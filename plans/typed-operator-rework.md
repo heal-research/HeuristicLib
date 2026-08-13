@@ -6,7 +6,18 @@ Rejected at the mutator-spike decision gate. The typed `Invoke` authoring model 
 
 The production experiment has been rolled back from the mutator slice. Its measured result and the independent architectural decisions recorded below are retained.
 
-Compile-time generation of ordinary role-specific implementations remains a possible alternative. It is not part of the typed invocation design and requires its own feasibility spike and acceptance decision.
+Compile-time generation of ordinary role-specific implementations was evaluated separately and is not being adopted. Operator roles and cross-cutting concern adapters remain ordinary source; coding agents may assist with scaffolding. See [Operator scaffolding](operator-scaffolding-generation.md).
+
+## Subsequent migration state
+
+The rejected typed-invocation spike led to a role-specific authoring rework rather than a return to the pre-spike design.
+
+- Mutator has been reworked and accepted as the reference role, including its arity ladders, stateless and stateful paths, single-candidate batching path, wrapping and multi topology, applicable concerns, construction paths, equality, and tests.
+- Selector has been reworked and accepted as the second common-shape role, including its arity ladders, stateless and stateful paths, wrapping and multi topology, applicable concerns, construction paths, equality, and tests. Selector deliberately has no single-item base.
+- Creator, Crossover, Evaluator, Replacer, Interceptor, and Terminator have not yet completed the same migration and acceptance process. Shared changes such as adopting `ValueArray<T>` do not by themselves mark a role complete.
+- Source generation and deterministic scaffolding were considered and rejected for the current authoring model. New role families and cross-cutting concern adapters remain ordinary checked-in source; coding agents are the recommended optional scaffolding aid.
+
+The retained outcomes below describe architectural rules established by the spike and subsequent accepted slices. They must not be read as claiming that every operator role already implements those rules.
 
 ## Original Goal
 
@@ -58,7 +69,9 @@ The rollback removes the following experimental concepts:
 
 `IOperator<TExecutionInstance>` is retained. It expresses which execution-instance role a reusable operator configuration creates and supports typed registry resolution. It is independent of the rejected input/context/output invocation model.
 
-## Alternative: Source-Generated Role Implementations
+## Historical alternative: Source-Generated Role Implementations
+
+Status: rejected for the current authoring model. The analysis below is retained as evidence, not as an open implementation plan. The accepted approach keeps operator families as ordinary checked-in source and uses coding agents as optional development-time scaffolding aids. There is no generator attribute, IDE action, or build command. See [Operator scaffolding](operator-scaffolding-generation.md).
 
 ### Concept
 
@@ -304,7 +317,7 @@ Reject the generator approach if the spike requires extensive string configurati
 - Completed composition policies may be sealed when they are not intended as authoring extension points; topology and authoring bases remain open where inheritance carries a defined responsibility.
 - Use `var` when an inferred local type would otherwise repeat a large generic declaration without improving understanding.
 - Avoid casts, runtime proxies, reflection, `dynamic`, and opaque adapters as substitutes for a coherent static model.
-- Source generation may be reconsidered only if stable cross-role boilerplate later becomes materially costly. It would generate ordinary nominal role types rather than change the operator contracts.
+- Deterministic generation is not selected for the current authoring model. Reconsider it only through a new explicit decision if stable cross-role boilerplate later becomes materially costly; ordinary source and agent-assisted scaffolding are the accepted approach today.
 
 ### Operator semantics
 

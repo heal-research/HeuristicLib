@@ -181,6 +181,16 @@ Unlike the leaf authoring bases, these are available at the full arity only. See
 
 Composition helpers such as choosing one child, applying a transformation and running a pipeline are covered in [Operator composition](operator-composition.md).
 
+## Scaffolding roles and cross-cutting concerns
+
+HeuristicLib does not provide a source-generator attribute, IDE action or command that generates an operator family. Operator roles, topology bases, authoring conveniences and role-specific concern adapters are ordinary C# source.
+
+Adding a concrete operator to an existing role normally means deriving from one of the existing authoring bases. Adding a new operator role is a larger task: it may require configuration and execution-instance arity ladders, stateless and stateful bases, applicable single-item bases, wrapping and multi topologies, construction companions, tests and API usage specs.
+
+Cross-cutting concerns also remain role-specific source. Implement and review the concern for one representative role first, then state its lifecycle and applicability independently of that role before expanding it. Similar signatures do not prove identical semantics: duration measurement records failed calls because it updates in `finally`, while counting updates only after a successful child call; candidate-count conveniences apply only when the role produces an appropriate candidate collection.
+
+A coding agent can help scaffold a new role family or adapt an accepted concern across the applicable operator roles. This is the recommended way to reduce repetitive authoring work, but it is optional development assistance rather than part of the HeuristicLib API or build. The resulting files are normal contributor-owned source: inspect and refactor them normally, review every public member, and validate them with the compiler, analyzers, focused behavior tests and API usage specs. An agent should inspect the current contracts and guidelines rather than copy the nearest implementation blindly, because roles may differ semantically or still contain legacy shapes.
+
 ## Configuration and execution rules
 
 - Keep configuration values unchanged during execution. Retained collection inputs are immutable snapshots.

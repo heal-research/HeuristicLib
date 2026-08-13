@@ -92,6 +92,8 @@ Operator authoring must follow the ownership paths described in [Operator author
 
 A single-item base seals the batch role operation it implements, so the single-item method stays the only authoring surface, and exposes an `ExecutionConcurrency Concurrency` property so batching remains a visible configuration decision rather than an override. Per-item random number generators are forked from the batch position, which keeps the result independent of the chosen concurrency. `SingleCandidateMutator` is the reference; roles whose single-item base predates it are aligned as they are migrated.
 
+Operator scaffolding is ordinary source, not a build-time generation feature. The repository has no source-generator attribute, IDE action or command that emits an operator family. Contributors may use coding agents to scaffold a new role or adapt an accepted cross-cutting concern across applicable roles, but the resulting code is contributor-owned and must be reviewed, tested and maintained exactly like handwritten code. Agents are optional development aids and must not become build or runtime dependencies. See [Operator authoring](operator-authoring.md#scaffolding-roles-and-cross-cutting-concerns).
+
 Algorithms coordinate operators and execution flow, so they use a configuration paired with an explicitly authored execution instance. See [Algorithm](algorithm.md).
 
 Roslyn analyzers are guardrails for recognizable mistakes. They do not prove that configurations, state and execution instances obey every ownership invariant.

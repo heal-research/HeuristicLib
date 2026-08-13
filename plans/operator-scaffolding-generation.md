@@ -1,413 +1,172 @@
-# Operator Scaffolding Generation
+# Operator Scaffolding
 
 ## Decision summary
 
-Source generation remains an undecided alternative for reducing the mechanical work required to author a new operator role. It is deliberately not scheduled yet.
+Status: accepted on 2026-08-13.
 
-The current preferred hypothesis is narrow:
+HeuristicLib will not introduce a Roslyn source generator, another build-time code generator, or a deterministic IDE scaffolding command for operator roles or cross-cutting operator concerns at this time.
 
-- generation may be valuable for role scaffolding such as role and execution-instance arity ladders and topology bases;
-- generation is unlikely to be valuable for semantic composition operators such as `ChooseOne*`, `Pipeline*`, or `Transformed*`;
-- handwritten roles must remain a fully supported, first-class path;
-- generated code must have the same runtime shape and performance characteristics as accepted handwritten code.
+Operator types remain ordinary C# source checked into the repository. Contributors may use a coding agent to scaffold a new operator role or to adapt an accepted concern implementation across applicable roles. Agent-produced code is contributor-owned source: it must be inspectable, reviewable, refactorable, tested, and maintained in the same way as handwritten code.
 
-Do not freeze a generator API or start a generator project from the mutator slice alone. First finish and accept the mutator reference, then migrate and measure a second role. Two matching roles are enough to evaluate the common three-parameter role shape, but not enough to claim support for every role shape.
+There is deliberately no hidden attribute, IDE action, or command that generates the operator family. A coding agent is an optional development aid, not a compiler feature, build dependency, runtime dependency, or correctness mechanism.
 
-This document supersedes the section "Alternative: Source-Generated Role Implementations" in [typed-operator-rework.md](typed-operator-rework.md). The retained decisions in that document continue to apply where they do not conflict with this plan.
+This decision supersedes the source-generation alternative retained in [typed-operator-rework.md](typed-operator-rework.md).
 
-## Current gate
+## Migration state at this decision
 
-The generator is blocked on evidence, not implementation capacity.
+The operator rework is partially complete. This status is retained here so the scaffolding decision is not mistaken for completion of the wider migration.
 
-Only the mutator role currently has the intended authoring shape. A generator derived from that one example would risk encoding mutator-specific mechanics as universal role conventions. The next actionable work is therefore the Selector migration described in [Migration and acceptance sequence](#migration-and-acceptance-sequence).
+| Operator role | Status | Accepted scope or remaining work |
+| --- | --- | --- |
+| Mutator | Reworked and accepted | Role and execution-instance arity ladders, stateless and stateful paths, `SingleCandidateMutator`, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. |
+| Selector | Reworked and accepted | Role and execution-instance arity ladders, stateless and stateful paths, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. Selection has no single-item base because it is inherently a whole-population operation. |
+| Creator | Migration outstanding | Still needs a separate migration and acceptance review. |
+| Crossover | Migration outstanding | Still needs a separate migration and acceptance review. |
+| Evaluator | Migration outstanding | Still needs a separate migration and acceptance review. |
+| Replacer | Migration outstanding | Still needs a separate migration and acceptance review. |
+| Interceptor | Migration outstanding | Still needs a separate migration and acceptance review, including its additional search-state shape. |
+| Terminator | Migration outstanding | Still needs a separate migration and acceptance review, including its additional search-state shape. |
 
-Generator work is Phase 4. It is reached only after the Selector migration is accepted in Phase 2 and the Phase 3 decision explicitly chooses a spike, and abandoning generation is a permitted outcome of that decision. Phases 2 and 3 contain no generator code.
+Some outstanding roles already received shared improvements such as `ValueArray<T>` for structural collection equality. Those changes do not complete their authoring migration: legacy role-named factories, `Inner*` topology, forwarding aliases, authoring conveniences, and concern shapes must still be reviewed role by role.
 
-If asked to implement the generator before that gate is satisfied, offer the next migration task instead. Do not silently turn the current illustrative syntax into a public generator contract.
+The scaffolding mechanism is nevertheless settled for both completed and future migrations: do not build a Roslyn or deterministic code generator now; use ordinary source, optionally scaffolded and bulk-evolved by coding agents under normal review and validation.
 
-## Goal and non-goals
+## Scope
 
-### Goal
+The decision covers two kinds of scaffolding.
 
-Let an internal or external role author request mechanical scaffolding instead of hand-writing repeated generic substitution, factory forwarding, and topology plumbing before implementing role-specific operator behavior.
+### New operator roles
 
-Generation is a convenience, never a requirement. A role written entirely by hand must compile and behave identically without an attribute, a generator package, or a generated member that the runtime framework requires.
+A new operator role may need a family of related authoring types, including:
 
-### Non-goals
+- its configuration and execution-instance arity ladders;
+- stateless and stateful authoring bases;
+- role-applicable single-item authoring bases;
+- wrapping and multi topology bases;
+- construction companions and API usage specs.
 
-- Do not introduce a generic runtime invocation abstraction.
-- Do not replace named role methods such as `Mutate`, `Select`, or `Cross`.
-- Do not generate semantic behavior that cannot be selected or derived unambiguously.
-- Do not evolve into string-driven source templating.
-- Do not eliminate the compiled public type matrix. The goal is to eliminate justified handwritten repetition.
-- Do not make direct contract implementations or handwritten role bases second-class.
-- Do not optimize primarily for the eight built-in roles. External custom-role authoring is the principal justification for generator work.
+New concrete operators within an existing role normally use the existing authoring bases and do not need this family scaffolded.
 
-## Illustrative authoring model
+### Cross-cutting concerns
 
-The exact attribute API is intentionally not decided. The following example illustrates the division of responsibility rather than proposing final names or parameters.
+A new concern such as duration measurement, counting, or observation may need one role-specific adapter for every applicable operator role. The concern semantics are defined once in an accepted reference implementation, but each adapter remains ordinary role-specific source.
 
-The role author writes the fundamental contracts and the ordinary role operation:
+Applicability and semantics must be decided explicitly. Similar method shapes do not prove identical behavior. For example:
 
-```csharp
-public interface IExampleOperator<TCandidate, in TSearchSpace, in TProblem>
-    : IOperator<IExampleOperatorInstance<TCandidate, TSearchSpace, TProblem>>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>;
+- duration measurement records elapsed time in `finally`, including failed calls;
+- counting occurs after the child succeeds, so failed calls are not counted;
+- every role can count calls, but only roles with an appropriate candidate result can count processed candidates;
+- public names such as `CountMutatedCandidates`, `CountSelectedCandidates`, and `CountReplacementCandidates` express different role semantics.
 
-public interface IExampleOperatorInstance<TCandidate, in TSearchSpace, in TProblem>
-    : IOperatorInstance
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    IReadOnlyList<TCandidate> ApplyExample(
-        IReadOnlyList<TCandidate> candidates,
-        IRandomNumberGenerator random,
-        TSearchSpace searchSpace,
-        TProblem problem);
-}
-```
+## Why code generation is not being adopted
 
-An illustrative opt-in declaration requests selected authoring families:
+The mechanical repetition is real, especially when a concern is expanded across the operator-role matrix. The measured benefit does not currently outweigh the generator's permanent development and usage cost.
 
-```csharp
-[GenerateOperatorScaffolding(
-    Families = OperatorScaffoldingFamilies.RoleLadder
-        | OperatorScaffoldingFamilies.WrappingTopology)]
-public partial record ExampleOperator<TCandidate, TSearchSpace, TProblem>;
-```
+- New operator roles are expected to be uncommon.
+- Concern adapters contain role-specific applicability, lifecycle, result, naming, and construction decisions in addition to mechanical forwarding.
+- A production generator would require a stable generator contract, semantic discovery, diagnostics, collision handling, generated-source tests, IDE verification, packaging, external consumer tests, and ongoing compiler compatibility work.
+- Generated public source would be less visible in the repository and less natural to navigate, refactor, customize, and review.
+- Updating a generator could reshape a broad public API without an ordinary source diff at each generated type.
+- A generator defect would be reproduced across the entire generated matrix.
+- A sufficiently general concern generator would need either generator-specific implementations for every known concern or a concern description language. The latter would introduce another abstraction whose complexity is not currently justified.
 
-Conceptually, the generator supplies ordinary nominal C# for:
+Coding agents change the cost comparison. Once one role establishes the accepted semantics and structure, an agent can adapt that implementation across other roles while preserving ordinary source. Agents can also help evolve or repair the expanded code later without making generation part of the product.
 
-- the full and reduced role configuration bases;
-- the matching execution-instance bases and explicit arity-reduction forwarders;
-- the requested full-arity wrapping topology base;
-- public `CreateExecutionInstance(...)` factories with the exact role-instance return type;
-- canonical `ChildExampleOperator` configuration properties and protected resolved-child fields or properties on execution instances.
+## Agent-assisted scaffolding workflow
 
-The author still writes:
+Coding agents are recommended for repetitive rollout, but their output is not assumed correct.
 
-- the fundamental role contracts;
-- the role operation and its domain semantics;
-- any unsupported authoring family;
-- equality-sensitive configuration state unless the selected generator family explicitly owns its equality implementation;
-- semantic composition operators and role-specific conveniences.
+### Scaffolding a role family
 
-The final API must look like acceptable handwritten HeuristicLib code. The feasibility spike should begin with the least magical opt-in form, even if a later accepted design can infer more from the annotated role.
+1. Define the new role's contracts and ordinary role operation explicitly.
+2. Identify the closest accepted role family, while recording structural differences such as extra type parameters, variance, operation inputs, or single-item applicability.
+3. Ask the agent to create ordinary source files following the accepted authoring conventions.
+4. Review every generated public type and member as a deliberate API addition.
+5. Add API usage specs and focused tests for every supported authoring path.
 
-## Generation tiers
+### Rolling out a concern
 
-The tiers are non-overlapping. A later tier may depend on an earlier tier, but it must not redefine it.
+1. Implement and accept the concern for one representative role.
+2. State its lifecycle semantics, failure behavior, retained configuration, equality behavior, and applicability independently of that role's method names.
+3. Build an explicit applicability matrix covering every operator role.
+4. Ask the agent to adapt the reference implementation to each applicable role as ordinary source.
+5. Review role-specific names, inputs, results, factories, fluent extensions, and exceptional cases.
+6. Add shared behavioral tests where possible and role-specific tests where semantics differ.
+7. Confirm that non-applicable roles were omitted deliberately rather than accidentally.
 
-| Tier | Content | Current target | Main gate |
-| ---: | --- | :--: | --- |
-| 1 | Role configuration and execution-instance arity ladders | Yes | Two accepted roles with the common shape |
-| 2A | Full-arity `Wrapping*` topology base | Yes | Tier 1 proven |
-| 2B | Full-arity `Multi*` topology base | Conditional | Explicit structural-equality strategy proven |
-| 3 | Optional `Stateless*`, `Stateful*`, and role-applicable single-item authoring bases | Later | Each family justified independently |
-| 4 | `Observable*`, `DurationMeasuring*`, and `Counting*` concerns | Not initially | Naming and observation semantics declared |
-| 5 | `ChooseOne*`, `Pipeline*`, and `Transformed*` compositions | Handwritten by default | Material role semantics remain |
+An agent should inspect the current contracts and developer guidelines rather than copy the nearest file mechanically. Some roles may still contain legacy shapes while their migration is unfinished.
 
-### Tier 1: role ladders
+## Correctness guardrails
 
-Tier 1 contains only two families:
+Agent assistance reduces typing and navigation work; it does not replace engineering evidence.
 
-1. Role configuration bases narrow generic arguments without adding alternative factories.
-2. Role execution-instance bases add narrower abstract role operations and explicit interface forwarders.
-
-These families are related but not one template. Their accepted behavior is described in [developer-guidelines.md](../docs/developer-guidelines.md), under "Role arity reduction."
-
-### Tier 2: topology bases
-
-Topology bases stay at full role arity because their generic arguments type the child slots. Reduced topology arities would reject problem-specific children rather than make composition easier.
-
-`Wrapping*` and `Multi*` are separate generation targets:
-
-- Tier 2A can generate a wrapping topology after the role ladder is proven.
-- Tier 2B may generate a multi topology only after the generator owns or otherwise deliberately preserves ordered structural equality for its child collection.
-
-A generated `Multi*` child collection must be a `ValueArray<T>` property, which carries ordered structural equality in the member type and needs no cooperating equality generator. Do not emit a child collection typed `ImmutableArray<T>`, `T[]` or `IReadOnlyList<T>`; those compare by reference and would silently break configuration equality.
-
-### Tier 3: optional authoring conveniences
-
-`Stateless*`, `Stateful*`, and single-item bases are independent authoring conveniences, not part of the fundamental role ladder.
-
-- `Stateless*` combines a configuration and execution instance in one type.
-- `Stateful*` owns fresh run-scoped state and a nested execution instance.
-- A single-item base is generated only when the role has an accepted independent-item interpretation. It is not universal; Selector, Terminator, and other roles may have no meaningful equivalent.
-
-Each family needs its own evidence and opt-in decision. Similarity in the mutator role is not sufficient.
-
-### Tiers 4 and 5: concerns and compositions
-
-These tiers contain increasing amounts of role judgement:
-
-- counting requires irregular public names such as `CountMutatedCandidates` and `CountReplacementCandidates`;
-- observer conveniences need to know which operation argument is the primary result;
-- choose-one has per-item, whole-call, and count-distribution variants;
-- pipelines require an endomorphic operation;
-- transformed operators coordinate two different roles;
-- rate conveniences require role-specific identity operators.
-
-They stay handwritten unless later evidence identifies a small, closed semantic choice that is worth generating.
-
-## Semantic parameters
-
-Where a semantic choice cannot be inferred, a future generator may accept an enum-valued parameter selecting an observed behavior:
-
-```csharp
-[GenerateChooseOneOperator(Dispatch = ChoiceDispatch.PerItem)]
-```
-
-This is only illustrative. Such a parameter is acceptable when all of these hold:
-
-- it is a closed enum rather than a string or source fragment;
-- every value corresponds to behavior already implemented and accepted in the repository;
-- invalid role and option combinations produce a diagnostic on the declaration;
-- the complete combination set remains practical to test exhaustively;
-- the concern does not require three or more orthogonal behavior parameters.
-
-Strings may describe genuinely irregular public names, but must never carry behavior. Role-specific types and conveniences should normally remain in handwritten partial companions.
-
-## Migration and acceptance sequence
-
-Every task below is a review gate. Pause after its code, tests, and documentation are complete. Do not begin the next task until the user accepts the current one.
-
-The sequence has four phases. Only Phase 4 contains generator work, and it is reached only if the Phase 3 decision explicitly chooses it.
-
-| Phase | Content | Generator code |
-| ---: | --- | :--: |
-| 1 | Mutator reference slice | No |
-| 2 | Selector migration | No |
-| 3 | Evidence and decision | No |
-| 4 | Generator feasibility spike, if chosen | Yes |
-
-### Phase 1: the mutator reference — accepted
-
-The mutator slice was accepted on this basis:
-
-- one public `CreateExecutionInstance(...)` factory per base configuration;
-- role arity reduction follows the documented forwarding model;
-- `WrappingMutator` and `MultiMutator` expose canonical public child configuration properties;
-- execution instances keep resolved children private or protected;
-- stateless, stateful, and single-candidate authoring paths have API usage specs;
-- concern configurations have structural-equality coverage;
-- mutation behavior, allocation-sensitive batching, and public construction paths have focused tests;
-- the single-candidate base seals its batch role operation and exposes batching as an `ExecutionConcurrency` configuration property;
-- the retained terminology and authoring rules are documented.
-
-Later mutator changes are ordinary follow-up work rather than grounds for reopening this phase.
-
-### Phase 2: migrate Selector as the common-shape probe
-
-Selector is a useful second role because it uses the common candidate/search-space/problem shape, has full authoring and concern families, and currently exposes the legacy protected `InnerSelector` topology. Selection is inherently whole-population, so Selector has no single-item base and produces no second data point for that family.
-
-Split the migration into separate accepted tasks:
-
-1. Migrate the Selector role and execution-instance ladders together with the `WrappingSelector` and `MultiSelector` child slot: one public `CreateExecutionInstance(...)` per base configuration, canonical public child properties, protected resolved children on execution instances, and ordered structural equality for the child collection. Pause.
-2. Migrate the Selector stateless and stateful bases and the applicable concerns. Pause.
-
-The child slot is deliberately part of the first task rather than a separate one. Both touch the same topology types, and renaming the child property in one task while changing its visibility in another would leave an intermediate shape matching neither the old nor the target model. The cost is coarser evidence granularity in Phase 3, which is accepted.
-
-Do not migrate unrelated roles as part of these tasks merely to make the Selector diff compile unless they are direct consumers that must be updated.
-
-`ISelectorInstance.Select` currently takes its objective and count arguments before the random number generator, which does not match the documented operator parameter order. Raise that as an explicit decision during Phase 2; do not normalize it silently.
-
-### Phase 3: evidence and decision
-
-Record the evidence first: elapsed engineering time, changed lines by category, mechanical versus judgement-heavy changes, defects uncovered, and aspects that resisted substitution.
-
-Mutator plus Selector can justify only a decision about the common three-parameter role shape. Choose explicitly among:
-
-- abandon generation because the measured repetition is too small or too semantic;
-- allow an isolated Tier 1 feasibility spike for the common shape;
-- collect more migration evidence before deciding.
-
-Abandoning generation is a legitimate outcome, not a failure. This decision does not authorize a production generator or broad role support. Pause for acceptance of the decision itself.
-
-### Phase 4: generator feasibility spike
-
-Reached only if Phase 3 explicitly chooses the spike. This is the first phase containing any generator code.
-
-1. Create an isolated incremental-generator test project or fixture.
-2. Generate Tier 1 for synthetic roles in test-only namespaces.
-3. Compare the generated structure with separately compiled handwritten fixtures for both accepted common-shape roles.
-4. Do not emit types with the same namespace and metadata name as the production handwritten types. Source generators are additive and cannot replace those declarations side by side.
-5. Evaluate diagnostics, IDE navigation, incremental rebuilds, API clarity, and measured runtime equivalence.
-6. Pause and decide whether to abandon, revise, or proceed to Tier 2A.
-
-Production handwritten types are not replaced during the spike. Remaining role migrations need not be completed before an isolated spike, but no generated replacement ships until the affected role migrations and API reviews are complete.
-
-Before claiming that scaffolding supports every operator role, migrate and accept one structurally different role, preferably Interceptor or Terminator, which exercises an additional search-state type parameter and its variance rules. If the accepted generator scope stays explicitly limited to the common three-parameter shape, that migration may be deferred, but the limitation must be part of the documented public scope.
-
-## Migration decisions already settled
-
-These are operator-rework decisions, not generator decisions.
+- The compiler, analyzers, tests, API usage specs, formatting checks, and human review remain authoritative.
+- Agent-produced code must not contain generated-file markers or warnings that discourage ordinary maintenance.
+- Public operator configurations retain structural value semantics. Ordered configuration collections use `ValueArray<T>`; execution instances may use `ImmutableArray<T>` for resolved children.
+- Configuration inputs are snapshotted and configurations remain unchanged during execution.
+- Child configurations are resolved through the execution instance registry.
+- Cross-cutting concerns need success and failure tests when lifecycle placement changes observable behavior.
+- Matrix-wide changes should verify that every applicable role was updated. Repository search, shared contract tests, or explicit conformance tests may provide that deterministic coverage.
+- Shared runtime helpers remain preferable when they express a complete semantic rule without obscuring role behavior or adding runtime machinery. Agent replication is not a reason to duplicate a stable calculation unnecessarily.
+
+## Retained operator decisions
+
+These decisions were established during the Mutator and Selector migrations and remain independent of the scaffolding mechanism.
 
 ### Public factory and child topology
 
 - Base configurations expose one public `CreateExecutionInstance(...)` method returning the exact role execution-instance type.
 - Topology bases may seal that method and expose a protected natural overload with already-resolved children.
-- Configuration objects expose canonical `ChildOperator` or role-specific child properties publicly.
-- A child slot has exactly one public name. A wrapping or multi base is used only when the children are identified by being children and nothing more, and derived concerns add no forwarding alias for a child the base already exposes. An operator whose child plays a specific part derives from the role base and declares that child itself, as `EliteSelector` and `GenderSpecificSelector` do.
+- Configurations expose canonical `ChildOperator` or role-specific child properties publicly.
+- A child slot has exactly one public name. Use wrapping or multi bases only when the children are identified by being children and nothing more.
+- An operator whose child has a specific responsibility derives from the role base and declares that child directly.
 - Execution instances keep resolved child machinery private or protected.
-
-See [developer-guidelines.md](../docs/developer-guidelines.md), under "Configuration and execution ownership."
 
 ### Counting concerns
 
-The `CountingMutator` shape is the reference. A counting concern wraps its child directly and owns a handwritten counting execution instance. It does not derive from an observable concern merely to reuse a callback.
+The `CountingMutator` shape is the reference. A counting concern wraps its child directly and owns a counting execution instance. It does not derive from an observable concern merely to reuse a callback.
 
-Counting occurs after the child succeeds so failed calls are not counted. Structurally identical counting configurations must compare equal. Add equivalent failure and equality tests as each role is migrated.
+Counting occurs after the child succeeds. Structurally identical counting configurations compare equal. Equivalent failure and equality tests accompany each migrated role.
 
-### Terminology
+### Terminology and construction companions
 
-Use `SingleCandidate*`, not `SingleSolution*`, when the operation concerns unevaluated candidates. The single-candidate form remains a regular batch-wise role operator; only its authoring method is scalar.
-
-Use the canonical terminology in [glossary.md](../docs/glossary.md).
-
-### Construction companions
-
+- Use `SingleCandidate*`, not `SingleSolution*`, when the operation concerns unevaluated candidates.
+- The single-candidate form remains a regular batch-wise role operator; only its authoring method is scalar.
 - Static `Create` factories stay in the non-generic static `<Type>` companion.
 - Fluent extensions stay in an explicit `<Type>Extensions` companion.
 - Instrumentation concerns may use role-first names such as `MutatorDurationExtensions` when that is the accepted convention.
-- Generated XML documentation is reserved for non-obvious behavior and contracts; do not generate comments that merely repeat member names or types.
+- XML documentation is written for non-obvious behavior and contracts rather than repeating member names or types.
 
-## Analyzer role
+## Alternatives considered
 
-Analyzers and generators solve different problems:
+### Build-time source generation
 
-| Mechanism | Responsibility |
-| --- | --- |
-| Generator | Writes opted-in scaffolding |
-| Analyzer | Checks generated or handwritten conventions |
-| In-repository tests | Check built-in role behavior and API usage |
+An incremental Roslyn generator could emit consistent nominal C# with no runtime abstraction cost and automatically synchronize generated roles. It was rejected for now because its permanent implementation, packaging, debugging, inspection, refactoring, and maintenance costs are disproportionate to the expected frequency of new roles and concerns.
 
-The repository already contains Roslyn analyzer infrastructure and operator-authoring rules. It must not yet be described as an externally delivered custom-role analyzer contract: the current analyzer projects are non-packable, and consumer delivery through the runtime package has not been verified.
+### Deterministic one-shot scaffolding
 
-After the second role is accepted, evaluate additional diagnostics for:
+A Roslyn code fix, IDE action, template, or command could write ordinary source once. This avoids hidden build output but still introduces a tool and template contract that must be developed, distributed, tested, and maintained. Coding agents provide the same immediate development assistance with better adaptation to irregular role semantics and without a new product surface.
 
-- canonical child property naming;
-- redundant forwarding aliases;
-- one public exact-role `CreateExecutionInstance(...)` factory;
-- required role variance and documented structural exceptions.
+### Manual-only authoring
 
-External analyzer delivery needs an explicit packaging test. An analyzer can enforce conventions for handwritten roles, but it cannot remove their scaffolding work.
+Requiring contributors to reproduce every family by hand would maximize determinism but spend effort on mechanical work and encourage copy drift. Coding agents are preferred as optional accelerators while all output remains normal reviewed source.
 
-## Technical design constraints
+## Evidence
 
-### Semantic role discovery
+Mutator and Selector established the accepted common three-parameter authoring shape. Their role ladders and topology bases contain substantial mechanical similarity, while their optional conveniences and concern implementations also exposed real semantic differences.
 
-Discover the execution-instance contract by following `IOperator<TExecutionInstance>` and inspect the ordinary role operation semantically. Do not infer relationships from generic parameter names or fixed positions when symbols provide them.
+The concern matrix strengthens the benefit of automation: one broadly applicable concern may require adapters for all eight operator roles. Duration measurement is highly uniform, while counting demonstrates capability-sensitive behavior: Interceptor and Terminator count calls but do not expose a candidate-count convenience, whereas result-producing roles do.
 
-The supported declaration contract must state how it handles inherited and overloaded operations, generic methods, nullable annotations, by-reference parameters, constraints, accessibility, and ambiguous operations. Unsupported shapes require precise diagnostics.
+The migrations also found copied rate-complement behavior that differed between choose-one roles. The stable calculation now lives in `WeightedBatchDispatch.GetRateWeights`. This demonstrates both sides of agent-assisted expansion:
 
-### Equality and registry identity
+- an agent can reproduce a mistaken reference across several roles;
+- an agent can efficiently propagate a reviewed correction;
+- deterministic behavioral tests and shared semantic helpers remain necessary in either case.
 
-The execution registry resolves configurations by object reference. Structural record equality does not control execution-instance sharing.
+## Reconsideration
 
-Structural equality still matters as a public configuration contract. This is now carried by the member type: ordered configuration collections use `ValueArray<T>`, which compares its elements, so a record holding one gets correct equality from the compiler-synthesized `Equals` and `GetHashCode`. `Generator.Equals` has been removed from the repository.
+This decision is intentionally reversible, but it must be revisited explicitly rather than eroded through isolated generator experiments.
 
-This resolves the former Tier 2B blocker. The earlier constraint was that ordinary source generators cannot consume one another's output in the same compilation, so `Generator.Equals` could not see a generated child property. A generator emitting a `ValueArray<T>` property now needs no cooperating equality generator at all.
+Reconsider deterministic generation only if measured future work shows that agent-assisted ordinary source has become a material maintenance burden—for example, frequent new roles or concerns, recurring matrix omissions, or repeated synchronization work whose semantics have stabilized into a small declarative model.
 
-Therefore:
-
-- Tier 1 and Tier 2A must not introduce unreviewed equality-sensitive state;
-- Tier 2B may emit a `Multi*` child collection as a `ValueArray<T>` property, and must test the resulting equality;
-- reference-based child-array equality must never appear as an accidental fallback, which means a generated collection member must never be an `ImmutableArray<T>`, a `T[]` or an `IReadOnlyList<T>`.
-
-### Performance
-
-Generation must not introduce runtime allocations, adapters, reflection, extra context objects, or additional dispatch layers compared with the accepted handwritten implementation.
-
-Before replacing handwritten code:
-
-- capture reviewed baselines for representative empty, small, and larger batches;
-- compare allocation counts and direct dispatch costs;
-- define regression thresholds from benchmark stability rather than requiring literal equality or the vague phrase "within measurement noise";
-- investigate any regression before accepting generated output.
-
-Generated configuration code must preserve immutable snapshots without adding repeated execution-path normalization or validation.
-
-### Packaging and inspection
-
-Prefer an isolated `netstandard2.0` project implementing `IIncrementalGenerator`. The generator assembly must not become a runtime dependency.
-
-The external delivery model remains open. CI currently runs solution-wide `dotnet pack` and publishes produced packages from `main`, but that does not by itself prove that a new generator package, transitive analyzer asset, or optional dependency reaches consumers correctly. Verify the final package contents and an external consuming project before claiming support.
-
-Generated files must be inspectable through IDE navigation and test artifacts. Whether repository builds enable `EmitCompilerGeneratedFiles` remains an implementation-time decision.
-
-## Validation required before shipping
-
-- Incremental-generator tests over Roslyn symbols.
-- Generated-source snapshot or structural tests.
-- Compilation tests for valid, invalid, ambiguous, and colliding declarations.
-- Diagnostic location and message tests.
-- API usage specs proving generic inference and ordinary role assignability.
-- Runtime behavioral tests against the handwritten reference.
-- Immutable-snapshot and structural-equality tests.
-- Registry reference-identity tests.
-- Reviewed allocation and dispatch benchmarks.
-- Deterministic-output and incremental-rebuild tests.
-- IDE generated-source navigation verification.
-- A package-content test and an external consumer project using the packed generator.
-- A handwritten external role that works without generator attributes or a generator package.
-
-The current hand-written analyzer test harness may be insufficient for this scope. Evaluate `Microsoft.CodeAnalysis.Testing` or an equivalent standard harness as part of the spike rather than assuming the existing raw-compilation utilities will scale.
-
-## Open decisions
-
-Do not settle these from the mutator slice alone:
-
-- final attribute granularity and names;
-- whether families are requested together or by separate partial declarations;
-- whether generation is limited to the common three-parameter role shape;
-- the Tier 2B equality strategy;
-- optional versus bundled external generator delivery;
-- generated namespace, accessibility, member ordering, hint names, collision policy, and nullable behavior;
-- whether generated files are written to build artifacts by default;
-- whether packaged analyzers accompany the generator;
-- whether internal conformance tests remain valuable once generation and analyzers cover part of the model.
-
-Record each accepted answer here before generated public API ships.
-
-## Evidence appendix
-
-### Current migration finding
-
-The concern matrix represents a half-finished migration rather than eight equally valid shapes. Mutator is the current reference. The other seven roles still use some combination of protected role-named factories, `Inner*` child properties, and derived forwarding aliases that conflict with the accepted developer guidelines.
-
-This migration cost is shared by every option that aims for a coherent API. It must not be charged solely to generator work.
-
-### Why leaf composition is a weak first target
-
-`ChooseOne` already has three observed semantics:
-
-| Variant | Current roles | Behavior |
-| --- | --- | --- |
-| Per item | Mutator, Crossover | Select independently per input item and restore order |
-| Whole call | Selector, Replacer | Select one child for the complete invocation |
-| Count distribution | Creator | Distribute a requested count without an input batch |
-
-`Pipeline` additionally requires an endomorphic operation, while `Transformed*` coordinates different roles. These concerns contain materially more judgement than the scaffolding they might save.
-
-### Provisional effort hypothesis
-
-Previous estimates suggested that a tier-limited generator could cost materially less than a generator covering every concern. Those figures were speculative and depended on an assumed amount of repeated scaffolding. Replace them with measured migration and spike data rather than treating engineer-day ranges as a decision criterion.
-
-The decision should use:
-
-- measured mechanical lines and review effort per migrated role;
-- expected number of internal and external custom roles;
-- generator and analyzer maintenance cost;
-- public API clarity and debugging cost;
-- demonstrated runtime equivalence.
-
-### Copy-drift lesson
-
-The evaluation found copied rate-complement behavior that differed between choose-one roles. The stable rule now lives in `WeightedBatchDispatch.GetRateWeights`, and callers consume the complete derived pair.
-
-Two lessons carry forward:
-
-- prefer a shared helper that returns a complete derived value over duplicated fragments;
-- test behavior, not only generated structure or configuration properties, because copy drift can preserve the apparent shape while changing probabilistic semantics.
+Any future proposal must compare its measured benefit with the existing agent-assisted workflow and preserve handwritten ordinary source as a fully supported authoring path until a separate accepted decision says otherwise.
