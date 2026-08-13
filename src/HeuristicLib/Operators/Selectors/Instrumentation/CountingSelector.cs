@@ -11,8 +11,8 @@ public sealed record CountingSelector<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ObservationCounter Counter { get; }
-    public OperatorCountMetric Metric { get; }
+    public ObservationCounter Counter { get; init; }
+    public OperatorCountMetric Metric { get; init; }
 
     public CountingSelector(ISelector<TCandidate, TSearchSpace, TProblem> childSelector, ObservationCounter counter, OperatorCountMetric metric)
         : base(childSelector)

@@ -12,7 +12,7 @@ public record AfterOperatorCountTerminator<TCandidate> : StatelessTerminator<TCa
         MaximumCount = maximumCount;
     }
 
-    public ObservationCounter Counter { get; }
+    public ObservationCounter Counter { get; init; }
 
     public int MaximumCount
     {

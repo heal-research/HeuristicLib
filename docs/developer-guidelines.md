@@ -71,6 +71,15 @@ Base configurations should expose one public `CreateExecutionInstance(...)` meth
 
 Keep public constructors as the direct construction path. Add a static `Create` helper when its arguments can infer otherwise repetitive generic type parameters. Add a fluent extension when the receiver naturally becomes a child configuration. These entry points should construct the same configuration rather than introduce different semantics.
 
+A configuration setting is either required or optional, and that decision determines how it is declared. There is exactly one way to supply each setting.
+
+- A required value is a constructor parameter without a default, so a configuration cannot be created incomplete.
+- An optional value is an `init` property carrying its default, and is never also a constructor parameter. A defaulted constructor parameter beside an `init` property gives two ways to set one value and is a review finding.
+- Every configuration property is `{ get; init; }`, including required ones. Construction and reconfiguration are different operations: the constructor is the only way to create a configuration, while `with` is the only way to derive a changed one. A `{ get; }` property silently removes a setting from `with`, which is how experiments vary parameters, so it is never the right accessor for configuration state.
+- Execution instances are the opposite: their resolved children and run data stay `{ get; }` because they are never reconfigured.
+
+An invariant spanning a required value and an optional one can no longer be checked in the constructor. Check it where both are known and before any work depends on it, normally in `CreateExecutionInstance`, and throw `InvalidOperationException` because the offending value is no longer an argument. `ChooseOneMutator` compares its weight count against its child count this way.
+
 Configuration objects expose the information that describes their configured behavior through public read-only properties, including retained child operators. A wrapping base owns the canonical singular child property and a multi-operator base owns the canonical child collection. Name these properties `ChildOperator` and `ChildOperators`, or use role-specific forms such as `ChildMutator` and `ChildMutators`. Reserve nested operator for an operator at any descendant depth. Execution instances keep resolved child instances and other execution machinery private or protected by default.
 
 Role authoring hierarchies are deliberately symmetric between configurations and execution instances. A full role base has a matching full role instance base, and wrapping and multi topology bases come in matching configuration/instance pairs. A derived configuration and its nested execution instance use the corresponding pair even when the instance base currently contributes only canonical protected child storage. This predictable hierarchy and the topology it expresses at the type level are part of the authoring model. Pass required resolved children through constructors so an execution instance cannot be created incomplete.

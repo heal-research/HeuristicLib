@@ -78,6 +78,33 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void CountCreatorCalls_DoesNotIncrementWhenCreationThrows()
+    {
+        var counter = new ObservationCounter();
+        var instance = new ThrowingCreator().CountCreatorCalls(counter).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        counter.CurrentCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public void MeasureCreatorDuration_RecordsElapsedDurationWhenCreationThrows()
+    {
+        var duration = new ObservationDuration();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var instance = new ThrowingCreator().MeasureCreatorDuration(duration, timeProvider).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+    }
+
+    [Fact]
     public void ObservableMutator_SnapshotsObservers()
     {
         var observer = new ActionMutatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
@@ -331,6 +358,33 @@ public class ObservableOperatorCounterTests
             problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+    }
+
+    [Fact]
+    public void CountCrossoverCalls_DoesNotIncrementWhenCrossoverThrows()
+    {
+        var counter = new ObservationCounter();
+        var instance = new ThrowingCrossover().CountCrossoverCalls(counter).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        counter.CurrentCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public void MeasureCrossoverDuration_RecordsElapsedDurationWhenCrossoverThrows()
+    {
+        var duration = new ObservationDuration();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var instance = new ThrowingCrossover().MeasureCrossoverDuration(duration, timeProvider).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     [Fact]
@@ -702,6 +756,28 @@ public class ObservableOperatorCounterTests
                 FuncProblem<int, DummySearchSpace<int>> problem) =>
                 callback(parents, random, searchSpace, problem);
         }
+    }
+
+    private sealed record ThrowingCreator
+        : StatelessCreator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+    {
+        public override IReadOnlyList<int> Create(
+            int count,
+            IRandomNumberGenerator random,
+            DummySearchSpace<int> searchSpace,
+            FuncProblem<int, DummySearchSpace<int>> problem) =>
+            throw new InvalidOperationException();
+    }
+
+    private sealed record ThrowingCrossover
+        : StatelessCrossover<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+    {
+        public override IReadOnlyList<int> Cross(
+            IReadOnlyList<Parents<int>> parents,
+            IRandomNumberGenerator random,
+            DummySearchSpace<int> searchSpace,
+            FuncProblem<int, DummySearchSpace<int>> problem) =>
+            throw new InvalidOperationException();
     }
 
     private sealed record SumParentsCrossover

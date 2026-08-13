@@ -118,7 +118,7 @@ public class AnalysisSpecs
             PopulationSize = 16,
             MaximumGenerations = maximumGenerations,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
-            Crossover = new AlphaBetaBlendCrossover(alpha: 0.7),
+            Crossover = new AlphaBetaBlendCrossover { Alpha = 0.7 },
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
             Selector = TournamentSelector.For(problem, tournamentSize: 2),
             MutationRate = 0.2,

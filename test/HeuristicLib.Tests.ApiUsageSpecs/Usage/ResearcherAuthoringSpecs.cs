@@ -165,9 +165,9 @@ public class ResearcherAuthoringSpecs
     }
 
     private sealed record TestFunctionOriginCreator
-      : SingleSolutionCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+      : SingleCandidateCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        public override RealVector Create(
+        public override RealVector CreateCandidate(
           IRandomNumberGenerator random,
           RealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)

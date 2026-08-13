@@ -8,8 +8,8 @@ public sealed record CountingReplacer<TCandidate, TSearchSpace, TProblem> : Obse
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ObservationCounter Counter { get; }
-    public OperatorCountMetric Metric { get; }
+    public ObservationCounter Counter { get; init; }
+    public OperatorCountMetric Metric { get; init; }
 
     public CountingReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, ObservationCounter counter, OperatorCountMetric metric)
         : base(replacer, new ActionReplacerObserver<TCandidate, TSearchSpace, TProblem>(

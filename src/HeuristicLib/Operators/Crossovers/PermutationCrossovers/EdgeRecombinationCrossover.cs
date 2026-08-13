@@ -4,10 +4,10 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
-public record EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation>
+public record EdgeRecombinationCrossover : SingleCandidateCrossover<Permutation>
 {
-    public override Permutation Cross(Parents<Permutation> parents, IRandomNumberGenerator random)
-      => Cross(parents.Parent1, parents.Parent2, random);
+    public override Permutation CrossParents(Parents<Permutation> parents, IRandomNumberGenerator random) =>
+        Cross(parents.Parent1, parents.Parent2, random);
 
     public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator random)
     {

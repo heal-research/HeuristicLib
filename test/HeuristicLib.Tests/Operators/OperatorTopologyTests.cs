@@ -11,6 +11,10 @@ public class OperatorTopologyTests
     [InlineData(typeof(IMutatorInstance<,,>))]
     [InlineData(typeof(ISelector<,,>))]
     [InlineData(typeof(ISelectorInstance<,,>))]
+    [InlineData(typeof(ICrossover<,,>))]
+    [InlineData(typeof(ICrossoverInstance<,,>))]
+    [InlineData(typeof(ICreator<,,>))]
+    [InlineData(typeof(ICreatorInstance<,,>))]
     public void OperatorRoleContracts_PreserveCandidateAndUseContravariantContext(Type roleContract)
     {
         var typeParameters = roleContract.GetGenericArguments();
@@ -26,6 +30,8 @@ public class OperatorTopologyTests
     [Theory]
     [InlineData("HEAL.HeuristicLib.Operators.Mutators")]
     [InlineData("HEAL.HeuristicLib.Operators.Selectors")]
+    [InlineData("HEAL.HeuristicLib.Operators.Crossovers")]
+    [InlineData("HEAL.HeuristicLib.Operators.Creators")]
     public void OperatorConfigurations_RetainedChildOperatorsArePubliclyInspectable(string roleNamespace)
     {
         var hiddenChildProperties = OperatorTypesIn(roleNamespace)
@@ -46,6 +52,8 @@ public class OperatorTopologyTests
     [Theory]
     [InlineData("HEAL.HeuristicLib.Operators.Mutators")]
     [InlineData("HEAL.HeuristicLib.Operators.Selectors")]
+    [InlineData("HEAL.HeuristicLib.Operators.Crossovers")]
+    [InlineData("HEAL.HeuristicLib.Operators.Creators")]
     public void OperatorExecutionInstances_DoNotPubliclyExposeChildMachinery(string roleNamespace)
     {
         var publicChildProperties = OperatorTypesIn(roleNamespace)

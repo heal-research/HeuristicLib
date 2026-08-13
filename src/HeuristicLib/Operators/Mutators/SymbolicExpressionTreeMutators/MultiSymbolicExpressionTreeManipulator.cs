@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
 public sealed record MultiSymbolicExpressionTreeManipulator : SymbolicExpressionTreeManipulator
 {
-    public ValueArray<SymbolicExpressionTreeManipulator> SubOperators { get; }
+    public ValueArray<SymbolicExpressionTreeManipulator> SubOperators { get; init; }
 
     public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
     {

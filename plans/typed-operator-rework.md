@@ -14,7 +14,8 @@ The rejected typed-invocation spike led to a role-specific authoring rework rath
 
 - Mutator has been reworked and accepted as the reference role, including its arity ladders, stateless and stateful paths, single-candidate batching path, wrapping and multi topology, applicable concerns, construction paths, equality, and tests.
 - Selector has been reworked and accepted as the second common-shape role, including its arity ladders, stateless and stateful paths, wrapping and multi topology, applicable concerns, construction paths, equality, and tests. Selector deliberately has no single-item base.
-- Creator, Crossover, Evaluator, Replacer, Interceptor, and Terminator have not yet completed the same migration and acceptance process. Shared changes such as adopting `ValueArray<T>` do not by themselves mark a role complete.
+- Crossover and Creator have been reworked to the same shape as the third slice and await acceptance, including their arity ladders, stateless and stateful paths, single-candidate batching paths, wrapping and multi topology, applicable concerns, construction paths, equality, and tests.
+- Evaluator, Replacer, Interceptor, and Terminator have not yet completed the same migration and acceptance process. Shared changes such as adopting `ValueArray<T>` do not by themselves mark a role complete.
 - Source generation and deterministic scaffolding were considered and rejected for the current authoring model. New role families and cross-cutting concern adapters remain ordinary checked-in source; coding agents are the recommended optional scaffolding aid.
 
 The retained outcomes below describe architectural rules established by the spike and subsequent accepted slices. They must not be read as claiming that every operator role already implements those rules.

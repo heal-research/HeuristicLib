@@ -12,7 +12,7 @@ public record AfterOperatorDurationTerminator<TCandidate> : StatelessTerminator<
         MaximumDuration = maximumDuration;
     }
 
-    public ObservationDuration Duration { get; }
+    public ObservationDuration Duration { get; init; }
 
     public TimeSpan MaximumDuration
     {

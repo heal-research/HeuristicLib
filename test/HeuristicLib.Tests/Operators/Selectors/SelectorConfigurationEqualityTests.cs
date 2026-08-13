@@ -89,8 +89,8 @@ public class SelectorConfigurationEqualityTests
     public void ChooseOneSelector_WithDifferentWeights_IsNotEqual()
     {
         ISelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[] childSelectors = [new RangeSelector(1), new RangeSelector(2)];
-        var left = new ChooseOneSelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childSelectors, [1.0, 2.0]);
-        var right = new ChooseOneSelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childSelectors, [2.0, 1.0]);
+        var left = new ChooseOneSelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childSelectors) { Weights = [1.0, 2.0] };
+        var right = new ChooseOneSelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childSelectors) { Weights = [2.0, 1.0] };
 
         left.ShouldNotBe(right);
     }

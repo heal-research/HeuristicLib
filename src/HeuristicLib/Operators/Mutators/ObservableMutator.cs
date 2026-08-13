@@ -9,7 +9,7 @@ public sealed record ObservableMutator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ValueArray<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
+    public ValueArray<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; init; }
 
     public ObservableMutator(IMutator<TCandidate, TSearchSpace, TProblem> childMutator, params IReadOnlyList<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : base(childMutator)

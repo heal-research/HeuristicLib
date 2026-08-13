@@ -8,8 +8,8 @@ public sealed record CountingEvaluator<TCandidate, TSearchSpace, TProblem> : Obs
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ObservationCounter Counter { get; }
-    public OperatorCountMetric Metric { get; }
+    public ObservationCounter Counter { get; init; }
+    public OperatorCountMetric Metric { get; init; }
 
     public CountingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, ObservationCounter counter, OperatorCountMetric metric)
         : base(evaluator, new ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>(

@@ -43,7 +43,7 @@ public class OperatorStaticMethodGuidelineTests
         ];
         var objective = CreateBiObjective();
 
-        var viaInstance = new ParetoCrowdingTournamentSelector<int>(dominateOnEqualities: false, tournamentSize: 3)
+        var viaInstance = new ParetoCrowdingTournamentSelector<int>(dominateOnEqualities: false) { TournamentSize = 3 }
           .Select(population, objective, count: 4, RandomNumberGenerator.Create(456));
         var viaStatic = ParetoCrowdingTournamentSelector.Select(population, objective, count: 4, RandomNumberGenerator.Create(456), dominateOnEqualities: false, tournamentSize: 3);
 

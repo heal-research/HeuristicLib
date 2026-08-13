@@ -10,8 +10,8 @@ public sealed record CountingMutator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ObservationCounter Counter { get; }
-    public OperatorCountMetric Metric { get; }
+    public ObservationCounter Counter { get; init; }
+    public OperatorCountMetric Metric { get; init; }
 
     public CountingMutator(IMutator<TCandidate, TSearchSpace, TProblem> childMutator, ObservationCounter counter, OperatorCountMetric metric)
         : base(childMutator)

@@ -1,23 +1,47 @@
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-public sealed record CountingCrossover<TCandidate, TSearchSpace, TProblem> : ObservableCrossover<TCandidate, TSearchSpace, TProblem>
+public sealed record CountingCrossover<TCandidate, TSearchSpace, TProblem>
+    : WrappingCrossover<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ObservationCounter Counter { get; }
-    public OperatorCountMetric Metric { get; }
+    public ObservationCounter Counter { get; init; }
+    public OperatorCountMetric Metric { get; init; }
 
-    public CountingCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, ObservationCounter counter, OperatorCountMetric metric)
-        : base(crossover, new ActionCrossoverObserver<TCandidate, TSearchSpace, TProblem>(
-            (offspring, _, _, _) => counter.IncrementBy(metric == OperatorCountMetric.Calls ? 1 : offspring.Count)))
+    public CountingCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> childCrossover, ObservationCounter counter, OperatorCountMetric metric)
+        : base(childCrossover)
     {
         Counter = counter;
         Metric = metric;
     }
+
+    protected override WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> childCrossover) =>
+        new Instance(childCrossover, Counter, Metric);
+
+    private sealed class Instance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> childCrossover, ObservationCounter counter, OperatorCountMetric metric)
+        : WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(childCrossover)
+    {
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        {
+            var offspring = ChildCrossover.Cross(parents, random, searchSpace, problem);
+            counter.IncrementBy(metric == OperatorCountMetric.Calls ? 1 : offspring.Count);
+            return offspring;
+        }
+    }
+}
+
+public static class CountingCrossover
+{
+    public static CountingCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> childCrossover, ObservationCounter counter, OperatorCountMetric metric)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childCrossover, counter, metric);
 }
 
 public static class CrossoverCounterExtensions

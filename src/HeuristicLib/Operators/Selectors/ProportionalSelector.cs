@@ -8,12 +8,7 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 public record ProportionalSelector<TCandidate>
     : StatelessSelector<TCandidate>
 {
-    public ProportionalSelector(bool windowing = true)
-    {
-        Windowing = windowing;
-    }
-
-    public bool Windowing { get; init; }
+    public bool Windowing { get; init; } = true;
 
     public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
         ProportionalSelector.Select(population, objective, count, random, Windowing);
@@ -22,7 +17,7 @@ public record ProportionalSelector<TCandidate>
 public static class ProportionalSelector
 {
     public static ProportionalSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, bool windowing = true)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(windowing);
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new() { Windowing = windowing };
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, bool windowing = true)
     {

@@ -15,7 +15,7 @@ public class GeneticAlgorithmBuilderTests
     [Fact]
     public void Build_CopiesConfiguredComponentsAndParameters()
     {
-        var creator = new UniformDistributedCreator(null, 3.0);
+        var creator = new UniformDistributedCreator { Maximum = 3.0 };
         var crossover = new SinglePointCrossover();
         var mutator = new GaussianMutator(0.1, 0.1);
         var selector = new RandomSelector<RealVector>();
@@ -47,7 +47,7 @@ public class GeneticAlgorithmBuilderTests
     public void GetBuilder_UsesCurrentDefaultParametersForUnconfiguredSettings()
     {
         var builder = GeneticAlgorithm.GetBuilder(
-          new UniformDistributedCreator(null, 3.0),
+          new UniformDistributedCreator { Maximum = 3.0 },
           new SinglePointCrossover(),
           new GaussianMutator(0.1, 0.1));
 

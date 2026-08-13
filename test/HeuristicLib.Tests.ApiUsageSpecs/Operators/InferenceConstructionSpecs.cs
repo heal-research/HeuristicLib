@@ -120,10 +120,10 @@ public class InferenceConstructionSpecs
         reconfiguredAlgorithm.Interceptor.ShouldBeSameAs(identityInterceptor);
         pipelineMutator.ChildMutators.Count.ShouldBe(2);
         fluentPipelineMutator.ChildMutators.Count.ShouldBe(2);
-        transformedCreator.Creator.ShouldBeSameAs(algorithm.Creator);
-        fluentTransformedCreator.Creator.ShouldBeSameAs(algorithm.Creator);
-        transformedCrossover.Crossover.ShouldBeSameAs(algorithm.Crossover);
-        fluentTransformedCrossover.Crossover.ShouldBeSameAs(algorithm.Crossover);
+        transformedCreator.SourceCreator.ShouldBeSameAs(algorithm.Creator);
+        fluentTransformedCreator.SourceCreator.ShouldBeSameAs(algorithm.Creator);
+        transformedCrossover.SourceCrossover.ShouldBeSameAs(algorithm.Crossover);
+        fluentTransformedCrossover.SourceCrossover.ShouldBeSameAs(algorithm.Crossover);
         pipelineInterceptor.ShouldNotBeNull();
         fluentPipelineInterceptor.ShouldNotBeNull();
         eliteSelector.SelectorForRemaining.ShouldBeSameAs(algorithm.Selector);

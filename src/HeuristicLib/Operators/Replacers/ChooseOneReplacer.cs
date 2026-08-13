@@ -15,19 +15,13 @@ public record ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>
 {
     public ValueArray<IReplacer<TCandidate, TSearchSpace, TProblem>> Replacers => InnerReplacers;
 
-    public ValueArray<double> Weights { get; }
+    public ValueArray<double> Weights { get; init; }
 
-    public ChooseOneReplacer(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers, IReadOnlyList<double>? weights = null)
+    public ChooseOneReplacer(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers)
         : base(replacers)
     {
         if (replacers.Count == 0)
             throw new ArgumentException("At least one replacer must be provided.", nameof(replacers));
-
-        IReadOnlyList<double> effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / replacers.Count, replacers.Count)];
-        if (effectiveWeights.Count != replacers.Count)
-            throw new ArgumentException("Weights must have the same length as replacers.", nameof(weights));
-
-        Weights = effectiveWeights.ToValueArray();
     }
 
     protected override MultiReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> innerReplacers) =>
@@ -51,5 +45,5 @@ public static class ChooseOneReplacer
     public static ChooseOneReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers, IReadOnlyList<double> weights)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new(replacers, weights);
+        new(replacers) { Weights = weights.ToValueArray() };
 }

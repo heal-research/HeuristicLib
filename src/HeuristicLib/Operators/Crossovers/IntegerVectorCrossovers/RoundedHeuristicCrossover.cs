@@ -5,24 +5,15 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 
-public record RoundedHeuristicCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
+public record RoundedHeuristicCrossover : SingleCandidateCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
-    public override IntegerVector Cross(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-      => Cross(random, parents.Parent1, parents.Parent2, searchSpace);
+    public override IntegerVector CrossParents(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace) =>
+        Cross(random, parents.Parent1, parents.Parent2, searchSpace);
 
-    public static IntegerVector Cross(
-      IRandomNumberGenerator random,
-      IntegerVector betterParent,
-      IntegerVector worseParent,
-      IntegerVectorSearchSpace searchSpace)
-      => Cross(random, betterParent, worseParent, searchSpace.Minimum, searchSpace.Maximum);
+    public static IntegerVector Cross(IRandomNumberGenerator random, IntegerVector betterParent, IntegerVector worseParent, IntegerVectorSearchSpace searchSpace) =>
+        Cross(random, betterParent, worseParent, searchSpace.Minimum, searchSpace.Maximum);
 
-    public static IntegerVector Cross(
-      IRandomNumberGenerator random,
-      IntegerVector betterParent,
-      IntegerVector worseParent,
-      IntegerVector minimum,
-      IntegerVector maximum)
+    public static IntegerVector Cross(IRandomNumberGenerator random, IntegerVector betterParent, IntegerVector worseParent, IntegerVector minimum, IntegerVector maximum)
     {
         if (betterParent.Count != worseParent.Count)
             throw new ArgumentException("Parents must have same length.", nameof(betterParent));

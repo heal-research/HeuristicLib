@@ -4,50 +4,65 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Creators;
 
+/// <summary>
+/// Chooses one child creator independently for each requested candidate and restores the results to assignment order.
+/// </summary>
 /// <remarks>
-/// Selection is performed independently for each candidate. Candidates assigned to the same creator are created as one batch and returned in their original assignment order.
+/// Candidates assigned to the same creator are requested as one batch, so each selected creator must return exactly
+/// the count assigned to it.
 /// </remarks>
-public record ChooseOneCreator<TCandidate, TSearchSpace, TProblem>
+public sealed record ChooseOneCreator<TCandidate, TSearchSpace, TProblem>
     : MultiCreator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ValueArray<ICreator<TCandidate, TSearchSpace, TProblem>> Creators => InnerCreators;
+    /// <summary>
+    /// Relative selection weight of each child creator, in child order. An empty collection selects every child
+    /// uniformly.
+    /// </summary>
+    /// <remarks>
+    /// Weights are retained exactly as configured rather than normalized, so omitting them stays distinguishable from
+    /// passing equal weights.
+    /// </remarks>
+    public ValueArray<double> Weights { get; init; }
 
-    public ValueArray<double> Weights { get; }
-
-    public ChooseOneCreator(IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> creators, IReadOnlyList<double>? weights = null)
-        : base(creators)
+    public ChooseOneCreator(IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> childCreators)
+        : base(childCreators)
     {
-        if (creators.Count == 0)
-            throw new ArgumentException("At least one creator must be provided.", nameof(creators));
-
-        IReadOnlyList<double> effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / creators.Count, creators.Count)];
-        if (effectiveWeights.Count != creators.Count)
-            throw new ArgumentException("Weights must have the same length as creators.", nameof(weights));
-
-        Weights = effectiveWeights.ToValueArray();
+        if (ChildCreators.Count == 0)
+            throw new ArgumentException("At least one creator must be provided.", nameof(childCreators));
     }
 
-    protected override MultiCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ImmutableArray<ICreatorInstance<TCandidate, TSearchSpace, TProblem>> innerCreators) =>
-        new Instance(innerCreators, new WeightedBatchDispatch(Weights));
+    protected override MultiCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<ICreatorInstance<TCandidate, TSearchSpace, TProblem>> childCreators)
+    {
+        if (Weights.Count > 0 && Weights.Count != ChildCreators.Count)
+            throw new InvalidOperationException("Weights must have the same length as creators.");
 
-    private sealed class Instance(ImmutableArray<ICreatorInstance<TCandidate, TSearchSpace, TProblem>> innerCreators, WeightedBatchDispatch dispatcher)
-        : MultiCreatorInstance<TCandidate, TSearchSpace, TProblem>(innerCreators)
+        return new Instance(childCreators, new WeightedBatchDispatch(Weights));
+    }
+
+    private sealed class Instance(ImmutableArray<ICreatorInstance<TCandidate, TSearchSpace, TProblem>> childCreators, WeightedBatchDispatch dispatcher)
+        : MultiCreatorInstance<TCandidate, TSearchSpace, TProblem>(childCreators)
     {
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            dispatcher.Dispatch(Enumerable.Range(0, count).ToArray(), InnerCreators, random, (creator, positions) => creator.Create(positions.Count, random, searchSpace, problem));
+            dispatcher.Dispatch(
+                Enumerable.Range(0, count).ToArray(),
+                ChildCreators,
+                random,
+                (random, searchSpace, problem),
+                static (creator, positions, state) => creator.Create(positions.Count, state.random, state.searchSpace, state.problem));
     }
 }
 
 public static class ChooseOneCreator
 {
-    public static ChooseOneCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> creators)
+    public static ChooseOneCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> childCreators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        => new(creators);
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childCreators);
 
-    public static ChooseOneCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> creators, IReadOnlyList<double> weights)
+    public static ChooseOneCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> childCreators, IReadOnlyList<double> weights)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(creators, weights);
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childCreators) { Weights = weights.ToValueArray() };
 }

@@ -10,7 +10,7 @@ public sealed record CountingInterceptor<TCandidate, TSearchSpace, TProblem, TSe
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public ObservationCounter Counter { get; }
+    public ObservationCounter Counter { get; init; }
 
     public CountingInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor, ObservationCounter counter)
         : base(interceptor, new ActionInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>((_, _, _, _, _) => counter.IncrementBy(1)))

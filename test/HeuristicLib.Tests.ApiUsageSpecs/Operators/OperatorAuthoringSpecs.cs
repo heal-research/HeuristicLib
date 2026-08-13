@@ -506,28 +506,28 @@ public class OperatorAuthoringSpecs
         return new ExecutionInstanceRegistry().Resolve(mutator);
     }
 
-    private sealed record PrefixingWrappingCreator(ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> InnerCreator)
-      : WrappingCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>(InnerCreator)
+    private sealed record PrefixingWrappingCreator(ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Child)
+      : WrappingCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>(Child)
     {
-        protected override WrappingCreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateCreatorInstance(ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> innerCreator) =>
-            new Instance(innerCreator);
+        protected override WrappingCreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childCreator) =>
+            new Instance(childCreator);
 
-        private sealed class Instance(ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> innerCreator)
-            : WrappingCreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>(innerCreator)
+        private sealed class Instance(ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childCreator)
+            : WrappingCreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>(childCreator)
         {
             public override IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
             {
-                var offspring = InnerCreator.Create(count, random, searchSpace, problem).ToArray();
-                offspring[0] = RealVector.Repeat(0.0, problem.TestFunction.Dimension);
-                return offspring;
+                var candidates = ChildCreator.Create(count, random, searchSpace, problem).ToArray();
+                candidates[0] = RealVector.Repeat(0.0, problem.TestFunction.Dimension);
+                return candidates;
             }
         }
     }
 
     private sealed record ConstantOriginCreator
-      : SingleSolutionCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+      : SingleCandidateCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        public override RealVector Create(
+        public override RealVector CreateCandidate(
           IRandomNumberGenerator random,
           RealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)
@@ -798,8 +798,8 @@ public class OperatorAuthoringSpecs
     private sealed record ForwardingCrossover(ICrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)
         : Crossover<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        protected override CrossoverInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateCrossoverInstance(ExecutionInstanceRegistry registry) =>
-            new Instance(registry.Resolve(Inner));
+        public override CrossoverInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+            new Instance(instanceRegistry.Resolve(Inner));
 
         private sealed class Instance(ICrossoverInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
             : CrossoverInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
@@ -810,9 +810,9 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record ConstantOneCreator
-      : SingleSolutionCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+      : SingleCandidateCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        public override RealVector Create(
+        public override RealVector CreateCandidate(
           IRandomNumberGenerator random,
           RealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)

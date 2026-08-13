@@ -28,7 +28,7 @@ public record AfterElapsedTimeTerminator<TCandidate>
         init => field = value > TimeSpan.Zero ? value : throw new ArgumentOutOfRangeException(nameof(MaximumElapsedTime), "MaximumElapsedTime must be positive.");
     }
 
-    public TimeProvider TimeProvider { get; }
+    public TimeProvider TimeProvider { get; init; }
 
     protected override ExecutionState CreateInitialState()
     {

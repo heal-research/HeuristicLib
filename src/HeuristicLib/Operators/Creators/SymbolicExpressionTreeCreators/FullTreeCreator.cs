@@ -13,7 +13,7 @@ public record FullTreeCreator : SymbolicExpressionTreeCreator
     ///   Function symbols are used for all nodes situated on a level above the maximum tree depth.
     ///   Nodes on the last tree level will have Terminal symbols.
     /// </summary>
-    public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Create(searchSpace, random);
+    public override SymbolicExpressionTree CreateCandidate(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Create(searchSpace, random);
 
     public static SymbolicExpressionTree Create(SymbolicExpressionTreeSearchSpace searchSpace, IRandomNumberGenerator random)
     {

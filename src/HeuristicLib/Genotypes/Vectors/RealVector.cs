@@ -396,6 +396,8 @@ public sealed class RealVector : Vector<double>, IEquatable<RealVector>
 
     public static int FloorToInteger(double value, int minimum, int maximum)
     {
+        if (double.IsNaN(value))
+            return Math.Clamp(0, minimum, maximum);
         if (value <= minimum)
             return minimum;
         if (value >= maximum)
@@ -406,6 +408,8 @@ public sealed class RealVector : Vector<double>, IEquatable<RealVector>
 
     public static int CeilToInteger(double value, int minimum, int maximum)
     {
+        if (double.IsNaN(value))
+            return Math.Clamp(0, minimum, maximum);
         if (value <= minimum)
             return minimum;
         if (value >= maximum)

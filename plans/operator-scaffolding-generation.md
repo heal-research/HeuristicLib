@@ -20,8 +20,8 @@ The operator rework is partially complete. This status is retained here so the s
 | --- | --- | --- |
 | Mutator | Reworked and accepted | Role and execution-instance arity ladders, stateless and stateful paths, `SingleCandidateMutator`, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. |
 | Selector | Reworked and accepted | Role and execution-instance arity ladders, stateless and stateful paths, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. Selection has no single-item base because it is inherently a whole-population operation. |
-| Creator | Migration outstanding | Still needs a separate migration and acceptance review. |
-| Crossover | Migration outstanding | Still needs a separate migration and acceptance review. |
+| Creator | Reworked, pending acceptance | Role and execution-instance arity ladders, stateless and stateful paths, `SingleCandidateCreator`, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. `PredefinedCandidatesCreator` declares its fallback child directly instead of wrapping it. |
+| Crossover | Reworked, pending acceptance | Role and execution-instance arity ladders, stateless and stateful paths, `SingleCandidateCrossover`, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. Crossover has no pipeline because it consumes parent groups rather than candidates produced by another crossover. |
 | Evaluator | Migration outstanding | Still needs a separate migration and acceptance review. |
 | Replacer | Migration outstanding | Still needs a separate migration and acceptance review. |
 | Interceptor | Migration outstanding | Still needs a separate migration and acceptance review, including its additional search-state shape. |

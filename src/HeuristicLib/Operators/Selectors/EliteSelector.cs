@@ -11,19 +11,18 @@ public record EliteSelector<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public EliteSelector(ISelector<TCandidate, TSearchSpace, TProblem> selectorForRemaining, int elites = 1)
+    public EliteSelector(ISelector<TCandidate, TSearchSpace, TProblem> selectorForRemaining)
     {
         SelectorForRemaining = selectorForRemaining;
-        Elites = elites;
     }
 
     /// <summary>
     /// Gets the selector that fills the places remaining after the elites have been taken. It is asked for the
     /// reduced count rather than for the complete selection.
     /// </summary>
-    public ISelector<TCandidate, TSearchSpace, TProblem> SelectorForRemaining { get; }
+    public ISelector<TCandidate, TSearchSpace, TProblem> SelectorForRemaining { get; init; }
 
-    public int Elites { get; }
+    public int Elites { get; init; } = 1;
 
     public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         new Instance(instanceRegistry.Resolve(SelectorForRemaining), Elites);
@@ -46,7 +45,7 @@ public static class EliteSelector
 {
     public static EliteSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector, int elites = 1)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(selector, elites);
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(selector) { Elites = elites };
 }
 
 public static class EliteSelectorExtensions

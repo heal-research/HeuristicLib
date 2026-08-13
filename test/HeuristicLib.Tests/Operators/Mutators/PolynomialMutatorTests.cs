@@ -10,7 +10,7 @@ public class PolynomialMutatorTests
     [Fact]
     public void Configuration_IsPubliclyInspectable()
     {
-        var mutator = new PolynomialMutator(eta: 30, atLeastOnce: true);
+        var mutator = new PolynomialMutator { Eta = 30, AtLeastOnce = true };
 
         mutator.Eta.ShouldBe(30);
         mutator.AtLeastOnce.ShouldBeTrue();

@@ -14,7 +14,7 @@ public abstract record WrappingMutator<TCandidate, TSearchSpace, TProblem>
         ChildMutator = childMutator;
     }
 
-    public IMutator<TCandidate, TSearchSpace, TProblem> ChildMutator { get; }
+    public IMutator<TCandidate, TSearchSpace, TProblem> ChildMutator { get; init; }
 
     public sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         CreateExecutionInstance(instanceRegistry.Resolve(ChildMutator));

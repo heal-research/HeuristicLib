@@ -12,8 +12,8 @@ public sealed record DurationMeasuringInterceptor<TCandidate, TSearchSpace, TPro
     where TSearchState : class, ISearchState
 {
     public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Interceptor => InnerInterceptor;
-    public ObservationDuration Duration { get; }
-    public TimeProvider TimeProvider { get; }
+    public ObservationDuration Duration { get; init; }
+    public TimeProvider TimeProvider { get; init; }
 
     public DurationMeasuringInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor, ObservationDuration duration)
         : this(interceptor, duration, TimeProvider.System)

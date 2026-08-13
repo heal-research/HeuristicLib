@@ -16,22 +16,22 @@ public sealed record ChooseOneSelector<TCandidate, TSearchSpace, TProblem>
     /// <summary>
     /// Gets the configured weights, or an empty array when all child selectors are selected uniformly.
     /// </summary>
-    public ValueArray<double> Weights { get; }
+    public ValueArray<double> Weights { get; init; }
 
-    public ChooseOneSelector(IReadOnlyList<ISelector<TCandidate, TSearchSpace, TProblem>> childSelectors, IReadOnlyList<double>? weights = null)
+    public ChooseOneSelector(IReadOnlyList<ISelector<TCandidate, TSearchSpace, TProblem>> childSelectors)
         : base(childSelectors)
     {
         if (ChildSelectors.Count == 0)
             throw new ArgumentException("At least one selector must be provided.", nameof(childSelectors));
-
-        Weights = weights?.ToValueArray() ?? [];
-
-        if (Weights.Count > 0 && Weights.Count != ChildSelectors.Count)
-            throw new ArgumentException("Weights must have the same length as selectors.", nameof(weights));
     }
 
-    protected override MultiSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> childSelectors) =>
-        new Instance(childSelectors, new WeightedBatchDispatch(Weights));
+    protected override MultiSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> childSelectors)
+    {
+        if (Weights.Count > 0 && Weights.Count != ChildSelectors.Count)
+            throw new InvalidOperationException("Weights must have the same length as selectors.");
+
+        return new Instance(childSelectors, new WeightedBatchDispatch(Weights));
+    }
 
     private sealed class Instance(ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> childSelectors, WeightedBatchDispatch dispatcher)
         : MultiSelectorInstance<TCandidate, TSearchSpace, TProblem>(childSelectors)
@@ -50,5 +50,5 @@ public static class ChooseOneSelector
 
     public static ChooseOneSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<ISelector<TCandidate, TSearchSpace, TProblem>> childSelectors, IReadOnlyList<double> weights)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(childSelectors, weights);
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(childSelectors) { Weights = weights.ToValueArray() };
 }

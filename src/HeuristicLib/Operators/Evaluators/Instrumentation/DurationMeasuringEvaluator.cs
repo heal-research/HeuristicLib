@@ -12,8 +12,8 @@ public sealed record DurationMeasuringEvaluator<TCandidate, TSearchSpace, TProbl
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator => InnerEvaluator;
-    public ObservationDuration Duration { get; }
-    public TimeProvider TimeProvider { get; }
+    public ObservationDuration Duration { get; init; }
+    public TimeProvider TimeProvider { get; init; }
 
     public DurationMeasuringEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, ObservationDuration duration)
         : this(evaluator, duration, TimeProvider.System)

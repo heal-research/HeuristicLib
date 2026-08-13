@@ -18,22 +18,22 @@ public sealed record ChooseOneMutator<TCandidate, TSearchSpace, TProblem>
     /// <summary>
     /// Gets the configured weights, or an empty array when all child mutators are selected uniformly.
     /// </summary>
-    public ValueArray<double> Weights { get; }
+    public ValueArray<double> Weights { get; init; }
 
-    public ChooseOneMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> childMutators, IReadOnlyList<double>? weights = null)
+    public ChooseOneMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> childMutators)
         : base(childMutators)
     {
         if (ChildMutators.Count == 0)
             throw new ArgumentException("At least one mutator must be provided.", nameof(childMutators));
-
-        Weights = weights?.ToValueArray() ?? [];
-
-        if (Weights.Count > 0 && Weights.Count != ChildMutators.Count)
-            throw new ArgumentException("Weights must have the same length as mutators.", nameof(weights));
     }
 
-    protected override MultiMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators) =>
-        new Instance(childMutators, new WeightedBatchDispatch(Weights));
+    protected override MultiMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators)
+    {
+        if (Weights.Count > 0 && Weights.Count != ChildMutators.Count)
+            throw new InvalidOperationException("Weights must have the same length as mutators.");
+
+        return new Instance(childMutators, new WeightedBatchDispatch(Weights));
+    }
 
     private sealed class Instance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedBatchDispatch dispatcher)
         : MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(childMutators)
@@ -58,7 +58,7 @@ public static class ChooseOneMutator
     public static ChooseOneMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> childMutators, IReadOnlyList<double> weights)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new(childMutators, weights);
+        new(childMutators) { Weights = weights.ToValueArray() };
 }
 
 public static class ChooseOneMutatorExtensions

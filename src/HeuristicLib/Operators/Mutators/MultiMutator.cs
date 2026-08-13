@@ -14,7 +14,7 @@ public abstract record MultiMutator<TCandidate, TSearchSpace, TProblem>
         ChildMutators = childMutators.ToValueArray();
     }
 
-    public ValueArray<IMutator<TCandidate, TSearchSpace, TProblem>> ChildMutators { get; }
+    public ValueArray<IMutator<TCandidate, TSearchSpace, TProblem>> ChildMutators { get; init; }
 
     public sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         CreateExecutionInstance([.. ChildMutators.Select(instanceRegistry.Resolve)]);

@@ -10,8 +10,8 @@ public sealed record DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ObservationDuration Duration { get; }
-    public TimeProvider TimeProvider { get; }
+    public ObservationDuration Duration { get; init; }
+    public TimeProvider TimeProvider { get; init; }
 
     public DurationMeasuringMutator(IMutator<TCandidate, TSearchSpace, TProblem> childMutator, ObservationDuration duration)
         : this(childMutator, duration, TimeProvider.System)

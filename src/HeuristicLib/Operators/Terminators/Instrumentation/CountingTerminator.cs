@@ -10,7 +10,7 @@ public sealed record CountingTerminator<TCandidate, TSearchSpace, TProblem, TSea
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public ObservationCounter Counter { get; }
+    public ObservationCounter Counter { get; init; }
 
     public CountingTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator, ObservationCounter counter)
         : base(terminator, new ActionTerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>((_, _, _, _) => counter.IncrementBy(1)))

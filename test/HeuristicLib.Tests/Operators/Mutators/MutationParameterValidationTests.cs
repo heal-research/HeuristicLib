@@ -57,7 +57,7 @@ public sealed class MutatorParameterSemanticsTests
     public void ArithmeticMutationSettings_PreserveUnconventionalValues(double value)
     {
         var gaussian = new GaussianMutator(mutationRate: 1, mutationStrength: value);
-        var polynomial = new PolynomialMutator(value);
+        var polynomial = new PolynomialMutator { Eta = value };
         var instance = new ExecutionInstanceRegistry().Resolve<IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>>(gaussian);
 
         instance.CurrentMutationStrength = value;

@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 public record ElitismReplacer<TCandidate>
   : StatelessReplacer<TCandidate>
 {
-    public int Elites { get; }
+    public int Elites { get; init; }
 
     public ElitismReplacer(int elites)
     {

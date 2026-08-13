@@ -41,7 +41,7 @@ public class MetaOptimizationTests
                 new GaussianMutator(0.5, 0.5),
                 new GaussianMutator(0.5, 1),
                 new PolynomialMutator(),
-                new PolynomialMutator(atLeastOnce: true)
+                new PolynomialMutator { AtLeastOnce = true }
             });
         var metaSpace = b.Build();
         var metaProblem = problem.AsMetaProblem(metaSpace, x =>

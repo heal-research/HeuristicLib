@@ -12,8 +12,8 @@ public sealed record DurationMeasuringReplacer<TCandidate, TSearchSpace, TProble
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public IReplacer<TCandidate, TSearchSpace, TProblem> Replacer => InnerReplacer;
-    public ObservationDuration Duration { get; }
-    public TimeProvider TimeProvider { get; }
+    public ObservationDuration Duration { get; init; }
+    public TimeProvider TimeProvider { get; init; }
 
     public DurationMeasuringReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, ObservationDuration duration)
         : this(replacer, duration, TimeProvider.System)

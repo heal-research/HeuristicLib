@@ -10,7 +10,7 @@ public sealed record ObservableSelector<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ValueArray<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
+    public ValueArray<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; init; }
 
     public ObservableSelector(ISelector<TCandidate, TSearchSpace, TProblem> childSelector, params IReadOnlyList<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : base(childSelector)

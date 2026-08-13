@@ -12,10 +12,10 @@ public record GrowTreeCreator : SymbolicExpressionTreeCreator
     ///   GetEvaluator a symbolic expression tree using the 'Grow' method.
     ///   All symbols are allowed for nodes, so the resulting trees can be of any shape and size.
     /// </summary>
-    public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Create(searchSpace, random);
+    public override SymbolicExpressionTree CreateCandidate(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Create(searchSpace, random);
 
-    public static SymbolicExpressionTree Create(SymbolicExpressionTreeSearchSpace searchSpace, IRandomNumberGenerator random)
-      => CreateTree(random, searchSpace);
+    public static SymbolicExpressionTree Create(SymbolicExpressionTreeSearchSpace searchSpace, IRandomNumberGenerator random) =>
+        CreateTree(random, searchSpace);
 
     private static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
     {

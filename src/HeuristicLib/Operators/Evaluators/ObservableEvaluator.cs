@@ -12,7 +12,7 @@ public record ObservableEvaluator<TCandidate, TSearchSpace, TProblem>
 {
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator => InnerEvaluator;
 
-    public ValueArray<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
+    public ValueArray<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; init; }
 
     public ObservableEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, params IReadOnlyList<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : base(evaluator)

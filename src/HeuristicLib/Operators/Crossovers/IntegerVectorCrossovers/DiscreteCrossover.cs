@@ -9,10 +9,10 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 /// It is implemented as described in Gwiazda, T.D. 2006.
 /// Genetic algorithms reference Volume I Crossover for single-objective numerical optimization problems, p.17.
 /// </remarks>
-public record DiscreteCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
+public record DiscreteCrossover : SingleCandidateCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
-    public override IntegerVector Cross(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-      => Cross(random, [parents.Parent1, parents.Parent2]);
+    public override IntegerVector CrossParents(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace) =>
+        Cross(random, [parents.Parent1, parents.Parent2]);
 
     public static IntegerVector Cross(IRandomNumberGenerator random, IReadOnlyList<IntegerVector> parents)
     {

@@ -40,7 +40,7 @@ Individual composition policies may require a stronger contract. A composition m
 
 This order restoration requires every selected child to return exactly one result for each assigned element. `ChooseOneCreator` therefore requires each child creator to return the assigned count. `ChooseOneCrossover` and `ChooseOneMutator` require each child to preserve its assigned batch size.
 
-Weights are relative and finite. They must be nonnegative and at least one weight must be greater than zero. Omitting weights assigns the same normalized weight to every child.
+Weights are relative and finite. They must be nonnegative and at least one weight must be greater than zero. Omitting weights selects uniformly across all children; the configuration retains an empty weight collection rather than materializing one weight per child, so an omitted weight list stays distinguishable from an explicitly uniform one.
 
 `ChooseOneSelector` and `ChooseOneReplacer` make one weighted choice for each complete operation call. The selected child receives the complete population inputs and requested count. This preserves the meaning of a selector or replacer policy as a decision over a complete population instead of mixing fragments from several policies.
 

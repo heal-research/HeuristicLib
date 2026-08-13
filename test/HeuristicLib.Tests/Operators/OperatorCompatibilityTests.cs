@@ -269,27 +269,27 @@ public record TestFunctionProblemSpecificAlgorithm : Algorithm<TestFunctionProbl
     protected override AlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) => throw new NotSupportedException();
 }
 
-public record IndependentCrossover<TCandidate> : SingleSolutionCrossover<TCandidate>
+public record IndependentCrossover<TCandidate> : SingleCandidateCrossover<TCandidate>
 {
-    public override TCandidate Cross(Parents<TCandidate> parents, IRandomNumberGenerator random) => throw new NotSupportedException();
+    public override TCandidate CrossParents(Parents<TCandidate> parents, IRandomNumberGenerator random) => throw new NotSupportedException();
 }
 
-public record PermutationSpecificCrossover : SingleSolutionCrossover<Permutation, PermutationSearchSpace>
+public record PermutationSpecificCrossover : SingleCandidateCrossover<Permutation, PermutationSearchSpace>
 {
-    public override Permutation Cross(Parents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace) => throw new NotSupportedException();
+    public override Permutation CrossParents(Parents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace) => throw new NotSupportedException();
 }
 
-public record TspSpecificCrossover : SingleSolutionCrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>
+public record TspSpecificCrossover : SingleCandidateCrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>
 {
-    public override Permutation Cross(Parents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace, TravelingSalesmanProblem problem) => throw new NotSupportedException();
+    public override Permutation CrossParents(Parents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace, TravelingSalesmanProblem problem) => throw new NotSupportedException();
 }
 
-public record RealVectorSpecificCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
+public record RealVectorSpecificCrossover : SingleCandidateCrossover<RealVector, RealVectorSearchSpace>
 {
-    public override RealVector Cross(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => throw new NotSupportedException();
+    public override RealVector CrossParents(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => throw new NotSupportedException();
 }
 
-public record TestFunctionProblemSpecificCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+public record TestFunctionProblemSpecificCrossover : SingleCandidateCrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem>
 {
-    public override RealVector Cross(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) => throw new NotSupportedException();
+    public override RealVector CrossParents(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) => throw new NotSupportedException();
 }

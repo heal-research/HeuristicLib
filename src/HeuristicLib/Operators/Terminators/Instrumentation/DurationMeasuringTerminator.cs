@@ -12,8 +12,8 @@ public sealed record DurationMeasuringTerminator<TCandidate, TSearchSpace, TProb
     where TSearchState : class, ISearchState
 {
     public ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Terminator => InnerTerminator;
-    public ObservationDuration Duration { get; }
-    public TimeProvider TimeProvider { get; }
+    public ObservationDuration Duration { get; init; }
+    public TimeProvider TimeProvider { get; init; }
 
     public DurationMeasuringTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator, ObservationDuration duration)
         : this(terminator, duration, TimeProvider.System)

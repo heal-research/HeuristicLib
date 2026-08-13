@@ -12,13 +12,13 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 /// <remarks>
 /// The mutator is invoked for every crossover result batch. A rate controlled mutator may be supplied when conditional mutation is explicitly desired.
 /// </remarks>
-public record TransformedCrossover<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> Crossover, IMutator<TCandidate, TSearchSpace, TProblem> Mutator)
+public record TransformedCrossover<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> SourceCrossover, IMutator<TCandidate, TSearchSpace, TProblem> TransformationMutator)
     : Crossover<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected override CrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ExecutionInstanceRegistry registry) =>
-        new Instance(registry.Resolve(Crossover), registry.Resolve(Mutator));
+    public override CrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new Instance(instanceRegistry.Resolve(SourceCrossover), instanceRegistry.Resolve(TransformationMutator));
 
     private sealed class Instance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> crossover, IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator)
         : CrossoverInstance<TCandidate, TSearchSpace, TProblem>

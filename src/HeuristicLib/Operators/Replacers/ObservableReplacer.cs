@@ -12,7 +12,7 @@ public record ObservableReplacer<TCandidate, TSearchSpace, TProblem>
 {
     public IReplacer<TCandidate, TSearchSpace, TProblem> Replacer => InnerReplacer;
 
-    public ValueArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
+    public ValueArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; init; }
 
     public ObservableReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, params IReadOnlyList<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : base(replacer)

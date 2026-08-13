@@ -6,13 +6,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 
 public record PolynomialMutator : SingleCandidateMutator<RealVector, RealVectorSearchSpace>
 {
-    public PolynomialMutator(double eta = 20, bool atLeastOnce = false)
-    {
-        Eta = eta;
-        AtLeastOnce = atLeastOnce;
-    }
-
-    public double Eta { get; init; }
+    public double Eta { get; init; } = 20;
 
     public bool AtLeastOnce { get; init; }
 

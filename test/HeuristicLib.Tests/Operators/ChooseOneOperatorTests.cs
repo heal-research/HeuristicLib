@@ -25,7 +25,7 @@ public class ChooseOneOperatorTests
         var second = new AddOffsetMutator(2);
         var mutators = new List<IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
         var weightValues = new[] { 1.0, 2.0 };
-        var configuration = new ChooseOneMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutators, weightValues);
+        var configuration = new ChooseOneMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutators) { Weights = weightValues.ToValueArray() };
 
         mutators.Clear();
         weightValues[0] = 100.0;
@@ -151,16 +151,16 @@ public class ChooseOneOperatorTests
         var selectorFromFactory = ChooseOneSelector.Create(new FirstCandidatesSelector(), new LastCandidatesSelector());
         var replacerFromFactory = ChooseOneReplacer.Create(new PreviousCandidatesReplacer(), new OffspringCandidatesReplacer());
 
-        new ChooseOneCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(creators).Weights.ShouldBe([0.5, 0.5]);
-        creatorFromFactory.Weights.ShouldBe([0.5, 0.5]);
-        new ChooseOneCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(crossovers).Weights.ShouldBe([0.5, 0.5]);
-        crossoverFromFactory.Weights.ShouldBe([0.5, 0.5]);
+        new ChooseOneCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(creators).Weights.ShouldBeEmpty();
+        creatorFromFactory.Weights.ShouldBeEmpty();
+        new ChooseOneCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(crossovers).Weights.ShouldBeEmpty();
+        crossoverFromFactory.Weights.ShouldBeEmpty();
         new ChooseOneMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutators).Weights.ShouldBeEmpty();
         mutatorFromFactory.Weights.ShouldBeEmpty();
         new ChooseOneSelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(selectors).Weights.ShouldBeEmpty();
         selectorFromFactory.Weights.ShouldBeEmpty();
-        new ChooseOneReplacer<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(replacers).Weights.ShouldBe([0.5, 0.5]);
-        replacerFromFactory.Weights.ShouldBe([0.5, 0.5]);
+        new ChooseOneReplacer<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(replacers).Weights.ShouldBeEmpty();
+        replacerFromFactory.Weights.ShouldBeEmpty();
     }
 
     [Fact]
@@ -173,8 +173,8 @@ public class ChooseOneOperatorTests
         };
 
         ImmutableArray<double> defaultWeights = default;
-        var emptyWeightsMutator = new ChooseOneMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutators, []);
-        var defaultWeightsMutator = new ChooseOneMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutators, defaultWeights);
+        var emptyWeightsMutator = new ChooseOneMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutators) { Weights = [] };
+        var defaultWeightsMutator = new ChooseOneMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutators) { Weights = defaultWeights.ToValueArray() };
 
         emptyWeightsMutator.Weights.ShouldBeEmpty();
         defaultWeightsMutator.Weights.ShouldBeEmpty();
@@ -242,12 +242,15 @@ public class ChooseOneOperatorTests
     [Fact]
     public void ChooseOneOperators_ShouldRejectInvalidWeights()
     {
-        Should.Throw<ArgumentException>(() => ChooseOneMutator.Create(
-          [new AddOffsetMutator(100)],
-          [1.0, 1.0]));
-        Should.Throw<ArgumentException>(() => ChooseOneCreator.Create(
-          [new ConstantCreator(100), new ConstantCreator(200)],
-          [1.0]));
+        // Weights are an optional setting rather than a constructor argument, so a count that disagrees with the
+        // children is detected when the execution instance is built rather than when the configuration is created.
+        var tooManyWeights = ChooseOneMutator.Create([new AddOffsetMutator(100)], [1.0, 1.0]);
+        var tooFewWeights = ChooseOneCreator.Create([new ConstantCreator(100), new ConstantCreator(200)], [1.0]);
+
+        Should.Throw<InvalidOperationException>(() => new Execution.ExecutionInstanceRegistry().Resolve(tooManyWeights));
+        Should.Throw<InvalidOperationException>(() => new Execution.ExecutionInstanceRegistry().Resolve(tooFewWeights));
+
+        // A missing child collection is still a constructor argument, so it still fails at construction.
         Should.Throw<ArgumentException>(() => ChooseOneReplacer.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>());
     }
 
@@ -513,19 +516,19 @@ public class ChooseOneOperatorTests
         public override int MutateCandidate(int parent, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => parent + Offset;
     }
 
-    private sealed record ConstantCreator(int Value) : SingleSolutionCreator<int, DummySearchSpace<int>>
+    private sealed record ConstantCreator(int Value) : SingleCandidateCreator<int, DummySearchSpace<int>>
     {
-        public override int Create(IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => Value;
+        public override int CreateCandidate(IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => Value;
     }
 
-    private sealed record FirstParentCrossover(int Offset) : SingleSolutionCrossover<int, DummySearchSpace<int>>
+    private sealed record FirstParentCrossover(int Offset) : SingleCandidateCrossover<int, DummySearchSpace<int>>
     {
-        public override int Cross(Parents<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => parents.Parent1 + Offset;
+        public override int CrossParents(Parents<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => parents.Parent1 + Offset;
     }
 
-    private sealed record SecondParentCrossover(int Offset) : SingleSolutionCrossover<int, DummySearchSpace<int>>
+    private sealed record SecondParentCrossover(int Offset) : SingleCandidateCrossover<int, DummySearchSpace<int>>
     {
-        public override int Cross(Parents<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => parents.Parent2 + Offset;
+        public override int CrossParents(Parents<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => parents.Parent2 + Offset;
     }
 
     private sealed record AddToStateInterceptor(int Offset)

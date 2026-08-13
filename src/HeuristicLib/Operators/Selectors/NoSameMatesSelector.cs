@@ -16,7 +16,7 @@ public record NoSameMatesSelector<TCandidate, TSearchSpace, TProblem>
         MaxAttempts = maxAttempts;
     }
 
-    public int MaxAttempts { get; }
+    public int MaxAttempts { get; init; }
 
     protected override WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector) =>
         new Instance(childSelector, MaxAttempts);
