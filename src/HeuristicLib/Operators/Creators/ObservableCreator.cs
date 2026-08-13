@@ -1,31 +1,28 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Creators;
 
-[Equatable]
-public partial record ObservableCreator<TCandidate, TSearchSpace, TProblem>
+public record ObservableCreator<TCandidate, TSearchSpace, TProblem>
   : WrappingCreator<TCandidate, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public ICreator<TCandidate, TSearchSpace, TProblem> Creator => InnerCreator;
 
-    [OrderedEquality]
-    public ImmutableArray<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
+    public ValueArray<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
     public ObservableCreator(ICreator<TCandidate, TSearchSpace, TProblem> creator, params IReadOnlyList<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : base(creator)
     {
-        Observers = observers.ToImmutableArray();
+        Observers = observers.ToValueArray();
     }
 
     protected override WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> innerCreator) =>
         new Instance(innerCreator, Observers);
 
-    private sealed class Instance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> innerCreator, ImmutableArray<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+    private sealed class Instance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> innerCreator, ValueArray<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem>(innerCreator)
     {
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)

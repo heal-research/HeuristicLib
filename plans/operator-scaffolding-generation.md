@@ -126,7 +126,7 @@ Topology bases stay at full role arity because their generic arguments type the 
 - Tier 2A can generate a wrapping topology after the role ladder is proven.
 - Tier 2B may generate a multi topology only after the generator owns or otherwise deliberately preserves ordered structural equality for its child collection.
 
-Do not emit `Multi*` while relying on `Generator.Equals` to discover a generated child property. Ordinary source generators cannot consume one another's generated output in the same compilation. If no clear equality strategy is accepted, `Multi*` remains handwritten and Tier 2B is skipped.
+A generated `Multi*` child collection must be a `ValueArray<T>` property, which carries ordered structural equality in the member type and needs no cooperating equality generator. Do not emit a child collection typed `ImmutableArray<T>`, `T[]` or `IReadOnlyList<T>`; those compare by reference and would silently break configuration equality.
 
 ### Tier 3: optional authoring conveniences
 
@@ -306,13 +306,15 @@ The supported declaration contract must state how it handles inherited and overl
 
 The execution registry resolves configurations by object reference. Structural record equality does not control execution-instance sharing.
 
-Structural equality still matters as a public configuration contract. `ImmutableArray<T>` uses reference-based default equality, so ordered topology collections need a deliberate structural-equality implementation. The current `Generator.Equals` generator cannot inspect properties produced by another ordinary source generator in the same compilation.
+Structural equality still matters as a public configuration contract. This is now carried by the member type: ordered configuration collections use `ValueArray<T>`, which compares its elements, so a record holding one gets correct equality from the compiler-synthesized `Equals` and `GetHashCode`. `Generator.Equals` has been removed from the repository.
+
+This resolves the former Tier 2B blocker. The earlier constraint was that ordinary source generators cannot consume one another's output in the same compilation, so `Generator.Equals` could not see a generated child property. A generator emitting a `ValueArray<T>` property now needs no cooperating equality generator at all.
 
 Therefore:
 
 - Tier 1 and Tier 2A must not introduce unreviewed equality-sensitive state;
-- Tier 2B is blocked until the operator generator itself emits and tests the required equality behavior, or another explicit strategy is accepted;
-- reference-based child-array equality must never appear as an accidental fallback.
+- Tier 2B may emit a `Multi*` child collection as a `ValueArray<T>` property, and must test the resulting equality;
+- reference-based child-array equality must never appear as an accidental fallback, which means a generated collection member must never be an `ImmutableArray<T>`, a `T[]` or an `IReadOnlyList<T>`.
 
 ### Performance
 

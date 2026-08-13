@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -6,26 +5,23 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-[Equatable]
-public sealed partial record ObservableSelector<TCandidate, TSearchSpace, TProblem>
+public sealed record ObservableSelector<TCandidate, TSearchSpace, TProblem>
     : WrappingSelector<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [OrderedEquality]
-    public ImmutableArray<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
+    public ValueArray<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
     public ObservableSelector(ISelector<TCandidate, TSearchSpace, TProblem> childSelector, params IReadOnlyList<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : base(childSelector)
     {
-        var immutableObservers = observers.ToImmutableArray();
-        Observers = immutableObservers.IsDefault ? [] : immutableObservers;
+        Observers = observers.ToValueArray();
     }
 
     protected override WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector) =>
         new Instance(childSelector, Observers);
 
-    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, ImmutableArray<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, ValueArray<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(childSelector)
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)

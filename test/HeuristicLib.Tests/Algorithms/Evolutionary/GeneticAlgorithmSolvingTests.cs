@@ -27,7 +27,7 @@ public class GeneticAlgorithmSolvingTests
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken);
 
-        result.Population.EvaluatedCandidates.Length.ShouldBe(5);
+        result.Population.EvaluatedCandidates.Count.ShouldBe(5);
         result.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
     }
 
@@ -43,7 +43,7 @@ public class GeneticAlgorithmSolvingTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(5);
-        results.All(result => result.Population.EvaluatedCandidates.Length == 5).ShouldBeTrue();
+        results.All(result => result.Population.EvaluatedCandidates.Count == 5).ShouldBeTrue();
         results.SelectMany(result => result.Population.EvaluatedCandidates)
                .All(solution => problem.SearchSpace.Contains(solution.Candidate))
                .ShouldBeTrue();
@@ -64,7 +64,7 @@ public class GeneticAlgorithmSolvingTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(1);
-        results.Single().Population.EvaluatedCandidates.Length.ShouldBe(5);
+        results.Single().Population.EvaluatedCandidates.Count.ShouldBe(5);
         results.Single().Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
     }
 
@@ -83,7 +83,7 @@ public class GeneticAlgorithmSolvingTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(3);
-        results.All(result => result.Population.EvaluatedCandidates.Length == 5).ShouldBeTrue();
+        results.All(result => result.Population.EvaluatedCandidates.Count == 5).ShouldBeTrue();
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class GeneticAlgorithmSolvingTests
           TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(2);
-        results.All(result => result.Population.EvaluatedCandidates.Length == 5).ShouldBeTrue();
+        results.All(result => result.Population.EvaluatedCandidates.Count == 5).ShouldBeTrue();
     }
 
     [Fact]

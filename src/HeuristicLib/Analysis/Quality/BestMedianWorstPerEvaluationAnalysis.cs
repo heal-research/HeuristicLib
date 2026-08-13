@@ -53,7 +53,7 @@ public sealed class BestMedianWorstPerEvaluationAnalysisState<TCandidate>
 
     public void AfterInterception(PopulationState<TCandidate> currentState, ObjectiveDirections objective)
     {
-        if (currentState.Population.EvaluatedCandidates.Length == 0)
+        if (currentState.Population.EvaluatedCandidates.Count == 0)
         {
             throw new InvalidOperationException("Population is empty, cannot determine best/median/worst solution.");
         }

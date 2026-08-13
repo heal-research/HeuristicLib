@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -6,27 +5,25 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-[Equatable]
-public partial record ObservableReplacer<TCandidate, TSearchSpace, TProblem>
+public record ObservableReplacer<TCandidate, TSearchSpace, TProblem>
   : WrappingReplacer<TCandidate, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public IReplacer<TCandidate, TSearchSpace, TProblem> Replacer => InnerReplacer;
 
-    [OrderedEquality]
-    public ImmutableArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
+    public ValueArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
     public ObservableReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, params IReadOnlyList<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : base(replacer)
     {
-        Observers = observers.ToImmutableArray();
+        Observers = observers.ToValueArray();
     }
 
     protected override WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> innerReplacer) =>
         new Instance(innerReplacer, Observers);
 
-    private sealed class Instance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> innerReplacer, ImmutableArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
+    private sealed class Instance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> innerReplacer, ValueArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem>(innerReplacer)
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)

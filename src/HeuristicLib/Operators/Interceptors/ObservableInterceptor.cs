@@ -1,12 +1,10 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-[Equatable]
-public partial record ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+public record ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
   : WrappingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -14,19 +12,18 @@ public partial record ObservableInterceptor<TCandidate, TSearchSpace, TProblem, 
 {
     public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Interceptor => InnerInterceptor;
 
-    [OrderedEquality]
-    public ImmutableArray<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> Observers { get; }
+    public ValueArray<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> Observers { get; }
 
     public ObservableInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor, params IReadOnlyList<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
         : base(interceptor)
     {
-        Observers = observers.ToImmutableArray();
+        Observers = observers.ToValueArray();
     }
 
     protected override WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerInterceptor) =>
         new Instance(innerInterceptor, Observers);
 
-    private sealed class Instance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerInterceptor, ImmutableArray<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
+    private sealed class Instance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerInterceptor, ValueArray<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
         : WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(innerInterceptor)
     {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, TProblem problem)

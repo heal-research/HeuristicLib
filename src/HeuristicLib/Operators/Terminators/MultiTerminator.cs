@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -6,19 +5,17 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-[Equatable]
-public abstract partial record MultiTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+public abstract record MultiTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
     : Terminator<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [OrderedEquality]
-    protected ImmutableArray<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> InnerTerminators { get; }
+    protected ValueArray<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> InnerTerminators { get; }
 
     protected MultiTerminator(IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> innerTerminators)
     {
-        InnerTerminators = innerTerminators.ToImmutableArray();
+        InnerTerminators = innerTerminators.ToValueArray();
     }
 
     protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) =>

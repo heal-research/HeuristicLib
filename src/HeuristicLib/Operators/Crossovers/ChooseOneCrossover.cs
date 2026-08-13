@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -6,19 +5,14 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-[Equatable]
-public partial record ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>
+public record ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>
     : MultiCrossover<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [IgnoreEquality] public ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> Crossovers => InnerCrossovers;
+    public ValueArray<ICrossover<TCandidate, TSearchSpace, TProblem>> Crossovers => InnerCrossovers;
 
-    [OrderedEquality]
-    public ImmutableArray<double> Weights { get; }
-
-    [IgnoreEquality]
-    private readonly WeightedBatchDispatch dispatcher;
+    public ValueArray<double> Weights { get; }
 
     public ChooseOneCrossover(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers, IReadOnlyList<double>? weights = null)
         : base(crossovers)
@@ -30,12 +24,11 @@ public partial record ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>
         if (effectiveWeights.Count != crossovers.Count)
             throw new ArgumentException("Weights must have the same length as crossovers.", nameof(weights));
 
-        dispatcher = new WeightedBatchDispatch(effectiveWeights);
-        Weights = dispatcher.Weights;
+        Weights = effectiveWeights.ToValueArray();
     }
 
     protected override MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> innerCrossovers) =>
-        new Instance(innerCrossovers, dispatcher);
+        new Instance(innerCrossovers, new WeightedBatchDispatch(Weights));
 
     private sealed class Instance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> innerCrossovers, WeightedBatchDispatch dispatcher)
         : MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem>(innerCrossovers)

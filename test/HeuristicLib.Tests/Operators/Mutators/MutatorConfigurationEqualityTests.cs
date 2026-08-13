@@ -225,8 +225,57 @@ public class MutatorConfigurationEqualityTests
         left.ShouldNotBe(right);
     }
 
+    [Fact]
+    public void HandwrittenMultiMutator_ComparesChildMutatorsWithoutAnyEqualityDeclaration()
+    {
+        var left = new FirstOfMutator([new AddOffsetMutator(1), new AddOffsetMutator(2)]);
+        var right = new FirstOfMutator([new AddOffsetMutator(1), new AddOffsetMutator(2)]);
+
+        left.ShouldBe(right);
+        left.GetHashCode().ShouldBe(right.GetHashCode());
+        left.ShouldNotBe(new FirstOfMutator([new AddOffsetMutator(2), new AddOffsetMutator(1)]));
+        left.ShouldNotBe(new FirstOfMutator([new AddOffsetMutator(1)]));
+    }
+
+    [Fact]
+    public void HandwrittenMultiMutator_SnapshotsConfiguredChildMutators()
+    {
+        var first = new AddOffsetMutator(1);
+        var second = new AddOffsetMutator(2);
+        var childMutators = new List<IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var mutator = new FirstOfMutator(childMutators);
+
+        childMutators.Clear();
+
+        mutator.ChildMutators.ShouldBe([first, second]);
+    }
+
     private sealed record AddOffsetMutator(int Offset) : SingleCandidateMutator<int, DummySearchSpace<int>>
     {
         public override int MutateCandidate(int parent, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => parent + Offset;
+    }
+
+    /// <summary>
+    /// An externally authored topology carrying no equality attribute, generator or hand-written comparison. Its
+    /// structural equality follows from <c>ChildMutators</c> being a value array.
+    /// </summary>
+    private sealed record FirstOfMutator
+        : MultiMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+    {
+        public FirstOfMutator(IReadOnlyList<IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childMutators)
+            : base(childMutators)
+        {
+        }
+
+        protected override MultiMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(
+            ImmutableArray<IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childMutators) =>
+            new Instance(childMutators);
+
+        private sealed class Instance(ImmutableArray<IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childMutators)
+            : MultiMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childMutators)
+        {
+            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+                ChildMutators[0].Mutate(parents, random, searchSpace, problem);
+        }
     }
 }

@@ -1,24 +1,20 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-[Equatable]
-public abstract partial record MultiSelector<TCandidate, TSearchSpace, TProblem>
+public abstract record MultiSelector<TCandidate, TSearchSpace, TProblem>
     : Selector<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     protected MultiSelector(IReadOnlyList<ISelector<TCandidate, TSearchSpace, TProblem>> childSelectors)
     {
-        var immutableChildSelectors = childSelectors.ToImmutableArray();
-        ChildSelectors = immutableChildSelectors.IsDefault ? [] : immutableChildSelectors;
+        ChildSelectors = childSelectors.ToValueArray();
     }
 
-    [OrderedEquality]
-    public ImmutableArray<ISelector<TCandidate, TSearchSpace, TProblem>> ChildSelectors { get; }
+    public ValueArray<ISelector<TCandidate, TSearchSpace, TProblem>> ChildSelectors { get; }
 
     public sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         CreateExecutionInstance([.. ChildSelectors.Select(instanceRegistry.Resolve)]);

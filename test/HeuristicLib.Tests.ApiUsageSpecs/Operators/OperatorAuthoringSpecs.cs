@@ -123,7 +123,7 @@ public class OperatorAuthoringSpecs
 
         observable.ChildMutator.ShouldBeSameAs(childMutator);
         observable.Observers.ShouldBe([observer]);
-        callbackObservable.Observers.Length.ShouldBe(1);
+        callbackObservable.Observers.Count.ShouldBe(1);
         counting.ChildMutator.ShouldBeSameAs(childMutator);
     }
 
@@ -346,7 +346,7 @@ public class OperatorAuthoringSpecs
         observable.Observers.ShouldBe([observer]);
         staticObservable.ChildSelector.ShouldBeSameAs(childSelector);
         staticObservable.Observers.ShouldBe([observer]);
-        callbackObservable.Observers.Length.ShouldBe(1);
+        callbackObservable.Observers.Count.ShouldBe(1);
         counting.ChildSelector.ShouldBeSameAs(childSelector);
         chooseOne.ChildSelectors[0].ShouldBeSameAs(childSelector);
     }

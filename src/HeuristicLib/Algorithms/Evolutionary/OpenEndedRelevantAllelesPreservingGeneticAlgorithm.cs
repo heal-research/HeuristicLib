@@ -67,7 +67,7 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
             var oldPopulation = previousState.Population.EvaluatedCandidates;
             IReadOnlyList<EvaluatedCandidate<TCandidate>> newPop;
 
-            if (oldPopulation.Length <= 0)
+            if (oldPopulation.Count <= 0)
             {
                 var initialCandidates = creator.Create(populationSize, random, problem.SearchSpace, problem);
                 var initialFitnesses = evaluator.Evaluate(initialCandidates, random, problem.SearchSpace, problem);

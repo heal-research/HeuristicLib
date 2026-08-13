@@ -1,15 +1,12 @@
 using System.Collections;
-using Generator.Equals;
 
 namespace HEAL.HeuristicLib.Experiments;
 
-[Equatable]
-public sealed partial class Grid<T> : IEnumerable<T>
+public sealed record Grid<T> : IEnumerable<T>
 {
     public T Prototype { get; }
 
-    [OrderedEquality]
-    public ImmutableArray<IGridParameter<T>> Parameters { get; } = [];
+    public ValueArray<IGridParameter<T>> Parameters { get; }
 
     public Grid(T prototype)
     {
@@ -19,17 +16,15 @@ public sealed partial class Grid<T> : IEnumerable<T>
     public Grid(T prototype, IReadOnlyList<IGridParameter<T>> parameters)
     {
         Prototype = prototype;
-        Parameters = parameters.ToImmutableArray();
+        Parameters = parameters.ToValueArray();
     }
 
     public Grid<T> VaryBy<TProblem>(IReadOnlyList<TProblem> values, Func<T, TProblem, T> configurator)
     {
         if (values.Count == 0)
-        {
             throw new ArgumentException("A grid dimension must contain at least one value.", nameof(values));
-        }
 
-        return new(Prototype, Parameters.Add(new GridParameter<T, TProblem>(values, configurator)));
+        return new(Prototype, [.. Parameters, new GridParameter<T, TProblem>(values, configurator)]);
     }
 
     public ImmutableArray<T> GetConfigurations()
@@ -51,15 +46,15 @@ public interface IGridParameter<T>
 
 public sealed record GridParameter<T, TParam> : IGridParameter<T>
 {
-    public ImmutableArray<TParam> Values { get; }
+    public ValueArray<TParam> Values { get; }
 
     public Func<T, TParam, T> Configurator { get; }
 
-    public int Count => Values.Length;
+    public int Count => Values.Count;
 
     public GridParameter(IReadOnlyList<TParam> values, Func<T, TParam, T> configurator)
     {
-        Values = values.ToImmutableArray();
+        Values = values.ToValueArray();
         Configurator = configurator;
     }
 

@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -9,8 +8,7 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 /// <summary>
 /// Selects one child selector by weight for each complete selection call.
 /// </summary>
-[Equatable]
-public sealed partial record ChooseOneSelector<TCandidate, TSearchSpace, TProblem>
+public sealed record ChooseOneSelector<TCandidate, TSearchSpace, TProblem>
     : MultiSelector<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -18,19 +16,17 @@ public sealed partial record ChooseOneSelector<TCandidate, TSearchSpace, TProble
     /// <summary>
     /// Gets the configured weights, or an empty array when all child selectors are selected uniformly.
     /// </summary>
-    [OrderedEquality]
-    public ImmutableArray<double> Weights { get; }
+    public ValueArray<double> Weights { get; }
 
     public ChooseOneSelector(IReadOnlyList<ISelector<TCandidate, TSearchSpace, TProblem>> childSelectors, IReadOnlyList<double>? weights = null)
         : base(childSelectors)
     {
-        if (ChildSelectors.Length == 0)
+        if (ChildSelectors.Count == 0)
             throw new ArgumentException("At least one selector must be provided.", nameof(childSelectors));
 
-        var immutableWeights = weights?.ToImmutableArray() ?? [];
-        Weights = immutableWeights.IsDefault ? [] : immutableWeights;
+        Weights = weights?.ToValueArray() ?? [];
 
-        if (Weights.Length > 0 && Weights.Length != ChildSelectors.Length)
+        if (Weights.Count > 0 && Weights.Count != ChildSelectors.Count)
             throw new ArgumentException("Weights must have the same length as selectors.", nameof(weights));
     }
 

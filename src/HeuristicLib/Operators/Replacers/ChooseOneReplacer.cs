@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -9,20 +8,14 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 /// <summary>
 /// Selects one child replacer by weight for each complete replacement call.
 /// </summary>
-[Equatable]
-public partial record ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>
+public record ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>
     : MultiReplacer<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [IgnoreEquality]
-    public ImmutableArray<IReplacer<TCandidate, TSearchSpace, TProblem>> Replacers => InnerReplacers;
+    public ValueArray<IReplacer<TCandidate, TSearchSpace, TProblem>> Replacers => InnerReplacers;
 
-    [OrderedEquality]
-    public ImmutableArray<double> Weights { get; }
-
-    [IgnoreEquality]
-    private readonly WeightedBatchDispatch dispatcher;
+    public ValueArray<double> Weights { get; }
 
     public ChooseOneReplacer(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers, IReadOnlyList<double>? weights = null)
         : base(replacers)
@@ -34,12 +27,11 @@ public partial record ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>
         if (effectiveWeights.Count != replacers.Count)
             throw new ArgumentException("Weights must have the same length as replacers.", nameof(weights));
 
-        dispatcher = new WeightedBatchDispatch(effectiveWeights);
-        Weights = dispatcher.Weights;
+        Weights = effectiveWeights.ToValueArray();
     }
 
     protected override MultiReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> innerReplacers) =>
-        new Instance(innerReplacers, dispatcher);
+        new Instance(innerReplacers, new WeightedBatchDispatch(Weights));
 
     private sealed class Instance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> innerReplacers, WeightedBatchDispatch dispatcher)
         : MultiReplacerInstance<TCandidate, TSearchSpace, TProblem>(innerReplacers)

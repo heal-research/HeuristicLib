@@ -1,12 +1,10 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-[Equatable]
-public partial record AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+public record AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
     : MultiTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>

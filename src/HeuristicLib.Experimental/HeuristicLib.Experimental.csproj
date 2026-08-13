@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <Using Include="System.Collections.Immutable" />
+        <Using Include="HEAL.HeuristicLib.Collections" />
     </ItemGroup>
 
     <ItemGroup>

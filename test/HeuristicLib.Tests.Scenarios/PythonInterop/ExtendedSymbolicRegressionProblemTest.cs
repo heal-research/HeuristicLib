@@ -16,7 +16,7 @@ public class ExtendedSymbolicRegressionProblemTest
         Func<SymbolicExpressionTree[], ObjectiveVector[], double[][]> populationCallback = (_, os) => os.Select(o => new[] { o[0], 0, 0, 0, 0 }).ToArray();
 
         var pop = ExtendedSymbolicRegressionProblem.RunDefault(file, 40, individualCallback, populationCallback);
-        pop.EvaluatedCandidates.Length.ShouldBe(300);
+        pop.EvaluatedCandidates.Count.ShouldBe(300);
         pop.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 5).ShouldBeTrue();
         pop.EvaluatedCandidates.All(solution => solution.ObjectiveVector.All(double.IsFinite)).ShouldBeTrue();
         var best = pop.EvaluatedCandidates.OrderByDescending(x => x.ObjectiveVector[0]).First();

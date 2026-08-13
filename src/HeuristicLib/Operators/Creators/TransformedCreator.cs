@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -9,8 +8,7 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 /// <summary>
 /// Creates a candidate batch and then always applies one mutator to the created batch.
 /// </summary>
-[Equatable]
-public partial record TransformedCreator<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> Creator, IMutator<TCandidate, TSearchSpace, TProblem> Mutator)
+public record TransformedCreator<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> Creator, IMutator<TCandidate, TSearchSpace, TProblem> Mutator)
     : Creator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>

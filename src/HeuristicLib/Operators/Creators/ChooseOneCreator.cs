@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,20 +7,14 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 /// <remarks>
 /// Selection is performed independently for each candidate. Candidates assigned to the same creator are created as one batch and returned in their original assignment order.
 /// </remarks>
-[Equatable]
-public partial record ChooseOneCreator<TCandidate, TSearchSpace, TProblem>
+public record ChooseOneCreator<TCandidate, TSearchSpace, TProblem>
     : MultiCreator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [IgnoreEquality]
-    public ImmutableArray<ICreator<TCandidate, TSearchSpace, TProblem>> Creators => InnerCreators;
+    public ValueArray<ICreator<TCandidate, TSearchSpace, TProblem>> Creators => InnerCreators;
 
-    [OrderedEquality]
-    public ImmutableArray<double> Weights { get; }
-
-    [IgnoreEquality]
-    private readonly WeightedBatchDispatch dispatcher;
+    public ValueArray<double> Weights { get; }
 
     public ChooseOneCreator(IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> creators, IReadOnlyList<double>? weights = null)
         : base(creators)
@@ -33,12 +26,11 @@ public partial record ChooseOneCreator<TCandidate, TSearchSpace, TProblem>
         if (effectiveWeights.Count != creators.Count)
             throw new ArgumentException("Weights must have the same length as creators.", nameof(weights));
 
-        dispatcher = new WeightedBatchDispatch(effectiveWeights);
-        Weights = dispatcher.Weights;
+        Weights = effectiveWeights.ToValueArray();
     }
 
     protected override MultiCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ImmutableArray<ICreatorInstance<TCandidate, TSearchSpace, TProblem>> innerCreators) =>
-        new Instance(innerCreators, dispatcher);
+        new Instance(innerCreators, new WeightedBatchDispatch(Weights));
 
     private sealed class Instance(ImmutableArray<ICreatorInstance<TCandidate, TSearchSpace, TProblem>> innerCreators, WeightedBatchDispatch dispatcher)
         : MultiCreatorInstance<TCandidate, TSearchSpace, TProblem>(innerCreators)

@@ -368,7 +368,7 @@ public class ObservableOperatorCounterTests
 
         var observable = new ObservableSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new FirstCandidatesSelector(), observers);
 
-        observable.Observers.IsDefault.ShouldBeFalse();
+        observable.Observers.IsEmpty.ShouldBeTrue();
         observable.Observers.ShouldBeEmpty();
     }
 

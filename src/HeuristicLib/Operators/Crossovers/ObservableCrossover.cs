@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -6,27 +5,25 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-[Equatable]
-public partial record ObservableCrossover<TCandidate, TSearchSpace, TProblem>
+public record ObservableCrossover<TCandidate, TSearchSpace, TProblem>
   : WrappingCrossover<TCandidate, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public ICrossover<TCandidate, TSearchSpace, TProblem> Crossover => InnerCrossover;
 
-    [OrderedEquality]
-    public ImmutableArray<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
+    public ValueArray<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
     public ObservableCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, params IReadOnlyList<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : base(crossover)
     {
-        Observers = observers.ToImmutableArray();
+        Observers = observers.ToValueArray();
     }
 
     protected override WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> innerCrossover) =>
         new Instance(innerCrossover, Observers);
 
-    private sealed class Instance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> innerCrossover, ImmutableArray<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers)
+    private sealed class Instance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> innerCrossover, ValueArray<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(innerCrossover)
     {
         public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)

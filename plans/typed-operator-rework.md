@@ -131,7 +131,7 @@ The generator does not eliminate the compiled public type matrix. It eliminates 
 - Duration measurement, homogeneous pipelines, per-item choice, whole-invocation choice, and transformations do not share one universal semantic shape. The generator must preserve those distinctions instead of hiding them behind one attribute model.
 - Invalid or ambiguous role shapes require precise compile-time diagnostics; generator exceptions or obscure downstream compiler errors are unacceptable.
 - Source generators are additive and cannot rewrite handwritten code.
-- Generators run without access to the output of other ordinary source generators. Generated properties and attributes therefore cannot be assumed to participate in `Generator.Equals` or another generator automatically.
+- Generators run without access to the output of other ordinary source generators, so a generated member cannot rely on a second generator to give it equality. Typing equality-sensitive collections as `ValueArray<T>` removes that dependency.
 - IDE behavior, generated-source navigation, incremental rebuild behavior, and NuGet analyzer delivery add maintenance responsibilities beyond ordinary library code.
 
 ### Required design decisions
@@ -180,14 +180,9 @@ Factories and fluent extensions are part of the public role API. Their names, ov
 
 Generated configurations must preserve immutable collection snapshots and the library's intended structural equality. This is especially important because the execution registry uses configurations to control instance identity and sharing.
 
-`Generator.Equals` cannot inspect properties produced by another ordinary source generator in the same run. Select and test one explicit strategy:
+This is settled: equality-sensitive collections are `ValueArray<T>`, which compares its elements, so a generated property participates in the compiler-synthesized record equality with no cooperating equality generator. `Generator.Equals` has been removed from the repository.
 
-- keep equality-sensitive properties on handwritten topology bases and generate derived role types;
-- generate the necessary equality implementation within the operator generator;
-- require a small handwritten partial declaration containing equality-sensitive properties; or
-- replace the relevant equality mechanism through a separate, deliberately reviewed design.
-
-Do not accept reference-based `ImmutableArray` equality or changed registry behavior as an accidental consequence of generation.
+Do not accept reference-based `ImmutableArray` equality or changed registry behavior as an accidental consequence of generation. A generated collection member typed `ImmutableArray<T>`, `T[]` or `IReadOnlyList<T>` would produce exactly that.
 
 #### Generator and attribute placement
 

@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -6,19 +5,17 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-[Equatable]
-public abstract partial record MultiInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+public abstract record MultiInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
     : Interceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [OrderedEquality]
-    protected ImmutableArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> InnerInterceptors { get; }
+    protected ValueArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> InnerInterceptors { get; }
 
     protected MultiInterceptor(IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> innerInterceptors)
     {
-        InnerInterceptors = innerInterceptors.ToImmutableArray();
+        InnerInterceptors = innerInterceptors.ToValueArray();
     }
 
     protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) =>

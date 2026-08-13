@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -11,8 +10,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 /// <remarks>
 /// Each selected mutator must return exactly one result for every parent assigned to it.
 /// </remarks>
-[Equatable]
-public sealed partial record ChooseOneMutator<TCandidate, TSearchSpace, TProblem>
+public sealed record ChooseOneMutator<TCandidate, TSearchSpace, TProblem>
     : MultiMutator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -20,19 +18,17 @@ public sealed partial record ChooseOneMutator<TCandidate, TSearchSpace, TProblem
     /// <summary>
     /// Gets the configured weights, or an empty array when all child mutators are selected uniformly.
     /// </summary>
-    [OrderedEquality]
-    public ImmutableArray<double> Weights { get; }
+    public ValueArray<double> Weights { get; }
 
     public ChooseOneMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> childMutators, IReadOnlyList<double>? weights = null)
         : base(childMutators)
     {
-        if (ChildMutators.Length == 0)
+        if (ChildMutators.Count == 0)
             throw new ArgumentException("At least one mutator must be provided.", nameof(childMutators));
 
-        var immutableWeights = weights?.ToImmutableArray() ?? [];
-        Weights = immutableWeights.IsDefault ? [] : immutableWeights;
+        Weights = weights?.ToValueArray() ?? [];
 
-        if (Weights.Length > 0 && Weights.Length != ChildMutators.Length)
+        if (Weights.Count > 0 && Weights.Count != ChildMutators.Count)
             throw new ArgumentException("Weights must have the same length as mutators.", nameof(weights));
     }
 

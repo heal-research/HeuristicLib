@@ -1,21 +1,19 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-[Equatable]
-public abstract partial record MultiEvaluator<TCandidate, TSearchSpace, TProblem>
+public abstract record MultiEvaluator<TCandidate, TSearchSpace, TProblem>
     : Evaluator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [OrderedEquality] protected ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> InnerEvaluators { get; }
+    protected ValueArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> InnerEvaluators { get; }
 
     protected MultiEvaluator(IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> innerEvaluators)
     {
-        InnerEvaluators = innerEvaluators.ToImmutableArray();
+        InnerEvaluators = innerEvaluators.ToValueArray();
     }
 
     protected sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(ExecutionInstanceRegistry registry) =>

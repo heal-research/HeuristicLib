@@ -107,18 +107,46 @@ Any type used as `TCandidate` must behave as an immutable value.
 Core configurations and durable value objects use snapshot semantics for retained collections.
 
 - Accept the narrowest read only abstraction that describes the required input shape.
-- Use HLib vector types for mathematical coordinates; use immutable arrays for immutable configuration topology.
+- Use HLib vector types for mathematical coordinates; use value arrays for immutable configuration topology.
 - Use `RealVector`, `IntegerVector` or `BoolVector` when positions represent mathematical dimensions and vector operations or broadcasting are meaningful.
-- Use `ImmutableArray<T>` when positions correspond to child operators, pipeline stages or another configuration collection. Accept such inputs as `IReadOnlyList<T>` and snapshot them.
+- Use `ValueArray<T>` when positions correspond to child operators, pipeline stages or another configuration collection. Accept such inputs as `IReadOnlyList<T>` and snapshot them with `ToValueArray()`.
 - Use `IReadOnlyList<T>` for finite ordered collection inputs.
-- Immediately snapshot retained collection inputs into `ImmutableArray<T>`.
-- Expose owned immutable collections as `ImmutableArray<T>`.
+- Immediately snapshot retained collection inputs into `ValueArray<T>`.
+- Expose owned immutable collections as `ValueArray<T>`.
 - Later changes to a caller owned input collection must not affect an existing configuration or durable value.
 - Keep transient operation batches on `IReadOnlyList<T>` when the implementation need not retain them.
 - Return mutable collections or arrays only when caller mutation or ownership transfer is intentional.
 - Reserve `IEnumerable<T>` for genuinely lazy or sequence oriented APIs.
 
 Snapshotting is shallow. An immutable collection retains its element references, so the elements must satisfy their own mutability contracts.
+
+### Choosing a collection type
+
+`ValueArray<T>` exists because structural equality is a public contract of every configuration, and `ImmutableArray<T>` does not provide it. Two `ImmutableArray<T>` values with equal contents compare **unequal**, because the comparison is by underlying array reference. A record holding one therefore silently loses structural equality, with no diagnostic. Carrying that equality in the member type rather than in an attribute or a generated `Equals` makes the correct behavior the default and removes the possibility of forgetting it.
+
+| Situation | Type |
+| --- | --- |
+| Collection retained by a configuration, record or other value object | `ValueArray<T>` |
+| Parameter accepting a finite ordered collection | `IReadOnlyList<T>`, snapshotted with `ToValueArray()` |
+| Mathematical coordinates with broadcasting | `RealVector`, `IntegerVector`, `BoolVector` |
+| Transient batch inside one operation, never retained | `IReadOnlyList<T>` |
+| Collection held by an **execution instance** | `ImmutableArray<T>` |
+| Lazy or sequence oriented API | `IEnumerable<T>` |
+
+Execution instances keep `ImmutableArray<T>`. They are resolved by reference identity through `ExecutionInstanceRegistry` and are never compared structurally, so value equality would cost without buying anything.
+
+`ValueArray<T>` is a `readonly struct` over an `ImmutableArray<T>`, so it adds no allocation, and a record holding one compares and hashes it without boxing.
+
+Construction:
+
+- `ValueArray.Create(a, b, c)` or a collection expression `ValueArray<T> x = [a, b, c]` build from elements. Note that a single argument that is not an array or span becomes **one element** — `ValueArray.Create(someList)` produces a one element array whose element is the list.
+- `items.ToValueArray()` snapshots any sequence, and does not copy an input that is already immutable. This is the form configuration constructors use.
+- `ValueArray.FromOwnedArray(array)` wraps an array without copying; the caller transfers ownership and must not mutate it afterwards.
+- An `ImmutableArray<T>` converts implicitly.
+
+The default value is an empty array, not an invalid one. Do not write `IsDefault` guards or normalize a collection member before assigning it; `ValueArray<T>` has no observable default state. Use `Count` rather than `Length`.
+
+Do not redeclare an inherited child collection with `new`. The compiler will not warn once `new` is present, and the derived record's synthesized equality then compares the shadowing member instead, reintroducing reference equality. A child that plays a specific part gets its own name rather than hiding the inherited one.
 
 ## Nullability and defensive validation
 
@@ -127,7 +155,7 @@ Nullable reference annotations are repository contracts.
 - Do not add runtime null checks for nonnullable parameters, properties or collection elements.
 - Handle null when a type is explicitly nullable or code operates at an untyped external boundary.
 - Do not add checks solely to defend against `null!`, disabled nullable analysis, reflection or another deliberate contract bypass.
-- Do not systematically validate `ImmutableArray<T>.IsDefault`. Assume immutable array parameters are initialized unless a specific API gives the default value meaning or a concrete domain invariant requires validation.
+- Do not systematically validate `ImmutableArray<T>.IsDefault`. Assume immutable array parameters are initialized unless a specific API gives the default value meaning or a concrete domain invariant requires validation. `ValueArray<T>` needs no such check at all: its default value is an empty array.
 
 Use minimal safety validation. Preserve caller supplied values exactly and accept unusual values when the operation has stable computational semantics for them. In particular, do not reject or clamp floating point values merely because they lie outside a conventional range or are `NaN` or infinite. IEEE comparison and propagation behavior is part of the computation unless a specific API defines a stricter contract.
 

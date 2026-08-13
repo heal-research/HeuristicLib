@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -13,8 +12,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 /// <remarks>
 /// The mutator is invoked for every crossover result batch. A rate controlled mutator may be supplied when conditional mutation is explicitly desired.
 /// </remarks>
-[Equatable]
-public partial record TransformedCrossover<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> Crossover, IMutator<TCandidate, TSearchSpace, TProblem> Mutator)
+public record TransformedCrossover<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> Crossover, IMutator<TCandidate, TSearchSpace, TProblem> Mutator)
     : Crossover<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>

@@ -33,7 +33,7 @@ public class AnalysisSpecs
         var analysisResult = run.GetResult(analysis);
 
         analysisResult.Count.ShouldBe(4);
-        finalState.Population.EvaluatedCandidates.Length.ShouldBe(16);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBe(16);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class AnalysisSpecs
         var result = run.GetResult(analysis);
 
         result.Count.ShouldBe(4);
-        finalState.Population.EvaluatedCandidates.Length.ShouldBe(16);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBe(16);
     }
 
     private static TestFunctionProblem CreateRastriginProblem(int dimension)

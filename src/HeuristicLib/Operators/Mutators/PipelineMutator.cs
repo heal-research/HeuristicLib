@@ -1,12 +1,10 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
-[Equatable]
-public sealed partial record PipelineMutator<TCandidate, TSearchSpace, TProblem>
+public sealed record PipelineMutator<TCandidate, TSearchSpace, TProblem>
     : MultiMutator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>

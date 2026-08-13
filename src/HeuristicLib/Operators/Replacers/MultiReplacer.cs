@@ -1,22 +1,19 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-[Equatable]
-public abstract partial record MultiReplacer<TCandidate, TSearchSpace, TProblem>
+public abstract record MultiReplacer<TCandidate, TSearchSpace, TProblem>
     : Replacer<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [OrderedEquality]
-    protected ImmutableArray<IReplacer<TCandidate, TSearchSpace, TProblem>> InnerReplacers { get; }
+    protected ValueArray<IReplacer<TCandidate, TSearchSpace, TProblem>> InnerReplacers { get; }
 
     protected MultiReplacer(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> innerReplacers)
     {
-        InnerReplacers = innerReplacers.ToImmutableArray();
+        InnerReplacers = innerReplacers.ToValueArray();
     }
 
     protected sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(ExecutionInstanceRegistry registry) =>

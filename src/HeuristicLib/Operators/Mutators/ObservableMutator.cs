@@ -1,30 +1,26 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
-[Equatable]
-public sealed partial record ObservableMutator<TCandidate, TSearchSpace, TProblem>
+public sealed record ObservableMutator<TCandidate, TSearchSpace, TProblem>
     : WrappingMutator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [OrderedEquality]
-    public ImmutableArray<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
+    public ValueArray<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
     public ObservableMutator(IMutator<TCandidate, TSearchSpace, TProblem> childMutator, params IReadOnlyList<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : base(childMutator)
     {
-        var immutableObservers = observers.ToImmutableArray();
-        Observers = immutableObservers.IsDefault ? [] : immutableObservers;
+        Observers = observers.ToValueArray();
     }
 
     protected override WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator) =>
         new Instance(childMutator, Observers);
 
-    private sealed class Instance(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator, ImmutableArray<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+    private sealed class Instance(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator, ValueArray<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem>(childMutator)
     {
         public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)

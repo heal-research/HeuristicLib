@@ -461,6 +461,16 @@ Drawing random values from an RNG changes its state, so draw order matters. Fork
 
 See also: Experiment, Run.
 
+### Value array
+
+Status: `Canonical`
+
+A value array is an immutable ordered collection that compares by its elements rather than by the identity of its backing storage, represented by `ValueArray<T>`.
+
+Configurations use a value array for every retained ordered collection, such as child operators, pipeline stages or weights, so that structurally identical configurations compare equal without an equality attribute or a hand-written comparison. An `ImmutableArray<T>` compares by underlying array reference and must not be used for collection state that participates in equality. Execution instances keep `ImmutableArray<T>`, because they are resolved by reference identity and never compared structurally.
+
+See also: Child operator, Configuration, Execution instance, Execution instance registry.
+
 ### Execution concurrency
 
 Status: `Canonical`

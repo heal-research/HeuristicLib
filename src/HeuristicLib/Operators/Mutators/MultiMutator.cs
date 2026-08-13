@@ -1,24 +1,20 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
-[Equatable]
-public abstract partial record MultiMutator<TCandidate, TSearchSpace, TProblem>
+public abstract record MultiMutator<TCandidate, TSearchSpace, TProblem>
     : Mutator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     protected MultiMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> childMutators)
     {
-        var immutableChildMutators = childMutators.ToImmutableArray();
-        ChildMutators = immutableChildMutators.IsDefault ? [] : immutableChildMutators;
+        ChildMutators = childMutators.ToValueArray();
     }
 
-    [OrderedEquality]
-    public ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> ChildMutators { get; }
+    public ValueArray<IMutator<TCandidate, TSearchSpace, TProblem>> ChildMutators { get; }
 
     public sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         CreateExecutionInstance([.. ChildMutators.Select(instanceRegistry.Resolve)]);

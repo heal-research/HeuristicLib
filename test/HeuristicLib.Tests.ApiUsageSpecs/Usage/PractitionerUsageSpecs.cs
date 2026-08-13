@@ -218,7 +218,7 @@ public class PractitionerUsageSpecs
           RandomNumberGenerator.Create(123),
           ct: TestContext.Current.CancellationToken);
 
-        finalState.Population.EvaluatedCandidates.Length.ShouldBe(24);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBe(24);
         finalState.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
     }
 
@@ -298,7 +298,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(2);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
         internalTerminator.CheckedStateCount.ShouldBe(2);
         internalTerminator.HasTerminated.ShouldBeFalse();
     }
@@ -329,7 +329,7 @@ public class PractitionerUsageSpecs
 
         statesByEvaluatorCalls.Count.ShouldBe(2);
         statesByEvaluatedCandidates.Count.ShouldBe(1);
-        statesByEvaluatedCandidates.Single().Population.EvaluatedCandidates.Length.ShouldBe(16);
+        statesByEvaluatedCandidates.Single().Population.EvaluatedCandidates.Count.ShouldBe(16);
     }
 
     [Fact]
@@ -353,7 +353,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(2);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -376,7 +376,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(2);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -409,9 +409,9 @@ public class PractitionerUsageSpecs
             .ToList();
 
         statesByMutatorCalls.Count.ShouldBe(2);
-        statesByMutatorCalls.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        statesByMutatorCalls.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
         statesByMutatedCandidates.Count.ShouldBe(3);
-        statesByMutatedCandidates.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        statesByMutatedCandidates.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -454,7 +454,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(3);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -480,7 +480,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(3);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -507,7 +507,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(2);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
         counter.CurrentCount.ShouldBeGreaterThanOrEqualTo(2);
     }
 
@@ -599,7 +599,7 @@ public class PractitionerUsageSpecs
           RandomNumberGenerator.Create(555),
           ct: TestContext.Current.CancellationToken);
 
-        finalState.Population.EvaluatedCandidates.Length.ShouldBe(8);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBe(8);
         finalState.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
     }
 
