@@ -207,7 +207,22 @@ public class OperatorAuthoringSpecs
     }
 
     [Fact]
-    public void SingleSolutionEvaluator_UsesGeneralExecutionConcurrency()
+    public void SingleCandidateEvaluator_CanEvaluateOneCandidateDirectly()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        SingleCandidateEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> evaluator = new ConcurrentFirstValueEvaluator();
+
+        var objective = evaluator.EvaluateCandidate(
+            RealVector.Repeat(2.0, 3),
+            RandomNumberGenerator.Create(5),
+            problem.SearchSpace,
+            problem);
+
+        objective.ShouldBe(new ObjectiveVector(2.0));
+    }
+
+    [Fact]
+    public void SingleCandidateEvaluator_UsesGeneralExecutionConcurrency()
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var evaluator = new ConcurrentFirstValueEvaluator { Concurrency = ExecutionConcurrency.Concurrent(2) };
@@ -250,6 +265,50 @@ public class OperatorAuthoringSpecs
         var objectives = instance.Evaluate([RealVector.Repeat(4.0, 3)], RandomNumberGenerator.Create(6), problem.SearchSpace, problem);
 
         objectives.ShouldBe([new ObjectiveVector(4.0)]);
+    }
+
+    [Fact]
+    public void EvaluatorTopologies_ExposeAndResolveConfiguredChildren()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        var child = new FirstValueEvaluator();
+        var wrapping = new ForwardingWrappingEvaluator(child);
+        var multi = new FirstMultiEvaluator([child, new FirstValueEvaluator()]);
+
+        var wrapped = wrapping.CreateExecutionInstance(new ExecutionInstanceRegistry())
+            .Evaluate([RealVector.Repeat(3.0, 3)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var first = multi.CreateExecutionInstance(new ExecutionInstanceRegistry())
+            .Evaluate([RealVector.Repeat(4.0, 3)], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+
+        wrapping.ChildEvaluator.ShouldBeSameAs(child);
+        multi.ChildEvaluators[0].ShouldBeSameAs(child);
+        wrapped.ShouldBe([new ObjectiveVector(3.0)]);
+        first.ShouldBe([new ObjectiveVector(4.0)]);
+    }
+
+    [Fact]
+    public void EvaluatorCompositionFactories_InferRoleTypes()
+    {
+        IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> child = new FirstValueEvaluator();
+        IEvaluatorObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem> observer =
+            new ActionEvaluatorObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem>((_, _, _, _) => { });
+
+        var observable = ObservableEvaluator.Create(child, observer);
+        var callbackObservable = ObservableEvaluator.Create(child, (_, _) => { });
+        var counting = CountingEvaluator.Create(child, new ObservationCounter(), OperatorCountMetric.Calls);
+        var duration = DurationMeasuringEvaluator.Create(child, new ObservationDuration());
+        var repeating = child.AsRepeated(3, ObjectiveVectorAggregation.Median);
+        var caching = child.WithCache(new FirstCoordinateCacheKeySelector());
+
+        observable.ChildEvaluator.ShouldBeSameAs(child);
+        observable.Observers.ShouldBe([observer]);
+        callbackObservable.Observers.Count.ShouldBe(1);
+        counting.ChildEvaluator.ShouldBeSameAs(child);
+        duration.ChildEvaluator.ShouldBeSameAs(child);
+        repeating.ChildEvaluator.ShouldBeSameAs(child);
+        repeating.Aggregator.ShouldBe(ObjectiveVectorAggregation.Median);
+        caching.ChildEvaluator.ShouldBeSameAs(child);
+        caching.KeySelector.ShouldBe(new FirstCoordinateCacheKeySelector());
     }
 
     [Fact]
@@ -394,6 +453,46 @@ public class OperatorAuthoringSpecs
         var replaced = instance.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(10), problem.SearchSpace, problem);
 
         replaced.ShouldBe(offspring);
+    }
+
+    [Fact]
+    public void ReplacerTopologies_ExposeAndResolveConfiguredChildren()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        var child = new OffspringReplacer();
+        var wrapping = new ForwardingWrappingReplacer(child);
+        var multi = new FirstMultiReplacer([child, new OffspringReplacer()]);
+        var previous = CreatePopulation(1.0);
+        var offspring = CreatePopulation(2.0);
+
+        var wrapped = wrapping.CreateExecutionInstance(new ExecutionInstanceRegistry())
+            .Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var first = multi.CreateExecutionInstance(new ExecutionInstanceRegistry())
+            .Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+
+        wrapping.ChildReplacer.ShouldBeSameAs(child);
+        multi.ChildReplacers[0].ShouldBeSameAs(child);
+        wrapped.ShouldBe(offspring);
+        first.ShouldBe(offspring);
+    }
+
+    [Fact]
+    public void ReplacerCompositionFactories_InferRoleTypes()
+    {
+        IReplacer<RealVector, RealVectorSearchSpace, TestFunctionProblem> child = new OffspringReplacer();
+        IReplacerObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem> observer =
+            new ActionReplacerObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem>((_, _, _, _, _, _) => { });
+
+        var observable = ObservableReplacer.Create(child, observer);
+        var callbackObservable = ObservableReplacer.Create(child, _ => { });
+        var counting = CountingReplacer.Create(child, new ObservationCounter(), OperatorCountMetric.Calls);
+        var duration = DurationMeasuringReplacer.Create(child, new ObservationDuration());
+
+        observable.ChildReplacer.ShouldBeSameAs(child);
+        observable.Observers.ShouldBe([observer]);
+        callbackObservable.Observers.Count.ShouldBe(1);
+        counting.ChildReplacer.ShouldBeSameAs(child);
+        duration.ChildReplacer.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -574,10 +673,15 @@ public class OperatorAuthoringSpecs
             candidates.Select(candidate => new ObjectiveVector(candidate[0])).ToArray();
     }
 
-    private sealed record ConcurrentFirstValueEvaluator : SingleSolutionEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private sealed record ConcurrentFirstValueEvaluator : SingleCandidateEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ObjectiveVector Evaluate(RealVector candidate, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+        public override ObjectiveVector EvaluateCandidate(RealVector candidate, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
             new(candidate[0]);
+    }
+
+    private sealed record FirstCoordinateCacheKeySelector : ICacheKeySelector<RealVector, double>
+    {
+        public double SelectKey(RealVector candidate) => candidate[0];
     }
 
     private sealed record CountingStatefulEvaluator : StatefulEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CountingStatefulEvaluator.ExecutionState>
@@ -599,14 +703,52 @@ public class OperatorAuthoringSpecs
     private sealed record ForwardingEvaluator(IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)
         : Evaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        protected override EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateEvaluatorInstance(ExecutionInstanceRegistry registry) =>
-            new Instance(registry.Resolve(Inner));
+        public override EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+            new Instance(instanceRegistry.Resolve(Inner));
 
         private sealed class Instance(IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
             : EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
             public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
                 inner.Evaluate(candidates, random, searchSpace, problem);
+        }
+    }
+
+    private sealed record ForwardingWrappingEvaluator
+        : WrappingEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+        public ForwardingWrappingEvaluator(IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> childEvaluator)
+            : base(childEvaluator)
+        {
+        }
+
+        protected override WrappingEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childEvaluator) =>
+            new Instance(childEvaluator);
+
+        private sealed class Instance(IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childEvaluator)
+            : WrappingEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>(childEvaluator)
+        {
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+                ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
+        }
+    }
+
+    private sealed record FirstMultiEvaluator
+        : MultiEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+        public FirstMultiEvaluator(IReadOnlyList<IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>> childEvaluators)
+            : base(childEvaluators)
+        {
+        }
+
+        protected override MultiEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ImmutableArray<IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>> childEvaluators) =>
+            new Instance(childEvaluators);
+
+        private sealed class Instance(ImmutableArray<IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>> childEvaluators)
+            : MultiEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>(childEvaluators)
+        {
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+                ChildEvaluators[0].Evaluate(candidates, random, searchSpace, problem);
         }
     }
 
@@ -716,14 +858,52 @@ public class OperatorAuthoringSpecs
     private sealed record ForwardingReplacer(IReplacer<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)
         : Replacer<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        protected override ReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateReplacerInstance(ExecutionInstanceRegistry registry) =>
-            new Instance(registry.Resolve(Inner));
+        public override ReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+            new Instance(instanceRegistry.Resolve(Inner));
 
         private sealed class Instance(IReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
             : ReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
             public override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
                 inner.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+        }
+    }
+
+    private sealed record ForwardingWrappingReplacer
+        : WrappingReplacer<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+        public ForwardingWrappingReplacer(IReplacer<RealVector, RealVectorSearchSpace, TestFunctionProblem> childReplacer)
+            : base(childReplacer)
+        {
+        }
+
+        protected override WrappingReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(IReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childReplacer) =>
+            new Instance(childReplacer);
+
+        private sealed class Instance(IReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childReplacer)
+            : WrappingReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>(childReplacer)
+        {
+            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+                ChildReplacer.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+        }
+    }
+
+    private sealed record FirstMultiReplacer
+        : MultiReplacer<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+        public FirstMultiReplacer(IReadOnlyList<IReplacer<RealVector, RealVectorSearchSpace, TestFunctionProblem>> childReplacers)
+            : base(childReplacers)
+        {
+        }
+
+        protected override MultiReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ImmutableArray<IReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>> childReplacers) =>
+            new Instance(childReplacers);
+
+        private sealed class Instance(ImmutableArray<IReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>> childReplacers)
+            : MultiReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>(childReplacers)
+        {
+            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+                ChildReplacers[0].Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
         }
     }
 

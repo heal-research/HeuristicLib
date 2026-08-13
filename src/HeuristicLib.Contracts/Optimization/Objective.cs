@@ -40,5 +40,15 @@ public static class ObjectiveExtensions
 
             return arr.Order(o.TotalOrderComparer).ElementAt(arr.Length / 2);
         }
+
+        public ObjectiveVector Mean()
+        {
+            var arr = values.ToArray();
+            if (arr.Length == 0)
+                throw new InvalidOperationException("Sequence contains no elements.");
+
+            var dimension = arr.Max(v => v.Count);
+            return new ObjectiveVector(Enumerable.Range(0, dimension).Select(i => arr.Average(v => v[i])));
+        }
     }
 }

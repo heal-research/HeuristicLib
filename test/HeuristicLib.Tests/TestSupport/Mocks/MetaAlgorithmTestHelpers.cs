@@ -29,7 +29,7 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
 {
     public int InstanceCount { get; private set; }
 
-    protected override IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateEvaluatorInstance(ExecutionInstanceRegistry registry)
+    public override IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         InstanceCount++;
         return new Instance();

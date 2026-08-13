@@ -36,7 +36,7 @@ Maximum concurrency describes active operations, not worker objects or dedicated
 
 `BatchExecution.Execute(...)` uses the same input for synchronous batches. `BatchExecution.Sequential(...)` and `BatchExecution.Parallel(...)` are convenience forms for fixed scheduling choices. All forms preserve output order and fork the supplied random number generator by input index. Concurrent execution follows normal TPL exception behavior, including aggregating callback failures.
 
-`SingleSolutionEvaluator` and `SingleSolutionProblem` default to sequential execution and expose `Concurrency` for explicitly enabling concurrent batch processing. When concurrent execution is selected, the single-candidate `Evaluate(...)` method may be called concurrently on the same execution instance. Implementations and their dependencies must support that use. Repeated evaluation also defaults to sequential execution because each repetition uses the same resolved inner evaluator instance.
+`SingleCandidateEvaluator` and `SingleSolutionProblem` default to sequential execution and expose `Concurrency` for explicitly enabling concurrent batch processing. When concurrent execution is selected, the single-candidate `EvaluateCandidate(...)` method may be called concurrently on the same execution instance. Implementations and their dependencies must support that use. `RepeatingEvaluator` likewise defaults to sequential execution because each repetition uses the same resolved child evaluator instance. Its `Repetitions` setting is the total evaluation count per candidate, and its objective-vector aggregation strategy defaults to component-wise arithmetic mean.
 
 ## The main authoring model
 

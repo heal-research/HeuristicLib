@@ -9,23 +9,23 @@ public abstract record WrappingReplacer<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IReplacer<TCandidate, TSearchSpace, TProblem> InnerReplacer { get; }
-
-    protected WrappingReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> innerReplacer)
+    protected WrappingReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer)
     {
-        InnerReplacer = innerReplacer;
+        ChildReplacer = childReplacer;
     }
 
-    protected sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(ExecutionInstanceRegistry registry) =>
-        CreateReplacerInstance(registry.Resolve(InnerReplacer));
+    public IReplacer<TCandidate, TSearchSpace, TProblem> ChildReplacer { get; init; }
 
-    protected abstract WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> innerReplacer);
+    public sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateExecutionInstance(instanceRegistry.Resolve(ChildReplacer));
+
+    protected abstract WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer);
 }
 
-public abstract class WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem>(IReplacerInstance<TCandidate, TSearchSpace, TProblem> innerReplacer)
+public abstract class WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem>(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer)
     : ReplacerInstance<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IReplacerInstance<TCandidate, TSearchSpace, TProblem> InnerReplacer { get; } = innerReplacer;
+    protected IReplacerInstance<TCandidate, TSearchSpace, TProblem> ChildReplacer { get; } = childReplacer;
 }

@@ -587,6 +587,25 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void CountReplacerCalls_DoesNotCountFailedCall()
+    {
+        var counter = new ObservationCounter();
+        var instance = new ThrowingReplacer().CountReplacerCalls(counter).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() => instance.Replace(
+            CreateEvaluatedCandidates([1]),
+            CreateEvaluatedCandidates([2]),
+            problem.Objective,
+            1,
+            RandomNumberGenerator.Create(1),
+            problem.SearchSpace,
+            problem));
+
+        counter.CurrentCount.ShouldBe(0);
+    }
+
+    [Fact]
     public void MeasureReplacerDuration_AddsElapsedReplacerExecutionDuration()
     {
         var duration = new ObservationDuration();
@@ -615,6 +634,25 @@ public class ObservableOperatorCounterTests
             problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+    }
+
+    [Fact]
+    public void MeasureReplacerDuration_RecordsFailedCall()
+    {
+        var duration = new ObservationDuration();
+        var instance = new ThrowingReplacer().MeasureReplacerDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() => instance.Replace(
+            CreateEvaluatedCandidates([1]),
+            CreateEvaluatedCandidates([2]),
+            problem.Objective,
+            1,
+            RandomNumberGenerator.Create(1),
+            problem.SearchSpace,
+            problem));
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     [Fact]
@@ -835,6 +873,20 @@ public class ObservableOperatorCounterTests
         {
             return previousPopulation.Concat(offspringPopulation).Take(count).ToArray();
         }
+    }
+
+    private sealed record ThrowingReplacer
+      : StatelessReplacer<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<int>> Replace(
+            IReadOnlyList<EvaluatedCandidate<int>> previousPopulation,
+            IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation,
+            ObjectiveDirections objective,
+            int count,
+            IRandomNumberGenerator random,
+            DummySearchSpace<int> searchSpace,
+            FuncProblem<int, DummySearchSpace<int>> problem) =>
+            throw new InvalidOperationException();
     }
 
     private sealed record AddOneInterceptor

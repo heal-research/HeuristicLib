@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public record ElitismReplacer<TCandidate>
+public sealed record ElitismReplacer<TCandidate>
   : StatelessReplacer<TCandidate>
 {
     public int Elites { get; init; }

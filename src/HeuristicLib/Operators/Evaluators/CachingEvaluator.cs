@@ -13,21 +13,27 @@ public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
     where TCandidate : notnull
     where TKey : notnull
 {
-    private readonly Func<TCandidate, TKey> keySelector;
-    private readonly long? sizeLimit;
+    /// <summary>
+    /// Gets the strategy that selects a candidate's cache key. Candidates that produce equal keys share one cached objective vector.
+    /// </summary>
+    public ICacheKeySelector<TCandidate, TKey> KeySelector { get; init; }
 
-    public CachingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, Func<TCandidate, TKey> keySelector, long? sizeLimit = null)
-      : base(evaluator)
+    /// <summary>
+    /// Gets the maximum number of cached objective vectors, or <see langword="null"/> when the cache has no configured size limit.
+    /// </summary>
+    public long? SizeLimit { get; init; }
+
+    public CachingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector)
+      : base(childEvaluator)
     {
-        this.keySelector = keySelector;
-        this.sizeLimit = sizeLimit;
+        KeySelector = keySelector;
     }
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
-        new Instance(innerEvaluator, keySelector, sizeLimit);
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
+        new Instance(childEvaluator, KeySelector, SizeLimit);
 
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator, Func<TCandidate, TKey> keySelector, long? sizeLimit)
-        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(innerEvaluator)
+    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit)
+        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
     {
         private readonly MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
 
@@ -42,7 +48,7 @@ public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
             for (var i = 0; i < n; i++)
             {
                 var candidate = candidates[i];
-                var key = keySelector(candidate);
+                var key = keySelector.SelectKey(candidate);
 
                 if (cache.TryGetValue(key, out ObjectiveVector? cached))
                 {
@@ -68,7 +74,7 @@ public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
                 return results;
             }
 
-            var newObjectives = InnerEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
+            var newObjectives = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
 
             for (var k = 0; k < uncachedKeys.Count; k++)
             {
@@ -89,13 +95,14 @@ public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
     }
 }
 
-public record CachingEvaluator<TCandidate, TSearchSpace, TProblem>
+public sealed record CachingEvaluator<TCandidate, TSearchSpace, TProblem>
     : CachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate>
     where TCandidate : notnull
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public CachingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, long? sizeLimit = null) : base(evaluator, x => x, sizeLimit) { }
+    public CachingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator)
+        : base(childEvaluator, CacheKeySelection<TCandidate>.Identity) { }
 }
 
 public static class CachedEvaluatorExtensions
@@ -105,10 +112,10 @@ public static class CachedEvaluatorExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache<TKey>(Func<TCandidate, TKey> keySelector, long? sizeLimit = null) where TKey : notnull
-            => new(evaluator, keySelector, sizeLimit);
+        public CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit = null) where TKey : notnull
+            => new(evaluator, keySelector) { SizeLimit = sizeLimit };
 
         public CachingEvaluator<TCandidate, TSearchSpace, TProblem> WithCache(long? sizeLimit = null)
-            => new(evaluator, sizeLimit);
+            => new(evaluator) { SizeLimit = sizeLimit };
     }
 }

@@ -60,7 +60,7 @@ public class MetaOptimizationTests
             new UniformOnePositionMutator()));
         hc.BatchSize = 4;
         hc.Evaluator = hc.Evaluator
-                         .AsRepeated(11, objectives => objectives.Median(problem.Objective))
+                         .AsRepeated(11, ObjectiveVectorAggregation.Median)
                          .WithCache();
 
         //run meta alg

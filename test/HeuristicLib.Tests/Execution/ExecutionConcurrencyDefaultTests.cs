@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Tests.ExecutionModel;
 public class ExecutionConcurrencyDefaultTests
 {
     [Fact]
-    public void SingleSolutionEvaluator_DefaultsToSequentialExecution()
+    public void SingleCandidateEvaluator_DefaultsToSequentialExecution()
     {
         var evaluator = new DummyEvaluator<SpecialGenotype, SpecialSearchSpace, SpecialProblem>();
 

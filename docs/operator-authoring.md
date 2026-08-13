@@ -14,13 +14,13 @@ The same pattern exists for creators, crossovers, mutators, selectors, replacers
 
 The unprefixed role base is the common base of the three paths. Stateless and stateful bases derive from it. Derive directly from the unprefixed base when authoring an explicit execution instance.
 
-Some roles add a single-item base as a further stateless convenience, for operations that apply independently to each item of a batch: `SingleCandidateMutator<...>`, `SingleCandidateCrossover<...>`, `SingleCandidateCreator<...>` and `SingleSolutionEvaluator<...>`. Implement the single-item method for one item; the inherited batch-wise role operation handles deterministic per-item random forks and batching. Callers holding the specialized base may invoke the single-item method directly, while ordinary role consumers continue to use the batch role operation. A role gets such a base only when independent per-item application is a genuine shape for it, so Selector, Replacer, Interceptor and Terminator have no equivalent.
+Some roles add a single-item base as a further stateless convenience, for operations that apply independently to each item of a batch: `SingleCandidateMutator<...>`, `SingleCandidateCrossover<...>`, `SingleCandidateCreator<...>` and `SingleCandidateEvaluator<...>`. Implement the single-item method for one item; the inherited batch-wise role operation handles deterministic per-item random forks and batching. Callers holding the specialized base may invoke the single-item method directly, while ordinary role consumers continue to use the batch role operation. A role gets such a base only when independent per-item application is a genuine shape for it, so Selector, Replacer, Interceptor and Terminator have no equivalent.
 
 The single-item method has its own name so it stays distinct from the batch operation it drives: `MutateCandidate`, `CrossParents`, `CreateCandidate`. A crossover crosses one `Parents<TCandidate>` group into one candidate, so its single-item unit is a parent group rather than a candidate. A creator receives no input at all, so `CreateCandidate` takes only the random number generator and the context it needs; the requested count belongs to the batch operation.
 
 A single-item base owns its batch operation and seals it. A subclass that replaced the batch operation would no longer be the single-item operator its type claims to be, and the single-item method it must still implement would become unreachable. Batching is a configuration decision instead: set the `Concurrency` property to run the per-item calls concurrently. Each item receives a random number generator forked from its batch position, so the result is identical for every concurrency setting and the choice is a performance decision rather than a semantic one. An operator that genuinely needs a different batch-wise operation derives from the stateless base directly, where the batch operation is the authoring surface.
 
-`SingleCandidateMutator` is the reference implementation of this rule, and `SingleCandidateCrossover` and `SingleCandidateCreator` follow it. The evaluator base predates it: `SingleSolutionEvaluator` still exposes an unsealed batch operation. Align it with the rule above when the evaluator role is migrated rather than copying the older shape.
+`SingleCandidateMutator` is the reference implementation of this rule; `SingleCandidateCrossover`, `SingleCandidateCreator` and `SingleCandidateEvaluator` follow it.
 
 ## Choose an arity
 
@@ -74,7 +74,7 @@ private sealed record FirstValueEvaluator
 }
 ```
 
-Use specialized helpers such as `SingleSolutionEvaluator` when the role offers one that exactly matches the operation shape.
+Use specialized helpers such as `SingleCandidateEvaluator` when the role offers one that exactly matches the operation shape.
 
 ## Stateful operators
 
@@ -117,8 +117,8 @@ private sealed record ForwardingEvaluator(
     IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)
     : Evaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
 {
-    protected override EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateEvaluatorInstance(ExecutionInstanceRegistry registry) =>
-        new Instance(registry.Resolve(Inner));
+    public override EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new Instance(instanceRegistry.Resolve(Inner));
 
     private sealed class Instance(IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
         : EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>

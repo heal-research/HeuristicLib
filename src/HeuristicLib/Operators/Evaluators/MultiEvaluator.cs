@@ -9,23 +9,23 @@ public abstract record MultiEvaluator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ValueArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> InnerEvaluators { get; }
-
-    protected MultiEvaluator(IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> innerEvaluators)
+    protected MultiEvaluator(IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> childEvaluators)
     {
-        InnerEvaluators = innerEvaluators.ToValueArray();
+        ChildEvaluators = childEvaluators.ToValueArray();
     }
 
-    protected sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(ExecutionInstanceRegistry registry) =>
-        CreateEvaluatorInstance([.. InnerEvaluators.Select(registry.Resolve)]);
+    public ValueArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> ChildEvaluators { get; init; }
 
-    protected abstract MultiEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(ImmutableArray<IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> innerEvaluators);
+    public sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateExecutionInstance([.. ChildEvaluators.Select(instanceRegistry.Resolve)]);
+
+    protected abstract MultiEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> childEvaluators);
 }
 
-public abstract class MultiEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> innerEvaluators)
+public abstract class MultiEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> childEvaluators)
     : EvaluatorInstance<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> InnerEvaluators { get; } = innerEvaluators;
+    protected ImmutableArray<IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> ChildEvaluators { get; } = childEvaluators;
 }

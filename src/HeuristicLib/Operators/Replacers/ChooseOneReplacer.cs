@@ -8,30 +8,36 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 /// <summary>
 /// Selects one child replacer by weight for each complete replacement call.
 /// </summary>
-public record ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>
+public sealed record ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>
     : MultiReplacer<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ValueArray<IReplacer<TCandidate, TSearchSpace, TProblem>> Replacers => InnerReplacers;
-
+    /// <summary>
+    /// Gets the configured weights, or an empty array when all child replacers are selected uniformly.
+    /// </summary>
     public ValueArray<double> Weights { get; init; }
 
-    public ChooseOneReplacer(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers)
-        : base(replacers)
+    public ChooseOneReplacer(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> childReplacers)
+        : base(childReplacers)
     {
-        if (replacers.Count == 0)
-            throw new ArgumentException("At least one replacer must be provided.", nameof(replacers));
+        if (ChildReplacers.Count == 0)
+            throw new ArgumentException("At least one replacer must be provided.", nameof(childReplacers));
     }
 
-    protected override MultiReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> innerReplacers) =>
-        new Instance(innerReplacers, new WeightedBatchDispatch(Weights));
+    protected override MultiReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> childReplacers)
+    {
+        if (Weights.Count > 0 && Weights.Count != ChildReplacers.Count)
+            throw new InvalidOperationException("Weights must have the same length as replacers.");
 
-    private sealed class Instance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> innerReplacers, WeightedBatchDispatch dispatcher)
-        : MultiReplacerInstance<TCandidate, TSearchSpace, TProblem>(innerReplacers)
+        return new Instance(childReplacers, new WeightedBatchDispatch(Weights));
+    }
+
+    private sealed class Instance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> childReplacers, WeightedBatchDispatch dispatcher)
+        : MultiReplacerInstance<TCandidate, TSearchSpace, TProblem>(childReplacers)
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            InnerReplacers[dispatcher.ChooseOperator(random, InnerReplacers.Length)].Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+            ChildReplacers[dispatcher.ChooseOperator(random, ChildReplacers.Length)].Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
     }
 }
 
