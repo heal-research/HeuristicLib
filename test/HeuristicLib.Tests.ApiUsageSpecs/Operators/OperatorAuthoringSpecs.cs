@@ -299,6 +299,59 @@ public class OperatorAuthoringSpecs
     }
 
     [Fact]
+    public void WrappingSelector_AuthoringExample_ResolvesItsChildOnce()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        var childSelector = new FirstSelector();
+        var selector = new DoublingWrappingSelector(childSelector);
+        var instance = new ExecutionInstanceRegistry().Resolve(selector);
+        var population = CreatePopulation(1.0, 2.0);
+
+        var selected = instance.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(11), problem.SearchSpace, problem);
+
+        selector.ChildSelector.ShouldBeSameAs(childSelector);
+        selected.ShouldBe([population[0], population[0]]);
+    }
+
+    [Fact]
+    public void MultiSelector_AuthoringExample_ResolvesEveryChildOnce()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        var first = new FirstSelector();
+        var last = new LastSelector();
+        var selector = new PreferFirstMultiSelector([first, last]);
+        var instance = new ExecutionInstanceRegistry().Resolve(selector);
+        var population = CreatePopulation(1.0, 2.0);
+
+        var selected = instance.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(12), problem.SearchSpace, problem);
+
+        selector.ChildSelectors.ShouldBe([first, last]);
+        selected.ShouldBe([population[0]]);
+    }
+
+    [Fact]
+    public void SelectorCompositionFactories_InferRoleTypes()
+    {
+        ISelector<RealVector, RealVectorSearchSpace, TestFunctionProblem> childSelector = new FirstSelector();
+        ISelectorObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem> observer =
+            new ActionSelectorObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem>((_, _, _, _, _, _) => { });
+
+        var observable = childSelector.ObserveWith(observer);
+        var staticObservable = ObservableSelector.Create(childSelector, observer);
+        var callbackObservable = ObservableSelector.Create(childSelector, _ => { });
+        var counting = childSelector.CountSelectorCalls(new ObservationCounter());
+        var chooseOne = ChooseOneSelector.Create(childSelector, new LastSelector());
+
+        observable.ChildSelector.ShouldBeSameAs(childSelector);
+        observable.Observers.ShouldBe([observer]);
+        staticObservable.ChildSelector.ShouldBeSameAs(childSelector);
+        staticObservable.Observers.ShouldBe([observer]);
+        callbackObservable.Observers.Length.ShouldBe(1);
+        counting.ChildSelector.ShouldBeSameAs(childSelector);
+        chooseOne.ChildSelectors[0].ShouldBeSameAs(childSelector);
+    }
+
+    [Fact]
     public void StatelessReplacer_AuthoringExample_UsesConfigurationAndExplicitInputs()
     {
         var problem = CreateRastriginProblem(dimension: 3);
@@ -584,14 +637,62 @@ public class OperatorAuthoringSpecs
     private sealed record ForwardingSelector(ISelector<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)
         : Selector<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        protected override SelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSelectorInstance(ExecutionInstanceRegistry registry) =>
-            new Instance(registry.Resolve(Inner));
+        public override SelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+            new Instance(instanceRegistry.Resolve(Inner));
 
         private sealed class Instance(ISelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
             : SelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
             public override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
                 inner.Select(population, objective, count, random, searchSpace, problem);
+        }
+    }
+
+    private sealed record LastSelector : StatelessSelector<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            population.TakeLast(count).ToArray();
+    }
+
+    private sealed record DoublingWrappingSelector
+        : WrappingSelector<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+        public DoublingWrappingSelector(ISelector<RealVector, RealVectorSearchSpace, TestFunctionProblem> childSelector)
+            : base(childSelector)
+        {
+        }
+
+        protected override WrappingSelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(
+            ISelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childSelector) =>
+            new Instance(childSelector);
+
+        private sealed class Instance(ISelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childSelector)
+            : WrappingSelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>(childSelector)
+        {
+            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+            {
+                var selected = ChildSelector.Select(population, objective, count, random, searchSpace, problem);
+                return [.. selected, .. selected];
+            }
+        }
+    }
+
+    private sealed record PreferFirstMultiSelector
+        : MultiSelector<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+        public PreferFirstMultiSelector(ImmutableArray<ISelector<RealVector, RealVectorSearchSpace, TestFunctionProblem>> childSelectors)
+            : base(childSelectors)
+        {
+        }
+
+        protected override MultiSelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ImmutableArray<ISelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>> childSelectors) =>
+            new Instance(childSelectors);
+
+        private sealed class Instance(ImmutableArray<ISelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>> childSelectors)
+            : MultiSelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>(childSelectors)
+        {
+            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+                ChildSelectors[0].Select(population, objective, count, random, searchSpace, problem);
         }
     }
 

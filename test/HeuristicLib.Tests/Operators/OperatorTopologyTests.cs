@@ -6,13 +6,30 @@ namespace HEAL.HeuristicLib.Tests.Operators;
 
 public class OperatorTopologyTests
 {
-    [Fact]
-    public void MutatorConfigurations_RetainedChildMutatorsArePubliclyInspectable()
+    [Theory]
+    [InlineData(typeof(IMutator<,,>))]
+    [InlineData(typeof(IMutatorInstance<,,>))]
+    [InlineData(typeof(ISelector<,,>))]
+    [InlineData(typeof(ISelectorInstance<,,>))]
+    public void OperatorRoleContracts_PreserveCandidateAndUseContravariantContext(Type roleContract)
     {
-        var hiddenChildProperties = typeof(Mutator<,,>).Assembly
-            .GetTypes()
+        var typeParameters = roleContract.GetGenericArguments();
+
+        (typeParameters[0].GenericParameterAttributes & GenericParameterAttributes.VarianceMask)
+            .ShouldBe(GenericParameterAttributes.None);
+        (typeParameters[1].GenericParameterAttributes & GenericParameterAttributes.VarianceMask)
+            .ShouldBe(GenericParameterAttributes.Contravariant);
+        (typeParameters[2].GenericParameterAttributes & GenericParameterAttributes.VarianceMask)
+            .ShouldBe(GenericParameterAttributes.Contravariant);
+    }
+
+    [Theory]
+    [InlineData("HEAL.HeuristicLib.Operators.Mutators")]
+    [InlineData("HEAL.HeuristicLib.Operators.Selectors")]
+    public void OperatorConfigurations_RetainedChildOperatorsArePubliclyInspectable(string roleNamespace)
+    {
+        var hiddenChildProperties = OperatorTypesIn(roleNamespace)
             .Where(type => typeof(IOperator).IsAssignableFrom(type))
-            .Where(IsMutatorType)
             .SelectMany(type => type.GetProperties(
                 BindingFlags.Instance |
                 BindingFlags.Public |
@@ -26,13 +43,13 @@ public class OperatorTopologyTests
         hiddenChildProperties.ShouldBeEmpty();
     }
 
-    [Fact]
-    public void MutatorExecutionInstances_DoNotPubliclyExposeChildMachinery()
+    [Theory]
+    [InlineData("HEAL.HeuristicLib.Operators.Mutators")]
+    [InlineData("HEAL.HeuristicLib.Operators.Selectors")]
+    public void OperatorExecutionInstances_DoNotPubliclyExposeChildMachinery(string roleNamespace)
     {
-        var publicChildProperties = typeof(Mutator<,,>).Assembly
-            .GetTypes()
+        var publicChildProperties = OperatorTypesIn(roleNamespace)
             .Where(type => typeof(IOperatorInstance).IsAssignableFrom(type))
-            .Where(IsMutatorType)
             .SelectMany(type => type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
             .Where(property => property.Name.StartsWith("Child", StringComparison.Ordinal))
             .Select(property => $"{property.DeclaringType}.{property.Name}")
@@ -41,6 +58,8 @@ public class OperatorTopologyTests
         publicChildProperties.ShouldBeEmpty();
     }
 
-    private static bool IsMutatorType(Type type) =>
-        type.Namespace?.StartsWith("HEAL.HeuristicLib.Operators.Mutators", StringComparison.Ordinal) == true;
+    private static IEnumerable<Type> OperatorTypesIn(string roleNamespace) =>
+        typeof(Mutator<,,>).Assembly
+            .GetTypes()
+            .Where(type => type.Namespace?.StartsWith(roleNamespace, StringComparison.Ordinal) == true);
 }

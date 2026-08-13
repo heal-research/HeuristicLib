@@ -7,32 +7,30 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
 [Equatable]
-public partial record ObservableSelector<TCandidate, TSearchSpace, TProblem>
-  : WrappingSelector<TCandidate, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed partial record ObservableSelector<TCandidate, TSearchSpace, TProblem>
+    : WrappingSelector<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ISelector<TCandidate, TSearchSpace, TProblem> Selector => InnerSelector;
-
     [OrderedEquality]
     public ImmutableArray<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
-    public ObservableSelector(ISelector<TCandidate, TSearchSpace, TProblem> selector, params IReadOnlyList<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
-        : base(selector)
+    public ObservableSelector(ISelector<TCandidate, TSearchSpace, TProblem> childSelector, params IReadOnlyList<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : base(childSelector)
     {
-        Observers = observers.ToImmutableArray();
+        var immutableObservers = observers.ToImmutableArray();
+        Observers = immutableObservers.IsDefault ? [] : immutableObservers;
     }
 
+    protected override WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector) =>
+        new Instance(childSelector, Observers);
 
-    protected override WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> innerSelector) =>
-        new Instance(innerSelector, Observers);
-
-    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> innerSelector, ImmutableArray<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
-        : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(innerSelector)
+    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, ImmutableArray<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(childSelector)
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            var result = InnerSelector.Select(population, objective, count, random, searchSpace, problem);
+            var result = ChildSelector.Select(population, objective, count, random, searchSpace, problem);
             foreach (var observer in observers)
             {
                 observer.AfterSelection(result, population, objective, count, searchSpace, problem);
@@ -44,8 +42,8 @@ public partial record ObservableSelector<TCandidate, TSearchSpace, TProblem>
 }
 
 public interface ISelectorObserver<TCandidate, in TSearchSpace, in TProblem>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     void AfterSelection(IReadOnlyList<EvaluatedCandidate<TCandidate>> selected, IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TSearchSpace searchSpace, TProblem problem);
 }
@@ -58,6 +56,24 @@ public sealed class ActionSelectorObserver<TCandidate, TSearchSpace, TProblem>(
 {
     public void AfterSelection(IReadOnlyList<EvaluatedCandidate<TCandidate>> selected, IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TSearchSpace searchSpace, TProblem problem) =>
         afterSelection(selected, population, objective, count, searchSpace, problem);
+}
+
+public static class ObservableSelector
+{
+    public static ObservableSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> childSelector, params IReadOnlyList<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childSelector, observers);
+
+    public static ObservableSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> childSelector, Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, ObjectiveDirections, int, TSearchSpace, TProblem> afterSelection)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childSelector, new ActionSelectorObserver<TCandidate, TSearchSpace, TProblem>(afterSelection));
+
+    public static ObservableSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> childSelector, Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>> afterSelection)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childSelector, new ActionSelectorObserver<TCandidate, TSearchSpace, TProblem>((selected, _, _, _, _, _) => afterSelection(selected)));
 }
 
 public static class ObservableSelectorExtensions

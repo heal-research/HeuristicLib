@@ -8,7 +8,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public record TournamentSelector<TCandidate>
-  : StatelessSelector<TCandidate>
+    : StatelessSelector<TCandidate>
 {
     public int TournamentSize { get; init; }
 
@@ -17,8 +17,8 @@ public record TournamentSelector<TCandidate>
         TournamentSize = tournamentSize;
     }
 
-    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
-      => TournamentSelector.Select(population, objective, count, random, TournamentSize);
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
+        TournamentSelector.Select(population, objective, count, random, TournamentSize);
 }
 
 public static class TournamentSelector
@@ -31,12 +31,7 @@ public static class TournamentSelector
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState => new(tournamentSize);
 
-    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(
-      IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
-      ObjectiveDirections objective,
-      int count,
-      IRandomNumberGenerator random,
-      int tournamentSize)
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, int tournamentSize)
     {
         return Enumerable
                .Range(0, count)

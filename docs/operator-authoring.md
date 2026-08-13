@@ -152,7 +152,30 @@ Wrapping and multi bases are shortcuts for common explicit execution topologies:
 - A wrapping base resolves one child once.
 - A multi base resolves several children once.
 
+Each topology is represented by a matching configuration and execution-instance pair, such as `WrappingSelector<...>` with `WrappingSelectorInstance<...>`. Derived configurations and their nested instances use the corresponding pair consistently. The instance base provides canonical protected child storage and preserves the same topology at the type level, even when it does not currently add shared execution behavior. Required resolved children are constructor dependencies rather than optionally initialized properties.
+
 These bases do not have separate stateless and stateful variants. Their purpose is already to coordinate an execution graph. Use the unprefixed role base when a wrapping or multi topology does not fit.
+
+Reach for them when the children are identified by being children and nothing more. `PipelineMutator` and `ChooseOneMutator` apply their children interchangeably, so the inherited `ChildMutators` is the honest name for the slot, and they add no name of their own.
+
+When a child plays a specific part in the operation, derive from the unprefixed role base instead and declare that child yourself:
+
+```csharp
+public record EliteSelector<TCandidate, TSearchSpace, TProblem>
+    : Selector<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+{
+    public ISelector<TCandidate, TSearchSpace, TProblem> SelectorForRemaining { get; }
+    public int Elites { get; }
+
+    public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new Instance(instanceRegistry.Resolve(SelectorForRemaining), Elites);
+    // ...
+}
+```
+
+`EliteSelector` takes its elites first and asks `SelectorForRemaining` only for the places that are left, so calling that child `ChildSelector` would hide what it does. Wrapping it and adding a second, better-named property is not the fix: the two properties return the same object and a reader cannot tell which one to use. Declaring the child directly also lets the constructor fix how many children there are — `GenderSpecificSelector` needs exactly one `FemaleSelector` and one `MaleSelector`, which a multi base cannot express.
 
 Unlike the leaf authoring bases, these are available at the full arity only. See [Choose an arity](#choose-an-arity) for why narrowing a child slot is a restriction rather than a convenience.
 

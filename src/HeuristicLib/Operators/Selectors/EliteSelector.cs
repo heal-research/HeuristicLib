@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -6,31 +7,35 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public record EliteSelector<TCandidate, TSearchSpace, TProblem>
-    : WrappingSelector<TCandidate, TSearchSpace, TProblem>
+    : Selector<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    private readonly int elites;
-
-    public ISelector<TCandidate, TSearchSpace, TProblem> SelectorForRemaining => InnerSelector;
-
     public EliteSelector(ISelector<TCandidate, TSearchSpace, TProblem> selectorForRemaining, int elites = 1)
-      : base(selectorForRemaining)
     {
-        this.elites = elites;
+        SelectorForRemaining = selectorForRemaining;
+        Elites = elites;
     }
 
-    protected override WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> innerSelector) =>
-        new Instance(innerSelector, elites);
+    /// <summary>
+    /// Gets the selector that fills the places remaining after the elites have been taken. It is asked for the
+    /// reduced count rather than for the complete selection.
+    /// </summary>
+    public ISelector<TCandidate, TSearchSpace, TProblem> SelectorForRemaining { get; }
 
-    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> innerSelector, int elites)
-        : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(innerSelector)
+    public int Elites { get; }
+
+    public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new Instance(instanceRegistry.Resolve(SelectorForRemaining), Elites);
+
+    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> selectorForRemaining, int elites)
+        : SelectorInstance<TCandidate, TSearchSpace, TProblem>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var selectedElites = BestSelector.Select(population, objective, elites);
             var remainingCount = count - selectedElites.Count;
-            var selectedRemaining = InnerSelector.Select(population, objective, remainingCount, random, searchSpace, problem);
+            var selectedRemaining = selectorForRemaining.Select(population, objective, remainingCount, random, searchSpace, problem);
 
             return selectedElites.Concat(selectedRemaining).ToArray();
         }

@@ -249,7 +249,7 @@ These are operator-rework decisions, not generator decisions.
 - Base configurations expose one public `CreateExecutionInstance(...)` method returning the exact role execution-instance type.
 - Topology bases may seal that method and expose a protected natural overload with already-resolved children.
 - Configuration objects expose canonical `ChildOperator` or role-specific child properties publicly.
-- Derived concerns do not add forwarding aliases unless a distinct name adds domain meaning.
+- A child slot has exactly one public name. A wrapping or multi base is used only when the children are identified by being children and nothing more, and derived concerns add no forwarding alias for a child the base already exposes. An operator whose child plays a specific part derives from the role base and declares that child itself, as `EliteSelector` and `GenderSpecificSelector` do.
 - Execution instances keep resolved child machinery private or protected.
 
 See [developer-guidelines.md](../docs/developer-guidelines.md), under "Configuration and execution ownership."

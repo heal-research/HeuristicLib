@@ -6,10 +6,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public record LinearRankSelector<TCandidate>
-  : StatelessSelector<TCandidate>
+    : StatelessSelector<TCandidate>
 {
-    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
-      => LinearRankSelector.Select(population, objective, count, random);
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
+        LinearRankSelector.Select(population, objective, count, random);
 }
 
 public static class LinearRankSelector
@@ -17,11 +17,7 @@ public static class LinearRankSelector
     public static LinearRankSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
         where TSearchSpace : class, ISearchSpace<TCandidate> => new();
 
-    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(
-      IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
-      ObjectiveDirections objective,
-      int count,
-      IRandomNumberGenerator random)
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
     {
         var list = population.OrderByDescending(x => x.ObjectiveVector, objective.TotalOrderComparer).ToList();
 

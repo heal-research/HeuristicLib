@@ -9,23 +9,23 @@ public abstract record WrappingSelector<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ISelector<TCandidate, TSearchSpace, TProblem> InnerSelector { get; }
-
-    protected WrappingSelector(ISelector<TCandidate, TSearchSpace, TProblem> innerSelector)
+    protected WrappingSelector(ISelector<TCandidate, TSearchSpace, TProblem> childSelector)
     {
-        InnerSelector = innerSelector;
+        ChildSelector = childSelector;
     }
 
-    protected sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ExecutionInstanceRegistry registry) =>
-        CreateSelectorInstance(registry.Resolve(InnerSelector));
+    public ISelector<TCandidate, TSearchSpace, TProblem> ChildSelector { get; }
 
-    protected abstract WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> innerSelector);
+    public sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateExecutionInstance(instanceRegistry.Resolve(ChildSelector));
+
+    protected abstract WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector);
 }
 
-public abstract class WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> innerSelector)
+public abstract class WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector)
     : SelectorInstance<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ISelectorInstance<TCandidate, TSearchSpace, TProblem> InnerSelector { get; } = innerSelector;
+    protected ISelectorInstance<TCandidate, TSearchSpace, TProblem> ChildSelector { get; } = childSelector;
 }

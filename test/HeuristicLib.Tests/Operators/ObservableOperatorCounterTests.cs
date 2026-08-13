@@ -350,6 +350,72 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void ObservableSelector_SnapshotsObservers()
+    {
+        var observer = new ActionSelectorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((_, _, _, _, _, _) => { });
+        var observers = new List<ISelectorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>> { observer };
+        var observable = new ObservableSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new FirstCandidatesSelector(), observers);
+
+        observers.Clear();
+
+        observable.Observers.ShouldBe([observer]);
+    }
+
+    [Fact]
+    public void ObservableSelector_NormalizesDefaultObserverArrayToEmpty()
+    {
+        ImmutableArray<ISelectorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>> observers = default;
+
+        var observable = new ObservableSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new FirstCandidatesSelector(), observers);
+
+        observable.Observers.IsDefault.ShouldBeFalse();
+        observable.Observers.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ObservableSelector_InvokesObserversInOrderWithSelectionAndPopulation()
+    {
+        var calls = new List<string>();
+        IReadOnlyList<EvaluatedCandidate<int>> observedSelection = [];
+        IReadOnlyList<EvaluatedCandidate<int>> observedPopulation = [];
+        var population = CreateEvaluatedCandidates([1, 2, 3]);
+        var problem = CreateProblem();
+
+        var selector = new FirstCandidatesSelector().ObserveWith(
+            new ActionSelectorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((selected, candidates, objective, count, searchSpace, observedProblem) =>
+            {
+                calls.Add("first");
+                observedSelection = selected;
+                observedPopulation = candidates;
+                objective.ShouldBe(problem.Objective);
+                count.ShouldBe(2);
+                searchSpace.ShouldBeSameAs(problem.SearchSpace);
+                observedProblem.ShouldBeSameAs(problem);
+            }),
+            new ActionSelectorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((_, _, _, _, _, _) => calls.Add("second")));
+
+        var result = selector.CreateExecutionInstance().Select(population, problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+
+        calls.ShouldBe(["first", "second"]);
+        observedSelection.ShouldBeSameAs(result);
+        observedSelection.ShouldBe([population[0], population[1]]);
+        observedPopulation.ShouldBeSameAs(population);
+    }
+
+    [Fact]
+    public void ObservableSelector_DoesNotInvokeObserversWhenSelectionThrows()
+    {
+        var observed = 0;
+        var instance = new ThrowingSelector().ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => observed++).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        observed.ShouldBe(0);
+    }
+
+    [Fact]
     public void CountSelectedCandidates_IncrementsByReturnedCandidateCount()
     {
         var counter = new ObservationCounter();
@@ -361,6 +427,19 @@ public class ObservableOperatorCounterTests
         instance.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public void CountSelectorCalls_DoesNotIncrementWhenSelectionThrows()
+    {
+        var counter = new ObservationCounter();
+        var instance = new ThrowingSelector().CountSelectorCalls(counter).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        counter.CurrentCount.ShouldBe(0);
     }
 
     [Fact]
@@ -378,6 +457,21 @@ public class ObservableOperatorCounterTests
         instance.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+    }
+
+    [Fact]
+    public void MeasureSelectorDuration_RecordsElapsedDurationWhenSelectionThrows()
+    {
+        var duration = new ObservationDuration();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var selector = new ThrowingSelector().MeasureSelectorDuration(duration, timeProvider);
+        var instance = selector.CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     [Fact]
@@ -636,6 +730,19 @@ public class ObservableOperatorCounterTests
         {
             return population.Take(count).ToArray();
         }
+    }
+
+    private sealed record ThrowingSelector
+        : StatelessSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<int>> Select(
+            IReadOnlyList<EvaluatedCandidate<int>> population,
+            ObjectiveDirections objective,
+            int count,
+            IRandomNumberGenerator random,
+            DummySearchSpace<int> searchSpace,
+            FuncProblem<int, DummySearchSpace<int>> problem) =>
+            throw new InvalidOperationException();
     }
 
     private sealed record FirstReplacementCandidatesReplacer

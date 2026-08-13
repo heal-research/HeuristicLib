@@ -71,7 +71,16 @@ Base configurations should expose one public `CreateExecutionInstance(...)` meth
 
 Keep public constructors as the direct construction path. Add a static `Create` helper when its arguments can infer otherwise repetitive generic type parameters. Add a fluent extension when the receiver naturally becomes a child configuration. These entry points should construct the same configuration rather than introduce different semantics.
 
-Configuration objects expose the information that describes their configured behavior through public read-only properties, including retained child operators. A wrapping base owns the canonical singular child property and a multi-operator base owns the canonical child collection. Name these properties `ChildOperator` and `ChildOperators`, or use role-specific forms such as `ChildMutator` and `ChildMutators`. Reserve nested operator for an operator at any descendant depth. Derived types should not add forwarding aliases unless a distinct name communicates additional domain semantics. Execution instances keep resolved child instances and other execution machinery private or protected by default.
+Configuration objects expose the information that describes their configured behavior through public read-only properties, including retained child operators. A wrapping base owns the canonical singular child property and a multi-operator base owns the canonical child collection. Name these properties `ChildOperator` and `ChildOperators`, or use role-specific forms such as `ChildMutator` and `ChildMutators`. Reserve nested operator for an operator at any descendant depth. Execution instances keep resolved child instances and other execution machinery private or protected by default.
+
+Role authoring hierarchies are deliberately symmetric between configurations and execution instances. A full role base has a matching full role instance base, and wrapping and multi topology bases come in matching configuration/instance pairs. A derived configuration and its nested execution instance use the corresponding pair even when the instance base currently contributes only canonical protected child storage. This predictable hierarchy and the topology it expresses at the type level are part of the authoring model. Pass required resolved children through constructors so an execution instance cannot be created incomplete.
+
+A child slot has exactly one public name. Which name it is follows from how the operator identifies its children:
+
+- When a child is identified by being a child and nothing more, use the wrapping or multi base. It owns the canonical public property, and derived types add no second name for the same object. `ChooseOneMutator`, `PipelineMutator` and the observing, counting and duration-measuring concerns work this way.
+- When a child plays a specific part in the operator's own logic, the topology base is the wrong base. Derive from the role base, declare exactly the children the operator needs with names that describe their part, and resolve them in `CreateExecutionInstance`. `EliteSelector` asks `SelectorForRemaining` only for the places left after the elites, and `GenderSpecificSelector` needs one `FemaleSelector` and one `MaleSelector`.
+
+Do not reach for a forwarding alias to reconcile the two. Two public properties returning the same child leave a reader with no way to tell which is the right one. Declaring the children directly also lets the constructor fix how many there are, which a multi base cannot express.
 
 Operator authoring must follow the ownership paths described in [Operator authoring](operator-authoring.md):
 
@@ -227,7 +236,7 @@ Use API usage specs to prove that the intended calls compile without explicit ge
 
 ### Operator parameter order
 
-Order operator operation parameters as primary input, random number generator, search space, problem and operator-specific settings. Omit parameters that do not apply while preserving the relative order of the remaining parameters. Lower-level inputs that replace a search space, such as explicit minimum and maximum bounds, occupy the search-space position.
+Order operator operation parameters as the role's complete primary input group, random number generator, search space and problem. A primary input group may contain several values; selection, for example, receives the population, objective directions and requested count before its random number generator. Omit parameters that do not apply while preserving the relative order of the remaining groups. Lower-level inputs that replace a search space, such as explicit minimum and maximum bounds, occupy the search-space position.
 
 ### Stateless operator implementation methods
 

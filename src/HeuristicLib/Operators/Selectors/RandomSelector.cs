@@ -6,10 +6,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public record RandomSelector<TCandidate>
-  : StatelessSelector<TCandidate>
+    : StatelessSelector<TCandidate>
 {
-    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
-      => RandomSelector.Select(population, count, random);
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
+        RandomSelector.Select(population, count, random);
 }
 
 public static class RandomSelector

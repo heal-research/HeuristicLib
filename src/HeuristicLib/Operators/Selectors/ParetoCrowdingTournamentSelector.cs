@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public record ParetoCrowdingTournamentSelector<TCandidate>
-  : StatelessSelector<TCandidate>
+    : StatelessSelector<TCandidate>
 {
     public int TournamentSize { get; init; }
     public bool DominateOnEqualities { get; init; }
@@ -17,12 +17,8 @@ public record ParetoCrowdingTournamentSelector<TCandidate>
         TournamentSize = tournamentSize;
     }
 
-    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(
-      IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
-      ObjectiveDirections objective,
-      int count,
-      IRandomNumberGenerator random)
-      => ParetoCrowdingTournamentSelector.Select(population, objective, count, random, DominateOnEqualities, TournamentSize);
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
+        ParetoCrowdingTournamentSelector.Select(population, objective, count, random, DominateOnEqualities, TournamentSize);
 }
 
 public static class ParetoCrowdingTournamentSelector
@@ -30,13 +26,7 @@ public static class ParetoCrowdingTournamentSelector
     public static ParetoCrowdingTournamentSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, bool dominateOnEqualities, int tournamentSize = 2)
         where TSearchSpace : class, ISearchSpace<TCandidate> => new(dominateOnEqualities, tournamentSize);
 
-    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(
-      IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
-      ObjectiveDirections objective,
-      int count,
-      IRandomNumberGenerator random,
-      bool dominateOnEqualities,
-      int tournamentSize = 2)
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, bool dominateOnEqualities, int tournamentSize = 2)
     {
         var fronts = DominationCalculator.CalculateAllParetoFronts(population, objective, out var rank, dominateOnEqualities);
 

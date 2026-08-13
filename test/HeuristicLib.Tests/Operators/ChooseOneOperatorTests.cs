@@ -157,8 +157,8 @@ public class ChooseOneOperatorTests
         crossoverFromFactory.Weights.ShouldBe([0.5, 0.5]);
         new ChooseOneMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutators).Weights.ShouldBeEmpty();
         mutatorFromFactory.Weights.ShouldBeEmpty();
-        new ChooseOneSelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(selectors).Weights.ShouldBe([0.5, 0.5]);
-        selectorFromFactory.Weights.ShouldBe([0.5, 0.5]);
+        new ChooseOneSelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(selectors).Weights.ShouldBeEmpty();
+        selectorFromFactory.Weights.ShouldBeEmpty();
         new ChooseOneReplacer<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(replacers).Weights.ShouldBe([0.5, 0.5]);
         replacerFromFactory.Weights.ShouldBe([0.5, 0.5]);
     }

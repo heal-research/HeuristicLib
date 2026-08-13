@@ -23,24 +23,21 @@ public sealed partial record ChooseOneMutator<TCandidate, TSearchSpace, TProblem
     [OrderedEquality]
     public ImmutableArray<double> Weights { get; }
 
-    [IgnoreEquality]
-    private readonly WeightedBatchDispatch dispatcher;
-
     public ChooseOneMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> childMutators, IReadOnlyList<double>? weights = null)
         : base(childMutators)
     {
         if (ChildMutators.Length == 0)
             throw new ArgumentException("At least one mutator must be provided.", nameof(childMutators));
 
-        dispatcher = new WeightedBatchDispatch(weights);
-        Weights = dispatcher.Weights;
+        var immutableWeights = weights?.ToImmutableArray() ?? [];
+        Weights = immutableWeights.IsDefault ? [] : immutableWeights;
 
         if (Weights.Length > 0 && Weights.Length != ChildMutators.Length)
             throw new ArgumentException("Weights must have the same length as mutators.", nameof(weights));
     }
 
     protected override MultiMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators) =>
-        new Instance(childMutators, dispatcher);
+        new Instance(childMutators, new WeightedBatchDispatch(Weights));
 
     private sealed class Instance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedBatchDispatch dispatcher)
         : MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(childMutators)
