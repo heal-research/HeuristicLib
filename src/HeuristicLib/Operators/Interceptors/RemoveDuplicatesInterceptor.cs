@@ -1,9 +1,10 @@
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-public record RemoveDuplicatesInterceptor<TCandidate, TSearchState>
+public sealed record RemoveDuplicatesInterceptor<TCandidate, TSearchState>
   : StatelessInterceptor<TCandidate, TSearchState>
   where TSearchState : PopulationState<TCandidate>
 {
@@ -14,7 +15,7 @@ public record RemoveDuplicatesInterceptor<TCandidate, TSearchState>
         Comparer = comparer;
     }
 
-    public override TSearchState Transform(TSearchState currentState, TSearchState? previousState)
+    public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random)
       => RemoveDuplicatesInterceptor.Transform(currentState, previousState, Comparer);
 }
 

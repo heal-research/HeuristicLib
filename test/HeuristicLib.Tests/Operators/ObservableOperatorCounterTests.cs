@@ -664,8 +664,8 @@ public class ObservableOperatorCounterTests
         var instance = interceptor.CreateExecutionInstance();
         var problem = CreateProblem();
 
-        instance.Transform(new CounterState { Value = 1 }, previousState: null, problem.SearchSpace, problem);
-        instance.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, problem.SearchSpace, problem);
+        instance.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        instance.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
     }
@@ -681,10 +681,34 @@ public class ObservableOperatorCounterTests
         var instance = interceptor.CreateExecutionInstance();
         var problem = CreateProblem();
 
-        instance.Transform(new CounterState { Value = 1 }, previousState: null, problem.SearchSpace, problem);
-        instance.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, problem.SearchSpace, problem);
+        instance.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        instance.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+    }
+
+    [Fact]
+    public void CountInterceptorCalls_DoesNotCountFailedCall()
+    {
+        var counter = new ObservationCounter();
+        var instance = new ThrowingInterceptor().CountInterceptorCalls(counter).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() => instance.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        counter.CurrentCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public void MeasureInterceptorDuration_RecordsFailedCall()
+    {
+        var duration = new ObservationDuration();
+        var instance = new ThrowingInterceptor().MeasureInterceptorDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() => instance.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     [Fact]
@@ -717,6 +741,30 @@ public class ObservableOperatorCounterTests
         instance.IsTerminalState(new CounterState { Value = 2 }, problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+    }
+
+    [Fact]
+    public void CountTerminatorCalls_DoesNotCountFailedCall()
+    {
+        var counter = new ObservationCounter();
+        var instance = new ThrowingTerminator().CountTerminatorCalls(counter).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() => instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
+
+        counter.CurrentCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public void MeasureTerminatorDuration_RecordsFailedCall()
+    {
+        var duration = new ObservationDuration();
+        var instance = new ThrowingTerminator().MeasureTerminatorDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() => instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem()
@@ -895,11 +943,19 @@ public class ObservableOperatorCounterTests
         public override CounterState Transform(
             CounterState currentState,
             CounterState? previousState,
+            IRandomNumberGenerator random,
             DummySearchSpace<int> searchSpace,
             FuncProblem<int, DummySearchSpace<int>> problem)
         {
             return currentState with { Value = currentState.Value + 1 };
         }
+    }
+
+    private sealed record ThrowingInterceptor
+      : StatelessInterceptor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>
+    {
+        public override CounterState Transform(CounterState currentState, CounterState? previousState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
+            throw new InvalidOperationException();
     }
 
     private sealed record NeverTerminalStateTerminator
@@ -912,6 +968,13 @@ public class ObservableOperatorCounterTests
         {
             return false;
         }
+    }
+
+    private sealed record ThrowingTerminator
+      : StatelessTerminator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>
+    {
+        public override bool IsTerminalState(CounterState state, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
+            throw new InvalidOperationException();
     }
 
     private sealed record CounterState : SearchState

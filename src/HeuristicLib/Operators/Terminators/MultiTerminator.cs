@@ -11,24 +11,24 @@ public abstract record MultiTerminator<TCandidate, TSearchSpace, TProblem, TSear
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ValueArray<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> InnerTerminators { get; }
-
-    protected MultiTerminator(IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> innerTerminators)
+    protected MultiTerminator(IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
     {
-        InnerTerminators = innerTerminators.ToValueArray();
+        ChildTerminators = childTerminators.ToValueArray();
     }
 
-    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) =>
-        CreateTerminatorInstance([.. InnerTerminators.Select(registry.Resolve)]);
+    public ValueArray<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> ChildTerminators { get; init; }
 
-    protected abstract MultiTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ImmutableArray<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> innerTerminators);
+    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateExecutionInstance([.. ChildTerminators.Select(instanceRegistry.Resolve)]);
+
+    protected abstract MultiTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ImmutableArray<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators);
 }
 
-public abstract class MultiTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> innerTerminators)
+public abstract class MultiTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
     : TerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> InnerTerminators { get; } = innerTerminators;
+    protected ImmutableArray<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> ChildTerminators { get; } = childTerminators;
 }

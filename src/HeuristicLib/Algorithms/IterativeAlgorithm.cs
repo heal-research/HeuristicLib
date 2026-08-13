@@ -73,7 +73,7 @@ public abstract class IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProb
 
             if (interceptor is not null)
             {
-                newState = interceptor.Transform(newState, previousState, problem.SearchSpace, problem);
+                newState = interceptor.Transform(newState, previousState, iterationRandom, problem.SearchSpace, problem);
             }
 
             var isTerminalState = IsTerminalState(newState, yieldedStateCount + 1, previousState, problem);

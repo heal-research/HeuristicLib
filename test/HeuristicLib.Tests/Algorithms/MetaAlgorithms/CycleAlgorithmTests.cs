@@ -192,6 +192,7 @@ public class CycleAlgorithmTests
           PopulationState<RealVector> currentState,
           PopulationState<RealVector>? previousState,
           ExecutionState executionState,
+          IRandomNumberGenerator random,
           RealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)
         {

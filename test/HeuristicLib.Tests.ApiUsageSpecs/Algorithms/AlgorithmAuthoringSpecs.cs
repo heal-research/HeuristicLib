@@ -216,6 +216,7 @@ public class AlgorithmAuthoringSpecs
         public override SingleSolutionState<RealVector> Transform(
             SingleSolutionState<RealVector> currentState,
             SingleSolutionState<RealVector>? previousState,
+            IRandomNumberGenerator random,
             RealVectorSearchSpace searchSpace,
             TestFunctionProblem problem)
         {
@@ -295,7 +296,7 @@ public class AlgorithmAuthoringSpecs
             : IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
         {
             public SingleSolutionState<RealVector> Transform(SingleSolutionState<RealVector> currentState, SingleSolutionState<RealVector>? previousState,
-                RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+                IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
             {
                 owner.TransformCalls++;
                 return currentState;

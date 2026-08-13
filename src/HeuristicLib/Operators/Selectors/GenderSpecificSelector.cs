@@ -10,7 +10,8 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 /// Selects equal numbers of female and male candidates, then aligns them as consecutive pairs.
 /// </summary>
 /// <remarks>
-/// The requested count must be even. The result order is female 0, male 0, female 1, male 1 and so on.
+/// The result order is female 0, male 0, female 1, male 1 and so on. For an odd requested count, the final
+/// candidate is selected by the female selector.
 /// </remarks>
 public record GenderSpecificSelector<TCandidate, TSearchSpace, TProblem>
     : Selector<TCandidate, TSearchSpace, TProblem>
@@ -35,11 +36,9 @@ public record GenderSpecificSelector<TCandidate, TSearchSpace, TProblem>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            if (count % 2 != 0)
-                throw new ArgumentException("The requested count must be even.", nameof(count));
-
             var pairCount = count / 2;
-            var females = femaleSelector.Select(population, objective, pairCount, random, searchSpace, problem);
+            var femaleCount = count - pairCount;
+            var females = femaleSelector.Select(population, objective, femaleCount, random, searchSpace, problem);
             var males = maleSelector.Select(population, objective, pairCount, random, searchSpace, problem);
 
             var result = new EvaluatedCandidate<TCandidate>[count];
@@ -48,6 +47,9 @@ public record GenderSpecificSelector<TCandidate, TSearchSpace, TProblem>
                 result[2 * i] = females[i];
                 result[(2 * i) + 1] = males[i];
             }
+
+            if (femaleCount > pairCount)
+                result[^1] = females[^1];
 
             return result;
         }

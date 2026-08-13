@@ -11,24 +11,24 @@ public abstract record WrappingTerminator<TCandidate, TSearchSpace, TProblem, TS
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> InnerTerminator { get; }
-
-    protected WrappingTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> innerTerminator)
+    protected WrappingTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator)
     {
-        InnerTerminator = innerTerminator;
+        ChildTerminator = childTerminator;
     }
 
-    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) =>
-        CreateTerminatorInstance(registry.Resolve(InnerTerminator));
+    public ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> ChildTerminator { get; init; }
 
-    protected abstract WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerTerminator);
+    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateExecutionInstance(instanceRegistry.Resolve(ChildTerminator));
+
+    protected abstract WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator);
 }
 
-public abstract class WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerTerminator)
+public abstract class WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator)
     : TerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> InnerTerminator { get; } = innerTerminator;
+    protected ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> ChildTerminator { get; } = childTerminator;
 }

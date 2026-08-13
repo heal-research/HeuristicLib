@@ -26,6 +26,8 @@ A single-item base owns its batch operation and seals it. A subclass that replac
 
 Each role base is available at three arities. Reduced arities exist so an author who needs neither the problem nor the search space does not have to name them.
 
+Interceptor and Terminator retain `TSearchState` in these three ordinary arities because their operations transform or inspect a produced search state. Terminator additionally provides `Terminator<TCandidate>`, `TerminatorInstance<TCandidate>` and matching stateless and stateful bases for termination conditions that inspect none of the operation inputs, such as elapsed time, cancellation and external operator budgets. Interceptor cannot remove `TSearchState` because it returns that type.
+
 | Declared as | Operation receives | Use when |
 | ----------------------------------------------- | ---------------------------------------- | ----------------------------------------------- |
 | `SingleCandidateMutator<TCandidate, TSearchSpace, TProblem>` | parent, random, search space, problem | The operation depends on the problem |

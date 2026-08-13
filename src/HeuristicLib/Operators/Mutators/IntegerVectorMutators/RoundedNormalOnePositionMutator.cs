@@ -17,9 +17,6 @@ public record RoundedNormalOnePositionMutator
 
     public static IntegerVector Mutate(IntegerVector candidate, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace, RealVector sigma)
     {
-        if (candidate.Count != searchSpace.Length)
-            throw new ArgumentException("Candidate length must match the search space length.", nameof(candidate));
-
         return Mutate(candidate, random, searchSpace.Minimum, searchSpace.Maximum, sigma);
     }
 

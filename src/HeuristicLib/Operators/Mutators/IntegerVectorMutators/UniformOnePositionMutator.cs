@@ -12,9 +12,6 @@ public record UniformOnePositionMutator
 
     public static IntegerVector Mutate(IntegerVector candidate, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
     {
-        if (candidate.Count != searchSpace.Length)
-            throw new ArgumentException("Candidate length must match the search space length.", nameof(candidate));
-
         return Mutate(candidate, random, searchSpace.Minimum, searchSpace.Maximum);
     }
 

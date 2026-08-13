@@ -32,16 +32,13 @@ public sealed record RepeatingEvaluator<TCandidate, TSearchSpace, TProblem>
     public RepeatingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions)
         : base(childEvaluator)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(repetitions, 1);
         Repetitions = repetitions;
     }
 
     protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator)
     {
-        if (Repetitions < 1)
-            throw new InvalidOperationException("At least one repetition is required.");
-        if (Aggregator is null)
-            throw new InvalidOperationException("An objective-vector aggregator is required.");
+        if (Repetitions <= 0)
+            throw new InvalidOperationException("Repetitions must be positive.");
 
         return new Instance(childEvaluator, Repetitions, Aggregator, Concurrency);
     }

@@ -139,23 +139,6 @@ public sealed class MutatorParameterSemanticsTests
     }
 
     [Fact]
-    public void CandidateLengthMustMatchSearchSpaceBeforeRandomDraws()
-    {
-        var integerCandidate = IntegerVector.Create(1, 2);
-        var integerSearchSpace = new IntegerVectorSearchSpace(3, 0, 10);
-        var realCandidate = RealVector.Create(1, 2);
-        var realSearchSpace = new RealVectorSearchSpace(3, minimum: 0, maximum: 10);
-        var randomWithoutValues = new SequenceRandomNumberGenerator();
-
-        Should.Throw<ArgumentException>(() => UniformOnePositionMutator.Mutate(integerCandidate, randomWithoutValues, integerSearchSpace)).ParamName.ShouldBe("candidate");
-        Should.Throw<ArgumentException>(() => UniformSomePositionsMutator.Mutate(integerCandidate, randomWithoutValues, integerSearchSpace, probability: 0.5)).ParamName.ShouldBe("candidate");
-        Should.Throw<ArgumentException>(() => RoundedNormalOnePositionMutator.Mutate(integerCandidate, randomWithoutValues, integerSearchSpace, sigma: 1)).ParamName.ShouldBe("candidate");
-        Should.Throw<ArgumentException>(() => RoundedNormalAllPositionsMutator.Mutate(integerCandidate, randomWithoutValues, integerSearchSpace, sigma: 1)).ParamName.ShouldBe("candidate");
-        Should.Throw<ArgumentException>(() => GaussianMutator.Mutate(realCandidate, randomWithoutValues, realSearchSpace, mutationRate: 0.5, mutationStrength: 1)).ParamName.ShouldBe("candidate");
-        Should.Throw<ArgumentException>(() => PolynomialMutator.Mutate(realCandidate, randomWithoutValues, realSearchSpace, eta: 20, atLeastOnce: false)).ParamName.ShouldBe("candidate");
-    }
-
-    [Fact]
     public void BoundsMustBeBroadcastableBeforeRandomDraws()
     {
         var integerCandidate = IntegerVector.Create(1, 2);

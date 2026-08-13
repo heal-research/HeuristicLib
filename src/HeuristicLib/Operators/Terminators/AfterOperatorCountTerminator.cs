@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record AfterOperatorCountTerminator<TCandidate> : StatelessTerminator<TCandidate>
+public sealed record AfterOperatorCountTerminator<TCandidate> : StatelessTerminator<TCandidate>
 {
     public AfterOperatorCountTerminator(ObservationCounter counter, int maximumCount)
     {
@@ -14,13 +14,7 @@ public record AfterOperatorCountTerminator<TCandidate> : StatelessTerminator<TCa
 
     public ObservationCounter Counter { get; init; }
 
-    public int MaximumCount
-    {
-        get;
-        init => field = value > 0
-            ? value
-            : throw new ArgumentOutOfRangeException(nameof(MaximumCount), "MaximumCount must be positive.");
-    }
+    public int MaximumCount { get; init; }
 
     public override bool IsTerminalState()
     {

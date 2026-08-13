@@ -67,26 +67,21 @@ public class RepeatingEvaluatorTests
         concurrentResult.ShouldBe(sequentialResult);
     }
 
-    [Fact]
-    public void CreateExecutionInstance_RejectsInvalidReconfiguredRepetitions()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void ExecutionInstanceCreation_RejectsNonPositiveRepetitions(int repetitions)
     {
-        var evaluator = new RepeatingEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new CandidateEvaluator(), 1)
+        var constructed = new RepeatingEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new CandidateEvaluator(), repetitions);
+        var reconfigured = new RepeatingEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new CandidateEvaluator(), 1) with
         {
-            Repetitions = 0
+            Repetitions = repetitions
         };
 
-        Should.Throw<InvalidOperationException>(() => evaluator.CreateExecutionInstance(new ExecutionInstanceRegistry()));
-    }
-
-    [Fact]
-    public void CreateExecutionInstance_RejectsMissingAggregator()
-    {
-        var evaluator = new RepeatingEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new CandidateEvaluator(), 1)
-        {
-            Aggregator = null!
-        };
-
-        Should.Throw<InvalidOperationException>(() => evaluator.CreateExecutionInstance(new ExecutionInstanceRegistry()));
+        constructed.Repetitions.ShouldBe(repetitions);
+        reconfigured.Repetitions.ShouldBe(repetitions);
+        Should.Throw<InvalidOperationException>(() => constructed.CreateExecutionInstance(new ExecutionInstanceRegistry()));
+        Should.Throw<InvalidOperationException>(() => reconfigured.CreateExecutionInstance(new ExecutionInstanceRegistry()));
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>

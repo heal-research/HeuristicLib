@@ -77,7 +77,7 @@ public class OperatorStaticMethodGuidelineTests
         ]).ToPopulationState();
         var comparer = CaseInsensitiveStringComparer.Instance;
 
-        var viaInstance = new RemoveDuplicatesInterceptor<string, PopulationState<string>>(comparer).Transform(state, previousState: null);
+        var viaInstance = new RemoveDuplicatesInterceptor<string, PopulationState<string>>(comparer).Transform(state, previousState: null, RandomNumberGenerator.Create(1));
         var viaStatic = RemoveDuplicatesInterceptor.Transform(state, previousState: null, comparer);
 
         viaStatic.Population.ShouldBe(viaInstance.Population);

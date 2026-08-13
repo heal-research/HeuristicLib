@@ -42,9 +42,6 @@ public record RoundedUniformArithmeticCrossover : SingleCandidateCrossover<Integ
     {
         int length = parent1.Count;
 
-        if (length != parent2.Count)
-            throw new ArgumentException("Parents must have same length.", nameof(parent1));
-
         var result = new int[length];
 
         for (int i = 0; i < length; i++)

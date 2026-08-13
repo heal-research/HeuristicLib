@@ -78,9 +78,23 @@ A configuration setting is either required or optional, and that decision determ
 - Every configuration property is `{ get; init; }`, including required ones. Construction and reconfiguration are different operations: the constructor is the only way to create a configuration, while `with` is the only way to derive a changed one. A `{ get; }` property silently removes a setting from `with`, which is how experiments vary parameters, so it is never the right accessor for configuration state.
 - Execution instances are the opposite: their resolved children and run data stay `{ get; }` because they are never reconfigured.
 
+Constructors and `init` accessors retain configuration values as supplied. Do not validate configuration invariants while
+constructing or reconfiguring an object. A record `with` expression does not rerun its public constructor, and relational
+invariants cannot be checked reliably while individual `init` assignments are still being applied.
+
+Validate configuration invariants when `CreateExecutionInstance` is called. At that point the complete immutable
+configuration is known, but no operator execution has begun. Throw `InvalidOperationException` for an invalid
+configuration. Keep validation in the existing factory implementation; do not introduce a parallel validation API or a
+second factory layer. For topology bases whose public factory resolves children before calling a protected overload, the
+derived configuration performs its checks in that protected overload. `RepeatingEvaluator` validates its repetition count
+there, while the `ChooseOne` operators validate nonempty children and matching weight counts there.
+
 Behavior that forms part of a reusable configuration should be represented by an explicit strategy interface whose implementations are immutable value objects, normally records. This keeps configuration equality structural and leaves a viable persistence model for built-in and user-defined strategies. Do not use a `Func`, `Action` or another delegate as a configuration property for such behavior: delegate equality depends on method and target identity, and captured runtime state cannot be persisted meaningfully. A delegate adapter is appropriate only for an explicitly runtime-only API whose identity equality and non-persistability are part of its documented contract.
 
-An invariant spanning a required value and an optional one can no longer be checked in the constructor. Check it where both are known and before any work depends on it, normally in `CreateExecutionInstance`, and throw `InvalidOperationException` because the offending value is no longer an argument. `ChooseOneMutator` compares its weight count against its child count this way.
+Validation that depends on the actual problem, search space or operation inputs belongs at execution time in the execution
+instance's role method. This includes populations, candidate batches, requested result counts and other call-specific data.
+Perform such checks before consuming random draws, mutating execution state or doing substantial avoidable work. A
+configuration check must not be deferred to a role method merely because that method will eventually use the setting.
 
 Configuration objects expose the information that describes their configured behavior through public read-only properties, including retained child operators. A wrapping base owns the canonical singular child property and a multi-operator base owns the canonical child collection. Name these properties `ChildOperator` and `ChildOperators`, or use role-specific forms such as `ChildMutator` and `ChildMutators`. Reserve nested operator for an operator at any descendant depth. Execution instances keep resolved child instances and other execution machinery private or protected by default.
 
@@ -193,6 +207,14 @@ Validate when a violation could:
 - Fail only after substantial avoidable computation.
 - Break an essential relationship such as compatible dimensions or matching operator and weight counts.
 
+Operators may assume that candidates supplied through an algorithm are valid for that algorithm's search space. Do not
+repeat search-space validity checks inside operators, including candidate dimensions, permutation contents, and matching
+dimensions of multiple candidates that are valid for the same fixed-dimension search space. This convention also applies
+to reduced-arity operators that omit an otherwise implicit search-space parameter. A caller that invokes a direct
+operation method with candidates outside that contract may receive a later exception or otherwise undefined results.
+Continue to validate independent structural inputs that search-space validity does not establish, such as broadcastable
+parameter dimensions.
+
 Do not add validation solely to replace an immediate underlying exception with a different exception type. Do not normalize or clamp configuration values unless normalization is the documented operation itself. Hard configuration invariants should be validated once when the configuration is authored. Public direct-operation methods may validate hard invariants at their boundary, but execution paths should use private trusted implementations when necessary to avoid repeating validation for every candidate.
 
 Debug and release builds must behave the same for the same input.
@@ -213,6 +235,10 @@ Design APIs for the pit of success.
 - Avoid capability interfaces until concrete use cases justify the additional abstraction.
 - Do not add marker interfaces without behavior or a concrete static typing requirement.
 - Do not preserve overloads or base classes only for symmetry when their semantics are unclear.
+
+XML documentation presents the ordinary contract first. Use `<summary>` for the member's main purpose and, where useful,
+the conventional expected value range. Put stable interpretations of unusual values, edge cases, and behavior outside the
+expected range in `<remarks>`. Do not let unusual-value details obscure the normal usage that most readers need first.
 
 ### Generic variance
 

@@ -121,17 +121,4 @@ public sealed class CrossoverParameterSemanticsTests
         (value > 1 || double.IsPositiveInfinity(value)).ShouldBe(prefersInternal);
     }
 
-    [Fact]
-    public void UnequalParentLengths_RemainAnError()
-    {
-        var shortParent = IntegerVector.Create(1);
-        var longParent = IntegerVector.Create(1, 2);
-        var realShortParent = RealVector.Create(1);
-        var realLongParent = RealVector.Create(1, 2);
-
-        Should.Throw<ArgumentException>(() => RoundedBlendAlphaBetaCrossover.Cross(Random, shortParent, longParent, IntegerSearchSpace, 0.5, 0.5));
-        Should.Throw<ArgumentException>(() => RoundedUniformArithmeticCrossover.Cross(Random, shortParent, longParent, IntegerSearchSpace, 0.5, 1));
-        Should.Throw<ArgumentException>(() => RoundedHeuristicCrossover.Cross(Random, shortParent, longParent, IntegerSearchSpace));
-        Should.Throw<ArgumentException>(() => SimulatedBinaryCrossover.Cross(Random, realShortParent, realLongParent, contiguity: 2));
-    }
 }

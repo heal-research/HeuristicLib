@@ -15,11 +15,6 @@ public record OrderCrossover : SingleCandidateCrossover<Permutation, Permutation
 
     public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator rng)
     {
-        if (parent1.Count != parent2.Count)
-        {
-            throw new ArgumentException("Parent permutations must have the same length.");
-        }
-
         var (start, end) = GetRandomBreakPoints(parent1.Count, rng);
 
         return Cross(parent1, parent2, start, end);
@@ -27,11 +22,6 @@ public record OrderCrossover : SingleCandidateCrossover<Permutation, Permutation
 
     public static Permutation Cross(Permutation parent1, Permutation parent2, int start, int end)
     {
-        if (parent1.Count != parent2.Count)
-        {
-            throw new ArgumentException("Parent permutations must have the same length.");
-        }
-
         if (start < 0 || end < 0 || start >= parent1.Count || end >= parent1.Count || start > end)
         {
             throw new ArgumentException("Start and end indices must be within the bounds of the permutation.");

@@ -1,14 +1,15 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-public record IdentityInterceptor<TCandidate, TSearchState> : StatelessInterceptor<TCandidate, TSearchState>
+public sealed record IdentityInterceptor<TCandidate, TSearchState> : StatelessInterceptor<TCandidate, TSearchState>
   where TSearchState : class, ISearchState
 {
-    public override TSearchState Transform(TSearchState currentState, TSearchState? previousState) => IdentityInterceptor.Transform(currentState, previousState);
+    public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random) => IdentityInterceptor.Transform(currentState, previousState);
 }
 
 public static class IdentityInterceptor

@@ -146,7 +146,7 @@ public class CycleAlgorithmAnalysisTests
                 var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
                 var currentState = Population.From([EvaluatedCandidate.From(candidate, objectiveVector)]).ToPopulationState();
 
-                yield return interceptor.Transform(currentState, initialState, problem.SearchSpace, problem);
+                yield return interceptor.Transform(currentState, initialState, random, problem.SearchSpace, problem);
                 await Task.CompletedTask;
             }
         }

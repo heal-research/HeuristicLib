@@ -17,15 +17,7 @@ public record DiscreteCrossover : SingleCandidateCrossover<IntegerVector, Intege
     public static IntegerVector Cross(IRandomNumberGenerator random, IReadOnlyList<IntegerVector> parents)
     {
         var n = parents.Count;
-        if (n < 2)
-            throw new ArgumentException("DiscreteCrossover: There are less than two parents to cross.");
         int length = parents[0].Count;
-
-        for (int i = 0; i < n; i++)
-        {
-            if (parents[i].Count != length)
-                throw new ArgumentException("DiscreteCrossover: The parents' vectors are of different length.", nameof(parents));
-        }
 
         var result = new int[length];
         for (int i = 0; i < length; i++)

@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record CancellationTokenTerminator<TCandidate>(CancellationToken CancellationToken)
+public sealed record CancellationTokenTerminator<TCandidate>(CancellationToken CancellationToken)
   : StatelessTerminator<TCandidate>
 {
     public override bool IsTerminalState()

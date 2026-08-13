@@ -23,12 +23,12 @@ public sealed record ChooseOneMutator<TCandidate, TSearchSpace, TProblem>
     public ChooseOneMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> childMutators)
         : base(childMutators)
     {
-        if (ChildMutators.Count == 0)
-            throw new ArgumentException("At least one mutator must be provided.", nameof(childMutators));
     }
 
     protected override MultiMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators)
     {
+        if (ChildMutators.Count == 0)
+            throw new InvalidOperationException("At least one mutator must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildMutators.Count)
             throw new InvalidOperationException("Weights must have the same length as mutators.");
 

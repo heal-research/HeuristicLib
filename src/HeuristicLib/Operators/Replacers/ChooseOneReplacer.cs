@@ -21,12 +21,12 @@ public sealed record ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>
     public ChooseOneReplacer(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> childReplacers)
         : base(childReplacers)
     {
-        if (ChildReplacers.Count == 0)
-            throw new ArgumentException("At least one replacer must be provided.", nameof(childReplacers));
     }
 
     protected override MultiReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> childReplacers)
     {
+        if (ChildReplacers.Count == 0)
+            throw new InvalidOperationException("At least one replacer must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildReplacers.Count)
             throw new InvalidOperationException("Weights must have the same length as replacers.");
 

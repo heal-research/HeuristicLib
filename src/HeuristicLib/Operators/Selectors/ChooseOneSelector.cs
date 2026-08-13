@@ -21,12 +21,12 @@ public sealed record ChooseOneSelector<TCandidate, TSearchSpace, TProblem>
     public ChooseOneSelector(IReadOnlyList<ISelector<TCandidate, TSearchSpace, TProblem>> childSelectors)
         : base(childSelectors)
     {
-        if (ChildSelectors.Count == 0)
-            throw new ArgumentException("At least one selector must be provided.", nameof(childSelectors));
     }
 
     protected override MultiSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> childSelectors)
     {
+        if (ChildSelectors.Count == 0)
+            throw new InvalidOperationException("At least one selector must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildSelectors.Count)
             throw new InvalidOperationException("Weights must have the same length as selectors.");
 

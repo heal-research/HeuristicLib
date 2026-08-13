@@ -250,8 +250,40 @@ public class ChooseOneOperatorTests
         Should.Throw<InvalidOperationException>(() => new Execution.ExecutionInstanceRegistry().Resolve(tooManyWeights));
         Should.Throw<InvalidOperationException>(() => new Execution.ExecutionInstanceRegistry().Resolve(tooFewWeights));
 
-        // A missing child collection is still a constructor argument, so it still fails at construction.
-        Should.Throw<ArgumentException>(() => ChooseOneReplacer.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>());
+        var emptyCreator = ChooseOneCreator.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
+        var emptyCrossover = ChooseOneCrossover.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
+        var emptyMutator = ChooseOneMutator.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
+        var emptySelector = ChooseOneSelector.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
+        var emptyReplacer = ChooseOneReplacer.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
+        var registry = new Execution.ExecutionInstanceRegistry();
+
+        emptyCreator.ChildCreators.ShouldBeEmpty();
+        emptyCrossover.ChildCrossovers.ShouldBeEmpty();
+        emptyMutator.ChildMutators.ShouldBeEmpty();
+        emptySelector.ChildSelectors.ShouldBeEmpty();
+        emptyReplacer.ChildReplacers.ShouldBeEmpty();
+        Should.Throw<InvalidOperationException>(() => registry.Resolve(emptyCreator));
+        Should.Throw<InvalidOperationException>(() => registry.Resolve(emptyCrossover));
+        Should.Throw<InvalidOperationException>(() => registry.Resolve(emptyMutator));
+        Should.Throw<InvalidOperationException>(() => registry.Resolve(emptySelector));
+        Should.Throw<InvalidOperationException>(() => registry.Resolve(emptyReplacer));
+    }
+
+    [Fact]
+    public void ChooseOneOperators_ShouldRejectChildrenRemovedByReconfiguration()
+    {
+        var creator = ChooseOneCreator.Create(new ConstantCreator(1)) with { ChildCreators = [] };
+        var crossover = ChooseOneCrossover.Create(new FirstParentCrossover(1)) with { ChildCrossovers = [] };
+        var mutator = ChooseOneMutator.Create(new AddOffsetMutator(1)) with { ChildMutators = [] };
+        var selector = ChooseOneSelector.Create(new FirstCandidatesSelector()) with { ChildSelectors = [] };
+        var replacer = ChooseOneReplacer.Create(new PreviousCandidatesReplacer()) with { ChildReplacers = [] };
+        var registry = new Execution.ExecutionInstanceRegistry();
+
+        Should.Throw<InvalidOperationException>(() => registry.Resolve(creator));
+        Should.Throw<InvalidOperationException>(() => registry.Resolve(crossover));
+        Should.Throw<InvalidOperationException>(() => registry.Resolve(mutator));
+        Should.Throw<InvalidOperationException>(() => registry.Resolve(selector));
+        Should.Throw<InvalidOperationException>(() => registry.Resolve(replacer));
     }
 
     [Theory]
@@ -469,7 +501,7 @@ public class ChooseOneOperatorTests
           objective: SingleObjective.Minimize);
         var instance = new Execution.ExecutionInstanceRegistry().Resolve(interceptor);
 
-        var result = instance.Transform(new TestAlgorithmState { Value = 1 }, previousState: null, DummySearchSpace<int>.Instance, problem);
+        var result = instance.Transform(new TestAlgorithmState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, problem);
 
         result.Value.ShouldBe(111);
     }
@@ -482,7 +514,24 @@ public class ChooseOneOperatorTests
         var instance = new Execution.ExecutionInstanceRegistry().Resolve(interceptor);
         var state = new TestAlgorithmState { Value = 1 };
 
-        instance.Transform(state, previousState: null, DummySearchSpace<int>.Instance, problem).ShouldBeSameAs(state);
+        instance.Transform(state, previousState: null, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, problem).ShouldBeSameAs(state);
+    }
+
+    [Fact]
+    public void PipelineInterceptor_PassesSameRandomAndOriginalPreviousStateToEveryStage()
+    {
+        var observations = new List<(TestAlgorithmState? PreviousState, IRandomNumberGenerator Random)>();
+        var interceptor = new RecordingStateInterceptor(observations).Then(new RecordingStateInterceptor(observations));
+        var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+        var previousState = new TestAlgorithmState { Value = 0 };
+        var random = RandomNumberGenerator.Create(1);
+
+        new Execution.ExecutionInstanceRegistry().Resolve(interceptor)
+            .Transform(new TestAlgorithmState { Value = 1 }, previousState, random, DummySearchSpace<int>.Instance, problem);
+
+        observations.Count.ShouldBe(2);
+        observations.ShouldAllBe(observation => ReferenceEquals(observation.PreviousState, previousState));
+        observations.ShouldAllBe(observation => ReferenceEquals(observation.Random, random));
     }
 
     [Fact]
@@ -534,8 +583,18 @@ public class ChooseOneOperatorTests
     private sealed record AddToStateInterceptor(int Offset)
       : StatelessInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>
     {
-        public override TestAlgorithmState Transform(TestAlgorithmState currentState, TestAlgorithmState? previousState, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+        public override TestAlgorithmState Transform(TestAlgorithmState currentState, TestAlgorithmState? previousState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
             => currentState with { Value = currentState.Value + Offset };
+    }
+
+    private sealed record RecordingStateInterceptor(List<(TestAlgorithmState? PreviousState, IRandomNumberGenerator Random)> Observations)
+      : StatelessInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>
+    {
+        public override TestAlgorithmState Transform(TestAlgorithmState currentState, TestAlgorithmState? previousState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+        {
+            Observations.Add((previousState, random));
+            return currentState;
+        }
     }
 
     private sealed record FirstCandidatesSelector : StatelessSelector<int>

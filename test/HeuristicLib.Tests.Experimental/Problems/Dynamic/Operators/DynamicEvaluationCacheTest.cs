@@ -5,6 +5,7 @@ using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.Dynamic.Operators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.States;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
 namespace HEAL.HeuristicLib.Tests.Problems.Dynamic.Operators;
@@ -35,6 +36,7 @@ file sealed record CountingEvaluator : StatelessEvaluator<DummyGenotype, DummySe
 {
     public int Calls { get; private set; }
     public int LastBatchSize { get; private set; }
+    public IRandomNumberGenerator? LastRandom { get; private set; }
 
     public override IReadOnlyList<ObjectiveVector> Evaluate(
       IReadOnlyList<DummyGenotype> solutions,
@@ -44,6 +46,7 @@ file sealed record CountingEvaluator : StatelessEvaluator<DummyGenotype, DummySe
     {
         Calls++;
         LastBatchSize = solutions.Count;
+        LastRandom = random;
 
         return solutions.Select(s => problem.Evaluate(s, random)).ToArray();
     }
@@ -58,6 +61,24 @@ file sealed record DummyGenotypeValueCacheKeySelector : ICacheKeySelector<DummyG
 
 public class DynamicEvaluationCacheTests
 {
+    [Fact]
+    public void ReevaluationInterceptor_UsesProvidedIterationRandomAfterEpochChange()
+    {
+        var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
+        var evaluator = new CountingEvaluator();
+        var interceptor = new ReevaluationInterceptor<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(evaluator, problem);
+        var instance = new ExecutionInstanceRegistry().Resolve(interceptor);
+        var candidate = new DummyGenotype(1);
+        var state = Population.From([EvaluatedCandidate.From(candidate, new ObjectiveVector(99.0))]).ToPopulationState();
+        var random = RandomNumberGenerator.Create(1);
+
+        problem.UpdateOnce();
+        var result = instance.Transform(state, previousState: null, random, problem.SearchSpace, problem);
+
+        evaluator.LastRandom.ShouldBeSameAs(random);
+        result.Population.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1.0));
+    }
+
     [Fact]
     public void DeduplicatesWithinBatch_EvaluatesOnce()
     {

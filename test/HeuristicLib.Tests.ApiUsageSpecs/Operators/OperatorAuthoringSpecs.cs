@@ -501,7 +501,7 @@ public class OperatorAuthoringSpecs
         var problem = CreateRastriginProblem(dimension: 3);
         var instance = new ExecutionInstanceRegistry().Resolve(new IncrementingInterceptor());
 
-        var transformed = instance.Transform(new CounterSearchState(1), previousState: null, problem.SearchSpace, problem);
+        var transformed = instance.Transform(new CounterSearchState(1), previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         transformed.Value.ShouldBe(2);
     }
@@ -514,9 +514,9 @@ public class OperatorAuthoringSpecs
         var firstInstance = new ExecutionInstanceRegistry().Resolve(interceptor);
         var secondInstance = new ExecutionInstanceRegistry().Resolve(interceptor);
 
-        var first = firstInstance.Transform(new CounterSearchState(0), previousState: null, problem.SearchSpace, problem);
-        var second = firstInstance.Transform(new CounterSearchState(0), previousState: null, problem.SearchSpace, problem);
-        var independent = secondInstance.Transform(new CounterSearchState(0), previousState: null, problem.SearchSpace, problem);
+        var first = firstInstance.Transform(new CounterSearchState(0), previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var second = firstInstance.Transform(new CounterSearchState(0), previousState: null, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        var independent = secondInstance.Transform(new CounterSearchState(0), previousState: null, RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
 
         first.Value.ShouldBe(1);
         second.Value.ShouldBe(2);
@@ -529,9 +529,38 @@ public class OperatorAuthoringSpecs
         var problem = CreateRastriginProblem(dimension: 3);
         var instance = new ExecutionInstanceRegistry().Resolve(new ForwardingInterceptor(new IncrementingInterceptor()));
 
-        var transformed = instance.Transform(new CounterSearchState(1), previousState: null, problem.SearchSpace, problem);
+        var transformed = instance.Transform(new CounterSearchState(1), previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         transformed.Value.ShouldBe(2);
+    }
+
+    [Fact]
+    public void InterceptorTopologyBases_ExposeMatchingConfigurationAndInstanceShapes()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        var child = new IncrementingInterceptor();
+        var wrapping = new ForwardingWrappingInterceptor(child);
+        var multi = new FirstMultiInterceptor([child]);
+
+        wrapping.ChildInterceptor.ShouldBeSameAs(child);
+        multi.ChildInterceptors.ShouldBe([child]);
+        wrapping.CreateExecutionInstance(new ExecutionInstanceRegistry()).Transform(new CounterSearchState(1), null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Value.ShouldBe(2);
+        multi.CreateExecutionInstance(new ExecutionInstanceRegistry()).Transform(new CounterSearchState(1), null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Value.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Interceptor_ReducedArities_KeepOnlyConsumedContextOnAuthoringSurface()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        IInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> searchSpaceOnly = new SearchSpaceInterceptor();
+        IInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> candidateOnly = new CandidateInterceptor();
+        IInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> statefulSearchSpaceOnly = new StatefulSearchSpaceInterceptor();
+        IInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> statefulCandidateOnly = new StatefulCandidateInterceptor();
+
+        new ExecutionInstanceRegistry().Resolve(searchSpaceOnly).Transform(new CounterSearchState(0), null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Value.ShouldBe(1);
+        new ExecutionInstanceRegistry().Resolve(candidateOnly).Transform(new CounterSearchState(0), null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Value.ShouldBe(1);
+        new ExecutionInstanceRegistry().Resolve(statefulSearchSpaceOnly).Transform(new CounterSearchState(0), null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Value.ShouldBe(1);
+        new ExecutionInstanceRegistry().Resolve(statefulCandidateOnly).Transform(new CounterSearchState(0), null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Value.ShouldBe(1);
     }
 
     [Fact]
@@ -565,6 +594,39 @@ public class OperatorAuthoringSpecs
         var instance = new ExecutionInstanceRegistry().Resolve(new ForwardingTerminator(new ValueTerminator(2)));
 
         instance.IsTerminalState(new CounterSearchState(2), problem.SearchSpace, problem).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void TerminatorTopologyBases_ExposeMatchingConfigurationAndInstanceShapes()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        var child = new ValueTerminator(2);
+        var wrapping = new ForwardingWrappingTerminator(child);
+        var multi = new FirstMultiTerminator([child]);
+
+        wrapping.ChildTerminator.ShouldBeSameAs(child);
+        multi.ChildTerminators.ShouldBe([child]);
+        wrapping.CreateExecutionInstance(new ExecutionInstanceRegistry()).IsTerminalState(new CounterSearchState(2), problem.SearchSpace, problem).ShouldBeTrue();
+        multi.CreateExecutionInstance(new ExecutionInstanceRegistry()).IsTerminalState(new CounterSearchState(2), problem.SearchSpace, problem).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Terminator_ReducedArities_IncludeStateAgnosticForm()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        ITerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> searchSpaceOnly = new SearchSpaceTerminator();
+        ITerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> stateOnly = new StateTerminator();
+        ITerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> stateAgnostic = new StateAgnosticTerminator();
+        ITerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> statefulSearchSpaceOnly = new StatefulSearchSpaceTerminator();
+        ITerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> statefulStateOnly = new StatefulStateTerminator();
+        ITerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> statefulStateAgnostic = new StatefulStateAgnosticTerminator();
+
+        new ExecutionInstanceRegistry().Resolve(searchSpaceOnly).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
+        new ExecutionInstanceRegistry().Resolve(stateOnly).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
+        new ExecutionInstanceRegistry().Resolve(stateAgnostic).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
+        new ExecutionInstanceRegistry().Resolve(statefulSearchSpaceOnly).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
+        new ExecutionInstanceRegistry().Resolve(statefulStateOnly).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
+        new ExecutionInstanceRegistry().Resolve(statefulStateAgnostic).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
     }
 
     [Fact]
@@ -911,7 +973,39 @@ public class OperatorAuthoringSpecs
 
     private sealed record IncrementingInterceptor : StatelessInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
     {
-        public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+        public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            currentState with { Value = currentState.Value + 1 };
+    }
+
+    private sealed record SearchSpaceInterceptor : StatelessInterceptor<RealVector, RealVectorSearchSpace, CounterSearchState>
+    {
+        public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) =>
+            currentState with { Value = currentState.Value + 1 };
+    }
+
+    private sealed record CandidateInterceptor : StatelessInterceptor<RealVector, CounterSearchState>
+    {
+        public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, IRandomNumberGenerator random) =>
+            currentState with { Value = currentState.Value + 1 };
+    }
+
+    private sealed record StatefulSearchSpaceInterceptor : StatefulInterceptor<RealVector, RealVectorSearchSpace, CounterSearchState, StatefulSearchSpaceInterceptor.ExecutionState>
+    {
+        public sealed class ExecutionState { }
+
+        protected override ExecutionState CreateInitialState() => new();
+
+        protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, ExecutionState state, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) =>
+            currentState with { Value = currentState.Value + 1 };
+    }
+
+    private sealed record StatefulCandidateInterceptor : StatefulInterceptor<RealVector, CounterSearchState, StatefulCandidateInterceptor.ExecutionState>
+    {
+        public sealed class ExecutionState { }
+
+        protected override ExecutionState CreateInitialState() => new();
+
+        protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, ExecutionState state, IRandomNumberGenerator random) =>
             currentState with { Value = currentState.Value + 1 };
     }
 
@@ -924,7 +1018,7 @@ public class OperatorAuthoringSpecs
 
         protected override ExecutionState CreateInitialState() => new();
 
-        protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, ExecutionState state, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, ExecutionState state, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
             state.Calls++;
             return currentState with { Value = currentState.Value + state.Calls };
@@ -934,20 +1028,100 @@ public class OperatorAuthoringSpecs
     private sealed record ForwardingInterceptor(IInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> Inner)
         : Interceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
     {
-        protected override InterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) =>
-            new Instance(registry.Resolve(Inner));
+        public override InterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+            new Instance(instanceRegistry.Resolve(Inner));
 
         private sealed class Instance(IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> inner)
             : InterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
         {
-            public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
-                inner.Transform(currentState, previousState, searchSpace, problem);
+            public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+                inner.Transform(currentState, previousState, random, searchSpace, problem);
+        }
+    }
+
+    private sealed record ForwardingWrappingInterceptor
+        : WrappingInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
+    {
+        public ForwardingWrappingInterceptor(IInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> childInterceptor)
+            : base(childInterceptor)
+        {
+        }
+
+        protected override WrappingInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> CreateExecutionInstance(IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> childInterceptor) =>
+            new Instance(childInterceptor);
+
+        private sealed class Instance(IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> childInterceptor)
+            : WrappingInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(childInterceptor)
+        {
+            public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+                ChildInterceptor.Transform(currentState, previousState, random, searchSpace, problem);
+        }
+    }
+
+    private sealed record FirstMultiInterceptor
+        : MultiInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
+    {
+        public FirstMultiInterceptor(IReadOnlyList<IInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>> childInterceptors)
+            : base(childInterceptors)
+        {
+        }
+
+        protected override MultiInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> CreateExecutionInstance(ImmutableArray<IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>> childInterceptors) =>
+            new Instance(childInterceptors);
+
+        private sealed class Instance(ImmutableArray<IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>> childInterceptors)
+            : MultiInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(childInterceptors)
+        {
+            public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+                ChildInterceptors[0].Transform(currentState, previousState, random, searchSpace, problem);
         }
     }
 
     private sealed record ValueTerminator(int MaximumValue) : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
     {
         public override bool IsTerminalState(CounterSearchState state, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) => state.Value >= MaximumValue;
+    }
+
+    private sealed record SearchSpaceTerminator : StatelessTerminator<RealVector, RealVectorSearchSpace, CounterSearchState>
+    {
+        public override bool IsTerminalState(CounterSearchState state, RealVectorSearchSpace searchSpace) => false;
+    }
+
+    private sealed record StateTerminator : StatelessTerminator<RealVector, CounterSearchState>
+    {
+        public override bool IsTerminalState(CounterSearchState state) => false;
+    }
+
+    private sealed record StateAgnosticTerminator : StatelessTerminator<RealVector>
+    {
+        public override bool IsTerminalState() => false;
+    }
+
+    private sealed record StatefulSearchSpaceTerminator : StatefulTerminator<RealVector, RealVectorSearchSpace, CounterSearchState, StatefulSearchSpaceTerminator.ExecutionState>
+    {
+        public sealed class ExecutionState { }
+
+        protected override ExecutionState CreateInitialState() => new();
+
+        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state, RealVectorSearchSpace searchSpace) => false;
+    }
+
+    private sealed record StatefulStateTerminator : StatefulTerminator<RealVector, CounterSearchState, StatefulStateTerminator.ExecutionState>
+    {
+        public sealed class ExecutionState { }
+
+        protected override ExecutionState CreateInitialState() => new();
+
+        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state) => false;
+    }
+
+    private sealed record StatefulStateAgnosticTerminator : StatefulTerminator<RealVector, StatefulStateAgnosticTerminator.ExecutionState>
+    {
+        public sealed class ExecutionState { }
+
+        protected override ExecutionState CreateInitialState() => new();
+
+        protected override bool IsTerminalState(ExecutionState state) => false;
     }
 
     private sealed record CountingStatefulTerminator : StatefulTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState, CountingStatefulTerminator.ExecutionState>
@@ -965,13 +1139,51 @@ public class OperatorAuthoringSpecs
     private sealed record ForwardingTerminator(ITerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> Inner)
         : Terminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
     {
-        protected override TerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) =>
-            new Instance(registry.Resolve(Inner));
+        public override TerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+            new Instance(instanceRegistry.Resolve(Inner));
 
         private sealed class Instance(ITerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> inner)
             : TerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
         {
             public override bool IsTerminalState(CounterSearchState state, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) => inner.IsTerminalState(state, searchSpace, problem);
+        }
+    }
+
+    private sealed record ForwardingWrappingTerminator
+        : WrappingTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
+    {
+        public ForwardingWrappingTerminator(ITerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> childTerminator)
+            : base(childTerminator)
+        {
+        }
+
+        protected override WrappingTerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> CreateExecutionInstance(ITerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> childTerminator) =>
+            new Instance(childTerminator);
+
+        private sealed class Instance(ITerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> childTerminator)
+            : WrappingTerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(childTerminator)
+        {
+            public override bool IsTerminalState(CounterSearchState state, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+                ChildTerminator.IsTerminalState(state, searchSpace, problem);
+        }
+    }
+
+    private sealed record FirstMultiTerminator
+        : MultiTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
+    {
+        public FirstMultiTerminator(IReadOnlyList<ITerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>> childTerminators)
+            : base(childTerminators)
+        {
+        }
+
+        protected override MultiTerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> CreateExecutionInstance(ImmutableArray<ITerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>> childTerminators) =>
+            new Instance(childTerminators);
+
+        private sealed class Instance(ImmutableArray<ITerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>> childTerminators)
+            : MultiTerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(childTerminators)
+        {
+            public override bool IsTerminalState(CounterSearchState state, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+                ChildTerminators[0].IsTerminalState(state, searchSpace, problem);
         }
     }
 

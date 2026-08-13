@@ -41,9 +41,6 @@ public record RoundedBlendAlphaBetaCrossover : SingleCandidateCrossover<IntegerV
 
     public static IntegerVector Cross(IRandomNumberGenerator random, IntegerVector betterParent, IntegerVector worseParent, IntegerVector minimum, IntegerVector maximum, double alpha, double beta)
     {
-        if (betterParent.Count != worseParent.Count)
-            throw new ArgumentException("Parents must have same length.", nameof(betterParent));
-
         int length = betterParent.Count;
         var result = new int[length];
 

@@ -43,9 +43,6 @@ public record GaussianMutator
 
     public static RealVector Mutate(RealVector candidate, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, double mutationRate, double mutationStrength)
     {
-        if (candidate.Count != searchSpace.Length)
-            throw new ArgumentException("Candidate length must match the search space length.", nameof(candidate));
-
         return Mutate(candidate, random, searchSpace.Minimum, searchSpace.Maximum, mutationRate, mutationStrength);
     }
 

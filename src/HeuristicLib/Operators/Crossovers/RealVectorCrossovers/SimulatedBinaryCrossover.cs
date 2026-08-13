@@ -24,7 +24,6 @@ public record SimulatedBinaryCrossover : SingleCandidateCrossover<RealVector, Re
     ///   crossed either a contracting crossover or an expanding crossover is performed, again with equal probability.
     ///   For more details refer to the paper by Deb and Agrawal.
     /// </summary>
-    /// <exception cref="ArgumentException">Thrown when the parents' vectors are of unequal length.</exception>
     /// <remarks>
     ///   The manipulated value is not restricted by the (possibly) specified lower and upper bounds. Use the
     ///   <see cref="BoundsChecker" /> to correct the values after performing the crossover.
@@ -36,11 +35,6 @@ public record SimulatedBinaryCrossover : SingleCandidateCrossover<RealVector, Re
     public static RealVector Cross(IRandomNumberGenerator random, RealVector parent1, RealVector parent2, double contiguity)
     {
         var length = parent1.Count;
-        if (length != parent2.Count)
-        {
-            throw new ArgumentException("SimulatedBinaryCrossover: Parents are of unequal length");
-        }
-
         var result = new double[length];
         for (var i = 0; i < length; i++)
         {
@@ -76,11 +70,6 @@ public record SimulatedBinaryCrossover : SingleCandidateCrossover<RealVector, Re
 
     protected RealVector Cross(IRandomNumberGenerator random, RealVector[] parents)
     {
-        if (parents.Length != 2)
-        {
-            throw new ArgumentException("SimulatedBinaryCrossover: The number of parents is not equal to 2");
-        }
-
         return Cross(random, parents[0], parents[1], Contiguity);
     }
 }
@@ -96,11 +85,6 @@ public static class Sbx
     public static (RealVector child1, RealVector child2) CrossSbx(RealVector p1, RealVector p2, RealVectorSearchSpace searchSpace, double eta, double probVar, double probBin, IRandomNumberGenerator rng, double eps = 1.0e-14)
     {
         var nVar = p1.Count;
-        if (p2.Count != nVar)
-        {
-            throw new ArgumentException("p1 and p2 must have the same length.");
-        }
-
         var xl = searchSpace.Minimum; // IReadOnlyList<double>
         var xu = searchSpace.Maximum;
 

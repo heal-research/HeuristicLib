@@ -590,13 +590,15 @@ public class OperatorBudgetAlgorithmTests
         counter.CurrentCount.ShouldBe(3);
     }
 
-    [Fact]
-    public void AfterOperatorCountTerminator_Throws_WhenMaximumCountIsNotPositive()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void AfterOperatorCountTerminator_IsImmediatelyTerminal_WhenMaximumCountIsNotPositive(int maximumCount)
     {
         var counter = new ObservationCounter();
+        var terminator = new AfterOperatorCountTerminator<RealVector>(counter, maximumCount);
 
-        Should.Throw<ArgumentOutOfRangeException>(() =>
-            new AfterOperatorCountTerminator<RealVector>(counter, maximumCount: 0));
+        terminator.IsTerminalState().ShouldBeTrue();
     }
 
     [Fact]
@@ -615,12 +617,12 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
-    public void AfterOperatorDurationTerminator_Throws_WhenMaximumDurationIsNotPositive()
+    public void AfterOperatorDurationTerminator_IsImmediatelyTerminal_WhenMaximumDurationIsNotPositive()
     {
         var duration = new ObservationDuration();
 
-        Should.Throw<ArgumentOutOfRangeException>(() =>
-            new AfterOperatorDurationTerminator<RealVector>(duration, maximumDuration: TimeSpan.Zero));
+        new AfterOperatorDurationTerminator<RealVector>(duration, TimeSpan.Zero).IsTerminalState().ShouldBeTrue();
+        new AfterOperatorDurationTerminator<RealVector>(duration, TimeSpan.FromTicks(-1)).IsTerminalState().ShouldBeTrue();
     }
 
     [Fact]

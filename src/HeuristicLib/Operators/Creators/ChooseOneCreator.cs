@@ -29,12 +29,12 @@ public sealed record ChooseOneCreator<TCandidate, TSearchSpace, TProblem>
     public ChooseOneCreator(IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> childCreators)
         : base(childCreators)
     {
-        if (ChildCreators.Count == 0)
-            throw new ArgumentException("At least one creator must be provided.", nameof(childCreators));
     }
 
     protected override MultiCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<ICreatorInstance<TCandidate, TSearchSpace, TProblem>> childCreators)
     {
+        if (ChildCreators.Count == 0)
+            throw new InvalidOperationException("At least one creator must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildCreators.Count)
             throw new InvalidOperationException("Weights must have the same length as creators.");
 

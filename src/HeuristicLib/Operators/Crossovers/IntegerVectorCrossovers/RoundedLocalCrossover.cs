@@ -15,9 +15,6 @@ public record RoundedLocalCrossover : SingleCandidateCrossover<IntegerVector, In
 
     public static IntegerVector Cross(IRandomNumberGenerator random, IntegerVector parent1, IntegerVector parent2, IntegerVector minimum, IntegerVector maximum)
     {
-        if (parent1.Count != parent2.Count)
-            throw new ArgumentException("Parents must have same length.", nameof(parent1));
-
         int length = parent1.Count;
         var result = new int[length];
         for (int i = 0; i < length; i++)

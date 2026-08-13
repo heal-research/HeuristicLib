@@ -29,12 +29,12 @@ public sealed record ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>
     public ChooseOneCrossover(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>> childCrossovers)
         : base(childCrossovers)
     {
-        if (ChildCrossovers.Count == 0)
-            throw new ArgumentException("At least one crossover must be provided.", nameof(childCrossovers));
     }
 
     protected override MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> childCrossovers)
     {
+        if (ChildCrossovers.Count == 0)
+            throw new InvalidOperationException("At least one crossover must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildCrossovers.Count)
             throw new InvalidOperationException("Weights must have the same length as crossovers.");
 
