@@ -8,7 +8,11 @@ public class OnlineMeanAbsolutePercentageErrorCalculator
     private int n;
     private double sre;
 
-    public OnlineMeanAbsolutePercentageErrorCalculator() => Reset();
+    public OnlineMeanAbsolutePercentageErrorCalculator()
+    {
+        Reset();
+    }
+
     public double MeanAbsolutePercentageError => n > 0 ? sre / n : 0.0;
 
     public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)

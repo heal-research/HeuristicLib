@@ -270,7 +270,7 @@ public sealed class IntegerVectorTests
         IntegerVector a = IntegerVector.Create(1, 2);
         IntegerVector b = IntegerVector.Create(3, 4);
 
-        IntegerVector.AreBroadcastable(a, b).ShouldBeTrue();
+        Vector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
@@ -279,7 +279,7 @@ public sealed class IntegerVectorTests
         IntegerVector a = 1;
         IntegerVector b = IntegerVector.Create(3, 4, 5);
 
-        IntegerVector.AreBroadcastable(a, b).ShouldBeTrue();
+        Vector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
@@ -288,7 +288,7 @@ public sealed class IntegerVectorTests
         IntegerVector a = IntegerVector.Create(3, 4, 5);
         IntegerVector b = 1;
 
-        IntegerVector.AreBroadcastable(a, b).ShouldBeTrue();
+        Vector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
@@ -297,7 +297,7 @@ public sealed class IntegerVectorTests
         IntegerVector a = IntegerVector.Create(1, 2);
         IntegerVector b = IntegerVector.Create(3, 4, 5);
 
-        IntegerVector.AreBroadcastable(a, b).ShouldBeFalse();
+        Vector.AreBroadcastable(a, b).ShouldBeFalse();
     }
 
     [Fact]
@@ -306,8 +306,8 @@ public sealed class IntegerVectorTests
         IntegerVector scalar = 1;
         IntegerVector vector = IntegerVector.Create(3, 4, 5);
 
-        IntegerVector.BroadcastLength(scalar, vector).ShouldBe(3);
-        IntegerVector.BroadcastLength(vector, scalar).ShouldBe(3);
+        Vector.BroadcastLength(scalar, vector).ShouldBe(3);
+        Vector.BroadcastLength(vector, scalar).ShouldBe(3);
     }
 
     [Fact]
@@ -316,8 +316,8 @@ public sealed class IntegerVectorTests
         IntegerVector scalar = 1;
         var empty = IntegerVector.Create();
 
-        IntegerVector.BroadcastLength(scalar, empty).ShouldBe(0);
-        IntegerVector.BroadcastLength(empty, scalar).ShouldBe(0);
+        Vector.BroadcastLength(scalar, empty).ShouldBe(0);
+        Vector.BroadcastLength(empty, scalar).ShouldBe(0);
         (scalar + empty).ShouldBeEmpty();
         (empty + scalar).ShouldBeEmpty();
     }
@@ -328,7 +328,7 @@ public sealed class IntegerVectorTests
         IntegerVector scalar = 1;
         var others = new[] { IntegerVector.Create(1, 2), IntegerVector.Create(3, 4, 5) };
 
-        IntegerVector.AreBroadcastable(scalar, others).ShouldBeFalse();
+        Vector.AreBroadcastable(scalar, others).ShouldBeFalse();
     }
 
     [Fact]
@@ -338,8 +338,8 @@ public sealed class IntegerVectorTests
         var compatible = new[] { IntegerVector.Create(1, 2, 3), (IntegerVector)2 };
         var incompatible = new[] { IntegerVector.Create(1, 2), IntegerVector.Create(3, 4, 5) };
 
-        IntegerVector.BroadcastLength(scalar, compatible).ShouldBe(3);
-        Should.Throw<ArgumentException>(() => IntegerVector.BroadcastLength(scalar, incompatible));
+        Vector.BroadcastLength(scalar, compatible).ShouldBe(3);
+        Should.Throw<ArgumentException>(() => Vector.BroadcastLength(scalar, incompatible));
     }
 
     [Fact]
@@ -547,8 +547,8 @@ public sealed class IntegerVectorTests
     [Fact]
     public void AreBroadcastableTo_AcceptsScalarsAndMatchingLengths()
     {
-        IntegerVector.AreBroadcastableTo(3, IntegerVector.Create(1), IntegerVector.Create(1, 2, 3)).ShouldBeTrue();
-        IntegerVector.AreBroadcastableTo(3, IntegerVector.Create(1, 2)).ShouldBeFalse();
+        Vector.AreBroadcastableTo(3, IntegerVector.Create(1), IntegerVector.Create(1, 2, 3)).ShouldBeTrue();
+        Vector.AreBroadcastableTo(3, IntegerVector.Create(1, 2)).ShouldBeFalse();
     }
 
     [Fact]

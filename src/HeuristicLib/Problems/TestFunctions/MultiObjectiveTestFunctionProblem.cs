@@ -9,7 +9,10 @@ public class MultiObjectiveTestFunctionProblem : RealVectorProblem
 {
     public readonly IMultiObjectiveTestFunction TestFunction;
 
-    public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) : base(testFunction.Objective, GetEncoding(testFunction)) => TestFunction = testFunction;
+    public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) : base(testFunction.Objective, GetEncoding(testFunction))
+    {
+        TestFunction = testFunction;
+    }
 
     public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction, RealVectorSearchSpace searchSpace) : base(testFunction.Objective, searchSpace)
     {

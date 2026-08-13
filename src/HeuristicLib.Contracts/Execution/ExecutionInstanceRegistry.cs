@@ -14,7 +14,10 @@ public class ExecutionInstanceRegistry
     {
     }
 
-    private ExecutionInstanceRegistry(ExecutionInstanceRegistry parentRegistry) => this.parentRegistry = parentRegistry;
+    private ExecutionInstanceRegistry(ExecutionInstanceRegistry parentRegistry)
+    {
+        this.parentRegistry = parentRegistry;
+    }
 
     public ExecutionInstanceRegistry CreateChildRegistry()
     {

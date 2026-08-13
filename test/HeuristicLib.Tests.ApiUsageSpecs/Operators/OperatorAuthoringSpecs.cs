@@ -14,11 +14,9 @@ using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
 

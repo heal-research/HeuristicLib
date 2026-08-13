@@ -330,7 +330,7 @@ public sealed class RealVectorTests
         RealVector a = RealVector.Create(1.0, 2.0);
         RealVector b = RealVector.Create(3.0, 4.0);
 
-        RealVector.AreBroadcastable(a, b).ShouldBeTrue();
+        Vector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
@@ -339,8 +339,8 @@ public sealed class RealVectorTests
         RealVector scalar = 1.0;
         RealVector vector = RealVector.Create(3.0, 4.0);
 
-        RealVector.AreBroadcastable(scalar, vector).ShouldBeTrue();
-        RealVector.AreBroadcastable(vector, scalar).ShouldBeTrue();
+        Vector.AreBroadcastable(scalar, vector).ShouldBeTrue();
+        Vector.AreBroadcastable(vector, scalar).ShouldBeTrue();
     }
 
     [Fact]
@@ -349,7 +349,7 @@ public sealed class RealVectorTests
         RealVector a = RealVector.Create(1.0, 2.0);
         RealVector b = RealVector.Create(3.0, 4.0, 5.0);
 
-        RealVector.AreBroadcastable(a, b).ShouldBeFalse();
+        Vector.AreBroadcastable(a, b).ShouldBeFalse();
     }
 
     [Fact]
@@ -358,8 +358,8 @@ public sealed class RealVectorTests
         RealVector scalar = 1.0;
         RealVector vector = RealVector.Create(3.0, 4.0, 5.0);
 
-        RealVector.BroadcastLength(scalar, vector).ShouldBe(3);
-        RealVector.BroadcastLength(vector, scalar).ShouldBe(3);
+        Vector.BroadcastLength(scalar, vector).ShouldBe(3);
+        Vector.BroadcastLength(vector, scalar).ShouldBe(3);
     }
 
     [Fact]
@@ -368,8 +368,8 @@ public sealed class RealVectorTests
         RealVector scalar = 1.0;
         var empty = RealVector.Create();
 
-        RealVector.BroadcastLength(scalar, empty).ShouldBe(0);
-        RealVector.BroadcastLength(empty, scalar).ShouldBe(0);
+        Vector.BroadcastLength(scalar, empty).ShouldBe(0);
+        Vector.BroadcastLength(empty, scalar).ShouldBe(0);
         (scalar + empty).ShouldBeEmpty();
         (empty + scalar).ShouldBeEmpty();
     }
@@ -875,7 +875,7 @@ public sealed class RealVectorTests
         RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
         var others = new[] { RealVector.Create(4.0, 5.0, 6.0), 7.0, RealVector.Create(8.0, 9.0, 10.0) };
 
-        var result = RealVector.AreBroadcastable(vector, others);
+        var result = Vector.AreBroadcastable(vector, others);
 
         result.ShouldBeTrue();
     }
@@ -886,7 +886,7 @@ public sealed class RealVectorTests
         RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
         var others = new[] { RealVector.Create(4.0, 5.0, 6.0), RealVector.Create(7.0, 8.0) };
 
-        var result = RealVector.AreBroadcastable(vector, others);
+        var result = Vector.AreBroadcastable(vector, others);
 
         result.ShouldBeFalse();
     }
@@ -897,8 +897,8 @@ public sealed class RealVectorTests
         RealVector scalar = 1.0;
         var others = new[] { RealVector.Create(1.0, 2.0), RealVector.Create(3.0, 4.0, 5.0) };
 
-        RealVector.AreBroadcastable(scalar, others).ShouldBeFalse();
-        Should.Throw<ArgumentException>(() => RealVector.BroadcastLength(scalar, others));
+        Vector.AreBroadcastable(scalar, others).ShouldBeFalse();
+        Should.Throw<ArgumentException>(() => Vector.BroadcastLength(scalar, others));
     }
 
     [Fact]
@@ -907,7 +907,7 @@ public sealed class RealVectorTests
         RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
         var others = Array.Empty<RealVector>();
 
-        var result = RealVector.AreBroadcastable(vector, others);
+        var result = Vector.AreBroadcastable(vector, others);
 
         result.ShouldBeTrue();
     }
@@ -917,7 +917,7 @@ public sealed class RealVectorTests
     {
         var vectors = new[] { RealVector.Create(1.0, 2.0, 3.0), 4.0, RealVector.Create(5.0, 6.0, 7.0) };
 
-        var result = RealVector.AreBroadcastableTo(3, vectors);
+        var result = Vector.AreBroadcastableTo(3, vectors);
 
         result.ShouldBeTrue();
     }
@@ -927,7 +927,7 @@ public sealed class RealVectorTests
     {
         var vectors = new[] { RealVector.Create(1.0, 2.0, 3.0), RealVector.Create(4.0, 5.0) };
 
-        var result = RealVector.AreBroadcastableTo(3, vectors);
+        var result = Vector.AreBroadcastableTo(3, vectors);
 
         result.ShouldBeFalse();
     }
@@ -935,8 +935,8 @@ public sealed class RealVectorTests
     [Fact]
     public void AreBroadcastableTo_AcceptsScalarsAndMatchingLengths()
     {
-        RealVector.AreBroadcastableTo(3, RealVector.Create(1), RealVector.Create(1, 2, 3)).ShouldBeTrue();
-        RealVector.AreBroadcastableTo(3, RealVector.Create(1, 2)).ShouldBeFalse();
+        Vector.AreBroadcastableTo(3, RealVector.Create(1), RealVector.Create(1, 2, 3)).ShouldBeTrue();
+        Vector.AreBroadcastableTo(3, RealVector.Create(1, 2)).ShouldBeFalse();
     }
 
     [Fact]
@@ -945,7 +945,7 @@ public sealed class RealVectorTests
         RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
         var others = new[] { 4.0, (RealVector)5.0 };
 
-        var result = RealVector.BroadcastLength(vector, others);
+        var result = Vector.BroadcastLength(vector, others);
 
         result.ShouldBe(3);
     }
@@ -956,7 +956,7 @@ public sealed class RealVectorTests
         RealVector vector = 1.0;
         var others = new[] { RealVector.Create(1.0, 2.0, 3.0, 4.0), 2.0, RealVector.Create(5.0, 6.0, 7.0, 8.0) };
 
-        var result = RealVector.BroadcastLength(vector, others);
+        var result = Vector.BroadcastLength(vector, others);
 
         result.ShouldBe(4);
     }
@@ -967,7 +967,7 @@ public sealed class RealVectorTests
         RealVector scalar = 1.0;
         var others = new[] { RealVector.Create(), (RealVector)2.0 };
 
-        RealVector.BroadcastLength(scalar, others).ShouldBe(0);
+        Vector.BroadcastLength(scalar, others).ShouldBe(0);
     }
 
     [Fact]
@@ -976,7 +976,7 @@ public sealed class RealVectorTests
         RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
         var others = Array.Empty<RealVector>();
 
-        var result = RealVector.BroadcastLength(vector, others);
+        var result = Vector.BroadcastLength(vector, others);
 
         result.ShouldBe(3);
     }
@@ -987,7 +987,7 @@ public sealed class RealVectorTests
         RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
         var others = new[] { RealVector.Create(4.0, 5.0) };
 
-        Should.Throw<ArgumentException>(() => RealVector.BroadcastLength(vector, others));
+        Should.Throw<ArgumentException>(() => Vector.BroadcastLength(vector, others));
     }
 
     private sealed class StubRandomNumberGenerator : IRandomNumberGenerator

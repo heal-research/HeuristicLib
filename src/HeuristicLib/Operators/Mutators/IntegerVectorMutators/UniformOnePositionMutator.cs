@@ -20,7 +20,7 @@ public record UniformOnePositionMutator
 
     public static IntegerVector Mutate(IntegerVector candidate, IRandomNumberGenerator random, IntegerVector minimum, IntegerVector maximum)
     {
-        if (!IntegerVector.AreBroadcastableTo(candidate.Count, minimum, maximum))
+        if (!Vector.AreBroadcastableTo(candidate.Count, minimum, maximum))
             throw new ArgumentException("Minimum and maximum must each have length 1 or match the candidate length.");
 
         if (candidate.Count == 0)

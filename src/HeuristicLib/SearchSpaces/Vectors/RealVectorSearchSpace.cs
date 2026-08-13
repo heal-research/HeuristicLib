@@ -12,7 +12,7 @@ public record RealVectorSearchSpace : SearchSpace<RealVector>
 
     public RealVectorSearchSpace(int length, RealVector minimum, RealVector maximum)
     {
-        if (!RealVector.AreBroadcastableTo(length, minimum, maximum))
+        if (!Vector.AreBroadcastableTo(length, minimum, maximum))
         {
             throw new ArgumentException("Minimum and Maximum vector must be of length 1 or match the searchSpace length");
         }

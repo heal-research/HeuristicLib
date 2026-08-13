@@ -7,7 +7,7 @@ public record IntegerVectorSearchSpace : SearchSpace<IntegerVector>
     public IntegerVectorSearchSpace(int Length, IntegerVector Minimum, IntegerVector Maximum)
     {
         this.Length = Length;
-        if (!IntegerVector.AreBroadcastableTo(Length, Minimum, Maximum))
+        if (!Vector.AreBroadcastableTo(Length, Minimum, Maximum))
             throw new ArgumentException("Bounds are not compatible with Length.");
 
         this.Minimum = Minimum;

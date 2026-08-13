@@ -6,7 +6,10 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 public class LaggedTreeNode : SymbolicExpressionTreeNode
 {
 
-    protected LaggedTreeNode(LaggedTreeNode original) : base(original) => Lag = original.Lag;
+    protected LaggedTreeNode(LaggedTreeNode original) : base(original)
+    {
+        Lag = original.Lag;
+    }
 
     public LaggedTreeNode(LaggedSymbol timeLagSymbol) : base(timeLagSymbol) { }
     public new LaggedSymbol Symbol => (LaggedSymbol)base.Symbol;

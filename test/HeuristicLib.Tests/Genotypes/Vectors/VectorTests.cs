@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 
 namespace HEAL.HeuristicLib.Tests.Genotypes.Vectors;

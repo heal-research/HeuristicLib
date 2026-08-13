@@ -51,7 +51,7 @@ public record GaussianMutator
 
     public static RealVector Mutate(RealVector candidate, IRandomNumberGenerator random, RealVector minimum, RealVector maximum, double mutationRate, double mutationStrength)
     {
-        if (!RealVector.AreBroadcastableTo(candidate.Count, minimum, maximum))
+        if (!Vector.AreBroadcastableTo(candidate.Count, minimum, maximum))
             throw new ArgumentException("Minimum and maximum must each have length 1 or match the candidate length.");
 
         if (candidate.Count == 0)

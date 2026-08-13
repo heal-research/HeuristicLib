@@ -11,7 +11,10 @@ public class TestFunctionProblem : RealVectorProblem
     public readonly ITestFunction TestFunction;
     public TestFunctionProblem() : this(null!) { }
 
-    public TestFunctionProblem(ITestFunction testFunction) : base(SingleObjective.Create(testFunction.Objective), GetEncoding(testFunction)) => TestFunction = testFunction;
+    public TestFunctionProblem(ITestFunction testFunction) : base(SingleObjective.Create(testFunction.Objective), GetEncoding(testFunction))
+    {
+        TestFunction = testFunction;
+    }
 
     public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) => TestFunction.Evaluate(solution);
 

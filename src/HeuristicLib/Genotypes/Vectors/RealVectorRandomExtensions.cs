@@ -8,7 +8,7 @@ public static class RealVectorRandomExtensions
     {
         public RealVector NextRealVectorUniform(RealVector minimum, RealVector maximum, int length)
         {
-            if (!RealVector.AreBroadcastableTo(length, minimum, maximum))
+            if (!Vector.AreBroadcastableTo(length, minimum, maximum))
                 throw new ArgumentException("Vectors must be compatible for broadcasting.");
 
             var result = new double[length];
@@ -24,7 +24,7 @@ public static class RealVectorRandomExtensions
 
         public RealVector NextRealVectorNormal(RealVector mean, RealVector std, int length)
         {
-            if (!RealVector.AreBroadcastableTo(length, mean, std))
+            if (!Vector.AreBroadcastableTo(length, mean, std))
                 throw new ArgumentException("Vectors must be compatible for broadcasting.");
 
             var result = new double[length];

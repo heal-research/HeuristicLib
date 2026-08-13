@@ -12,7 +12,10 @@ public sealed class TravelingSalesmanMoveProblem
     private readonly ITravelingSalesmanProblemData data;
 
     public TravelingSalesmanMoveProblem(ITravelingSalesmanProblemData data)
-        : base(SingleObjective.Minimize, new PermutationSearchSpace(data.NumberOfCities)) => this.data = data;
+        : base(SingleObjective.Minimize, new PermutationSearchSpace(data.NumberOfCities))
+    {
+        this.data = data;
+    }
 
     public override ObjectiveVector Evaluate(Permutation candidate, IRandomNumberGenerator random)
         => !IsTerminal(candidate, random) ? throw new ArgumentException("A complete tour is required for evaluation.", nameof(candidate)) : TourLength(candidate);

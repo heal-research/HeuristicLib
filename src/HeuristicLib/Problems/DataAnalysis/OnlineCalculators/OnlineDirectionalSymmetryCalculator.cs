@@ -8,7 +8,10 @@ public class OnlineDirectionalSymmetryCalculator
     private int n;
     private int nCorrect;
 
-    public OnlineDirectionalSymmetryCalculator() => Reset();
+    public OnlineDirectionalSymmetryCalculator()
+    {
+        Reset();
+    }
 
     public double DirectionalSymmetry => n < 1 ? 0.0 : (double)nCorrect / n;
 

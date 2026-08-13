@@ -10,7 +10,10 @@ public class ValueArraySpecs
 
     private sealed record Workflow
     {
-        public Workflow(params IReadOnlyList<Stage> stages) => Stages = stages.ToValueArray();
+        public Workflow(params IReadOnlyList<Stage> stages)
+        {
+            Stages = stages.ToValueArray();
+        }
 
         public ValueArray<Stage> Stages { get; }
     }

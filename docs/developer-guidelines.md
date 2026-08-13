@@ -338,3 +338,9 @@ Choose the enforcement mechanism that matches the rule.
 - Do not commit IDE vendor specific suppression comments or suppression attributes. Configure inspections that exist only in one IDE in personal IDE settings when the code should remain unchanged.
 
 Follow the validation order in [AGENTS.md](../AGENTS.md) and the placement guidance in [the test suite guide](../test/README.md).
+
+### Expression-bodied members
+
+Use an expression body for a member that produces a value: a property, an indexer, an accessor, or a method that computes a result or forwards to another member.
+
+Do not use an expression body for a member whose purpose is to change state. A constructor always uses a block body, which `csharp_style_expression_bodied_constructors = false` enforces as IDE0021. The same reasoning applies to a method that exists to mutate state or to run a side effect rather than to return a value; no mechanical check covers that case, so apply it by review.

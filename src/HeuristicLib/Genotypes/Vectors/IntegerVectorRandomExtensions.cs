@@ -8,7 +8,7 @@ public static class IntegerVectorRandomExtensions
     {
         public IntegerVector NextIntegerVectorUniform(IntegerVector minimum, IntegerVector maximum, int length)
         {
-            if (!IntegerVector.AreBroadcastableTo(length, minimum, maximum))
+            if (!Vector.AreBroadcastableTo(length, minimum, maximum))
                 throw new ArgumentException("Bounds must be broadcast-compatible with the requested length.");
 
             var result = new int[length];

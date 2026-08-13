@@ -111,7 +111,7 @@ public sealed class BoolVectorTests
         BoolVector a = new BoolVector(true, false);
         BoolVector b = new BoolVector(false, true);
 
-        BoolVector.AreBroadcastable(a, b).ShouldBeTrue();
+        Vector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public sealed class BoolVectorTests
         BoolVector a = true;
         BoolVector b = new BoolVector(false, true, false);
 
-        BoolVector.AreBroadcastable(a, b).ShouldBeTrue();
+        Vector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public sealed class BoolVectorTests
         BoolVector a = new BoolVector(false, true, false);
         BoolVector b = false;
 
-        BoolVector.AreBroadcastable(a, b).ShouldBeTrue();
+        Vector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public sealed class BoolVectorTests
         BoolVector a = new BoolVector(true, false);
         BoolVector b = new BoolVector(true, false, true);
 
-        BoolVector.AreBroadcastable(a, b).ShouldBeFalse();
+        Vector.AreBroadcastable(a, b).ShouldBeFalse();
     }
 
     [Fact]
@@ -147,8 +147,8 @@ public sealed class BoolVectorTests
         BoolVector scalar = true;
         BoolVector vector = new BoolVector(true, false, true);
 
-        BoolVector.BroadcastLength(scalar, vector).ShouldBe(3);
-        BoolVector.BroadcastLength(vector, scalar).ShouldBe(3);
+        Vector.BroadcastLength(scalar, vector).ShouldBe(3);
+        Vector.BroadcastLength(vector, scalar).ShouldBe(3);
     }
 
     [Fact]
@@ -157,8 +157,8 @@ public sealed class BoolVectorTests
         BoolVector scalar = true;
         var empty = BoolVector.Create();
 
-        BoolVector.BroadcastLength(scalar, empty).ShouldBe(0);
-        BoolVector.BroadcastLength(empty, scalar).ShouldBe(0);
+        Vector.BroadcastLength(scalar, empty).ShouldBe(0);
+        Vector.BroadcastLength(empty, scalar).ShouldBe(0);
         (scalar & empty).ShouldBeEmpty();
         (empty & scalar).ShouldBeEmpty();
     }
@@ -169,7 +169,7 @@ public sealed class BoolVectorTests
         BoolVector scalar = true;
         var others = new[] { BoolVector.Create(true, false), BoolVector.Create(true, false, true) };
 
-        BoolVector.AreBroadcastable(scalar, others).ShouldBeFalse();
+        Vector.AreBroadcastable(scalar, others).ShouldBeFalse();
     }
 
     [Fact]
@@ -179,15 +179,15 @@ public sealed class BoolVectorTests
         var compatible = new[] { BoolVector.Create(true, false, true), (BoolVector)false };
         var incompatible = new[] { BoolVector.Create(true, false), BoolVector.Create(true, false, true) };
 
-        BoolVector.BroadcastLength(scalar, compatible).ShouldBe(3);
-        Should.Throw<ArgumentException>(() => BoolVector.BroadcastLength(scalar, incompatible));
+        Vector.BroadcastLength(scalar, compatible).ShouldBe(3);
+        Should.Throw<ArgumentException>(() => Vector.BroadcastLength(scalar, incompatible));
     }
 
     [Fact]
     public void AreBroadcastableTo_AcceptsScalarsAndMatchingLengths()
     {
-        BoolVector.AreBroadcastableTo(3, BoolVector.Create(true), BoolVector.Create(true, false, true)).ShouldBeTrue();
-        BoolVector.AreBroadcastableTo(3, BoolVector.Create(true, false)).ShouldBeFalse();
+        Vector.AreBroadcastableTo(3, BoolVector.Create(true), BoolVector.Create(true, false, true)).ShouldBeTrue();
+        Vector.AreBroadcastableTo(3, BoolVector.Create(true, false)).ShouldBeFalse();
     }
 
     [Fact]
