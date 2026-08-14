@@ -23,9 +23,9 @@ public class DynamicTSPTests
 
         //GA
         var ga = GeneticAlgorithm.GetBuilder(
-          new RandomPermutationCreator(),
-          new EdgeRecombinationCrossover(),
-          new InversionMutator()
+            new RandomPermutationCreator(),
+            new EdgeRecombinationCrossover(),
+            new InversionMutator()
         );
 
         //ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
@@ -39,10 +39,8 @@ public class DynamicTSPTests
         //prob.AttachTo(ga);
 
         //execute
-        var resGa = (ga.Build() with
-        {
-            MaximumGenerations = 1000
-        }).Complete(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var resGa = (ga.Build() with { MaximumGenerations = 1000 }).Complete(prob, RandomNumberGenerator.Create(42),
+            ct: TestContext.Current.CancellationToken);
 
         //look at results
         var objGa = resGa.Population
@@ -50,7 +48,8 @@ public class DynamicTSPTests
                          .First();
 
         resGa.Population.EvaluatedCandidates.Count.ShouldBe(100);
-        resGa.Population.EvaluatedCandidates.All(solution => prob.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
+        resGa.Population.EvaluatedCandidates.All(solution => prob.SearchSpace.Contains(solution.Candidate))
+             .ShouldBeTrue();
         resGa.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
         double.IsFinite(objGa.ObjectiveVector[0]).ShouldBeTrue();
         objGa.ObjectiveVector[0].ShouldBeGreaterThan(0.0);

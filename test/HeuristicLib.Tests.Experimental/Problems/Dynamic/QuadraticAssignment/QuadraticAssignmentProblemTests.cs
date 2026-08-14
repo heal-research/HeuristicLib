@@ -1,5 +1,5 @@
 using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Problems.Dynamic.QuadraticAssignment;
+using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
@@ -83,6 +83,28 @@ public class QuadraticAssignmentProblemTests
         var costDyn = dyn.Evaluate(sol, TestRandoms.NoRandom);
         var costB = new QuadraticAssignmentProblem(b).Evaluate(sol, TestRandoms.NoRandom);
         costDyn.ShouldBe(costB);
+    }
+
+    [Fact]
+    public void PingPongAlpha_ReturnsFromOneTowardZero()
+    {
+        var rng = TestRandoms.SystemRandomGenerator(1);
+        var a = QuadraticAssignmentProblemHelper.CreateDefaultA();
+        var b = QuadraticAssignmentProblemHelper.CreateDefaultB();
+        var dyn = new InterpolatedQuadraticAssignmentProblem(a, b, rng, 0.0, 0.25, true);
+
+        dyn.UpdateOnce();
+        dyn.Alpha.ShouldBe(0.25);
+        dyn.UpdateOnce();
+        dyn.Alpha.ShouldBe(0.5);
+        dyn.UpdateOnce();
+        dyn.Alpha.ShouldBe(0.75);
+        dyn.UpdateOnce();
+        dyn.Alpha.ShouldBe(1.0);
+        dyn.UpdateOnce();
+        dyn.Alpha.ShouldBe(0.75);
+        dyn.UpdateOnce();
+        dyn.Alpha.ShouldBe(0.5);
     }
 
     [Fact]

@@ -10,7 +10,6 @@ using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.IntegerVectorMutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.MetaOptimization;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
