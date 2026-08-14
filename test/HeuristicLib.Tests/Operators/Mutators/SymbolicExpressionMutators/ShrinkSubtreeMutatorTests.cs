@@ -69,7 +69,7 @@ public sealed class ShrinkSubtreeMutatorTests
         var searchSpace = CreateSearchSpace();
         var parent = (Variable("x0") + Variable("x1") * Variable("x2")).Build(searchSpace);
 
-        var offspring = new ShrinkSubtreeMutator().Mutate(
+        var offspring = new ShrinkSubtreeMutator().MutateCandidate(
             parent,
             new SequenceRandomNumberGenerator(0.75, 0.75),
             searchSpace);

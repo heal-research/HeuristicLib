@@ -12,7 +12,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
 
 public record HillClimber<TCandidate, TSearchSpace, TProblem>
-    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>
+    : IterativeAlgorithm<HillClimber<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -23,9 +23,8 @@ public record HillClimber<TCandidate, TSearchSpace, TProblem>
     public required int MaxNeighbors { get; init; }
     public required int BatchSize { get; init; }
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateIterativeAlgorithmInstance(
-        ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
-        new Instance(resolvedInterceptor, registry.Resolve(Evaluator), registry.Resolve(Creator), registry.Resolve(Mutator), Direction, MaxNeighbors, BatchSize);
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
+        new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Mutator), Direction, MaxNeighbors, BatchSize);
 
     private sealed class Instance(
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor,
@@ -75,7 +74,7 @@ public record HillClimber<TCandidate, TSearchSpace, TProblem>
             {
                 var candidates = mutator.Mutate(Enumerable.Repeat(current.Candidate, batchSize).ToArray(), random, problem.SearchSpace, problem);
                 var evaluatedCandidates = evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
-                var objectiveVectors = evaluatedCandidates.Select(candidate => candidate.ObjectiveVector).ToArray();
+                var objectiveVectors = evaluatedCandidates.Select(evaluatedCandidate => evaluatedCandidate.ObjectiveVector).ToArray();
                 var bestIndex = BestSelector.Select(objectiveVectors, problem.Objective, count: 1)[0];
 
                 if (problem.Objective.TotalOrderComparer.Compare(objectiveVectors[bestIndex], current.ObjectiveVector) >= 0)
@@ -103,7 +102,7 @@ public static class HillClimber
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        return new HillClimberBuilder<TCandidate, TSearchSpace, TProblem>
+        return new()
         {
             Mutator = mutator,
             Creator = creator

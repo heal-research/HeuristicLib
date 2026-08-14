@@ -90,8 +90,6 @@ public class GenealogyGraph<TCandidate> where TCandidate : notnull
         sb.AppendLine("digraph G {");
         sb.AppendLine("rankdir=TB;");
 
-        var elites = new List<Node>();
-
         foreach (var (genId, gen) in Nodes.Select((x, i) => (i, x)))
         {
             if (gen.Count == 0)
@@ -120,7 +118,6 @@ public class GenealogyGraph<TCandidate> where TCandidate : notnull
                 else
                 {
                     var ranked = nl.Where(x => x.Rank != -1).OrderBy(x => x.Rank).ToArray();
-                    elites.Add(ranked[0]);
                     foreach (var t in ranked)
                     {
                         var shape = t.Parents.Any(x => equality.Equals(x.Value, t.Value) && x.Layer == 0) ? "doublecircle" : "circle";

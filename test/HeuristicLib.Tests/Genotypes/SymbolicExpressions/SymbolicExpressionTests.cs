@@ -317,6 +317,42 @@ public sealed class SymbolicExpressionTests
     }
 
     [Fact]
+    public void OperationNode_EqualityDistinguishesTheOperationSymbol()
+    {
+        var operand = Variable("x0").Build().Root;
+
+        new UnaryExpressionNode(Symbols.Logarithm, operand)
+            .ShouldNotBe(new UnaryExpressionNode(Symbols.SquareRoot, operand));
+        new BinaryExpressionNode(Symbols.Addition, operand, operand)
+            .ShouldNotBe(new BinaryExpressionNode(Symbols.Subtraction, operand, operand));
+    }
+
+    [Fact]
+    public void TerminalNode_EqualityUsesItsPayload()
+    {
+        var variableSymbol = new VariableSymbol(["x0", "x1"]);
+        new VariableExpressionNode(variableSymbol, "x0")
+            .ShouldNotBe(new VariableExpressionNode(variableSymbol, "x1"));
+
+        var constantSymbol = new EvolvableConstantSymbol();
+        new NumericConstantExpressionNode(constantSymbol, 1.0)
+            .ShouldNotBe(new NumericConstantExpressionNode(constantSymbol, 2.0));
+    }
+
+    [Fact]
+    public void Node_EqualityIgnoresCachedSubtreeMetadata()
+    {
+        var first = (Variable("x0") + Variable("x1")).Build().Root;
+        var second = (Variable("x0") + Variable("x1")).Build().Root;
+
+        first.ShouldBe(second);
+        first.GetHashCode().ShouldBe(second.GetHashCode());
+        first.Length.ShouldBe(second.Length);
+        first.Depth.ShouldBe(second.Depth);
+        ReferenceEquals(first, second).ShouldBeFalse();
+    }
+
+    [Fact]
     public void NaryNode_EqualityUsesOrderedChildValues()
     {
         var symbol = new SumThreeSymbol();

@@ -3,10 +3,10 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 
-public record SwapSingleSolutionMutator : SingleSolutionMutator<Permutation>
+public record SwapMutator : SingleCandidateMutator<Permutation>
 {
-    public override Permutation Mutate(Permutation solution, IRandomNumberGenerator random)
+    public override Permutation MutateCandidate(Permutation parent, IRandomNumberGenerator random)
     {
-        return random.Swap(solution);
+        return parent.SwapRandomIndices(random);
     }
 }

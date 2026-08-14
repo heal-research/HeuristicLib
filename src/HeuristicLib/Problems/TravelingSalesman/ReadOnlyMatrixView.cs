@@ -1,5 +1,3 @@
-#pragma warning disable S2368
-
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 public sealed class ReadOnlyMatrixView<T>

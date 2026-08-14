@@ -30,7 +30,6 @@ public abstract class VariableTreeNodeBase : SymbolicExpressionTreeNode
     {
         base.ShakeLocalParameters(random, shakingFactor);
 
-        // 50% additive & 50% multiplicative (TODO: BUG in if statement below -> fix in HL 4.0!)
         if (random.NextDouble() < 0.5)
         {
             var x = random.NextNormal(Symbol.WeightManipulatorMu, Symbol.WeightManipulatorSigma);

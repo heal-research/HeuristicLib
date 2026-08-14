@@ -9,23 +9,23 @@ public abstract record WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IEvaluator<TCandidate, TSearchSpace, TProblem> InnerEvaluator { get; }
-
-    protected WrappingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> innerEvaluator)
+    protected WrappingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator)
     {
-        InnerEvaluator = innerEvaluator;
+        ChildEvaluator = childEvaluator;
     }
 
-    protected sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(ExecutionInstanceRegistry registry) =>
-        CreateEvaluatorInstance(registry.Resolve(InnerEvaluator));
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> ChildEvaluator { get; init; }
 
-    protected abstract WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator);
+    public sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateExecutionInstance(instanceRegistry.Resolve(ChildEvaluator));
+
+    protected abstract WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator);
 }
 
-public abstract class WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator)
+public abstract class WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator)
     : EvaluatorInstance<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> InnerEvaluator { get; } = innerEvaluator;
+    protected IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> ChildEvaluator { get; } = childEvaluator;
 }

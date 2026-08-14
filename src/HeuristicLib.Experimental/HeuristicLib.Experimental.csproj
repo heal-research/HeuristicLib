@@ -6,8 +6,14 @@
         <RootNamespace>HEAL.HeuristicLib</RootNamespace>
         <Description>Experimental HeuristicLib APIs and research-oriented features.</Description>
     </PropertyGroup>
+
     <ItemGroup>
-      <PackageReference Include="TreesearchLib" Version="1.3.0" />
+        <Using Include="System.Collections.Immutable" />
+        <Using Include="HEAL.HeuristicLib.Collections" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="TreesearchLib" Version="1.3.0" />
     </ItemGroup>
 
     <ItemGroup>

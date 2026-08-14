@@ -10,11 +10,11 @@ public record BestPerEvaluationAnalysis<TCandidate, TSearchSpace, TProblem> : An
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 
 {
-    private IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators { get; }
+    private ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> Evaluators { get; }
 
-    public BestPerEvaluationAnalysis(params IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators)
+    public BestPerEvaluationAnalysis(params IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators)
     {
-        this.Evaluators = Evaluators;
+        Evaluators = evaluators.ToImmutableArray();
     }
 
     public void AfterEvaluation(QualityCurve<TCandidate> state,

@@ -9,16 +9,16 @@ public record BestQualityAlgorithmAnalysis<TCandidate, TSearchSpace, TProblem> :
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public BestQualityAlgorithmAnalysis(params IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluator)
+    public BestQualityAlgorithmAnalysis(params IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators)
     {
-        this.Evaluator = Evaluator;
+        Evaluators = evaluators.ToImmutableArray();
     }
 
     public override QualityState CreateInitialResult() => new();
 
     public override void RegisterObservations(ObservationPlan observations, QualityState result)
     {
-        foreach (var evaluator in Evaluator)
+        foreach (var evaluator in Evaluators)
             observations.Observe(evaluator, AfterEvaluation);
         return;
 
@@ -37,7 +37,7 @@ public record BestQualityAlgorithmAnalysis<TCandidate, TSearchSpace, TProblem> :
         }
     }
 
-    private IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluator { get; }
+    private ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> Evaluators { get; }
 }
 
 public class QualityState

@@ -1,9 +1,9 @@
-namespace HEAL.HeuristicLib.Operators.MoveCreators;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using Execution;
-using Problems;
-using Random;
-using SearchSpaces;
+namespace HEAL.HeuristicLib.Operators.MoveCreators;
 
 public abstract record MoveCreator<TGenotype, TSearchSpace, TProblem, TMove, TState>
     : IMoveCreator<TGenotype, TSearchSpace, TProblem, TMove>

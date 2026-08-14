@@ -2,4 +2,4 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public interface IStochasticProblem<TSolution, out TSearchSpace> : IProblem<TSolution, TSearchSpace> where TSearchSpace : class, ISearchSpace<TSolution>;
+public interface IStochasticProblem<TCandidate, out TSearchSpace> : IProblem<TCandidate, TSearchSpace> where TSearchSpace : class, ISearchSpace<TCandidate>;

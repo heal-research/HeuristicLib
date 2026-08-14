@@ -42,7 +42,7 @@ public static class OperatorDurationBudgetExtensions
             Func<TOperator, ObservationDuration, TimeProvider, IOperator<TObservedInstance>> measuredOperatorFactory)
             where TOperator : IOperator<TObservedInstance>
         {
-            return new OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance>
+            return new()
             {
                 Algorithm = algorithm,
                 ObservedOperator = observedOperator,

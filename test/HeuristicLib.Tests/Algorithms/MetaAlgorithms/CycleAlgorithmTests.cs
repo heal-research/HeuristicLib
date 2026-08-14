@@ -16,7 +16,6 @@ using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
-using HEAL.HeuristicLib.Tests.TestSupport.Execution;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
@@ -32,16 +31,21 @@ public class CycleAlgorithmTests
         exception.ParamName.ShouldBe("algorithms");
     }
 
+    /// <summary>
+    /// A nonpositive cycle limit is a stable value rather than a rejected one: it runs no cycles.
+    /// </summary>
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void CycleAlgorithm_RequiresPositiveMaximumCycles(int maximumCycles)
+    public void CycleAlgorithm_WithNonpositiveMaximumCycles_RunsNoCycles(int maximumCycles)
     {
-        Should.Throw<ArgumentOutOfRangeException>(() =>
-            new CycleAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([new AdditiveStepAlgorithm(1)])
-            {
-                MaximumCycles = maximumCycles
-            });
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var cycle = CycleAlgorithm.Create(new AdditiveStepAlgorithm(1)) with
+        {
+            MaximumCycles = maximumCycles
+        };
+
+        cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ShouldBeEmpty();
     }
 
     [Fact]
@@ -49,7 +53,7 @@ public class CycleAlgorithmTests
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = new NoProgressAlgorithm();
-        var cycle = new CycleAlgorithm<NoProgressAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([algorithm])
+        var cycle = CycleAlgorithm.Create(algorithm) with
         {
             MaximumCycles = 3
         };
@@ -64,11 +68,8 @@ public class CycleAlgorithmTests
     public void CycleAlgorithm_ContinuesWhenALaterChildProducesProgress()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var cycle = new CycleAlgorithm<IAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>, int,
-            DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([new NoProgressAlgorithm(), new AdditiveStepAlgorithm(1)])
-        {
-            MaximumCycles = 2
-        };
+        IAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> firstAlgorithm = new NoProgressAlgorithm();
+        var cycle = firstAlgorithm.CycleWith(new AdditiveStepAlgorithm(1), maximumCycles: 2);
 
         var states = cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -81,7 +82,7 @@ public class CycleAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
-        var cycle = new CycleAlgorithm<CountingInstanceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([algorithm]);
+        var cycle = CycleAlgorithm.Create(algorithm);
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
@@ -91,17 +92,10 @@ public class CycleAlgorithmTests
     }
 
     [Fact]
-    public void CycleAlgorithm_RunStreaming_RepeatsStagesAndPassesStateAcrossCycles()
+    public void CycleAlgorithm_Stream_RepeatsStagesAndPassesStateAcrossCycles()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var cycle = new CycleAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(
-            [
-                new AdditiveStepAlgorithm(1),
-                new AdditiveStepAlgorithm(10)
-            ])
-        {
-            MaximumCycles = 2
-        };
+        var cycle = new AdditiveStepAlgorithm(1).CycleWith(new AdditiveStepAlgorithm(10), maximumCycles: 2);
 
         var states = cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -117,7 +111,7 @@ public class CycleAlgorithmTests
         {
             MaximumGenerations = 3
         };
-        var cycle = new CycleAlgorithm<GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>, RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>([ga])
+        var cycle = CycleAlgorithm.Create(ga) with
         {
             MaximumCycles = 5
         };
@@ -138,7 +132,7 @@ public class CycleAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
-        var cycle = new CycleAlgorithm<CountingInstanceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([algorithm])
+        var cycle = CycleAlgorithm.Create(algorithm) with
         {
             MaximumCycles = 2,
             NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
@@ -164,7 +158,7 @@ public class CycleAlgorithmTests
             Crossover = new SinglePointCrossover(),
             Mutator = new GaussianMutator(0.1, 0.1),
             MutationRate = 0.5,
-            Selector = new RandomSelector<RealVector>(),
+            Selector = RandomSelector.For(problem),
             Elites = 0,
             Interceptor = new YieldedStateStampingInterceptor()
         };
@@ -174,11 +168,11 @@ public class CycleAlgorithmTests
       state.Population.EvaluatedCandidates[0].ObjectiveVector[0];
 
     private sealed record NoProgressAlgorithm
-        : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        : Algorithm<NoProgressAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
         public int InstanceCount { get; private set; }
 
-        protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
+        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
         {
             InstanceCount++;
             return new Instance();
@@ -203,6 +197,7 @@ public class CycleAlgorithmTests
           PopulationState<RealVector> currentState,
           PopulationState<RealVector>? previousState,
           ExecutionState executionState,
+          IRandomNumberGenerator random,
           RealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)
         {

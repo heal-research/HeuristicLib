@@ -1,9 +1,6 @@
-using Generator.Equals;
-
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
-[Equatable]
-public abstract partial record OperationExpressionNode : ExpressionNode
+public abstract record OperationExpressionNode : ExpressionNode
 {
     private protected OperationExpressionNode(OperationSymbol symbol, int length, int depth)
         : base(length, depth)
@@ -11,12 +8,10 @@ public abstract partial record OperationExpressionNode : ExpressionNode
         Symbol = symbol;
     }
 
-    [IgnoreEquality]
     public sealed override OperationSymbol Symbol { get; }
 }
 
-[Equatable]
-public sealed partial record UnaryExpressionNode : OperationExpressionNode
+public sealed record UnaryExpressionNode : OperationExpressionNode
 {
     public UnaryExpressionNode(OperationSymbol symbol, ExpressionNode operand)
         : base(ValidateSymbol(symbol), operand.Length + 1, operand.Depth + 1)
@@ -62,8 +57,7 @@ public sealed partial record UnaryExpressionNode : OperationExpressionNode
     }
 }
 
-[Equatable]
-public sealed partial record BinaryExpressionNode : OperationExpressionNode
+public sealed record BinaryExpressionNode : OperationExpressionNode
 {
     public BinaryExpressionNode(OperationSymbol symbol, ExpressionNode left, ExpressionNode right)
         : base(ValidateSymbol(symbol), left.Length + right.Length + 1, Math.Max(left.Depth, right.Depth) + 1)
@@ -121,8 +115,7 @@ public sealed partial record BinaryExpressionNode : OperationExpressionNode
     }
 }
 
-[Equatable]
-public sealed partial record NaryExpressionNode : OperationExpressionNode
+public sealed record NaryExpressionNode : OperationExpressionNode
 {
     public NaryExpressionNode(OperationSymbol symbol, params IEnumerable<ExpressionNode> children)
         : this(symbol, children.ToImmutableArray())
@@ -135,12 +128,11 @@ public sealed partial record NaryExpressionNode : OperationExpressionNode
         Children = children;
     }
 
-    [OrderedEquality]
-    public ImmutableArray<ExpressionNode> Children { get; }
+    public ValueArray<ExpressionNode> Children { get; }
 
     public override ExpressionNode GetChild(int index)
     {
-        if (index < 0 || index >= Children.Length)
+        if (index < 0 || index >= Children.Count)
             throw new ArgumentOutOfRangeException(nameof(index));
 
         return Children[index];
@@ -148,12 +140,12 @@ public sealed partial record NaryExpressionNode : OperationExpressionNode
 
     internal override ExpressionNode WithChild(int index, ExpressionNode replacement)
     {
-        if (index < 0 || index >= Children.Length)
+        if (index < 0 || index >= Children.Count)
             throw new ArgumentOutOfRangeException(nameof(index));
         if (Children[index].Equals(replacement))
             return this;
 
-        return new NaryExpressionNode(Symbol, Children.SetItem(index, replacement));
+        return new NaryExpressionNode(Symbol, Children.AsImmutableArray().SetItem(index, replacement));
     }
 
     internal override ExpressionNode WithChildren(IReadOnlyDictionary<int, ExpressionNode> replacements)
@@ -164,12 +156,12 @@ public sealed partial record NaryExpressionNode : OperationExpressionNode
         ImmutableArray<ExpressionNode>.Builder? updated = null;
         foreach (var (index, replacement) in replacements)
         {
-            if (index < 0 || index >= Children.Length)
+            if (index < 0 || index >= Children.Count)
                 throw new ArgumentException($"Child index {index} is outside the n-ary node.", nameof(replacements));
             if (Children[index].Equals(replacement))
                 continue;
 
-            updated ??= Children.ToBuilder();
+            updated ??= Children.AsImmutableArray().ToBuilder();
             updated[index] = replacement;
         }
 

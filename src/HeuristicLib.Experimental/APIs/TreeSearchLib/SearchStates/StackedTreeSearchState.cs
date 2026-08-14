@@ -1,11 +1,10 @@
-using HEAL.HeuristicLib.APIs.TreeSearchLib.SearchStates;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.Partial;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using TreesearchLib;
 
-namespace HEAL.HeuristicLib.APIs.TreeSearchLib;
+namespace HEAL.HeuristicLib.APIs.TreeSearchLib.SearchStates;
 
 public class StackedTreeSearchState<T, TS, TP, TM> : GenotypeAwareTreeSearchState<T, TS, TP, TM>,
                                                      IMutableState<StackedTreeSearchState<T, TS, TP, TM>, TM,
@@ -14,10 +13,10 @@ public class StackedTreeSearchState<T, TS, TP, TM> : GenotypeAwareTreeSearchStat
     where TS : class, ISearchSpace<T>
 {
     // backing field for Quality (cannot add setter to the override)
-    private ObjectiveVector? quality;
-    private ObjectiveVector bound;
-    private bool isTerminal;
-    private T candidate;
+    private readonly ObjectiveVector? quality;
+    private readonly ObjectiveVector bound;
+    private readonly bool isTerminal;
+    private readonly T candidate;
 
     public StackedTreeSearchState(T genotype, TreeSearchContext context) : base(context)
     {

@@ -531,6 +531,44 @@ HeuristicLib will not initially provide `RefiningCreator`, `RefiningCrossover`, 
 
 Before implementing the `Refiner` operator model, merge `dev` into the current working branch. The development branch contains operator-base improvements that may simplify or change the appropriate Refiner design. Reconcile the merge, review the resulting operator conventions, and validate the integrated code before proceeding. This is a separate integration checkpoint and must not include Refiner implementation.
 
+### Development-branch integration outcome
+
+`dev` is merged. The reconciliation kept `dev`'s operator structure and this
+branch's evaluator semantics: `IEvaluatorInstance.Evaluate` still returns
+`IReadOnlyList<EvaluatedCandidate<TCandidate>>`, which RF-5 depends on, while the
+authoring bases, naming, and execution-instance factory come from `dev`.
+
+Findings that bear on the `Refiner` design:
+
+- **Authoring model.** A role provides three paths — `Stateless<Role>`,
+  `Stateful<Role, TState>`, and the explicit instance base — each in three
+  arities, plus `Wrapping`/`Multi`/`Observable`/instrumentation topology pairs.
+  A `Refiner` role should supply the same set rather than a single base.
+- **Factory shape.** One `public abstract I<Role>Instance<...> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)`.
+  The old protected role-named factory plus explicit interface implementation is gone.
+- **Single-candidate bases.** `SingleCandidate<Role>` gives the single-item
+  operation its own name (`MutateCandidate`, `CreateCandidate`, `EvaluateCandidate`,
+  `CrossParents`) and seals the batch method. A `SingleCandidateRefiner` should
+  follow with `RefineCandidate`.
+- **Concurrency.** Batching is configuration: `ExecutionConcurrency Concurrency { get; init; }`
+  with per-item RNGs forked from batch position, so results do not depend on the
+  concurrency setting. A refiner is a natural fit; constant optimization is
+  expensive per candidate.
+- **Validation placement.** Configuration invariants are validated in
+  `CreateExecutionInstance` and throw `InvalidOperationException`. Note the gap
+  found during this integration: stateless bases seal `CreateExecutionInstance`,
+  so a stateless operator has nowhere to validate configuration and must either
+  check in its role method before consuming randomness or define threshold
+  semantics that need no validation. Decide which applies to `Refiner` before
+  RF-2, and consider whether the stateless bases should expose a validation hook.
+- **Threshold semantics.** Rates and probabilities are retained as configured,
+  never clamped or rejected. If `RefinementEvaluator` grows an improvement
+  threshold, it follows this rule.
+
+Validation: Release build clean with the operator authoring analyzer at error
+severity; 2001 tests pass across all four test projects; `dotnet format`
+whitespace, style and analyzer checks are clean.
+
 ### Refinement checkpoints
 
 Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted`. Implementation stops at `Awaiting review`; only explicit user acceptance advances to the next checkpoint.
@@ -538,7 +576,7 @@ Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted
 | Checkpoint | Status | Deliverable |
 | --- | --- | --- |
 | RF-0 Design contract | Awaiting review | Document the canonical `Candidate → Candidate` refiner role, conventional algorithm placement, absence of general improvement guarantees, objective-aware refinement evaluator, authoritative evaluator result, and deferred producer wrappers. No source code. |
-| RF-1 Development-branch integration | Pending | Merge `dev` into the working branch, reconcile and review its operator-base improvements, run appropriate validation, and stop before implementing Refiner. |
+| RF-1 Development-branch integration | Awaiting review | Merge `dev` into the working branch, reconcile and review its operator-base improvements, run appropriate validation, and stop before implementing Refiner. Done; see [Development-branch integration outcome](#development-branch-integration-outcome). |
 | RF-2 Refiner operator model | Pending | Implement the general refiner configuration and execution-instance contracts, authoring bases, identity behavior, validation, and focused contract tests. |
 | RF-3 Explicit algorithm integration | Pending | Add configurable refinement to applicable built-in algorithms after creation and final variation but before evaluation, without re-refining carried evaluated candidates. |
 | RF-4 Constant-optimization refiner | Pending | Adapt symbolic-regression constant optimization to the general refiner role and define its failure behavior without adding problem-objective retention. |

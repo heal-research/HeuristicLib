@@ -8,17 +8,13 @@ public static class IntegerVectorRandomExtensions
     {
         public IntegerVector NextIntegerVectorUniform(IntegerVector minimum, IntegerVector maximum, int length)
         {
-            if (minimum.Count != 1 && minimum.Count != length)
-                throw new ArgumentException("Minimum vector must be broadcast-compatible with the requested length.", nameof(minimum));
-            if (maximum.Count != 1 && maximum.Count != length)
-                throw new ArgumentException("Maximum vector must be broadcast-compatible with the requested length.", nameof(maximum));
-            if (!(minimum <= maximum).All())
-                throw new ArgumentException("Minimum values must be less than or equal to maximum values.");
+            if (!Vector.AreBroadcastableTo(length, minimum, maximum))
+                throw new ArgumentException("Bounds must be broadcast-compatible with the requested length.");
 
             var result = new int[length];
             for (var dim = 0; dim < length; dim++)
             {
-                result[dim] = random.NextIntegerVectorUniformAtUnchecked(minimum, maximum, dim);
+                result[dim] = random.NextIntegerVectorUniformAt(minimum, maximum, dim);
             }
 
             return IntegerVector.FromOwnedArray(result);
@@ -29,14 +25,9 @@ public static class IntegerVectorRandomExtensions
 
         public int NextIntegerVectorUniformAt(IntegerVector minimum, IntegerVector maximum, int dim)
         {
-            return random.NextIntegerVectorUniformAtUnchecked(minimum, maximum, dim);
-        }
-
-        private int NextIntegerVectorUniformAtUnchecked(IntegerVector minimum, IntegerVector maximum, int dim)
-        {
             int low = minimum.Count == 1 ? minimum[0] : minimum[dim];
             int high = maximum.Count == 1 ? maximum[0] : maximum[dim];
-            return random.NextIntUnchecked(low, (long)high - low + 1L);
+            return random.NextInt(low, high, inclusiveHigh: true);
         }
     }
 }

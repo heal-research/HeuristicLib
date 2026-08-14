@@ -54,7 +54,7 @@ public sealed class GrowTreeCreatorTests
     {
         var searchSpace = new ExpressionTreeSearchSpace(15, 4, [Symbols.Addition], ["x0"]);
 
-        var expression = new GrowTreeCreator().Create(RandomNumberGenerator.Create(123), searchSpace);
+        var expression = new GrowTreeCreator().CreateCandidate(RandomNumberGenerator.Create(123), searchSpace);
 
         searchSpace.Contains(expression).ShouldBeTrue();
     }
@@ -63,9 +63,9 @@ public sealed class GrowTreeCreatorTests
     public void CreatorInstance_RestrictsCreationToTheConfiguredMaximumDepth()
     {
         var searchSpace = new ExpressionTreeSearchSpace(31, 5, [Symbols.Addition], ["x0"]);
-        var creator = new GrowTreeCreator(maximumDepth: 2);
+        var creator = new GrowTreeCreator { MaximumDepth = 2 };
 
-        var expression = creator.Create(RandomNumberGenerator.Create(123), searchSpace);
+        var expression = creator.CreateCandidate(RandomNumberGenerator.Create(123), searchSpace);
 
         creator.MaximumDepth.ShouldBe(2);
         expression.Depth.ShouldBeLessThanOrEqualTo(2);
@@ -73,9 +73,12 @@ public sealed class GrowTreeCreatorTests
     }
 
     [Fact]
-    public void Constructor_RejectsNonPositiveMaximumDepth()
+    public void Create_RejectsNonPositiveMaximumDepth()
     {
-        Should.Throw<ArgumentOutOfRangeException>(() => new GrowTreeCreator(maximumDepth: 0));
+        var searchSpace = new ExpressionTreeSearchSpace(15, 4, [Symbols.Addition], ["x0"], constants: []);
+
+        Should.Throw<ArgumentOutOfRangeException>(() =>
+            new GrowTreeCreator { MaximumDepth = 0 }.CreateCandidate(RandomNumberGenerator.Create(123), searchSpace));
     }
 
     [Fact]
@@ -89,7 +92,7 @@ public sealed class GrowTreeCreatorTests
             constants: []);
 
         Should.Throw<ArgumentOutOfRangeException>(() =>
-            new GrowTreeCreator(maximumDepth: 4).Create(RandomNumberGenerator.Create(123), searchSpace));
+            new GrowTreeCreator { MaximumDepth = 4 }.CreateCandidate(RandomNumberGenerator.Create(123), searchSpace));
     }
 
     [Theory]

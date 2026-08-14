@@ -10,20 +10,20 @@ public record BalancedTreeCreator : SymbolicExpressionTreeCreator
 {
     public double IrregularityBias { get; init; }
 
-    public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
-      => Create(random, searchSpace, IrregularityBias);
+    public override SymbolicExpressionTree CreateCandidate(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) =>
+        Create(random, searchSpace, IrregularityBias);
 
     #region helpers
     private sealed record NodeInfo(SymbolicExpressionTreeNode Node, int Depth, int Arity);
 
-    public void CreateExpression(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, SymbolicExpressionTreeSearchSpace searchSpace, int maxTreeLength, int maxTreeDepth)
-      => Create(random, seedNode, searchSpace, maxTreeLength, maxTreeDepth, IrregularityBias);
+    public void CreateExpression(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, SymbolicExpressionTreeSearchSpace searchSpace, int maxTreeLength, int maxTreeDepth) =>
+        Create(random, seedNode, searchSpace, maxTreeLength, maxTreeDepth, IrregularityBias);
     #endregion
 
     public static SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace, double irregularityBias) => Create(random, searchSpace.Grammar, searchSpace.TreeLength, searchSpace.TreeDepth, irregularityBias);
 
-    public static SymbolicExpressionTree Create(ISymbolicExpressionGrammar grammar, int treeLength, int treeDepth, IRandomNumberGenerator random, double irregularityBias = 1)
-      => Create(random, grammar, treeLength, treeDepth, irregularityBias);
+    public static SymbolicExpressionTree Create(ISymbolicExpressionGrammar grammar, int treeLength, int treeDepth, IRandomNumberGenerator random, double irregularityBias = 1) =>
+        Create(random, grammar, treeLength, treeDepth, irregularityBias);
 
     public static SymbolicExpressionTree Create(IRandomNumberGenerator random, ISymbolicExpressionGrammar grammar, int treeLength, int treeDepth, double irregularityBias = 1)
     {
@@ -64,8 +64,8 @@ public record BalancedTreeCreator : SymbolicExpressionTreeCreator
         return node;
     }
 
-    public static void Create(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeSearchSpace searchSpace, int targetLength, int maxDepth, double irregularityBias)
-      => Create(random, root, searchSpace.Grammar, targetLength, maxDepth, irregularityBias);
+    public static void Create(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeSearchSpace searchSpace, int targetLength, int maxDepth, double irregularityBias) =>
+        Create(random, root, searchSpace.Grammar, targetLength, maxDepth, irregularityBias);
 
     public static void Create(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, ISymbolicExpressionGrammar grammar, int targetLength, int maxDepth, double irregularityBias)
     {

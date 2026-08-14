@@ -5,20 +5,21 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public abstract class SingleSolutionProblem<TSolution, TSearchSpace> : Problem<TSolution, TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TSolution>
+public abstract class SingleSolutionProblem<TCandidate, TSearchSpace> : Problem<TCandidate, TSearchSpace>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public int DegreeOfParallelism { get; init; } = 1;
+    public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
     protected SingleSolutionProblem(ObjectiveDirections objective, TSearchSpace searchSpace) : base(objective, searchSpace) { }
 
-    public sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TSolution> candidates, IRandomNumberGenerator random) => BatchExecution.Parallel(candidates, Evaluate, random, DegreeOfParallelism);
+    public sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) =>
+        BatchExecution.Execute(candidates, Evaluate, random, Concurrency);
 
-    public abstract ObjectiveVector Evaluate(TSolution solution, IRandomNumberGenerator random);
+    public abstract ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random);
 }
 
-public abstract class Problem<TSolution, TSearchSpace> : IProblem<TSolution, TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TSolution>
+public abstract class Problem<TCandidate, TSearchSpace> : IProblem<TCandidate, TSearchSpace>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     protected Problem(ObjectiveDirections objective, TSearchSpace searchSpace)
     {
@@ -27,7 +28,7 @@ public abstract class Problem<TSolution, TSearchSpace> : IProblem<TSolution, TSe
     }
 
     public ObjectiveDirections Objective { get; }
-    public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TSolution> candidates, IRandomNumberGenerator random);
+    public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
 
     public TSearchSpace SearchSpace { get; }
 }

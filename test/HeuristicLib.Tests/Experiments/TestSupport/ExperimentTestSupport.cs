@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
@@ -16,7 +15,7 @@ internal sealed record FixedExperiment<TAlgorithm>(ImmutableArray<ExperimentCase
     : Experiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, TAlgorithm, int>
     where TAlgorithm : class, IAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
 {
-    public override IReadOnlyList<ExperimentCase<TAlgorithm, int>> MaterializeCases() => Cases;
+    public override ImmutableArray<ExperimentCase<TAlgorithm, int>> MaterializeCases() => Cases;
 }
 
 internal sealed record ProbeAlgorithm(
@@ -26,10 +25,11 @@ internal sealed record ProbeAlgorithm(
     bool UseRandomValue = false,
     bool FailDuringSetup = false,
     bool FailDuringExecution = false,
-    bool YieldState = true)
-    : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    bool YieldState = true,
+    int HoldAfterYieldMilliseconds = 0)
+    : Algorithm<ProbeAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
 {
-    protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
+    public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         Probe?.RecordSetup();
         if (FailDuringSetup)
@@ -37,10 +37,10 @@ internal sealed record ProbeAlgorithm(
             throw new InvalidOperationException($"Setup failed for {Value}.");
         }
 
-        return new Instance(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState);
+        return new Instance(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState, HoldAfterYieldMilliseconds);
     }
 
-    private sealed class Instance(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState)
+    private sealed class Instance(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState, int holdAfterYieldMilliseconds)
         : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
         public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
@@ -68,6 +68,10 @@ internal sealed record ProbeAlgorithm(
                     var candidate = useRandomValue ? random.NextInt() : value;
                     probe?.RecordCandidate(candidate);
                     yield return ExperimentTestSupport.CreateState(candidate);
+                    if (holdAfterYieldMilliseconds > 0)
+                    {
+                        await Task.Delay(holdAfterYieldMilliseconds, ct);
+                    }
                 }
             }
             finally
@@ -126,10 +130,10 @@ internal static class ExperimentTestSupport
         IExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, TAlgorithm, int> experiment,
         int seed = 42)
         where TAlgorithm : class, IAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> =>
-        new(experiment, MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(seed));
+        experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(seed));
 
     public static PopulationState<int> CreateState(int candidate) => new()
     {
-        Population = Population.From([EvaluatedCandidate.From(candidate, (ObjectiveVector)candidate)])
+        Population = Population.From([EvaluatedCandidate.From(candidate, candidate)])
     };
 }

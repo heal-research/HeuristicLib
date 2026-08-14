@@ -1,12 +1,12 @@
-namespace HEAL.HeuristicLib.Operators.Neighborhoods;
+using HEAL.HeuristicLib.Operators.MoveAppliers;
+using HEAL.HeuristicLib.Operators.MoveCreators;
+using HEAL.HeuristicLib.Operators.MoveEvaluators;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using MoveAppliers;
-using MoveCreators;
-using MoveEvaluators;
-using Optimization;
-using Problems;
-using Random;
-using SearchSpaces;
+namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 
 public abstract record Neighborhood<TGenotype, TSearchSpace, TProblem, TMove> :
     INeighborhood<TGenotype, TSearchSpace, TProblem, TMove>, IDirectNeighborhood<TGenotype, TSearchSpace, TProblem, TMove>

@@ -1,6 +1,6 @@
-namespace HEAL.HeuristicLib.Operators.Neighborhoods;
+using HEAL.HeuristicLib.Random;
 
-using Random;
+namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 
 public interface IDirectNeighborhood<TGenotype, in TSearchSpace, in TProblem, TMove>
 {

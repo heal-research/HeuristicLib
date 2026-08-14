@@ -1,23 +1,30 @@
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-public record RandomCrossover<TCandidate>
-  : SingleSolutionCrossover<TCandidate>
+/// <summary>
+/// Returns one of the two parents unchanged, chosen at random for each parent group.
+/// </summary>
+public record RandomCrossover<TCandidate> : SingleCandidateCrossover<TCandidate>
 {
-    public double Bias { get; }
+    /// <summary>
+    /// Probability of choosing the first parent, normally in <c>[0,1]</c>. The default of <c>0.5</c> picks either
+    /// parent equally often.
+    /// </summary>
+    /// <remarks>
+    /// The value is used as a threshold rather than a validated ratio: at most zero, and <c>NaN</c>, always takes the
+    /// second parent, while at least one always takes the first.
+    /// </remarks>
+    public double Bias { get; init; } = 0.5;
 
-    public RandomCrossover(double bias = 0.5)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThan(bias, 0);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(bias, 1);
+    public override TCandidate CrossParents(Parents<TCandidate> parents, IRandomNumberGenerator random) => random.NextDouble() < Bias ? parents.Parent1 : parents.Parent2;
+}
 
-        Bias = bias;
-    }
-
-    public override TCandidate Cross(IParents<TCandidate> parents, IRandomNumberGenerator random)
-    {
-        return random.NextDouble() < Bias ? parents.Parent1 : parents.Parent2;
-    }
+public static class RandomCrossover
+{
+    public static RandomCrossover<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, double bias = 0.5)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new() { Bias = bias };
 }

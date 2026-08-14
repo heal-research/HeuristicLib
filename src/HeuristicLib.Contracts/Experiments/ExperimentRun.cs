@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using HEAL.HeuristicLib.Algorithms;
@@ -17,8 +16,8 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     where TSearchState : class, ISearchState
     where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
-    private readonly HashSet<object> attachedBindings = new(ReferenceEqualityComparer.Instance);
-    private readonly Dictionary<object, IReadOnlyList<IAnalyzer>> bindingAnalyzers = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<TrialAnalyzer, ImmutableArray<IAnalyzer>> trialAnalyzers = new(ReferenceEqualityComparer.Instance);
+    private bool executionStarted;
 
     public IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Experiment { get; }
 
@@ -26,9 +25,9 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
     public IRandomNumberGenerator Random { get; }
 
-    public IReadOnlyList<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>> Trials { get; }
+    public ImmutableArray<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>> Trials { get; }
 
-    public bool ExecutionStarted => Trials.Any(trial => trial.Run.ExecutionStarted);
+    public bool ExecutionStarted => executionStarted || Trials.Any(trial => trial.Run.ExecutionStarted);
 
     public ExperimentRun(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> experiment, TProblem problem, IRandomNumberGenerator random)
     {
@@ -37,146 +36,80 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         Random = random;
 
         var cases = experiment.MaterializeCases();
-        if (cases.Count == 0)
-        {
+        if (cases.Length == 0)
             throw new InvalidOperationException("An experiment must contain at least one trial.");
-        }
 
         var keys = new HashSet<TKey>();
-        var trials = new List<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>>(cases.Count);
-        for (var index = 0; index < cases.Count; index++)
+        var trials = new List<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>>(cases.Length);
+        for (var index = 0; index < cases.Length; index++)
         {
             var experimentCase = cases[index];
             if (!keys.Add(experimentCase.Key))
-            {
                 throw new InvalidOperationException($"Experiment trial key {experimentCase.Key} is not unique.");
-            }
 
             var trialRandom = experimentCase.RandomForkPath.Aggregate(random, static (current, forkKey) => current.Fork(forkKey));
             var algorithmRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState>(experimentCase.Algorithm, problem, trialRandom);
             trials.Add(new ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>(index, experimentCase.Key, experimentCase.Algorithm, algorithmRun, experimentCase.RandomForkPath));
         }
 
-        Trials = trials;
+        Trials = trials.ToImmutableArray();
     }
 
-    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> WithAnalysis<TOperator, TResult>(AnalyzerBinding<TAlgorithm, TOperator, TResult> binding)
+    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> WithAnalyzer<TOperator, TResult>(TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
         where TResult : class
     {
         EnsureNotStarted();
-        if (attachedBindings.Contains(binding))
-        {
-            throw new InvalidOperationException("The same experiment analysis binding cannot be attached more than once.");
-        }
+        if (trialAnalyzers.ContainsKey(trialAnalyzer))
+            throw new InvalidOperationException("The same trial analyzer cannot be attached more than once.");
 
-        var analyzers = Trials.Select(trial => binding.AnalyzerFactory(binding.Selector(trial.Algorithm))).ToList();
-        for (var index = 0; index < Trials.Count; index++)
+        var analyzers = Trials.Select(trial => (IAnalyzer)trialAnalyzer.AnalyzerFactory(trialAnalyzer.Selector(trial.Algorithm))).ToImmutableArray();
+        for (var index = 0; index < Trials.Length; index++)
         {
             Trials[index].Run.WithAnalyzer(analyzers[index]);
         }
 
-        attachedBindings.Add(binding);
-        bindingAnalyzers.Add(binding, analyzers);
+        trialAnalyzers.Add(trialAnalyzer, analyzers);
 
         return this;
     }
 
-    public IReadOnlyList<ExperimentAnalysisResult<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TResult>> GetResults<TOperator, TResult>(AnalyzerBinding<TAlgorithm, TOperator, TResult> binding)
+    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> WithAnalyzer<TOperator, TResult>(Func<TAlgorithm, TOperator> selector, Func<TOperator, IAnalyzer<TResult>> analyzerFactory, out TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
         where TResult : class
     {
-        if (!bindingAnalyzers.TryGetValue(binding, out var analyzers))
-        {
-            throw new KeyNotFoundException("The analysis binding is not attached to this experiment run.");
-        }
+        trialAnalyzer = TrialAnalyzer.Create(selector, analyzerFactory);
+        return WithAnalyzer(trialAnalyzer);
+    }
+
+    public ImmutableArray<TrialAnalysisResult<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TResult>> GetResults<TOperator, TResult>(TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
+        where TResult : class
+    {
+        var analyzers = trialAnalyzers[trialAnalyzer];
 
         return Trials.Select((trial, index) =>
         {
             var analyzer = (IAnalyzer<TResult>)analyzers[index];
-            return new ExperimentAnalysisResult<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TResult>(trial, analyzer, trial.Run.GetResult(analyzer));
-        }).ToList();
+            return TrialAnalysisResult.From(trial, analyzer, trial.Run.GetResult(analyzer));
+        }).ToImmutableArray();
     }
 
-    public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(ExperimentExecutionPolicy? policy = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
+    public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
     {
         var execution = PrepareCombinedExecution(initialState, cancellationToken);
-        return new ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>(ExecuteCombined(execution, policy ?? ExperimentExecutionPolicy.Sequential(), cancellationToken), cancellationToken);
+        return new(StreamScheduledExecution(execution, concurrency ?? ExecutionConcurrency.Sequential(), cancellationToken), cancellationToken);
     }
 
-    public async Task<IReadOnlyList<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)>> CompleteAsync(ExperimentExecutionPolicy? policy = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
+    public ImmutableArray<Task<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)>> StartTrials(ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
     {
         var execution = PrepareCombinedExecution(initialState, cancellationToken);
-        var finalStates = new TSearchState?[Trials.Count];
-        await foreach (var entry in ExecuteCombined(execution, policy ?? ExperimentExecutionPolicy.Sequential(), cancellationToken).WithCancellation(cancellationToken))
-        {
-            finalStates[entry.Trial.Index] = entry.State;
-        }
-
-        var missingStateFailures = Trials.Where(trial => finalStates[trial.Index] is null)
-            .Select(trial => (Exception)new ExperimentTrialException<TKey>(trial.Key, new InvalidOperationException("The algorithm did not yield a search state.")))
-            .ToList();
-        if (missingStateFailures.Count > 0)
-        {
-            throw new AggregateException(missingStateFailures);
-        }
-
-        return Trials.Select(trial => (trial, finalStates[trial.Index]!)).ToList();
+        var scheduledExecution = ScheduleTrials(execution, concurrency ?? ExecutionConcurrency.Sequential(), null, cancellationToken);
+        return scheduledExecution.TrialCompletions.Select((completion, index) => RequireFinalState(Trials[index], completion)).ToImmutableArray();
     }
 
-    public IReadOnlyList<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)> Complete(ExperimentExecutionPolicy? policy = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
-        CompleteAsync(policy, initialState, cancellationToken).GetAwaiter().GetResult();
-
-    private IAsyncEnumerable<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> ExecuteCombined(PreparedCombinedExecution execution, ExperimentExecutionPolicy policy, CancellationToken cancellationToken) =>
-        policy.Kind == ExperimentExecutionKind.Sequential ? ExecuteSequentially(execution, cancellationToken) : ExecuteConcurrently(execution, policy.MaximumConcurrency, cancellationToken);
-
-    private async IAsyncEnumerable<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> ExecuteSequentially(PreparedCombinedExecution execution, [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        foreach (var preparedTrial in execution.TrialStreams)
-        {
-            var trial = Trials[preparedTrial.TrialIndex];
-            cancellationToken.ThrowIfCancellationRequested();
-            await using var enumerator = preparedTrial.Stream.GetAsyncEnumerator(cancellationToken);
-            while (true)
-            {
-                bool hasNext;
-                try
-                {
-                    hasNext = await enumerator.MoveNextAsync();
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception exception)
-                {
-                    execution.Failures[trial.Index] = new ExperimentTrialException<TKey>(trial.Key, exception);
-                    break;
-                }
-
-                if (!hasNext)
-                {
-                    break;
-                }
-
-                yield return new ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>(trial, enumerator.Current);
-            }
-        }
-
-        var orderedFailures = execution.Failures.OfType<Exception>().ToList();
-        if (orderedFailures.Count > 0)
-        {
-            throw new AggregateException(orderedFailures);
-        }
-    }
-
-    private async IAsyncEnumerable<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> ExecuteConcurrently(PreparedCombinedExecution execution, int maximumConcurrency, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private async IAsyncEnumerable<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> StreamScheduledExecution(PreparedCombinedExecution execution, ExecutionConcurrency concurrency, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         using var stopSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var channel = Channel.CreateUnbounded<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
-        var nextPreparedTrialIndex = -1;
-        var workerCount = Math.Min(maximumConcurrency, execution.TrialStreams.Count);
-
-        var workers = Enumerable.Range(0, workerCount).Select(_ => ProduceEntries()).ToArray();
-        var completion = CompleteChannelWhenFinished(workers, channel.Writer);
+        var channel = Channel.CreateUnbounded<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = concurrency.MaximumConcurrency == 1 });
+        var scheduledExecution = ScheduleTrials(execution, concurrency, channel.Writer, stopSource.Token);
         try
         {
             await foreach (var entry in channel.Reader.ReadAllAsync(cancellationToken))
@@ -184,82 +117,145 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
                 yield return entry;
             }
 
-            await completion;
+            await scheduledExecution.WorkersCompletion;
+            cancellationToken.ThrowIfCancellationRequested();
+            ThrowTrialFailures(scheduledExecution.TrialCompletions);
         }
         finally
         {
             await stopSource.CancelAsync();
-            await Task.WhenAll(workers);
+            await scheduledExecution.WorkersCompletion.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         }
+    }
 
-        cancellationToken.ThrowIfCancellationRequested();
-        var orderedFailures = execution.Failures.OfType<Exception>().ToList();
-        if (orderedFailures.Count > 0)
-        {
-            throw new AggregateException(orderedFailures);
-        }
+    private ScheduledExecution ScheduleTrials(PreparedCombinedExecution execution, ExecutionConcurrency concurrency, ChannelWriter<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>? progressWriter, CancellationToken cancellationToken)
+    {
+        var completionSources = Enumerable.Range(0, Trials.Length)
+            .Select(_ => new TaskCompletionSource<TrialExecutionResult>(TaskCreationOptions.RunContinuationsAsynchronously))
+            .ToImmutableArray();
+        var nextTrialIndex = -1;
+        var workerCount = concurrency.Kind == ExecutionConcurrencyKind.Sequential ? 1 : Math.Min(concurrency.MaximumConcurrency, execution.PreparedTrials.Length);
+        var workers = Enumerable.Range(0, workerCount).Select(_ => ExecuteTrials()).ToArray();
+        var workersCompletion = FinishWorkers(workers, completionSources, progressWriter, cancellationToken);
 
-        async Task ProduceEntries()
+        return new ScheduledExecution(completionSources.Select(source => source.Task).ToImmutableArray(), workersCompletion);
+
+        async Task ExecuteTrials()
         {
             while (true)
             {
-                var preparedTrialIndex = Interlocked.Increment(ref nextPreparedTrialIndex);
-                if (preparedTrialIndex >= execution.TrialStreams.Count)
-                {
+                var trialIndex = Interlocked.Increment(ref nextTrialIndex);
+                if (trialIndex >= execution.PreparedTrials.Length)
                     return;
-                }
 
-                var preparedTrial = execution.TrialStreams[preparedTrialIndex];
-                var trial = Trials[preparedTrial.TrialIndex];
+                var preparedTrial = execution.PreparedTrials[trialIndex];
+                var completionSource = completionSources[trialIndex];
                 try
                 {
-                    await foreach (var state in preparedTrial.Stream.WithCancellation(stopSource.Token))
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (preparedTrial is FailedPreparedTrial failedTrial)
                     {
-                        await channel.Writer.WriteAsync(new ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>(trial, state), stopSource.Token);
+                        completionSource.SetException(failedTrial.Exception);
+                        continue;
                     }
+
+                    completionSource.SetResult(await ExecuteTrial((PreparedTrialStream)preparedTrial, progressWriter, cancellationToken));
                 }
-                catch (OperationCanceledException) when (stopSource.IsCancellationRequested)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    completionSource.TrySetCanceled(cancellationToken);
                     return;
                 }
                 catch (Exception exception)
                 {
-                    execution.Failures[trial.Index] = new ExperimentTrialException<TKey>(trial.Key, exception);
+                    completionSource.TrySetException(exception);
                 }
             }
         }
     }
 
-    private static async Task CompleteChannelWhenFinished(Task[] tasks, ChannelWriter<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> writer)
+    private async Task<TrialExecutionResult> ExecuteTrial(PreparedTrialStream preparedTrial, ChannelWriter<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>? progressWriter, CancellationToken cancellationToken)
     {
-        await Task.WhenAll(tasks);
-        writer.TryComplete();
+        var trial = Trials[preparedTrial.TrialIndex];
+        TSearchState? finalState = null;
+        var producedState = false;
+        try
+        {
+            await foreach (var state in preparedTrial.Stream.WithCancellation(cancellationToken))
+            {
+                producedState = true;
+                finalState = state;
+                if (progressWriter is not null)
+                {
+                    await progressWriter.WriteAsync(ExperimentStreamEntry.From(trial, state), cancellationToken);
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw new ExperimentTrialException<TKey>(trial.Key, exception);
+        }
+
+        return new TrialExecutionResult(producedState, finalState);
     }
 
-    private PreparedCombinedExecution PrepareCombinedExecution(TSearchState? initialState, CancellationToken cancellationToken)
+    private static async Task<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)> RequireFinalState(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> trial, Task<TrialExecutionResult> completion)
     {
-        EnsureNotStarted();
-        var trialStreams = new List<PreparedTrialStream>(Trials.Count);
-        var failures = new Exception?[Trials.Count];
-        for (var trialIndex = 0; trialIndex < Trials.Count; trialIndex++)
+        var result = await completion;
+        if (!result.ProducedState)
+            throw new ExperimentTrialException<TKey>(trial.Key, new InvalidOperationException("The algorithm did not yield a search state."));
+
+        return (trial, result.FinalState!);
+    }
+
+    private static async Task FinishWorkers(Task[] workers, ImmutableArray<TaskCompletionSource<TrialExecutionResult>> completionSources, ChannelWriter<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>? progressWriter, CancellationToken cancellationToken)
+    {
+        Exception? workerFailure = null;
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var trial = Trials[trialIndex];
-            try
+            await Task.WhenAll(workers);
+        }
+        catch (Exception exception)
+        {
+            workerFailure = exception;
+        }
+
+        foreach (var completionSource in completionSources)
+        {
+            if (cancellationToken.IsCancellationRequested)
             {
-                trialStreams.Add(new PreparedTrialStream(trialIndex, trial.Run.Stream(initialState, cancellationToken)));
+                completionSource.TrySetCanceled(cancellationToken);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            else if (workerFailure is not null)
             {
-                throw;
+                completionSource.TrySetException(workerFailure);
             }
-            catch (Exception exception)
+            else
             {
-                failures[trialIndex] = new ExperimentTrialException<TKey>(trial.Key, exception);
+                completionSource.TrySetException(new InvalidOperationException("The experiment trial was not scheduled."));
             }
         }
 
-        return new PreparedCombinedExecution(trialStreams, failures);
+        progressWriter?.TryComplete(workerFailure);
+    }
+
+    private static void ThrowTrialFailures(ImmutableArray<Task<TrialExecutionResult>> trialCompletions)
+    {
+        var failures = trialCompletions.Select(task => task.Exception).OfType<AggregateException>().SelectMany(exception => exception.InnerExceptions).ToList();
+        if (failures.Count > 0)
+        {
+            throw new AggregateException(failures);
+        }
+    }
+
+    private void StartExecution()
+    {
+        EnsureNotStarted();
+        executionStarted = true;
     }
 
     private void EnsureNotStarted()
@@ -270,9 +266,37 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         }
     }
 
-    private sealed record PreparedTrialStream(int TrialIndex, ExecutionStream<TSearchState> Stream);
+    private PreparedCombinedExecution PrepareCombinedExecution(TSearchState? initialState, CancellationToken cancellationToken)
+    {
+        StartExecution();
+        var preparedTrials = ImmutableArray.CreateBuilder<PreparedTrial>(Trials.Length);
+        for (var trialIndex = 0; trialIndex < Trials.Length; trialIndex++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var trial = Trials[trialIndex];
+            try
+            {
+                preparedTrials.Add(new PreparedTrialStream(trialIndex, trial.Run.Stream(initialState, cancellationToken)));
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                preparedTrials.Add(new FailedPreparedTrial(trialIndex, new ExperimentTrialException<TKey>(trial.Key, exception)));
+            }
+        }
 
-    private sealed record PreparedCombinedExecution(IReadOnlyList<PreparedTrialStream> TrialStreams, Exception?[] Failures);
+        return new PreparedCombinedExecution(preparedTrials.MoveToImmutable());
+    }
+
+    private abstract record PreparedTrial(int TrialIndex);
+    private sealed record PreparedTrialStream(int TrialIndex, ExecutionStream<TSearchState> Stream) : PreparedTrial(TrialIndex);
+    private sealed record FailedPreparedTrial(int TrialIndex, Exception Exception) : PreparedTrial(TrialIndex);
+    private sealed record PreparedCombinedExecution(ImmutableArray<PreparedTrial> PreparedTrials);
+    private sealed record ScheduledExecution(ImmutableArray<Task<TrialExecutionResult>> TrialCompletions, Task WorkersCompletion);
+    private sealed record TrialExecutionResult(bool ProducedState, TSearchState? FinalState);
 }
 
 public sealed class ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>
@@ -303,9 +327,17 @@ public sealed class ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchS
 
 public sealed record ExperimentStreamEntry<TTrial, TSearchState>(TTrial Trial, TSearchState State);
 
+public static class ExperimentStreamEntry
+{
+    public static ExperimentStreamEntry<TTrial, TSearchState> From<TTrial, TSearchState>(TTrial trial, TSearchState state) => new(trial, state);
+}
+
 public sealed class ExperimentTrialException<TKey> : Exception
 {
     public TKey Key { get; }
 
-    public ExperimentTrialException(TKey key, Exception innerException) : base($"Experiment trial {key} failed.", innerException) => Key = key;
+    public ExperimentTrialException(TKey key, Exception innerException) : base($"Experiment trial {key} failed.", innerException)
+    {
+        Key = key;
+    }
 }

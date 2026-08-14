@@ -1,30 +1,35 @@
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public record ParetoCrowdingReplacer<TCandidate>
-  : StatelessReplacer<TCandidate>
+public sealed record ParetoCrowdingReplacer<TCandidate>
+    : StatelessReplacer<TCandidate>
 {
-    private readonly bool dominateOnEqualities;
+    public bool DominateOnEqualities { get; init; }
 
     public ParetoCrowdingReplacer(bool dominateOnEqualities)
     {
-        this.dominateOnEqualities = dominateOnEqualities;
+        DominateOnEqualities = dominateOnEqualities;
     }
 
     public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
-      => ParetoCrowdingReplacer.Replace(previousPopulation, offspringPopulation, objective, count, dominateOnEqualities);
+        => ParetoCrowdingReplacer.Replace(previousPopulation, offspringPopulation, objective, count, DominateOnEqualities);
 }
 
 public static class ParetoCrowdingReplacer
 {
+    public static ParetoCrowdingReplacer<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, bool dominateOnEqualities)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(dominateOnEqualities);
+
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace<TCandidate>(
-      IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
-      IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
-      ObjectiveDirections objective,
-      int count,
-      bool dominateOnEqualities)
+        IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
+        IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
+        ObjectiveDirections objective,
+        int count,
+        bool dominateOnEqualities)
     {
         var all = previousPopulation.Concat(offspringPopulation).ToArray();
         var fronts = DominationCalculator.CalculateAllParetoFronts(all, objective, out _, dominateOnEqualities);

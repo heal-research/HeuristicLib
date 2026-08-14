@@ -53,11 +53,11 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
     }
 
     public void AfterCross(GenealogyGraph<TCandidate> graph, IReadOnlyList<TCandidate> offspring,
-                           IReadOnlyList<IParents<TCandidate>> parents)
+                           IReadOnlyList<Parents<TCandidate>> parents)
     {
         foreach (var (parents1, child) in parents.Zip(offspring))
         {
-            graph.AddConnection([parents1.Item1, parents1.Item2], child);
+            graph.AddConnection([parents1.Parent1, parents1.Parent2], child);
         }
     }
 

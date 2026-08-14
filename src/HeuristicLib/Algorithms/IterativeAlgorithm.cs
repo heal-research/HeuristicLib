@@ -9,22 +9,22 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, IIterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>
+    : Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>, IIterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSelf : IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
     public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; init; }
 
-    protected sealed override AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
+    public sealed override AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
-        var resolvedInterceptor = Interceptor is null ? null : registry.Resolve(Interceptor);
-        return CreateIterativeAlgorithmInstance(registry, resolvedInterceptor);
+        var resolvedInterceptor = Interceptor is null ? null : instanceRegistry.Resolve(Interceptor);
+        return CreateExecutionInstance(instanceRegistry, resolvedInterceptor);
     }
 
-    protected abstract IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateIterativeAlgorithmInstance(
-        ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor);
+    protected abstract IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor);
 }
 
 public abstract class IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
@@ -72,7 +72,7 @@ public abstract class IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProb
 
             if (interceptor is not null)
             {
-                newState = interceptor.Transform(newState, previousState, problem.SearchSpace, problem);
+                newState = interceptor.Transform(newState, previousState, iterationRandom, problem.SearchSpace, problem);
             }
 
             var isTerminalState = IsTerminalState(newState, yieldedStateCount + 1, previousState, problem);

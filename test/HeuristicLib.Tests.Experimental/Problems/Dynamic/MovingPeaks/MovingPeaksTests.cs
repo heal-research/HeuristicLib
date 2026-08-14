@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems.Dynamic.MovingPeaks;
+using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
@@ -9,22 +9,23 @@ namespace HEAL.HeuristicLib.Tests.Problems.Dynamic.MovingPeaks;
 public class MovingPeaksTests
 {
     public static readonly MovingPeaksParameters Parameters = new(
-      2,
-      2,
-      0,
-      100,
-      0,
-      100,
-      0,
-      10,
-      10,
-      5,
-      1
+        2,
+        2,
+        0,
+        100,
+        0,
+        100,
+        0,
+        10,
+        10,
+        5,
+        1
     );
 
-    private static readonly (double[] center, double height, double width)[] Peaks = [
-      (center: [10, 10], height: 50.0, width: 1.0),
-    (center: [90, 90], height: 30.0, width: 1.0)
+    private static readonly (double[] center, double height, double width)[] Peaks =
+    [
+        (center: [10, 10], height: 50.0, width: 1.0),
+        (center: [90, 90], height: 30.0, width: 1.0)
     ];
 
     [Fact]

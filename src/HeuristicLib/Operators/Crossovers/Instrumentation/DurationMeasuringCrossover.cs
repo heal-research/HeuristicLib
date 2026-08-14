@@ -11,35 +11,33 @@ public sealed record DurationMeasuringCrossover<TCandidate, TSearchSpace, TProbl
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ICrossover<TCandidate, TSearchSpace, TProblem> Crossover => InnerCrossover;
-    public ObservationDuration Duration { get; }
-    public TimeProvider TimeProvider { get; }
+    public ObservationDuration Duration { get; init; }
+    public TimeProvider TimeProvider { get; init; }
 
-    public DurationMeasuringCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, ObservationDuration duration)
-        : this(crossover, duration, TimeProvider.System)
+    public DurationMeasuringCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> childCrossover, ObservationDuration duration)
+        : this(childCrossover, duration, TimeProvider.System)
     {
     }
 
-    public DurationMeasuringCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, ObservationDuration duration, TimeProvider timeProvider)
-        : base(crossover)
+    public DurationMeasuringCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> childCrossover, ObservationDuration duration, TimeProvider timeProvider)
+        : base(childCrossover)
     {
         Duration = duration;
         TimeProvider = timeProvider;
     }
 
-    protected override WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(
-        ICrossoverInstance<TCandidate, TSearchSpace, TProblem> innerCrossover) =>
-        new Instance(innerCrossover, Duration, TimeProvider);
+    protected override WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> childCrossover) =>
+        new Instance(childCrossover, Duration, TimeProvider);
 
-    private sealed class Instance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> innerCrossover, ObservationDuration duration, TimeProvider timeProvider)
-        : WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(innerCrossover)
+    private sealed class Instance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> childCrossover, ObservationDuration duration, TimeProvider timeProvider)
+        : WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(childCrossover)
     {
-        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var startTimestamp = timeProvider.GetTimestamp();
             try
             {
-                return InnerCrossover.Cross(parents, random, searchSpace, problem);
+                return ChildCrossover.Cross(parents, random, searchSpace, problem);
             }
             finally
             {
@@ -49,13 +47,27 @@ public sealed record DurationMeasuringCrossover<TCandidate, TSearchSpace, TProbl
     }
 }
 
+public static class DurationMeasuringCrossover
+{
+    public static DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> childCrossover, ObservationDuration duration)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childCrossover, duration);
+
+    public static DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> childCrossover, ObservationDuration duration, TimeProvider timeProvider)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childCrossover, duration, timeProvider);
+}
+
 public static class CrossoverDurationExtensions
 {
     extension<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem> MeasureCrossoverDuration(ObservationDuration duration) => new(crossover, duration);
+        public DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem> MeasureCrossoverDuration(ObservationDuration duration) =>
+            new(crossover, duration);
 
         public DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem> MeasureCrossoverDuration(ObservationDuration duration, TimeProvider timeProvider) =>
             new(crossover, duration, timeProvider);
@@ -63,13 +75,13 @@ public static class CrossoverDurationExtensions
         public DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem> MeasureCrossoverDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem>(crossover, duration);
+            return new(crossover, duration);
         }
 
         public DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem> MeasureCrossoverDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem>(crossover, duration, timeProvider);
+            return new(crossover, duration, timeProvider);
         }
     }
 }

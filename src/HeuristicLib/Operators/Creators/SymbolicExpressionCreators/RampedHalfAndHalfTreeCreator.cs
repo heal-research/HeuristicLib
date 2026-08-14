@@ -7,31 +7,25 @@ namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
 public sealed record RampedHalfAndHalfTreeCreator
     : StatelessCreator<ExpressionTree, ExpressionTreeSearchSpace>
 {
-    public RampedHalfAndHalfTreeCreator(int minimumDepth = 2, int? maximumDepth = null)
-    {
-        if (minimumDepth <= 0)
-            throw new ArgumentOutOfRangeException(nameof(minimumDepth));
-        if (maximumDepth is <= 0)
-            throw new ArgumentOutOfRangeException(nameof(maximumDepth));
-        if (maximumDepth is int configuredMaximumDepth && configuredMaximumDepth < minimumDepth)
-            throw new ArgumentException("The maximum depth must be greater than or equal to the minimum depth.", nameof(maximumDepth));
-
-        MinimumDepth = minimumDepth;
-        MaximumDepth = maximumDepth;
-    }
-
     /// <summary>Gets the first requested depth in the ramp.</summary>
-    public int MinimumDepth { get; }
+    public int MinimumDepth { get; init; } = 2;
 
     /// <summary>
     /// Gets the last requested depth, or <see langword="null"/> to use the deepest Full-compatible search-space depth.
-    /// An explicit depth range must be feasible within the search-space depth and length limits.
+    /// An explicit depth range must be positive, ordered and feasible within the search-space depth and length limits.
     /// </summary>
-    public int? MaximumDepth { get; }
+    public int? MaximumDepth { get; init; }
 
     public override IReadOnlyList<ExpressionTree> Create(int count, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(count);
+
+        if (MinimumDepth <= 0)
+            throw new InvalidOperationException("The configured minimum depth must be positive.");
+        if (MaximumDepth is <= 0)
+            throw new InvalidOperationException("The configured maximum depth must be positive.");
+        if (MaximumDepth is int configuredMaximumDepth && configuredMaximumDepth < MinimumDepth)
+            throw new InvalidOperationException("The configured maximum depth must be greater than or equal to the minimum depth.");
 
         var maximumFeasibleDepth = FullTreeCreation.GetMaximumFeasibleDepth(searchSpace);
         var maximumDepth = MaximumDepth ?? maximumFeasibleDepth;

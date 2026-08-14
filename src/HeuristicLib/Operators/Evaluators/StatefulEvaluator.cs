@@ -21,11 +21,12 @@ public abstract record StatefulEvaluator<TCandidate, TSearchSpace, TProblem, TSt
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    protected sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
+    public sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new Instance(this, CreateInitialState());
 
-    private sealed class Instance(StatefulEvaluator<TCandidate, TSearchSpace, TProblem, TState> evaluator, TState state) : IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>
+    private sealed class Instance(StatefulEvaluator<TCandidate, TSearchSpace, TProblem, TState> evaluator, TState state)
+        : EvaluatorInstance<TCandidate, TSearchSpace, TProblem>
     {
-        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => evaluator.Evaluate(candidates, state, random, searchSpace, problem);
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => evaluator.Evaluate(candidates, state, random, searchSpace, problem);
     }
 }
 
@@ -38,11 +39,12 @@ public abstract record StatefulEvaluator<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    protected sealed override IEvaluatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateEvaluatorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
+    public sealed override IEvaluatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new Instance(this, CreateInitialState());
 
-    private sealed class Instance(StatefulEvaluator<TCandidate, TSearchSpace, TState> evaluator, TState state) : IEvaluatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    private sealed class Instance(StatefulEvaluator<TCandidate, TSearchSpace, TState> evaluator, TState state)
+        : EvaluatorInstance<TCandidate, TSearchSpace>
     {
-        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) => evaluator.Evaluate(candidates, state, random, searchSpace);
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace) => evaluator.Evaluate(candidates, state, random, searchSpace);
     }
 }
 
@@ -54,10 +56,11 @@ public abstract record StatefulEvaluator<TCandidate, TState>
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random);
 
-    protected sealed override IEvaluatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateEvaluatorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
+    public sealed override IEvaluatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new Instance(this, CreateInitialState());
 
-    private sealed class Instance(StatefulEvaluator<TCandidate, TState> evaluator, TState state) : IEvaluatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+    private sealed class Instance(StatefulEvaluator<TCandidate, TState> evaluator, TState state)
+        : EvaluatorInstance<TCandidate>
     {
-        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => evaluator.Evaluate(candidates, state, random);
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => evaluator.Evaluate(candidates, state, random);
     }
 }

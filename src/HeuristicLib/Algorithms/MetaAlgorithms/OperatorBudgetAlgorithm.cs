@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
 public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance>
-    : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : Algorithm<OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance>, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
@@ -21,22 +21,20 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearc
     public required TOperator ObservedOperator { get; init; }
     public required Func<TOperator, ObservationCounter, IOperator<TObservedInstance>> CountedOperatorFactory { get; init; }
 
-    public int MaximumCount
-    {
-        get;
-        init => field = value > 0
-            ? value
-            : throw new ArgumentOutOfRangeException(nameof(MaximumCount), "MaximumCount must be positive.");
-    }
+    /// <summary>
+    /// Gets the counted-operator budget. The expected value is positive.
+    /// </summary>
+    /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
+    public int MaximumCount { get; init; }
 
-    protected override OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
+    public override OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         var counter = new ObservationCounter();
         var countedOperator = CountedOperatorFactory(ObservedOperator, counter);
-        var childRegistry = registry.CreateChildRegistry();
+        var childRegistry = instanceRegistry.CreateChildRegistry();
         childRegistry.RegisterReplacement(ObservedOperator, countedOperator);
 
-        return new OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childRegistry.Resolve(Algorithm), counter, MaximumCount);
+        return new(childRegistry.Resolve(Algorithm), counter, MaximumCount);
     }
 }
 

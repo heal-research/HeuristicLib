@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
@@ -16,6 +17,5 @@ public interface IInterceptorInstance<TCandidate, in TSearchSpace, in TProblem, 
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    // ToDo: think about really providing the previous state, as it implies some form of iteration and state storage (if the interceptor really needs the previous state, it can be stateful and store it on its own).
-    TSearchState Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, TProblem problem);
+    TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

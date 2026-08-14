@@ -29,7 +29,7 @@ public static class WeightSelection
         return weights.Select(weight => weight / total).ToImmutableArray();
     }
 
-    public static int SelectIndex(IRandomNumberGenerator random, int count, ImmutableArray<double> normalizedWeights)
+    public static int SelectIndex(IRandomNumberGenerator random, int count, ReadOnlySpan<double> normalizedWeights)
     {
         if (count == 1)
             return 0;

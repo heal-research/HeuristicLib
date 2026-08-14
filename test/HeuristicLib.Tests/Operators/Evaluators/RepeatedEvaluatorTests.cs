@@ -14,7 +14,7 @@ public class RepeatedEvaluatorTests
     public void RepeatedEvaluator_UsesMeanObjectiveAggregation_ByDefault()
     {
         var problem = CreateProblem();
-        var evaluator = new StatefulObjectiveEvaluator().AsRepeated(repeats: 3);
+        var evaluator = new StatefulObjectiveEvaluator().AsRepeated(repetitions: 3);
         var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
 
         var solutions = instance.Evaluate([7], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -26,9 +26,7 @@ public class RepeatedEvaluatorTests
     public void RepeatedEvaluator_Throws_WhenRepeatedEvaluationReturnsDifferentGenotype()
     {
         var problem = CreateProblem();
-        var evaluator = new StatefulReplacingEvaluator().AsRepeated(
-            repeats: 2,
-            aggregator: objectives => objectives[0]);
+        var evaluator = new StatefulReplacingEvaluator().AsRepeated(repetitions: 2);
         var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
 
         Should.Throw<InvalidOperationException>(() =>
@@ -39,9 +37,9 @@ public class RepeatedEvaluatorTests
     public void RepeatedEvaluator_UsesCustomGenotypeComparer()
     {
         var problem = CreateProblem();
-        var evaluator = new StatefulReplacingEvaluator().AsRepeated(
-            repeats: 2,
-            comparer: EqualityComparer<int>.Create(static (_, _) => true));
+        var evaluator = new StatefulReplacingEvaluator().AsRepeated(repetitions: 2)
+            with
+        { CandidateComparer = EqualityComparer<int>.Create(static (_, _) => true) };
         var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
 
         var solutions = instance.Evaluate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

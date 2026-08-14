@@ -2,15 +2,19 @@
 
 This file is the short living tracker for doc, API-spec, and refactoring follow-up.
 
-It is intentionally narrow: it should track only partial and unfinished follow-up.
+It is intentionally narrow: it should track only partial and unfinished follow-up. [Discussed, tried, and rejected](#discussed-tried-and-rejected) is the one exception, and holds settled questions that should not be reopened without new evidence.
 
 ## Partly addressed, but still open
 
 These items have meaningful progress behind them, but should still stay on the backlog until the remaining work is done:
 
-- desired-state experiment API, beside the current-state experiment specs
+- decide whether the current mutable single use `AlgorithmRun` and `ExperimentRun` lifecycle should remain or be replaced by separate immutable setup and running types. Any replacement must preserve the direct fluent API while making repeated execution and analyzer attachment after execution impossible through the available types
+- define the intended serialization boundary for experiments. Grid configurators and trial analyzer selectors and factories are runtime setup delegates, while materialized algorithm, operator and analyzer configurations remain serialization friendly in principle. Decide whether experiment configurations themselves need a persistable representation
+- extend experiment composition only from concrete user needs. Deferred candidates include per trial problem and initial state creation, heterogeneous algorithm comparison, benchmark experiments across problem instances and dedicated individual cancellation handles
+- reconsider typed hierarchical trial paths only if composed tuple keys and `RandomForkPath` metadata prove insufficient. Do not introduce untyped path tags that require casts
 - desired-state analysis API, beside the current-state analysis specs
 - execution-graph invariants within one run
+- separate operation concurrency capability from requested execution policy. A future run-level execution context should let users select sequential or concurrent operation execution once, while operators and other execution boundaries declare the concurrency they safely allow. Define how the effective policy is constrained, how it reaches run-scoped instances through the execution registry without ambient state, how stateless operator bases capture run-specific settings, how problem evaluation participates, how per-trial experiment concurrency remains separate and whether maximum concurrency is per batch or shared across a whole run
 - work out run-scoped mutable operator parameters as a deliberate authoring capability and present the pattern clearly to users. Define naming and ownership for immutable configured values versus mutable current instance values, identify examples beyond mutation strength and decide how coordinating algorithms discover and control these parameters without prematurely introducing a generic parameter framework
 - design how operator wrappers and compositions preserve specialized execution instance capabilities such as variable mutation strength without adding role specific type checks and boilerplate to every general wrapper. Currently wrapping or composing `GaussianMutator` hides `IVariableStrengthMutatorInstance` from `EvolutionStrategy` and disables mutation strength adaptation
 - role-aware mating and parent selection pressure differences
@@ -22,6 +26,7 @@ These items have meaningful progress behind them, but should still stay on the b
 - improve the main `README.md` as the repository and NuGet front door: add install commands, a compact representative code example, a package overview, links to usage guides, and a visible example of what HeuristicLib can do, such as the Python interactive demonstrator GIF
 - move to a more standard C# formatting baseline, including a more conventional editor configuration and CI enforcement that fails pull requests on formatting violations
 - actively pay down solution warning debt and define a staged warning policy: fix the existing compiler, analyzer, and test warnings intentionally instead of normalizing them, then ratchet toward warning-clean builds and stricter CI enforcement in steps that avoid drowning active work in noise
+
 Why these are only partial today:
 
 - the experiment and analysis specs cover the current API well, but there is not yet a separate desired-state API story
@@ -32,14 +37,17 @@ Why these are only partial today:
 
 These are still real open items:
 
+- restructure the developer guidelines into a coherent, numbered hierarchy that separates document authority, contributor decision-making, architectural rules, contract and validation rules, public API design, implementation conventions, and enforcement. Treat the guide as policy for both human contributors and coding agents: normative decisions must be explicit, easy to locate and reference, and clearly distinguished from rationale and examples so agents can identify, explain, and warn about proposed code or documentation that conflicts with an established guideline. Preserve the guideline as the canonical policy document linked from `AGENTS.md`; perform the initial structural pass without intentionally changing policy, then review duplication and move topic-specific explanations only in a separate editorial pass
 - multi-objective short-path usage
+- generalize `PipelineAlgorithm` so consecutive algorithms may use different search state types
+- add explicit state transformations between `PipelineAlgorithm` stages, including transformations where the input and output state types are the same
+- introduce a probability based selection abstraction that separates selection from mappings such as fitness to probability and rank to probability
 - rework the objective system around the glossary terms `objective value`, `objective vector`, `objective direction`, and `objective directions`: keep the conceptual model open enough for single-objective and multi-objective cases, and clarify when an algorithm/operator requires exactly one objective value, a total ordering over objective vectors, or multi-objective comparison semantics
 - island-style population workflow
 - fully implement ALPS-style age-layered workflow; the current ALPS algorithm still behaves like a simple single-layer evolutionary loop with a regular generation budget
 - add an offspring-selection genetic algorithm implementation
 - richer experiment scenarios
-- design a first-class problem-instance system for discovering, loading, and describing named domain instances independently of problem classes. Define loader/provider responsibilities, instance metadata, partition conventions, caching, and experiment integration before recreating legacy conveniences such as `RegressionCsvInstanceProvider`
-- symbolic-regression redesign follow-up, tracked in the [symbolic regression redesign plan](../plans/symbolic-regression-redesign-plan.md)
+- symbolic-regression validation scenarios
 - dynamic-problem extension workflow
 - meta-optimization by running an inner algorithm inside `Problem.Evaluate(...)`
 - apply remaining glossary terminology to public API and code names where the current names still encode legacy concepts, while keeping namespace and folder cleanup in separate branches
@@ -49,21 +57,55 @@ These are still real open items:
 - decide the broader run/resume/continue naming scheme and decide whether completion results should carry typed stop reasons; this should become its own API naming and lifecycle-result design discussion rather than remaining tied to the termination overhaul branch
 - re-discuss algorithm builder APIs before extending them further: decide whether builders should become a polished, first-class configuration style with full feature parity, better type inference, and clear naming, or whether the library should phase them out in favor of object initializers, static factories, and small helper APIs
 - introduce a dedicated architecture test suite and evaluate ArchUnitNET as its foundation. Cover assembly dependency directions and cross-cutting authoring API rules such as returning the most concrete accessible execution instance type from protected creation methods. The removed `PipelineAlgorithm_FactoryExposesItsConcretePublicInstanceType` unit test is the first concrete example to restore there as a generalized architecture rule rather than a Pipeline-specific test
-- add static factory methods for algorithms where constructors force callers to spell generic arguments that should be inferable from supplied collaborators; meta-algorithms such as `CycleAlgorithm.Create(...)` and `PipelineAlgorithm.Create(...)` are the most visible examples, but the convention should be considered across algorithm APIs
-- reconsider the naming scheme for  and problem operator base classes. Decide whether common independent authoring bases should use the short main type name, with names such as `PopulationMutator`, `PopulationMutator` or similar reserved for less common variants whose semantics genuinely depend on the full population or batch.
-- revisit where scalar problem batch execution should live. `SingleSolutionProblem` currently implements the batch `IProblem` contract by parallelizing scalar evaluation and therefore exposes `MaxDegreeOfParallelism`, but this leaks execution policy into a problem type. Moving this to `ProblemEvaluator` would require either a scalar problem contract, separate evaluator types or a type check with conditional parallelism semantics.
+- add a Roslyn analyzer and code fix for missing type inference helpers on public operator configurations. Detect when direct construction requires generic arguments that could be inferred through a static `Create(...)`, `For(problem, ...)` or `For(algorithm, ...)` helper, generate the appropriate companion helper and cover the intended syntax with API usage specs. Start with operators. Reconsider algorithms after their builder and factory design is settled. Do not duplicate the same rule in architecture tests
+- consider static factory methods for concrete algorithms where constructors force callers to spell generic arguments that should be inferable from supplied collaborators. Keep this work aligned with the separate decision about builders and object initializer based configuration
+- redesign composite search space and composite genotype construction so common composition does not require callers to repeat every candidate and search space type argument. Preserve the fully typed relationship between each candidate part and its search space without relying on untyped component collections
+- revisit where scalar problem batch execution should live. `SingleSolutionProblem` currently implements the batch `IProblem` contract by adapting scalar evaluation and therefore exposes its own concurrency setting, but this leaks execution policy into a problem type. Moving it to `ProblemEvaluator` would require either a scalar problem contract, separate evaluator types or a type check with conditional concurrency semantics
+- reconsider the naming scheme for problem operator base classes. Decide whether common independent authoring bases should use the short main type name, with names such as `PopulationMutator` reserved for less common variants whose semantics genuinely depend on the full population or batch
 - clean up the test-suite organization and conventions: standardize test naming, file names, folders, and arrange/act/assert structure; use Shouldly consistently across all test projects, including extension tests; delete or restore commented-out tests; rethink `Explicit = true` for long-running tests and decide whether categories, traits, or separate projects should distinguish fast TDD/unit tests from manually triggered regression, smoke, and performance checks; CI should normally run all tests, but may run expensive regression groups only after the fast unit-test group passes; add a coverage-reporting baseline that highlights weak coverage for public APIs and important invariants
 - migrate HeuristicLab operators and their unit tests in a structured way; track operator mappings, missing operators, test migration status, and intentional behavior/API differences in the [HeuristicLab operator migration overview](../plans/heuristiclab_operator_migration_overview.md)
 - add a Python package bootstrap story for `HEAL.HeuristicLib.PythonInterop`: during early GitHub-based installs, the Python package should generate a tiny temporary `.csproj` that references the matching NuGet package and runs `dotnet publish` into a user cache, so Python users do not need checked-in generated DLLs. Later, replace or complement this with CI-built PyPI wheels that already contain the published .NET payload for normal Python installs.
 - add explicit ownership-taking factory methods for candidate containers such as `RealVector`, `IntegerVector`, and similar types, following the explicit static-factory style rather than constructor overloads; the goal is to let callers that already own the backing storage transfer it without another allocation or copy, and random generation should be one of the first places to adopt this once the API shape is decided
 - decide whether operators should expose a consistent caller-provided output-buffer or result-memory API. Avoid one-off `Memory<T>` parameters on individual operators. If this becomes necessary for allocation-sensitive workflows, design it as a library-wide operator convention that clearly states who owns the resulting storage and how immutable candidate containers are created from it.
+- benchmark and, if worthwhile, reduce batching overhead in lightweight operators such as `InversionMutator`, including per-call captured delegates and per-item RNG forks. General and variable-width operations should retain deterministic child RNGs per logical item or key. For operators with a proven fixed number of primitive draws, evaluate deterministic fixed-width random-decision planning in logical item order as an allocation-saving specialization. Results must remain independent of workers, partitions, scheduling, concurrency limits, and CPU-core count. Do not require all RNG implementations to become counter-based or random-access-capable solely for this optimization.
 - expand `IRandomNumberGenerator` and the concrete random engines so they expose the raw primitive outputs and data widths needed to build statistically sound and efficient higher-level sampling APIs; in particular, bounded integer generation should eventually be reworked on top of integer-domain primitives rather than `NextDouble()` scaling
+
+## Discussed, tried, and rejected
+
+Approaches that were evaluated, in some cases prototyped, and decided against. They are recorded here so that a settled question is not proposed, prototyped and rejected a second time. Each entry states what was tried, what decided it, and what would have to change to reopen it.
+
+Unlike the open items above, these are settled. Rules that follow from them live in [developer guidelines](developer-guidelines.md) and the relevant topic pages; this section holds only the reasoning.
+
+### Typed operator invocation
+
+Prototyped during the operator rework in August 2026 and rolled back.
+
+Cross-cutting concerns such as duration measurement, observation, choosing one child and pipelining would have been centralized behind one typed execution signature, `(TInput, TContext) -> TOutput`, with generic meta-operator bases invoking children through a shared `Invoke`.
+
+It failed because C#'s nominal interface model still requires a role-specific configuration and execution instance for every role. A generic pipeline containing mutators cannot become an `IMutator` merely because its type arguments are mutators, and CRTP preserves a self type but cannot add interface membership. The duration-measuring prototype moved only the small exception-safe timing block into the shared base, while constructors, configuration properties, static factories, fluent extensions, the nested execution instance and role forwarding all remained; the generic base declarations and the context bridge replaced at least as much code as they removed. An isolated pass-through benchmark measured 2.39 ns for the role-specific one-stage pipeline against 12.84 ns for the typed one, both at zero allocation.
+
+Role execution instances therefore expose their named operation — `Mutate`, `Cross`, `Select`, `Evaluate` — and no second generic invocation path. Do not reintroduce a generic `Invoke`, a problem context carrier, default interface bridges between an invocation method and role methods, or generic wrapping and multi bases shared across roles. `IOperator<TExecutionInstance>` is unrelated to this rejection and is retained: it expresses which execution-instance role a configuration creates and carries no input, context or output model.
+
+Reopening this would need a language or runtime mechanism that lets one generic implementation satisfy several nominal role contracts without a per-role leaf. Current C# has none.
+
+### Generated operator families
+
+Decided against on 2026-08-13, after the typed-invocation rework left source generation open as an alternative.
+
+A Roslyn incremental generator, or a deterministic one-shot scaffolding command, would have emitted the repetitive parts of an operator family: configuration and execution-instance arity ladders, stateless and stateful bases, wrapping and multi topologies, construction companions, and one adapter per role for each cross-cutting concern.
+
+It was rejected because new operator roles are expected to be rare and concern adapters are not purely mechanical. Applicability, lifecycle, result shape, naming and construction differ per role, as duration measurement recording failed calls in `finally` and counting recording only successful ones already shows. A production generator would need a stable generator contract, semantic discovery, diagnostics, collision handling, generated-source tests, IDE verification, packaging, external-consumer tests and ongoing compiler compatibility work. Generated public API would also be harder to navigate, refactor and review, a template change could reshape a broad public API with no ordinary source diff at each type, and one generator defect would reproduce across the entire matrix. Coding agents absorb the same repetitive work while the result stays ordinary reviewable source.
+
+Operator families are therefore ordinary checked-in C# source; see [operator authoring](operator-authoring.md#scaffolding-roles-and-cross-cutting-concerns) for the workflow and its guardrails.
+
+Reopening this would need measured evidence that ordinary source has become a material maintenance burden — frequent new roles or concerns, recurring matrix omissions, or repeated synchronization work whose semantics have stabilized into a small declarative model. Any proposal must compare its benefit against the agent-assisted workflow rather than against handwriting everything, and must keep handwritten source a fully supported path. Reopen it through an explicit decision rather than through isolated generator experiments.
 
 ## Source material
 
 The active guiding docs remain:
 
 - [design-goals.md](design-goals.md)
+- [developer-guidelines.md](developer-guidelines.md)
 - [requirements.md](requirements.md)
 
 ## Keep or delete?
@@ -76,3 +118,5 @@ Delete it once most remaining items have either:
 - moved into normal issue tracking or another active planning system
 
 If it starts reading like a second architecture document again, cut it down.
+
+[Discussed, tried, and rejected](#discussed-tried-and-rejected) outlives the tracker. When this file goes away, move that section somewhere durable rather than deleting it; its whole purpose is to stop settled questions from being reopened by someone who was not there.

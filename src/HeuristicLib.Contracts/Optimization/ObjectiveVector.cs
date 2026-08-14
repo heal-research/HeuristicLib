@@ -7,9 +7,15 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
 {
     private readonly double[] values;
 
-    public ObjectiveVector(params IEnumerable<double> values) => this.values = values.ToArray();
+    public ObjectiveVector(params IEnumerable<double> values)
+    {
+        this.values = values.ToArray();
+    }
 
-    public ObjectiveVector(params ReadOnlySpan<double> values) => this.values = values.ToArray();
+    public ObjectiveVector(params ReadOnlySpan<double> values)
+    {
+        this.values = values.ToArray();
+    }
 
     public bool IsSingleObjective => Count == 1;
     public ObjectiveValue? SingleObjectiveValue => Count == 1 ? new ObjectiveValue(values[0]) : null;
@@ -72,7 +78,7 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
             {
                 ObjectiveDirection.Minimize => +1,
                 ObjectiveDirection.Maximize => -1,
-                _ => throw new NotImplementedException()
+                _ => throw new InvalidOperationException($"Unsupported objective direction: {objective.Directions[i]}.")
             };
         }
 

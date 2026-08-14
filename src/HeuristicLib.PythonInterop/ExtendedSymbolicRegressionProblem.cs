@@ -115,7 +115,7 @@ public class ExtendedSymbolicRegressionProblem(
         var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>
         {
             Creator = new ProbabilisticTreeCreator(),
-            Crossover = new SubtreeCrossover(0.9),
+            Crossover = new SubtreeCrossover { InternalNodeProbability = 0.9 },
             Mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>(
                 [.. SymbolicExpressionMutators.Default]),
             MutationRate = 0.1,

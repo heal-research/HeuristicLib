@@ -71,14 +71,14 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
         private sealed class Instance(ICrossoverInstance<T1, TS1, IProblem<T1, TS1>> operatorInstance1, ICrossoverInstance<T2, TS2, IProblem<T2, TS2>> operatorInstance2)
             : ICrossoverInstance<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>
         {
-            public IReadOnlyList<CompositeGenotype<T1, T2>> Cross(IReadOnlyList<IParents<CompositeGenotype<T1, T2>>> parents, IRandomNumberGenerator random, CompositeSearchSpace<T1, TS1, T2, TS2> searchSpace, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>> problem)
+            public IReadOnlyList<CompositeGenotype<T1, T2>> Cross(IReadOnlyList<Parents<CompositeGenotype<T1, T2>>> parents, IRandomNumberGenerator random, CompositeSearchSpace<T1, TS1, T2, TS2> searchSpace, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>> problem)
             {
                 var res1 = operatorInstance1.Cross(parents.Select(Selector1).ToArray(), random, searchSpace.SearchSpace, searchSpace.NoProblem1);
                 var res2 = operatorInstance2.Cross(parents.Select(Selector2).ToArray(), random, searchSpace.SearchSpace2, searchSpace.NoProblem2);
                 return res1.Zip(res2, ((a, b) => new CompositeGenotype<T1, T2>(a, b))).ToArray();
 
-                static IParents<T2> Selector2(IParents<CompositeGenotype<T1, T2>> x) => new Parents<T2>(x.Parent1.Part2, x.Parent2.Part2);
-                static IParents<T1> Selector1(IParents<CompositeGenotype<T1, T2>> x) => new Parents<T1>(x.Parent1.Part1, x.Parent2.Part1);
+                static Parents<T2> Selector2(Parents<CompositeGenotype<T1, T2>> x) => Parents.From(x.Parent1.Part2, x.Parent2.Part2);
+                static Parents<T1> Selector1(Parents<CompositeGenotype<T1, T2>> x) => Parents.From(x.Parent1.Part1, x.Parent2.Part1);
             }
         }
     }

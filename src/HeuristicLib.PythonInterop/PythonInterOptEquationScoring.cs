@@ -91,7 +91,7 @@ public class PythonInterOptEquationScoring(
         var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>
         {
             Creator = new ProbabilisticTreeCreator(),
-            Crossover = new SubtreeCrossover(0.9),
+            Crossover = new SubtreeCrossover { InternalNodeProbability = 0.9 },
             Mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>(
                 [.. SymbolicExpressionMutators.Default]),
             MutationRate = 0.1,

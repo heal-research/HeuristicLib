@@ -75,7 +75,7 @@ public sealed class SubtreeMutatorTests
             0.0,  // Select the variable terminal symbol.
             0.75); // Sample x1.
 
-        var offspring = new SubtreeMutator().Mutate(parent, random, searchSpace);
+        var offspring = new SubtreeMutator().MutateCandidate(parent, random, searchSpace);
 
         offspring.ToInfixString().ShouldBe("(x1 + (x1 * x0))");
         offspring.Length.ShouldBe(5);

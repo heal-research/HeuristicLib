@@ -1,34 +1,31 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-[Equatable]
-public abstract partial record MultiReplacer<TCandidate, TSearchSpace, TProblem>
+public abstract record MultiReplacer<TCandidate, TSearchSpace, TProblem>
     : Replacer<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [OrderedEquality]
-    protected ImmutableArray<IReplacer<TCandidate, TSearchSpace, TProblem>> InnerReplacers { get; }
-
-    protected MultiReplacer(ImmutableArray<IReplacer<TCandidate, TSearchSpace, TProblem>> innerReplacers)
+    protected MultiReplacer(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> childReplacers)
     {
-        InnerReplacers = innerReplacers;
+        ChildReplacers = childReplacers.ToValueArray();
     }
 
-    protected sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(ExecutionInstanceRegistry registry) =>
-        CreateReplacerInstance([.. InnerReplacers.Select(registry.Resolve)]);
+    public ValueArray<IReplacer<TCandidate, TSearchSpace, TProblem>> ChildReplacers { get; init; }
 
-    protected abstract MultiReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> innerReplacers);
+    public sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateExecutionInstance([.. ChildReplacers.Select(instanceRegistry.Resolve)]);
+
+    protected abstract MultiReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> childReplacers);
 }
 
-public abstract class MultiReplacerInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> innerReplacers)
+public abstract class MultiReplacerInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> childReplacers)
     : ReplacerInstance<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> InnerReplacers { get; } = innerReplacers;
+    protected ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> ChildReplacers { get; } = childReplacers;
 }

@@ -11,13 +11,12 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 public sealed record AdditiveStepAlgorithm(int Increment)
-    : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    : Algorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
 {
-    public IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator { get; init; } =
-        new ProblemEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
+    public IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator { get; init; } = new ProblemEvaluator<int>();
 
-    protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(
-        ExecutionInstanceRegistry registry) => new Instance(registry.Resolve(Evaluator), Increment);
+    public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new Instance(instanceRegistry.Resolve(Evaluator), Increment);
 
     private sealed class Instance(IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, int increment)
         : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
@@ -32,10 +31,7 @@ public sealed record AdditiveStepAlgorithm(int Increment)
             var next = current + increment;
             var evaluatedCandidate = evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
 
-            yield return new PopulationState<int>
-            {
-                Population = Population.From([evaluatedCandidate])
-            };
+            yield return Population.From([evaluatedCandidate]).ToPopulationState();
 
             await Task.CompletedTask;
         }

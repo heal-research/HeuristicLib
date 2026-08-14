@@ -1,6 +1,3 @@
-// ReSharper disable InconsistentNaming
-
-#pragma warning disable S101
 namespace HEAL.HeuristicLib.APIs.RoarNet;
 
 #region Wrapping a HeuristicLib problem + Operators to a ROAR-NET operations bundle

@@ -1,12 +1,11 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Neighborhoods;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.APIs.RoarNet;
-
-using Operators.Neighborhoods;
 
 public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
     TP Problem,

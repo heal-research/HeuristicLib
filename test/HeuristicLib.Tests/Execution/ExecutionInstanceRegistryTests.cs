@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Tests.TestSupport.Execution;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 

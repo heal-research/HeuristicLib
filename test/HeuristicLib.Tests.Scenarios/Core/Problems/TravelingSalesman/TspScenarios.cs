@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
@@ -33,7 +32,7 @@ public class TspScenarios
         // ga.RandomSeed = 42;
         ga.PopulationSize = 100;
         ga.MutationRate = 0.05;
-        ga.Selector = new TournamentSelector<Permutation>(2);
+        ga.Selector = TournamentSelector.For(prob, tournamentSize: 2);
         ga.Elites = 1;
         // execute
         var resGa = (ga.Build() with
@@ -46,7 +45,7 @@ public class TspScenarios
                          .OrderBy(x => x.ObjectiveVector[0])
                          .First();
 
-        resGa.Population.EvaluatedCandidates.Length.ShouldBe(100);
+        resGa.Population.EvaluatedCandidates.Count.ShouldBe(100);
         resGa.Population.EvaluatedCandidates.All(solution => prob.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
         resGa.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
         double.IsFinite(objGa.ObjectiveVector[0]).ShouldBeTrue();

@@ -12,7 +12,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
-    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>
+    : IterativeAlgorithm<GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -22,30 +22,30 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
     public ITerminator<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? Terminator { get; init; }
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
-    public int? MaximumGenerations
-    {
-        get;
-        init => field = value is null or > 0
-          ? value
-          : throw new ArgumentOutOfRangeException(nameof(MaximumGenerations), "MaximumGenerations must be positive when set.");
-    }
+    /// <summary>
+    /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
+    /// </summary>
+    /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
+    public int? MaximumGenerations { get; init; }
 
     public int Elites { get; init; } = 1;
 
-    public double MutationRate
-    {
-        get;
-        init => field = value is >= 0.0 and <= 1.0 ? value : throw new ArgumentOutOfRangeException(nameof(MutationRate), "MutationRate must be in [0, 1].");
-    } = 0.1;
+    /// <summary>
+    /// Gets the probability that an offspring is mutated. The expected value is in <c>[0, 1]</c>.
+    /// </summary>
+    /// <remarks>
+    /// The rate is applied as a threshold against a random value in <c>[0, 1)</c>. A value at most zero, negative
+    /// infinity and <c>NaN</c> never mutate; a value at least one and positive infinity always mutate.
+    /// </remarks>
+    public double MutationRate { get; init; } = 0.1;
 
     public required ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateIterativeAlgorithmInstance(
-        ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor)
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
         var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate);
-        return new Instance(resolvedInterceptor, registry.Resolve(Evaluator), registry.Resolve(Creator), registry.Resolve(Crossover),
-            registry.Resolve(effectiveMutator), registry.Resolve(Selector), Terminator is null ? null : registry.Resolve(Terminator), PopulationSize, MaximumGenerations, Elites);
+        return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover),
+            instanceRegistry.Resolve(effectiveMutator), instanceRegistry.Resolve(Selector), Terminator is null ? null : instanceRegistry.Resolve(Terminator), PopulationSize, MaximumGenerations, Elites);
     }
 
     private sealed class Instance(
@@ -73,7 +73,7 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
             {
                 var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
                 var initialPopulation = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
-                return new PopulationState<TCandidate> { Population = Population.From(initialPopulation) };
+                return Population.From(initialPopulation).ToPopulationState();
             }
 
             var oldPopulation = previousState.Population.EvaluatedCandidates;
@@ -82,8 +82,8 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
             var offspring = crossover.Cross(parents.ToParentPairs(), random, problem.SearchSpace, problem);
             offspring = mutator.Mutate(offspring, random, problem.SearchSpace, problem);
             var offspringPopulation = evaluator.Evaluate(offspring, random, problem.SearchSpace, problem);
-            var newPopulation = ElitismReplacer<TCandidate>.Replace(oldPopulation, offspringPopulation, problem.Objective, populationSize, elites);
-            return new PopulationState<TCandidate> { Population = Population.From(newPopulation) };
+            var newPopulation = ElitismReplacer.Replace(oldPopulation, offspringPopulation, problem.Objective, populationSize, elites);
+            return Population.From(newPopulation).ToPopulationState();
         }
     }
 }
@@ -106,7 +106,7 @@ public static class GeneticAlgorithm
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        return new GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
+        return new()
         {
             Creator = creator,
             Crossover = crossover,

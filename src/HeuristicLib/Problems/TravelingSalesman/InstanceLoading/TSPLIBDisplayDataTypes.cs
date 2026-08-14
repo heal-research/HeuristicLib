@@ -1,9 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 
-[SuppressMessage("ReSharper", "InconsistentNaming")]
-[SuppressMessage("ReSharper", "IdentifierTypo")]
 public enum TSPLIBDisplayDataTypes
 {
     Unknown = 0,

@@ -5,23 +5,15 @@ using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
 
 public sealed record GrowTreeCreator
-    : SingleSolutionCreator<ExpressionTree, ExpressionTreeSearchSpace>
+    : SingleCandidateCreator<ExpressionTree, ExpressionTreeSearchSpace>
 {
-    public GrowTreeCreator(int? maximumDepth = null)
-    {
-        if (maximumDepth is <= 0)
-            throw new ArgumentOutOfRangeException(nameof(maximumDepth));
-
-        MaximumDepth = maximumDepth;
-    }
-
     /// <summary>
     /// Gets the maximum tree depth, or <see langword="null"/> to use the search-space maximum.
-    /// An explicit maximum must not exceed the search-space depth limit.
+    /// An explicit maximum must be positive and must not exceed the search-space depth limit.
     /// </summary>
-    public int? MaximumDepth { get; }
+    public int? MaximumDepth { get; init; }
 
-    public override ExpressionTree Create(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace) =>
+    public override ExpressionTree CreateCandidate(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace) =>
         GrowTreeCreation.Create(random, searchSpace, MaximumDepth);
 }
 

@@ -44,20 +44,16 @@ public class CycleAlgorithmAnalysisScenarios
         var interceptor = new IdentityInterceptor<int, PopulationState<int>>();
         var algorithm1 = new SingleStepAlgorithm(1, evaluator, interceptor);
         var algorithm2 = new SingleStepAlgorithm(2, evaluator, interceptor);
-        var cycleAlgorithm =
-            new CycleAlgorithm<SingleStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>,
-                PopulationState<int>>(
-                [algorithm1, algorithm2])
-            {
-                MaximumCycles = 3,
-                NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
-            };
+        var cycleAlgorithm = algorithm1.CycleWith(algorithm2, maximumCycles: 3) with
+        {
+            NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
+        };
 
         var evaluationTrace1 = new EvaluationTraceAnalysis(evaluator);
         var evaluationTrace2 = new EvaluationTraceAnalysis(evaluator);
         var interceptionTrace = new InterceptionTraceAnalysis(interceptor);
-        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(
-            evaluateFunc: x => x,
+        var problem = FuncProblem.Create(
+            evaluateFunc: (int x) => x,
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
@@ -66,9 +62,9 @@ public class CycleAlgorithmAnalysisScenarios
 
         return new CycleRunResult(
             finalState,
-            run.GetAnalyzerResult(evaluationTrace1),
-            run.GetAnalyzerResult(evaluationTrace2),
-            run.GetAnalyzerResult(interceptionTrace));
+            run.GetResult(evaluationTrace1),
+            run.GetResult(evaluationTrace2),
+            run.GetResult(interceptionTrace));
     }
 
     private sealed record CycleRunResult(PopulationState<int> FinalState, EvaluationTraceAnalysis.ExecutionState EvaluationTrace1, EvaluationTraceAnalysis.ExecutionState EvaluationTrace2, InterceptionTraceAnalysis.ExecutionState InterceptionTrace);
@@ -99,7 +95,7 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
-    private sealed record SingleStepAlgorithm : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    private sealed record SingleStepAlgorithm : Algorithm<SingleStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
         public int Candidate { get; }
 
@@ -114,8 +110,8 @@ public class CycleAlgorithmAnalysisScenarios
             Evaluator = evaluator;
         }
 
-        protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) =>
-            new Instance(registry.Resolve(Evaluator), registry.Resolve(Interceptor), Candidate);
+        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+            new Instance(instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Interceptor), Candidate);
 
         private sealed class Instance(IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor, int candidate)
             : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
@@ -131,12 +127,9 @@ public class CycleAlgorithmAnalysisScenarios
                 ct.ThrowIfCancellationRequested();
 
                 var evaluatedCandidate = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
-                var currentState = new PopulationState<int>
-                {
-                    Population = Population.From([evaluatedCandidate])
-                };
+                var currentState = Population.From([evaluatedCandidate]).ToPopulationState();
 
-                yield return interceptor.Transform(currentState, initialState, problem.SearchSpace, problem);
+                yield return interceptor.Transform(currentState, initialState, random, problem.SearchSpace, problem);
                 await Task.CompletedTask;
             }
         }
@@ -149,8 +142,7 @@ public class CycleAlgorithmAnalysisScenarios
 
         public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
         {
-            observations.Observe(Evaluator, (_, evaluatedCandidates, _, _) =>
-                result.RecordObjectiveValues(evaluatedCandidates.Select(candidate => candidate.ObjectiveVector).ToArray()));
+            observations.Observe(Evaluator, (_, evaluatedCandidates, _, _) => result.RecordObjectiveValues(evaluatedCandidates));
         }
 
         public sealed class ExecutionState
@@ -159,9 +151,9 @@ public class CycleAlgorithmAnalysisScenarios
 
             public IReadOnlyList<double> ObjectiveValues => objectiveValues;
 
-            public void RecordObjectiveValues(IReadOnlyList<ObjectiveVector> objectiveVectors)
+            public void RecordObjectiveValues(IReadOnlyList<EvaluatedCandidate<int>> evaluatedCandidates)
             {
-                objectiveValues.AddRange(objectiveVectors.Select(x => x[0]));
+                objectiveValues.AddRange(evaluatedCandidates.Select(x => x.ObjectiveVector[0]));
             }
         }
     }

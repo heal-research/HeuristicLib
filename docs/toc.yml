@@ -6,6 +6,8 @@
   items:
     - name: Design goals & principles
       href: design-goals.md
+    - name: Developer guidelines
+      href: developer-guidelines.md
     - name: Requirements
       href: requirements.md
     - name: Developer backlog
@@ -29,10 +31,14 @@
     - name: Operators
       href: operators.md
       items:
+        - name: Operator authoring
+          href: operator-authoring.md
         - name: Operator composition
           href: operator-composition.md
     - name: Algorithm
       href: algorithm.md
+    - name: Experiments
+      href: experiments.md
     - name: Search state
       href: algorithm-state.md
     - name: Execution model

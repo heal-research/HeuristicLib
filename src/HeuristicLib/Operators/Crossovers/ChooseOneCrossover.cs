@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -6,68 +5,75 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-[Equatable]
-public partial record ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>
+/// <summary>
+/// Chooses one child crossover independently for each parent group and restores the results to input order.
+/// </summary>
+/// <remarks>
+/// Each selected crossover must return exactly one result for every parent group assigned to it.
+/// </remarks>
+public sealed record ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>
     : MultiCrossover<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [IgnoreEquality] public ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> Crossovers => InnerCrossovers;
+    /// <summary>
+    /// Relative selection weight of each child crossover, in child order. An empty collection selects every child
+    /// uniformly.
+    /// </summary>
+    /// <remarks>
+    /// Weights are retained exactly as configured rather than normalized, so omitting them stays distinguishable from
+    /// passing equal weights.
+    /// </remarks>
+    public ValueArray<double> Weights { get; init; }
 
-    [OrderedEquality]
-    public ImmutableArray<double> Weights { get; }
-
-    [IgnoreEquality]
-    private readonly WeightedBatchDispatch dispatcher;
-
-    public ChooseOneCrossover(ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)
-        : base(crossovers)
+    public ChooseOneCrossover(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>> childCrossovers)
+        : base(childCrossovers)
     {
-        if (crossovers.Length == 0)
-        {
-            throw new ArgumentException("At least one crossover must be provided.", nameof(crossovers));
-        }
-
-        var effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / crossovers.Length, crossovers.Length)];
-        if (effectiveWeights.Length != crossovers.Length)
-        {
-            throw new ArgumentException("Weights must have the same length as crossovers.", nameof(weights));
-        }
-
-        dispatcher = new WeightedBatchDispatch(effectiveWeights);
-        Weights = dispatcher.Weights;
     }
 
-    protected override MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> innerCrossovers) =>
-        new Instance(innerCrossovers, dispatcher);
-
-    private sealed class Instance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> innerCrossovers, WeightedBatchDispatch dispatcher)
-        : MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem>(innerCrossovers)
+    protected override MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> childCrossovers)
     {
-        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            dispatcher.Dispatch(parents, InnerCrossovers, random, (crossover, batchParents) => crossover.Cross(batchParents, random, searchSpace, problem));
+        if (ChildCrossovers.Count == 0)
+            throw new InvalidOperationException("At least one crossover must be provided.");
+        if (Weights.Count > 0 && Weights.Count != ChildCrossovers.Count)
+            throw new InvalidOperationException("Weights must have the same length as crossovers.");
+
+        return new Instance(childCrossovers, new WeightedBatchDispatch(Weights));
+    }
+
+    private sealed class Instance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> childCrossovers, WeightedBatchDispatch dispatcher)
+        : MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem>(childCrossovers)
+    {
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            dispatcher.Dispatch(
+                parents,
+                ChildCrossovers,
+                random,
+                (random, searchSpace, problem),
+                static (crossover, batchParents, state) => crossover.Cross(batchParents, state.random, state.searchSpace, state.problem));
     }
 }
 
 public static class ChooseOneCrossover
 {
-    public static ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IEnumerable<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers)
+    public static ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>> childCrossovers)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        var crossoverArray = crossovers.ToImmutableArray();
-        return new ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>(crossoverArray);
-    }
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childCrossovers);
 
-    public static ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)
+    public static ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>> childCrossovers, IReadOnlyList<double> weights)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(crossovers, weights);
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childCrossovers) { Weights = weights.ToValueArray() };
+}
 
+public static class ChooseOneCrossoverExtensions
+{
     extension<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> WithRate(double crossoverRate) =>
-            Create([crossover, SelectFirstParentCrossover<TCandidate>.Instance], [crossoverRate, 1 - crossoverRate]);
+            ChooseOneCrossover.Create([crossover, SelectFirstParentCrossover<TCandidate>.Instance], WeightedBatchDispatch.GetRateWeights(crossoverRate));
     }
 }

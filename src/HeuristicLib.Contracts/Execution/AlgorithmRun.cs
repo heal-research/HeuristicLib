@@ -16,38 +16,23 @@ public abstract class AlgorithmRun
 
     public bool ExecutionStarted { get; private set; }
 
-    protected AlgorithmRun(IReadOnlyList<IAnalyzer>? analyzers = null)
-    {
-        if (analyzers is not null)
-        {
-            this.analyzers.AddRange(analyzers);
-        }
-    }
-
-    public AlgorithmRun WithAnalyzer(IAnalyzer analyzer)
+    protected void AttachAnalyzer(IAnalyzer analyzer)
     {
         EnsureNotStarted();
         analyzers.Add(analyzer);
-
-        return this;
     }
 
-    public AlgorithmRun WithAnalyzers(params IReadOnlyList<IAnalyzer> analyzers)
+    protected void AttachAnalyzers(IReadOnlyList<IAnalyzer> analyzers)
     {
         EnsureNotStarted();
         this.analyzers.AddRange(analyzers);
-
-        return this;
     }
 
-    protected void BeginExecution()
+    protected ExecutionInstanceRegistry StartExecution()
     {
         EnsureNotStarted();
         ExecutionStarted = true;
-    }
 
-    protected ExecutionInstanceRegistry CreateExecutionRegistry()
-    {
         var observationPlan = new ObservationPlan();
         analyzerStates = new Dictionary<IAnalyzer, IAnalyzerRunState>(ReferenceEqualityComparer.Instance);
 
@@ -63,7 +48,22 @@ public abstract class AlgorithmRun
         return registry;
     }
 
-    public TResult GetAnalyzerResult<TResult>(IAnalyzer<TResult> analyzer) where TResult : class
+    //TODO: Discuss whether we really want this. A disposable analyzer run state is a strange contract: it makes every
+    //      analyzer a potential resource owner and couples run teardown to analyzer internals. The only current need is
+    //      unsubscribing from problem events, which might be better solved by a dedicated subscription lifetime.
+    protected void DisposeAnalyzerStates()
+    {
+        if (analyzerStates is null)
+            return;
+
+        foreach (var state in analyzerStates.Values)
+        {
+            if (state is IDisposable disposable)
+                disposable.Dispose();
+        }
+    }
+
+    public TResult GetResult<TResult>(IAnalyzer<TResult> analyzer) where TResult : class
     {
         var states = GetAnalyzerStates();
         if (!states.TryGetValue(analyzer, out var state))
@@ -76,10 +76,10 @@ public abstract class AlgorithmRun
             return typedState.Result;
         }
 
-        throw CreateAnalyzerResultTypeMismatchException<TResult>(analyzer, state);
+        throw CreateResultTypeMismatchException(analyzer, state);
     }
 
-    public bool TryGetAnalyzerResult<TResult>(IAnalyzer<TResult> analyzer, [MaybeNullWhen(false)] out TResult result) where TResult : class
+    public bool TryGetResult<TResult>(IAnalyzer<TResult> analyzer, [MaybeNullWhen(false)] out TResult result) where TResult : class
     {
         var states = GetAnalyzerStates();
         if (!states.TryGetValue(analyzer, out var state))
@@ -94,15 +94,11 @@ public abstract class AlgorithmRun
             return true;
         }
 
-        throw CreateAnalyzerResultTypeMismatchException<TResult>(analyzer, state);
+        throw CreateResultTypeMismatchException(analyzer, state);
     }
 
-    public TResult GetResult<TResult>(IAnalyzer<TResult> analyzer) where TResult : class => GetAnalyzerResult(analyzer);
-
-    public bool TryGetResult<TResult>(IAnalyzer<TResult> analyzer, [MaybeNullWhen(false)] out TResult result) where TResult : class => TryGetAnalyzerResult(analyzer, out result);
-
-    private Dictionary<IAnalyzer, IAnalyzerRunState> GetAnalyzerStates()
-        => analyzerStates ?? throw new InvalidOperationException("Analyzer results are not available before the run starts.");
+    private Dictionary<IAnalyzer, IAnalyzerRunState> GetAnalyzerStates() =>
+        analyzerStates ?? throw new InvalidOperationException("Analyzer results are not available before the run starts.");
 
     private void EnsureNotStarted()
     {
@@ -112,7 +108,7 @@ public abstract class AlgorithmRun
         }
     }
 
-    private static InvalidOperationException CreateAnalyzerResultTypeMismatchException<TResult>(IAnalyzer<TResult> analyzer, IAnalyzerRunState state) where TResult : class =>
+    private static InvalidOperationException CreateResultTypeMismatchException<TResult>(IAnalyzer<TResult> analyzer, IAnalyzerRunState state) where TResult : class =>
         new($"Analyzer {analyzer} created run state {state.GetType()} which does not implement {typeof(IAnalyzerRunState<TResult>)}.");
 }
 
@@ -134,23 +130,30 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         Random = random;
     }
 
-    public new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> WithAnalyzer(IAnalyzer analyzer)
+    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> WithAnalyzer(IAnalyzer analyzer)
     {
-        base.WithAnalyzer(analyzer);
+        AttachAnalyzer(analyzer);
         return this;
     }
 
-    public new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> WithAnalyzers(params IReadOnlyList<IAnalyzer> analyzers)
+    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> WithAnalyzer<TAnalyzer>(TAnalyzer analyzer, out TAnalyzer attachedAnalyzer)
+        where TAnalyzer : IAnalyzer
     {
-        base.WithAnalyzers(analyzers);
+        attachedAnalyzer = analyzer;
+        AttachAnalyzer(analyzer);
+        return this;
+    }
+
+    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> WithAnalyzers(params IReadOnlyList<IAnalyzer> analyzers)
+    {
+        AttachAnalyzers(analyzers);
         return this;
     }
 
     public ExecutionStream<TSearchState> Stream(TSearchState? initialState = null, CancellationToken cancellationToken = default)
     {
-        BeginExecution();
-        var algorithmInstance = CreateExecutionRegistry().Resolve(Algorithm);
-        return new ExecutionStream<TSearchState>(StreamStates(algorithmInstance, initialState, cancellationToken), cancellationToken);
+        var algorithmInstance = StartExecution().Resolve(Algorithm);
+        return new(StreamStates(algorithmInstance, initialState, cancellationToken), cancellationToken);
     }
 
     public async Task<TSearchState> CompleteAsync(TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
@@ -161,9 +164,16 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
 
     private async IAsyncEnumerable<TSearchState> StreamStates(IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithmInstance, TSearchState? initialState, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var state in algorithmInstance.RunStreamingAsync(Problem, Random, initialState, cancellationToken).WithCancellation(cancellationToken))
+        try
         {
-            yield return state;
+            await foreach (var state in algorithmInstance.RunStreamingAsync(Problem, Random, initialState, cancellationToken))
+            {
+                yield return state;
+            }
+        }
+        finally
+        {
+            DisposeAnalyzerStates();
         }
     }
 }

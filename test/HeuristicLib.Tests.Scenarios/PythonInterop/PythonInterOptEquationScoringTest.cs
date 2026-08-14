@@ -40,7 +40,7 @@ public class PythonInterOptEquationScoringTest
         ]));
         p.InnerProblem.UseLinearScaling.ShouldBeTrue();
         var pop = PythonInterOptEquationScoring.RunDefault(p);
-        pop.EvaluatedCandidates.Length.ShouldBe(300);
+        pop.EvaluatedCandidates.Count.ShouldBe(300);
         pop.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 5).ShouldBeTrue();
         pop.EvaluatedCandidates.All(solution => solution.ObjectiveVector.All(double.IsFinite)).ShouldBeTrue();
         var best = pop.EvaluatedCandidates.OrderByDescending(x => x.ObjectiveVector[0]).First();

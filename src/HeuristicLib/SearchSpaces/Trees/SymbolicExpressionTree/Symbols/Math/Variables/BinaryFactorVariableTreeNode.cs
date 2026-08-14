@@ -6,7 +6,10 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 public sealed class BinaryFactorVariableTreeNode : VariableTreeNodeBase
 {
 
-    private BinaryFactorVariableTreeNode(BinaryFactorVariableTreeNode original) : base(original) => VariableValue = original.VariableValue;
+    private BinaryFactorVariableTreeNode(BinaryFactorVariableTreeNode original) : base(original)
+    {
+        VariableValue = original.VariableValue;
+    }
 
     public BinaryFactorVariableTreeNode(BinaryFactorVariable variableSymbol) : base(variableSymbol) { }
     public new BinaryFactorVariable Symbol => (BinaryFactorVariable)base.Symbol;

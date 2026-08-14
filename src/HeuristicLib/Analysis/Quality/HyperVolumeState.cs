@@ -8,9 +8,9 @@ public class HyperVolumeState<T>(ObjectiveVector referencePoint, ObjectiveDirect
     private Lazy<double>? hyperVolumeLazy;
     public double HyperVolume => hyperVolumeLazy?.Value ?? 0;
 
-    public override bool AddPoints(IEnumerable<EvaluatedCandidate<T>> solutions)
+    public override bool AddPoints(IEnumerable<EvaluatedCandidate<T>> evaluatedCandidates)
     {
-        if (!base.AddPoints(solutions))
+        if (!base.AddPoints(evaluatedCandidates))
             return false;
 
         hyperVolumeLazy = new Lazy<double>(() =>

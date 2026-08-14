@@ -66,7 +66,7 @@ public class VariableStrengthMutatorTests
             Creator = new ZeroCreator(),
             Mutator = gaussian,
             Crossover = null,
-            Selector = new BestSelector<RealVector>(),
+            Selector = BestSelector.For(problem),
             MaximumGenerations = 3
         };
 
@@ -83,11 +83,11 @@ public class VariableStrengthMutatorTests
     }
 
     private static FuncProblem<RealVector, RealVectorSearchSpace> CreateProblem(RealVectorSearchSpace searchSpace) =>
-        FuncProblem.Create<RealVector, RealVectorSearchSpace>(candidate => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);
+        FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);
 
-    private sealed record ZeroCreator : SingleSolutionCreator<RealVector, RealVectorSearchSpace>
+    private sealed record ZeroCreator : SingleCandidateCreator<RealVector, RealVectorSearchSpace>
     {
-        public override RealVector Create(IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => new(0.0);
+        public override RealVector CreateCandidate(IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => new(0.0);
     }
 
     private sealed class SequenceRandom(params double[] values) : IRandomNumberGenerator
@@ -100,6 +100,4 @@ public class VariableStrengthMutatorTests
 
         public IRandomNumberGenerator Fork(ulong forkKey) => this;
     }
-
-    private sealed class TestRun : AlgorithmRun;
 }

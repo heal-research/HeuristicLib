@@ -7,5 +7,5 @@ public class TreeComplexityEvaluator : IRegressionEvaluator<SymbolicExpressionTr
 {
     public ObjectiveDirection Direction => ObjectiveDirection.Minimize;
 
-    public double Evaluate(SymbolicExpressionTree solution, IEnumerable<double> predictedValues, IEnumerable<double> trueValues) => TreeComplexityCalculator.CalculateComplexity(solution);
+    public double Evaluate(SymbolicExpressionTree model, IEnumerable<double> predictedValues, IEnumerable<double> trueValues) => TreeComplexityCalculator.CalculateComplexity(model);
 }

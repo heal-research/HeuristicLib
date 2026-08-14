@@ -35,7 +35,7 @@ public sealed class FullTreeCreatorTests
             variables: ["x0"],
             constants: []);
 
-        var expression = new FullTreeCreator().Create(RandomNumberGenerator.Create(123), searchSpace);
+        var expression = new FullTreeCreator().CreateCandidate(RandomNumberGenerator.Create(123), searchSpace);
 
         expression.Length.ShouldBeLessThanOrEqualTo(5);
         expression.Depth.ShouldBe(4);
@@ -53,7 +53,7 @@ public sealed class FullTreeCreatorTests
             variables: ["x0"],
             constants: []);
 
-        var expression = new FullTreeCreator(depth: 3).Create(RandomNumberGenerator.Create(123), searchSpace);
+        var expression = new FullTreeCreator { Depth = 3 }.CreateCandidate(RandomNumberGenerator.Create(123), searchSpace);
 
         expression.Depth.ShouldBe(3);
         expression.Length.ShouldBe(7);
@@ -61,9 +61,12 @@ public sealed class FullTreeCreatorTests
     }
 
     [Fact]
-    public void Constructor_RejectsNonPositiveDepth()
+    public void Create_RejectsNonPositiveDepth()
     {
-        Should.Throw<ArgumentOutOfRangeException>(() => new FullTreeCreator(depth: 0));
+        var searchSpace = new ExpressionTreeSearchSpace(15, 4, [Symbols.Addition], ["x0"], constants: []);
+
+        Should.Throw<InvalidOperationException>(() =>
+            new FullTreeCreator { Depth = 0 }.CreateCandidate(RandomNumberGenerator.Create(123), searchSpace));
     }
 
     [Fact]
@@ -77,7 +80,7 @@ public sealed class FullTreeCreatorTests
             constants: []);
 
         Should.Throw<ArgumentOutOfRangeException>(() =>
-            new FullTreeCreator(depth: 3).Create(RandomNumberGenerator.Create(123), searchSpace));
+            new FullTreeCreator { Depth = 3 }.CreateCandidate(RandomNumberGenerator.Create(123), searchSpace));
     }
 
     [Fact]
@@ -91,7 +94,7 @@ public sealed class FullTreeCreatorTests
             constants: []);
 
         Should.Throw<ArgumentException>(() =>
-            new FullTreeCreator(depth: 3).Create(RandomNumberGenerator.Create(123), searchSpace));
+            new FullTreeCreator { Depth = 3 }.CreateCandidate(RandomNumberGenerator.Create(123), searchSpace));
     }
 
     [Fact]

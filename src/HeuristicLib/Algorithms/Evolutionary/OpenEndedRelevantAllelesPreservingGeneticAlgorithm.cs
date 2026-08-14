@@ -13,7 +13,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
-    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>
+    : IterativeAlgorithm<OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -27,16 +27,14 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
     public int Elites { get; init; } = 1;
     public required int MaxEffort { get; init; }
-    public int? MaximumGenerations
-    {
-        get;
-        init => field = value is null or > 0
-          ? value
-          : throw new ArgumentOutOfRangeException(nameof(MaximumGenerations), "MaximumGenerations must be positive when set.");
-    }
+    /// <summary>
+    /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
+    /// </summary>
+    /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
+    public int? MaximumGenerations { get; init; }
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateIterativeAlgorithmInstance(ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor) =>
-        new Instance(resolvedInterceptor, registry.Resolve(Evaluator), registry.Resolve(Creator), registry.Resolve(Crossover), registry.Resolve(Mutator), registry.Resolve(Selector), PopulationSize, Elites, MaxEffort, MaximumGenerations, Strictness);
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor) =>
+        new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover), instanceRegistry.Resolve(Mutator), instanceRegistry.Resolve(Selector), PopulationSize, Elites, MaxEffort, MaximumGenerations, Strictness);
 
     private sealed class Instance(
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
@@ -61,37 +59,37 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
             {
                 var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
                 var initialPopulation = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
-                return new PopulationState<TCandidate> { Population = Population.From(initialPopulation) };
+                return Population.From(initialPopulation).ToPopulationState();
             }
 
             var oldPopulation = previousState.Population.EvaluatedCandidates;
             IReadOnlyList<EvaluatedCandidate<TCandidate>> newPop;
 
-            if (oldPopulation.Length <= 0)
+            if (oldPopulation.Count <= 0)
             {
-                var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
-                newPop = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
+                var initialCandidates = creator.Create(populationSize, random, problem.SearchSpace, problem);
+                newPop = evaluator.Evaluate(initialCandidates, random, problem.SearchSpace, problem);
             }
             else
             {
                 var selected = selector.Select(oldPopulation, problem.Objective, maxEffort * 2, random, problem.SearchSpace, problem);
                 var population = crossover.Cross(selected.ToParents(problem.Objective), random, problem.SearchSpace, problem);
                 population = mutator.Mutate(population, random, problem.SearchSpace, problem);
-                newPop = evaluator.Evaluate(population, random, problem.SearchSpace, problem).Zip(selected.ToSolutionPairs())
+                newPop = evaluator.Evaluate(population, random, problem.SearchSpace, problem).Zip(selected.ToEvaluatedCandidatesPairs())
                     .Where(pair => pair.Item1.ObjectiveVector.Dominates(Combine(pair.Item2, problem.Objective, strictness), problem.Objective))
                     .Select(pair => pair.Item1).ToArray();
             }
 
             var targetPopulationSize = elites + newPop.Count;
-            var newPopulation = ElitismReplacer<TCandidate>.Replace(oldPopulation, newPop, problem.Objective, targetPopulationSize, elites);
+            var newPopulation = ElitismReplacer.Replace(oldPopulation, newPop, problem.Objective, targetPopulationSize, elites);
 
-            return new PopulationState<TCandidate> { Population = Population.From(newPopulation) };
+            return Population.From(newPopulation).ToPopulationState();
         }
 
-        private static ObjectiveVector Combine((EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>) parents, ObjectiveDirections problemObjective, double strictness)
+        private static ObjectiveVector Combine(Parents<EvaluatedCandidate<TCandidate>> parents, ObjectiveDirections problemObjective, double strictness)
         {
-            var o1 = parents.Item1.ObjectiveVector;
-            var o2 = parents.Item2.ObjectiveVector;
+            var o1 = parents.Parent1.ObjectiveVector;
+            var o2 = parents.Parent2.ObjectiveVector;
             if (o2.Dominates(o1, problemObjective))
             {
                 (o1, o2) = (o2, o1);
@@ -107,7 +105,6 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
     }
 }
 
-// ReSharper disable once IdentifierTypo
 public record OerapgaBuildBuilder<TCandidate, TSearchSpace, TProblem>
   : AlgorithmBuilder<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>, OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>>,
     IBuilderWithCreator<TCandidate, TSearchSpace, TProblem>,
@@ -128,7 +125,7 @@ public record OerapgaBuildBuilder<TCandidate, TSearchSpace, TProblem>
 
     public override OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem> Build()
     {
-        return new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>()
+        return new()
         {
             PopulationSize = PopulationSize,
             Creator = Creator,

@@ -9,7 +9,7 @@ public static class SingleObjective
     {
         ObjectiveDirection.Minimize => Minimize,
         ObjectiveDirection.Maximize => Maximize,
-        _ => throw new NotImplementedException()
+        _ => throw new InvalidOperationException($"Unsupported objective direction: {direction}.")
     };
 
     public static ObjectiveDirections WithSingleObjective(this ObjectiveDirections objectives) => Create(objectives.Directions.Single());

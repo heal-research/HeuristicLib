@@ -8,9 +8,16 @@ public sealed class NumberTreeNode : NumericTreeNode
 
     public NumberTreeNode(Number numberSymbol) : base(numberSymbol) { }
 
-    public NumberTreeNode(NumberTreeNode original) : base(original) => Value = original.Value;
+    public NumberTreeNode(NumberTreeNode original) : base(original)
+    {
+        Value = original.Value;
+    }
 
-    public NumberTreeNode(double value) : this(new Number()) => Value = value;
+    public NumberTreeNode(double value) : this(new Number())
+    {
+        Value = value;
+    }
+
     public new Number Symbol => (Number)base.Symbol;
 
     public override bool HasLocalParameters => true;

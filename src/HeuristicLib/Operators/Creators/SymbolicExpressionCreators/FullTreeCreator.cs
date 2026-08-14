@@ -5,23 +5,15 @@ using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
 
 public sealed record FullTreeCreator
-    : SingleSolutionCreator<ExpressionTree, ExpressionTreeSearchSpace>
+    : SingleCandidateCreator<ExpressionTree, ExpressionTreeSearchSpace>
 {
-    public FullTreeCreator(int? depth = null)
-    {
-        if (depth is <= 0)
-            throw new ArgumentOutOfRangeException(nameof(depth));
-
-        Depth = depth;
-    }
-
     /// <summary>
     /// Gets the exact tree depth, or <see langword="null"/> to use the deepest depth contained by the search space.
-    /// An explicit depth must be feasible within the search-space depth and length limits.
+    /// An explicit depth must be positive and feasible within the search-space depth and length limits.
     /// </summary>
-    public int? Depth { get; }
+    public int? Depth { get; init; }
 
-    public override ExpressionTree Create(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
+    public override ExpressionTree CreateCandidate(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
     {
         return FullTreeCreation.Create(random, searchSpace, Depth);
     }
@@ -31,6 +23,9 @@ public static class FullTreeCreation
 {
     public static ExpressionTree Create(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, int? depth = null)
     {
+        if (depth is <= 0)
+            throw new InvalidOperationException("The configured depth must be positive.");
+
         var effectiveDepth = depth ?? GetMaximumFeasibleDepth(searchSpace);
         var root = CreateSubtreeAtDepth(random, searchSpace, searchSpace.MaximumLength, effectiveDepth);
 

@@ -24,7 +24,6 @@ using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
-using Xunit;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Usage;
 
@@ -55,6 +54,9 @@ public class PractitionerUsageSpecs
 
         RandomNumberGenerator.Create(2025).NextBools(3, probability: 0.0).ShouldBe([false, false, false]);
         RandomNumberGenerator.Create(2025).NextNormals(3, mu: 0.25, sigma: 0.0).ShouldBe([0.25, 0.25, 0.25]);
+        var randomValues = new double[3];
+        RandomNumberGenerator.Create(2025).NextDoubles(randomValues, low: -1, high: 1);
+        randomValues.All(x => x is >= -1 and < 1).ShouldBeTrue();
 
         var roundedVector = new RealVector(1.6, -2.8, 0.2).RoundToIntegerVector(new IntegerVector(-2), new IntegerVector(2));
         roundedVector.ShouldBe(new IntegerVector(2, -2, 0));
@@ -159,8 +161,8 @@ public class PractitionerUsageSpecs
         var gaussianChild = GaussianMutator.Mutate(parent, RandomNumberGenerator.Create(2031), realSearchSpace, mutationRate: 1.0, mutationStrength: 100.0);
         realSearchSpace.Contains(gaussianChild).ShouldBeTrue();
 
-        SelectFirstParentCrossover.Cross(new Parents<RealVector>(parent, otherParent), RandomNumberGenerator.Create(2032)).ShouldBe(parent);
-        SelectSecondParentCrossover.Cross(new Parents<RealVector>(parent, otherParent), RandomNumberGenerator.Create(2032)).ShouldBe(otherParent);
+        SelectFirstParentCrossover.Cross(Parents.From(parent, otherParent), RandomNumberGenerator.Create(2032)).ShouldBe(parent);
+        SelectSecondParentCrossover.Cross(Parents.From(parent, otherParent), RandomNumberGenerator.Create(2032)).ShouldBe(otherParent);
 
         var edgeChild = EdgeRecombinationCrossover.Cross(
           [0, 1, 2, 3],
@@ -171,30 +173,27 @@ public class PractitionerUsageSpecs
         var evaluations = problem.Evaluate([parent], RandomNumberGenerator.Create(2034));
         evaluations.Count.ShouldBe(1);
 
-        IReadOnlyList<EvaluatedCandidate<RealVector>> solutions =
+        IReadOnlyList<EvaluatedCandidate<RealVector>> evaluatedCandidates =
         [
-            new EvaluatedCandidate<RealVector>(parent, new ObjectiveVector(2.0)),
-            new EvaluatedCandidate<RealVector>(otherParent, new ObjectiveVector(1.0))
+            EvaluatedCandidate.From(parent, new ObjectiveVector(2.0)),
+            EvaluatedCandidate.From(otherParent, new ObjectiveVector(1.0))
         ];
 
-        RandomSelector.Select(solutions, count: 2, RandomNumberGenerator.Create(2035)).Count.ShouldBe(2);
-        ProportionalSelector.Select(solutions, problem.Objective, count: 2, RandomNumberGenerator.Create(2036), windowing: true).Count.ShouldBe(2);
-        CommaSelectionReplacer.Replace(solutions, problem.Objective, count: 1).Single().ShouldBe(solutions[1]);
+        RandomSelector.Select(evaluatedCandidates, count: 2, RandomNumberGenerator.Create(2035)).Count.ShouldBe(2);
+        ProportionalSelector.Select(evaluatedCandidates, problem.Objective, count: 2, RandomNumberGenerator.Create(2036), windowing: true).Count.ShouldBe(2);
+        CommaSelectionReplacer.Replace(evaluatedCandidates, problem.Objective, count: 1).Single().ShouldBe(evaluatedCandidates[1]);
 
         IReadOnlyList<EvaluatedCandidate<RealVector>> offspring =
         [
-            new EvaluatedCandidate<RealVector>([5.0, 5.0, 5.0], new ObjectiveVector(0.5)),
-            new EvaluatedCandidate<RealVector>([7.0, 7.0, 7.0], new ObjectiveVector(3.0))
+            EvaluatedCandidate.From(RealVector.Create(5.0, 5.0, 5.0), new ObjectiveVector(0.5)),
+            EvaluatedCandidate.From(RealVector.Create(7.0, 7.0, 7.0), new ObjectiveVector(3.0))
         ];
-        var paretoReplacement = ParetoCrowdingReplacer.Replace(solutions, offspring, problem.Objective, count: 2, dominateOnEqualities: false);
+        var paretoReplacement = ParetoCrowdingReplacer.Replace(evaluatedCandidates, offspring, problem.Objective, count: 2, dominateOnEqualities: false);
         paretoReplacement.Select(solution => solution.ObjectiveVector[0]).Order().ToArray().ShouldBe([0.5, 1.0]);
 
         NeverTerminator.IsTerminalState().ShouldBeFalse();
 
-        var state = new SingleSolutionState<RealVector>
-        {
-            Population = Population.From([parent], [evaluations[0]])
-        };
+        var state = SingleSolutionState.From(parent, evaluations[0]);
         IdentityInterceptor.Transform(state, previousState: null).ShouldBe(state);
     }
 
@@ -207,9 +206,9 @@ public class PractitionerUsageSpecs
             PopulationSize = 24,
             MaximumGenerations = 8,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
-            Crossover = new AlphaBetaBlendCrossover(alpha: 0.7),
+            Crossover = new AlphaBetaBlendCrossover { Alpha = 0.7 },
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
-            Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
+            Selector = TournamentSelector.For(problem, tournamentSize: 2),
             MutationRate = 0.2,
             Elites = 1
         };
@@ -219,7 +218,7 @@ public class PractitionerUsageSpecs
           RandomNumberGenerator.Create(123),
           ct: TestContext.Current.CancellationToken);
 
-        finalState.Population.EvaluatedCandidates.Length.ShouldBe(24);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBe(24);
         finalState.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
     }
 
@@ -299,7 +298,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(2);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
         internalTerminator.CheckedStateCount.ShouldBe(2);
         internalTerminator.HasTerminated.ShouldBeFalse();
     }
@@ -330,7 +329,7 @@ public class PractitionerUsageSpecs
 
         statesByEvaluatorCalls.Count.ShouldBe(2);
         statesByEvaluatedCandidates.Count.ShouldBe(1);
-        statesByEvaluatedCandidates.Single().Population.EvaluatedCandidates.Length.ShouldBe(16);
+        statesByEvaluatedCandidates.Single().Population.EvaluatedCandidates.Count.ShouldBe(16);
     }
 
     [Fact]
@@ -354,7 +353,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(2);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -377,7 +376,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(2);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -410,9 +409,9 @@ public class PractitionerUsageSpecs
             .ToList();
 
         statesByMutatorCalls.Count.ShouldBe(2);
-        statesByMutatorCalls.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        statesByMutatorCalls.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
         statesByMutatedCandidates.Count.ShouldBe(3);
-        statesByMutatedCandidates.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        statesByMutatedCandidates.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -426,10 +425,10 @@ public class PractitionerUsageSpecs
         var counted = new CountingMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>(mutator, counter, OperatorCountMetric.Candidates);
         var measured = mutator.MeasureMutatorDuration(duration);
 
-        counted.Mutator.ShouldBeSameAs(mutator);
+        counted.ChildMutator.ShouldBeSameAs(mutator);
         counted.Counter.ShouldBeSameAs(counter);
         counted.Metric.ShouldBe(OperatorCountMetric.Candidates);
-        measured.Mutator.ShouldBeSameAs(mutator);
+        measured.ChildMutator.ShouldBeSameAs(mutator);
         measured.Duration.ShouldBeSameAs(duration);
     }
 
@@ -455,7 +454,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(3);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -481,7 +480,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(3);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -499,11 +498,7 @@ public class PractitionerUsageSpecs
             Crossover = baseAlgorithm.Crossover.CountCrossoverCalls(counter),
             Mutator = baseAlgorithm.Mutator.CountMutatorCalls(counter)
         };
-        var algorithm = new StateTerminatedAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
-        {
-            Algorithm = observedAlgorithm,
-            Terminator = new AfterOperatorCountTerminator<RealVector>(counter, maximumCount: 2)
-        };
+        var algorithm = observedAlgorithm.WithTerminator(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 2));
 
         var states = algorithm.Stream(
             problem,
@@ -512,7 +507,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(2);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
         counter.CurrentCount.ShouldBeGreaterThanOrEqualTo(2);
     }
 
@@ -544,7 +539,7 @@ public class PractitionerUsageSpecs
         var algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
-            Mutator = NoChangeMutator<RealVector>.Instance,
+            Mutator = NoChangeMutator.For(problem),
             Direction = LocalSearchDirection.FirstImprovement,
             BatchSize = 4,
             MaxNeighbors = 12
@@ -571,15 +566,14 @@ public class PractitionerUsageSpecs
             BatchSize = 4,
             MaxNeighbors = 12
         }.WithMaxIterations(6);
-        var repeated = new RepeatedExperiment<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>,
-          IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>(algorithm, 3);
+        var repeated = algorithm.Repeat(3);
 
         var results = await repeated.CompleteAsync(
           problem,
           RandomNumberGenerator.Create(999),
           cancellationToken: TestContext.Current.CancellationToken);
 
-        results.Count.ShouldBe(3);
+        results.Length.ShouldBe(3);
         results.Select(result => result.Trial.Key).ShouldBe([0, 1, 2]);
         results.All(result => problem.SearchSpace.Contains(result.State.EvaluatedCandidate.Candidate)).ShouldBeTrue();
     }
@@ -596,7 +590,7 @@ public class PractitionerUsageSpecs
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
             Crossover = null,
-            Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
+            Selector = TournamentSelector.For(problem, tournamentSize: 2),
             MaximumGenerations = 5
         };
 
@@ -605,7 +599,7 @@ public class PractitionerUsageSpecs
           RandomNumberGenerator.Create(555),
           ct: TestContext.Current.CancellationToken);
 
-        finalState.Population.EvaluatedCandidates.Length.ShouldBe(8);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBe(8);
         finalState.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
     }
 
@@ -621,9 +615,9 @@ public class PractitionerUsageSpecs
         {
             PopulationSize = 16,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
-            Crossover = new AlphaBetaBlendCrossover(alpha: 0.7),
+            Crossover = new AlphaBetaBlendCrossover { Alpha = 0.7 },
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
-            Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
+            Selector = TournamentSelector.For(problem, tournamentSize: 2),
             MutationRate = 0.2,
             Elites = 1
         };

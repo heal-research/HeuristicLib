@@ -14,8 +14,8 @@ public static class MetaAlgorithmTestHelpers
 {
     public static IProblem<int, DummySearchSpace<int>> CreateIntegerProblem()
     {
-        return FuncProblem.Create<int, DummySearchSpace<int>>(
-          evaluateFunc: x => x,
+        return FuncProblem.Create(
+          evaluateFunc: (int x) => x,
           encoding: DummySearchSpace<int>.Instance,
           objective: SingleObjective.Minimize);
     }
@@ -29,7 +29,7 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
 {
     public int InstanceCount { get; private set; }
 
-    protected override IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateEvaluatorInstance(ExecutionInstanceRegistry registry)
+    public override IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         InstanceCount++;
         return new Instance();
@@ -38,21 +38,19 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
     private sealed class Instance : EvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
         public override IReadOnlyList<EvaluatedCandidate<int>> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
-            problem.Evaluate(candidates, random)
-                .Select((objectiveVector, index) => candidates[index].ToEvaluated(objectiveVector))
-                .ToArray();
+            problem.Evaluate(candidates, random).Select((objectiveVector, index) => candidates[index].ToEvaluated(objectiveVector)).ToArray();
     }
 }
 
 public sealed record CountingInstanceAlgorithm(int Increment, IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator)
-    : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    : Algorithm<CountingInstanceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
 {
     public int InstanceCount { get; private set; }
 
-    protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
+    public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         InstanceCount++;
-        return new Instance(Increment, registry.Resolve(Evaluator));
+        return new Instance(Increment, instanceRegistry.Resolve(Evaluator));
     }
 
     private sealed class Instance(int increment, IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator)
@@ -66,7 +64,7 @@ public sealed record CountingInstanceAlgorithm(int Increment, IEvaluator<int, Du
             var next = current + increment;
             var evaluatedCandidate = evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
 
-            yield return new PopulationState<int> { Population = Population.From([evaluatedCandidate]) };
+            yield return Population.From([evaluatedCandidate]).ToPopulationState();
             await Task.CompletedTask;
         }
     }

@@ -1,17 +1,15 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 
-[Equatable]
-public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
+public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
 {
-    [IgnoreEquality] private readonly Dictionary<int, Symbol[]> symbolsByArity;
-    [IgnoreEquality] private readonly Dictionary<int, ImmutableArray<double>> selectionWeightsByArity;
-    [IgnoreEquality] private readonly HashSet<string> allowedVariableNames;
-    [IgnoreEquality] private readonly bool allowsVariables;
-    [IgnoreEquality] private readonly bool allowsEvolvableConstants;
+    private readonly Dictionary<int, Symbol[]> symbolsByArity;
+    private readonly Dictionary<int, ImmutableArray<double>> selectionWeightsByArity;
+    private readonly HashSet<string> allowedVariableNames;
+    private readonly bool allowsVariables;
+    private readonly bool allowsEvolvableConstants;
 
     public ExpressionTreeSearchSpace(int maximumLength, int maximumDepth, IEnumerable<OperationSymbol> operations, IEnumerable<string> variables)
         : this(maximumLength, maximumDepth, ComposeCommonSymbols(operations, variables, [new EvolvableConstantSymbol()]))
@@ -47,10 +45,10 @@ public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionT
         MaximumLength = maximumLength;
         MaximumDepth = maximumDepth;
         Symbols = symbols.ToImmutableArray();
-        if (Symbols.IsDefaultOrEmpty)
+        if (Symbols.IsEmpty)
             throw new ArgumentException("At least one symbol must be supplied.", nameof(symbols));
 
-        SelectionWeights = WeightSelection.Normalize(selectionWeights?.ToArray(), Symbols.Length);
+        SelectionWeights = WeightSelection.Normalize(selectionWeights?.ToArray(), Symbols.Count);
 
         symbolsByArity = Symbols
             .GroupBy(symbol => symbol.Arity)
@@ -75,11 +73,25 @@ public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionT
 
     public int MaximumLength { get; }
     public int MaximumDepth { get; }
-    [OrderedEquality] public ImmutableArray<Symbol> Symbols { get; }
-    [IgnoreEquality] public ImmutableArray<Symbol> TerminalSymbols { get; }
-    [OrderedEquality] public ImmutableArray<double> SelectionWeights { get; }
-    [IgnoreEquality] public bool AllowsVariables => allowsVariables;
-    [IgnoreEquality] public bool AllowsEvolvableConstants => allowsEvolvableConstants;
+    public ValueArray<Symbol> Symbols { get; }
+    public ImmutableArray<Symbol> TerminalSymbols { get; }
+    public ValueArray<double> SelectionWeights { get; }
+    public bool AllowsVariables => allowsVariables;
+    public bool AllowsEvolvableConstants => allowsEvolvableConstants;
+
+    /// <remarks>
+    /// Equality covers the configured limits, symbols and selection weights only. The remaining members are lookup
+    /// structures derived from those values in the constructor, and comparing them would degrade to reference equality.
+    /// </remarks>
+    public bool Equals(ExpressionTreeSearchSpace? other) =>
+        other is not null
+        && MaximumLength == other.MaximumLength
+        && MaximumDepth == other.MaximumDepth
+        && Symbols.Equals(other.Symbols)
+        && SelectionWeights.Equals(other.SelectionWeights);
+
+    public override int GetHashCode() =>
+        HashCode.Combine(MaximumLength, MaximumDepth, Symbols, SelectionWeights);
 
     public IReadOnlyList<Symbol> GetSymbols(int arity) =>
         symbolsByArity.TryGetValue(arity, out var symbols) ? symbols : [];
@@ -90,7 +102,7 @@ public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionT
             throw new ArgumentException($"No symbols with arity {arity} are allowed.", nameof(arity));
 
         var weights = selectionWeightsByArity[arity];
-        var index = WeightSelection.SelectIndex(random, symbols.Length, weights);
+        var index = WeightSelection.SelectIndex(random, symbols.Length, weights.AsSpan());
         return symbols[index];
     }
 
@@ -118,7 +130,7 @@ public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionT
         else
         {
             var totalWeight = 0.0;
-            for (var i = 0; i < Symbols.Length; i++)
+            for (var i = 0; i < Symbols.Count; i++)
             {
                 if (Symbols[i].Arity >= minimumArity && Symbols[i].Arity <= maximumArity)
                     totalWeight += SelectionWeights[i];
@@ -126,7 +138,7 @@ public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionT
 
             var value = random.NextDouble() * totalWeight;
             Symbol? lastCandidate = null;
-            for (var i = 0; i < Symbols.Length; i++)
+            for (var i = 0; i < Symbols.Count; i++)
             {
                 var symbol = Symbols[i];
                 if (symbol.Arity < minimumArity || symbol.Arity > maximumArity)

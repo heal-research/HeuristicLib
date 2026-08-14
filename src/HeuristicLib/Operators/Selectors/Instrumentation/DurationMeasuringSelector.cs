@@ -11,36 +11,33 @@ public sealed record DurationMeasuringSelector<TCandidate, TSearchSpace, TProble
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ISelector<TCandidate, TSearchSpace, TProblem> Selector => InnerSelector;
-    public ObservationDuration Duration { get; }
-    public TimeProvider TimeProvider { get; }
+    public ObservationDuration Duration { get; init; }
+    public TimeProvider TimeProvider { get; init; }
 
-    public DurationMeasuringSelector(ISelector<TCandidate, TSearchSpace, TProblem> selector, ObservationDuration duration)
-        : this(selector, duration, TimeProvider.System)
+    public DurationMeasuringSelector(ISelector<TCandidate, TSearchSpace, TProblem> childSelector, ObservationDuration duration)
+        : this(childSelector, duration, TimeProvider.System)
     {
     }
 
-    public DurationMeasuringSelector(ISelector<TCandidate, TSearchSpace, TProblem> selector, ObservationDuration duration, TimeProvider timeProvider)
-        : base(selector)
+    public DurationMeasuringSelector(ISelector<TCandidate, TSearchSpace, TProblem> childSelector, ObservationDuration duration, TimeProvider timeProvider)
+        : base(childSelector)
     {
         Duration = duration;
         TimeProvider = timeProvider;
     }
 
-    protected override WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> innerSelector) =>
-        new Instance(innerSelector, Duration, TimeProvider);
+    protected override WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector) =>
+        new Instance(childSelector, Duration, TimeProvider);
 
-    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> innerSelector, ObservationDuration duration, TimeProvider timeProvider)
-        : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(innerSelector)
+    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, ObservationDuration duration, TimeProvider timeProvider)
+        : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(childSelector)
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(
-            IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count,
-            IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var startTimestamp = timeProvider.GetTimestamp();
             try
             {
-                return InnerSelector.Select(population, objective, count, random, searchSpace, problem);
+                return ChildSelector.Select(population, objective, count, random, searchSpace, problem);
             }
             finally
             {
@@ -48,6 +45,19 @@ public sealed record DurationMeasuringSelector<TCandidate, TSearchSpace, TProble
             }
         }
     }
+}
+
+public static class DurationMeasuringSelector
+{
+    public static DurationMeasuringSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> childSelector, ObservationDuration duration)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childSelector, duration);
+
+    public static DurationMeasuringSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> childSelector, ObservationDuration duration, TimeProvider timeProvider)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childSelector, duration, timeProvider);
 }
 
 public static class SelectorDurationExtensions
@@ -64,13 +74,13 @@ public static class SelectorDurationExtensions
         public DurationMeasuringSelector<TCandidate, TSearchSpace, TProblem> MeasureSelectorDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringSelector<TCandidate, TSearchSpace, TProblem>(selector, duration);
+            return new(selector, duration);
         }
 
         public DurationMeasuringSelector<TCandidate, TSearchSpace, TProblem> MeasureSelectorDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringSelector<TCandidate, TSearchSpace, TProblem>(selector, duration, timeProvider);
+            return new(selector, duration, timeProvider);
         }
     }
 }

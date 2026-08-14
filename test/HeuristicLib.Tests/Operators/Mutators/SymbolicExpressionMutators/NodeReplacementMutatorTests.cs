@@ -71,7 +71,7 @@ public sealed class NodeReplacementMutatorTests
     {
         var searchSpace = new ExpressionTreeSearchSpace(2, 2, [Symbols.Logarithm, Symbols.SquareRoot, new VariableSymbol(["x0"])]);
 
-        var mutant = new NodeReplacementMutator().Mutate(Sqrt(Variable("x0")).Build(), new SequenceRandomNumberGenerator(0.0, 0.0), searchSpace);
+        var mutant = new NodeReplacementMutator().MutateCandidate(Sqrt(Variable("x0")).Build(), new SequenceRandomNumberGenerator(0.0, 0.0), searchSpace);
 
         mutant.ToInfixString().ShouldBe("log(x0)");
         mutant.EvaluateSingleRow(("x0", Math.E)).ShouldBe(1.0, tolerance: 1e-12);

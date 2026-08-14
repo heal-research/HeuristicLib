@@ -25,7 +25,6 @@ using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
@@ -33,23 +32,22 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 var problem = TravelingSalesmanProblem.CreateDefault();
-var rng = new SystemRandomNumberGenerator(seed: 123);
+var random = RandomNumberGenerator.Create(seed: 123);
 
 var ga = new GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> {
    PopulationSize = 200,
    MaximumGenerations = 200,
    Creator = new RandomPermutationCreator(),
    Crossover = new OrderCrossover(),
-   Mutator = new SwapSingleSolutionMutator(),
+   Mutator = new SwapMutator(),
    MutationRate = 0.20,
-   Selector = new TournamentSelector<Permutation>(tournamentSize: 3),
-   Elites = 2,
-   Evaluator = new ProblemEvaluator<Permutation>()
+   Selector = TournamentSelector.For(problem, tournamentSize: 3),
+   Elites = 2
 };
 
 var generation = 0;
 
-await foreach (var state in ga.RunStreamingAsync(problem, rng))
+await foreach (var state in ga.Stream(problem, random))
 {
    var best = state.Population.EvaluatedCandidates
       .MinBy(s => s.ObjectiveVector, problem.ObjectiveDirections.TotalOrderComparer)!;
@@ -59,7 +57,7 @@ await foreach (var state in ga.RunStreamingAsync(problem, rng))
 ```
 
 > [!NOTE]
-> The default execution loop is streaming-first. If you want progress reporting, `RunStreamingAsync(...)` is the most natural hook. For this genetic algorithm, each streamed population state is one generation.
+> The default execution loop is streaming first. If you want progress reporting, `Stream(...)` is the natural hook. For this genetic algorithm, each streamed population state is one generation.
 
 ## Where to go next
 

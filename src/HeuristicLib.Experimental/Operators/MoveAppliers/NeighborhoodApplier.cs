@@ -1,9 +1,9 @@
-namespace HEAL.HeuristicLib.Operators.MoveAppliers;
+using HEAL.HeuristicLib.Operators.Neighborhoods;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using Neighborhoods;
-using Problems;
-using Random;
-using SearchSpaces;
+namespace HEAL.HeuristicLib.Operators.MoveAppliers;
 
 public sealed record NeighborhoodApplier<TGenotype, TSearchSpace, TProblem, TMove>(
     IDirectNeighborhood<TGenotype, TSearchSpace, TProblem, TMove> neighborhood)

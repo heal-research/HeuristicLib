@@ -5,13 +5,13 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 
-public record RoundedAverageCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
+public record RoundedAverageCrossover : SingleCandidateCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
-    public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-      => Cross(random, [parents.Parent1, parents.Parent2], searchSpace);
+    public override IntegerVector CrossParents(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace) =>
+        Cross(random, [parents.Parent1, parents.Parent2], searchSpace);
 
-    public static IntegerVector Cross(IRandomNumberGenerator random, IReadOnlyList<IntegerVector> parents, IntegerVectorSearchSpace searchSpace)
-      => Cross(random, parents, searchSpace.Minimum, searchSpace.Maximum);
+    public static IntegerVector Cross(IRandomNumberGenerator random, IReadOnlyList<IntegerVector> parents, IntegerVectorSearchSpace searchSpace) =>
+        Cross(random, parents, searchSpace.Minimum, searchSpace.Maximum);
 
     public static IntegerVector Cross(IRandomNumberGenerator random, IReadOnlyList<IntegerVector> parents, IntegerVector minimum, IntegerVector maximum)
     {

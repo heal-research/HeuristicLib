@@ -1,31 +1,25 @@
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public record ProportionalSelector<TCandidate>
-  : StatelessSelector<TCandidate>
+    : StatelessSelector<TCandidate>
 {
-    public ProportionalSelector(bool windowing = true)
-    {
-        Windowing = windowing;
-    }
+    public bool Windowing { get; init; } = true;
 
-    // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
-    public bool Windowing { get; init; }
-
-    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
-      => ProportionalSelector.Select(population, objective, count, random, Windowing);
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
+        ProportionalSelector.Select(population, objective, count, random, Windowing);
 }
 
 public static class ProportionalSelector
 {
-    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(
-      IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
-      ObjectiveDirections objective,
-      int count,
-      IRandomNumberGenerator random,
-      bool windowing = true)
+    public static ProportionalSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, bool windowing = true)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new() { Windowing = windowing };
+
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, bool windowing = true)
     {
         var singleObjective = objective.Directions.Length == 1 ? objective.Directions[0] : throw new InvalidOperationException("Proportional selection requires a single objective.");
         var fitnesses = population.Select(s => s.ObjectiveVector.Count == 1 ? s.ObjectiveVector[0] : throw new InvalidOperationException("Proportional selection requires a single objective.")).ToList();

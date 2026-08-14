@@ -12,7 +12,6 @@ using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
-using Xunit;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Algorithms;
 
@@ -89,7 +88,6 @@ public class AlgorithmAuthoringSpecs
     [Fact]
     public void IterativeAlgorithm_CreateExecutionInstance_EagerlyResolvesRuntimeDependenciesOnce()
     {
-        var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
         var creator = new InstancingCreator();
         var evaluator = new InstancingEvaluator();
         var interceptor = new InstancingInterceptor();
@@ -112,24 +110,32 @@ public class AlgorithmAuthoringSpecs
         interceptor.TransformCalls.ShouldBe(0);
     }
 
+    /// <summary>
+    /// Algorithm configurations expose <c>CreateExecutionInstance</c> publicly, exactly as operator role bases do, so
+    /// a deliberate caller does not need an interface cast. The registry-only overload is the public one; the
+    /// post-resolution overload that also receives the resolved interceptor stays protected for authors.
+    /// </summary>
     [Fact]
-    public void Algorithm_CreateExecutionInstance_IsHiddenFromTheConcreteConfigurationSurface()
+    public void Algorithm_CreateExecutionInstance_IsCallableWithoutAnInterfaceCast()
     {
-        typeof(SingleCreateAlgorithm).GetMethod("CreateExecutionInstance").ShouldBeNull();
+        var algorithm = new SingleCreateAlgorithm { Creator = new CountingCreator() };
+
+        var instance = algorithm.CreateExecutionInstance(new ExecutionInstanceRegistry());
+
+        instance.ShouldBeAssignableTo<IterativeAlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>();
+        typeof(SingleCreateAlgorithm).GetMethod("CreateExecutionInstance", [typeof(ExecutionInstanceRegistry)]).ShouldNotBeNull();
     }
 
     private sealed record SingleCreateAlgorithm
-        : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
+        : IterativeAlgorithm<SingleCreateAlgorithm, RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
         public required ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
-        public IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Evaluator { get; init; } =
-            new ProblemEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>();
+        public IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
-        protected override IterativeAlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateIterativeAlgorithmInstance(
-            ExecutionInstanceRegistry registry,
+        protected override IterativeAlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry,
             IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
         {
-            return new Instance(resolvedInterceptor, registry.Resolve(Creator), registry.Resolve(Evaluator));
+            return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Evaluator));
         }
 
         private sealed class Instance(
@@ -143,23 +149,21 @@ public class AlgorithmAuthoringSpecs
                 var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
                 var evaluatedCandidate = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-                return new SingleSolutionState<RealVector> { Population = Population.From([evaluatedCandidate]) };
+                return SingleSolutionState.From(evaluatedCandidate);
             }
         }
     }
 
     private sealed record DoubleCreateAlgorithm
-        : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
+        : IterativeAlgorithm<DoubleCreateAlgorithm, RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
         public required ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
-        public IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Evaluator { get; init; } =
-            new ProblemEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>();
+        public IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
-        protected override IterativeAlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateIterativeAlgorithmInstance(
-            ExecutionInstanceRegistry registry,
+        protected override IterativeAlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry,
             IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
         {
-            return new Instance(resolvedInterceptor, registry.Resolve(Creator), registry.Resolve(Evaluator));
+            return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Evaluator));
         }
 
         private sealed class Instance(
@@ -179,7 +183,7 @@ public class AlgorithmAuthoringSpecs
                 RealVector candidate = [first[0], second[0], steps];
                 var evaluatedCandidate = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-                return new SingleSolutionState<RealVector> { Population = Population.From([evaluatedCandidate]) };
+                return SingleSolutionState.From(evaluatedCandidate);
             }
         }
     }
@@ -220,15 +224,13 @@ public class AlgorithmAuthoringSpecs
         public override SingleSolutionState<RealVector> Transform(
             SingleSolutionState<RealVector> currentState,
             SingleSolutionState<RealVector>? previousState,
+            IRandomNumberGenerator random,
             RealVectorSearchSpace searchSpace,
             TestFunctionProblem problem)
         {
             var current = currentState.EvaluatedCandidate.Candidate;
             RealVector transformed = [current[0], current[1], current[2] + 1.0];
-            return new SingleSolutionState<RealVector>
-            {
-                Population = Population.From([transformed], [currentState.EvaluatedCandidate.ObjectiveVector])
-            };
+            return SingleSolutionState.From(transformed, currentState.EvaluatedCandidate.ObjectiveVector);
         }
     }
 
@@ -237,8 +239,7 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionInstancesCreated { get; private set; }
         public int CreateCalls { get; private set; }
 
-        public ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(
-            ExecutionInstanceRegistry instanceRegistry)
+        public ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
         {
             ExecutionInstancesCreated++;
             return new Instance(this);
@@ -263,8 +264,7 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionInstancesCreated { get; private set; }
         public int EvaluateCalls { get; private set; }
 
-        public IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(
-            ExecutionInstanceRegistry instanceRegistry)
+        public IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
         {
             ExecutionInstancesCreated++;
             return new Instance(this);
@@ -291,8 +291,7 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionInstancesCreated { get; private set; }
         public int TransformCalls { get; private set; }
 
-        public IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(
-            ExecutionInstanceRegistry instanceRegistry)
+        public IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
         {
             ExecutionInstancesCreated++;
             return new Instance(this);
@@ -302,7 +301,7 @@ public class AlgorithmAuthoringSpecs
             : IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
         {
             public SingleSolutionState<RealVector> Transform(SingleSolutionState<RealVector> currentState, SingleSolutionState<RealVector>? previousState,
-                RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+                IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
             {
                 owner.TransformCalls++;
                 return currentState;

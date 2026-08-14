@@ -18,7 +18,7 @@ public enum EvolutionStrategyType
 }
 
 public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
-    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>
+    : IterativeAlgorithm<EvolutionStrategy<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -30,18 +30,16 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
     public required ICrossover<TCandidate, TSearchSpace, TProblem>? Crossover { get; init; }
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
     public required ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
-    public int? MaximumGenerations
-    {
-        get;
-        init => field = value is null or > 0
-          ? value
-          : throw new ArgumentOutOfRangeException(nameof(MaximumGenerations), "MaximumGenerations must be positive when set.");
-    }
+    /// <summary>
+    /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
+    /// </summary>
+    /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
+    public int? MaximumGenerations { get; init; }
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateIterativeAlgorithmInstance(ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor)
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
-        var mutator = registry.Resolve(Mutator);
-        return new Instance(resolvedInterceptor, registry.Resolve(Evaluator), registry.Resolve(Creator), mutator, registry.Resolve(Selector), Crossover is null ? null : registry.Resolve(Crossover), PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
+        var mutator = instanceRegistry.Resolve(Mutator);
+        return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), mutator, instanceRegistry.Resolve(Selector), Crossover is null ? null : instanceRegistry.Resolve(Crossover), PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
     }
 
     private sealed class Instance(
@@ -66,10 +64,7 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
             {
                 var initialPopulation = creator.Create(populationSize, random, problem.SearchSpace, problem);
                 var evaluatedCandidates = evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
-                return new PopulationState<TCandidate>
-                {
-                    Population = Population.From(evaluatedCandidates)
-                };
+                return Population.From(evaluatedCandidates).ToPopulationState();
             }
 
             IReadOnlyList<TCandidate> parents;
@@ -107,15 +102,12 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
             var population = Population.From(evaluatedChildren);
             var newPopulation = strategy switch
             {
-                EvolutionStrategyType.Comma => ElitismReplacer<TCandidate>.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, problem.Objective, numberOfChildren, 0),
-                EvolutionStrategyType.Plus => PlusSelectionReplacer<TCandidate>.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, problem.Objective, numberOfChildren),
+                EvolutionStrategyType.Comma => ElitismReplacer.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, problem.Objective, numberOfChildren, 0),
+                EvolutionStrategyType.Plus => PlusSelectionReplacer.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, problem.Objective, numberOfChildren),
                 _ => throw new InvalidOperationException($"Unknown strategy {strategy}")
             };
 
-            return new PopulationState<TCandidate>
-            {
-                Population = Population.From(newPopulation)
-            };
+            return Population.From(newPopulation).ToPopulationState();
         }
     }
 }

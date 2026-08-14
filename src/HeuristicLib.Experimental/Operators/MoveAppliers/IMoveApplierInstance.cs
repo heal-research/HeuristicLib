@@ -1,8 +1,8 @@
-namespace HEAL.HeuristicLib.Operators.MoveAppliers;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using Problems;
-using Random;
-using SearchSpaces;
+namespace HEAL.HeuristicLib.Operators.MoveAppliers;
 
 public interface IMoveApplierInstance<TGenotype, in TSearchSpace, in TProblem, in TMove>
     : IOperatorInstance

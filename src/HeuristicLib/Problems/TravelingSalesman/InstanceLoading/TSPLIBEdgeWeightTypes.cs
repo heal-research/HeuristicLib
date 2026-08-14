@@ -1,8 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 
-[SuppressMessage("ReSharper", "InconsistentNaming")]
 public enum TSPLIBEdgeWeightTypes
 {
     Unknown = 0,

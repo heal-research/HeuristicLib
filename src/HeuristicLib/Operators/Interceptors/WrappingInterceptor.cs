@@ -11,24 +11,24 @@ public abstract record WrappingInterceptor<TCandidate, TSearchSpace, TProblem, T
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> InnerInterceptor { get; }
-
-    protected WrappingInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> innerInterceptor)
+    protected WrappingInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor)
     {
-        InnerInterceptor = innerInterceptor;
+        ChildInterceptor = childInterceptor;
     }
 
-    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) =>
-        CreateInterceptorInstance(registry.Resolve(InnerInterceptor));
+    public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> ChildInterceptor { get; init; }
 
-    protected abstract WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerInterceptor);
+    public sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateExecutionInstance(instanceRegistry.Resolve(ChildInterceptor));
+
+    protected abstract WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor);
 }
 
-public abstract class WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerInterceptor)
+public abstract class WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor)
     : InterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> InnerInterceptor { get; } = innerInterceptor;
+    protected IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> ChildInterceptor { get; } = childInterceptor;
 }

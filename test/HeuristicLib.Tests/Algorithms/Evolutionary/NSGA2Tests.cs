@@ -11,12 +11,10 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.Evolutionary;
 
-#pragma warning disable S101
 public class NSGA2Tests
-#pragma warning restore S101
 {
     [Fact]
-    public void RunToCompletion_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
+    public void Complete_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
     {
         var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
         var algorithm = NSGA2.GetBuilder<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>(
@@ -34,7 +32,7 @@ public class NSGA2Tests
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken);
 
-        result.Population.EvaluatedCandidates.Length.ShouldBe(5);
+        result.Population.EvaluatedCandidates.Count.ShouldBe(5);
         result.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
         result.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 2).ShouldBeTrue();
     }

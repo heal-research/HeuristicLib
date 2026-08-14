@@ -1,9 +1,6 @@
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
-// ReSharper disable ForCanBeConvertedToForeach
-// ReSharper disable LoopCanBeConvertedToQuery
-
 namespace HEAL.HeuristicLib.Genotypes.Trees;
 
 public class NoSymbol : Symbol
@@ -177,7 +174,6 @@ public class SymbolicExpressionTreeNode
     {
         a(this);
         // avoid linq to reduce memory pressure
-        // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < subtrees.Count; i++)
         {
             subtrees[i].ForEachNodePrefix(a);

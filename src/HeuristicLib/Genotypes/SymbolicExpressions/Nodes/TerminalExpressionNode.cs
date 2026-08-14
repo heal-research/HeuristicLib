@@ -1,16 +1,12 @@
-using Generator.Equals;
-
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
-[Equatable]
-public abstract partial record TerminalExpressionNode : ExpressionNode
+public abstract record TerminalExpressionNode : ExpressionNode
 {
     private protected TerminalExpressionNode(TerminalSymbol symbol)
         : base(length: 1, depth: 1)
     {
     }
 
-    [IgnoreEquality]
     public abstract override TerminalSymbol Symbol { get; }
 
     public override ExpressionNode GetChild(int index)
@@ -33,8 +29,7 @@ public abstract partial record TerminalExpressionNode : ExpressionNode
 
 }
 
-[Equatable]
-public sealed partial record VariableExpressionNode : TerminalExpressionNode
+public sealed record VariableExpressionNode : TerminalExpressionNode
 {
     public VariableExpressionNode(VariableSymbol symbol, string variableName)
         : base(symbol)
@@ -43,7 +38,6 @@ public sealed partial record VariableExpressionNode : TerminalExpressionNode
         VariableName = ValidateVariableName(symbol, variableName);
     }
 
-    [IgnoreEquality]
     public override VariableSymbol Symbol { get; }
 
     public string VariableName { get; }
@@ -59,8 +53,7 @@ public sealed partial record VariableExpressionNode : TerminalExpressionNode
     }
 }
 
-[Equatable]
-public sealed partial record NumericConstantExpressionNode : TerminalExpressionNode
+public sealed record NumericConstantExpressionNode : TerminalExpressionNode
 {
     public NumericConstantExpressionNode(ConstantSymbol symbol, double value)
         : base(symbol)
@@ -69,7 +62,6 @@ public sealed partial record NumericConstantExpressionNode : TerminalExpressionN
         Value = ValidateValue(symbol, value);
     }
 
-    [IgnoreEquality]
     public override ConstantSymbol Symbol { get; }
 
     public double Value { get; }
@@ -83,8 +75,7 @@ public sealed partial record NumericConstantExpressionNode : TerminalExpressionN
     }
 }
 
-[Equatable]
-public sealed partial record PayloadlessTerminalExpressionNode : TerminalExpressionNode
+public sealed record PayloadlessTerminalExpressionNode : TerminalExpressionNode
 {
     public PayloadlessTerminalExpressionNode(PayloadlessTerminalSymbol symbol)
         : base(symbol)
@@ -92,6 +83,5 @@ public sealed partial record PayloadlessTerminalExpressionNode : TerminalExpress
         Symbol = symbol;
     }
 
-    [IgnoreEquality]
     public override PayloadlessTerminalSymbol Symbol { get; }
 }

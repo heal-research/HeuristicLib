@@ -6,27 +6,24 @@ using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 namespace HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
 
 public sealed record SubtreeCrossover
-    : SingleSolutionCrossover<ExpressionTree, ExpressionTreeSearchSpace>
+    : SingleCandidateCrossover<ExpressionTree, ExpressionTreeSearchSpace>
 {
-    public SubtreeCrossover(double? internalNodeProbability = null)
-    {
-        ValidateInternalNodeProbability(internalNodeProbability);
-        InternalNodeProbability = internalNodeProbability;
-    }
-
     /// <summary>
     /// Gets the probability of selecting an internal node before selecting uniformly within that category.
     /// A value of <see langword="null"/> selects uniformly among all eligible nodes.
     /// </summary>
-    public double? InternalNodeProbability { get; }
+    /// <remarks>
+    /// A non-null value is used as a threshold against a random draw in <c>[0, 1)</c> and is retained as configured.
+    /// A value at or below zero, negative infinity and <see cref="double.NaN"/> never select an internal node; a value
+    /// at or above one and positive infinity always do.
+    /// </remarks>
+    public double? InternalNodeProbability { get; init; }
 
-    public override ExpressionTree Cross(IParents<ExpressionTree> parents, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace) =>
+    public override ExpressionTree CrossParents(Parents<ExpressionTree> parents, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace) =>
         Cross(parents.Parent1, parents.Parent2, random, searchSpace, InternalNodeProbability);
 
     public static ExpressionTree Cross(ExpressionTree parent1, ExpressionTree parent2, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, double? internalNodeProbability = null)
     {
-        ValidateInternalNodeProbability(internalNodeProbability);
-
         var destination = SelectDestination(parent1, random, internalNodeProbability);
         var selectedDonor = SelectDonor(parent1, parent2, destination, random, searchSpace, internalNodeProbability);
 
@@ -99,11 +96,5 @@ public sealed record SubtreeCrossover
         }
 
         return selectedPoint;
-    }
-
-    private static void ValidateInternalNodeProbability(double? internalNodeProbability)
-    {
-        if (internalNodeProbability is double probability && (double.IsNaN(probability) || probability is < 0.0 or > 1.0))
-            throw new ArgumentOutOfRangeException(nameof(internalNodeProbability));
     }
 }

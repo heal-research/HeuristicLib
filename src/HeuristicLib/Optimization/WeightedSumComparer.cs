@@ -4,17 +4,17 @@ namespace HEAL.HeuristicLib.Optimization;
 
 public class WeightedSumComparer : IComparer<ObjectiveVector>
 {
-    private readonly ObjectiveDirection[] objectives;
+    private readonly ImmutableArray<ObjectiveDirection> objectives;
     private readonly RealVector weights;
 
-    public WeightedSumComparer(ObjectiveDirection[] objectives, double[]? weights = null)
+    public WeightedSumComparer(IReadOnlyList<ObjectiveDirection> objectives, IReadOnlyList<double>? weights = null)
     {
-        if (weights is not null && objectives.Length != weights.Length)
+        if (weights is not null && objectives.Count != weights.Count)
         {
             throw new ArgumentException("Objective and weights must have the same length");
         }
 
-        this.objectives = objectives;
+        this.objectives = objectives.ToImmutableArray();
         this.weights = weights is null
           ? RealVector.Repeat(1.0, this.objectives.Length)
           : RealVector.Create(weights);
@@ -49,7 +49,7 @@ public class WeightedSumComparer : IComparer<ObjectiveVector>
         {
             ObjectiveDirection.Minimize => +1.0,
             ObjectiveDirection.Maximize => -1.0,
-            _ => throw new NotImplementedException()
+            _ => throw new InvalidOperationException($"Unsupported objective direction: {d}.")
         }));
         var directedWeights = weights * directions;
 

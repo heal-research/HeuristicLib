@@ -1,6 +1,3 @@
-// ReSharper disable UnusedParameter.Local
-
-#pragma warning disable S1172
 namespace HEAL.HeuristicLib.Problems.TestFunctions.BBoB;
 
 public static class BBoBSuite
@@ -64,6 +61,7 @@ public static class BBoBSuite
         };
     }
 
+#pragma warning disable S1172
     private static SphereFunction CreateSphereProblem(int function, int dimension, int instance, long randomSeed) => new() { Dimension = dimension };
 
     private static EllipsoidFunction CreateEllipsoidProblem(int function, int dimension, int instance, long randomSeed) => new() { Dimension = dimension };
@@ -145,10 +143,10 @@ public static class BBoBSuite
         // BBOB has two Schaffers F7 variants:
         // - f17 with condition 10
         // - f18 with condition 1000
-        // 
+        //
         // In COCO, that condition influences the transformations / scaling,
         // not the raw Schaffers function itself.
-        // 
+        //
         return new SchaffersFunction { Dimension = dimension };
     }
 
@@ -321,6 +319,8 @@ public static class BBoBSuite
         return new LunacekBiRastriginFunction(data) { Dimension = dimension };
     }
 
+#pragma warning restore S1172
+
     public readonly record struct FGallagherPermutation(double Value, int Index);
 
     #region Helpers to mimic BBoB creation
@@ -336,13 +336,11 @@ public static class BBoBSuite
         {
             // xopt[i] = 8 * floor(1e4 * xopt[i]) / 1e4 - 4;
             var v = xopt[i];
-            var floored = Math.Floor(1e4 * v);
-            xopt[i] = 8.0 * (floored / 1e4) - 4.0;
+            var bucket = (long)Math.Floor(1e4 * v);
+            xopt[i] = 8.0 * (bucket / 1e4) - 4.0;
 
             // If exactly 0.0 → set to -1e−5
-#pragma warning disable S1244
-            if (xopt[i] == 0.0)
-#pragma warning restore S1244
+            if (bucket == 5000)
             {
                 xopt[i] = -1e-5;
             }
@@ -434,12 +432,9 @@ public static class BBoBSuite
             aktrand = rgrand[tmp];
             rgrand[tmp] = aktseed;
 
-            r[i] = aktrand / 2.147483647e9; // exactly the same divisor as COCO
-
-            if (r[i] == 0.0)
-            {
-                r[i] = 1e-99;
-            }
+            r[i] = aktrand == 0
+              ? 1e-99
+              : aktrand / 2.147483647e9; // exactly the same divisor as COCO
         }
     }
 
@@ -468,7 +463,9 @@ public static class BBoBSuite
             // Box-Muller transform
             var val = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
 
+#pragma warning disable S1244
             if (val == 0.0)
+#pragma warning restore S1244
             {
                 val = 1e-99;
             }
@@ -576,5 +573,4 @@ public static class BBoBSuite
     }
 
     #endregion
-
 }

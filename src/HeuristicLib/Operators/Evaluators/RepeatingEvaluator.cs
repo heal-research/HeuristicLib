@@ -6,168 +6,112 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public static class RepeatingEvaluator
+/// <summary>
+/// Evaluates every candidate repeatedly and aggregates the resulting objective vectors.
+/// </summary>
+public sealed record RepeatingEvaluator<TCandidate, TSearchSpace, TProblem>
+    : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public static RepeatingEvaluator<TCandidate, TSearchSpace, TProblem> AsRepeatingAggregating<TCandidate, TSearchSpace, TProblem>(
-      this IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
-      int repeats,
-      Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator)
-      where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(evaluator, repeats, aggregator);
+    /// <summary>
+    /// Gets the total number of evaluations performed for each candidate.
+    /// </summary>
+    public int Repetitions { get; init; }
 
-    public static RepeatedEvaluator<TCandidate, TSearchSpace, TProblem> AsRepeated<TCandidate, TSearchSpace, TProblem>(
-        this IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
-        int repeats,
-        Func<ReadOnlySpan<ObjectiveVector>, ObjectiveVector>? aggregator = null,
-        IEqualityComparer<TCandidate>? comparer = null,
-        int maxDegreeOfParallelism = -1)
-      where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace>
-      => new(evaluator, repeats, aggregator, comparer, maxDegreeOfParallelism);
-}
+    /// <summary>
+    /// Gets the strategy used to aggregate the repeated objective vectors.
+    /// </summary>
+    public IObjectiveVectorAggregator Aggregator { get; init; } = ObjectiveVectorAggregation.Mean;
 
-public record RepeatingEvaluator<TCandidate, TSearchSpace, TProblem>
-  : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    private readonly int repeats;
-    private readonly Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator;
+    /// <summary>
+    /// Gets the concurrency used to execute the repeated evaluation batches.
+    /// </summary>
+    public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
-    public RepeatingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, int repeats, Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator)
-      : base(evaluator)
+    /// <summary>
+    /// Gets the comparer used to verify that every repetition returned the same candidate for one input slot.
+    /// </summary>
+    /// <remarks>
+    /// The child evaluator may return a replacement candidate rather than the one it was given. Aggregating objective
+    /// vectors across repetitions is only meaningful when all repetitions agree on the candidate they describe, so a
+    /// disagreement fails instead of producing an objective vector that belongs to no returned candidate.
+    /// </remarks>
+    public IEqualityComparer<TCandidate> CandidateComparer { get; init; } = EqualityComparer<TCandidate>.Default;
+
+    public RepeatingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions)
+        : base(childEvaluator)
     {
-        this.repeats = repeats;
-        this.aggregator = aggregator;
+        Repetitions = repetitions;
     }
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
-        new Instance(innerEvaluator, repeats, aggregator);
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator)
+    {
+        if (Repetitions <= 0)
+            throw new InvalidOperationException("Repetitions must be positive.");
 
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator, int repeats, Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator)
-        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(innerEvaluator)
+        return new Instance(childEvaluator, Repetitions, Aggregator, Concurrency, CandidateComparer);
+    }
+
+    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency, IEqualityComparer<TCandidate> candidateComparer)
+        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            var results = InnerEvaluator.Evaluate(candidates, random, searchSpace, problem).ToArray();
-
-            for (var i = 0; i < repeats; i++)
-            {
-                var reevaluationResult = InnerEvaluator.Evaluate(candidates, random, searchSpace, problem);
-                for (var j = 0; j < results.Length; j++)
-                {
-                    results[j] = results[j] with
-                    {
-                        ObjectiveVector = aggregator(results[j].ObjectiveVector, reevaluationResult[j].ObjectiveVector)
-                    };
-                }
-            }
-
-            return results;
-        }
-    }
-}
-
-public record RepeatedEvaluator<TCandidate, TSearchSpace, TProblem>
-  : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    private readonly int repeats;
-    private readonly Func<ReadOnlySpan<ObjectiveVector>, ObjectiveVector> aggregator;
-    private readonly IEqualityComparer<TCandidate> comparer;
-    private readonly int maxDegreeOfParallelism;
-
-    public RepeatedEvaluator(
-        IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
-        int repeats,
-        Func<ReadOnlySpan<ObjectiveVector>, ObjectiveVector>? aggregator = null,
-        IEqualityComparer<TCandidate>? comparer = null,
-        int maxDegreeOfParallelism = -1)
-      : base(evaluator)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(repeats);
-        this.repeats = repeats;
-        this.aggregator = aggregator ?? Mean;
-        this.comparer = comparer ?? EqualityComparer<TCandidate>.Default;
-        this.maxDegreeOfParallelism = maxDegreeOfParallelism;
-    }
-
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
-        new Instance(innerEvaluator, repeats, aggregator, comparer, maxDegreeOfParallelism);
-
-    private sealed class Instance(
-        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator,
-        int repeats,
-        Func<ReadOnlySpan<ObjectiveVector>, ObjectiveVector> aggregator,
-        IEqualityComparer<TCandidate> comparer,
-        int maxDegreeOfParallelism)
-        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(innerEvaluator)
-    {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-        {
-            var evaluations = BatchExecution.Parallel(
-                repeats,
-                r => InnerEvaluator.Evaluate(candidates, r, searchSpace, problem),
+            var repetitionResults = BatchExecution.Execute(
+                repetitions,
+                (instance: this, candidates, searchSpace, problem),
+                static (itemRandom, state) => state.instance.ChildEvaluator.Evaluate(state.candidates, itemRandom, state.searchSpace, state.problem),
                 random,
-                maxDegreeOfParallelism: maxDegreeOfParallelism);
+                concurrency);
 
-            var objectiveVectors = new ObjectiveVector[repeats];
             return Enumerable.Range(0, candidates.Count)
                 .Select(candidateIndex =>
                 {
-                    var evaluatedCandidate = evaluations[0][candidateIndex];
-                    for (var repetition = 1; repetition < repeats; repetition++)
+                    var evaluatedCandidate = repetitionResults[0][candidateIndex];
+                    var objectiveVectors = new ObjectiveVector[repetitions];
+                    objectiveVectors[0] = evaluatedCandidate.ObjectiveVector;
+
+                    for (var repetition = 1; repetition < repetitions; repetition++)
                     {
-                        EnsureSameCandidate(
-                            evaluatedCandidate.Candidate,
-                            evaluations[repetition][candidateIndex].Candidate,
-                            comparer);
+                        var repeated = repetitionResults[repetition][candidateIndex];
+                        if (!candidateComparer.Equals(evaluatedCandidate.Candidate, repeated.Candidate))
+                            throw new InvalidOperationException("Repeated evaluation requires every repetition of one input candidate to return the same candidate.");
+
+                        objectiveVectors[repetition] = repeated.ObjectiveVector;
                     }
 
-                    for (var repetition = 0; repetition < repeats; repetition++)
-                    {
-                        objectiveVectors[repetition] = evaluations[repetition][candidateIndex].ObjectiveVector;
-                    }
-
-                    return evaluatedCandidate with { ObjectiveVector = aggregator(objectiveVectors) };
+                    return evaluatedCandidate with { ObjectiveVector = aggregator.Aggregate(objectiveVectors, problem.Objective) };
                 })
                 .ToArray();
         }
     }
+}
 
-    private static ObjectiveVector Mean(ReadOnlySpan<ObjectiveVector> objectiveVectors)
+public static class RepeatingEvaluator
+{
+    public static RepeatingEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childEvaluator, repetitions);
+}
+
+public static class RepeatingEvaluatorExtensions
+{
+    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        var dimension = objectiveVectors[0].Count;
-        var values = new double[dimension];
-        foreach (var objectiveVector in objectiveVectors)
-        {
-            if (objectiveVector.Count != dimension)
-            {
-                throw new InvalidOperationException("Repeated evaluator aggregation requires all objective vectors to have the same dimension.");
-            }
+        public RepeatingEvaluator<TCandidate, TSearchSpace, TProblem> AsRepeated(int repetitions) =>
+            new(evaluator, repetitions);
 
-            for (var i = 0; i < dimension; i++)
-            {
-                values[i] += objectiveVector[i];
-            }
-        }
+        public RepeatingEvaluator<TCandidate, TSearchSpace, TProblem> AsRepeated(int repetitions, IObjectiveVectorAggregator aggregator) =>
+            new(evaluator, repetitions) { Aggregator = aggregator };
 
-        for (var i = 0; i < values.Length; i++)
-        {
-            values[i] /= objectiveVectors.Length;
-        }
+        public RepeatingEvaluator<TCandidate, TSearchSpace, TProblem> AsRepeated(int repetitions, ExecutionConcurrency concurrency) =>
+            new(evaluator, repetitions) { Concurrency = concurrency };
 
-        return new ObjectiveVector(values);
-    }
-
-    private static void EnsureSameCandidate(
-        TCandidate first,
-        TCandidate second,
-        IEqualityComparer<TCandidate> candidateComparer)
-    {
-        if (!candidateComparer.Equals(first, second))
-        {
-            throw new InvalidOperationException(
-                "Repeated evaluator aggregation requires all repeated evaluations of one input slot to return the same candidate.");
-        }
+        public RepeatingEvaluator<TCandidate, TSearchSpace, TProblem> AsRepeated(int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency) =>
+            new(evaluator, repetitions) { Aggregator = aggregator, Concurrency = concurrency };
     }
 }

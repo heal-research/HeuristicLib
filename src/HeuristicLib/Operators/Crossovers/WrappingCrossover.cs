@@ -9,23 +9,23 @@ public abstract record WrappingCrossover<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ICrossover<TCandidate, TSearchSpace, TProblem> InnerCrossover { get; }
-
-    protected WrappingCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> innerCrossover)
+    protected WrappingCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> childCrossover)
     {
-        InnerCrossover = innerCrossover;
+        ChildCrossover = childCrossover;
     }
 
-    protected sealed override ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ExecutionInstanceRegistry registry) =>
-        CreateCrossoverInstance(registry.Resolve(InnerCrossover));
+    public ICrossover<TCandidate, TSearchSpace, TProblem> ChildCrossover { get; init; }
 
-    protected abstract WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> innerCrossover);
+    public sealed override ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateExecutionInstance(instanceRegistry.Resolve(ChildCrossover));
+
+    protected abstract WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> childCrossover);
 }
 
-public abstract class WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> innerCrossover)
+public abstract class WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> childCrossover)
     : CrossoverInstance<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ICrossoverInstance<TCandidate, TSearchSpace, TProblem> InnerCrossover { get; } = innerCrossover;
+    protected ICrossoverInstance<TCandidate, TSearchSpace, TProblem> ChildCrossover { get; } = childCrossover;
 }

@@ -17,7 +17,7 @@ public abstract class DynamicProblem<TCandidate, TSearchSpace> :
     IDisposable
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    private readonly ConcurrentBag<(TCandidate solution, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog = [];
+    private readonly ConcurrentBag<(TCandidate candidate, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog = [];
     private readonly ReaderWriterLockSlim rwLock = new();
     private readonly UpdatePolicy updatePolicy;
     private bool disposed;
@@ -36,7 +36,7 @@ public abstract class DynamicProblem<TCandidate, TSearchSpace> :
     public event EventHandler<IReadOnlyList<(TCandidate, ObjectiveVector, EvaluationTiming)>>? OnEvaluation;
 
     // this method will be called in parallel
-    public override ObjectiveVector Evaluate(TCandidate solution, IRandomNumberGenerator random)
+    public override ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         // PredictAndTrain in parallel read lock
@@ -46,11 +46,11 @@ public abstract class DynamicProblem<TCandidate, TSearchSpace> :
         ObjectiveVector r;
         try
         {
-            r = Evaluate(solution, random, timing);
+            r = Evaluate(candidate, random, timing);
         }
         finally { rwLock.ExitReadLock(); }
 
-        evaluationLog.Add((solution, r, timing));
+        evaluationLog.Add((candidate, r, timing));
 
         if (updatePolicy == UpdatePolicy.Asynchronous)
         {
@@ -60,7 +60,7 @@ public abstract class DynamicProblem<TCandidate, TSearchSpace> :
         return r;
     }
 
-    public abstract ObjectiveVector Evaluate(TCandidate solution, IRandomNumberGenerator random, EvaluationTiming timing);
+    public abstract ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, EvaluationTiming timing);
 
     public void AfterEvaluation(IReadOnlyList<TCandidate> candidates, IReadOnlyList<EvaluatedCandidate<TCandidate>> evaluatedCandidates, TSearchSpace searchSpace, DynamicProblem<TCandidate, TSearchSpace> problem)
     {

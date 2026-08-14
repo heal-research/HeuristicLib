@@ -28,8 +28,10 @@ public sealed class SymbolicRegressionVerticalSliceScenario(ITestOutputHelper ou
             constants: [new EvolvableConstantSymbol(), new FixedConstantSymbol(2.0)]);
         var problem = new SymbolicRegressionProblem(data, Metrics.RMSE, searchSpace);
         var mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(
-            [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()],
-            [1.0, 1.0, 1.0]);
+            [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()])
+        {
+            Weights = [1.0, 1.0, 1.0]
+        };
         var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
         {
             PopulationSize = 80,
@@ -56,7 +58,7 @@ public sealed class SymbolicRegressionVerticalSliceScenario(ITestOutputHelper ou
         var repeatedPredictions = ExpressionInterpreter.Interpret(compiled, data.Inputs);
         var retainedCompiledScore = Metrics.RMSE.Evaluate(firstPredictions, data.Target.Values.Span);
 
-        finalState.Population.EvaluatedCandidates.Length.ShouldBe(80);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBe(80);
         finalState.Population.EvaluatedCandidates.All(candidate => searchSpace.Contains(candidate.Candidate)).ShouldBeTrue();
         best.ObjectiveVector[0].ShouldBeLessThan(baseline);
         retainedCompiledScore.ShouldBe(best.ObjectiveVector[0], tolerance: 1e-12);

@@ -6,16 +6,16 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>
     : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSelf : Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    protected abstract AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry);
+    internal TSelf Self => (TSelf)this;
 
-    IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> IExecutionInstanceResolvable<IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateAlgorithmInstance(instanceRegistry);
+    public abstract IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
 public abstract class AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
@@ -37,7 +37,7 @@ public static class AlgorithmExtensions
     {
         public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun(TProblem problem, IRandomNumberGenerator random)
         {
-            return new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, problem, random);
+            return new(algorithm, problem, random);
         }
 
         public ExecutionStream<TSearchState> Stream(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)

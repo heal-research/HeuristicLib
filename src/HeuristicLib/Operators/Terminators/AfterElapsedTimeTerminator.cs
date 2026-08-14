@@ -1,17 +1,14 @@
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
+
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record AfterElapsedTimeTerminator<TCandidate>
-  : StatefulTerminator<TCandidate, AfterElapsedTimeTerminator<TCandidate>.ExecutionState>
+public sealed record AfterElapsedTimeTerminator<TCandidate>
+    : StatefulTerminator<TCandidate, AfterElapsedTimeTerminator<TCandidate>.ExecutionState>
 {
     public AfterElapsedTimeTerminator(TimeSpan maximumElapsedTime)
-      : this(maximumElapsedTime, TimeProvider.System)
-    {
-    }
-
-    public AfterElapsedTimeTerminator(TimeSpan maximumElapsedTime, TimeProvider timeProvider)
     {
         MaximumElapsedTime = maximumElapsedTime;
-        TimeProvider = timeProvider;
     }
 
     public sealed class ExecutionState
@@ -19,24 +16,23 @@ public record AfterElapsedTimeTerminator<TCandidate>
         public required long StartTimestamp { get; init; }
     }
 
-    public TimeSpan MaximumElapsedTime
-    {
-        get;
-        init => field = value > TimeSpan.Zero ? value : throw new ArgumentOutOfRangeException(nameof(MaximumElapsedTime), "MaximumElapsedTime must be positive.");
-    }
+    /// <summary>
+    /// Gets the elapsed-time limit. The expected value is positive.
+    /// </summary>
+    /// <remarks>A nonpositive limit terminates on the first checked state.</remarks>
+    public TimeSpan MaximumElapsedTime { get; init; }
 
-    public TimeProvider TimeProvider { get; }
+    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
-    protected override ExecutionState CreateInitialState()
-    {
-        return new ExecutionState
-        {
-            StartTimestamp = TimeProvider.GetTimestamp()
-        };
-    }
+    protected override ExecutionState CreateInitialState() =>
+        new() { StartTimestamp = TimeProvider.GetTimestamp() };
 
-    protected override bool IsTerminalState(ExecutionState executionState)
-    {
-        return TimeProvider.GetElapsedTime(executionState.StartTimestamp) >= MaximumElapsedTime;
-    }
+    protected override bool IsTerminalState(ExecutionState executionState) =>
+        TimeProvider.GetElapsedTime(executionState.StartTimestamp) >= MaximumElapsedTime;
+}
+
+public static class AfterElapsedTimeTerminator
+{
+    public static AfterElapsedTimeTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, TimeSpan maximumElapsedTime, TimeProvider? timeProvider = null)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(maximumElapsedTime) { TimeProvider = timeProvider ?? TimeProvider.System };
 }

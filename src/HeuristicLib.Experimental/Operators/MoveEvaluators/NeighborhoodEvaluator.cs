@@ -1,10 +1,10 @@
-namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
+using HEAL.HeuristicLib.Operators.Neighborhoods;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using Neighborhoods;
-using Optimization;
-using Problems;
-using Random;
-using SearchSpaces;
+namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
 
 public sealed record NeighborhoodEvaluator<TGenotype, TSearchSpace, TProblem, TMove>(
     Neighborhood<TGenotype, TSearchSpace, TProblem, TMove> neighborhood)
@@ -13,7 +13,7 @@ public sealed record NeighborhoodEvaluator<TGenotype, TSearchSpace, TProblem, TM
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
     public override ObjectiveVector Evaluate(
-        ObjectiveVector objective,
+        ObjectiveVector oldQuality,
         TGenotype genotype,
         TMove move,
         IRandomNumberGenerator random,

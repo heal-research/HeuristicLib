@@ -14,7 +14,7 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.LocalSearch;
 public class HillClimberTests
 {
     [Fact]
-    public void RunStreaming_WhenNoImprovingNeighborExists_YieldsOnlyGeneratedInitialState()
+    public void Stream_WhenNoImprovingNeighborExists_YieldsOnlyGeneratedInitialState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = CreateHillClimber(initialValue: 0, mutationOffset: 1);
@@ -27,14 +27,11 @@ public class HillClimberTests
     }
 
     [Fact]
-    public void RunStreaming_WithInitialLocalOptimum_YieldsNoStates()
+    public void Stream_WithInitialLocalOptimum_YieldsNoStates()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = CreateHillClimber(initialValue: 0, mutationOffset: 1);
-        var initialState = new SingleSolutionState<int>
-        {
-            Population = Population.From([0], [new ObjectiveVector(0.0)])
-        };
+        var initialState = SingleSolutionState.From(0, new ObjectiveVector(0.0));
 
         var states = algorithm.WithMaxIterations(5)
           .Stream(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken)
@@ -63,8 +60,7 @@ public class HillClimberTests
       : ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>,
         ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(
-          ExecutionInstanceRegistry instanceRegistry) => this;
+        public ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 
         public IReadOnlyList<int> Create(
           int count,
@@ -78,8 +74,7 @@ public class HillClimberTests
       : IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>,
         IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(
-          ExecutionInstanceRegistry instanceRegistry) => this;
+        public IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 
         public IReadOnlyList<int> Mutate(
           IReadOnlyList<int> parents,

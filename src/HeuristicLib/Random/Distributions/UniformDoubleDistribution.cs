@@ -15,6 +15,6 @@ public sealed record UniformDoubleDistribution(double Minimum, double Maximum) :
         if (maximum < minimum)
             throw new ArgumentOutOfRangeException(nameof(maximum));
 
-        return random.NextDouble() * (maximum - minimum) + minimum;
+        return random.NextDouble(minimum, maximum);
     }
 }

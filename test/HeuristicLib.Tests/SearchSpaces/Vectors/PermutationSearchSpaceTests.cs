@@ -45,7 +45,7 @@ public class PermutationSearchSpaceTests
     {
         var space = new PermutationSearchSpace(0);
 
-        space.Contains(Permutation.Create(Array.Empty<int>())).ShouldBeTrue();
+        space.Contains(Permutation.Create()).ShouldBeTrue();
     }
 
     [Fact]
@@ -73,13 +73,14 @@ public class PermutationSearchSpaceTests
     }
 
     [Fact]
-    public void ImplicitConversion_ForLengthZero_Throws()
+    public void ImplicitConversion_ForLengthZero_CreatesCollapsedRange()
     {
         var permutationSpace = new PermutationSearchSpace(0);
 
-        Should.Throw<ArgumentException>(() =>
-        {
-            IntegerVectorSearchSpace _ = permutationSpace;
-        });
+        IntegerVectorSearchSpace intSpace = permutationSpace;
+
+        intSpace.Length.ShouldBe(0);
+        intSpace.Minimum.ShouldBe(new IntegerVector(0));
+        intSpace.Maximum.ShouldBe(new IntegerVector(-1));
     }
 }

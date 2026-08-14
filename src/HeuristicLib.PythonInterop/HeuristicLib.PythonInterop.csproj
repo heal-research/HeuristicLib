@@ -5,10 +5,16 @@
         <PackageId>HEAL.HeuristicLib.PythonInterop</PackageId>
         <RootNamespace>HEAL.HeuristicLib.PythonInterop</RootNamespace>
         <Description>Python-facing interop helpers and workflows for HeuristicLib.</Description>
-		<GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+        <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     </PropertyGroup>
+
     <ItemGroup>
-      <PackageReference Include="pythonnet" Version="3.1.0" />
+        <Using Include="System.Collections.Immutable" />
+        <Using Include="HEAL.HeuristicLib.Collections" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="pythonnet" Version="3.1.0" />
     </ItemGroup>
 
     <ItemGroup>

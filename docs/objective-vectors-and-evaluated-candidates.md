@@ -44,6 +44,8 @@ This separation is intentional:
 
 In this repository, `EvaluatedCandidate<TCandidate>` is a simple value object.
 
+Use `EvaluatedCandidate.From(candidate, objectiveVector)` or `candidate.ToEvaluated(objectiveVector)` when the candidate value should determine the generic type.
+
 Evaluator results are authoritative. An evaluator may pair the original input candidate with its objective vector, or return a transformed candidate such as one whose numeric parameters were optimized during evaluation. The objective vector must describe the candidate returned in the same `EvaluatedCandidate<TCandidate>`.
 
 Problems remain score-only: `IProblem.Evaluate(...)` returns objective vectors for the supplied candidates. `ProblemEvaluator` adapts that contract to evaluated candidates for ordinary algorithms.

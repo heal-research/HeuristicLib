@@ -15,7 +15,7 @@ public class GeneticAlgorithmTests
     [Fact]
     public void GeneticAlgorithm_ConfigurationRetainsConfiguredValues()
     {
-        var creator = new UniformDistributedCreator(null, 3.0);
+        var creator = new UniformDistributedCreator { Maximum = 3.0 };
         var crossover = new SinglePointCrossover();
         var mutator = new GaussianMutator(0.1, 0.1);
         var evaluator = new DummyEvaluator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>();

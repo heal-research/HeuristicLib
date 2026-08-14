@@ -9,11 +9,11 @@ public class ParetoState<T>(ObjectiveVector referencePoint, ObjectiveDirections 
 
     protected List<EvaluatedCandidate<T>> Front { get; } = [];
 
-    public virtual bool AddPoints(IEnumerable<EvaluatedCandidate<T>> solutions)
+    public virtual bool AddPoints(IEnumerable<EvaluatedCandidate<T>> evaluatedCandidates)
     {
         var t = false;
-        foreach (var solution in solutions)
-            if (DominationCalculator.TryAddToParetoFrontInPlace(Front, solution, Objective))
+        foreach (var evaluatedCandidate in evaluatedCandidates)
+            if (DominationCalculator.TryAddToParetoFrontInPlace(Front, evaluatedCandidate, Objective))
                 t = true;
         return t;
     }

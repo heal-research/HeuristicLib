@@ -1,11 +1,10 @@
+using HEAL.HeuristicLib.Operators.MoveAppliers;
+using HEAL.HeuristicLib.Operators.MoveCreators;
+using HEAL.HeuristicLib.Operators.MoveEvaluators;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
+
 namespace HEAL.HeuristicLib.Operators.Neighborhoods;
-
-using MoveAppliers;
-using MoveCreators;
-using MoveEvaluators;
-using Problems;
-using SearchSpaces;
-
 #region neighborhoods
 public interface INeighborhood<TGenotype, in TSearchSpace, in TProblem, TMove>
     where TSearchSpace : class, ISearchSpace<TGenotype>

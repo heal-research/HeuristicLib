@@ -14,9 +14,18 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossover
 /// </summary>
 public record SubtreeCrossover : SymbolicExpressionTreeCrossover
 {
+    /// <summary>
+    /// Probability of cutting at an internal node rather than a leaf, normally in <c>[0,1]</c>. Higher values exchange
+    /// larger branches; the default of <c>0.9</c> strongly favours internal nodes.
+    /// </summary>
+    /// <remarks>
+    /// The value is used as a threshold rather than a validated ratio: at most zero, and <c>NaN</c>, always selects a
+    /// leaf crossover point, while at least one always selects an internal one. When the preferred kind of node is not
+    /// available the other kind is used.
+    /// </remarks>
     public double InternalCrossoverPointProbability { get; init; } = 0.9;
 
-    public override SymbolicExpressionTree Cross(IParents<SymbolicExpressionTree> parents, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Cross(random, parents.Item1, parents.Item2, InternalCrossoverPointProbability, searchSpace);
+    public override SymbolicExpressionTree CrossParents(Parents<SymbolicExpressionTree> parents, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Cross(random, parents.Parent1, parents.Parent2, InternalCrossoverPointProbability, searchSpace);
 
     public static SymbolicExpressionTree Cross(IRandomNumberGenerator random,
                                                SymbolicExpressionTree parent0, SymbolicExpressionTree parent1,
@@ -80,8 +89,6 @@ public record SubtreeCrossover : SymbolicExpressionTreeCrossover
 
     private static void SelectCrossoverPoint(IRandomNumberGenerator random, SymbolicExpressionTree parent0, double internalNodeProbability, SymbolicExpressionTreeSearchSpace searchSpace, out CutPoint crossoverPoint)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(internalNodeProbability, 0);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(internalNodeProbability, 1);
         var maxBranchLength = searchSpace.TreeLength;
         var maxBranchDepth = searchSpace.TreeDepth;
         var internalCrossoverPoints = new List<CutPoint>();
@@ -145,11 +152,6 @@ public record SubtreeCrossover : SymbolicExpressionTreeCrossover
 
     private static SymbolicExpressionTreeNode? SelectRandomBranch(IRandomNumberGenerator random, List<SymbolicExpressionTreeNode?> branches, double internalNodeProbability)
     {
-        if (internalNodeProbability is < 0.0 or > 1.0)
-        {
-            throw new ArgumentException("internalNodeProbability");
-        }
-
         List<SymbolicExpressionTreeNode> allowedInternalBranches;
         List<SymbolicExpressionTreeNode> allowedLeafBranches;
         if (random.NextDouble() < internalNodeProbability)

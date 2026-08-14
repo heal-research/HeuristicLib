@@ -11,6 +11,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
 {
     public const string StatefulStateDiagnosticId = "HLib0002";
     public const string ConfigurationMutationDiagnosticId = "HLib0003";
+    public const string StateContractDiagnosticId = "HLib0004";
 
     private const string OperatorMetadataName = "HEAL.HeuristicLib.Operators.IOperator";
     private const string CreateInitialStateMethodName = "CreateInitialState";
@@ -31,7 +32,15 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [StatefulStateRule, ConfigurationMutationRule];
+    private static readonly DiagnosticDescriptor StateContractRule = new(
+        id: StateContractDiagnosticId,
+        title: "Stateful operator state must be a dedicated state type",
+        messageFormat: "'{0}' is a framework contract type and cannot be operator state. Check the type argument order: the state type parameter is always last, so omitting an earlier argument such as TProblem or TSearchState shifts a framework contract into the TState position.",
+        category: "Architecture",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [StatefulStateRule, ConfigurationMutationRule, StateContractRule];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -41,9 +50,10 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         context.RegisterCompilationStartAction(startContext =>
         {
             var forbiddenTypes = GetForbiddenTypes(startContext.Compilation);
+            var stateContractTypes = GetStateContractTypes(startContext.Compilation, forbiddenTypes);
             var operatorContract = startContext.Compilation.GetTypeByMetadataName(OperatorMetadataName);
             startContext.RegisterSymbolAction(
-                symbolContext => AnalyzeStatefulOperator(symbolContext, forbiddenTypes, operatorContract),
+                symbolContext => AnalyzeStatefulOperator(symbolContext, forbiddenTypes, stateContractTypes, operatorContract),
                 SymbolKind.NamedType);
 
             startContext.RegisterSyntaxNodeAction(
@@ -86,7 +96,23 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
             .Cast<INamedTypeSymbol>()];
     }
 
-    private static void AnalyzeStatefulOperator(SymbolAnalysisContext context, ImmutableArray<INamedTypeSymbol> forbiddenTypes, INamedTypeSymbol? operatorContract)
+    private static ImmutableArray<INamedTypeSymbol> GetStateContractTypes(Compilation compilation, ImmutableArray<INamedTypeSymbol> forbiddenTypes)
+    {
+        var metadataNames = new[]
+        {
+            "HEAL.HeuristicLib.Problems.IProblem`2",
+            "HEAL.HeuristicLib.SearchSpaces.ISearchSpace",
+            "HEAL.HeuristicLib.States.ISearchState",
+            "HEAL.HeuristicLib.Operators.IOperatorInstance"
+        };
+
+        return [.. forbiddenTypes.Concat(metadataNames
+            .Select(compilation.GetTypeByMetadataName)
+            .Where(static type => type is not null)
+            .Cast<INamedTypeSymbol>())];
+    }
+
+    private static void AnalyzeStatefulOperator(SymbolAnalysisContext context, ImmutableArray<INamedTypeSymbol> forbiddenTypes, ImmutableArray<INamedTypeSymbol> stateContractTypes, INamedTypeSymbol? operatorContract)
     {
         if (context.Symbol is not INamedTypeSymbol operatorType || operatorContract is null || !TryGetOperatorStateType(operatorType, operatorContract, out var stateType))
         {
@@ -95,6 +121,21 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
 
         if (stateType.TypeKind == TypeKind.TypeParameter)
         {
+            return;
+        }
+
+        var stateContract = stateContractTypes.FirstOrDefault(candidate => IsOrImplementsDefinition(stateType, candidate));
+        if (stateContract is not null)
+        {
+            var contractLocation = GetBaseTypeLocation(operatorType) ?? operatorType.Locations.FirstOrDefault(static candidate => candidate.IsInSource);
+            if (contractLocation is not null)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    StateContractRule,
+                    contractLocation,
+                    stateType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
+            }
+
             return;
         }
 
@@ -237,6 +278,42 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
 
         forbiddenType = null!;
         return false;
+    }
+
+    private static Location? GetBaseTypeLocation(INamedTypeSymbol operatorType)
+    {
+        foreach (var reference in operatorType.DeclaringSyntaxReferences)
+        {
+            if (reference.GetSyntax() is TypeDeclarationSyntax { BaseList.Types.Count: > 0 } declaration)
+            {
+                return declaration.BaseList.Types[0].GetLocation();
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsOrImplementsDefinition(ITypeSymbol type, INamedTypeSymbol candidateDefinition)
+    {
+        if (SymbolEqualityComparer.Default.Equals(type.OriginalDefinition, candidateDefinition))
+        {
+            return true;
+        }
+
+        if (type is not INamedTypeSymbol namedType)
+        {
+            return false;
+        }
+
+        for (var current = namedType.BaseType; current is not null; current = current.BaseType)
+        {
+            if (SymbolEqualityComparer.Default.Equals(current.OriginalDefinition, candidateDefinition))
+            {
+                return true;
+            }
+        }
+
+        return namedType.AllInterfaces.Any(@interface => SymbolEqualityComparer.Default.Equals(@interface.OriginalDefinition, candidateDefinition));
     }
 
     private static bool IsOrImplements(ITypeSymbol type, INamedTypeSymbol candidate)

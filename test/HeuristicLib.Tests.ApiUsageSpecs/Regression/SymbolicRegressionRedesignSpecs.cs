@@ -206,8 +206,10 @@ public class SymbolicRegressionRedesignSpecs
             Creator = new RampedHalfAndHalfTreeCreator(),
             Crossover = new SubtreeCrossover(),
             Mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(
-                [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()],
-                [1.0, 1.0, 1.0]),
+                [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()])
+            {
+                Weights = [1.0, 1.0, 1.0]
+            },
             MutationRate = 0.2,
             Selector = new TournamentSelector<ExpressionTree>(tournamentSize: 2),
             Elites = 1
@@ -219,7 +221,7 @@ public class SymbolicRegressionRedesignSpecs
           ct: TestContext.Current.CancellationToken);
 
         finalState.Population.EvaluatedCandidates.All(candidate => problem.SearchSpace.Contains(candidate.Candidate)).ShouldBeTrue();
-        finalState.Population.EvaluatedCandidates.Length.ShouldBe(24);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBe(24);
     }
 
     [Fact]

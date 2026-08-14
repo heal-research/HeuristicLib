@@ -1,5 +1,3 @@
-using Generator.Equals;
-
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
 /// <summary>Represents an immutable node in an <see cref="ExpressionTree"/>.</summary>
@@ -7,8 +5,7 @@ namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 /// Nodes expose expression structure for inspection and may be shared by multiple occurrences.
 /// Apply edits through <see cref="ExpressionTree"/> using an <see cref="ExpressionPoint"/>.
 /// </remarks>
-[Equatable]
-public abstract partial record ExpressionNode
+public abstract record ExpressionNode
 {
     private protected ExpressionNode(int length, int depth)
     {
@@ -18,16 +15,12 @@ public abstract partial record ExpressionNode
 
     public abstract Symbol Symbol { get; }
 
-    [IgnoreEquality]
     public int Arity => Symbol.Arity;
 
-    [IgnoreEquality]
     public int Length { get; }
 
-    [IgnoreEquality]
     public int Depth { get; }
 
-    [IgnoreEquality]
     public string Name => Symbol.Name;
 
     /// <summary>Returns the child at <paramref name="index"/>.</summary>

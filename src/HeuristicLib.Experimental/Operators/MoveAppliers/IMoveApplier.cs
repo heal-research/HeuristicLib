@@ -1,7 +1,7 @@
-namespace HEAL.HeuristicLib.Operators.MoveAppliers;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using Problems;
-using SearchSpaces;
+namespace HEAL.HeuristicLib.Operators.MoveAppliers;
 
 public interface IMoveApplier<TGenotype, in TSearchSpace, in TProblem, in TMove>
     : IOperator<IMoveApplierInstance<TGenotype, TSearchSpace, TProblem, TMove>>

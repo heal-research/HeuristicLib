@@ -19,6 +19,24 @@ The core roles used across algorithms in this repository are:
 
 The genetic algorithm (`GeneticAlgorithm<...>`) is the easiest place to see all of these roles working together.
 
+## Type inference helpers
+
+Generic methods can infer type arguments from an existing problem or algorithm even when an operator constructor has no type bearing argument. The static `For(...)` helpers use that argument as a type witness:
+
+```csharp
+var problemEvaluator = DirectEvaluator.For(problem);
+var tournamentSelector = TournamentSelector.For(problem, tournamentSize: 4);
+var randomSelector = RandomSelector.For(problem);
+var unchangedMutator = NoChangeMutator.For(problem);
+var firstParentCrossover = SelectFirstParentCrossover.For(problem);
+
+var algorithmEvaluator = DirectEvaluator.For(algorithm);
+var algorithmSelector = TournamentSelector.For(algorithm, tournamentSize: 4);
+var interceptor = IdentityInterceptor.For(algorithm);
+```
+
+Built in operator configurations whose concrete type otherwise contains only `TCandidate` consistently provide `For(problem, ...)`. The created operator does not retain or depend on the problem. It only supplies generic information to method inference. Direct generic construction remains appropriate when neither a problem nor a configured algorithm is available, such as a generic default declared on an algorithm configuration.
+
 ## The “shape” of an operator
 
 Operators are intentionally uniform:
@@ -46,9 +64,15 @@ Operator authoring is based on who owns execution data and execution graph depen
 
 The unprefixed role base is the common base for all three paths. Stateless and stateful bases derive from it. Authors normally derive directly from the unprefixed base only for the full control path.
 
+Role-specific base classes are authoring conveniences. Contract-only implementations remain valid and do not need to use them.
+
+Each role or topology base publicly exposes one `CreateExecutionInstance(ExecutionInstanceRegistry)` factory whose return type is the exact execution-instance role. The method directly implements the configuration contract, so deliberate callers do not need an interface cast and there is no parallel role-named factory. Ordinary execution should still resolve configurations through the registry so that it controls instance identity and sharing. Topology bases implement the public registry overload and expose a protected `CreateExecutionInstance` overload that constructs the same execution instance from already-resolved child instances.
+
+Wrapping and multi-operator configurations expose their retained child operators through public read-only properties. Configuration objects remain fully inspectable without allowing callers to replace their children. Resolved child instances are execution machinery and remain private or protected by default.
+
 ### Stateless operators
 
-A stateless operator configuration also performs the operation. Configuration values and referenced collections must remain unchanged during execution. Specialized role helpers may build on this path for common operation shapes.
+A stateless operator configuration also performs the operation. Configuration values must remain unchanged during execution. Retained collection inputs use snapshot semantics: operator APIs accept `IReadOnlyList<T>` where appropriate then store an immutable snapshot. Later changes to the caller's list do not alter the operator configuration. Specialized role helpers may build on this path for common operation shapes.
 
 ### Stateful operators
 
@@ -62,13 +86,15 @@ Framework managed state has no disposal lifecycle. State that owns disposable re
 
 The configuration describes reusable parameters and graph structure. The authored execution instance owns operation logic, mutable execution data and resolved child execution instances.
 
-Wrapping and multi bases are topology specific shortcuts within this path. A wrapping base resolves one child once. A multi base resolves several children once. They do not have separate stateless and stateful variants because their purpose is already execution graph coordination. The unprefixed role base remains available when those shortcuts do not fit.
+Role-specific wrapping and multi bases are topology shortcuts within this path. A wrapping base resolves one child once. A multi base resolves several children once and publicly exposes their immutable configuration snapshot. They do not have separate stateless and stateful variants because their purpose is already execution graph coordination. The unprefixed role base remains available when those shortcuts do not fit.
 
-### Analyzer guardrails
+### Roslyn analyzer guardrails
 
-The `OperatorAuthoringAnalyzer` applies across operator roles. `HLib0002` reports execution graph dependencies exposed through stateful operator state. `HLib0003` reports direct mutation of operator configuration members during operation logic.
+The `OperatorAuthoringAnalyzer` Roslyn analyzer applies across operator roles. `HLib0002` reports execution graph dependencies exposed through stateful operator state. `HLib0003` reports direct mutation of operator configuration members during operation logic.
 
-These diagnostics are guardrails for common authoring mistakes, not a proof that configuration and state obey every invariant. In particular, the analyzer cannot reliably identify every indirect mutation through a referenced collection, helper object or delegate. Operator authors remain responsible for keeping configurations reusable and keeping execution graph dependencies out of framework managed state.
+These diagnostics are guardrails for common authoring mistakes, not a proof that configuration and state obey every invariant. In particular, the Roslyn analyzer cannot reliably identify every indirect mutation through a referenced collection, helper object or delegate. Operator authors remain responsible for keeping configurations reusable and keeping execution graph dependencies out of framework managed state.
+
+See [Operator authoring](operator-authoring.md) for focused examples of each path and their ownership rules.
 
 ## Terminator ownership
 
@@ -94,5 +120,6 @@ See [Operator composition](operator-composition.md) for the available forms, the
 ## Next
 
 - [Algorithm](algorithm.md)
+- [Operator authoring](operator-authoring.md)
 - [Operator composition](operator-composition.md)
 - [Execution model](execution-model.md)

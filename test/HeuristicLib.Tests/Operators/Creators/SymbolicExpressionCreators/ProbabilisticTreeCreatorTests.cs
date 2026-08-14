@@ -120,9 +120,9 @@ public sealed class ProbabilisticTreeCreatorTests
             operations: [Symbols.Addition],
             variables: ["x0"],
             constants: []);
-        var creator = new ProbabilisticTreeCreator(new FixedDistribution<int>(7));
+        var creator = new ProbabilisticTreeCreator { RequestedLengthDistribution = new FixedDistribution<int>(7) };
 
-        var expression = creator.Create(RandomNumberGenerator.Create(123), searchSpace);
+        var expression = creator.CreateCandidate(RandomNumberGenerator.Create(123), searchSpace);
 
         expression.Length.ShouldBe(7);
         searchSpace.Contains(expression).ShouldBeTrue();
@@ -142,7 +142,7 @@ public sealed class ProbabilisticTreeCreatorTests
             0.0, // Select the variable symbol.
             0.0); // Select x0.
 
-        var expression = new ProbabilisticTreeCreator().Create(random, searchSpace);
+        var expression = new ProbabilisticTreeCreator().CreateCandidate(random, searchSpace);
 
         expression.Length.ShouldBe(1);
     }

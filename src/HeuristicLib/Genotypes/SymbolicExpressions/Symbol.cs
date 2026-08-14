@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Random.Distributions;
 
@@ -102,24 +101,23 @@ public sealed record EvolvableConstantSymbol(IDistribution<double> InitialDistri
     internal double SampleInitialValue(IRandomNumberGenerator random) => InitialDistribution.Sample(random);
 }
 
-[Equatable]
-public sealed partial record VariableSymbol : TerminalSymbol
+public sealed record VariableSymbol : TerminalSymbol
 {
     public VariableSymbol(IEnumerable<string> variables, IEnumerable<double>? selectionWeights = null)
         : base("variable")
     {
         Variables = variables.ToImmutableArray();
-        if (Variables.IsDefaultOrEmpty)
+        if (Variables.IsEmpty)
             throw new ArgumentException("At least one variable must be supplied.", nameof(variables));
 
         if (Variables.Any(string.IsNullOrWhiteSpace))
             throw new ArgumentException("Variable names must not be empty.", nameof(variables));
 
-        SelectionWeights = WeightSelection.Normalize(selectionWeights?.ToImmutableArray(), Variables.Length);
+        SelectionWeights = WeightSelection.Normalize(selectionWeights?.ToImmutableArray(), Variables.Count);
     }
 
-    [OrderedEquality] public ImmutableArray<string> Variables { get; }
-    [OrderedEquality] public ImmutableArray<double> SelectionWeights { get; }
+    public ValueArray<string> Variables { get; }
+    public ValueArray<double> SelectionWeights { get; }
 
     public override bool SupportsLocalPerturbation => true;
 
@@ -156,7 +154,7 @@ public sealed partial record VariableSymbol : TerminalSymbol
 
     internal string Sample(IRandomNumberGenerator random)
     {
-        var index = WeightSelection.SelectIndex(random, Variables.Length, SelectionWeights);
+        var index = WeightSelection.SelectIndex(random, Variables.Count, SelectionWeights.AsSpan());
         return Variables[index];
     }
 }

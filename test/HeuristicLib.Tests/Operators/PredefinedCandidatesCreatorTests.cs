@@ -2,7 +2,6 @@ using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Tests.TestSupport.Execution;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators;
@@ -14,8 +13,8 @@ public class PredefinedCandidatesCreatorTests
     {
         var random = RandomNumberGenerator.Create(42);
         var fallback = new ExpectedRandomCreator(random, 99);
-        var creator = new PredefinedCandidatesCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>([10, 20], fallback);
-        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(x => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+        var creator = fallback.WithPredefinedCandidates([10, 20]);
+        var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var instance = new Execution.ExecutionInstanceRegistry().Resolve(creator);
 
         var first = instance.Create(1, random, DummySearchSpace<int>.Instance, problem);

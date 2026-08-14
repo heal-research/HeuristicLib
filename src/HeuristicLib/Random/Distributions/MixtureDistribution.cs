@@ -1,12 +1,9 @@
-using Generator.Equals;
-
 namespace HEAL.HeuristicLib.Random.Distributions;
 
-[Equatable]
-public sealed partial record MixtureDistribution<T> : IDistribution<T>
+public sealed record MixtureDistribution<T> : IDistribution<T>
 {
-    [OrderedEquality] public ImmutableArray<IDistribution<T>> Distributions { get; }
-    [OrderedEquality] public ImmutableArray<double> Weights { get; }
+    public ValueArray<IDistribution<T>> Distributions { get; }
+    public ValueArray<double> Weights { get; }
 
     public MixtureDistribution(ImmutableArray<IDistribution<T>> distributions)
     {
@@ -38,7 +35,7 @@ public sealed partial record MixtureDistribution<T> : IDistribution<T>
 
     public T Sample(IRandomNumberGenerator random)
     {
-        var distributionIndex = WeightSelection.SelectIndex(random, Distributions.Length, Weights);
+        var distributionIndex = WeightSelection.SelectIndex(random, Distributions.Count, Weights.AsSpan());
         var distribution = Distributions[distributionIndex];
         return distribution.Sample(random);
     }

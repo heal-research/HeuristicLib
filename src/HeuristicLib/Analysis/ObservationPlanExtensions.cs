@@ -33,7 +33,7 @@ public static class ObservationPlanExtensions
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
           => observations.Observe<ICrossover<TCandidate, TSearchSpace, TProblem>, ICrossoverInstance<TCandidate, TSearchSpace, TProblem>, ICrossoverObserver<TCandidate, TSearchSpace, TProblem>>(crossover, observer, static (c, o) => c.ObserveWith(o));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, Action<IReadOnlyList<TCandidate>, IReadOnlyList<IParents<TCandidate>>, TSearchSpace, TProblem> afterCross)
+        public void Observe<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, Action<IReadOnlyList<TCandidate>, IReadOnlyList<Parents<TCandidate>>, TSearchSpace, TProblem> afterCross)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
           => observations.Observe(crossover, new ActionCrossoverObserver<TCandidate, TSearchSpace, TProblem>(afterCross));

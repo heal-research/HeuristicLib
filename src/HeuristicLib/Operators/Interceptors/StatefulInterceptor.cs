@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
@@ -19,13 +20,15 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TProblem, T
 {
     protected abstract TState CreateInitialState();
 
-    protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, TSearchSpace searchSpace, TProblem problem);
+    protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
+    public sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new Instance(this, CreateInitialState());
 
-    private sealed class Instance(StatefulInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TState> interceptor, TState state) : IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+    private sealed class Instance(StatefulInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TState> interceptor, TState state)
+        : InterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
-        public TSearchState Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, TProblem problem) => interceptor.Transform(currentState, previousState, state, searchSpace, problem);
+        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            interceptor.Transform(currentState, previousState, state, random, searchSpace, problem);
     }
 }
 
@@ -37,13 +40,15 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TSearchStat
 {
     protected abstract TState CreateInitialState();
 
-    protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, TSearchSpace searchSpace);
+    protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
+    public sealed override IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new Instance(this, CreateInitialState());
 
-    private sealed class Instance(StatefulInterceptor<TCandidate, TSearchSpace, TSearchState, TState> interceptor, TState state) : IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
+    private sealed class Instance(StatefulInterceptor<TCandidate, TSearchSpace, TSearchState, TState> interceptor, TState state)
+        : InterceptorInstance<TCandidate, TSearchSpace, TSearchState>
     {
-        public TSearchState Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) => interceptor.Transform(currentState, previousState, state, searchSpace);
+        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
+            interceptor.Transform(currentState, previousState, state, random, searchSpace);
     }
 }
 
@@ -54,12 +59,14 @@ public abstract record StatefulInterceptor<TCandidate, TSearchState, TState>
 {
     protected abstract TState CreateInitialState();
 
-    protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state);
+    protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random);
 
-    protected sealed override IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
+    public sealed override IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new Instance(this, CreateInitialState());
 
-    private sealed class Instance(StatefulInterceptor<TCandidate, TSearchState, TState> interceptor, TState state) : IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
+    private sealed class Instance(StatefulInterceptor<TCandidate, TSearchState, TState> interceptor, TState state)
+        : InterceptorInstance<TCandidate, TSearchState>
     {
-        public TSearchState Transform(TSearchState currentState, TSearchState? previousState, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => interceptor.Transform(currentState, previousState, state);
+        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random) =>
+            interceptor.Transform(currentState, previousState, state, random);
     }
 }

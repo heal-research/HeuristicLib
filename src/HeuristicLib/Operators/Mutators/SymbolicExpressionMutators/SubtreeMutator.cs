@@ -6,9 +6,9 @@ using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
 
 public sealed record SubtreeMutator
-    : SingleSolutionMutator<ExpressionTree, ExpressionTreeSearchSpace>
+    : SingleCandidateMutator<ExpressionTree, ExpressionTreeSearchSpace>
 {
-    public override ExpressionTree Mutate(ExpressionTree parent, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
+    public override ExpressionTree MutateCandidate(ExpressionTree parent, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
     {
         return SubtreeMutation.Mutate(parent, random, searchSpace);
     }

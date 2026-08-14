@@ -9,30 +9,26 @@ namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
 /// Creates target-length expression trees by expanding pending positions breadth-first.
 /// </summary>
 public sealed record BalancedTreeCreator
-    : SingleSolutionCreator<ExpressionTree, ExpressionTreeSearchSpace>
+    : SingleCandidateCreator<ExpressionTree, ExpressionTreeSearchSpace>
 {
-    public BalancedTreeCreator(double irregularity = 0.0, IDistribution<int>? requestedLengthDistribution = null)
-    {
-        if (double.IsNaN(irregularity) || irregularity is < 0.0 or > 1.0)
-            throw new ArgumentOutOfRangeException(nameof(irregularity));
-
-        Irregularity = irregularity;
-        RequestedLengthDistribution = requestedLengthDistribution;
-    }
-
     /// <summary>
     /// Gets the probability of allowing terminals before breadth-first expansion reaches
     /// the requested length. Zero produces the most regular shape.
     /// </summary>
-    public double Irregularity { get; }
+    /// <remarks>
+    /// The value is used as a threshold against a random draw in <c>[0, 1)</c> and is retained as configured. A value
+    /// at or below zero, negative infinity and <see cref="double.NaN"/> never allow an early terminal; a value at or
+    /// above one and positive infinity always do.
+    /// </remarks>
+    public double Irregularity { get; init; }
 
     /// <summary>
     /// Gets the requested-length distribution, or <see langword="null"/> to sample uniformly
     /// from the search-space length range.
     /// </summary>
-    public IDistribution<int>? RequestedLengthDistribution { get; }
+    public IDistribution<int>? RequestedLengthDistribution { get; init; }
 
-    public override ExpressionTree Create(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
+    public override ExpressionTree CreateCandidate(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
     {
         var requestedLength = RequestedLengthDistribution?.Sample(random);
         return BalancedTreeCreation.Create(random, searchSpace, requestedLength, Irregularity);
@@ -54,8 +50,6 @@ public static class BalancedTreeCreation
         ArgumentOutOfRangeException.ThrowIfGreaterThan(maximumLength, searchSpace.MaximumLength);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumDepth);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(maximumDepth, searchSpace.MaximumDepth);
-        if (double.IsNaN(irregularity) || irregularity is < 0.0 or > 1.0)
-            throw new ArgumentOutOfRangeException(nameof(irregularity));
 
         var effectiveRequestedLength = requestedLength ?? random.NextInt(1, maximumLength, inclusiveHigh: true);
         if (effectiveRequestedLength <= 0 || effectiveRequestedLength > maximumLength)

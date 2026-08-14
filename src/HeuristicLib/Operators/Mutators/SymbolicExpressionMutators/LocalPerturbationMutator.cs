@@ -31,13 +31,16 @@ public sealed record EachLocalPerturbationTarget : LocalPerturbationTargetSelect
 {
     public EachLocalPerturbationTarget(double probability)
     {
-        if (double.IsNaN(probability) || probability is < 0.0 or > 1.0)
-            throw new ArgumentOutOfRangeException(nameof(probability));
-
         Probability = probability;
     }
 
-    public double Probability { get; }
+    /// <summary>Gets the probability of selecting each eligible point independently.</summary>
+    /// <remarks>
+    /// The value is used as a threshold against a random draw in <c>[0, 1)</c> and is retained as configured. A value
+    /// at or below zero, negative infinity and <see cref="double.NaN"/> select no point; a value at or above one and
+    /// positive infinity select every point.
+    /// </remarks>
+    public double Probability { get; init; }
 
     internal override IReadOnlyList<ExpressionPoint> Select(IReadOnlyList<ExpressionPoint> eligiblePoints, IRandomNumberGenerator random)
     {
@@ -52,12 +55,19 @@ public static class LocalPerturbationTargets
     public static LocalPerturbationTargetSelection Each(double probability) => new EachLocalPerturbationTarget(probability);
 }
 
-public sealed record LocalPerturbationMutator(LocalPerturbationTargetSelection TargetSelection)
-    : SingleSolutionMutator<ExpressionTree, ExpressionTreeSearchSpace>
+public sealed record LocalPerturbationMutator
+    : SingleCandidateMutator<ExpressionTree, ExpressionTreeSearchSpace>
 {
+    /// <summary>Gets the policy that selects which eligible points are perturbed.</summary>
+    public LocalPerturbationTargetSelection TargetSelection { get; init; } = LocalPerturbationTargets.One;
+
     public LocalPerturbationMutator()
-        : this(LocalPerturbationTargets.One)
     {
+    }
+
+    public LocalPerturbationMutator(LocalPerturbationTargetSelection targetSelection)
+    {
+        TargetSelection = targetSelection;
     }
 
     public LocalPerturbationMutator(double eachProbability)
@@ -65,7 +75,7 @@ public sealed record LocalPerturbationMutator(LocalPerturbationTargetSelection T
     {
     }
 
-    public override ExpressionTree Mutate(ExpressionTree parent, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
+    public override ExpressionTree MutateCandidate(ExpressionTree parent, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
     {
         return LocalPerturbationMutation.Mutate(parent, random, TargetSelection);
     }

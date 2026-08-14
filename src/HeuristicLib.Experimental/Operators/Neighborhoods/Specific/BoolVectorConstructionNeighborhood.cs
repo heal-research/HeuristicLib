@@ -1,11 +1,11 @@
+using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
+
 namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 
-using Genotypes.Vectors;
-using Problems;
-using Random;
-using SearchSpaces.Vectors;
-
-public record BoolVectorConstructionNeighborhood() : BoolVectorNeighborhood<bool>
+public record BoolVectorConstructionNeighborhood : BoolVectorNeighborhood<bool>
 {
     public override IEnumerable<bool> Moves(BoolVector genotype, IRandomNumberGenerator random, BoolVectorSearchSpace searchSpace, IProblem<BoolVector, BoolVectorSearchSpace> problem)
     {

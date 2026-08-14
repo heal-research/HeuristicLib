@@ -58,7 +58,7 @@ public sealed class RampedHalfAndHalfTreeCreatorTests
             operations: [Symbols.Addition],
             variables: ["x0"],
             constants: []);
-        var creator = new RampedHalfAndHalfTreeCreator(minimumDepth: 3, maximumDepth: 4);
+        var creator = new RampedHalfAndHalfTreeCreator { MinimumDepth = 3, MaximumDepth = 4 };
 
         var expressions = creator.Create(4, RandomNumberGenerator.Create(123), searchSpace);
 
@@ -79,7 +79,7 @@ public sealed class RampedHalfAndHalfTreeCreatorTests
             operations: [Symbols.Addition],
             variables: ["x0"],
             constants: []);
-        var creator = new RampedHalfAndHalfTreeCreator(minimumDepth: 2, maximumDepth: 4);
+        var creator = new RampedHalfAndHalfTreeCreator { MinimumDepth = 2, MaximumDepth = 4 };
 
         Should.Throw<ArgumentException>(() =>
             creator.Create(5, RandomNumberGenerator.Create(123), searchSpace));
@@ -94,7 +94,7 @@ public sealed class RampedHalfAndHalfTreeCreatorTests
             operations: [Symbols.Addition],
             variables: ["x0"],
             constants: []);
-        var creator = new RampedHalfAndHalfTreeCreator(minimumDepth: 3);
+        var creator = new RampedHalfAndHalfTreeCreator { MinimumDepth = 3 };
 
         Should.Throw<ArgumentException>(() =>
             creator.Create(1, RandomNumberGenerator.Create(123), searchSpace));
@@ -103,10 +103,13 @@ public sealed class RampedHalfAndHalfTreeCreatorTests
     [Theory]
     [InlineData(0, null)]
     [InlineData(2, 1)]
-    public void Constructor_RejectsInvalidDepthRange(int minimumDepth, int? maximumDepth)
+    public void Create_RejectsInvalidDepthRange(int minimumDepth, int? maximumDepth)
     {
-        Should.Throw<ArgumentException>(() =>
-            new RampedHalfAndHalfTreeCreator(minimumDepth, maximumDepth));
+        var searchSpace = new ExpressionTreeSearchSpace(15, 4, [Symbols.Addition], ["x0"], constants: []);
+        var creator = new RampedHalfAndHalfTreeCreator { MinimumDepth = minimumDepth, MaximumDepth = maximumDepth };
+
+        Should.Throw<InvalidOperationException>(() =>
+            creator.Create(1, RandomNumberGenerator.Create(123), searchSpace));
     }
 
     [Fact]

@@ -46,7 +46,7 @@ public sealed class LocalPerturbationMutatorTests
             new VariableSymbol(["x1"])
         ]);
 
-        var offspring = new LocalPerturbationMutator().Mutate(
+        var offspring = new LocalPerturbationMutator().MutateCandidate(
             parent,
             new SequenceRandomNumberGenerator(0.0, 0.9),
             searchSpace);
@@ -123,11 +123,14 @@ public sealed class LocalPerturbationMutatorTests
         result.ToInfixString().ShouldBe("(2 + 3)");
     }
 
-    [Fact]
-    public void Each_RejectsInvalidProbabilitiesDuringConfiguration()
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(1.1)]
+    [InlineData(double.NaN)]
+    public void Each_RetainsProbabilitiesOutsideTheUnitRange(double probability)
     {
-        Should.Throw<ArgumentOutOfRangeException>(() => LocalPerturbationTargets.Each(-0.1));
-        Should.Throw<ArgumentOutOfRangeException>(() => LocalPerturbationTargets.Each(1.1));
-        Should.Throw<ArgumentOutOfRangeException>(() => LocalPerturbationTargets.Each(double.NaN));
+        LocalPerturbationTargets.Each(probability)
+            .ShouldBeOfType<EachLocalPerturbationTarget>()
+            .Probability.ShouldBe(probability);
     }
 }

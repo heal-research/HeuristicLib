@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -6,37 +5,28 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-[Equatable]
-public partial record ObservableCrossover<TCandidate, TSearchSpace, TProblem>
-  : WrappingCrossover<TCandidate, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record ObservableCrossover<TCandidate, TSearchSpace, TProblem>
+    : WrappingCrossover<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ICrossover<TCandidate, TSearchSpace, TProblem> Crossover => InnerCrossover;
+    public ValueArray<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; init; }
 
-    [OrderedEquality]
-    public ImmutableArray<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
-
-    public ObservableCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, ImmutableArray<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers)
-      : base(crossover)
+    public ObservableCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> childCrossover, params IReadOnlyList<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : base(childCrossover)
     {
-        Observers = observers;
+        Observers = observers.ToValueArray();
     }
 
-    public ObservableCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, params IEnumerable<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers)
-      : this(crossover, [.. observers])
-    {
-    }
+    protected override WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> childCrossover) =>
+        new Instance(childCrossover, Observers);
 
-    protected override WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> innerCrossover) =>
-        new Instance(innerCrossover, Observers);
-
-    private sealed class Instance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> innerCrossover, ImmutableArray<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers)
-        : WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(innerCrossover)
+    private sealed class Instance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> childCrossover, ValueArray<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(childCrossover)
     {
-        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            var result = InnerCrossover.Cross(parents, random, searchSpace, problem);
+            var result = ChildCrossover.Cross(parents, random, searchSpace, problem);
             foreach (var observer in observers)
             {
                 observer.AfterCross(result, parents, searchSpace, problem);
@@ -47,19 +37,38 @@ public partial record ObservableCrossover<TCandidate, TSearchSpace, TProblem>
     }
 }
 
-public interface ICrossoverObserver<in TCandidate, in TSearchSpace, in TProblem>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    void AfterCross(IReadOnlyList<TCandidate> offspring, IReadOnlyList<IParents<TCandidate>> parents, TSearchSpace searchSpace, TProblem problem);
-}
-
-public sealed class ActionCrossoverObserver<TCandidate, TSearchSpace, TProblem>(Action<IReadOnlyList<TCandidate>, IReadOnlyList<IParents<TCandidate>>, TSearchSpace, TProblem> afterCross) : ICrossoverObserver<TCandidate, TSearchSpace, TProblem>
+public interface ICrossoverObserver<TCandidate, in TSearchSpace, in TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public void AfterCross(IReadOnlyList<TCandidate> offspring, IReadOnlyList<IParents<TCandidate>> parents, TSearchSpace searchSpace, TProblem problem) =>
+    void AfterCross(IReadOnlyList<TCandidate> offspring, IReadOnlyList<Parents<TCandidate>> parents, TSearchSpace searchSpace, TProblem problem);
+}
+
+public sealed class ActionCrossoverObserver<TCandidate, TSearchSpace, TProblem>(Action<IReadOnlyList<TCandidate>, IReadOnlyList<Parents<TCandidate>>, TSearchSpace, TProblem> afterCross)
+    : ICrossoverObserver<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+{
+    public void AfterCross(IReadOnlyList<TCandidate> offspring, IReadOnlyList<Parents<TCandidate>> parents, TSearchSpace searchSpace, TProblem problem) =>
         afterCross(offspring, parents, searchSpace, problem);
+}
+
+public static class ObservableCrossover
+{
+    public static ObservableCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> childCrossover, params IReadOnlyList<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childCrossover, observers);
+
+    public static ObservableCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> childCrossover, Action<IReadOnlyList<TCandidate>, IReadOnlyList<Parents<TCandidate>>, TSearchSpace, TProblem> afterCross)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childCrossover, new ActionCrossoverObserver<TCandidate, TSearchSpace, TProblem>(afterCross));
+
+    public static ObservableCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> childCrossover, Action<IReadOnlyList<TCandidate>> afterCross)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childCrossover, new ActionCrossoverObserver<TCandidate, TSearchSpace, TProblem>((offspring, _, _, _) => afterCross(offspring)));
 }
 
 public static class ObservableCrossoverExtensions
@@ -70,9 +79,9 @@ public static class ObservableCrossoverExtensions
     {
         public ObservableCrossover<TCandidate, TSearchSpace, TProblem> ObserveWith(ICrossoverObserver<TCandidate, TSearchSpace, TProblem> observer) =>
             new ObservableCrossover<TCandidate, TSearchSpace, TProblem>(crossover, observer);
-        public ObservableCrossover<TCandidate, TSearchSpace, TProblem> ObserveWith(params IEnumerable<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
+        public ObservableCrossover<TCandidate, TSearchSpace, TProblem> ObserveWith(params IReadOnlyList<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
             new ObservableCrossover<TCandidate, TSearchSpace, TProblem>(crossover, observers);
-        public ObservableCrossover<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>, IReadOnlyList<IParents<TCandidate>>, TSearchSpace, TProblem> afterCross) =>
+        public ObservableCrossover<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>, IReadOnlyList<Parents<TCandidate>>, TSearchSpace, TProblem> afterCross) =>
             crossover.ObserveWith(new ActionCrossoverObserver<TCandidate, TSearchSpace, TProblem>(afterCross));
         public ObservableCrossover<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>> afterCross) =>
             crossover.ObserveWith(new ActionCrossoverObserver<TCandidate, TSearchSpace, TProblem>((offspring, _, _, _) => afterCross(offspring)));

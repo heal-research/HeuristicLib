@@ -1,15 +1,20 @@
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
-public record NoChangeMutator<TCandidate> : SingleSolutionMutator<TCandidate>
+public record NoChangeMutator<TCandidate> : SingleCandidateMutator<TCandidate>
 {
     public static readonly NoChangeMutator<TCandidate> Instance = new();
 
-    public override TCandidate Mutate(TCandidate parent, IRandomNumberGenerator random) => NoChangeMutator.Mutate(parent, random);
+    public override TCandidate MutateCandidate(TCandidate parent, IRandomNumberGenerator random) => NoChangeMutator.Mutate(parent, random);
 }
 
 public static class NoChangeMutator
 {
+    public static NoChangeMutator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => NoChangeMutator<TCandidate>.Instance;
+
     public static TCandidate Mutate<TCandidate>(TCandidate parent, IRandomNumberGenerator random) => parent;
 }

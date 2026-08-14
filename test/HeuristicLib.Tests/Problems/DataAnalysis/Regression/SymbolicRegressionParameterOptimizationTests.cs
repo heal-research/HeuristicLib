@@ -134,9 +134,6 @@ public class SymbolicRegressionParameterOptimizationTests
         add.AddSubtree(numberTreeNode);
         tree.Root[0].AddSubtree(add);
 
-        var originalWeight = variableTreeNode.Weight;
-        var originalConstant = numberTreeNode.Value;
-
         var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
             problem.Interpreter,
             tree,
@@ -243,7 +240,7 @@ public class SymbolicRegressionParameterOptimizationTests
         var y = problem.Evaluate(tree)[0];
 
         y.ShouldBe(0.0, 1e-8);
-        (quality == 0).ShouldBeTrue();
+        quality.ShouldBe(0.0, 1e-12);
     }
 
     private static readonly double[,] DoubleXData = { { 0, 0 }, { 1, 2 }, { 2, 4 }, { 3, 6 }, { 4, 8 }, { 5, 10 } };
@@ -298,7 +295,7 @@ public class SymbolicRegressionParameterOptimizationTests
         tree.Root[0].AddSubtree(xNode);
         SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree).ShouldBeTrue();
 
-        var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
+        SymbolicRegressionParameterOptimization.OptimizeParameters(
             problem.Interpreter,
             tree,
             problem.ProblemData,

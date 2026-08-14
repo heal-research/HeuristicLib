@@ -9,6 +9,9 @@ public interface IRandomNumberGenerator
     //byte NextByte();
     //void NextBytes(Span<byte> buffer);
 
+    /// <summary>
+    /// Creates a deterministic child generator without drawing from or changing the state of this generator. Concurrent calls on the same generator are supported.
+    /// </summary>
     IRandomNumberGenerator Fork(ulong forkKey);
 }
 

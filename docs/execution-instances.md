@@ -74,13 +74,14 @@ Execution instances currently have no disposal contract. Framework managed state
 
 Explicitly authored execution instances matter when working on:
 
-* algorithms and meta algorithms
-* advanced analyzer and observation plumbing
-* operators that coordinate child execution instances or need custom execution structure
+- algorithms and meta algorithms
+- advanced analyzer and observation plumbing
+- operators that coordinate child execution instances or need custom execution structure
 
 Every algorithm uses an authored execution instance. Ordinary operators can instead use stateless or framework managed state authoring bases when they do not coordinate execution graph dependencies.
 
 ## Related pages
 
 - [Algorithm](algorithm.md)
+- [Operator authoring](operator-authoring.md)
 - [Execution model](execution-model.md)

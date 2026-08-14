@@ -29,5 +29,5 @@ public class FuncProblem<TCandidate, TSearchSpace> : SingleSolutionProblem<TCand
 
     private Func<TCandidate, ObjectiveVector> EvaluateFunc { get; }
 
-    public override ObjectiveVector Evaluate(TCandidate solution, IRandomNumberGenerator random) => EvaluateFunc(solution);
+    public override ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random) => EvaluateFunc(candidate);
 }

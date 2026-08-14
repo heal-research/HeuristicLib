@@ -170,8 +170,9 @@ public sealed class SubtreeCrossoverTests
     [InlineData(-0.01)]
     [InlineData(1.01)]
     [InlineData(double.NaN)]
-    public void Constructor_RejectsInvalidInternalNodeProbability(double probability)
+    public void InternalNodeProbability_OutsideTheUnitRangeIsRetainedAsConfigured(double probability)
     {
-        Should.Throw<ArgumentOutOfRangeException>(() => new SubtreeCrossover(probability));
+        new SubtreeCrossover { InternalNodeProbability = probability }
+            .InternalNodeProbability.ShouldBe(probability);
     }
 }

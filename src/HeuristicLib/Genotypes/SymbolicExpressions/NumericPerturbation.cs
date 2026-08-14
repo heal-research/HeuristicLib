@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Random.Distributions;
 
@@ -49,11 +48,10 @@ public sealed record ResampleInitialNumericPerturbation : NumericPerturbation
     }
 }
 
-[Equatable]
-public sealed partial record ChooseNumericPerturbation : NumericPerturbation
+public sealed record ChooseNumericPerturbation : NumericPerturbation
 {
-    [OrderedEquality] public ImmutableArray<NumericPerturbation> Options { get; }
-    [OrderedEquality] public ImmutableArray<double> Weights { get; }
+    public ValueArray<NumericPerturbation> Options { get; }
+    public ValueArray<double> Weights { get; }
 
     public ChooseNumericPerturbation(ImmutableArray<NumericPerturbation> options)
     {
@@ -85,16 +83,15 @@ public sealed partial record ChooseNumericPerturbation : NumericPerturbation
 
     public override bool TryApply(double value, EvolvableConstantSymbol symbol, IRandomNumberGenerator random, out double perturbed)
     {
-        var perturbationIndex = WeightSelection.SelectIndex(random, Options.Length, Weights);
+        var perturbationIndex = WeightSelection.SelectIndex(random, Options.Count, Weights.AsSpan());
         var perturbation = Options[perturbationIndex];
         return perturbation.TryApply(value, symbol, random, out perturbed);
     }
 }
 
-[Equatable]
-public sealed partial record ChainNumericPerturbation : NumericPerturbation
+public sealed record ChainNumericPerturbation : NumericPerturbation
 {
-    [OrderedEquality] public ImmutableArray<NumericPerturbation> Stages { get; }
+    public ValueArray<NumericPerturbation> Stages { get; }
 
     public ChainNumericPerturbation(ImmutableArray<NumericPerturbation> stages)
     {

@@ -1,9 +1,8 @@
-// ReSharper disable InconsistentNaming
-
-#pragma warning disable S101
 namespace HEAL.HeuristicLib.APIs.RoarNet;
 
+#pragma warning disable S101
 public interface Operations
+#pragma warning restore S101
 {
     Solution apply_move(Move move, Solution solution);
     Neighbourhood construction_neighbourhood(Problem problem);

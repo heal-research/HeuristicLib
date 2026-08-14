@@ -22,7 +22,7 @@ public sealed class InteractiveSymbolicRegressionTests
             parameters,
             TestContext.Current.CancellationToken);
 
-        population.EvaluatedCandidates.Length.ShouldBe(parameters.PopulationSize);
+        population.EvaluatedCandidates.Count.ShouldBe(parameters.PopulationSize);
         callbackCount.ShouldBe(parameters.Generations);
     }
 
@@ -65,7 +65,7 @@ public sealed class InteractiveSymbolicRegressionTests
             parameters,
             TestContext.Current.CancellationToken);
 
-        population.EvaluatedCandidates.Length.ShouldBe(parameters.PopulationSize);
+        population.EvaluatedCandidates.Count.ShouldBe(parameters.PopulationSize);
         callbackCount.ShouldBe(parameters.Generations);
     }
 

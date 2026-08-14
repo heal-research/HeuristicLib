@@ -294,6 +294,16 @@ Use operator for the reusable configuration unless the text explicitly says oper
 
 See also: Algorithm, Configuration, Evaluator, Execution instance.
 
+### Child operator
+
+Status: `Canonical`
+
+A child operator is an operator configuration directly referenced by another configuration.
+
+Child describes one immediate edge in the configuration graph. The same child operator may be referenced by multiple configurations, so the term does not imply exclusive ownership or a tree structure. Use a role-specific form such as child mutator when the operator role matters. Use nested operator only when referring more generally to an operator at any depth below another configuration.
+
+See also: Configuration graph, Operator.
+
 ### Operator roles
 
 Status: `Canonical`
@@ -398,6 +408,16 @@ Use interceptor for state post processing. Do not use it for read only analysis.
 
 See also: Analyzer, Observation, Operator, Search state.
 
+### Single-candidate operator
+
+Status: `Canonical`
+
+A single-candidate operator is a regular operator whose public role operation remains batch-wise. It can be used anywhere an ordinary operator of that role is expected and does not introduce a separate single-candidate execution contract.
+
+The term describes an authoring pattern: the operator author implements the role logic for one candidate, and the single-candidate operator applies that logic independently across a batch of candidates and handles the batching. Use a role-specific form such as single-candidate mutator when the operator role matters.
+
+See also: Candidate, Operator, Operator roles.
+
 ### Termination
 
 Status: `Canonical`
@@ -445,7 +465,9 @@ See also: Configuration, Execution graph.
 
 Status: `Canonical`
 
-A run is one logical execution of an algorithm configuration on a problem.
+A run is an object that owns one logical execution setup.
+
+An `AlgorithmRun` executes one algorithm configuration on a problem. An `ExperimentRun` coordinates the independent algorithm runs materialized by one experiment configuration. Prefer the concrete term when the distinction matters.
 
 When a meta-algorithm coordinates child algorithms, the run is created by the algorithm started by the user. Child algorithms and operators participate in that same run unless they are explicitly started as separate runs.
 
@@ -530,6 +552,28 @@ Drawing random values from an RNG changes its state, so draw order matters. Fork
 
 See also: Experiment, Run.
 
+### Value array
+
+Status: `Canonical`
+
+A value array is an immutable ordered collection that compares by its elements rather than by the identity of its backing storage, represented by `ValueArray<T>`.
+
+Configurations use a value array for every retained ordered collection, such as child operators, pipeline stages or weights, so that structurally identical configurations compare equal without an equality attribute or a hand-written comparison. An `ImmutableArray<T>` compares by underlying array reference and must not be used for collection state that participates in equality. Execution instances keep `ImmutableArray<T>`, because they are resolved by reference identity and never compared structurally.
+
+See also: Child operator, Configuration, Execution instance, Execution instance registry.
+
+### Execution concurrency
+
+Status: `Canonical`
+
+Execution concurrency describes whether independent operations must execute sequentially or may execute concurrently.
+
+`Sequential()` preserves input order and requires each operation to finish before the next starts. `Concurrent()` permits all operations to overlap. `Concurrent(maximumConcurrency)` limits active operations without promising sequential ordering.
+
+Execution concurrency describes scheduling permission and bounds. It does not imply dedicated threads.
+
+See also: Execution instance, Run.
+
 ## Analysis and Experiments
 
 ### Analyzer
@@ -589,6 +633,26 @@ An experiment is an execution setup that coordinates multiple independent runs.
 
 An experiment is not an algorithm. It does not produce one continuous stream of search states and does not pass search states from one run to the next. A repeated experiment executes the same algorithm configuration multiple times. A comparative experiment executes different algorithm configurations, parameter settings, problems or problem instances.
 
-Seed policy is an important part of an experiment because it defines how random seeds are assigned to independent runs, especially when stochastic algorithms are repeated or executed in parallel.
+Random assignment policy is an important part of an experiment because it defines how deterministic random forks are assigned to independent runs, especially when stochastic algorithms are repeated or executed concurrently.
 
-See also: Algorithm, Problem, Problem instance, Run.
+See also: Algorithm, Experiment trial, Problem, Problem instance, Run.
+
+### Experiment trial
+
+Status: `Canonical`
+
+An experiment trial is one materialized algorithm configuration and algorithm run within an experiment run.
+
+Each trial has a deterministic typed key, its own algorithm run, its own execution registry and its own random number generator fork. Trials do not pass search states or analyzer state to one another.
+
+See also: Algorithm, Experiment, Run.
+
+### Trial analyzer
+
+Status: `Canonical`
+
+A trial analyzer describes how an experiment run selects one operator from each trial algorithm configuration and creates an analyzer for that selected operator.
+
+The trial analyzer is also the typed lookup object used to retrieve the ordered analyzer results from all trials.
+
+See also: Analyzer, Experiment trial, Run.

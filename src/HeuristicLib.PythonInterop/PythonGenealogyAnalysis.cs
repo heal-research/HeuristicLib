@@ -26,9 +26,6 @@ using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 using HEAL.HeuristicLib.States;
 
-#pragma warning disable S1104
-#pragma warning disable S1104
-
 namespace HEAL.HeuristicLib.PythonInterop;
 
 public class PythonGenealogyAnalysis
@@ -41,8 +38,7 @@ public class PythonGenealogyAnalysis
         RunConfigurableRepeated<TCandidate>(int repetitions, Func<int, ExperimentResult<TCandidate>> experiment,
                                             int seed)
     {
-        return BatchExecution.Parallel<ExperimentResult<TCandidate>>(repetitions, r => experiment(r.NextInt()),
-                                 RandomNumberGenerator.Create(seed), maxDegreeOfParallelism: -1)
+        return BatchExecution.Parallel<ExperimentResult<TCandidate>>(repetitions, r => experiment(r.NextInt()), RandomNumberGenerator.Create(seed))
                              .ToArray();
     }
 
@@ -80,7 +76,7 @@ public class PythonGenealogyAnalysis
         parameters = new SymRegExperimentParameters(parameters)
         {
             Creator = parameters.Creator ?? new ProbabilisticTreeCreator(),
-            Crossover = parameters.Crossover ?? new SubtreeCrossover(0.9),
+            Crossover = parameters.Crossover ?? new SubtreeCrossover { InternalNodeProbability = 0.9 },
             Mutator = parameters.Mutator ??
                 new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace,
                     IProblem<ExpressionTree, ExpressionTreeSearchSpace>>([.. SymbolicExpressionMutators.Default])
@@ -160,7 +156,7 @@ public class PythonGenealogyAnalysis
                     {
                         gaAlgorithm = gaAlgorithm with
                         {
-                            Interceptor = new IdentityInterceptor<TCandidate, PopulationState<TCandidate>>()
+                            Interceptor = IdentityInterceptor.For(gaAlgorithm)
                         };
                     }
 
@@ -193,7 +189,7 @@ public class PythonGenealogyAnalysis
                     {
                         esAlgorithm = esAlgorithm with
                         {
-                            Interceptor = new IdentityInterceptor<TCandidate, PopulationState<TCandidate>>()
+                            Interceptor = IdentityInterceptor.For(esAlgorithm)
                         };
                     }
 
@@ -230,7 +226,7 @@ public class PythonGenealogyAnalysis
                     {
                         nsga2Algorithm = nsga2Algorithm with
                         {
-                            Interceptor = new IdentityInterceptor<TCandidate, PopulationState<TCandidate>>()
+                            Interceptor = IdentityInterceptor.For(nsga2Algorithm)
                         };
                     }
 
@@ -264,21 +260,20 @@ public class PythonGenealogyAnalysis
     {
         public ExperimentResult<TCandidate> ToExperimentResult(AlgorithmRun run)
         {
-            var qRes = run.GetAnalyzerResult(Qualities);
+            var qRes = run.GetResult(Qualities);
 
             var rankGraph = string.Empty;
             IReadOnlyList<List<double>> rankLines = [];
 
             if (RankAnalysis is not null)
             {
-                var rankResult = run.GetAnalyzerResult(RankAnalysis).Result();
+                var rankResult = run.GetResult(RankAnalysis).Result();
                 rankGraph = rankResult.Graph.ToGraphViz();
                 rankLines = rankResult.Ranks.Select(x => x.ToList()).ToArray();
             }
 
             IReadOnlyList<EvaluatedCandidate<TCandidate>[]> apRes = [];
-            if (AllPopulations is not null && run.TryGetAnalyzerResult(AllPopulations, out var populations) &&
-                populations is not null)
+            if (AllPopulations is not null && run.TryGetResult(AllPopulations, out var populations))
             {
                 apRes = populations;
             }

@@ -6,9 +6,9 @@ namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
 
 /// <summary>Replaces one operation occurrence with a terminal sampled from the search space.</summary>
 public sealed record ShrinkSubtreeMutator
-    : SingleSolutionMutator<ExpressionTree, ExpressionTreeSearchSpace>
+    : SingleCandidateMutator<ExpressionTree, ExpressionTreeSearchSpace>
 {
-    public override ExpressionTree Mutate(
+    public override ExpressionTree MutateCandidate(
         ExpressionTree parent,
         IRandomNumberGenerator random,
         ExpressionTreeSearchSpace searchSpace)

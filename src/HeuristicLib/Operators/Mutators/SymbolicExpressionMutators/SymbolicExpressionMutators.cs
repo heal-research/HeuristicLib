@@ -8,7 +8,7 @@ public static class SymbolicExpressionMutators
     /// <summary>
     /// Gets the standard symbolic-regression mutation set. Selection strategy and weights are defined by its consumer.
     /// </summary>
-    public static ImmutableArray<SingleSolutionMutator<ExpressionTree, ExpressionTreeSearchSpace>> Default { get; } =
+    public static ImmutableArray<SingleCandidateMutator<ExpressionTree, ExpressionTreeSearchSpace>> Default { get; } =
     [
         new NodeReplacementMutator(),
         new LocalPerturbationMutator(LocalPerturbationTargets.All),

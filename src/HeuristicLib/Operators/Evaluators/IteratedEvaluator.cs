@@ -5,26 +5,37 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public record IteratedEvaluator<TCandidate, TSearchSpace, TProblem>
+/// <summary>
+/// Feeds the candidate returned by the child evaluator back into it, so an evaluator that transforms candidates is
+/// applied repeatedly. The evaluated candidates of the final iteration are returned.
+/// </summary>
+public sealed record IteratedEvaluator<TCandidate, TSearchSpace, TProblem>
     : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    private readonly int iterations;
+    /// <summary>
+    /// Gets the number of times the child evaluator is applied to each candidate.
+    /// </summary>
+    public int Iterations { get; init; }
 
-    public IteratedEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, int iterations)
-        : base(evaluator)
+    public IteratedEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, int iterations)
+        : base(childEvaluator)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
-        this.iterations = iterations;
+        Iterations = iterations;
     }
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(
-        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
-        new Instance(innerEvaluator, iterations);
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(
+        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator)
+    {
+        if (Iterations <= 0)
+            throw new InvalidOperationException("Iterations must be positive.");
 
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator, int iterations)
-        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(innerEvaluator)
+        return new Instance(childEvaluator, Iterations);
+    }
+
+    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, int iterations)
+        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(
             IReadOnlyList<TCandidate> candidates,
@@ -37,7 +48,7 @@ public record IteratedEvaluator<TCandidate, TSearchSpace, TProblem>
 
             for (var i = 0; i < iterations; i++)
             {
-                evaluatedCandidates = InnerEvaluator.Evaluate(currentCandidates, random.Fork(i), searchSpace, problem);
+                evaluatedCandidates = ChildEvaluator.Evaluate(currentCandidates, random.Fork(i), searchSpace, problem);
                 currentCandidates = evaluatedCandidates.Select(evaluated => evaluated.Candidate).ToArray();
             }
 

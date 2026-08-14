@@ -12,7 +12,6 @@ using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
-using Xunit;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Usage;
 
@@ -52,11 +51,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var algorithm = new StateTerminatedAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
-        {
-            Algorithm = innerAlgorithm,
-            Terminator = new FirstEvaluatedStateTerminator()
-        };
+        var algorithm = innerAlgorithm.WithTerminator(new FirstEvaluatedStateTerminator());
 
         var finalState = await algorithm.CompleteAsync(
           problem,
@@ -81,11 +76,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var algorithm = new StateTerminatedAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
-        {
-            Algorithm = innerAlgorithm,
-            Terminator = new CancellationTokenTerminator<RealVector>(stopAfterCurrentState.Token)
-        };
+        var algorithm = innerAlgorithm.WithTerminator(CancellationTokenTerminator.For(problem, stopAfterCurrentState.Token));
 
         var states = algorithm.Stream(
           problem,
@@ -110,13 +101,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var algorithm = new StateTerminatedAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
-        {
-            Algorithm = innerAlgorithm,
-            Terminator = new AfterElapsedTimeTerminator<RealVector>(
-              TimeSpan.FromSeconds(1),
-              timeProvider)
-        };
+        var algorithm = innerAlgorithm.WithTerminator(AfterElapsedTimeTerminator.For(problem, TimeSpan.FromSeconds(1), timeProvider));
 
         var states = algorithm.Stream(
           problem,
@@ -154,9 +139,9 @@ public class ResearcherAuthoringSpecs
     }
 
     private sealed record PullTowardZeroMutator
-      : SingleSolutionMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+      : SingleCandidateMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        public override RealVector Mutate(
+        public override RealVector MutateCandidate(
           RealVector parent,
           IRandomNumberGenerator random,
           RealVectorSearchSpace searchSpace,
@@ -180,9 +165,9 @@ public class ResearcherAuthoringSpecs
     }
 
     private sealed record TestFunctionOriginCreator
-      : SingleSolutionCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+      : SingleCandidateCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        public override RealVector Create(
+        public override RealVector CreateCandidate(
           IRandomNumberGenerator random,
           RealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)

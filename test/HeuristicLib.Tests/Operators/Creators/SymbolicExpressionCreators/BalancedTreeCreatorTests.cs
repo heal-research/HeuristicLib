@@ -140,11 +140,13 @@ public sealed class BalancedTreeCreatorTests
     public void CreatorInstance_UsesItsConfiguredLengthDistributionAndIrregularity()
     {
         var searchSpace = CreateBinarySearchSpace(maximumLength: 7, maximumDepth: 4);
-        var creator = new BalancedTreeCreator(
-            irregularity: 0.0,
-            requestedLengthDistribution: new FixedDistribution<int>(7));
+        var creator = new BalancedTreeCreator
+        {
+            Irregularity = 0.0,
+            RequestedLengthDistribution = new FixedDistribution<int>(7)
+        };
 
-        var expression = creator.Create(RandomNumberGenerator.Create(123), searchSpace);
+        var expression = creator.CreateCandidate(RandomNumberGenerator.Create(123), searchSpace);
 
         creator.Irregularity.ShouldBe(0.0);
         expression.Length.ShouldBe(7);
@@ -153,12 +155,22 @@ public sealed class BalancedTreeCreatorTests
 
     [Theory]
     [InlineData(-0.1)]
-    [InlineData(1.1)]
+    [InlineData(double.NegativeInfinity)]
     [InlineData(double.NaN)]
-    public void Constructor_RejectsInvalidIrregularity(double irregularity)
+    public void Irregularity_OutsideTheUnitRangeIsRetainedAndNeverAllowsAnEarlyTerminal(double irregularity)
     {
-        Should.Throw<ArgumentOutOfRangeException>(() =>
-            new BalancedTreeCreator(irregularity));
+        var searchSpace = CreateBinarySearchSpace(maximumLength: 7, maximumDepth: 4);
+        var creator = new BalancedTreeCreator
+        {
+            Irregularity = irregularity,
+            RequestedLengthDistribution = new FixedDistribution<int>(7)
+        };
+
+        creator.Irregularity.ShouldBe(irregularity);
+
+        var expression = creator.CreateCandidate(RandomNumberGenerator.Create(123), searchSpace);
+
+        expression.Length.ShouldBe(7);
     }
 
     [Theory]

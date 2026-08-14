@@ -8,15 +8,21 @@ namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
 /// <summary>
 /// Creates expression trees using Luke's Probabilistic Tree Creation 2 (PTC2) algorithm.
 /// </summary>
-public sealed record ProbabilisticTreeCreator(IDistribution<int>? RequestedLengthDistribution = null)
-    : SingleSolutionCreator<ExpressionTree, ExpressionTreeSearchSpace>
+public sealed record ProbabilisticTreeCreator
+    : SingleCandidateCreator<ExpressionTree, ExpressionTreeSearchSpace>
 {
+    /// <summary>
+    /// Gets the requested-length distribution, or <see langword="null"/> to sample uniformly
+    /// from the search-space length range.
+    /// </summary>
+    public IDistribution<int>? RequestedLengthDistribution { get; init; }
+
     /// <summary>
     /// Creates a tree whose requested length is sampled from <see cref="RequestedLengthDistribution"/>.
     /// When no distribution is supplied, the requested length is sampled uniformly from the search-space
     /// length range.
     /// </summary>
-    public override ExpressionTree Create(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
+    public override ExpressionTree CreateCandidate(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
     {
         var requestedLength = RequestedLengthDistribution?.Sample(random);
         return ProbabilisticTreeCreation.Create(random, searchSpace, requestedLength);

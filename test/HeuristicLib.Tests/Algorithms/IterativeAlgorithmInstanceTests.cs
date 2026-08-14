@@ -71,6 +71,18 @@ public class IterativeAlgorithmInstanceTests
     }
 
     [Fact]
+    public async Task Interceptor_ReceivesTheIterationRandom()
+    {
+        var interceptor = new RecordingInterceptor();
+        var random = new RecordingRandom();
+        var instance = new ProbeInstance(interceptor) { TerminalAtValue = 2 };
+
+        _ = await Collect(instance, random, ct: TestContext.Current.CancellationToken);
+
+        interceptor.Random.ShouldBeSameAs(random);
+    }
+
+    [Fact]
     public async Task TerminalState_IsYieldedOnceBeforeCompletion()
     {
         var instance = new ProbeInstance { TerminalAtValue = 1 };
@@ -95,7 +107,7 @@ public class IterativeAlgorithmInstanceTests
 
     private static async Task<List<ProbeState>> Collect(ProbeInstance instance, IRandomNumberGenerator? random = null, ProbeState? initialState = null, CancellationToken ct = default)
     {
-        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(value => value, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+        var problem = FuncProblem.Create((int value) => value, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var states = new List<ProbeState>();
         await foreach (var state in instance.RunStreamingAsync(problem, random ?? new RecordingRandom(), initialState, ct))
         {
@@ -153,10 +165,12 @@ public class IterativeAlgorithmInstanceTests
     private sealed class RecordingInterceptor : IInterceptorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>
     {
         public int Calls { get; private set; }
+        public IRandomNumberGenerator? Random { get; private set; }
 
-        public ProbeState Transform(ProbeState currentState, ProbeState? previousState, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
+        public ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
         {
             Calls++;
+            Random = random;
             return currentState with { Value = currentState.Value + 1 };
         }
     }

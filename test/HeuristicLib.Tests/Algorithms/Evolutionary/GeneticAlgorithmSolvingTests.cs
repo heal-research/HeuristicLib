@@ -17,7 +17,7 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.Evolutionary;
 public class GeneticAlgorithmSolvingTests
 {
     [Fact]
-    public void RunToCompletion_ReturnsPopulationWithinProblemSearchSpace()
+    public void Complete_ReturnsPopulationWithinProblemSearchSpace()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem);
@@ -27,12 +27,12 @@ public class GeneticAlgorithmSolvingTests
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken);
 
-        result.Population.EvaluatedCandidates.Length.ShouldBe(5);
+        result.Population.EvaluatedCandidates.Count.ShouldBe(5);
         result.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
     }
 
     [Fact]
-    public void RunStreaming_YieldsConfiguredNumberOfPopulationStates()
+    public void Stream_YieldsConfiguredNumberOfPopulationStates()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem);
@@ -43,14 +43,14 @@ public class GeneticAlgorithmSolvingTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(5);
-        results.All(result => result.Population.EvaluatedCandidates.Length == 5).ShouldBeTrue();
+        results.All(result => result.Population.EvaluatedCandidates.Count == 5).ShouldBeTrue();
         results.SelectMany(result => result.Population.EvaluatedCandidates)
                .All(solution => problem.SearchSpace.Contains(solution.Candidate))
                .ShouldBeTrue();
     }
 
     [Fact]
-    public void RunStreaming_WithMaximumGenerationsOne_YieldsOnlyGeneratedInitialPopulation()
+    public void Stream_WithMaximumGenerationsOne_YieldsOnlyGeneratedInitialPopulation()
     {
         var problem = CreateProblem();
         var algorithm = CreateUnwrappedAlgorithm(problem) with
@@ -64,12 +64,12 @@ public class GeneticAlgorithmSolvingTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(1);
-        results.Single().Population.EvaluatedCandidates.Length.ShouldBe(5);
+        results.Single().Population.EvaluatedCandidates.Count.ShouldBe(5);
         results.Single().Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
     }
 
     [Fact]
-    public void RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfGenerationStates()
+    public void Stream_WithMaximumGenerations_YieldsConfiguredNumberOfGenerationStates()
     {
         var problem = CreateProblem();
         var algorithm = CreateUnwrappedAlgorithm(problem) with
@@ -83,11 +83,11 @@ public class GeneticAlgorithmSolvingTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(3);
-        results.All(result => result.Population.EvaluatedCandidates.Length == 5).ShouldBeTrue();
+        results.All(result => result.Population.EvaluatedCandidates.Count == 5).ShouldBeTrue();
     }
 
     [Fact]
-    public void RunStreaming_WithMaximumGenerationsAndInitialState_CountsOnlyNewlyProducedStates()
+    public void Stream_WithMaximumGenerationsAndInitialState_CountsOnlyNewlyProducedStates()
     {
         var problem = CreateProblem();
         var initialState = (CreateUnwrappedAlgorithm(problem) with
@@ -109,22 +109,48 @@ public class GeneticAlgorithmSolvingTests
           TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(2);
-        results.All(result => result.Population.EvaluatedCandidates.Length == 5).ShouldBeTrue();
+        results.All(result => result.Population.EvaluatedCandidates.Count == 5).ShouldBeTrue();
     }
 
-    [Fact]
-    public void Constructor_Throws_WhenMaximumGenerationsIsNotPositive()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Stream_WithNonpositiveMaximumGenerations_YieldsNoStates(int maximumGenerations)
     {
         var problem = CreateProblem();
-
-        Should.Throw<ArgumentOutOfRangeException>(() => CreateUnwrappedAlgorithm(problem) with
+        var algorithm = CreateUnwrappedAlgorithm(problem) with
         {
-            MaximumGenerations = 0
-        });
+            MaximumGenerations = maximumGenerations
+        };
+
+        algorithm.Stream(problem, RandomNumberGenerator.Create(43), ct: TestContext.Current.CancellationToken).ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// The mutation rate is a threshold against a random value in <c>[0, 1)</c>, so values outside <c>[0, 1]</c> and
+    /// <c>NaN</c> have stable meanings instead of being rejected.
+    /// </summary>
+    [Theory]
+    [InlineData(-1.0)]
+    [InlineData(2.0)]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    public void UnusualMutationRate_IsAccepted(double mutationRate)
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateUnwrappedAlgorithm(problem) with
+        {
+            MutationRate = mutationRate,
+            MaximumGenerations = 2
+        };
+
+        algorithm.MutationRate.ShouldBe(mutationRate);
+        algorithm.Stream(problem, RandomNumberGenerator.Create(43), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
     }
 
     [Fact]
-    public void RunStreaming_WithInternalTerminator_IncludesTriggeringState()
+    public void Stream_WithInternalTerminator_IncludesTriggeringState()
     {
         var problem = CreateProblem();
         var terminator = new RecordingPopulationTerminator(2);
@@ -144,7 +170,7 @@ public class GeneticAlgorithmSolvingTests
     }
 
     [Fact]
-    public void RunStreaming_WithInternalTerminatorAndInitialState_DoesNotCheckSuppliedInitialState()
+    public void Stream_WithInternalTerminatorAndInitialState_DoesNotCheckSuppliedInitialState()
     {
         var problem = CreateProblem();
         var initialState = (CreateUnwrappedAlgorithm(problem) with
@@ -173,7 +199,7 @@ public class GeneticAlgorithmSolvingTests
     }
 
     [Fact]
-    public void RunStreaming_MaximumGenerationsAndInternalTerminator_ComposeWithStopIfAnySemantics()
+    public void Stream_MaximumGenerationsAndInternalTerminator_ComposeWithStopIfAnySemantics()
     {
         var problem = CreateProblem();
         var terminator = new RecordingPopulationTerminator(2);
@@ -193,7 +219,7 @@ public class GeneticAlgorithmSolvingTests
     }
 
     [Fact]
-    public void RunStreaming_WithInternalTerminator_InvokesTerminatorOncePerProducedState()
+    public void Stream_WithInternalTerminator_InvokesTerminatorOncePerProducedState()
     {
         var problem = CreateProblem();
         var terminator = new RecordingPopulationTerminator(3);
@@ -212,7 +238,7 @@ public class GeneticAlgorithmSolvingTests
     }
 
     [Fact]
-    public void RunToCompletion_ReturnsSameFinalStateAsRunStreamingLastState()
+    public void Complete_ReturnsSameFinalStateAsStreamLastState()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem);
@@ -255,7 +281,7 @@ public class GeneticAlgorithmSolvingTests
             Crossover = new SinglePointCrossover(),
             Mutator = new GaussianMutator(0.1, 0.1),
             MutationRate = 0.5,
-            Selector = new RandomSelector<RealVector>(),
+            Selector = RandomSelector.For(problem),
             Elites = 0
         };
     }

@@ -36,7 +36,7 @@ Concretely:
 
 When the observable wrapper creates its execution instance, it resolves the underlying mutator execution instance from the registry:
 
-- `CreateExecutionInstance(...)` resolves the inner mutator from `ExecutionInstanceRegistry`.
+- `CreateExecutionInstance(...)` resolves the child mutator from `ExecutionInstanceRegistry`.
 - The returned observable instance delegates to that inner instance.
 
 At execution time:
@@ -129,7 +129,7 @@ var measured = new DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem>(
     timeProvider);
 ```
 
-The wrapper exposes the instrumented operator and its sink as properties regardless of how it was created.
+The wrapper exposes the instrumented operator through its `IMutator` role as `ChildMutator` and its sink as `Duration` regardless of how it was created.
 
 ## External sinks: `ObservationCounter`
 
@@ -219,8 +219,8 @@ In this system:
 
 - analyzer states call `RegisterObservations(ObservationPlan)`
 - the observation plan stores merged observation entries
-- `Run` installs merged observable replacements into each relevant `ExecutionInstanceRegistry`
-- users retrieve analyzer results from the run via `GetAnalyzerResult(...)`
+- `AlgorithmRun` installs merged observable replacements into each relevant `ExecutionInstanceRegistry`
+- users retrieve analyzer results from the run via `GetResult(...)`
 
 So observable wrappers and analyzers solve different problems:
 
@@ -229,10 +229,10 @@ So observable wrappers and analyzers solve different problems:
 
 ## Observable operators vs analyzers: when to use which
 
-HeuristicLib currently has **two related systems**:
+HeuristicLib has **two related systems**:
 
 1. **observable operator** system (`ObserveWith(...)`, `I*Observer`, `Observable*` wrappers)
-2. **analyzer** system (`IAnalyzer`, `CreateRun(problem, analyzers...)`, `GetAnalyzerResult(...)`)
+2. **analyzer** system (`IAnalyzer`, `WithAnalyzer(...)`, `GetResult(...)`)
 
 They are not competitors. The analyzer system is built **on top of** observable operators.
 
@@ -278,11 +278,37 @@ Typical characteristics:
 Typical API shape:
 
 ```csharp
-var analyzer = new QualityCurveAnalysis<TCandidate, TSearchSpace, TProblem>(evaluator);
-var run = algorithm.CreateRun(problem, analyzer);
-var finalState = run.RunToCompletion(random);
-var result = run.GetAnalyzerResult(analyzer);
+var run = algorithm.CreateRun(problem, random)
+    .WithAnalyzer(
+        Analyzer.BestQuality(evaluator),
+        out var bestQuality);
+
+var finalState = await run.CompleteAsync();
+var result = run.GetResult(bestQuality);
 ```
+
+The `out` overload is useful when an analyzer helper is called inline. It returns the same analyzer configuration that was attached to the run, so the variable naturally becomes the typed lookup object. An existing analyzer can instead be attached directly:
+
+```csharp
+var bestQuality = Analyzer.BestQuality(evaluator);
+var run = algorithm.CreateRun(problem, random)
+    .WithAnalyzer(bestQuality);
+```
+
+Experiment runs use the same fluent method. Their selector and factory overload returns a `TrialAnalyzer`, which is the typed lookup object for all corresponding trial results:
+
+```csharp
+var run = experiment.CreateRun(problem, random)
+    .WithAnalyzer(
+        algorithm => algorithm.Evaluator,
+        evaluator => Analyzer.BestQuality(evaluator),
+        out var bestQuality);
+
+var finalStates = await run.CompleteAsync();
+var results = run.GetResults(bestQuality);
+```
+
+`GetResults(...)` retrieves the complete ordered result set and therefore requires every trial run to have started. When trials are executed individually, aggregate results become available after all trials have started. Results from a separately attached analyzer on one trial remain available through `trial.Run.GetResult(...)`.
 
 Good fits:
 
@@ -304,7 +330,7 @@ Use **analyzers** when you want a **run-owned analysis object**.
 | Main purpose                 | local callback / instrumentation               | reusable run-scoped analysis                         |
 | Lifetime                     | execution-instance-driven                      | run-driven                                           |
 | State lives where?           | usually in an external sink or observer object | in the analyzer result returned by the run           |
-| Retrieval model              | you keep the sink yourself                     | `run.GetAnalyzerResult(analyzer)`                    |
+| Retrieval model              | you keep the sink yourself                     | `run.GetResult(analyzer)`                            |
 | Number of hook points        | often one                                      | one or many                                          |
 | Best for                     | logging, counters, quick diagnostics           | quality curves, genealogy, reusable analysis modules |
 | Relation to the other system | foundation                                     | built on top of observable operators                 |
@@ -332,5 +358,6 @@ Examples include observable wrappers for mutators, crossovers, evaluators, termi
 
 - [Operators](operators.md)
 - [Execution model](execution-model.md)
+- [Experiments](experiments.md)
 - [Configuration vs execution instances](execution-instances.md)
 - [Analyzer architecture](analyzer-architecture.md)

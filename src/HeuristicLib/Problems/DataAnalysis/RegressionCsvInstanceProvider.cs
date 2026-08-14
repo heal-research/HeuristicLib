@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
@@ -31,9 +30,15 @@ public static class RegressionCsvInstanceProvider
 
         // turn off input variables that are constant in the training partition
         var allowedInputVars = csvFileParser.Rows >= 3
-          ? dataset.DoubleVariables.Where(v => dataset.GetDoubleValues(v, Enumerable.Range(0, trainingRowCount)).Range() > 0 && v != targetVar).ToList()
+          ? dataset.DoubleVariables.Where(v => v != targetVar && HasVariation(dataset.GetDoubleValues(v, Enumerable.Range(0, trainingRowCount)))).ToList()
           : dataset.DoubleVariables.Where(v => v != targetVar).ToList();
 
         return new RegressionProblemData(dataset, targetVar, allowedInputVars, ..trainingRowCount);
+    }
+
+    private static bool HasVariation(IEnumerable<double> values)
+    {
+        var nonNanValues = values.Where(value => !double.IsNaN(value)).ToArray();
+        return nonNanValues.Length > 0 && nonNanValues.Range() > 0;
     }
 }

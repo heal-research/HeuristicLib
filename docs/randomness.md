@@ -13,6 +13,7 @@ There are two categories of operations:
   - If you call `Next...` in a different order, or a different number of times, you will get a different sequence.
 - **Creating independent child generators** via `Fork(ulong forkKey)`.
   - `Fork(...)` does **not** draw random numbers.
+  - `Fork(...)` does not modify the parent generator and may be called concurrently.
   - Forking is deterministic: the child generator is derived from the parent generator and the provided `forkKey`.
 
 This gives you a simple mental model:
@@ -84,8 +85,9 @@ Common fork keys:
 
 The execution APIs explicitly accept an RNG:
 
-- `RunToCompletion(problem, random, initialState?)`
-- `RunStreaming(problem, random, initialState?)`
+- `Complete(problem, random, initialState?)`
+- `CompleteAsync(problem, random, initialState?)`
+- `Stream(problem, random, initialState?)`
 
 This is intentional: algorithm behavior-affecting dependencies (especially randomness) stay visible and controllable.
 
@@ -126,23 +128,3 @@ The goal is that each layer adds one kind of convenience without creating a para
    - Vehicle: static factory methods on output types such as `RealVector` or `IntegerVector`
    - Typical API: `RealVector.CreateUniform(...)`, `RealVector.CreateNormal(...)`, `IntegerVector.CreateUniform(...)`
    - Use when: you prefer starting from the output type; these are ergonomic aliases only
-
-### Naming rule
-
-HeuristicLib does not use one naming pattern for every random layer.
-
-- scalar helpers use concept-first names because the result type is already implicit: `NextBool`, `NextDouble(low, high)`, `NextNormal`, `NextInts`, `NextNormals`
-- typed output helpers use target-first names because callers usually choose the output shape first: `NextRealVectorUniform`, `NextRealVectorNormal`, `NextIntegerVectorUniform`, `NextIntegerVectorNormal`
-- search-space helpers keep the same target-first names and add a search-space parameter instead of introducing a second naming scheme
-
-### Layering rule
-
-Higher layers may accept richer inputs, but they should build on lower layers rather than reimplementing the same sampling logic.
-
-- scalar helpers build on the primitive RNG
-- typed output helpers build on scalar helpers
-- search-space helpers build on typed output helpers
-- creators build on the existing random helper layers and add only operator-level guarantees
-- type-level factory aliases forward to the RNG helper layers
-
-This is also why HeuristicLib does not keep a separate general-purpose distribution-object layer for routine sampling. If a sampling behavior is just another convenience path to the same outcome, it should usually live in the extension-based layers above `IRandomNumberGenerator` instead of as a competing API surface.

@@ -1,5 +1,5 @@
-namespace HEAL.HeuristicLib.Operators.Neighborhoods;
+using HEAL.HeuristicLib.APIs.RoarNet;
 
-using APIs.RoarNet;
+namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 
 public record MutationMove(int forkKey) : Move;

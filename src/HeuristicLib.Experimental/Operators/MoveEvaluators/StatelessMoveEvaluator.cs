@@ -1,10 +1,10 @@
-namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using Execution;
-using Optimization;
-using Problems;
-using Random;
-using SearchSpaces;
+namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
 
 public abstract record StatelessMoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove>
     : IMoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove>,
@@ -17,12 +17,12 @@ public abstract record StatelessMoveEvaluator<TGenotype, TSearchSpace, TProblem,
         => this;
 
     public abstract ObjectiveVector Evaluate(
-        ObjectiveVector objective,
+        ObjectiveVector oldQuality,
         TGenotype genotype,
         TMove move,
         IRandomNumberGenerator random,
         TSearchSpace searchSpace,
         TProblem problem);
 
-    public ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotImplementedException();
+    public ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
 }

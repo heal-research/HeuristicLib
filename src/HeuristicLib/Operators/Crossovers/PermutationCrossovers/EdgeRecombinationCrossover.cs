@@ -4,18 +4,13 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
-public record EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation>
+public record EdgeRecombinationCrossover : SingleCandidateCrossover<Permutation>
 {
-    public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random)
-      => Cross(parents.Parent1, parents.Parent2, random);
+    public override Permutation CrossParents(Parents<Permutation> parents, IRandomNumberGenerator random) =>
+        Cross(parents.Parent1, parents.Parent2, random);
 
     public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator random)
     {
-        if (parent1.Count != parent2.Count)
-        {
-            throw new ArgumentException("EdgeRecombinationCrossover: The parent permutations are of unequal length.");
-        }
-
         var length = parent1.Count;
         var result = new int[length];
         var edgeList = new int[length, 4];
@@ -34,11 +29,6 @@ public record EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation>
                 index++;
             }
 
-            if (index == length)
-            {
-                throw new InvalidOperationException("Permutation doesn't contain number " + i + ".");
-            }
-
             edgeList[i, 0] = parent1[(index - 1 + length) % length];
             edgeList[i, 1] = parent1[(index + 1) % length];
             index = 0;
@@ -46,11 +36,6 @@ public record EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation>
             {
                 // search edges in parent2
                 index++;
-            }
-
-            if (index == length)
-            {
-                throw new InvalidOperationException("Permutation doesn't contain number " + i + ".");
             }
 
             var currentEdge = parent2[(index - 1 + length) % length];

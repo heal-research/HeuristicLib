@@ -10,25 +10,43 @@ At the user level, the important idea is simple:
 - a run executes that configuration on a problem
 - execution produces a stream of search states
 
-The core streaming shape is:
+The public streaming shape is:
 
 ```csharp
-IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
+ExecutionStream<TSearchState> Stream(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
 ```
 
-Convenience methods such as `RunToCompletion(...)` are just ways of consuming that stream.
+`Stream(...)`, `Complete(...)` and `CompleteAsync(...)` each create and execute a fresh `AlgorithmRun`. Create the run explicitly when attaching analyzers or when the run object itself is needed.
 
 Run-level `CancellationToken` parameters are for immediate execution interruption. Algorithms and operators may check that token before or during a step, so cancellation can stop the current iteration before it produces another state.
 
+## Execution concurrency
+
+`ExecutionConcurrency` is the general scheduling input for operations that may execute several independent items:
+
+```csharp
+ExecutionConcurrency.Sequential()
+ExecutionConcurrency.Concurrent()
+ExecutionConcurrency.Concurrent(4)
+```
+
+Sequential and concurrent execution are distinct categories. `Sequential()` requires one operation to finish before the next input starts and preserves input order. `Concurrent()` permits all inputs to overlap. `Concurrent(maximumConcurrency)` limits the number of active operations but does not promise sequential ordering. `Concurrent(1)` therefore remains categorically concurrent.
+
+Maximum concurrency describes active operations, not worker objects or dedicated threads. A scheduler may implement that bound with workers, tasks, asynchronous operations or synchronous parallel execution as appropriate. The current experiment scheduler uses it to bound active algorithm runs.
+
+`BatchExecution.Execute(...)` uses the same input for synchronous batches. `BatchExecution.Sequential(...)` and `BatchExecution.Parallel(...)` are convenience forms for fixed scheduling choices. All forms preserve output order and fork the supplied random number generator by input index. Concurrent execution follows normal TPL exception behavior, including aggregating callback failures.
+
+`SingleCandidateEvaluator` and `SingleSolutionProblem` default to sequential execution and expose `Concurrency` for explicitly enabling concurrent batch processing. When concurrent execution is selected, the single-candidate `EvaluateCandidate(...)` method may be called concurrently on the same execution instance. Implementations and their dependencies must support that use. `RepeatingEvaluator` likewise defaults to sequential execution because each repetition uses the same resolved child evaluator instance. Its `Repetitions` setting is the total evaluation count per candidate, and its objective-vector aggregation strategy defaults to component-wise arithmetic mean.
+
 ## The main authoring model
 
-Ordinary iterative algorithm configurations derive from `IterativeAlgorithm<...>`. Their execution instances derive from `IterativeAlgorithmInstance<...>`.
+Ordinary iterative algorithm configurations derive from `IterativeAlgorithm<TSelf, ...>`. `TSelf` is the concrete configuration type and supports type inference in fluent composition. Their execution instances derive from `IterativeAlgorithmInstance<...>`.
 
 The configuration creates the instance and eagerly resolves its children:
 
 ```csharp
 protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-    CreateIterativeAlgorithmInstance(ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor);
+    CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor);
 ```
 
 `resolvedInterceptor` is supplied by the base because the base declares and owns interceptor participation. The concrete instance creation method resolves its own dependencies through `registry`.
@@ -41,10 +59,10 @@ protected override TSearchState ExecuteStep(TSearchState? previousState, TProble
 
 The intended pattern is:
 
-* keep settings and child operator configurations on the reusable algorithm configuration
-* resolve child execution instances once in `CreateIterativeAlgorithmInstance(...)`
-* store resolved children and mutable execution data on the algorithm execution instance
-* keep configuration objects unchanged during execution
+- keep settings and child operator configurations on the reusable algorithm configuration
+- resolve child execution instances once in `CreateExecutionInstance(...)`
+- store resolved children and mutable execution data on the algorithm execution instance
+- keep configuration objects unchanged during execution
 
 Algorithms that can exhaust their own structure while trying to produce the next state can override `TryExecuteStep(...)` instead. Returning `false` means the algorithm has structurally completed and the stream ends without yielding another state.
 
@@ -106,10 +124,10 @@ Budget names should say what they count.
 - `MaximumGenerations` counts produced generation states owned by a generation-producing evolutionary algorithm.
 - `MaximumCycles` counts attempted cycles owned by a cycle algorithm, including cycles that yield no state.
 - `WithMaxIterations(...)` is an external early-stopping wrapper. It counts yielded stream states from the wrapped algorithm or composition, regardless of whether those states are generations, local-search moves, pipeline outputs, or cycle outputs.
-* `WithMaxEvaluatorCalls(evaluator, ...)` is an external early stopping wrapper over observed `Evaluate(...)` calls. It installs a counted evaluator replacement for the run and stops future stream consumption after the configured call count has been observed. It does not make the wrapped algorithm internally complete.
-* `WithMaxEvaluatedCandidates(evaluator, ...)` is an external early stopping wrapper over candidates processed inside observed evaluator batches. If one batch crosses the configured candidate count, the produced state for that batch is still yielded and future stream consumption stops afterward.
+- `WithMaxEvaluatorCalls(evaluator, ...)` is an external early stopping wrapper over observed `Evaluate(...)` calls. It installs a counted evaluator replacement for the run and stops future stream consumption after the configured call count has been observed. It does not make the wrapped algorithm internally complete.
+- `WithMaxEvaluatedCandidates(evaluator, ...)` is an external early stopping wrapper over candidates processed inside observed evaluator batches. If one batch crosses the configured candidate count, the produced state for that batch is still yielded and future stream consumption stops afterward.
 - `WithMaxAlgorithmDuration(...)` is an external early-stopping wrapper over active state-production duration. It measures time spent pulling produced states from the wrapped algorithm and excludes caller idle time between pulls.
-* `WithMaxEvaluatorDuration(evaluator, ...)` is an external early stopping wrapper over measured evaluator work duration. It installs a measured evaluator replacement for the run and stops future stream consumption after the configured cumulative evaluator duration has been observed.
+- `WithMaxEvaluatorDuration(evaluator, ...)` is an external early stopping wrapper over measured evaluator work duration. It installs a measured evaluator replacement for the run and stops future stream consumption after the configured cumulative evaluator duration has been observed.
 - Typed operator-budget helpers such as `WithMaxMutatorCalls(...)`, `WithMaxMutatedCandidates(...)`, `WithMaxSelectedCandidates(...)`, `WithMaxReplacementCandidates(...)`, and `WithMaxSelectorDuration(...)` observe an explicitly supplied operator and install the matching counted or measured replacement for that run.
 - `WithMaxOperatorDuration(...)` is the general external operator-duration wrapper. It observes an explicitly supplied operator and a measured replacement factory, so users can apply duration budgets to custom wrappers or unusual operator boundaries.
 - `WithMaxCount(...)` is the general external operator-budget wrapper. It observes an explicitly supplied operator and a counted replacement factory, so users can count custom units or operator boundaries that do not fit a typed helper.
@@ -122,13 +140,13 @@ Avoid treating "iteration" as a universal synonym for generation, step, cycle, e
 
 ## Runs and analyzers
 
-`CreateRun(problem, analyzers...)` creates one logical execution.
+`CreateRun(problem, random)` creates one logical algorithm execution.
 
-A `Run` is a single execution object. It can start only one execution through its streaming and completion entry points. Create a new `Run` when executing the same algorithm configuration again. The convenience methods on an algorithm configuration create a new run for every call.
+An `AlgorithmRun` is a single execution object. It can start only one execution through its streaming and completion entry points. Create a new run when executing the same algorithm configuration again. The convenience methods on an algorithm configuration create a new run for every call.
 
-This restriction applies to the public `Run` lifecycle, not to every direct algorithm instance invocation. A meta algorithm may deliberately invoke the same child algorithm instance again when its documented lifecycle policy calls for retained instance data. Concurrent execution through one algorithm instance remains unsupported unless that instance explicitly documents otherwise.
+This restriction applies to the public `AlgorithmRun` lifecycle, not to every direct algorithm instance invocation. A meta algorithm may deliberately invoke the same child algorithm instance again when its documented lifecycle policy calls for retained instance data. Concurrent execution through one algorithm instance remains unsupported unless that instance explicitly documents otherwise.
 
-A run owns:
+An algorithm run owns:
 
 - the algorithm configuration
 - the problem
@@ -162,5 +180,6 @@ Pipeline execution checks cancellation before starting each stage. Cycle executi
 ## Related pages
 
 - [Algorithm](algorithm.md)
+- [Operator authoring](operator-authoring.md)
 - [Configuration vs execution instances](execution-instances.md)
 - [Observability & analysis](observability-and-analysis.md)
