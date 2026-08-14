@@ -21,13 +21,13 @@ public abstract record StatefulMutator<TCandidate, TSearchSpace, TProblem, TStat
 
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>
+    public sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulMutator<TCandidate, TSearchSpace, TProblem, TState> mutator, TState state)
-      : IMutatorInstance<TCandidate, TSearchSpace, TProblem>
+        : MutatorInstance<TCandidate, TSearchSpace, TProblem>
     {
-        public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             mutator.Mutate(parents, state, random, searchSpace, problem);
     }
 }
@@ -41,13 +41,13 @@ public abstract record StatefulMutator<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>
+    public sealed override IMutatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulMutator<TCandidate, TSearchSpace, TState> mutator, TState state)
-      : IMutatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+        : MutatorInstance<TCandidate, TSearchSpace>
     {
-        public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
             mutator.Mutate(parents, state, random, searchSpace);
     }
 }
@@ -60,13 +60,13 @@ public abstract record StatefulMutator<TCandidate, TState>
 
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state, IRandomNumberGenerator random);
 
-    protected sealed override IMutatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>
+    public sealed override IMutatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulMutator<TCandidate, TState> mutator, TState state)
-        : IMutatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+        : MutatorInstance<TCandidate>
     {
-        public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random) =>
             mutator.Mutate(parents, state, random);
     }
 }

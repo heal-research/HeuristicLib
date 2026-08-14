@@ -33,7 +33,7 @@ public class AnalysisSpecs
         var analysisResult = run.GetResult(analysis);
 
         analysisResult.Count.ShouldBe(4);
-        finalState.Population.EvaluatedCandidates.Length.ShouldBe(16);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBe(16);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class AnalysisSpecs
         var result = run.GetResult(analysis);
 
         result.Count.ShouldBe(4);
-        finalState.Population.EvaluatedCandidates.Length.ShouldBe(16);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBe(16);
     }
 
     private static TestFunctionProblem CreateRastriginProblem(int dimension)
@@ -118,7 +118,7 @@ public class AnalysisSpecs
             PopulationSize = 16,
             MaximumGenerations = maximumGenerations,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
-            Crossover = new AlphaBetaBlendCrossover(alpha: 0.7),
+            Crossover = new AlphaBetaBlendCrossover { Alpha = 0.7 },
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
             Selector = TournamentSelector.For(problem, tournamentSize: 2),
             MutationRate = 0.2,

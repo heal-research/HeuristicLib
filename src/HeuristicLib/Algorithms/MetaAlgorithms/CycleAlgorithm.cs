@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using Generator.Equals;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -8,24 +7,20 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
-[Equatable]
-public partial record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
     : Algorithm<CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
     where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
-    [OrderedEquality]
-    public ImmutableArray<TAlgorithm> Algorithms { get; }
+    public ValueArray<TAlgorithm> Algorithms { get; }
 
-    public int? MaximumCycles
-    {
-        get;
-        init => field = value is null or > 0
-            ? value
-            : throw new ArgumentOutOfRangeException(nameof(MaximumCycles), "MaximumCycles must be positive when set.");
-    }
+    /// <summary>
+    /// Gets the cycle limit, or <see langword="null"/> for unlimited cycling. The expected value is positive.
+    /// </summary>
+    /// <remarks>A nonpositive limit runs no cycles.</remarks>
+    public int? MaximumCycles { get; init; }
 
     public bool NewExecutionInstancesPerCycle { get; init; } = true;
 
@@ -34,11 +29,11 @@ public partial record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProb
         if (algorithms.Count == 0)
             throw new ArgumentException("At least one algorithm must be provided.", nameof(algorithms));
 
-        Algorithms = algorithms.ToImmutableArray();
+        Algorithms = algorithms.ToValueArray();
     }
 
-    protected override CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) =>
-        new(registry, Algorithms, MaximumCycles, NewExecutionInstancesPerCycle);
+    public override CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new(instanceRegistry, Algorithms, MaximumCycles, NewExecutionInstancesPerCycle);
 }
 
 public static class CycleAlgorithm
@@ -116,7 +111,7 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
         var state = initialState;
 
         var cycleCountGenerator = MaximumCycles.HasValue
-          ? Enumerable.Range(0, MaximumCycles.Value)
+          ? Enumerable.Range(0, Math.Max(0, MaximumCycles.Value))
           : Enumerable.InfiniteSequence(0, 1);
 
         foreach (var cycleCount in cycleCountGenerator)

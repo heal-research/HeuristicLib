@@ -21,11 +21,13 @@ public abstract record StatefulTerminator<TCandidate, TSearchSpace, TProblem, TS
 
     protected abstract bool IsTerminalState(TSearchState searchState, TState state, TSearchSpace searchSpace, TProblem problem);
 
-    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
+    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new Instance(this, CreateInitialState());
 
-    private sealed class Instance(StatefulTerminator<TCandidate, TSearchSpace, TProblem, TSearchState, TState> terminator, TState executionState) : ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+    private sealed class Instance(StatefulTerminator<TCandidate, TSearchSpace, TProblem, TSearchState, TState> terminator, TState executionState)
+        : TerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
-        public bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem) => terminator.IsTerminalState(state, executionState, searchSpace, problem);
+        public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem) =>
+            terminator.IsTerminalState(state, executionState, searchSpace, problem);
     }
 }
 
@@ -39,11 +41,13 @@ public abstract record StatefulTerminator<TCandidate, TSearchSpace, TSearchState
 
     protected abstract bool IsTerminalState(TSearchState searchState, TState state, TSearchSpace searchSpace);
 
-    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
+    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new Instance(this, CreateInitialState());
 
-    private sealed class Instance(StatefulTerminator<TCandidate, TSearchSpace, TSearchState, TState> terminator, TState executionState) : ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
+    private sealed class Instance(StatefulTerminator<TCandidate, TSearchSpace, TSearchState, TState> terminator, TState executionState)
+        : TerminatorInstance<TCandidate, TSearchSpace, TSearchState>
     {
-        public bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) => terminator.IsTerminalState(state, executionState, searchSpace);
+        public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace) =>
+            terminator.IsTerminalState(state, executionState, searchSpace);
     }
 }
 
@@ -56,11 +60,12 @@ public abstract record StatefulTerminator<TCandidate, TSearchState, TState>
 
     protected abstract bool IsTerminalState(TSearchState searchState, TState state);
 
-    protected sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
+    public sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new Instance(this, CreateInitialState());
 
-    private sealed class Instance(StatefulTerminator<TCandidate, TSearchState, TState> terminator, TState executionState) : ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
+    private sealed class Instance(StatefulTerminator<TCandidate, TSearchState, TState> terminator, TState executionState)
+        : TerminatorInstance<TCandidate, TSearchState>
     {
-        public bool IsTerminalState(TSearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => terminator.IsTerminalState(state, executionState);
+        public override bool IsTerminalState(TSearchState state) => terminator.IsTerminalState(state, executionState);
     }
 }
 
@@ -72,10 +77,11 @@ public abstract record StatefulTerminator<TCandidate, TState>
 
     protected abstract bool IsTerminalState(TState state);
 
-    protected sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
+    public sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new Instance(this, CreateInitialState());
 
-    private sealed class Instance(StatefulTerminator<TCandidate, TState> terminator, TState executionState) : ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>
+    private sealed class Instance(StatefulTerminator<TCandidate, TState> terminator, TState executionState)
+        : TerminatorInstance<TCandidate>
     {
-        public bool IsTerminalState(ISearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => terminator.IsTerminalState(executionState);
+        public override bool IsTerminalState() => terminator.IsTerminalState(executionState);
     }
 }

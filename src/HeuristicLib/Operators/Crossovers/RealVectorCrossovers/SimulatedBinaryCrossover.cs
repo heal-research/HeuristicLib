@@ -5,42 +5,36 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 
-public record SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
+public record SimulatedBinaryCrossover : SingleCandidateCrossover<RealVector, RealVectorSearchSpace>
 {
-    public double Contiguity { get; } = 2;
+    /// <summary>
+    /// Controls how close the offspring stays to its parents. Larger values concentrate offspring near the parents;
+    /// typical values are in the range <c>[2;5]</c>.
+    /// </summary>
+    /// <remarks>
+    /// A value below zero spreads offspring further apart than their parents instead of failing, and a non-finite
+    /// value degenerates the spread factor. The result is not restricted to the search space bounds in either case.
+    /// </remarks>
+    public double Contiguity { get; init; } = 2;
 
-    public override RealVector Cross(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => Cross(random, parents.Parent1, parents.Parent2, Contiguity);
+    public override RealVector CrossParents(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => Cross(random, parents.Parent1, parents.Parent2, Contiguity);
 
     /// <summary>
     ///   Performs the simulated binary crossover on a real vector. Each position is crossed with a probability of 50% and if
     ///   crossed either a contracting crossover or an expanding crossover is performed, again with equal probability.
     ///   For more details refer to the paper by Deb and Agrawal.
     /// </summary>
-    /// <exception cref="ArgumentException">
-    ///   Thrown when the parents' vectors are of unequal length or when
-    ///   <paramref name="contiguity" /> is smaller than 0.
-    /// </exception>
     /// <remarks>
     ///   The manipulated value is not restricted by the (possibly) specified lower and upper bounds. Use the
     ///   <see cref="BoundsChecker" /> to correct the values after performing the crossover.
     /// </remarks>
     /// <param name="contiguity">
-    ///   The contiguity value that specifies how close a child should be to its parents (larger value
-    ///   means closer). The value must be greater or equal than 0. Typical values are in the range [2;5].
+    ///   Specifies how close a child should be to its parents; larger values mean closer. Typical values are in the
+    ///   range [2;5]. See <see cref="Contiguity"/> for the behavior outside that range.
     /// </param>
     public static RealVector Cross(IRandomNumberGenerator random, RealVector parent1, RealVector parent2, double contiguity)
     {
         var length = parent1.Count;
-        if (length != parent2.Count)
-        {
-            throw new ArgumentException("SimulatedBinaryCrossover: Parents are of unequal length");
-        }
-
-        if (contiguity < 0)
-        {
-            throw new ArgumentException("SimulatedBinaryCrossover: Contiguity value is smaller than 0", "contiguity");
-        }
-
         var result = new double[length];
         for (var i = 0; i < length; i++)
         {
@@ -76,11 +70,6 @@ public record SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, Rea
 
     protected RealVector Cross(IRandomNumberGenerator random, RealVector[] parents)
     {
-        if (parents.Length != 2)
-        {
-            throw new ArgumentException("SimulatedBinaryCrossover: The number of parents is not equal to 2");
-        }
-
         return Cross(random, parents[0], parents[1], Contiguity);
     }
 }
@@ -93,22 +82,9 @@ public static class Sbx
     ///   - Scalar eta, probVar, probBin to mirror the Python source.
     ///   Returns (child1, child2).
     /// </summary>
-    public static (RealVector child1, RealVector child2) CrossSbx(
-      RealVector p1,
-      RealVector p2,
-      RealVectorSearchSpace searchSpace,
-      double eta,
-      double probVar,
-      double probBin,
-      IRandomNumberGenerator rng,
-      double eps = 1.0e-14)
+    public static (RealVector child1, RealVector child2) CrossSbx(RealVector p1, RealVector p2, RealVectorSearchSpace searchSpace, double eta, double probVar, double probBin, IRandomNumberGenerator rng, double eps = 1.0e-14)
     {
         var nVar = p1.Count;
-        if (p2.Count != nVar)
-        {
-            throw new ArgumentException("p1 and p2 must have the same length.");
-        }
-
         var xl = searchSpace.Minimum; // IReadOnlyList<double>
         var xu = searchSpace.Maximum;
 
@@ -180,33 +156,57 @@ public static class Sbx
         }
 
         return (RealVector.Clamp(RealVector.FromOwnedArray(c1), searchSpace.Minimum, searchSpace.Maximum),
-          RealVector.Clamp(RealVector.FromOwnedArray(c2), searchSpace.Minimum, searchSpace.Maximum));
+            RealVector.Clamp(RealVector.FromOwnedArray(c2), searchSpace.Minimum, searchSpace.Maximum));
     }
 
     public static double CalcBetaQ(double beta, double d, double rv)
     {
         var alpha = 2.0 - Math.Pow(beta, -(d + 1.0));
         return rv <= 1.0 / alpha
-          ? Math.Pow(rv * alpha, 1.0 / (d + 1.0))
-          : Math.Pow(1.0 / (2.0 - (rv * alpha)), 1.0 / (d + 1.0));
+            ? Math.Pow(rv * alpha, 1.0 / (d + 1.0))
+            : Math.Pow(1.0 / (2.0 - (rv * alpha)), 1.0 / (d + 1.0));
     }
 }
 
-public record SelfAdaptiveSimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
+public record SelfAdaptiveSimulatedBinaryCrossover : SingleCandidateCrossover<RealVector, RealVectorSearchSpace>
 {
+    /// <summary>
+    /// Probability of crossing an individual variable, normally in <c>[0,1]</c>.
+    /// </summary>
+    /// <remarks>
+    /// Used as a threshold: at most zero, and <c>NaN</c>, never crosses a variable, while at least one always does.
+    /// </remarks>
     public double ProbVar { get; init; } = 0.5;
+
+    /// <summary>
+    /// Distribution index controlling how close the offspring stays to its parents. Larger values concentrate
+    /// offspring near the parents; typical values are in the range <c>[5;30]</c>.
+    /// </summary>
+    /// <remarks>
+    /// A value below zero spreads offspring further apart than their parents, and a non-finite value degenerates the
+    /// spread factor. The result is still clamped to the search space bounds.
+    /// </remarks>
     public double Eta { get; init; } = 15.0;
-    public double ProbExch { get; init; } = 1.0; // single draw gating probBin (whole call)
+
+    /// <summary>
+    /// Probability that the whole call performs the offspring exchange at all, drawn once per call rather than per
+    /// variable. Normally in <c>[0,1]</c>; the default of <c>1</c> always exchanges.
+    /// </summary>
+    /// <remarks>
+    /// Used as a threshold: at most zero, and <c>NaN</c>, always skips the exchange, while at least one always
+    /// performs it.
+    /// </remarks>
+    public double ProbExch { get; init; } = 1.0;
+
+    /// <summary>
+    /// Probability of swapping the two offspring at a crossed variable, normally in <c>[0,1]</c>.
+    /// </summary>
+    /// <remarks>
+    /// Used as a threshold: at most zero, and <c>NaN</c>, never swaps, while at least one always swaps.
+    /// </remarks>
     public double ProbBin { get; init; } = 0.5;
 
-    public (RealVector child1, RealVector child2) Do(
-      RealVector p1,
-      RealVector p2,
-      RealVectorSearchSpace searchSpace,
-      IRandomNumberGenerator rng,
-      double? eta = null,
-      double? probVar = null,
-      double? probBin = null)
+    public (RealVector child1, RealVector child2) Do(RealVector p1, RealVector p2, RealVectorSearchSpace searchSpace, IRandomNumberGenerator rng, double? eta = null, double? probVar = null, double? probBin = null)
     {
         var e = eta ?? Eta;
         var pv = probVar ?? ProbVar;
@@ -222,5 +222,5 @@ public record SelfAdaptiveSimulatedBinaryCrossover : SingleSolutionCrossover<Rea
         return (c1, c2);
     }
 
-    public override RealVector Cross(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => Do(parents.Parent1, parents.Parent2, searchSpace, random).child1;
+    public override RealVector CrossParents(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => Do(parents.Parent1, parents.Parent2, searchSpace, random).child1;
 }

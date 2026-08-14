@@ -9,7 +9,10 @@ public class OnlineWeightedDirectionalSymmetryCalculator
     private double incorrectSum;
     private int n;
 
-    public OnlineWeightedDirectionalSymmetryCalculator() => Reset();
+    public OnlineWeightedDirectionalSymmetryCalculator()
+    {
+        Reset();
+    }
 
     public double WeightedDirectionalSymmetry => n <= 1 ? 0.0 : incorrectSum / correctSum;
 

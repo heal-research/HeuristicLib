@@ -127,8 +127,8 @@ public class CycleAlgorithmAnalysisTests
             Evaluator = evaluator;
         }
 
-        protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) =>
-            new Instance(registry.Resolve(Evaluator), registry.Resolve(Interceptor), Candidate);
+        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+            new Instance(instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Interceptor), Candidate);
 
         private sealed class Instance(IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor, int candidate)
             : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
@@ -146,7 +146,7 @@ public class CycleAlgorithmAnalysisTests
                 var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
                 var currentState = Population.From([EvaluatedCandidate.From(candidate, objectiveVector)]).ToPopulationState();
 
-                yield return interceptor.Transform(currentState, initialState, problem.SearchSpace, problem);
+                yield return interceptor.Transform(currentState, initialState, random, problem.SearchSpace, problem);
                 await Task.CompletedTask;
             }
         }

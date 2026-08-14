@@ -10,34 +10,25 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 /// It creates new offspring by sampling a new value in the range [min_i - d * alpha, max_i + d * alpha) at each position i
 /// Here min_i and max_i are the smaller and larger value of the two parents at position i and d is max_i - min_i.
 /// </summary>
-public record RoundedBlendAlphaCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
+public record RoundedBlendAlphaCrossover : SingleCandidateCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
-    public double Alpha
-    {
-        get;
-        init
-        {
-            ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
-            field = value;
-        }
-    } = 0.5;
+    /// <summary>
+    /// Widens the sampling interval beyond both parents, as a fraction of the distance between them. Larger values
+    /// explore further outside the parents; zero samples only between them.
+    /// </summary>
+    /// <remarks>
+    /// A negative value narrows the interval instead of widening it, and a non-finite value collapses it. Both cases
+    /// fall back to the nearest feasible integer rather than failing.
+    /// </remarks>
+    public double Alpha { get; init; } = 0.5;
 
-    public override IntegerVector Cross(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-      => Cross(random, [parents.Parent1, parents.Parent2], searchSpace, Alpha);
+    public override IntegerVector CrossParents(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace) =>
+        Cross(random, [parents.Parent1, parents.Parent2], searchSpace, Alpha);
 
-    public static IntegerVector Cross(
-      IRandomNumberGenerator random,
-      IReadOnlyList<IntegerVector> parents,
-      IntegerVectorSearchSpace searchSpace,
-      double alpha)
-      => Cross(random, parents, searchSpace.Minimum, searchSpace.Maximum, alpha);
+    public static IntegerVector Cross(IRandomNumberGenerator random, IReadOnlyList<IntegerVector> parents, IntegerVectorSearchSpace searchSpace, double alpha) =>
+        Cross(random, parents, searchSpace.Minimum, searchSpace.Maximum, alpha);
 
-    public static IntegerVector Cross(
-      IRandomNumberGenerator random,
-      IReadOnlyList<IntegerVector> parents,
-      IntegerVector minimum,
-      IntegerVector maximum,
-      double alpha)
+    public static IntegerVector Cross(IRandomNumberGenerator random, IReadOnlyList<IntegerVector> parents, IntegerVector minimum, IntegerVector maximum, double alpha)
     {
         var parent1 = parents[0];
         var parent2 = parents[1];

@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -6,32 +5,28 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-[Equatable]
-public partial record ObservableReplacer<TCandidate, TSearchSpace, TProblem>
-  : WrappingReplacer<TCandidate, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record ObservableReplacer<TCandidate, TSearchSpace, TProblem>
+    : WrappingReplacer<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public IReplacer<TCandidate, TSearchSpace, TProblem> Replacer => InnerReplacer;
+    public ValueArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; init; }
 
-    [OrderedEquality]
-    public ImmutableArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
-
-    public ObservableReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, params IReadOnlyList<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
-        : base(replacer)
+    public ObservableReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, params IReadOnlyList<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : base(childReplacer)
     {
-        Observers = observers.ToImmutableArray();
+        Observers = observers.ToValueArray();
     }
 
-    protected override WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> innerReplacer) =>
-        new Instance(innerReplacer, Observers);
+    protected override WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer) =>
+        new Instance(childReplacer, Observers);
 
-    private sealed class Instance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> innerReplacer, ImmutableArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
-        : WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem>(innerReplacer)
+    private sealed class Instance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer, ValueArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem>(childReplacer)
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            var result = InnerReplacer.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+            var result = ChildReplacer.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
             foreach (var observer in observers)
             {
                 observer.AfterReplacement(result, previousPopulation, offspringPopulation, objective, searchSpace, problem);
@@ -42,9 +37,27 @@ public partial record ObservableReplacer<TCandidate, TSearchSpace, TProblem>
     }
 }
 
+public static class ObservableReplacer
+{
+    public static ObservableReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, params IReadOnlyList<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childReplacer, observers);
+
+    public static ObservableReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, ObjectiveDirections, TSearchSpace, TProblem> afterReplacement)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childReplacer, new ActionReplacerObserver<TCandidate, TSearchSpace, TProblem>(afterReplacement));
+
+    public static ObservableReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>> afterReplacement)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childReplacer, new ActionReplacerObserver<TCandidate, TSearchSpace, TProblem>((newPopulation, _, _, _, _, _) => afterReplacement(newPopulation)));
+}
+
 public interface IReplacerObserver<TCandidate, in TSearchSpace, in TProblem>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     void AfterReplacement(IReadOnlyList<EvaluatedCandidate<TCandidate>> newPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, TSearchSpace searchSpace, TProblem problem);
 }

@@ -6,7 +6,11 @@ public class OnlineMeanSquaredErrorCalculator
     private int n;
     private double sse;
 
-    public OnlineMeanSquaredErrorCalculator() => Reset();
+    public OnlineMeanSquaredErrorCalculator()
+    {
+        Reset();
+    }
+
     public double MeanSquaredError => n > 0 ? sse / n : 0.0;
 
     public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)

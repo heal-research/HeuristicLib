@@ -42,11 +42,11 @@ var experiment = algorithm
     .Repeat(10);
 ```
 
-Grid values are accepted as `IReadOnlyList<T>` and copied into immutable experiment configuration. Arrays, lists and immutable arrays can therefore be supplied without letting later caller mutation change the grid.
+Grid values are accepted as `IReadOnlyList<T>` and consumed immediately while producing the next immutable grid. Arrays, lists and immutable arrays can therefore be supplied without letting later caller mutation change the grid.
 
-Each `VaryBy(...)` performs a left to right Cartesian expansion. Its transformation receives every configuration produced by the preceding dimensions. Trial order follows dimension declaration order then value declaration order. Repetition extends each inner case before moving to the next inner case, so a grid containing `A`, `B` followed by `Repeat(2)` produces `(A, 0)`, `(A, 1)`, `(B, 0)`, `(B, 1)`.
+Each `VaryBy(...)` immediately performs a left to right Cartesian expansion and returns a new grid containing the resulting configurations. Its transformation receives every configuration produced by the preceding dimensions but is not retained by the grid. Trial order follows dimension declaration order then value declaration order. Repetition extends each inner case before moving to the next inner case, so a grid containing `A`, `B` followed by `Repeat(2)` produces `(A, 0)`, `(A, 1)`, `(B, 0)`, `(B, 1)`.
 
-Repetition counts must be positive and every grid dimension must contain at least one value. A grid that produces equal algorithm configurations throws because the algorithm configuration is its trial key. Use `Repeat(...)` when executing an equal configuration several times is intentional. Experiment runs also reject empty materialization and duplicate trial keys.
+Repetition counts must be positive. An empty grid dimension produces an empty grid according to ordinary Cartesian-product semantics; creating an experiment run from it fails because a run must contain at least one trial. A grid that produces equal algorithm configurations throws because the algorithm configuration is its trial key. Use `Repeat(...)` when executing an equal configuration several times is intentional. Experiment runs also reject duplicate trial keys.
 
 Materialized cases, trials, completion results and analysis results are exposed as immutable arrays in their canonical materialization order.
 

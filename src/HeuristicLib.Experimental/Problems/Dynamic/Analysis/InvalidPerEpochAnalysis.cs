@@ -9,8 +9,7 @@ public sealed record InvalidPerEpochAnalysis<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TCandidate, TSearchSpace>
 {
-    public InvalidPerEpochAnalysis(TProblem problem,
-                                   params IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators)
+    public InvalidPerEpochAnalysis(TProblem problem, params IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators)
         : base(problem, evaluators)
     { }
 
@@ -23,9 +22,7 @@ public sealed class InvalidPerEpochAnalysisResult<TCandidate> : IDynamicAnalysis
 
     public IReadOnlyDictionary<int, int> InvalidPerEpoch => invalidPerEpoch;
 
-    public void AfterEvaluationLog(object? sender,
-                                   IReadOnlyList<(TCandidate candidate, ObjectiveVector objective,
-                                       EvaluationTiming timing)> evaluationLog)
+    public void AfterEvaluationLog(object? sender, IReadOnlyList<(TCandidate candidate, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog)
     {
         foreach (var e in evaluationLog.Where(x => !x.timing.Valid))
         {

@@ -5,56 +5,42 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 
-public record RoundedBlendAlphaBetaCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
+/// <summary>
+/// Performs the rounded blend alpha-beta crossover (BLX-a-b) of two integer vectors.<br/>
+/// At each position it samples a new value from the interval spanned by both parents, widened by <see cref="Alpha"/>
+/// towards the better parent and by <see cref="Beta"/> towards the worse one, then rounds and clamps it to the search
+/// space bounds.
+/// </summary>
+public record RoundedBlendAlphaBetaCrossover : SingleCandidateCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
-    public double Alpha
+    /// <summary>
+    /// Widens the sampling interval beyond the better parent, as a fraction of the distance between the parents.
+    /// Larger values explore further away from the better parent; zero samples only between the parents.
+    /// </summary>
+    /// <remarks>
+    /// A negative value narrows the interval instead of widening it, and a non-finite value collapses it. Both cases
+    /// fall back to the nearest feasible integer rather than failing.
+    /// </remarks>
+    public double Alpha { get; init; } = 0.75;
+
+    /// <summary>
+    /// Widens the sampling interval beyond the worse parent, as a fraction of the distance between the parents.
+    /// It is usually smaller than <see cref="Alpha"/> so the offspring leans towards the better parent.
+    /// </summary>
+    /// <remarks>
+    /// A negative value narrows the interval instead of widening it, and a non-finite value collapses it. Both cases
+    /// fall back to the nearest feasible integer rather than failing.
+    /// </remarks>
+    public double Beta { get; init; } = 0.25;
+
+    public override IntegerVector CrossParents(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace) =>
+        Cross(random, parents.Parent1, parents.Parent2, searchSpace, Alpha, Beta);
+
+    public static IntegerVector Cross(IRandomNumberGenerator random, IntegerVector betterParent, IntegerVector worseParent, IntegerVectorSearchSpace searchSpace, double alpha, double beta) =>
+        Cross(random, betterParent, worseParent, searchSpace.Minimum, searchSpace.Maximum, alpha, beta);
+
+    public static IntegerVector Cross(IRandomNumberGenerator random, IntegerVector betterParent, IntegerVector worseParent, IntegerVector minimum, IntegerVector maximum, double alpha, double beta)
     {
-        get;
-        init
-        {
-            ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
-            field = value;
-        }
-    } = 0.75;
-
-    public double Beta
-    {
-        get;
-        init
-        {
-            ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
-            field = value;
-        }
-    } = 0.25;
-
-    public override IntegerVector Cross(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-      => Cross(random, parents.Parent1, parents.Parent2, searchSpace, Alpha, Beta);
-
-    public static IntegerVector Cross(
-      IRandomNumberGenerator random,
-      IntegerVector betterParent,
-      IntegerVector worseParent,
-      IntegerVectorSearchSpace searchSpace,
-      double alpha,
-      double beta)
-      => Cross(random, betterParent, worseParent, searchSpace.Minimum, searchSpace.Maximum, alpha, beta);
-
-    public static IntegerVector Cross(
-      IRandomNumberGenerator random,
-      IntegerVector betterParent,
-      IntegerVector worseParent,
-      IntegerVector minimum,
-      IntegerVector maximum,
-      double alpha,
-      double beta)
-    {
-        if (betterParent.Count != worseParent.Count)
-            throw new ArgumentException("Parents must have same length.", nameof(betterParent));
-        if (alpha < 0)
-            throw new ArgumentOutOfRangeException(nameof(alpha), "alpha must be >= 0.");
-        if (beta < 0)
-            throw new ArgumentOutOfRangeException(nameof(beta), "beta must be >= 0.");
-
         int length = betterParent.Count;
         var result = new int[length];
 

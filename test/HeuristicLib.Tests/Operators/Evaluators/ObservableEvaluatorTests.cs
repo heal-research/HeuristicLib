@@ -59,6 +59,45 @@ public class ObservableEvaluatorTests
     }
 
     [Fact]
+    public void ObservableEvaluator_DoesNotInvokeObserversWhenEvaluationThrows()
+    {
+        var observed = 0;
+        var evaluator = new ThrowingEvaluator().ObserveWith((IReadOnlyList<int> _, IReadOnlyList<ObjectiveVector> _) => observed++);
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            evaluator.CreateExecutionInstance().Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        observed.ShouldBe(0);
+    }
+
+    [Fact]
+    public void CountEvaluatorCalls_DoesNotCountFailedCall()
+    {
+        var counter = new ObservationCounter();
+        var evaluator = new ThrowingEvaluator().CountEvaluatorCalls(counter);
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            evaluator.CreateExecutionInstance().Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        counter.CurrentCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public void MeasureEvaluatorDuration_RecordsFailedCall()
+    {
+        var duration = new ObservationDuration();
+        var evaluator = new ThrowingEvaluator().MeasureEvaluatorDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            evaluator.CreateExecutionInstance().Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+    }
+
+    [Fact]
     public void ObservationDuration_AllowsNegativeAdjustments()
     {
         var duration = new ObservationDuration();
@@ -101,5 +140,11 @@ public class ObservableEvaluatorTests
             timestamp += step.Ticks;
             return current;
         }
+    }
+
+    private sealed record ThrowingEvaluator : StatelessEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+    {
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
+            throw new InvalidOperationException();
     }
 }

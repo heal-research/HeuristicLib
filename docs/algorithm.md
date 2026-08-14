@@ -8,7 +8,7 @@ Algorithms use one authoring path: a configuration paired with an explicitly aut
 
 Derive the reusable configuration from `IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>`. `TSelf` is the concrete algorithm configuration type. It preserves that type for fluent experiment APIs without requiring callers to supply generic arguments. Put settings and child operator configurations on the configuration type.
 
-Create a nested execution instance derived from `IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>`. Resolve child operators eagerly in `CreateIterativeAlgorithmInstance(...)` then pass them into the instance. Mutable counters, caches and other run scoped data belong on the instance.
+Create a nested execution instance derived from `IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>`. Resolve child operators eagerly in `CreateExecutionInstance(...)` then pass them into the instance. Mutable counters, caches and other run scoped data belong on the instance.
 
 ```csharp
 public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
@@ -20,8 +20,8 @@ public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
     public int MaximumStates { get; init; } = 1;
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateIterativeAlgorithmInstance(
-        ExecutionInstanceRegistry registry,
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateExecutionInstance(
+        ExecutionInstanceRegistry instanceRegistry,
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
         new Instance(resolvedInterceptor, registry.Resolve(Creator), registry.Resolve(Evaluator), MaximumStates);
 
@@ -74,7 +74,7 @@ Resolution remains local and eager for ordinary algorithms. Do not retain the re
 
 ## Noniterative algorithms
 
-Derive from `Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>` when the iterative lifecycle is not appropriate. Implement `CreateAlgorithmInstance(...)` and return an `AlgorithmInstance<...>` that owns the complete streaming behavior.
+Derive from `Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>` when the iterative lifecycle is not appropriate. Implement `CreateExecutionInstance(...)` and return an `AlgorithmInstance<...>` that owns the complete streaming behavior.
 
 ## Algorithm composition
 

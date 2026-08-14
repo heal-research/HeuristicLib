@@ -8,63 +8,43 @@ using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
-using JetBrains.Annotations;
-using MetaOptimizationGenotype =
-    HEAL.HeuristicLib.Genotypes.CompositeGenotype<HEAL.HeuristicLib.Genotypes.Vectors.RealVector,
-        HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector>;
-using MetaOptimizationProblem =
-    HEAL.HeuristicLib.Problems.IProblem<
-        HEAL.HeuristicLib.Genotypes.CompositeGenotype<HEAL.HeuristicLib.Genotypes.Vectors.RealVector,
-            HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector>, HEAL.HeuristicLib.Genotypes.CompositeSearchSpace<
-            HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.SearchSpaces.Vectors.RealVectorSearchSpace
-            , HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector,
-            HEAL.HeuristicLib.SearchSpaces.Vectors.IntegerVectorSearchSpace>>;
-using MetaOptimizationSearchSpace =
-    HEAL.HeuristicLib.Genotypes.CompositeSearchSpace<HEAL.HeuristicLib.Genotypes.Vectors.RealVector,
-        HEAL.HeuristicLib.SearchSpaces.Vectors.RealVectorSearchSpace, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector,
-        HEAL.HeuristicLib.SearchSpaces.Vectors.IntegerVectorSearchSpace>;
+
+using MetaOptimizationGenotype = HEAL.HeuristicLib.Genotypes.CompositeGenotype<HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector>;
+using MetaOptimizationProblem = HEAL.HeuristicLib.Problems.IProblem<HEAL.HeuristicLib.Genotypes.CompositeGenotype<HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector>, HEAL.HeuristicLib.Genotypes.CompositeSearchSpace<HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.SearchSpaces.Vectors.RealVectorSearchSpace, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector, HEAL.HeuristicLib.SearchSpaces.Vectors.IntegerVectorSearchSpace>>;
+using MetaOptimizationSearchSpace = HEAL.HeuristicLib.Genotypes.CompositeSearchSpace<HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.SearchSpaces.Vectors.RealVectorSearchSpace, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector, HEAL.HeuristicLib.SearchSpaces.Vectors.IntegerVectorSearchSpace>;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
 public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
-    : IterativeAlgorithm<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>,
-        TCandidate, TSearchSpace, TProblem, TSearchState>
+    : IterativeAlgorithm<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TCandidate, TSearchSpace>
     where TSearchState : PopulationState<TCandidate>
     where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     public DynamicRacingAlgorithm(MetaOptimizationSearchSpace metaSpace,
-                                  ICreator<MetaOptimizationGenotype, MetaOptimizationSearchSpace,
-                                      MetaOptimizationProblem> creator,
-                                  IMutator<MetaOptimizationGenotype, MetaOptimizationSearchSpace,
-                                      MetaOptimizationProblem> mutator,
+                                  ICreator<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> creator,
+                                  IMutator<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> mutator,
                                   IRacingStateMerger<TCandidate, TSearchState> stateMerger,
                                   Func<MetaOptimizationGenotype, TAlgorithm> algBuilder,
                                   Func<TAlgorithm, IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluatorSelector)
-        : this(metaSpace, creator, mutator, stateMerger, (candidate, _) => algBuilder(candidate),
-            evaluatorSelector)
+        : this(metaSpace, creator, mutator, stateMerger, (candidate, _) => algBuilder(candidate), evaluatorSelector)
     { }
 
     public DynamicRacingAlgorithm(MetaOptimizationSearchSpace metaSpace,
-                                  ICreator<MetaOptimizationGenotype, MetaOptimizationSearchSpace,
-                                      MetaOptimizationProblem> creator,
-                                  IMutator<MetaOptimizationGenotype, MetaOptimizationSearchSpace,
-                                      MetaOptimizationProblem> mutator,
+                                  ICreator<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> creator,
+                                  IMutator<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> mutator,
                                   Func<TSearchState[], TSearchState> stateMerger,
                                   Func<MetaOptimizationGenotype, TAlgorithm> algBuilder,
                                   Func<TAlgorithm, IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluatorSelector)
         : this(metaSpace, creator, mutator,
-            new DelegatingRacingStateMerger<TCandidate, TSearchState>((states, _) =>
-                stateMerger(states.ToArray())),
+            new DelegatingRacingStateMerger<TCandidate, TSearchState>((states, _) => stateMerger(states.ToArray())),
             (candidate, _) => algBuilder(candidate), evaluatorSelector)
     { }
 
     public DynamicRacingAlgorithm(MetaOptimizationSearchSpace metaSpace,
-                                  ICreator<MetaOptimizationGenotype, MetaOptimizationSearchSpace,
-                                      MetaOptimizationProblem> creator,
-                                  IMutator<MetaOptimizationGenotype, MetaOptimizationSearchSpace,
-                                      MetaOptimizationProblem> mutator,
+                                  ICreator<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> creator,
+                                  IMutator<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> mutator,
                                   IRacingStateMerger<TCandidate, TSearchState> stateMerger,
                                   Func<MetaOptimizationGenotype, TAlgorithm?, TAlgorithm> algBuilder,
                                   Func<TAlgorithm, IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluatorSelector)
@@ -88,7 +68,12 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     public required int NoRacers { get; init; } = 2;
     public double HallOfFameStrength { get; init; } = 0.1;
     public double EarlyTerminationStrength { get; init; } = 0.1;
-    private int burnInEpochs;
+    public int MinimumModelObservationCount { get; init; } = 10;
+    public int ModelObservationInterval { get; init; } = 100;
+    public Func<ObjectiveVector, double> ObjectiveValueSelector { get; init; } = static objectiveVector => objectiveVector[0];
+
+    private readonly int burnInEpochs;
+
     public int BurnInEpochs
     {
         get => burnInEpochs;
@@ -99,19 +84,9 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         }
     }
 
-    public int MinimumModelObservationCount { get; init; } = 10;
-    public int ModelObservationInterval { get; init; } = 100;
-    public Func<ObjectiveVector, double> ObjectiveValueSelector { get; init; } =
-        static objectiveVector => objectiveVector[0];
-
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-        CreateIterativeAlgorithmInstance(ExecutionInstanceRegistry registry,
-                                         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>?
-                                             resolvedInterceptor) =>
-        new Instance(registry, resolvedInterceptor, registry.Resolve(Creator), registry.Resolve(Mutator), MetaSpace,
-            EmptyMetaOptProblem, StateMerger, AlgBuilder, EvaluatorSelector, NoRacers, HallOfFameStrength,
-            EarlyTerminationStrength, BurnInEpochs, MinimumModelObservationCount, ModelObservationInterval,
-            ObjectiveValueSelector);
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor) =>
+        new Instance(instanceRegistry, resolvedInterceptor, instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Mutator), MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
+            EvaluatorSelector, NoRacers, HallOfFameStrength, EarlyTerminationStrength, BurnInEpochs, MinimumModelObservationCount, ModelObservationInterval, ObjectiveValueSelector);
 
     private sealed class Instance(
         ExecutionInstanceRegistry registry,
@@ -138,14 +113,11 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         private long completedRaces;
         private long completedEpochs;
 
-        protected override TSearchState ExecuteStep(TSearchState? previousState, TProblem problem,
-                                                    IRandomNumberGenerator random)
+        protected override TSearchState ExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random)
         {
             incumbent ??= creator.Create(1, random, metaSpace, emptyMetaOptProblem)[0];
             if (completedEpochs < burnInEpochs)
-            {
                 return ExecuteBurnInStep(previousState, problem, random);
-            }
 
             var entries = new List<Entry>(noRacers);
             entries.Add(CreateEntry(incumbent, incumbentAlgorithm, previousState, problem, random));
@@ -163,7 +135,9 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
                 {
                     var lowest = entries.MinBy(x => x.UsedCount);
                     _ = lowest!.MakeMove(problem, random, CancellationToken.None);
-                    raceEnded = CanTerminateRace(entries, problem);
+
+                    // MakeMove can raise OnEpochChange, which ends the race. Never overwrite that signal.
+                    raceEnded |= CanTerminateRace(entries, problem);
                 }
             }
             finally
@@ -184,14 +158,14 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             }
             finally
             {
-                foreach (var entry in entries) entry.Dispose();
+                foreach (var entry in entries)
+                    entry.Dispose();
             }
 
             void OnEpochChange(object? sender, int epoch) => raceEnded = true;
         }
 
-        private TSearchState ExecuteBurnInStep(TSearchState? previousState, TProblem problem,
-                                               IRandomNumberGenerator random)
+        private TSearchState ExecuteBurnInStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random)
         {
             using var entry = CreateEntry(incumbent!, incumbentAlgorithm, previousState, problem, random);
             var epochEnded = false;
@@ -199,9 +173,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             {
                 problem.EpochClock.OnEpochChange += OnEpochChange;
                 while (!epochEnded)
-                {
                     _ = entry.MakeMove(problem, random, CancellationToken.None);
-                }
             }
             finally
             {
@@ -226,8 +198,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
                 if (objectiveVector is null)
                     continue;
 
-                if (winnerObjectiveVector is not null &&
-                    comparer.Compare(objectiveVector, winnerObjectiveVector) >= 0)
+                if (winnerObjectiveVector is not null && comparer.Compare(objectiveVector, winnerObjectiveVector) >= 0)
                     continue;
 
                 winner = i;
@@ -235,8 +206,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             }
 
             if (winner < 0)
-                throw new InvalidOperationException(
-                    "Race cannot select a winner before any contender observed a fresh objective vector.");
+                throw new InvalidOperationException("Race cannot select a winner before any contender observed a fresh objective vector.");
 
             return winner;
         }
@@ -251,15 +221,12 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             var predictionHorizon = problem.EpochClock.EpochLength;
             var requiredEvaluationCount = predictionHorizon * earlyTerminationStrength;
             return entries.Where((_, index) => index != bestIndex)
-                          .All(contender => CanTerminateContender(best, contender, requiredEvaluationCount,
-                              predictionHorizon, problem.Objective));
+                .All(contender => CanTerminateContender(best, contender, requiredEvaluationCount, predictionHorizon, problem.Objective));
         }
 
-        private bool CanTerminateContender(Entry best, Entry contender, double requiredEvaluationCount,
-                                           double predictionHorizon, ObjectiveDirections objective)
+        private bool CanTerminateContender(Entry best, Entry contender, double requiredEvaluationCount, double predictionHorizon, ObjectiveDirections objective)
         {
-            if (best.CurrentBestObjectiveValue is not { } bestValue ||
-                contender.CurrentBestObjectiveValue is not { } contenderValue)
+            if (best.CurrentBestObjectiveValue is not { } bestValue || contender.CurrentBestObjectiveValue is not { } contenderValue)
                 return false;
 
             return IsBetter(bestValue, contenderValue, objective)
@@ -267,10 +234,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
                    && contender.ModelObservationCount > minimumModelObservationCount
                    && best.UsedCount > requiredEvaluationCount / 2
                    && contender.UsedCount > requiredEvaluationCount / 2
-                   && IsBetter(best.PredictObjectiveValue(predictionHorizon),
-                       contender.PredictObjectiveValue(predictionHorizon),
-                       objective,
-                       Math.Abs(bestValue - contenderValue) / 2);
+                   && IsBetter(best.PredictObjectiveValue(predictionHorizon), contender.PredictObjectiveValue(predictionHorizon), objective, Math.Abs(bestValue - contenderValue) / 2);
         }
 
         private static bool IsBetter(double left, double right, ObjectiveDirections objective, double noise = 0)
@@ -284,37 +248,24 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             return left - right > noise;
         }
 
-        private Entry CreateEntry(MetaOptimizationGenotype candidate, TAlgorithm? sourceAlgorithm,
-                                  TSearchState? initialState, TProblem problem, IRandomNumberGenerator random)
+        private Entry CreateEntry(MetaOptimizationGenotype candidate, TAlgorithm? sourceAlgorithm, TSearchState? initialState, TProblem problem, IRandomNumberGenerator random)
         {
             var algorithm = algorithmBuilder(candidate, sourceAlgorithm);
-            return new Entry(algorithm, evaluatorSelector(algorithm), candidate, problem, random, initialState,
-                CancellationToken.None, registry, modelObservationInterval, objectiveValueSelector);
+            return new Entry(algorithm, evaluatorSelector(algorithm), candidate, problem, random, initialState, CancellationToken.None, registry, modelObservationInterval, objectiveValueSelector);
         }
 
-        private MetaOptimizationGenotype CreateChallenger(MetaOptimizationGenotype currentIncumbent,
-                                                          IRandomNumberGenerator random)
-        {
-            return TryReviveFromHallOfFame(currentIncumbent, random)
-                   ?? mutator.Mutate([currentIncumbent], random, metaSpace, emptyMetaOptProblem)[0];
-        }
+        private MetaOptimizationGenotype CreateChallenger(MetaOptimizationGenotype currentIncumbent, IRandomNumberGenerator random) =>
+            TryReviveFromHallOfFame(currentIncumbent, random) ?? mutator.Mutate([currentIncumbent], random, metaSpace, emptyMetaOptProblem)[0];
 
-        private MetaOptimizationGenotype? TryReviveFromHallOfFame(MetaOptimizationGenotype currentIncumbent,
-                                                                  IRandomNumberGenerator random)
+        private MetaOptimizationGenotype? TryReviveFromHallOfFame(MetaOptimizationGenotype currentIncumbent, IRandomNumberGenerator random)
         {
             if (hallOfFame.Count < 2 || hallOfFameStrength <= 0 || random.NextDouble() >= hallOfFameStrength)
-            {
                 return null;
-            }
 
             var incumbentKey = CreateKey(currentIncumbent);
-            var candidates = hallOfFame.Values
-                                       .Where(entry => entry.Key != incumbentKey)
-                                       .ToArray();
+            var candidates = hallOfFame.Values.Where(entry => entry.Key != incumbentKey).ToArray();
             if (candidates.Length == 0)
-            {
                 return null;
-            }
 
             var totalWeight = candidates.Sum(entry => entry.SuccessCount);
             var selectedWeight = random.NextDouble() * totalWeight;
@@ -322,9 +273,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             {
                 selectedWeight -= entry.SuccessCount;
                 if (selectedWeight <= 0)
-                {
                     return Copy(entry.Candidate);
-                }
             }
 
             return Copy(candidates[^1].Candidate);
@@ -368,17 +317,13 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         private readonly PerformanceTrackingEvaluatorObserver performanceObserver;
         private IEnumerator<TSearchState> running;
 
-        public Entry(TAlgorithm algorithm, IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
-                     MetaOptimizationGenotype candidate, TProblem problem, IRandomNumberGenerator random,
-                     TSearchState? initialState, CancellationToken ct, ExecutionInstanceRegistry parentRegistry,
-                     int modelObservationInterval,
-                     Func<ObjectiveVector, double> objectiveValueSelector)
+        public Entry(TAlgorithm algorithm, IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, MetaOptimizationGenotype candidate, TProblem problem, IRandomNumberGenerator random,
+                     TSearchState? initialState, CancellationToken ct, ExecutionInstanceRegistry parentRegistry, int modelObservationInterval, Func<ObjectiveVector, double> objectiveValueSelector)
         {
             Algorithm = algorithm;
             this.evaluator = evaluator;
             ParentRegistry = parentRegistry;
-            performanceObserver =
-                new PerformanceTrackingEvaluatorObserver(modelObservationInterval, objectiveValueSelector);
+            performanceObserver = new PerformanceTrackingEvaluatorObserver(modelObservationInterval, objectiveValueSelector);
             Candidate = candidate;
             LastState = initialState;
             running = CreateEnumerator(problem, random, initialState, ct);
@@ -402,9 +347,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
                 running.Dispose();
                 running = CreateEnumerator(problem, random, LastState, ct);
                 if (!running.MoveNext())
-                {
                     throw new InvalidOperationException("Algorithm cannot start or resume execution");
-                }
             }
 
             LastState = running.Current;
@@ -413,15 +356,12 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
         public void Dispose() => running.Dispose();
 
-        [MustDisposeResource]
-        private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random,
-                                                           TSearchState? initialState, CancellationToken ct)
+        private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct)
         {
             var inheritedRegistry = ParentRegistry.CreateChildRegistry();
             var inheritedEvaluator = inheritedRegistry.Resolve(evaluator);
             var contenderRegistry = inheritedRegistry.CreateChildRegistry();
-            contenderRegistry.RegisterInstance(evaluator,
-                new PerformanceTrackingEvaluatorInstance(inheritedEvaluator, performanceObserver));
+            contenderRegistry.RegisterInstance(evaluator, new PerformanceTrackingEvaluatorInstance(inheritedEvaluator, performanceObserver));
             return contenderRegistry.Resolve(Algorithm).Stream(problem, random, initialState, ct).GetEnumerator();
         }
     }
@@ -431,10 +371,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         IEvaluatorObserver<TCandidate, TSearchSpace, TProblem> observer)
         : IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>
     {
-        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates,
-                                                       IRandomNumberGenerator random,
-                                                       TSearchSpace searchSpace,
-                                                       TProblem problem)
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var objectiveVectors = innerEvaluator.Evaluate(candidates, random, searchSpace, problem);
             observer.AfterEvaluation(candidates, objectiveVectors, searchSpace, problem);
@@ -448,8 +385,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         private readonly Func<ObjectiveVector, double> objectiveValueSelector;
         private int nextModelObservationAt;
 
-        public PerformanceTrackingEvaluatorObserver(int modelObservationInterval,
-                                                    Func<ObjectiveVector, double> objectiveValueSelector)
+        public PerformanceTrackingEvaluatorObserver(int modelObservationInterval, Func<ObjectiveVector, double> objectiveValueSelector)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(modelObservationInterval);
             this.modelObservationInterval = modelObservationInterval;
@@ -458,19 +394,12 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         }
 
         public int EvaluatedCandidateCount { get; private set; }
-
         public ObjectiveVector? CurrentBestObjectiveVector { get; private set; }
-
         public double? CurrentBestObjectiveValue { get; private set; }
-
         public int ModelObservationCount => CurveModel.ObservationCount;
-
         public OnlineWeibullCurveModel CurveModel { get; } = new();
 
-        public void AfterEvaluation(IReadOnlyList<TCandidate> candidates,
-                                    IReadOnlyList<ObjectiveVector> objectiveVectors,
-                                    TSearchSpace searchSpace,
-                                    TProblem problem)
+        public void AfterEvaluation(IReadOnlyList<TCandidate> candidates, IReadOnlyList<ObjectiveVector> objectiveVectors, TSearchSpace searchSpace, TProblem problem)
         {
             EvaluatedCandidateCount += candidates.Count;
             if (objectiveVectors.Count == 0)
@@ -478,8 +407,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
             var comparer = GetComparer(problem.Objective);
             var batchBest = objectiveVectors.MinBy(x => x, comparer)!;
-            if (CurrentBestObjectiveVector is null ||
-                comparer.Compare(batchBest, CurrentBestObjectiveVector) < 0)
+            if (CurrentBestObjectiveVector is null || comparer.Compare(batchBest, CurrentBestObjectiveVector) < 0)
                 CurrentBestObjectiveVector = batchBest;
 
             CurrentBestObjectiveValue = objectiveValueSelector(CurrentBestObjectiveVector);
@@ -490,8 +418,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
         private void RecordModelObservationIfDue()
         {
-            if (EvaluatedCandidateCount < nextModelObservationAt
-                || CurrentBestObjectiveVector is not { } currentBest)
+            if (EvaluatedCandidateCount < nextModelObservationAt || CurrentBestObjectiveVector is not { } currentBest)
                 return;
 
             var objectiveValue = objectiveValueSelector(currentBest);

@@ -38,8 +38,7 @@ public class CutPoint
         }
 
         // check syntax constraints of direct parent - child relation
-        if (!grammar.ContainsSymbol(newChild.Symbol) ||
-          !grammar.IsAllowedChildSymbol(Parent.Symbol, newChild.Symbol, ChildIndex))
+        if (!grammar.ContainsSymbol(newChild.Symbol) || !grammar.IsAllowedChildSymbol(Parent.Symbol, newChild.Symbol, ChildIndex))
         {
             return false;
         }

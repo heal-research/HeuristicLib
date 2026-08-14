@@ -31,7 +31,7 @@ var algorithm = new GeneticAlgorithm<Permutation, PermutationSearchSpace, Travel
     MaximumGenerations = 200,
     Creator = new RandomPermutationCreator(),
     Crossover = new OrderCrossover(),
-    Mutator = new SwapSingleSolutionMutator(),
+    Mutator = new SwapMutator(),
     MutationRate = 0.20,
     Selector = TournamentSelector.For(problem, tournamentSize: 3),
     Elites = 2
@@ -72,8 +72,8 @@ public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
     public int MaximumStates { get; init; } = 1;
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateIterativeAlgorithmInstance(
-        ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateExecutionInstance(
+        ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
         new Instance(resolvedInterceptor, registry.Resolve(Creator), registry.Resolve(Evaluator), MaximumStates);
 
     private sealed class Instance(

@@ -30,28 +30,26 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
 
     public int Elites { get; init; }
-    public int? MaximumGenerations
-    {
-        get;
-        init => field = value is null or > 0
-          ? value
-          : throw new ArgumentOutOfRangeException(nameof(MaximumGenerations), "MaximumGenerations must be positive when set.");
-    }
+    /// <summary>
+    /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
+    /// </summary>
+    /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
+    public int? MaximumGenerations { get; init; }
 
-    public double MutationRate
-    {
-        get;
-        init => field = value is >= 0.0 and <= 1.0
-          ? value
-          : throw new ArgumentOutOfRangeException(nameof(MutationRate), "MutationRate must be in [0, 1].");
-    } = 0.1;
+    /// <summary>
+    /// Gets the probability that an offspring is mutated. The expected value is in <c>[0, 1]</c>.
+    /// </summary>
+    /// <remarks>
+    /// The rate is applied as a threshold against a random value in <c>[0, 1)</c>. A value at most zero, negative
+    /// infinity and <c>NaN</c> never mutate; a value at least one and positive infinity always mutate.
+    /// </remarks>
+    public double MutationRate { get; init; } = 0.1;
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>> CreateIterativeAlgorithmInstance(
-        ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>? resolvedInterceptor)
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>? resolvedInterceptor)
     {
         var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate);
-        return new Instance(resolvedInterceptor, registry.Resolve(Evaluator), registry.Resolve(Creator), registry.Resolve(Crossover),
-            registry.Resolve(effectiveMutator), registry.Resolve(Selector), PopulationSize, Elites, MaximumGenerations);
+        return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover),
+            instanceRegistry.Resolve(effectiveMutator), instanceRegistry.Resolve(Selector), PopulationSize, Elites, MaximumGenerations);
     }
 
     private sealed class Instance(

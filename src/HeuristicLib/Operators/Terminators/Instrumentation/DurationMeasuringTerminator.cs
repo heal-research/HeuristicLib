@@ -11,9 +11,8 @@ public sealed record DurationMeasuringTerminator<TCandidate, TSearchSpace, TProb
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Terminator => InnerTerminator;
-    public ObservationDuration Duration { get; }
-    public TimeProvider TimeProvider { get; }
+    public ObservationDuration Duration { get; init; }
+    public TimeProvider TimeProvider { get; init; }
 
     public DurationMeasuringTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator, ObservationDuration duration)
         : this(terminator, duration, TimeProvider.System)
@@ -27,19 +26,18 @@ public sealed record DurationMeasuringTerminator<TCandidate, TSearchSpace, TProb
         TimeProvider = timeProvider;
     }
 
-    protected override WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(
-        ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerTerminator) =>
-        new Instance(innerTerminator, Duration, TimeProvider);
+    protected override WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator) =>
+        new Instance(childTerminator, Duration, TimeProvider);
 
-    private sealed class Instance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerTerminator, ObservationDuration duration, TimeProvider timeProvider)
-        : WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(innerTerminator)
+    private sealed class Instance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, ObservationDuration duration, TimeProvider timeProvider)
+        : WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminator)
     {
         public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem)
         {
             var startTimestamp = timeProvider.GetTimestamp();
             try
             {
-                return InnerTerminator.IsTerminalState(state, searchSpace, problem);
+                return ChildTerminator.IsTerminalState(state, searchSpace, problem);
             }
             finally
             {
@@ -47,6 +45,21 @@ public sealed record DurationMeasuringTerminator<TCandidate, TSearchSpace, TProb
             }
         }
     }
+}
+
+public static class DurationMeasuringTerminator
+{
+    public static DurationMeasuringTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, ObservationDuration duration)
+        where TSearchState : class, ISearchState
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childTerminator, duration);
+
+    public static DurationMeasuringTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, ObservationDuration duration, TimeProvider timeProvider)
+        where TSearchState : class, ISearchState
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childTerminator, duration, timeProvider);
 }
 
 public static class TerminatorDurationExtensions

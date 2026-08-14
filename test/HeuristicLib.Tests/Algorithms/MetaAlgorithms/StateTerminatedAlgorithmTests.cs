@@ -66,9 +66,14 @@ public class StateTerminatedAlgorithmTests
     }
 
     [Fact]
-    public void WithMaxIterations_Throws_WhenMaximumIterationsIsNotPositive()
+    public void WithMaxIterations_StopsOnFirstCheck_WhenMaximumIterationsIsNotPositive()
     {
-        Should.Throw<ArgumentOutOfRangeException>(() => new AdditiveStepAlgorithm(1).WithMaxIterations(0));
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var algorithm = new AdditiveStepAlgorithm(1).WithMaxIterations(0);
+
+        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
 
     [Fact]
@@ -112,7 +117,7 @@ public class StateTerminatedAlgorithmTests
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var timeProvider = new ManualTimeProvider();
-        var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5), timeProvider);
+        var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5)) { TimeProvider = timeProvider };
         var instance = new ExecutionInstanceRegistry().Resolve(terminator);
 
         instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeFalse();
@@ -123,9 +128,12 @@ public class StateTerminatedAlgorithmTests
     }
 
     [Fact]
-    public void AfterElapsedTimeTerminator_Throws_WhenMaximumElapsedTimeIsNotPositive()
+    public void AfterElapsedTimeTerminator_StopsOnFirstCheck_WhenMaximumElapsedTimeIsNotPositive()
     {
-        Should.Throw<ArgumentOutOfRangeException>(() => new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var instance = new ExecutionInstanceRegistry().Resolve(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
+
+        instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Fact]
@@ -182,7 +190,7 @@ public class StateTerminatedAlgorithmTests
     private sealed record RecordingAlgorithm(List<string> Events)
         : Algorithm<RecordingAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
+        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
         {
             Events.Add("algorithm");
             return new Instance();

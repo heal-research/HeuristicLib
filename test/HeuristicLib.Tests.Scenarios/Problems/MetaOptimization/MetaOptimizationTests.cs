@@ -10,7 +10,6 @@ using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.IntegerVectorMutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.MetaOptimization;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
@@ -37,12 +36,12 @@ public class MetaOptimizationTests
         //build meta problem (test some mutators
         var b = new MetaOptimizationProblemExamples.MetaOptimizationSearchSpaceBuilder();
         var mutatorExtractor = b.AddChoiceParameter(
-          new Mutator<RealVector, RealVectorSearchSpace>[] {
-      new GaussianMutator(0.5, 0.5),
-      new GaussianMutator(0.5, 1),
-      new PolynomialMutator(),
-      new PolynomialMutator(atLeastOnce: true)
-        });
+            new Mutator<RealVector, RealVectorSearchSpace>[] {
+                new GaussianMutator(0.5, 0.5),
+                new GaussianMutator(0.5, 1),
+                new PolynomialMutator(),
+                new PolynomialMutator { AtLeastOnce = true }
+            });
         var metaSpace = b.Build();
         var metaProblem = problem.AsMetaProblem(metaSpace, x =>
         {
@@ -57,10 +56,10 @@ public class MetaOptimizationTests
             new Operators.Creators.IntegerVectorCreators.UniformDistributedCreator()), //operator name clash ...
           mutator: metaSpace.CombineMutator(
             new PolynomialMutator(),
-            new UniformOnePositionManipulator()));
+            new UniformOnePositionMutator()));
         hc.BatchSize = 4;
         hc.Evaluator = hc.Evaluator
-                         .AsRepeated(11, objectives => objectives.Median(problem.Objective))
+                         .AsRepeated(11, ObjectiveVectorAggregation.Median)
                          .WithCache();
 
         //run meta alg

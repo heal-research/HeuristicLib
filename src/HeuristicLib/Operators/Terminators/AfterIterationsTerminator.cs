@@ -3,8 +3,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record AfterIterationsTerminator<TCandidate>
-  : StatefulTerminator<TCandidate, AfterIterationsTerminator<TCandidate>.ExecutionState>
+public sealed record AfterIterationsTerminator<TCandidate>
+    : StatefulTerminator<TCandidate, AfterIterationsTerminator<TCandidate>.ExecutionState>
 {
     public sealed class ExecutionState
     {
@@ -16,13 +16,11 @@ public record AfterIterationsTerminator<TCandidate>
         MaximumIterations = maximumIterations;
     }
 
-    public int MaximumIterations
-    {
-        get;
-        init => field = value > 0
-            ? value
-            : throw new ArgumentOutOfRangeException(nameof(MaximumIterations), "MaximumIterations must be positive.");
-    }
+    /// <summary>
+    /// Gets the iteration limit. The expected value is positive.
+    /// </summary>
+    /// <remarks>A nonpositive limit terminates on the first checked state.</remarks>
+    public int MaximumIterations { get; init; }
 
     protected override ExecutionState CreateInitialState() => new();
 

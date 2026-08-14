@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Experiments;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Tests.Experiments.TestSupport;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
@@ -41,6 +42,42 @@ public class ExperimentMaterializationTests
         increments[0] = 3;
 
         experiment.MaterializeCases().Select(experimentCase => experimentCase.Algorithm.Increment).ShouldBe([1, 2]);
+    }
+
+    [Fact]
+    public void Grid_VaryByImmediatelyMaterializesANewStructurallyComparableGrid()
+    {
+        var calls = 0;
+        var original = Grid.Create(new AdditiveStepAlgorithm(0));
+        var varied = original.VaryBy([1, 2], (algorithm, increment) =>
+        {
+            calls++;
+            return algorithm with { Increment = increment };
+        });
+
+        calls.ShouldBe(2);
+        original.Configurations.ShouldBe([new AdditiveStepAlgorithm(0)]);
+        varied.Configurations.ShouldBe([new AdditiveStepAlgorithm(1), new AdditiveStepAlgorithm(2)]);
+        varied.ShouldBe(Grid.Create(new AdditiveStepAlgorithm(0))
+            .VaryBy([1, 2], static (algorithm, increment) => algorithm with { Increment = increment }));
+
+        _ = varied.GetConfigurations();
+        calls.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Grid_EmptyDimensionProducesEmptyGrid()
+    {
+        var experiment = new AdditiveStepAlgorithm(0).AsGrid()
+            .VaryBy(Array.Empty<int>(), static (algorithm, increment) => algorithm with { Increment = increment });
+
+        experiment.ParameterGrid.Configurations.ShouldBeEmpty();
+        experiment.MaterializeCases().ShouldBeEmpty();
+        experiment.VaryBy([1, 2], static (algorithm, increment) => algorithm with { Increment = increment })
+            .ParameterGrid.Configurations.ShouldBeEmpty();
+        Should.Throw<InvalidOperationException>(() => experiment.CreateRun(
+            MetaAlgorithmTestHelpers.CreateIntegerProblem(),
+            RandomNumberGenerator.Create(42)));
     }
 
     [Fact]

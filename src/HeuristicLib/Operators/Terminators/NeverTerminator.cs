@@ -3,8 +3,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record NeverTerminator<TCandidate>
-  : StatelessTerminator<TCandidate>
+public sealed record NeverTerminator<TCandidate>
+    : StatelessTerminator<TCandidate>
 {
     public override bool IsTerminalState() => NeverTerminator.IsTerminalState();
 }

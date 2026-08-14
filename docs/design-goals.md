@@ -66,3 +66,11 @@ This gives algorithms, analysis and concurrent execution a predictable value ori
 The problem defines canonical evaluation semantics. An explicit evaluator layer may sit between algorithms and problem evaluation when it provides meaningful composition such as caching, repeated evaluation, observation or scheduling.
 
 Shared operators should support batch oriented APIs when batch context is part of the operation semantics.
+
+### Performance as a design constraint
+
+Heuristic optimization invokes the same operator and evaluation paths millions of times in one run. Performance is therefore a first-class constraint on the design itself, not a later optimization pass over a design that ignored it.
+
+Shared machinery should avoid unnecessary allocation, boxing, delegate creation and interface indirection. An expensive operator does not excuse overhead that is material for a lightweight one, because both travel the same path.
+
+This constrains abstractions rather than excusing unclear code. An abstraction whose supporting machinery costs more than the behavior it centralizes should not exist; a readable implementation that has not been shown to cost anything should not be replaced by a clever one.

@@ -13,10 +13,10 @@ public sealed record BestBeforeChangePerformanceAnalysis<TCandidate, TSearchSpac
     private readonly Func<ObjectiveVector, double> objectiveValueSelector;
 
     public BestBeforeChangePerformanceAnalysis(TProblem problem,
-                                               IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>>
-                                                   evaluators,
+                                               IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators,
                                                Func<ObjectiveVector, double>? objectiveValueSelector = null,
-                                               int predictionEpochMultiplier = 10) : base(problem, evaluators)
+                                               int predictionEpochMultiplier = 10)
+        : base(problem, evaluators)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(predictionEpochMultiplier);
         this.objectiveValueSelector = objectiveValueSelector ?? (static objectiveVector => objectiveVector[0]);
@@ -32,7 +32,8 @@ public sealed record BestBeforeChangePerformanceAnalysis<TCandidate, TSearchSpac
 public sealed class BestBeforeChangePerformanceAnalysisResult<TCandidate>(
     ObjectiveDirections objective,
     Func<ObjectiveVector, double> objectiveValueSelector,
-    int predictionEpochMultiplier) : IDynamicAnalysisResult<TCandidate>
+    int predictionEpochMultiplier)
+    : IDynamicAnalysisResult<TCandidate>
 {
     private readonly List<BestBeforeChangePerformanceEntry<TCandidate>> bestBeforeChange = [];
     private readonly OnlineWeibullCurveModel predictionModel = new(double.NaN);
@@ -43,9 +44,7 @@ public sealed class BestBeforeChangePerformanceAnalysisResult<TCandidate>(
     public double Performance => bestBeforeChange.Count == 0 ? double.NaN : objectiveValueSum / bestBeforeChange.Count;
     public double Prediction { get; private set; } = double.NaN;
 
-    public void AfterEvaluationLog(object? sender,
-                                   IReadOnlyList<(TCandidate candidate, ObjectiveVector objective,
-                                       EvaluationTiming timing)> evaluationLog)
+    public void AfterEvaluationLog(object? sender, IReadOnlyList<(TCandidate candidate, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog)
     {
         foreach (var evaluation in evaluationLog.Where(x => x.timing.Valid))
         {
@@ -70,11 +69,7 @@ public sealed class BestBeforeChangePerformanceAnalysisResult<TCandidate>(
     private void Record((TCandidate candidate, ObjectiveVector objective, EvaluationTiming timing) best)
     {
         var objectiveValue = objectiveValueSelector(best.objective);
-        bestBeforeChange.Add(new BestBeforeChangePerformanceEntry<TCandidate>(
-            best.candidate,
-            best.objective,
-            objectiveValue,
-            best.timing));
+        bestBeforeChange.Add(new BestBeforeChangePerformanceEntry<TCandidate>(best.candidate, best.objective, objectiveValue, best.timing));
         objectiveValueSum += objectiveValue;
 
         predictionModel.AddObservation(best.timing.Epoch, objectiveValue);

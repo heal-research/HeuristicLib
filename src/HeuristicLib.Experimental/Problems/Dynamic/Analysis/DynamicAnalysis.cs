@@ -7,9 +7,7 @@ namespace HEAL.HeuristicLib.Problems.Dynamic.Analysis;
 
 public interface IDynamicAnalysisResult<TCandidate>
 {
-    void AfterEvaluationLog(object? sender,
-                            IReadOnlyList<(TCandidate candidate, ObjectiveVector objective,
-                                EvaluationTiming timing)> evaluationLog);
+    void AfterEvaluationLog(object? sender, IReadOnlyList<(TCandidate candidate, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog);
 }
 
 public abstract record DynamicAnalysis<TCandidate, TSearchSpace, TProblem, TResult>
@@ -18,27 +16,25 @@ public abstract record DynamicAnalysis<TCandidate, TSearchSpace, TProblem, TResu
     where TProblem : DynamicProblem<TCandidate, TSearchSpace>
     where TResult : class, IDynamicAnalysisResult<TCandidate>
 {
-    protected DynamicAnalysis(TProblem problem,
-                              params IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators)
+    protected DynamicAnalysis(TProblem problem, params IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators)
     {
         Problem = problem;
-        Evaluators = [..evaluators];
+        Evaluators = [.. evaluators];
     }
 
     public TProblem Problem { get; }
-
     public ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> Evaluators { get; }
 
     public override IAnalyzerRunState<TResult> CreateAnalyzerState() => new RunState(this, CreateInitialResult());
 
     public override void RegisterObservations(ObservationPlan observations, TResult result)
     {
-        foreach (var evaluator in Evaluators) observations.Observe(evaluator, Problem);
+        foreach (var evaluator in Evaluators)
+            observations.Observe(evaluator, Problem);
     }
 
-    private sealed class RunState(
-        DynamicAnalysis<TCandidate, TSearchSpace, TProblem, TResult> analyzer,
-        TResult result) : IAnalyzerRunState<TResult>, IDisposable
+    private sealed class RunState(DynamicAnalysis<TCandidate, TSearchSpace, TProblem, TResult> analyzer, TResult result)
+        : IAnalyzerRunState<TResult>, IDisposable
     {
         private bool disposed;
 

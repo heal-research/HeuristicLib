@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 
 public record RampedHalfAndHalfTreeCreator : SymbolicExpressionTreeCreator
 {
-    public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Create(searchSpace, random);
+    public override SymbolicExpressionTree CreateCandidate(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Create(searchSpace, random);
 
     /// <summary>
     ///   GetEvaluator a symbolic expression tree using 'RampedHalfAndHalf' strategy.

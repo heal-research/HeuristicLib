@@ -5,7 +5,11 @@ public class OnlineMeanAbsoluteErrorCalculator
     private int n;
     private double sae;
 
-    public OnlineMeanAbsoluteErrorCalculator() => Reset();
+    public OnlineMeanAbsoluteErrorCalculator()
+    {
+        Reset();
+    }
+
     public double MeanAbsoluteError => n > 0 ? sae / n : 0.0;
 
     public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)

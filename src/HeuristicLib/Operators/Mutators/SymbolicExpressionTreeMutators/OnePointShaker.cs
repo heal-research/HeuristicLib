@@ -6,14 +6,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
 public sealed record OnePointShaker : SymbolicExpressionTreeManipulator
 {
-
-    #region properties
-    public double ShakingFactor
-    {
-        get;
-        set;
-    } = 1.0;
-    #endregion
+    public double ShakingFactor { get; init; } = 1.0;
 
     public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Mutate(random, parent, ShakingFactor);
 

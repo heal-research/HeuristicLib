@@ -15,30 +15,15 @@ public abstract record Creator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected abstract ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ExecutionInstanceRegistry registry);
-
-    ICreatorInstance<TCandidate, TSearchSpace, TProblem> IExecutionInstanceResolvable<ICreatorInstance<TCandidate, TSearchSpace, TProblem>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateCreatorInstance(instanceRegistry);
+    public abstract ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
 public abstract record Creator<TCandidate, TSearchSpace>
-    : ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-{
-    protected abstract ICreatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateCreatorInstance(ExecutionInstanceRegistry registry);
-
-    ICreatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> IExecutionInstanceResolvable<ICreatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateCreatorInstance(instanceRegistry);
-}
+    : Creator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>;
 
 public abstract record Creator<TCandidate>
-    : ICreator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
-{
-    protected abstract ICreatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateCreatorInstance(ExecutionInstanceRegistry registry);
-
-    ICreatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> IExecutionInstanceResolvable<ICreatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateCreatorInstance(instanceRegistry);
-}
+    : Creator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
 public abstract class CreatorInstance<TCandidate, TSearchSpace, TProblem>
     : ICreatorInstance<TCandidate, TSearchSpace, TProblem>

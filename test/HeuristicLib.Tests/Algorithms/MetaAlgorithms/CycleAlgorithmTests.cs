@@ -31,16 +31,21 @@ public class CycleAlgorithmTests
         exception.ParamName.ShouldBe("algorithms");
     }
 
+    /// <summary>
+    /// A nonpositive cycle limit is a stable value rather than a rejected one: it runs no cycles.
+    /// </summary>
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void CycleAlgorithm_RequiresPositiveMaximumCycles(int maximumCycles)
+    public void CycleAlgorithm_WithNonpositiveMaximumCycles_RunsNoCycles(int maximumCycles)
     {
-        Should.Throw<ArgumentOutOfRangeException>(() =>
-            CycleAlgorithm.Create(new AdditiveStepAlgorithm(1)) with
-            {
-                MaximumCycles = maximumCycles
-            });
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var cycle = CycleAlgorithm.Create(new AdditiveStepAlgorithm(1)) with
+        {
+            MaximumCycles = maximumCycles
+        };
+
+        cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ShouldBeEmpty();
     }
 
     [Fact]
@@ -167,7 +172,7 @@ public class CycleAlgorithmTests
     {
         public int InstanceCount { get; private set; }
 
-        protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
+        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
         {
             InstanceCount++;
             return new Instance();
@@ -192,6 +197,7 @@ public class CycleAlgorithmTests
           PopulationState<RealVector> currentState,
           PopulationState<RealVector>? previousState,
           ExecutionState executionState,
+          IRandomNumberGenerator random,
           RealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)
         {

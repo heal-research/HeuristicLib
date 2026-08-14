@@ -113,7 +113,7 @@ public class GenealogyGraphTests
         var gres = run.GetResult(genealogyAnalysis);
 
         qres.Count.ShouldBe(gens);
-        res.Population.EvaluatedCandidates.Length.ShouldBe(popsize);
+        res.Population.EvaluatedCandidates.Count.ShouldBe(popsize);
         res.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate))
            .ShouldBeTrue();
         res.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
@@ -179,7 +179,7 @@ public class GenealogyGraphTests
         var qres = run.GetResult(qualities);
 
         qres.Count.ShouldBe(maximumIterations);
-        res.Population.EvaluatedCandidates.Length.ShouldBe(populationSize);
+        res.Population.EvaluatedCandidates.Count.ShouldBe(populationSize);
         res.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate))
            .ShouldBeTrue();
         res.Population.EvaluatedCandidates

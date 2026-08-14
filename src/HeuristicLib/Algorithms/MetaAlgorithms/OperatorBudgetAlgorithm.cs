@@ -21,19 +21,17 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearc
     public required TOperator ObservedOperator { get; init; }
     public required Func<TOperator, ObservationCounter, IOperator<TObservedInstance>> CountedOperatorFactory { get; init; }
 
-    public int MaximumCount
-    {
-        get;
-        init => field = value > 0
-            ? value
-            : throw new ArgumentOutOfRangeException(nameof(MaximumCount), "MaximumCount must be positive.");
-    }
+    /// <summary>
+    /// Gets the counted-operator budget. The expected value is positive.
+    /// </summary>
+    /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
+    public int MaximumCount { get; init; }
 
-    protected override OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
+    public override OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         var counter = new ObservationCounter();
         var countedOperator = CountedOperatorFactory(ObservedOperator, counter);
-        var childRegistry = registry.CreateChildRegistry();
+        var childRegistry = instanceRegistry.CreateChildRegistry();
         childRegistry.RegisterReplacement(ObservedOperator, countedOperator);
 
         return new(childRegistry.Resolve(Algorithm), counter, MaximumCount);

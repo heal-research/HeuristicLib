@@ -1,7 +1,6 @@
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -14,8 +13,7 @@ public interface IBestKnownObjectiveProvider<TCandidate, TSearchSpace, in TProbl
     ObjectiveVector GetBestKnown(TProblem problem);
 }
 
-public sealed class FuncBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>(
-    Func<TProblem, ObjectiveVector> getBestKnown)
+public sealed class FuncBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>(Func<TProblem, ObjectiveVector> getBestKnown)
     : IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TCandidate, TSearchSpace>
@@ -23,29 +21,39 @@ public sealed class FuncBestKnownObjectiveProvider<TCandidate, TSearchSpace, TPr
     public ObjectiveVector GetBestKnown(TProblem problem) => getBestKnown(problem);
 }
 
-public record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem>
+/// <summary>
+/// Normalizes the objective vectors produced by the child evaluator against the best-known objective vector of a
+/// dynamic problem, refreshing that reference whenever the problem's epoch changes.
+/// </summary>
+public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem>
     : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TCandidate, TSearchSpace>
 {
-    private readonly TProblem sourceProblem;
-    private readonly IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider;
-    private readonly RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy;
+    /// <summary>
+    /// Gets the dynamic problem this evaluator is bound to. Execution instances observe its epoch clock and can only evaluate this problem.
+    /// </summary>
+    public TProblem SourceProblem { get; init; }
 
-    public DynamicRelativeQualityEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
-                                           TProblem problem,
-                                           IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider,
-                                           RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy =
-                                               RelativeQualityZeroBestKnownPolicy.SignedInfinity)
-        : base(evaluator)
+    /// <summary>
+    /// Gets the provider that supplies the best-known objective vector for the current epoch.
+    /// </summary>
+    public IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> BestKnownProvider { get; init; }
+
+    /// <summary>
+    /// Gets the policy applied when a best-known objective value is zero.
+    /// </summary>
+    public RelativeQualityZeroBestKnownPolicy ZeroBestKnownPolicy { get; init; } = RelativeQualityZeroBestKnownPolicy.SignedInfinity;
+
+    public DynamicRelativeQualityEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider)
+        : base(childEvaluator)
     {
-        sourceProblem = problem;
-        this.bestKnownProvider = bestKnownProvider;
-        this.zeroBestKnownPolicy = zeroBestKnownPolicy;
+        SourceProblem = problem;
+        BestKnownProvider = bestKnownProvider;
     }
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
-        new Instance(innerEvaluator, sourceProblem, bestKnownProvider, zeroBestKnownPolicy);
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
+        new Instance(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy);
 
     private sealed class Instance : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>, IDisposable
     {
@@ -54,11 +62,8 @@ public record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem
         private readonly RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy;
         private ObjectiveVector? bestKnown;
 
-        public Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator,
-                        TProblem sourceProblem,
-                        IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider,
-                        RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
-            : base(innerEvaluator)
+        public Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
+            : base(childEvaluator)
         {
             this.sourceProblem = sourceProblem;
             this.bestKnownProvider = bestKnownProvider;
@@ -67,21 +72,16 @@ public record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem
             sourceProblem.EpochClock.OnEpochChange += OnEpochChange;
         }
 
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates,
-                                                                IRandomNumberGenerator random,
-                                                                TSearchSpace searchSpace,
-                                                                TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             if (!ReferenceEquals(problem, sourceProblem))
-            {
                 throw new InvalidOperationException("Dynamic relative quality evaluator instances can only evaluate the dynamic problem they were created for.");
-            }
 
             var currentBestKnown = bestKnown ?? throw new InvalidOperationException("No best-known objective vector is available.");
 
-            return InnerEvaluator.Evaluate(candidates, random, searchSpace, problem)
-                                 .Select(objective => RelativeQuality.Normalize(objective, currentBestKnown, zeroBestKnownPolicy))
-                                 .ToArray();
+            return ChildEvaluator.Evaluate(candidates, random, searchSpace, problem)
+                .Select(objective => RelativeQuality.Normalize(objective, currentBestKnown, zeroBestKnownPolicy))
+                .ToArray();
         }
 
         public void Dispose() => sourceProblem.EpochClock.OnEpochChange -= OnEpochChange;
@@ -92,26 +92,30 @@ public record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem
     }
 }
 
+public static class DynamicRelativeQualityEvaluator
+{
+    public static DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : DynamicProblem<TCandidate, TSearchSpace> =>
+        new(childEvaluator, problem, bestKnownProvider);
+}
+
 public static class DynamicRelativeQualityEvaluatorExtensions
 {
     extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : DynamicProblem<TCandidate, TSearchSpace>
     {
-        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> WithDynamicRelativeQuality(
-            TProblem problem,
-            IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider,
-            RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy =
-                RelativeQualityZeroBestKnownPolicy.SignedInfinity)
-            => new(evaluator, problem, bestKnownProvider, zeroBestKnownPolicy);
+        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> WithDynamicRelativeQuality(TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider) =>
+            new(evaluator, problem, bestKnownProvider);
 
-        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> WithDynamicRelativeQuality(
-            TProblem problem,
-            Func<TProblem, ObjectiveVector> getBestKnown,
-            RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy =
-                RelativeQualityZeroBestKnownPolicy.SignedInfinity)
-            => new(evaluator, problem,
-                new FuncBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>(getBestKnown),
-                zeroBestKnownPolicy);
+        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> WithDynamicRelativeQuality(TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy) =>
+            new(evaluator, problem, bestKnownProvider) { ZeroBestKnownPolicy = zeroBestKnownPolicy };
+
+        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> WithDynamicRelativeQuality(TProblem problem, Func<TProblem, ObjectiveVector> getBestKnown) =>
+            new(evaluator, problem, new FuncBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>(getBestKnown));
+
+        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> WithDynamicRelativeQuality(TProblem problem, Func<TProblem, ObjectiveVector> getBestKnown, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy) =>
+            new(evaluator, problem, new FuncBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>(getBestKnown)) { ZeroBestKnownPolicy = zeroBestKnownPolicy };
     }
 }

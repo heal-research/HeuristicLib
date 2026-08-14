@@ -31,7 +31,7 @@ public class EvaluatorCompositionTests
     public void LimitEvaluator_UsesIndependentCounterPerExecutionInstance()
     {
         var counter = new ObservationCounter();
-        var evaluator = CreateEvaluator().CountEvaluatedCandidates(counter).LimitEvaluations(2, strict: true);
+        var evaluator = CreateEvaluator().CountEvaluatedCandidates(counter).LimitEvaluations(2, enforceLimitWithinBatch: true);
         var firstInstance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var secondInstance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var problem = CreateProblem();
@@ -47,13 +47,13 @@ public class EvaluatorCompositionTests
     public void RepeatingEvaluator_InvokesResolvedChildForEveryEvaluation()
     {
         var counter = new ObservationCounter();
-        var evaluator = CreateEvaluator().CountEvaluatorCalls(counter).AsRepeatingAggregating(2, static (left, _) => left);
+        var evaluator = CreateEvaluator().CountEvaluatorCalls(counter).AsRepeated(2, ObjectiveVectorAggregation.Mean);
         var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(3);
+        counter.CurrentCount.ShouldBe(2);
     }
 
     [Fact]
@@ -90,11 +90,9 @@ public class EvaluatorCompositionTests
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>
         FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
 
-    private sealed record ProblemEvaluator : SingleSolutionEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+    private sealed record ProblemEvaluator : SingleCandidateEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public override ObjectiveVector Evaluate(int candidate, IRandomNumberGenerator random,
-                                                 DummySearchSpace<int> searchSpace,
-                                                 FuncProblem<int, DummySearchSpace<int>> problem)
-            => problem.Evaluate(candidate, random);
+        public override ObjectiveVector EvaluateCandidate(int candidate, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
+            problem.Evaluate(candidate, random);
     }
 }

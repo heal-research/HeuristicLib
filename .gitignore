@@ -57,7 +57,6 @@ dlldata.c
 
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
-/tsp/
 
 # .NET Core
 project.lock.json
@@ -329,6 +328,11 @@ paket-files/
 __pycache__/
 *.pyc
 
+# Python virtual environments
+.venv/
+venv/
+env/
+
 # Cake - Uncomment if you are using it
 # tools/**
 # !tools/packages.config
@@ -422,14 +426,6 @@ FodyWeavers.xsd
 **/.idea/**/contentModel.xml
 **/.idea/**/modules.xml
 
-*.suo
-*.user
-.vs/
-[Bb]in/
-[Oo]bj/
-_UpgradeReport_Files/
-[Pp]ackages/
-
 Thumbs.db
 Desktop.ini
 .DS_Store
@@ -441,6 +437,3 @@ Desktop.ini
 /api/
 /.idea/
 *.DotSettings
-examples/PythonInteroperability/PythonInteroperability.sln
-examples/PythonInteroperability/.venv
-for_Agent/

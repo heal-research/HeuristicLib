@@ -48,6 +48,9 @@ public abstract class AlgorithmRun
         return registry;
     }
 
+    //TODO: Discuss whether we really want this. A disposable analyzer run state is a strange contract: it makes every
+    //      analyzer a potential resource owner and couples run teardown to analyzer internals. The only current need is
+    //      unsubscribing from problem events, which might be better solved by a dedicated subscription lifetime.
     protected void DisposeAnalyzerStates()
     {
         if (analyzerStates is null)
@@ -94,8 +97,8 @@ public abstract class AlgorithmRun
         throw CreateResultTypeMismatchException(analyzer, state);
     }
 
-    private Dictionary<IAnalyzer, IAnalyzerRunState> GetAnalyzerStates()
-        => analyzerStates ?? throw new InvalidOperationException("Analyzer results are not available before the run starts.");
+    private Dictionary<IAnalyzer, IAnalyzerRunState> GetAnalyzerStates() =>
+        analyzerStates ?? throw new InvalidOperationException("Analyzer results are not available before the run starts.");
 
     private void EnsureNotStarted()
     {

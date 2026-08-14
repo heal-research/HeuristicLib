@@ -28,12 +28,16 @@ public class TsplibParser
     }
 
     public TsplibParser(string path)
-      : this() =>
-      source = new StreamReader(path);
+      : this()
+    {
+        source = new StreamReader(path);
+    }
 
     public TsplibParser(Stream stream)
-      : this() =>
-      source = new StreamReader(stream);
+      : this()
+    {
+        source = new StreamReader(stream);
+    }
 
     public string Name { get; private set; }
     public TSPLIBTypes Type { get; private set; }

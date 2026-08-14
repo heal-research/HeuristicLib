@@ -9,23 +9,23 @@ public abstract record WrappingMutator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IMutator<TCandidate, TSearchSpace, TProblem> InnerMutator { get; }
-
-    protected WrappingMutator(IMutator<TCandidate, TSearchSpace, TProblem> innerMutator)
+    protected WrappingMutator(IMutator<TCandidate, TSearchSpace, TProblem> childMutator)
     {
-        InnerMutator = innerMutator;
+        ChildMutator = childMutator;
     }
 
-    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>
-        CreateMutatorInstance(registry.Resolve(InnerMutator));
+    public IMutator<TCandidate, TSearchSpace, TProblem> ChildMutator { get; init; }
 
-    protected abstract WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(IMutatorInstance<TCandidate, TSearchSpace, TProblem> innerMutator);
+    public sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateExecutionInstance(instanceRegistry.Resolve(ChildMutator));
+
+    protected abstract WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator);
 }
 
-public abstract class WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem>(IMutatorInstance<TCandidate, TSearchSpace, TProblem> innerMutator)
+public abstract class WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem>(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator)
     : MutatorInstance<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IMutatorInstance<TCandidate, TSearchSpace, TProblem> InnerMutator { get; } = innerMutator;
+    protected IMutatorInstance<TCandidate, TSearchSpace, TProblem> ChildMutator { get; } = childMutator;
 }

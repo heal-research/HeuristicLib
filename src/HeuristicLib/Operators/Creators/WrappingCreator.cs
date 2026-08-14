@@ -9,23 +9,23 @@ public abstract record WrappingCreator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ICreator<TCandidate, TSearchSpace, TProblem> InnerCreator { get; }
-
-    protected WrappingCreator(ICreator<TCandidate, TSearchSpace, TProblem> innerCreator)
+    protected WrappingCreator(ICreator<TCandidate, TSearchSpace, TProblem> childCreator)
     {
-        InnerCreator = innerCreator;
+        ChildCreator = childCreator;
     }
 
-    protected sealed override ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ExecutionInstanceRegistry registry) =>
-        CreateCreatorInstance(registry.Resolve(InnerCreator));
+    public ICreator<TCandidate, TSearchSpace, TProblem> ChildCreator { get; init; }
 
-    protected abstract WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> innerCreator);
+    public sealed override ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateExecutionInstance(instanceRegistry.Resolve(ChildCreator));
+
+    protected abstract WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator);
 }
 
-public abstract class WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem>(ICreatorInstance<TCandidate, TSearchSpace, TProblem> innerCreator)
+public abstract class WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem>(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator)
     : CreatorInstance<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ICreatorInstance<TCandidate, TSearchSpace, TProblem> InnerCreator { get; } = innerCreator;
+    protected ICreatorInstance<TCandidate, TSearchSpace, TProblem> ChildCreator { get; } = childCreator;
 }

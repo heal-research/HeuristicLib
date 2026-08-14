@@ -11,9 +11,9 @@ public static class DummyEvaluator
     public static readonly ObjectiveVector DummyObjectives = new(0.0);
 }
 
-public record DummyEvaluator<TCandidate, TSearchSpace, TProblem> : SingleSolutionEvaluator<TCandidate, TSearchSpace, TProblem>
+public sealed record DummyEvaluator<TCandidate, TSearchSpace, TProblem> : SingleCandidateEvaluator<TCandidate, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public override ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => DummyEvaluator.DummyObjectives;
+    public override ObjectiveVector EvaluateCandidate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => DummyEvaluator.DummyObjectives;
 }

@@ -20,8 +20,7 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
         double sigma,
         UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
         int epochLength = int.MaxValue
-    ) : base(SingleObjective.Minimize, new PermutationSearchSpace(problemData.Size), environmentRandom, updatePolicy,
-        epochLength)
+    ) : base(SingleObjective.Minimize, new PermutationSearchSpace(problemData.Size), environmentRandom, updatePolicy, epochLength)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(sigma);
 
@@ -31,8 +30,7 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
         Update(); // initialize state (or call RebuildNoisyFlows() directly)
     }
 
-    public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random,
-                                             EvaluationTiming timing)
+    public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing)
     {
         var n = baseProblemData.Size;
         var cost = 0.0;

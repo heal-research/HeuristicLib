@@ -5,18 +5,42 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public sealed record CountingTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> : ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+public sealed record CountingTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : WrappingTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public ObservationCounter Counter { get; }
+    public ObservationCounter Counter { get; init; }
 
-    public CountingTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator, ObservationCounter counter)
-        : base(terminator, new ActionTerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>((_, _, _, _) => counter.IncrementBy(1)))
+    public CountingTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, ObservationCounter counter)
+        : base(childTerminator)
     {
         Counter = counter;
     }
+
+    protected override WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator) =>
+        new Instance(childTerminator, Counter);
+
+    private sealed class Instance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, ObservationCounter counter)
+        : WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminator)
+    {
+        public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem)
+        {
+            var result = ChildTerminator.IsTerminalState(state, searchSpace, problem);
+            counter.IncrementBy(1);
+            return result;
+        }
+    }
+}
+
+public static class CountingTerminator
+{
+    public static CountingTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, ObservationCounter counter)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState =>
+        new(childTerminator, counter);
 }
 
 public static class TerminatorCounterExtensions

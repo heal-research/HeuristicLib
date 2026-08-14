@@ -124,7 +124,6 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
         }
     }
 
-    private static bool[] Generate(ITravelingSalesmanProblemData tspData, double activationProb,
-                                   IRandomNumberGenerator random)
-        => Enumerable.Range(0, tspData.NumberOfCities).Select(_ => random.NextBool(activationProb)).ToArray();
+    private static bool[] Generate(ITravelingSalesmanProblemData tspData, double activationProb, IRandomNumberGenerator random) =>
+        Enumerable.Range(0, tspData.NumberOfCities).Select(_ => random.NextBool(activationProb)).ToArray();
 }

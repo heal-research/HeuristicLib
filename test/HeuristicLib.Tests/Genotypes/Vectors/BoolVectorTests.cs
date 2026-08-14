@@ -106,49 +106,88 @@ public sealed class BoolVectorTests
     }
 
     [Fact]
-    public void AreCompatible_ReturnsTrue_ForSameLength()
+    public void AreBroadcastable_ReturnsTrue_ForSameLength()
     {
         BoolVector a = new BoolVector(true, false);
         BoolVector b = new BoolVector(false, true);
 
-        BoolVector.AreCompatible(a, b).ShouldBeTrue();
+        Vector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
-    public void AreCompatible_ReturnsTrue_WhenLeftIsScalar()
+    public void AreBroadcastable_ReturnsTrue_WhenLeftIsScalar()
     {
         BoolVector a = true;
         BoolVector b = new BoolVector(false, true, false);
 
-        BoolVector.AreCompatible(a, b).ShouldBeTrue();
+        Vector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
-    public void AreCompatible_ReturnsTrue_WhenRightIsScalar()
+    public void AreBroadcastable_ReturnsTrue_WhenRightIsScalar()
     {
         BoolVector a = new BoolVector(false, true, false);
         BoolVector b = false;
 
-        BoolVector.AreCompatible(a, b).ShouldBeTrue();
+        Vector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
-    public void AreCompatible_ReturnsFalse_ForDifferentNonScalarLengths()
+    public void AreBroadcastable_ReturnsFalse_ForDifferentNonScalarLengths()
     {
         BoolVector a = new BoolVector(true, false);
         BoolVector b = new BoolVector(true, false, true);
 
-        BoolVector.AreCompatible(a, b).ShouldBeFalse();
+        Vector.AreBroadcastable(a, b).ShouldBeFalse();
     }
 
     [Fact]
-    public void BroadcastLength_ReturnsMaximumLength()
+    public void BroadcastLength_ReturnsNonScalarLength()
     {
         BoolVector scalar = true;
         BoolVector vector = new BoolVector(true, false, true);
 
-        BoolVector.BroadcastLength(scalar, vector).ShouldBe(3);
-        BoolVector.BroadcastLength(vector, scalar).ShouldBe(3);
+        Vector.BroadcastLength(scalar, vector).ShouldBe(3);
+        Vector.BroadcastLength(vector, scalar).ShouldBe(3);
+    }
+
+    [Fact]
+    public void BroadcastLength_ScalarAndEmptyVector_ReturnsZero()
+    {
+        BoolVector scalar = true;
+        var empty = BoolVector.Create();
+
+        Vector.BroadcastLength(scalar, empty).ShouldBe(0);
+        Vector.BroadcastLength(empty, scalar).ShouldBe(0);
+        (scalar & empty).ShouldBeEmpty();
+        (empty & scalar).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void AreBroadcastable_VectorAndEnumerable_ReturnsFalse_WhenScalarPrecedesDifferentLengths()
+    {
+        BoolVector scalar = true;
+        var others = new[] { BoolVector.Create(true, false), BoolVector.Create(true, false, true) };
+
+        Vector.AreBroadcastable(scalar, others).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void BroadcastLength_VectorAndEnumerable_ReturnsCommonLengthOrThrows()
+    {
+        BoolVector scalar = true;
+        var compatible = new[] { BoolVector.Create(true, false, true), (BoolVector)false };
+        var incompatible = new[] { BoolVector.Create(true, false), BoolVector.Create(true, false, true) };
+
+        Vector.BroadcastLength(scalar, compatible).ShouldBe(3);
+        Should.Throw<ArgumentException>(() => Vector.BroadcastLength(scalar, incompatible));
+    }
+
+    [Fact]
+    public void AreBroadcastableTo_AcceptsScalarsAndMatchingLengths()
+    {
+        Vector.AreBroadcastableTo(3, BoolVector.Create(true), BoolVector.Create(true, false, true)).ShouldBeTrue();
+        Vector.AreBroadcastableTo(3, BoolVector.Create(true, false)).ShouldBeFalse();
     }
 
     [Fact]

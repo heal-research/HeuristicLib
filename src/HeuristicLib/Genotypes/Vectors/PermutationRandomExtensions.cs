@@ -17,16 +17,32 @@ public static class PermutationRandomExtensions
 
             return Permutation.FromOwnedArray(elements);
         }
+    }
 
-        public Permutation Swap(Permutation permutation)
+    extension(Permutation permutation)
+    {
+        public Permutation SwapRandomIndices(IRandomNumberGenerator random)
         {
-            var length = permutation.Count;
-            var index1 = random.NextInt(length);
-            var index2 = random.NextInt(length);
+            if (permutation.Count < 2)
+            {
+                return permutation;
+            }
 
-            var newElements = permutation.ToArray();
-            (newElements[index1], newElements[index2]) = (newElements[index2], newElements[index1]);
-            return Permutation.FromOwnedArray(newElements);
+            var index1 = random.NextInt(permutation.Count);
+            var index2 = random.NextInt(permutation.Count);
+            return permutation.Swap(index1, index2);
+        }
+
+        public Permutation InvertRandomRange(IRandomNumberGenerator random)
+        {
+            if (permutation.Count < 2)
+            {
+                return permutation;
+            }
+
+            var start = random.NextInt(permutation.Count);
+            var end = random.NextInt(start, permutation.Count);
+            return permutation.Invert(start, end);
         }
     }
 }

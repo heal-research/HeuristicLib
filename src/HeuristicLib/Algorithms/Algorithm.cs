@@ -15,10 +15,7 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
 {
     internal TSelf Self => (TSelf)this;
 
-    protected abstract AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry);
-
-    IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> IExecutionInstanceResolvable<IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateAlgorithmInstance(instanceRegistry);
+    public abstract IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
 public abstract class AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>

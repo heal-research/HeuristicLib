@@ -5,6 +5,6 @@ namespace HEAL.HeuristicLib.Operators;
 public interface IOperator;
 
 public interface IOperator<out TExecutionInstance> : IOperator, IExecutionInstanceResolvable<TExecutionInstance>
-  where TExecutionInstance : IOperatorInstance;
+    where TExecutionInstance : IOperatorInstance;
 
 public interface IOperatorInstance : IExecutionInstance;

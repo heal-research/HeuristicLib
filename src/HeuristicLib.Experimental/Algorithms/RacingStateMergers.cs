@@ -9,8 +9,7 @@ public interface IRacingStateMerger<TCandidate, TSearchState>
     TSearchState Merge(IReadOnlyList<TSearchState> states, ObjectiveDirections objective);
 }
 
-public sealed record DelegatingRacingStateMerger<TCandidate, TSearchState>(
-    Func<IReadOnlyList<TSearchState>, ObjectiveDirections, TSearchState> MergeFunc)
+public sealed record DelegatingRacingStateMerger<TCandidate, TSearchState>(Func<IReadOnlyList<TSearchState>, ObjectiveDirections, TSearchState> MergeFunc)
     : IRacingStateMerger<TCandidate, TSearchState>
     where TSearchState : PopulationState<TCandidate>
 {
@@ -21,13 +20,12 @@ public sealed record DelegatingRacingStateMerger<TCandidate, TSearchState>(
 public sealed record BestPopulationStateMerger<TCandidate>(int? PopulationSize = null)
     : IRacingStateMerger<TCandidate, PopulationState<TCandidate>>
 {
-    public PopulationState<TCandidate> Merge(IReadOnlyList<PopulationState<TCandidate>> states,
-                                             ObjectiveDirections objective)
+    public PopulationState<TCandidate> Merge(IReadOnlyList<PopulationState<TCandidate>> states, ObjectiveDirections objective)
     {
         if (states.Count == 0)
             throw new ArgumentException("At least one state is required.", nameof(states));
 
-        var targetSize = PopulationSize ?? states[0].Population.EvaluatedCandidates.Length;
+        var targetSize = PopulationSize ?? states[0].Population.EvaluatedCandidates.Count;
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(targetSize);
 
         var comparer = objective.TotalOrderComparer is NoTotalOrderComparer

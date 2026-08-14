@@ -31,7 +31,7 @@ public class EvolutionaryGenerationBudgetTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         states.Count.ShouldBe(3);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 6).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 6).ShouldBeTrue();
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class EvolutionaryGenerationBudgetTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         states.Count.ShouldBe(3);
-        states.All(state => state.Population.EvaluatedCandidates.Length == 6).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count == 6).ShouldBeTrue();
         states.SelectMany(state => state.Population.EvaluatedCandidates)
               .All(solution => solution.ObjectiveVector.Count == 2)
               .ShouldBeTrue();
@@ -70,7 +70,7 @@ public class EvolutionaryGenerationBudgetTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         states.Count.ShouldBe(3);
-        states.All(state => state.Population.Single().EvaluatedCandidates.Length == 6).ShouldBeTrue();
+        states.All(state => state.Population.Single().EvaluatedCandidates.Count == 6).ShouldBeTrue();
         states.Select(state => state.Ages.Single().Distinct().Single()).ShouldBe([0, 1, 2]);
     }
 
@@ -89,31 +89,30 @@ public class EvolutionaryGenerationBudgetTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         states.Count.ShouldBe(3);
-        states.All(state => state.Population.EvaluatedCandidates.Length > 0).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Count > 0).ShouldBeTrue();
     }
 
-    [Fact]
-    public void Constructors_Throw_WhenMaximumGenerationsIsNotPositive()
+    /// <summary>
+    /// A nonpositive generation limit is a stable value rather than a rejected one: it completes before the first
+    /// generation is produced, matching how the terminators treat nonpositive limits.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Stream_WithNonpositiveMaximumGenerations_YieldsNoStates(int maximumGenerations)
     {
         var singleObjectiveProblem = CreateSingleObjectiveProblem();
         var multiObjectiveProblem = CreateMultiObjectiveProblem();
+        var ct = TestContext.Current.CancellationToken;
 
-        Should.Throw<ArgumentOutOfRangeException>(() => CreateEvolutionStrategy(singleObjectiveProblem) with
-        {
-            MaximumGenerations = 0
-        });
-        Should.Throw<ArgumentOutOfRangeException>(() => CreateNSGA2(multiObjectiveProblem) with
-        {
-            MaximumGenerations = 0
-        });
-        Should.Throw<ArgumentOutOfRangeException>(() => CreateAlpsGeneticAlgorithm(singleObjectiveProblem) with
-        {
-            MaximumGenerations = 0
-        });
-        Should.Throw<ArgumentOutOfRangeException>(() => CreateOpenEndedRelevantAllelesPreservingGeneticAlgorithm(singleObjectiveProblem) with
-        {
-            MaximumGenerations = 0
-        });
+        (CreateEvolutionStrategy(singleObjectiveProblem) with { MaximumGenerations = maximumGenerations })
+            .Stream(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
+        (CreateNSGA2(multiObjectiveProblem) with { MaximumGenerations = maximumGenerations })
+            .Stream(multiObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
+        (CreateAlpsGeneticAlgorithm(singleObjectiveProblem) with { MaximumGenerations = maximumGenerations })
+            .Stream(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
+        (CreateOpenEndedRelevantAllelesPreservingGeneticAlgorithm(singleObjectiveProblem) with { MaximumGenerations = maximumGenerations })
+            .Stream(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
     }
 
     private static TestFunctionProblem CreateSingleObjectiveProblem()

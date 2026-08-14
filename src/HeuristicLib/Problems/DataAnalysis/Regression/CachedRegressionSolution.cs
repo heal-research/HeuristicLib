@@ -8,7 +8,10 @@ public class CachedRegressionSolution : IRegressionModel
     private readonly Dictionary<int, double> cache = new();
     private readonly IRegressionModel inner;
 
-    public CachedRegressionSolution(IRegressionModel inner) => this.inner = inner;
+    public CachedRegressionSolution(IRegressionModel inner)
+    {
+        this.inner = inner;
+    }
 
     public IEnumerable<double> Predict(Dataset data, IEnumerable<int> rows)
     {

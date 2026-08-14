@@ -6,7 +6,11 @@ public class OnlineCovarianceCalculator
     private int n;
     private double xMean, yMean, cn;
 
-    public OnlineCovarianceCalculator() => Reset();
+    public OnlineCovarianceCalculator()
+    {
+        Reset();
+    }
+
     public double Covariance => n > 0 ? cn / n : 0.0;
 
     public static double Calculate(IEnumerable<double> first, IEnumerable<double> second, out OnlineCalculatorError errorState)

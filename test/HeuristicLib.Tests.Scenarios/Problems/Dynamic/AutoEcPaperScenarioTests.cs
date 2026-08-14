@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators;
@@ -13,8 +12,6 @@ using HEAL.HeuristicLib.Operators.Mutators.IntegerVectorMutators;
 using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.Dynamic.Analysis;
 using HEAL.HeuristicLib.Problems.Dynamic.Operators;
@@ -52,7 +49,7 @@ public class AutoEcPaperScenarioTests
             new HEAL.HeuristicLib.Operators.Creators.IntegerVectorCreators.UniformDistributedCreator());
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.1),
-            new UniformOnePositionManipulator());
+            new UniformOnePositionMutator());
         var evaluator = DirectEvaluator.For(problem).WithDynamicRelativeQuality(
             problem,
             new ActivatedTravelingSalesmanExactBestKnownProvider(
@@ -93,7 +90,7 @@ public class AutoEcPaperScenarioTests
         var qualityResult = run.GetResult(qualityCurve);
         var bbcpResult = run.GetResult(bbcp);
 
-        finalState.Population.EvaluatedCandidates.Length.ShouldBeGreaterThan(0);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBeGreaterThan(0);
         finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
             problem.SearchSpace.Contains(candidate.Candidate));
         qualityResult.BestPerEpoch.Count.ShouldBeGreaterThanOrEqualTo(2);
@@ -112,7 +109,7 @@ public class AutoEcPaperScenarioTests
             new HEAL.HeuristicLib.Operators.Creators.IntegerVectorCreators.UniformDistributedCreator());
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.15),
-            new UniformOnePositionManipulator());
+            new UniformOnePositionMutator());
         var evaluator = DirectEvaluator.For(problem);
 
         var racing = new DynamicRacingAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem,
@@ -148,7 +145,7 @@ public class AutoEcPaperScenarioTests
         var qualityResult = run.GetResult(qualityCurve);
         var bbcpResult = run.GetResult(bbcp);
 
-        finalState.Population.EvaluatedCandidates.Length.ShouldBeGreaterThan(0);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBeGreaterThan(0);
         finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
             problem.SearchSpace.Contains(candidate.Candidate));
         qualityResult.BestPerEpoch.Count.ShouldBeGreaterThanOrEqualTo(3);
@@ -197,19 +194,19 @@ public class AutoEcPaperScenarioTests
 
     private static MovingPeaksProblem CreateMovingPeaksProblem() =>
         new(new MovingPeaksParameters
-            {
-                Dimension = 2,
-                NumberOfPeaks = 3,
-                LowerBound = -5.0,
-                UpperBound = 5.0,
-                MinHeight = 20.0,
-                MaxHeight = 80.0,
-                MinWidth = 0.5,
-                MaxWidth = 2.0,
-                ShiftSeverity = 0.5,
-                HeightSeverity = 2.0,
-                WidthSeverity = 0.1
-            },
+        {
+            Dimension = 2,
+            NumberOfPeaks = 3,
+            LowerBound = -5.0,
+            UpperBound = 5.0,
+            MinHeight = 20.0,
+            MaxHeight = 80.0,
+            MinWidth = 0.5,
+            MaxWidth = 2.0,
+            ShiftSeverity = 0.5,
+            HeightSeverity = 2.0,
+            WidthSeverity = 0.1
+        },
             RandomNumberGenerator.Create(321),
             UpdatePolicy.AfterEvaluation,
             epochLength: 30);

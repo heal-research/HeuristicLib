@@ -6,20 +6,12 @@ namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
 public sealed record FullTreeShaker : SymbolicExpressionTreeManipulator
 {
-    public double ShakingFactor
-    {
-        get;
-        set;
-    } = 1.0;
+    public double ShakingFactor { get; init; } = 1.0;
 
-    public override SymbolicExpressionTree Mutate(
-      SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
-    {
-        return Mutate(random, parent, ShakingFactor);
-    }
+    public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) =>
+        Mutate(random, parent, ShakingFactor);
 
-    public static SymbolicExpressionTree Mutate(
-      IRandomNumberGenerator random, SymbolicExpressionTree tree, double shakingFactor)
+    public static SymbolicExpressionTree Mutate(IRandomNumberGenerator random, SymbolicExpressionTree tree, double shakingFactor)
     {
         var clone = new SymbolicExpressionTree(tree);
         clone.Root.ForEachNodePostfix(node =>

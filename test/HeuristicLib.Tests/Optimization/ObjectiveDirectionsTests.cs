@@ -47,6 +47,7 @@ public class ObjectiveDirectionsTests
         values.Best(objective).ShouldBe(new ObjectiveVector(1.0));
         values.Worst(objective).ShouldBe(new ObjectiveVector(4.0));
         values.Median(objective).ShouldBe(new ObjectiveVector(3.0));
+        values.Mean().ShouldBe(new ObjectiveVector(2.5));
     }
 
     [Fact]
@@ -60,5 +61,6 @@ public class ObjectiveDirectionsTests
         Should.Throw<InvalidOperationException>(() => values.Best(objective));
         Should.Throw<InvalidOperationException>(() => values.Worst(objective));
         Should.Throw<InvalidOperationException>(() => values.Median(objective));
+        Should.Throw<InvalidOperationException>(() => values.Mean());
     }
 }

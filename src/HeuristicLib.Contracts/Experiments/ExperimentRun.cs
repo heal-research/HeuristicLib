@@ -336,5 +336,8 @@ public sealed class ExperimentTrialException<TKey> : Exception
 {
     public TKey Key { get; }
 
-    public ExperimentTrialException(TKey key, Exception innerException) : base($"Experiment trial {key} failed.", innerException) => Key = key;
+    public ExperimentTrialException(TKey key, Exception innerException) : base($"Experiment trial {key} failed.", innerException)
+    {
+        Key = key;
+    }
 }

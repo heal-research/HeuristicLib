@@ -5,9 +5,9 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
-public record OrderCrossover : SingleSolutionCrossover<Permutation, PermutationSearchSpace>
+public record OrderCrossover : SingleCandidateCrossover<Permutation, PermutationSearchSpace>
 {
-    public override Permutation Cross(Parents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace)
+    public override Permutation CrossParents(Parents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace)
     {
         var (parent1, parent2) = (parents.Parent1, parents.Parent2);
         return Cross(parent1, parent2, random);
@@ -15,11 +15,6 @@ public record OrderCrossover : SingleSolutionCrossover<Permutation, PermutationS
 
     public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator rng)
     {
-        if (parent1.Count != parent2.Count)
-        {
-            throw new ArgumentException("Parent permutations must have the same length.");
-        }
-
         var (start, end) = GetRandomBreakPoints(parent1.Count, rng);
 
         return Cross(parent1, parent2, start, end);
@@ -27,11 +22,6 @@ public record OrderCrossover : SingleSolutionCrossover<Permutation, PermutationS
 
     public static Permutation Cross(Permutation parent1, Permutation parent2, int start, int end)
     {
-        if (parent1.Count != parent2.Count)
-        {
-            throw new ArgumentException("Parent permutations must have the same length.");
-        }
-
         if (start < 0 || end < 0 || start >= parent1.Count || end >= parent1.Count || start > end)
         {
             throw new ArgumentException("Start and end indices must be within the bounds of the permutation.");

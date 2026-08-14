@@ -9,7 +9,7 @@ public record ProbabilisticTreeCreator : SymbolicExpressionTreeCreator
 {
     private const int MaxTries = 100;
 
-    public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+    public override SymbolicExpressionTree CreateCandidate(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
     {
         var tree = searchSpace.Grammar.MakeStump(random);
         Ptc2(random, tree.Root[0], searchSpace.TreeDepth - 2, searchSpace.TreeLength - 2, searchSpace);
@@ -222,7 +222,7 @@ public record ProbabilisticTreeCreator : SymbolicExpressionTreeCreator
         var possibleSymbols = (from s in searchSpace.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
                                where s.InitialFrequency > 0.0
                                group s by searchSpace.Grammar.GetMinimumExpressionLength(s)
-          into g
+            into g
                                orderby g.Key
                                select g).First().ToList();
         var weights = possibleSymbols.Select(x => x.InitialFrequency).ToList();

@@ -29,7 +29,7 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
 {
     public int InstanceCount { get; private set; }
 
-    protected override IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateEvaluatorInstance(ExecutionInstanceRegistry registry)
+    public override IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         InstanceCount++;
         return new Instance();
@@ -47,10 +47,10 @@ public sealed record CountingInstanceAlgorithm(int Increment, IEvaluator<int, Du
 {
     public int InstanceCount { get; private set; }
 
-    protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
+    public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         InstanceCount++;
-        return new Instance(Increment, registry.Resolve(Evaluator));
+        return new Instance(Increment, instanceRegistry.Resolve(Evaluator));
     }
 
     private sealed class Instance(int increment, IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator)

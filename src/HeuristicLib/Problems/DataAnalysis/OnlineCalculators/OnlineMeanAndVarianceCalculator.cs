@@ -4,7 +4,10 @@ public class OnlineMeanAndVarianceCalculator
 {
     private double mOldM, mNewM, mOldS, mNewS;
 
-    public OnlineMeanAndVarianceCalculator() => Reset();
+    public OnlineMeanAndVarianceCalculator()
+    {
+        Reset();
+    }
 
     public OnlineCalculatorError VarianceErrorState { get; private set; }
 

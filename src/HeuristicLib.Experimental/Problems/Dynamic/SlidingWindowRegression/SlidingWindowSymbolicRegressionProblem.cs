@@ -40,8 +40,7 @@ public class SlidingWindowSymbolicRegressionProblem
 
     public (int StartIndex, int EndIndex) CurrentState { get; private set; }
 
-    public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random,
-                                             EvaluationTiming timing) =>
+    public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random, EvaluationTiming timing) =>
         innerProblem.Evaluate(solution, CachedRows, CachedTargets);
 
     protected override void Update()

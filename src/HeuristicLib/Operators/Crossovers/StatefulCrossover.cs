@@ -10,6 +10,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
 /// It must not contain operator or algorithm configurations, execution instances or execution instance resolution facilities.
 /// <see cref="CreateInitialState"/> must return a fresh state object for every execution instance. Calls are not inherently thread safe.
+/// Use <see cref="Crossover{TCandidate,TSearchSpace,TProblem}"/> when the crossover needs execution graph dependencies.
 /// </remarks>
 public abstract record StatefulCrossover<TCandidate, TSearchSpace, TProblem, TState>
     : Crossover<TCandidate, TSearchSpace, TProblem>
@@ -21,11 +22,14 @@ public abstract record StatefulCrossover<TCandidate, TSearchSpace, TProblem, TSt
 
     protected abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    protected sealed override ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
+    public sealed override ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new Instance(this, CreateInitialState());
 
-    private sealed class Instance(StatefulCrossover<TCandidate, TSearchSpace, TProblem, TState> crossover, TState state) : ICrossoverInstance<TCandidate, TSearchSpace, TProblem>
+    private sealed class Instance(StatefulCrossover<TCandidate, TSearchSpace, TProblem, TState> crossover, TState state)
+        : CrossoverInstance<TCandidate, TSearchSpace, TProblem>
     {
-        public IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => crossover.Cross(parents, state, random, searchSpace, problem);
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            crossover.Cross(parents, state, random, searchSpace, problem);
     }
 }
 
@@ -38,11 +42,14 @@ public abstract record StatefulCrossover<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    protected sealed override ICrossoverInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateCrossoverInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
+    public sealed override ICrossoverInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new Instance(this, CreateInitialState());
 
-    private sealed class Instance(StatefulCrossover<TCandidate, TSearchSpace, TState> crossover, TState state) : ICrossoverInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    private sealed class Instance(StatefulCrossover<TCandidate, TSearchSpace, TState> crossover, TState state)
+        : CrossoverInstance<TCandidate, TSearchSpace>
     {
-        public IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) => crossover.Cross(parents, state, random, searchSpace);
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
+            crossover.Cross(parents, state, random, searchSpace);
     }
 }
 
@@ -54,10 +61,13 @@ public abstract record StatefulCrossover<TCandidate, TState>
 
     protected abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, TState state, IRandomNumberGenerator random);
 
-    protected sealed override ICrossoverInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateCrossoverInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
+    public sealed override ICrossoverInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new Instance(this, CreateInitialState());
 
-    private sealed class Instance(StatefulCrossover<TCandidate, TState> crossover, TState state) : ICrossoverInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+    private sealed class Instance(StatefulCrossover<TCandidate, TState> crossover, TState state)
+        : CrossoverInstance<TCandidate>
     {
-        public IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => crossover.Cross(parents, state, random);
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random) =>
+            crossover.Cross(parents, state, random);
     }
 }

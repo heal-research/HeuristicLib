@@ -14,9 +14,15 @@ public sealed record GridExperiment<TCandidate, TSearchSpace, TProblem, TSearchS
 {
     public Grid<TAlgorithm> ParameterGrid { get; }
 
-    public GridExperiment(TAlgorithm algorithm) => ParameterGrid = Grid.Create(algorithm);
+    public GridExperiment(TAlgorithm algorithm)
+    {
+        ParameterGrid = Grid.Create(algorithm);
+    }
 
-    private GridExperiment(Grid<TAlgorithm> parameterGrid) => ParameterGrid = parameterGrid;
+    private GridExperiment(Grid<TAlgorithm> parameterGrid)
+    {
+        ParameterGrid = parameterGrid;
+    }
 
     public GridExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> VaryBy<TValue>(IReadOnlyList<TValue> values, Func<TAlgorithm, TValue, TAlgorithm> configurator) =>
         new(ParameterGrid.VaryBy(values, configurator));

@@ -16,41 +16,20 @@ public abstract record Terminator<TCandidate, TSearchSpace, TProblem, TSearchSta
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected abstract ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry);
-
-    ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> IExecutionInstanceResolvable<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateTerminatorInstance(instanceRegistry);
+    public abstract ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
 public abstract record Terminator<TCandidate, TSearchSpace, TSearchState>
-    : ITerminator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
+    : Terminator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
     where TSearchState : class, ISearchState
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-{
-    protected abstract ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry);
-
-    ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> IExecutionInstanceResolvable<ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateTerminatorInstance(instanceRegistry);
-}
+    where TSearchSpace : class, ISearchSpace<TCandidate>;
 
 public abstract record Terminator<TCandidate, TSearchState>
-    : ITerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
-    where TSearchState : class, ISearchState
-{
-    protected abstract ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry);
-
-    ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> IExecutionInstanceResolvable<ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateTerminatorInstance(instanceRegistry);
-}
+    : Terminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
+    where TSearchState : class, ISearchState;
 
 public abstract record Terminator<TCandidate>
-    : ITerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>
-{
-    protected abstract ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry);
-
-    ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> IExecutionInstanceResolvable<ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateTerminatorInstance(instanceRegistry);
-}
+    : Terminator<TCandidate, ISearchState>;
 
 public abstract class TerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     : ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
@@ -78,7 +57,8 @@ public abstract class TerminatorInstance<TCandidate, TSearchState>
 {
     public abstract bool IsTerminalState(TSearchState state);
 
-    bool ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>.IsTerminalState(TSearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => IsTerminalState(state);
+    bool ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>.IsTerminalState(TSearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+        IsTerminalState(state);
 }
 
 public abstract class TerminatorInstance<TCandidate>
@@ -86,5 +66,6 @@ public abstract class TerminatorInstance<TCandidate>
 {
     public abstract bool IsTerminalState();
 
-    bool ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>.IsTerminalState(ISearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => IsTerminalState();
+    bool ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>.IsTerminalState(ISearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+        IsTerminalState();
 }

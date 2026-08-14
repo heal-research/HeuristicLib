@@ -4,7 +4,11 @@ public class OnlineMeanErrorCalculator
 {
     private readonly OnlineMeanAndVarianceCalculator meanAndVarianceCalculator = new();
 
-    public OnlineMeanErrorCalculator() => Reset();
+    public OnlineMeanErrorCalculator()
+    {
+        Reset();
+    }
+
     public double MeanError => meanAndVarianceCalculator.Mean;
 
     public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)

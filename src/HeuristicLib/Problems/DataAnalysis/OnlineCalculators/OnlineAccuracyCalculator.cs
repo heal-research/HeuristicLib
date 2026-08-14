@@ -7,7 +7,11 @@ public class OnlineAccuracyCalculator
     private int correctlyClassified;
     private int n;
 
-    public OnlineAccuracyCalculator() => Reset();
+    public OnlineAccuracyCalculator()
+    {
+        Reset();
+    }
+
     public double Accuracy => correctlyClassified / (double)n;
 
     public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)

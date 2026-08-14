@@ -1,4 +1,3 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -6,32 +5,28 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-[Equatable]
-public partial record ObservableEvaluator<TCandidate, TSearchSpace, TProblem>
+public sealed record ObservableEvaluator<TCandidate, TSearchSpace, TProblem>
     : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator => InnerEvaluator;
+    public ValueArray<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; init; }
 
-    [OrderedEquality]
-    public ImmutableArray<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
-
-    public ObservableEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, params IReadOnlyList<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
-        : base(evaluator)
+    public ObservableEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, params IReadOnlyList<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : base(childEvaluator)
     {
-        Observers = observers.ToImmutableArray();
+        Observers = observers.ToValueArray();
     }
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
-        new Instance(innerEvaluator, Observers);
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
+        new Instance(childEvaluator, Observers);
 
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator, ImmutableArray<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
-        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(innerEvaluator)
+    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ValueArray<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            var result = InnerEvaluator.Evaluate(candidates, random, searchSpace, problem);
+            var result = ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
             foreach (var observer in observers)
             {
                 observer.AfterEvaluation(candidates, result, searchSpace, problem);
@@ -42,9 +37,27 @@ public partial record ObservableEvaluator<TCandidate, TSearchSpace, TProblem>
     }
 }
 
+public static class ObservableEvaluator
+{
+    public static ObservableEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, params IReadOnlyList<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childEvaluator, observers);
+
+    public static ObservableEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, Action<IReadOnlyList<TCandidate>, IReadOnlyList<ObjectiveVector>, TSearchSpace, TProblem> afterEvaluation)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childEvaluator, new ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>(afterEvaluation));
+
+    public static ObservableEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, Action<IReadOnlyList<TCandidate>, IReadOnlyList<ObjectiveVector>> afterEvaluation)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childEvaluator, new ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>((candidates, objectives, _, _) => afterEvaluation(candidates, objectives)));
+}
+
 public interface IEvaluatorObserver<TCandidate, in TSearchSpace, in TProblem>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     void AfterEvaluation(IReadOnlyList<TCandidate> candidates, IReadOnlyList<ObjectiveVector> objectiveVectors, TSearchSpace searchSpace, TProblem problem);
 }

@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
@@ -11,9 +12,8 @@ public sealed record DurationMeasuringInterceptor<TCandidate, TSearchSpace, TPro
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Interceptor => InnerInterceptor;
-    public ObservationDuration Duration { get; }
-    public TimeProvider TimeProvider { get; }
+    public ObservationDuration Duration { get; init; }
+    public TimeProvider TimeProvider { get; init; }
 
     public DurationMeasuringInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor, ObservationDuration duration)
         : this(interceptor, duration, TimeProvider.System)
@@ -27,19 +27,18 @@ public sealed record DurationMeasuringInterceptor<TCandidate, TSearchSpace, TPro
         TimeProvider = timeProvider;
     }
 
-    protected override WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(
-        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerInterceptor) =>
-        new Instance(innerInterceptor, Duration, TimeProvider);
+    protected override WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor) =>
+        new Instance(childInterceptor, Duration, TimeProvider);
 
-    private sealed class Instance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerInterceptor, ObservationDuration duration, TimeProvider timeProvider)
-        : WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(innerInterceptor)
+    private sealed class Instance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, ObservationDuration duration, TimeProvider timeProvider)
+        : WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptor)
     {
-        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, TProblem problem)
+        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var startTimestamp = timeProvider.GetTimestamp();
             try
             {
-                return InnerInterceptor.Transform(currentState, previousState, searchSpace, problem);
+                return ChildInterceptor.Transform(currentState, previousState, random, searchSpace, problem);
             }
             finally
             {
@@ -47,6 +46,21 @@ public sealed record DurationMeasuringInterceptor<TCandidate, TSearchSpace, TPro
             }
         }
     }
+}
+
+public static class DurationMeasuringInterceptor
+{
+    public static DurationMeasuringInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, ObservationDuration duration)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState =>
+        new(childInterceptor, duration);
+
+    public static DurationMeasuringInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, ObservationDuration duration, TimeProvider timeProvider)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState =>
+        new(childInterceptor, duration, timeProvider);
 }
 
 public static class InterceptorDurationExtensions

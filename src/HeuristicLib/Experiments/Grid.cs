@@ -1,72 +1,40 @@
 using System.Collections;
-using Generator.Equals;
 
 namespace HEAL.HeuristicLib.Experiments;
 
-[Equatable]
-public sealed partial class Grid<T> : IEnumerable<T>
+public sealed record Grid<T> : IEnumerable<T>
 {
-    public T Prototype { get; }
-
-    [OrderedEquality]
-    public ImmutableArray<IGridParameter<T>> Parameters { get; } = [];
+    public ValueArray<T> Configurations { get; }
 
     public Grid(T prototype)
     {
-        Prototype = prototype;
+        Configurations = [prototype];
     }
 
-    public Grid(T prototype, IReadOnlyList<IGridParameter<T>> parameters)
+    private Grid(ValueArray<T> configurations)
     {
-        Prototype = prototype;
-        Parameters = parameters.ToImmutableArray();
+        Configurations = configurations;
     }
 
-    public Grid<T> VaryBy<TProblem>(IReadOnlyList<TProblem> values, Func<T, TProblem, T> configurator)
+    public Grid<T> VaryBy<TValue>(IReadOnlyList<TValue> values, Func<T, TValue, T> configurator)
     {
-        if (values.Count == 0)
+        var configurations = new T[checked(Configurations.Count * values.Count)];
+        var index = 0;
+        foreach (var configuration in Configurations)
         {
-            throw new ArgumentException("A grid dimension must contain at least one value.", nameof(values));
+            foreach (var value in values)
+            {
+                configurations[index++] = configurator(configuration, value);
+            }
         }
 
-        return new(Prototype, Parameters.Add(new GridParameter<T, TProblem>(values, configurator)));
+        return new(ValueArray.FromOwnedArray(configurations));
     }
 
-    public ImmutableArray<T> GetConfigurations()
-    {
-        IEnumerable<T> configurations = new List<T> { Prototype };
+    public ImmutableArray<T> GetConfigurations() => Configurations.AsImmutableArray();
 
-        return Parameters.Aggregate(configurations, (current, parameter) => parameter.GetConfigurations(current)).ToImmutableArray();
-    }
-
-    public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)GetConfigurations()).GetEnumerator();
+    public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)Configurations).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-}
-
-public interface IGridParameter<T>
-{
-    public int Count { get; }
-    IEnumerable<T> GetConfigurations(IEnumerable<T> prototypes);
-}
-
-public sealed record GridParameter<T, TParam> : IGridParameter<T>
-{
-    public ImmutableArray<TParam> Values { get; }
-
-    public Func<T, TParam, T> Configurator { get; }
-
-    public int Count => Values.Length;
-
-    public GridParameter(IReadOnlyList<TParam> values, Func<T, TParam, T> configurator)
-    {
-        Values = values.ToImmutableArray();
-        Configurator = configurator;
-    }
-
-    public IEnumerable<T> GetConfigurations(IEnumerable<T> prototypes)
-    {
-        return prototypes.SelectMany(prototype => Values.Select(value => Configurator(prototype, value)));
-    }
 }
 
 public static class Grid
@@ -75,5 +43,4 @@ public static class Grid
     {
         return new(prototype);
     }
-
 }

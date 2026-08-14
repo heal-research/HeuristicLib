@@ -11,27 +11,26 @@ public sealed record DurationMeasuringReplacer<TCandidate, TSearchSpace, TProble
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public IReplacer<TCandidate, TSearchSpace, TProblem> Replacer => InnerReplacer;
-    public ObservationDuration Duration { get; }
-    public TimeProvider TimeProvider { get; }
+    public ObservationDuration Duration { get; init; }
+    public TimeProvider TimeProvider { get; init; }
 
-    public DurationMeasuringReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, ObservationDuration duration)
-        : this(replacer, duration, TimeProvider.System)
+    public DurationMeasuringReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationDuration duration)
+        : this(childReplacer, duration, TimeProvider.System)
     {
     }
 
-    public DurationMeasuringReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, ObservationDuration duration, TimeProvider timeProvider)
-        : base(replacer)
+    public DurationMeasuringReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationDuration duration, TimeProvider timeProvider)
+        : base(childReplacer)
     {
         Duration = duration;
         TimeProvider = timeProvider;
     }
 
-    protected override WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> innerReplacer) =>
-        new Instance(innerReplacer, Duration, TimeProvider);
+    protected override WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer) =>
+        new Instance(childReplacer, Duration, TimeProvider);
 
-    private sealed class Instance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> innerReplacer, ObservationDuration duration, TimeProvider timeProvider)
-        : WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem>(innerReplacer)
+    private sealed class Instance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationDuration duration, TimeProvider timeProvider)
+        : WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem>(childReplacer)
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(
             IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
@@ -40,7 +39,7 @@ public sealed record DurationMeasuringReplacer<TCandidate, TSearchSpace, TProble
             var startTimestamp = timeProvider.GetTimestamp();
             try
             {
-                return InnerReplacer.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+                return ChildReplacer.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
             }
             finally
             {
@@ -48,6 +47,19 @@ public sealed record DurationMeasuringReplacer<TCandidate, TSearchSpace, TProble
             }
         }
     }
+}
+
+public static class DurationMeasuringReplacer
+{
+    public static DurationMeasuringReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationDuration duration)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childReplacer, duration);
+
+    public static DurationMeasuringReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationDuration duration, TimeProvider timeProvider)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childReplacer, duration, timeProvider);
 }
 
 public static class ReplacerDurationExtensions

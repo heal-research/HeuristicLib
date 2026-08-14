@@ -139,9 +139,9 @@ public class ResearcherAuthoringSpecs
     }
 
     private sealed record PullTowardZeroMutator
-      : SingleSolutionMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+      : SingleCandidateMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        public override RealVector Mutate(
+        public override RealVector MutateCandidate(
           RealVector parent,
           IRandomNumberGenerator random,
           RealVectorSearchSpace searchSpace,
@@ -165,9 +165,9 @@ public class ResearcherAuthoringSpecs
     }
 
     private sealed record TestFunctionOriginCreator
-      : SingleSolutionCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+      : SingleCandidateCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        public override RealVector Create(
+        public override RealVector CreateCandidate(
           IRandomNumberGenerator random,
           RealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)

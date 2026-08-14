@@ -6,7 +6,11 @@ public class OnlineMaxAbsoluteErrorCalculator
     private double mae;
     private int n;
 
-    public OnlineMaxAbsoluteErrorCalculator() => Reset();
+    public OnlineMaxAbsoluteErrorCalculator()
+    {
+        Reset();
+    }
+
     public double MaxAbsoluteError => n > 0 ? mae : 0.0;
 
     public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)

@@ -11,7 +11,7 @@ public class InversionMutatorTests
     {
         var parent = Permutation.Create(0, 1, 2, 3, 4, 5, 6, 7, 8);
 
-        var result = InversionMutator.Mutate(parent, new SequenceRandomNumberGenerator(), start: 1, end: 4);
+        var result = new InversionMutator().MutateCandidate(parent, new SequenceRandomNumberGenerator(0.12, 0.45));
 
         result.ShouldBe(Permutation.Create(0, 4, 3, 2, 1, 5, 6, 7, 8));
     }

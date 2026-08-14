@@ -64,6 +64,12 @@ Operator authoring is based on who owns execution data and execution graph depen
 
 The unprefixed role base is the common base for all three paths. Stateless and stateful bases derive from it. Authors normally derive directly from the unprefixed base only for the full control path.
 
+Role-specific base classes are authoring conveniences. Contract-only implementations remain valid and do not need to use them.
+
+Each role or topology base publicly exposes one `CreateExecutionInstance(ExecutionInstanceRegistry)` factory whose return type is the exact execution-instance role. The method directly implements the configuration contract, so deliberate callers do not need an interface cast and there is no parallel role-named factory. Ordinary execution should still resolve configurations through the registry so that it controls instance identity and sharing. Topology bases implement the public registry overload and expose a protected `CreateExecutionInstance` overload that constructs the same execution instance from already-resolved child instances.
+
+Wrapping and multi-operator configurations expose their retained child operators through public read-only properties. Configuration objects remain fully inspectable without allowing callers to replace their children. Resolved child instances are execution machinery and remain private or protected by default.
+
 ### Stateless operators
 
 A stateless operator configuration also performs the operation. Configuration values must remain unchanged during execution. Retained collection inputs use snapshot semantics: operator APIs accept `IReadOnlyList<T>` where appropriate then store an immutable snapshot. Later changes to the caller's list do not alter the operator configuration. Specialized role helpers may build on this path for common operation shapes.
@@ -80,7 +86,7 @@ Framework managed state has no disposal lifecycle. State that owns disposable re
 
 The configuration describes reusable parameters and graph structure. The authored execution instance owns operation logic, mutable execution data and resolved child execution instances.
 
-Wrapping and multi bases are topology specific shortcuts within this path. A wrapping base resolves one child once. A multi base resolves several children once. They do not have separate stateless and stateful variants because their purpose is already execution graph coordination. The unprefixed role base remains available when those shortcuts do not fit.
+Role-specific wrapping and multi bases are topology shortcuts within this path. A wrapping base resolves one child once. A multi base resolves several children once and publicly exposes their immutable configuration snapshot. They do not have separate stateless and stateful variants because their purpose is already execution graph coordination. The unprefixed role base remains available when those shortcuts do not fit.
 
 ### Roslyn analyzer guardrails
 

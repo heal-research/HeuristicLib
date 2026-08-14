@@ -14,9 +14,16 @@ public sealed class ConstantTreeNode : NumericTreeNode
 
     public ConstantTreeNode(Constant numberSymbol) : base(numberSymbol) { }
 
-    public ConstantTreeNode(ConstantTreeNode original) : base(original) => Value = original.Value;
+    public ConstantTreeNode(ConstantTreeNode original) : base(original)
+    {
+        Value = original.Value;
+    }
 
-    public ConstantTreeNode(double value) : this(new Constant()) => Value = value;
+    public ConstantTreeNode(double value) : this(new Constant())
+    {
+        Value = value;
+    }
+
     public new Constant Symbol => (Constant)base.Symbol;
 
     public override bool HasLocalParameters => false;

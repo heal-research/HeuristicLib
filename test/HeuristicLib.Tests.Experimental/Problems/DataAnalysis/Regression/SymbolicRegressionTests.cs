@@ -171,7 +171,7 @@ public class SymbolicRegressionTests
 
         foreach (var c in creators)
         {
-            var tree = c.Create(r, problem.SearchSpace);
+            var tree = c.CreateCandidate(r, problem.SearchSpace);
             problem.SearchSpace.Contains(tree).ShouldBeTrue();
             _ = problem.Evaluate(tree);
         }
@@ -183,7 +183,7 @@ public class SymbolicRegressionTests
         };
         foreach (var c in invalidCreators)
         {
-            var tree = c.Create(r, problem.SearchSpace);
+            var tree = c.CreateCandidate(r, problem.SearchSpace);
             (problem.SearchSpace.TreeDepth >= tree.Depth).ShouldBeTrue();
             _ = problem.Evaluate(tree);
         }

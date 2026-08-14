@@ -1,39 +1,37 @@
-using Generator.Equals;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-[Equatable]
-public partial record AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+public sealed record AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
     : MultiTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public AnyTerminator(params IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> terminators)
-      : base(terminators)
+    public AnyTerminator(params IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
+        : base(childTerminators)
     {
     }
 
-    protected override MultiTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ImmutableArray<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> innerTerminators) =>
-        new Instance(innerTerminators);
+    protected override MultiTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ImmutableArray<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators) =>
+        new Instance(childTerminators);
 
-    private sealed class Instance(ImmutableArray<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> innerTerminators)
-        : MultiTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(innerTerminators)
+    private sealed class Instance(ImmutableArray<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
+        : MultiTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminators)
     {
         public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem) =>
-            InnerTerminators.Any(terminator => terminator.IsTerminalState(state, searchSpace, problem));
+            ChildTerminators.Any(terminator => terminator.IsTerminalState(state, searchSpace, problem));
     }
 }
 
 public static class AnyTerminator
 {
-    public static AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(params IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> terminators)
+    public static AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(params IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
         where TSearchState : class, ISearchState
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new([.. terminators]);
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(childTerminators);
 }
 
 public static class AnyTerminatorExtensions

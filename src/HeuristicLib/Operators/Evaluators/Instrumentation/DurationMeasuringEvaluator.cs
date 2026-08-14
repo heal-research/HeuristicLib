@@ -11,35 +11,33 @@ public sealed record DurationMeasuringEvaluator<TCandidate, TSearchSpace, TProbl
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator => InnerEvaluator;
-    public ObservationDuration Duration { get; }
-    public TimeProvider TimeProvider { get; }
+    public ObservationDuration Duration { get; init; }
+    public TimeProvider TimeProvider { get; init; }
 
-    public DurationMeasuringEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, ObservationDuration duration)
-        : this(evaluator, duration, TimeProvider.System)
+    public DurationMeasuringEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationDuration duration)
+        : this(childEvaluator, duration, TimeProvider.System)
     {
     }
 
-    public DurationMeasuringEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, ObservationDuration duration, TimeProvider timeProvider)
-        : base(evaluator)
+    public DurationMeasuringEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationDuration duration, TimeProvider timeProvider)
+        : base(childEvaluator)
     {
         Duration = duration;
         TimeProvider = timeProvider;
     }
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(
-        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
-        new Instance(innerEvaluator, Duration, TimeProvider);
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
+        new Instance(childEvaluator, Duration, TimeProvider);
 
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator, ObservationDuration duration, TimeProvider timeProvider)
-        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(innerEvaluator)
+    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationDuration duration, TimeProvider timeProvider)
+        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var startTimestamp = timeProvider.GetTimestamp();
             try
             {
-                return InnerEvaluator.Evaluate(candidates, random, searchSpace, problem);
+                return ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
             }
             finally
             {
@@ -47,6 +45,19 @@ public sealed record DurationMeasuringEvaluator<TCandidate, TSearchSpace, TProbl
             }
         }
     }
+}
+
+public static class DurationMeasuringEvaluator
+{
+    public static DurationMeasuringEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationDuration duration)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childEvaluator, duration);
+
+    public static DurationMeasuringEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationDuration duration, TimeProvider timeProvider)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(childEvaluator, duration, timeProvider);
 }
 
 public static class EvaluatorDurationExtensions

@@ -77,8 +77,7 @@ public sealed class MovingPeaksProblem
         }
     }
 
-    public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random,
-                                             EvaluationTiming timing)
+    public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random, EvaluationTiming timing)
     {
         var best = double.NegativeInfinity;
 

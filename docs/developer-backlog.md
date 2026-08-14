@@ -2,7 +2,7 @@
 
 This file is the short living tracker for doc, API-spec, and refactoring follow-up.
 
-It is intentionally narrow: it should track only partial and unfinished follow-up.
+It is intentionally narrow: it should track only partial and unfinished follow-up. [Discussed, tried, and rejected](#discussed-tried-and-rejected) is the one exception, and holds settled questions that should not be reopened without new evidence.
 
 ## Partly addressed, but still open
 
@@ -37,6 +37,7 @@ Why these are only partial today:
 
 These are still real open items:
 
+- restructure the developer guidelines into a coherent, numbered hierarchy that separates document authority, contributor decision-making, architectural rules, contract and validation rules, public API design, implementation conventions, and enforcement. Treat the guide as policy for both human contributors and coding agents: normative decisions must be explicit, easy to locate and reference, and clearly distinguished from rationale and examples so agents can identify, explain, and warn about proposed code or documentation that conflicts with an established guideline. Preserve the guideline as the canonical policy document linked from `AGENTS.md`; perform the initial structural pass without intentionally changing policy, then review duplication and move topic-specific explanations only in a separate editorial pass
 - multi-objective short-path usage
 - generalize `PipelineAlgorithm` so consecutive algorithms may use different search state types
 - add explicit state transformations between `PipelineAlgorithm` stages, including transformations where the input and output state types are the same
@@ -64,7 +65,38 @@ These are still real open items:
 - add a Python package bootstrap story for `HEAL.HeuristicLib.PythonInterop`: during early GitHub-based installs, the Python package should generate a tiny temporary `.csproj` that references the matching NuGet package and runs `dotnet publish` into a user cache, so Python users do not need checked-in generated DLLs. Later, replace or complement this with CI-built PyPI wheels that already contain the published .NET payload for normal Python installs.
 - add explicit ownership-taking factory methods for candidate containers such as `RealVector`, `IntegerVector`, and similar types, following the explicit static-factory style rather than constructor overloads; the goal is to let callers that already own the backing storage transfer it without another allocation or copy, and random generation should be one of the first places to adopt this once the API shape is decided
 - decide whether operators should expose a consistent caller-provided output-buffer or result-memory API. Avoid one-off `Memory<T>` parameters on individual operators. If this becomes necessary for allocation-sensitive workflows, design it as a library-wide operator convention that clearly states who owns the resulting storage and how immutable candidate containers are created from it.
+- benchmark and, if worthwhile, reduce batching overhead in lightweight operators such as `InversionMutator`, including per-call captured delegates and per-item RNG forks. General and variable-width operations should retain deterministic child RNGs per logical item or key. For operators with a proven fixed number of primitive draws, evaluate deterministic fixed-width random-decision planning in logical item order as an allocation-saving specialization. Results must remain independent of workers, partitions, scheduling, concurrency limits, and CPU-core count. Do not require all RNG implementations to become counter-based or random-access-capable solely for this optimization.
 - expand `IRandomNumberGenerator` and the concrete random engines so they expose the raw primitive outputs and data widths needed to build statistically sound and efficient higher-level sampling APIs; in particular, bounded integer generation should eventually be reworked on top of integer-domain primitives rather than `NextDouble()` scaling
+
+## Discussed, tried, and rejected
+
+Approaches that were evaluated, in some cases prototyped, and decided against. They are recorded here so that a settled question is not proposed, prototyped and rejected a second time. Each entry states what was tried, what decided it, and what would have to change to reopen it.
+
+Unlike the open items above, these are settled. Rules that follow from them live in [developer guidelines](developer-guidelines.md) and the relevant topic pages; this section holds only the reasoning.
+
+### Typed operator invocation
+
+Prototyped during the operator rework in August 2026 and rolled back.
+
+Cross-cutting concerns such as duration measurement, observation, choosing one child and pipelining would have been centralized behind one typed execution signature, `(TInput, TContext) -> TOutput`, with generic meta-operator bases invoking children through a shared `Invoke`.
+
+It failed because C#'s nominal interface model still requires a role-specific configuration and execution instance for every role. A generic pipeline containing mutators cannot become an `IMutator` merely because its type arguments are mutators, and CRTP preserves a self type but cannot add interface membership. The duration-measuring prototype moved only the small exception-safe timing block into the shared base, while constructors, configuration properties, static factories, fluent extensions, the nested execution instance and role forwarding all remained; the generic base declarations and the context bridge replaced at least as much code as they removed. An isolated pass-through benchmark measured 2.39 ns for the role-specific one-stage pipeline against 12.84 ns for the typed one, both at zero allocation.
+
+Role execution instances therefore expose their named operation — `Mutate`, `Cross`, `Select`, `Evaluate` — and no second generic invocation path. Do not reintroduce a generic `Invoke`, a problem context carrier, default interface bridges between an invocation method and role methods, or generic wrapping and multi bases shared across roles. `IOperator<TExecutionInstance>` is unrelated to this rejection and is retained: it expresses which execution-instance role a configuration creates and carries no input, context or output model.
+
+Reopening this would need a language or runtime mechanism that lets one generic implementation satisfy several nominal role contracts without a per-role leaf. Current C# has none.
+
+### Generated operator families
+
+Decided against on 2026-08-13, after the typed-invocation rework left source generation open as an alternative.
+
+A Roslyn incremental generator, or a deterministic one-shot scaffolding command, would have emitted the repetitive parts of an operator family: configuration and execution-instance arity ladders, stateless and stateful bases, wrapping and multi topologies, construction companions, and one adapter per role for each cross-cutting concern.
+
+It was rejected because new operator roles are expected to be rare and concern adapters are not purely mechanical. Applicability, lifecycle, result shape, naming and construction differ per role, as duration measurement recording failed calls in `finally` and counting recording only successful ones already shows. A production generator would need a stable generator contract, semantic discovery, diagnostics, collision handling, generated-source tests, IDE verification, packaging, external-consumer tests and ongoing compiler compatibility work. Generated public API would also be harder to navigate, refactor and review, a template change could reshape a broad public API with no ordinary source diff at each type, and one generator defect would reproduce across the entire matrix. Coding agents absorb the same repetitive work while the result stays ordinary reviewable source.
+
+Operator families are therefore ordinary checked-in C# source; see [operator authoring](operator-authoring.md#scaffolding-roles-and-cross-cutting-concerns) for the workflow and its guardrails.
+
+Reopening this would need measured evidence that ordinary source has become a material maintenance burden — frequent new roles or concerns, recurring matrix omissions, or repeated synchronization work whose semantics have stabilized into a small declarative model. Any proposal must compare its benefit against the agent-assisted workflow rather than against handwriting everything, and must keep handwritten source a fully supported path. Reopen it through an explicit decision rather than through isolated generator experiments.
 
 ## Source material
 
@@ -84,3 +116,5 @@ Delete it once most remaining items have either:
 - moved into normal issue tracking or another active planning system
 
 If it starts reading like a second architecture document again, cut it down.
+
+[Discussed, tried, and rejected](#discussed-tried-and-rejected) outlives the tracker. When this file goes away, move that section somewhere durable rather than deleting it; its whole purpose is to stop settled questions from being reopened by someone who was not there.

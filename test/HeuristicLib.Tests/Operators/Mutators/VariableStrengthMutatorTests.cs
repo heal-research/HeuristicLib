@@ -85,9 +85,9 @@ public class VariableStrengthMutatorTests
     private static FuncProblem<RealVector, RealVectorSearchSpace> CreateProblem(RealVectorSearchSpace searchSpace) =>
         FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);
 
-    private sealed record ZeroCreator : SingleSolutionCreator<RealVector, RealVectorSearchSpace>
+    private sealed record ZeroCreator : SingleCandidateCreator<RealVector, RealVectorSearchSpace>
     {
-        public override RealVector Create(IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => new(0.0);
+        public override RealVector CreateCandidate(IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => new(0.0);
     }
 
     private sealed class SequenceRandom(params double[] values) : IRandomNumberGenerator
