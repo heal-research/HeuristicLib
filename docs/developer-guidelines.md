@@ -14,7 +14,7 @@ Each steering document has one primary responsibility:
 | [Design goals and principles](design-goals.md) | Which durable qualities the resulting library should have |
 | [Developer guidelines](developer-guidelines.md) | How contributors implement those requirements and goals |
 | [Glossary](glossary.md) | Which terminology is canonical |
-| [Developer backlog](developer-backlog.md) | Which follow-up work and design decisions remain unresolved |
+| [Developer backlog](developer-backlog.md) | Which follow-up work and design decisions remain unresolved, and which approaches were tried and rejected |
 | [AGENTS.md](../AGENTS.md) | How contributors navigate and validate the repository |
 
 Topic pages document public behavior, usage and extension contracts. They should not become alternative repository policy documents.
@@ -92,6 +92,8 @@ derived configuration performs its checks in that protected overload. `Repeating
 there, while the `ChooseOne` operators validate nonempty children and matching weight counts there.
 
 Behavior that forms part of a reusable configuration should be represented by an explicit strategy interface whose implementations are immutable value objects, normally records. This keeps configuration equality structural and leaves a viable persistence model for built-in and user-defined strategies. Do not use a `Func`, `Action` or another delegate as a configuration property for such behavior: delegate equality depends on method and target identity, and captured runtime state cannot be persisted meaningfully. A delegate adapter is appropriate only for an explicitly runtime-only API whose identity equality and non-persistability are part of its documented contract.
+
+A record declares that a type has value semantics, so choose one because structural equality is the right contract and not for the concise syntax. A carrier that holds a random number generator, an execution instance, a registry or another identity-bearing dependency is not a value, and its synthesized equality would compare things that cannot be meaningfully compared. Use an ordinary class for such a carrier.
 
 Validation that depends on the actual problem, search space or operation inputs belongs at execution time in the execution
 instance's role method. This includes populations, candidate batches, requested result counts and other call-specific data.
@@ -225,6 +227,18 @@ Debug and release builds must behave the same for the same input.
 - Do not use `Debug.Assert` in library code.
 - Enforce correctness invariants through types or normal runtime checks.
 
+## Performance
+
+Operators and evaluation run in the hottest loops of an algorithm, so treat their cost as part of the design rather than a later optimization pass. See [Performance as a design constraint](design-goals.md#performance-as-a-design-constraint).
+
+- Avoid unnecessary allocation, boxing, delegate creation, context object construction and interface indirection on operator and evaluation paths.
+- Do not accept overhead in shared machinery because the operators in mind are expensive. The same path carries lightweight operators such as `InversionMutator`, for which that overhead is material.
+- Keep the straightforward implementation until a measurement shows it costs something. A `foreach` pipeline loop, a direct timing block in `finally` and an ordinary role method call are the intended shapes. A disposable measurement scope or another clever helper needs a demonstrated clarity or performance benefit.
+- Prefer removing an abstraction to optimizing around it. A layer whose supporting machinery is larger than the behavior it centralizes should be deleted rather than tuned.
+- Keep results independent of workers, partitions, scheduling, concurrency limits and CPU-core count. Assign random sequences by logical item or key, as described in [Randomness](randomness.md).
+
+The repository has no benchmark project and does not maintain standing measurements. Benchmark ad hoc when a specific change looks risky and report the numbers with the change. Do not add permanent benchmark infrastructure without a separate accepted decision.
+
 ## Public API design
 
 Design APIs for the pit of success.
@@ -237,6 +251,8 @@ Design APIs for the pit of success.
 - Avoid capability interfaces until concrete use cases justify the additional abstraction.
 - Do not add marker interfaces without behavior or a concrete static typing requirement.
 - Do not preserve overloads or base classes only for symmetry when their semantics are unclear.
+- Introduce a self type parameter only when a concrete consumer needs the exact derived type. `Algorithm<TSelf, ...>` has one in fluent experiment composition. Do not propagate `TSelf` for symmetry or possible future use.
+- Seal a completed composition policy that is not intended as an authoring extension point. Topology and authoring bases stay open, because inheritance carries a defined responsibility there.
 
 XML documentation presents the ordinary contract first. Use `<summary>` for the member's main purpose and, where useful,
 the conventional expected value range. Put stable interpretations of unusual values, edge cases, and behavior outside the
@@ -301,6 +317,13 @@ Callers should not have to spell generic arguments that available values can det
 - Add a fluent extension when the receiver participates in the resulting configuration, for example `mutator.Then(otherMutator)`.
 - Keep direct construction available when neither an existing problem nor an algorithm can provide the required type information.
 
+Where these entry points live is also a convention, so that a reader who knows one operator knows where to look for the rest:
+
+- Public constructors stay on the configuration type itself.
+- Static `Create(...)` and `For(...)` helpers go on a non-generic static companion named after the type, so `ChooseOneMutator.Create(...)` infers what `new ChooseOneMutator<...>(...)` would make the caller spell.
+- Fluent extensions go in an explicit `<Type>Extensions` companion rather than a shared extension class.
+- A role-specific convenience that is not part of the general concern, such as `WithRate`, may live beside the type as its own companion rather than being pushed into a shared one.
+
 Use API usage specs to prove that the intended calls compile without explicit generic arguments. Mechanically stable helper conventions may be enforced by Roslyn analyzers and code fixes. Assembly wide relationships belong in architecture tests rather than a duplicate analyzer rule.
 
 ### Operator parameter order
@@ -326,6 +349,8 @@ Stateless operators should expose direct static implementation methods when the 
 Group extension methods by user facing concern rather than target type alone.
 
 Observation, counting, duration measurement, budget composition, factory and conversion helpers should use separate extension classes when they represent different intents. Avoid generic extension classes that collect unrelated methods.
+
+Name an extension class after the concern it serves. A cross-cutting concern spread over several roles uses role-first names such as `MutatorDurationExtensions`, which keeps one role's families together while still naming the concern.
 
 Source folders may group related extension concerns under folders such as `Instrumentation` without forcing a matching public namespace. Namespaces follow user facing concepts while folders may help maintainers separate implementations and cross cutting concerns.
 
