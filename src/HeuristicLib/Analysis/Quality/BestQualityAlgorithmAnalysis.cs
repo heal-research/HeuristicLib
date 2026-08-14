@@ -22,17 +22,16 @@ public record BestQualityAlgorithmAnalysis<TCandidate, TSearchSpace, TProblem> :
             observations.Observe(evaluator, AfterEvaluation);
         return;
 
-        void AfterEvaluation(IReadOnlyList<TCandidate> candidates, IReadOnlyList<EvaluatedCandidate<TCandidate>> evaluatedCandidates,
+        void AfterEvaluation(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates,
                              TSearchSpace searchSpace, TProblem problem)
         {
-            if (evaluatedCandidates.Count == 0)
+            if (objectiveVectors.Count == 0)
                 return;
-            result.CurrentScore ??= evaluatedCandidates[0].ObjectiveVector;
+            result.CurrentScore ??= objectiveVectors[0];
             var comp = problem.Objective.TotalOrderComparer;
-            foreach (var evaluatedCandidate in evaluatedCandidates)
+            foreach (var objectiveVector in objectiveVectors)
             {
-                var o = evaluatedCandidate.ObjectiveVector;
-                result.CurrentScore = comp.Compare(o, result.CurrentScore) < 0 ? o : result.CurrentScore;
+                result.CurrentScore = comp.Compare(objectiveVector, result.CurrentScore) < 0 ? objectiveVector : result.CurrentScore;
             }
         }
     }

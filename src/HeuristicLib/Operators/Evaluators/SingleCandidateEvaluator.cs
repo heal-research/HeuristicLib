@@ -15,11 +15,11 @@ public abstract record SingleCandidateEvaluator<TCandidate, TSearchSpace, TProbl
 
     public abstract ObjectiveVector EvaluateCandidate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+    public sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
         BatchExecution.Execute(
             candidates,
             (evaluator: this, searchSpace, problem),
-            static (candidate, itemRandom, state) => candidate.ToEvaluated(state.evaluator.EvaluateCandidate(candidate, itemRandom, state.searchSpace, state.problem)),
+            static (candidate, itemRandom, state) => state.evaluator.EvaluateCandidate(candidate, itemRandom, state.searchSpace, state.problem),
             random,
             Concurrency);
 }
@@ -32,11 +32,11 @@ public abstract record SingleCandidateEvaluator<TCandidate, TSearchSpace>
 
     public abstract ObjectiveVector EvaluateCandidate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
+    public sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
         BatchExecution.Execute(
             candidates,
             (evaluator: this, searchSpace),
-            static (candidate, itemRandom, state) => candidate.ToEvaluated(state.evaluator.EvaluateCandidate(candidate, itemRandom, state.searchSpace)),
+            static (candidate, itemRandom, state) => state.evaluator.EvaluateCandidate(candidate, itemRandom, state.searchSpace),
             random,
             Concurrency);
 }
@@ -48,11 +48,11 @@ public abstract record SingleCandidateEvaluator<TCandidate>
 
     public abstract ObjectiveVector EvaluateCandidate(TCandidate candidate, IRandomNumberGenerator random);
 
-    public sealed override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) =>
+    public sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) =>
         BatchExecution.Execute(
             candidates,
             this,
-            static (candidate, itemRandom, evaluator) => candidate.ToEvaluated(evaluator.EvaluateCandidate(candidate, itemRandom)),
+            static (candidate, itemRandom, evaluator) => evaluator.EvaluateCandidate(candidate, itemRandom),
             random,
             Concurrency);
 }

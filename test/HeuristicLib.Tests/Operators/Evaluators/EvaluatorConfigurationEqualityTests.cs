@@ -126,7 +126,7 @@ public class EvaluatorConfigurationEqualityTests
         private sealed class Instance(ImmutableArray<IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childEvaluators)
             : MultiEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childEvaluators)
         {
-            public override IReadOnlyList<EvaluatedCandidate<int>> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
                 ChildEvaluators[0].Evaluate(candidates, random, searchSpace, problem);
         }
     }

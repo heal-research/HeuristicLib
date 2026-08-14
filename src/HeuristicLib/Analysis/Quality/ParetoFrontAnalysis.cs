@@ -18,7 +18,7 @@ public record ParetoFrontAnalysis<T, TS, TP>(
     public override void RegisterObservations(ObservationPlan observations, ParetoState<T> result)
     {
         foreach (var evaluator in Evaluator)
-            observations.Observe(evaluator, (_, evaluatedCandidates, _, _) => AfterEvaluation(result, evaluatedCandidates));
+            observations.Observe(evaluator, (objectiveVectors, candidates, _, _) => AfterEvaluation(result, candidates.ToEvaluated(objectiveVectors)));
     }
 
     public void AfterEvaluation(ParetoState<T> result, IReadOnlyList<EvaluatedCandidate<T>> evaluatedCandidates)

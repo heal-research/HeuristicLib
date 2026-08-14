@@ -62,7 +62,7 @@ public class ObservableEvaluatorTests
     public void ObservableEvaluator_DoesNotInvokeObserversWhenEvaluationThrows()
     {
         var observed = 0;
-        var evaluator = new ThrowingEvaluator().ObserveWith((IReadOnlyList<int> _, IReadOnlyList<EvaluatedCandidate<int>> _) => observed++);
+        var evaluator = new ThrowingEvaluator().ObserveWith((IReadOnlyList<ObjectiveVector> _, IReadOnlyList<int> _) => observed++);
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -144,7 +144,7 @@ public class ObservableEvaluatorTests
 
     private sealed record ThrowingEvaluator : StatelessEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public override IReadOnlyList<EvaluatedCandidate<int>> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
             throw new InvalidOperationException();
     }
 }

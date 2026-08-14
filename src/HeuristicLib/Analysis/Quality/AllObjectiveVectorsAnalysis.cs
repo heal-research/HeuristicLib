@@ -31,8 +31,7 @@ public record AllObjectiveVectorsAnalysis<TCandidate, TSearchSpace, TProblem, TS
     {
         foreach (var evaluator in Evaluators)
             observations.Observe(evaluator,
-                (_, evaluatedCandidates, _, _) =>
-                    result.AddRange(evaluatedCandidates.Select(candidate => candidate.ObjectiveVector)));
+                (objectiveVectors, _, _, _) => result.AddRange(objectiveVectors));
 
         if (!resetAfterIntercept)
             return;

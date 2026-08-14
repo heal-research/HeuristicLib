@@ -543,7 +543,7 @@ repeated placement in the algorithm lifecycle. The role provides the usual set:
   simplification`. The composite preserves the configured order.
 - **Iterated.** Feeds the refined candidate back into the same refiner for a
   configured number of rounds, mirroring
-  `Operators/Evaluators/IteratedEvaluator.cs`. This is the intended way to
+  the `IteratedEvaluator` that RF-2 removes. This is the intended way to
   express repeated refinement of one candidate.
 - **Choose-one, multi, wrapping, observable, and instrumentation** variants
   follow the conventions of the other roles.
@@ -840,6 +840,40 @@ Validation: Release build clean with the operator authoring analyzer at error
 severity; 2001 tests pass across all four test projects; `dotnet format`
 whitespace, style and analyzer checks are clean.
 
+### Evaluator contract change outcome
+
+RF-2 is implemented. `IEvaluatorInstance.Evaluate` returns
+`IReadOnlyList<ObjectiveVector>`; `EvaluatedCandidate<TCandidate>` is retained as
+the population and state pairing type, and `candidates.ToEvaluated(objectiveVectors)`
+is the new batch pairing helper used at algorithm evaluation call sites.
+
+Findings from the migration:
+
+- **Two guards were dead code.** `RepeatingEvaluator.CandidateComparer` existed
+  solely to detect repetitions disagreeing on which candidate they described, and
+  `CachingEvaluator` had to document that a cache hit returns the cached candidate
+  rather than the supplied one. Both disappear with a measuring evaluator.
+- **`IteratedEvaluator` was removed**, together with its test. Iterating a
+  measuring evaluator is meaningless; the capability returns as `IteratedRefiner`
+  in RF-4, and the removed test's intent belongs there.
+- **Several call sites became simpler, not more complex.** `HillClimber`,
+  `PythonCorrelationAnalysis`, and `AllObjectiveVectorsAnalysis` were unpacking
+  objective vectors out of evaluated candidates and now receive them directly.
+  The predicted positional-pairing cost materialized in only a handful of
+  algorithm and analysis call sites.
+- **Two analysis hooks legitimately need pairs.** `ParetoFrontAnalysis` and
+  `HyperVolumeAnalysis` store candidate/objective pairs, and now build them at the
+  observer boundary. This is the intended shape: pairing happens where the pair is
+  used.
+- **Three refinement-behavior tests were removed** rather than adapted, because
+  they tested candidate replacement during evaluation, which is deliberately no
+  longer a behavior of this layer. Their coverage is owed by RF-4 and RF-7.
+
+Validation: Release build clean across the solution; 2030 tests pass across all
+four test projects; `dotnet format` whitespace and analyzer checks are clean.
+`dotnet format style` reports pre-existing IDE0021 warnings in
+`DataAnalysis/Statistics/Statistics.cs`, a file untouched by this change.
+
 ### Refinement checkpoints
 
 Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted`. Implementation stops at `Awaiting review`; only explicit user acceptance advances to the next checkpoint.
@@ -848,7 +882,7 @@ Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted
 | --- | --- | --- |
 | RF-0 Design contract | Accepted | Document the `Candidate → Candidate` refiner role as the single refinement mechanism, conventional algorithm placement, the visibility rule for operator-issued evaluation, composition topologies, the improvement-checking refiner with its nullable evaluator and comparer, the fitness-only evaluator contract, the composition examples, and deferred producer wrappers and artifacts. No source code. |
 | RF-1 Development-branch integration | Accepted | Merge `dev` into the working branch, reconcile and review its operator-base improvements, run appropriate validation, and stop before implementing Refiner. Done; see [Development-branch integration outcome](#development-branch-integration-outcome). |
-| RF-2 Evaluator contract simplification | Pending | Change `IEvaluatorInstance.Evaluate` to return `IReadOnlyList<ObjectiveVector>`, migrate the evaluator wrappers, built-in algorithms, and analysis hooks, remove `IteratedEvaluator`, and remove the candidate-substitution caveat from `CachingEvaluator`. |
+| RF-2 Evaluator contract simplification | Awaiting review | Change `IEvaluatorInstance.Evaluate` to return `IReadOnlyList<ObjectiveVector>`, migrate the evaluator wrappers, built-in algorithms, and analysis hooks, remove `IteratedEvaluator`, and remove the candidate-substitution caveat from `CachingEvaluator`. `EvaluatedCandidate<TCandidate>` is retained as the population and state pairing type; only the evaluator stops producing it. `IEvaluatorObserver.AfterEvaluation` becomes `(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, ...)`, adopting the output-first parameter order that the other seven observer interfaces already use and that evaluation was the sole exception to. |
 | RF-3 Refiner operator model | Pending | Implement the general refiner configuration and execution-instance contracts, authoring bases in the three paths and three arities, `SingleCandidateRefiner.RefineCandidate`, concurrency, identity behavior, validation, and focused contract tests. |
 | RF-4 Refiner composition topologies | Pending | Add the pipeline, iterated, choose-one, multi, wrapping, and observable refiner topologies, restoring iterated refinement after RF-2 removes `IteratedEvaluator`, with order-significant and repeated-stage tests. |
 | RF-5 Explicit algorithm integration | Pending | Add configurable refinement to applicable built-in algorithms after creation and final variation but before evaluation, without re-refining carried evaluated candidates. |

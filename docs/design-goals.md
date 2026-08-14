@@ -65,7 +65,7 @@ This gives algorithms, analysis and concurrent execution a predictable value ori
 
 The problem defines canonical evaluation semantics. An explicit evaluator layer may sit between algorithms and problem evaluation when it provides meaningful composition such as caching, repeated evaluation, observation or scheduling.
 
-Problems score candidates by returning objective vectors. Evaluators return authoritative `EvaluatedCandidate<TCandidate>` values, so an evaluator may return the original candidate or an explicit replacement candidate together with its objective vector.
+Problems score candidates by returning objective vectors, and evaluators return objective vectors for the candidates they are given.
 
 Shared operators should support batch oriented APIs when batch context is part of the operation semantics.
 

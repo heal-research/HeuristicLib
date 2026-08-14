@@ -144,8 +144,8 @@ public class TravelingSalesmanProblemTests
         problem.UpdateOnce();
         var after = instance.Evaluate([[0, 1, 2, 3]], TestRandoms.NoRandom, problem.SearchSpace, problem)[0];
 
-        before.ObjectiveVector.ShouldBe(new ObjectiveVector(0.0));
-        after.ObjectiveVector.ShouldBe(new ObjectiveVector(0.0));
+        before.ShouldBe(new ObjectiveVector(0.0));
+        after.ShouldBe(new ObjectiveVector(0.0));
     }
 
     [Fact]
@@ -215,7 +215,7 @@ public class TravelingSalesmanProblemTests
 
         var r1 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
         var r2 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
-        r2.ObjectiveVector.ToArray().ShouldBe(r1.ObjectiveVector.ToArray());
+        r2.ToArray().ShouldBe(r1.ToArray());
 
         p.UpdateOnce();
         p.EpochClock.CurrentEpoch.ShouldBe(1);

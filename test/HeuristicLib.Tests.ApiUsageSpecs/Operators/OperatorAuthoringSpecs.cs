@@ -204,7 +204,7 @@ public class OperatorAuthoringSpecs
         var candidate = RealVector.Repeat(2.0, 3);
         var evaluatedCandidates = instance.Evaluate([candidate], RandomNumberGenerator.Create(5), problem.SearchSpace, problem);
 
-        evaluatedCandidates.ShouldBe([candidate.ToEvaluated(new ObjectiveVector(2.0))]);
+        evaluatedCandidates.ShouldBe([new ObjectiveVector(2.0)]);
     }
 
     [Fact]
@@ -235,7 +235,7 @@ public class OperatorAuthoringSpecs
             problem.SearchSpace,
             problem);
 
-        objectives.Select(evaluatedCandidate => evaluatedCandidate.ObjectiveVector).ShouldBe([new ObjectiveVector(2.0), new ObjectiveVector(4.0)]);
+        objectives.ShouldBe([new ObjectiveVector(2.0), new ObjectiveVector(4.0)]);
     }
 
     [Fact]
@@ -251,9 +251,9 @@ public class OperatorAuthoringSpecs
         var second = firstInstance.Evaluate(candidates, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
         var independent = secondInstance.Evaluate(candidates, RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
 
-        first.ShouldBe([candidates[0].ToEvaluated(new ObjectiveVector(1.0))]);
-        second.ShouldBe([candidates[0].ToEvaluated(new ObjectiveVector(2.0))]);
-        independent.ShouldBe([candidates[0].ToEvaluated(new ObjectiveVector(1.0))]);
+        first.ShouldBe([new ObjectiveVector(1.0)]);
+        second.ShouldBe([new ObjectiveVector(2.0)]);
+        independent.ShouldBe([new ObjectiveVector(1.0)]);
     }
 
     [Fact]
@@ -266,7 +266,7 @@ public class OperatorAuthoringSpecs
         var candidate = RealVector.Repeat(4.0, 3);
         var evaluatedCandidates = instance.Evaluate([candidate], RandomNumberGenerator.Create(6), problem.SearchSpace, problem);
 
-        evaluatedCandidates.ShouldBe([candidate.ToEvaluated(new ObjectiveVector(4.0))]);
+        evaluatedCandidates.ShouldBe([new ObjectiveVector(4.0)]);
     }
 
     [Fact]
@@ -284,8 +284,8 @@ public class OperatorAuthoringSpecs
 
         wrapping.ChildEvaluator.ShouldBeSameAs(child);
         multi.ChildEvaluators[0].ShouldBeSameAs(child);
-        wrapped.Select(evaluatedCandidate => evaluatedCandidate.ObjectiveVector).ShouldBe([new ObjectiveVector(3.0)]);
-        first.Select(evaluatedCandidate => evaluatedCandidate.ObjectiveVector).ShouldBe([new ObjectiveVector(4.0)]);
+        wrapped.ShouldBe([new ObjectiveVector(3.0)]);
+        first.ShouldBe([new ObjectiveVector(4.0)]);
     }
 
     [Fact]
@@ -733,8 +733,8 @@ public class OperatorAuthoringSpecs
 
     private sealed record FirstValueEvaluator : StatelessEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        public override IReadOnlyList<EvaluatedCandidate<RealVector>> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
-            candidates.Select(candidate => candidate.ToEvaluated(new ObjectiveVector(candidate[0]))).ToArray();
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            candidates.Select(candidate => new ObjectiveVector(candidate[0])).ToArray();
     }
 
     private sealed record ConcurrentFirstValueEvaluator : SingleCandidateEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
@@ -757,10 +757,10 @@ public class OperatorAuthoringSpecs
 
         protected override ExecutionState CreateInitialState() => new();
 
-        protected override IReadOnlyList<EvaluatedCandidate<RealVector>> Evaluate(IReadOnlyList<RealVector> candidates, ExecutionState state, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, ExecutionState state, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
             state.Calls++;
-            return candidates.Select(candidate => candidate.ToEvaluated(new ObjectiveVector(state.Calls))).ToArray();
+            return candidates.Select(candidate => new ObjectiveVector(state.Calls)).ToArray();
         }
     }
 
@@ -773,7 +773,7 @@ public class OperatorAuthoringSpecs
         private sealed class Instance(IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
             : EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
-            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
                 inner.Evaluate(candidates, random, searchSpace, problem);
         }
     }
@@ -792,7 +792,7 @@ public class OperatorAuthoringSpecs
         private sealed class Instance(IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childEvaluator)
             : WrappingEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>(childEvaluator)
         {
-            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
                 ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
         }
     }
@@ -811,7 +811,7 @@ public class OperatorAuthoringSpecs
         private sealed class Instance(ImmutableArray<IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>> childEvaluators)
             : MultiEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>(childEvaluators)
         {
-            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
                 ChildEvaluators[0].Evaluate(candidates, random, searchSpace, problem);
         }
     }

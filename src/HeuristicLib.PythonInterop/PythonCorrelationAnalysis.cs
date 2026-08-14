@@ -41,9 +41,7 @@ public static class PythonCorrelationAnalysis
         {
             var r = random.Fork((int)i);
             var n = Enumerable.Range(0, count).Select(_ => NextSphere(r, vector, sigma, vector.Count, false)).ToArray();
-            var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem)
-                .Select(evaluatedCandidate => evaluatedCandidate.ObjectiveVector)
-                .ToArray();
+            var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem).ToArray();
             var d = Statistics.Covariance(
               objectives.Select(x => x[0]).ToArray(),
               objectives.Select(x => x[1]).ToArray()).Correlation;
@@ -71,9 +69,7 @@ public static class PythonCorrelationAnalysis
         var random = RandomNumberGenerator.Create(42);
         var evaluator = new ProblemEvaluator<RealVector>();
 
-        return evaluator.Evaluate(candidates, random, problem.SearchSpace, problem)
-                        .Select(evaluatedCandidate => evaluatedCandidate.ObjectiveVector)
-                        .ToArray();
+        return evaluator.Evaluate(candidates, random, problem.SearchSpace, problem).ToArray();
     }
 
     public static ExperimentResult<RealVector> RunCorrelationNsga2(GenerationCallback? callback, int generations, int populationSize, RealVectorProblem problem, int seed = 0)

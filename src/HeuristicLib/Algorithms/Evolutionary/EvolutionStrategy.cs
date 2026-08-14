@@ -63,8 +63,8 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
             if (previousState is null)
             {
                 var initialPopulation = creator.Create(populationSize, random, problem.SearchSpace, problem);
-                var evaluatedCandidates = evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
-                return Population.From(evaluatedCandidates).ToPopulationState();
+                var objectiveVectors = evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
+                return Population.From(initialPopulation.ToEvaluated(objectiveVectors)).ToPopulationState();
             }
 
             IReadOnlyList<TCandidate> parents;
@@ -84,7 +84,7 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
             }
 
             var children = mutator.Mutate(parents, random, problem.SearchSpace, problem);
-            var evaluatedChildren = evaluator.Evaluate(children, random, problem.SearchSpace, problem);
+            var evaluatedChildren = children.ToEvaluated(evaluator.Evaluate(children, random, problem.SearchSpace, problem));
 
             if (mutator is IVariableStrengthMutatorInstance<TCandidate, TSearchSpace, TProblem> variableStrengthMutator)
             {

@@ -49,7 +49,7 @@ public class RepeatingEvaluatorTests
             .Select(candidateIndex => ObjectiveVectorAggregation.Mean.Aggregate(repeated.Select(values => values[candidateIndex]).ToArray(), problem.Objective))
             .ToArray();
 
-        actual.Select(evaluatedCandidate => evaluatedCandidate.ObjectiveVector).ShouldBe(expected);
+        actual.ShouldBe(expected);
     }
 
     [Fact]

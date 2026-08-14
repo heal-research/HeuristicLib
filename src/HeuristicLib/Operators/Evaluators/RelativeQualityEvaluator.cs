@@ -42,9 +42,9 @@ public sealed record RelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem
     private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ObjectiveVector bestKnown, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
         : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             ChildEvaluator.Evaluate(candidates, random, searchSpace, problem)
-                .Select(evaluatedCandidate => evaluatedCandidate with { ObjectiveVector = RelativeQuality.Normalize(evaluatedCandidate.ObjectiveVector, bestKnown, zeroBestKnownPolicy) })
+                .Select(objectiveVector => RelativeQuality.Normalize(objectiveVector, bestKnown, zeroBestKnownPolicy))
                 .ToArray();
     }
 }

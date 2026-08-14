@@ -75,7 +75,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem,
             };
         }
 
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var cache = executionData.Cache;
             var beforeCacheStatistics = cache.GetCurrentStatistics();
@@ -83,7 +83,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem,
             var beforeMisses = beforeCacheStatistics?.TotalMisses ?? 0;
 
             var n = candidates.Count;
-            var results = new EvaluatedCandidate<TCandidate>[n];
+            var results = new ObjectiveVector[n];
 
             var uncachedCandidates = new List<TCandidate>();
             var uncachedKeys = new List<TKey>();
@@ -94,7 +94,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem,
                 var candidate = candidates[i];
                 var key = keySelector.SelectKey(candidate);
 
-                if (cache.TryGetValue(key, out EvaluatedCandidate<TCandidate>? cached))
+                if (cache.TryGetValue(key, out ObjectiveVector? cached))
                 {
                     results[i] = cached!;
                     continue;
@@ -115,18 +115,18 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem,
 
             if (uncachedCandidates.Count > 0)
             {
-                var newEvaluatedCandidates = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
+                var newObjectiveVectors = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
                 for (var k = 0; k < uncachedKeys.Count; k++)
                 {
-                    cache.Set(uncachedKeys[k], newEvaluatedCandidates[k], new MemoryCacheEntryOptions { Size = 1 });
+                    cache.Set(uncachedKeys[k], newObjectiveVectors[k], new MemoryCacheEntryOptions { Size = 1 });
                 }
 
                 foreach (var (_, entry) in uncachedMap)
                 {
-                    var evaluatedCandidate = newEvaluatedCandidates[entry.j];
+                    var objectiveVector = newObjectiveVectors[entry.j];
                     foreach (var i in entry.indices)
                     {
-                        results[i] = evaluatedCandidate;
+                        results[i] = objectiveVector;
                     }
                 }
             }

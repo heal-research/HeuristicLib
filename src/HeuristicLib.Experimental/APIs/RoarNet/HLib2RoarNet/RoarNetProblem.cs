@@ -57,6 +57,6 @@ public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
     public IRoarNetSolution<TG> EmptySolution() => new RoarNetSolution<TG>(EmptyCreator.Create(1, Rng, SearchSpace, Problem)[0], this);
     public IRoarNetSolution<TG> RandomSolution() => new RoarNetSolution<TG>(RandomCreator.Create(1, Rng, SearchSpace, Problem)[0], this);
     public IRoarNetSolution<TG> HeuristicSolution() => new RoarNetSolution<TG>(HeuristicCreator.Create(1, Rng, SearchSpace, Problem)[0], this);
-    public double? LowerBound(TG genotype) => BoundsEvaluator.Evaluate([genotype], Rng, SearchSpace, Problem)[0].ObjectiveVector[0];
-    public double? Objective(TG genotype) => Evaluator.Evaluate([genotype], Rng, SearchSpace, Problem)[0].ObjectiveVector[0];
+    public double? LowerBound(TG genotype) => BoundsEvaluator.Evaluate([genotype], Rng, SearchSpace, Problem)[0][0];
+    public double? Objective(TG genotype) => Evaluator.Evaluate([genotype], Rng, SearchSpace, Problem)[0][0];
 }

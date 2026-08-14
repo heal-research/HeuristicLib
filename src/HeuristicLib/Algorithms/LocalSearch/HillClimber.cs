@@ -62,7 +62,7 @@ public record HillClimber<TCandidate, TSearchSpace, TProblem>
         private SingleSolutionState<TCandidate> CreateInitialState(TProblem problem, IRandomNumberGenerator random)
         {
             var initialSolution = creator.Create(1, random, problem.SearchSpace, problem)[0];
-            var initialCandidate = evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
+            var initialCandidate = initialSolution.ToEvaluated(evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0]);
             return ToState(initialCandidate);
         }
 
@@ -73,8 +73,7 @@ public record HillClimber<TCandidate, TSearchSpace, TProblem>
             for (var i = 0; i < maxNeighbors; i += batchSize)
             {
                 var candidates = mutator.Mutate(Enumerable.Repeat(current.Candidate, batchSize).ToArray(), random, problem.SearchSpace, problem);
-                var evaluatedCandidates = evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
-                var objectiveVectors = evaluatedCandidates.Select(evaluatedCandidate => evaluatedCandidate.ObjectiveVector).ToArray();
+                var objectiveVectors = evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
                 var bestIndex = BestSelector.Select(objectiveVectors, problem.Objective, count: 1)[0];
 
                 if (problem.Objective.TotalOrderComparer.Compare(objectiveVectors[bestIndex], current.ObjectiveVector) >= 0)
@@ -82,7 +81,7 @@ public record HillClimber<TCandidate, TSearchSpace, TProblem>
                     continue;
                 }
 
-                improvement = evaluatedCandidates[bestIndex];
+                improvement = candidates[bestIndex].ToEvaluated(objectiveVectors[bestIndex]);
                 if (direction == LocalSearchDirection.FirstImprovement)
                 {
                     return true;

@@ -106,9 +106,9 @@ public class CycleAlgorithmAnalysisTests
 
         protected override ExecutionState CreateInitialState() => new();
 
-        protected override IReadOnlyList<EvaluatedCandidate<int>> Evaluate(IReadOnlyList<int> candidates, ExecutionState executionState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, ExecutionState executionState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
         {
-            return candidates.Select(candidate => candidate.ToEvaluated(new ObjectiveVector(++executionState.Value))).ToArray();
+            return candidates.Select(candidate => new ObjectiveVector(++executionState.Value)).ToArray();
         }
     }
 
@@ -143,8 +143,8 @@ public class CycleAlgorithmAnalysisTests
             {
                 ct.ThrowIfCancellationRequested();
 
-                var evaluatedCandidate = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
-                var currentState = Population.From([evaluatedCandidate]).ToPopulationState();
+                var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
+                var currentState = Population.From([candidate.ToEvaluated(objectiveVector)]).ToPopulationState();
 
                 yield return interceptor.Transform(currentState, initialState, random, problem.SearchSpace, problem);
                 await Task.CompletedTask;
@@ -159,7 +159,7 @@ public class CycleAlgorithmAnalysisTests
 
         public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
         {
-            observations.Observe(Evaluator, (_, evaluatedCandidates, _, _) => result.RecordObjectiveValues(evaluatedCandidates));
+            observations.Observe(Evaluator, (objectiveVectors, _, _, _) => result.RecordObjectiveValues(objectiveVectors));
         }
 
         public sealed class ExecutionState
@@ -168,9 +168,9 @@ public class CycleAlgorithmAnalysisTests
 
             public IReadOnlyList<double> ObjectiveValues => objectiveValues;
 
-            public void RecordObjectiveValues(IReadOnlyList<EvaluatedCandidate<int>> evaluatedCandidates)
+            public void RecordObjectiveValues(IReadOnlyList<ObjectiveVector> objectiveVectors)
             {
-                objectiveValues.AddRange(evaluatedCandidates.Select(x => x.ObjectiveVector[0]));
+                objectiveValues.AddRange(objectiveVectors.Select(x => x[0]));
             }
         }
     }

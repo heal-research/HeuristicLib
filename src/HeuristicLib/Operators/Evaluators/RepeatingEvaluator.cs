@@ -29,16 +29,6 @@ public sealed record RepeatingEvaluator<TCandidate, TSearchSpace, TProblem>
     /// </summary>
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
-    /// <summary>
-    /// Gets the comparer used to verify that every repetition returned the same candidate for one input slot.
-    /// </summary>
-    /// <remarks>
-    /// The child evaluator may return a replacement candidate rather than the one it was given. Aggregating objective
-    /// vectors across repetitions is only meaningful when all repetitions agree on the candidate they describe, so a
-    /// disagreement fails instead of producing an objective vector that belongs to no returned candidate.
-    /// </remarks>
-    public IEqualityComparer<TCandidate> CandidateComparer { get; init; } = EqualityComparer<TCandidate>.Default;
-
     public RepeatingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions)
         : base(childEvaluator)
     {
@@ -50,13 +40,13 @@ public sealed record RepeatingEvaluator<TCandidate, TSearchSpace, TProblem>
         if (Repetitions <= 0)
             throw new InvalidOperationException("Repetitions must be positive.");
 
-        return new Instance(childEvaluator, Repetitions, Aggregator, Concurrency, CandidateComparer);
+        return new Instance(childEvaluator, Repetitions, Aggregator, Concurrency);
     }
 
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency, IEqualityComparer<TCandidate> candidateComparer)
+    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency)
         : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var repetitionResults = BatchExecution.Execute(
                 repetitions,
@@ -68,20 +58,11 @@ public sealed record RepeatingEvaluator<TCandidate, TSearchSpace, TProblem>
             return Enumerable.Range(0, candidates.Count)
                 .Select(candidateIndex =>
                 {
-                    var evaluatedCandidate = repetitionResults[0][candidateIndex];
                     var objectiveVectors = new ObjectiveVector[repetitions];
-                    objectiveVectors[0] = evaluatedCandidate.ObjectiveVector;
+                    for (var repetition = 0; repetition < repetitions; repetition++)
+                        objectiveVectors[repetition] = repetitionResults[repetition][candidateIndex];
 
-                    for (var repetition = 1; repetition < repetitions; repetition++)
-                    {
-                        var repeated = repetitionResults[repetition][candidateIndex];
-                        if (!candidateComparer.Equals(evaluatedCandidate.Candidate, repeated.Candidate))
-                            throw new InvalidOperationException("Repeated evaluation requires every repetition of one input candidate to return the same candidate.");
-
-                        objectiveVectors[repetition] = repeated.ObjectiveVector;
-                    }
-
-                    return evaluatedCandidate with { ObjectiveVector = aggregator.Aggregate(objectiveVectors, problem.Objective) };
+                    return aggregator.Aggregate(objectiveVectors, problem.Objective);
                 })
                 .ToArray();
         }

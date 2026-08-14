@@ -39,14 +39,14 @@ public sealed record LimitEvaluator<TCandidate, TSearchSpace, TProblem>
     {
         private readonly ObservationCounter counter = new();
 
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var remainingEvaluations = maxEvaluations - counter.CurrentCount;
             var fallback = fallbackObjectiveVector ?? problem.Objective.Worst;
 
             if (remainingEvaluations <= 0)
             {
-                return candidates.Select(candidate => candidate.ToEvaluated(fallback)).ToArray();
+                return Enumerable.Repeat(fallback, candidates.Count).ToArray();
             }
 
             if (enforceLimitWithinBatch && remainingEvaluations < candidates.Count)
@@ -55,7 +55,7 @@ public sealed record LimitEvaluator<TCandidate, TSearchSpace, TProblem>
                 var candidatesToSkip = candidates.Skip(remainingEvaluations).ToList();
                 var evaluated = ChildEvaluator.Evaluate(candidatesToEvaluate, random, searchSpace, problem);
                 counter.IncrementBy(candidatesToEvaluate.Count);
-                var skipped = candidatesToSkip.Select(candidate => candidate.ToEvaluated(fallback));
+                var skipped = Enumerable.Repeat(fallback, candidatesToSkip.Count);
 
                 return evaluated.Concat(skipped).ToArray();
             }

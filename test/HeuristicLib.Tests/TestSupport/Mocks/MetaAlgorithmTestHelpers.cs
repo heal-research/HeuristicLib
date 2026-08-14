@@ -37,8 +37,8 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
 
     private sealed class Instance : EvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public override IReadOnlyList<EvaluatedCandidate<int>> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
-            problem.Evaluate(candidates, random).Select((objectiveVector, index) => candidates[index].ToEvaluated(objectiveVector)).ToArray();
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+            problem.Evaluate(candidates, random).ToArray();
     }
 }
 
@@ -62,9 +62,9 @@ public sealed record CountingInstanceAlgorithm(int Increment, IEvaluator<int, Du
 
             var current = initialState?.Population.EvaluatedCandidates.Single().Candidate ?? 0;
             var next = current + increment;
-            var evaluatedCandidate = evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
+            var objectiveVector = evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
 
-            yield return Population.From([evaluatedCandidate]).ToPopulationState();
+            yield return Population.From([next.ToEvaluated(objectiveVector)]).ToPopulationState();
             await Task.CompletedTask;
         }
     }

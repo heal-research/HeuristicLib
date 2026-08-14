@@ -147,9 +147,9 @@ public class AlgorithmAuthoringSpecs
             protected override SingleSolutionState<RealVector> ExecuteStep(SingleSolutionState<RealVector>? previousState, TestFunctionProblem problem, IRandomNumberGenerator random)
             {
                 var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
-                var evaluatedCandidate = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+                var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-                return SingleSolutionState.From(evaluatedCandidate);
+                return SingleSolutionState.From(candidate.ToEvaluated(objectiveVector));
             }
         }
     }
@@ -181,9 +181,9 @@ public class AlgorithmAuthoringSpecs
                 var first = creator.Create(1, random, problem.SearchSpace, problem)[0];
                 var second = creator.Create(1, random, problem.SearchSpace, problem)[0];
                 RealVector candidate = [first[0], second[0], steps];
-                var evaluatedCandidate = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+                var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-                return SingleSolutionState.From(evaluatedCandidate);
+                return SingleSolutionState.From(candidate.ToEvaluated(objectiveVector));
             }
         }
     }
@@ -273,14 +273,14 @@ public class AlgorithmAuthoringSpecs
         private sealed class Instance(InstancingEvaluator owner)
             : IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
-            public IReadOnlyList<EvaluatedCandidate<RealVector>> Evaluate(IReadOnlyList<RealVector> candidates,
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates,
                                                            IRandomNumberGenerator random,
                                                            RealVectorSearchSpace searchSpace,
                                                            TestFunctionProblem problem)
             {
                 owner.EvaluateCalls++;
                 return candidates
-                                 .Select(candidate => candidate.ToEvaluated(new ObjectiveVector(0.0)))
+                                 .Select(_ => new ObjectiveVector(0.0))
                                  .ToArray();
             }
         }

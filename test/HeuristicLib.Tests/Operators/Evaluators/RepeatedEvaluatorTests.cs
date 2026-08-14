@@ -16,46 +16,22 @@ public class RepeatedEvaluatorTests
         var evaluator = new StatefulObjectiveEvaluator().AsRepeated(repetitions: 3);
         var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
 
-        var solutions = instance.Evaluate([7], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var objectiveVectors = instance.Evaluate([7], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        solutions.Single().ShouldBe(EvaluatedCandidate.From(7, new ObjectiveVector(2.0)));
+        objectiveVectors.Single().ShouldBe(new ObjectiveVector(2.0));
     }
 
     [Fact]
-    public void RepeatedEvaluator_Throws_WhenRepeatedEvaluationReturnsDifferentGenotype()
+    public void RepeatedEvaluator_AggregatesEachCandidatePositionally()
     {
         var problem = CreateProblem();
-        var evaluator = new StatefulReplacingEvaluator().AsRepeated(repetitions: 2);
+        var evaluator = new ProblemEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
+            .AsRepeated(repetitions: 2);
         var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
 
-        Should.Throw<InvalidOperationException>(() =>
-            instance.Evaluate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
-    }
+        var objectiveVectors = instance.Evaluate([3, 5, 8], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-    [Fact]
-    public void RepeatedEvaluator_UsesCustomGenotypeComparer()
-    {
-        var problem = CreateProblem();
-        var evaluator = new StatefulReplacingEvaluator().AsRepeated(repetitions: 2)
-            with
-        { CandidateComparer = EqualityComparer<int>.Create(static (_, _) => true) };
-        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
-
-        var solutions = instance.Evaluate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-
-        solutions.Single().ShouldBe(EvaluatedCandidate.From(1, new ObjectiveVector(1.5)));
-    }
-
-    [Fact]
-    public void IteratedEvaluator_FeedsReturnedGenotypesIntoNextIteration()
-    {
-        var problem = CreateProblem();
-        var evaluator = new IncrementingEvaluator().AsIterated(iterations: 3);
-        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
-
-        var solutions = instance.Evaluate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-
-        solutions.Single().ShouldBe(EvaluatedCandidate.From(3, new ObjectiveVector(3.0)));
+        objectiveVectors.ShouldBe([new ObjectiveVector(3.0), new ObjectiveVector(5.0), new ObjectiveVector(8.0)]);
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem()
@@ -64,43 +40,6 @@ public class RepeatedEvaluatorTests
             evaluateFunc: static genotype => genotype,
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
-    }
-
-    private sealed record IncrementingEvaluator
-        : StatelessEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
-    {
-        public override IReadOnlyList<EvaluatedCandidate<int>> Evaluate(
-            IReadOnlyList<int> candidates,
-            IRandomNumberGenerator random,
-            DummySearchSpace<int> searchSpace,
-            FuncProblem<int, DummySearchSpace<int>> problem)
-            => candidates.Select(candidate =>
-            {
-                var next = candidate + 1;
-                return EvaluatedCandidate.From(next, problem.Evaluate(next, random));
-            }).ToArray();
-    }
-
-    private sealed record StatefulReplacingEvaluator
-        : StatefulEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, StatefulReplacingEvaluator.ExecutionState>
-    {
-        public sealed class ExecutionState
-        {
-            public int Calls;
-        }
-
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override IReadOnlyList<EvaluatedCandidate<int>> Evaluate(
-            IReadOnlyList<int> candidates,
-            ExecutionState executionState,
-            IRandomNumberGenerator random,
-            DummySearchSpace<int> searchSpace,
-            FuncProblem<int, DummySearchSpace<int>> problem)
-        {
-            var calls = Interlocked.Increment(ref executionState.Calls);
-            return candidates.Select(_ => EvaluatedCandidate.From(calls, problem.Evaluate(calls, random))).ToArray();
-        }
     }
 
     private sealed record StatefulObjectiveEvaluator
@@ -113,15 +52,10 @@ public class RepeatedEvaluatorTests
 
         protected override ExecutionState CreateInitialState() => new();
 
-        protected override IReadOnlyList<EvaluatedCandidate<int>> Evaluate(
-            IReadOnlyList<int> candidates,
-            ExecutionState executionState,
-            IRandomNumberGenerator random,
-            DummySearchSpace<int> searchSpace,
-            FuncProblem<int, DummySearchSpace<int>> problem)
+        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, ExecutionState executionState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
         {
             var calls = Interlocked.Increment(ref executionState.Calls);
-            return candidates.Select(candidate => EvaluatedCandidate.From(candidate, problem.Evaluate(calls, random))).ToArray();
+            return candidates.Select(_ => problem.Evaluate(calls, random)).ToArray();
         }
     }
 }

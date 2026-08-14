@@ -72,7 +72,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
             sourceProblem.EpochClock.OnEpochChange += OnEpochChange;
         }
 
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             if (!ReferenceEquals(problem, sourceProblem))
                 throw new InvalidOperationException("Dynamic relative quality evaluator instances can only evaluate the dynamic problem they were created for.");
@@ -80,7 +80,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
             var currentBestKnown = bestKnown ?? throw new InvalidOperationException("No best-known objective vector is available.");
 
             return ChildEvaluator.Evaluate(candidates, random, searchSpace, problem)
-                .Select(evaluatedCandidate => evaluatedCandidate with { ObjectiveVector = RelativeQuality.Normalize(evaluatedCandidate.ObjectiveVector, currentBestKnown, zeroBestKnownPolicy) })
+                .Select(objectiveVector => RelativeQuality.Normalize(objectiveVector, currentBestKnown, zeroBestKnownPolicy))
                 .ToArray();
         }
 

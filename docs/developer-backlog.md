@@ -69,6 +69,24 @@ These are still real open items:
 - decide whether operators should expose a consistent caller-provided output-buffer or result-memory API. Avoid one-off `Memory<T>` parameters on individual operators. If this becomes necessary for allocation-sensitive workflows, design it as a library-wide operator convention that clearly states who owns the resulting storage and how immutable candidate containers are created from it.
 - benchmark and, if worthwhile, reduce batching overhead in lightweight operators such as `InversionMutator`, including per-call captured delegates and per-item RNG forks. General and variable-width operations should retain deterministic child RNGs per logical item or key. For operators with a proven fixed number of primitive draws, evaluate deterministic fixed-width random-decision planning in logical item order as an allocation-saving specialization. Results must remain independent of workers, partitions, scheduling, concurrency limits, and CPU-core count. Do not require all RNG implementations to become counter-based or random-access-capable solely for this optimization.
 - expand `IRandomNumberGenerator` and the concrete random engines so they expose the raw primitive outputs and data widths needed to build statistically sound and efficient higher-level sampling APIs; in particular, bounded integer generation should eventually be reworked on top of integer-domain primitives rather than `NextDouble()` scaling
+- find a way to reduce the operator boilerplate that a role-contract change has to touch. The problem is unsolved, and both approaches tried so far are recorded in [Discussed, tried, and rejected](#discussed-tried-and-rejected): [typed operator invocation](#typed-operator-invocation) and [generated operator families](#generated-operator-families). Do not re-propose either without the new evidence those entries require.
+
+  The evaluator contract change from `EvaluatedCandidate<TCandidate>` to `ObjectiveVector` (RF-2 of the [symbolic-regression constant-optimization plan](../plans/symbolic-regression-constant-optimization-plan.md)) is the clearest measurement available so far. It changed the single most fundamental property of an operator role — what its execution instance returns — and is worth reading from two directions at once, because the pair is the actual finding.
+
+  **How far it spread.** The change touched 55 files, +255/-393. Split by whether a file has any semantic stake in what an evaluator does:
+
+  | Area | Files | Lines |
+  | --- | --- | --- |
+  | Evaluator role: contract, arity ladders, topologies | 14 | +68/-174 |
+  | Surrounding algorithms, analysis hooks, experimental operators, tests | 38 | +147/-213 |
+
+  About three quarters of the affected files changed only because a signature moved.
+
+  **How little it reached.** Inside the evaluator role itself, roughly 6% of the source changed. The role spans about 1080 lines; the return-type change touched 68 added and 106 removed lines, and about 30 of those were the identical one-line signature edit repeated across `Evaluator`, `StatelessEvaluator`, `StatefulEvaluator`, `SingleCandidateEvaluator`, the wrapping and multi topologies, and the instrumentation pair. Per file it is starker still: `CountingEvaluator` and `DurationMeasuringEvaluator` changed one line each out of 70 and 86, and `RelativeQualityEvaluator` two out of 108.
+
+  Genuine design work amounted to four edits: removing `RepeatingEvaluator.CandidateComparer`, deleting `IteratedEvaluator`, dropping `CachingEvaluator`'s candidate-substitution behavior, and adding the batch pairing helper. Everything else was mechanical.
+
+  Taken together: the change was broad but shallow. The ~94% of role source that survived untouched — constructors, generic constraint lists, arity re-declarations, factory companions, fluent helpers, nested execution-instance classes — is exactly the code that never expressed what an evaluator does, and the 38 outside files are coupled to the role's signature rather than its behavior. Any future proposal should be measured against this shape: it must shrink the mechanical fraction without reintroducing a generic invocation path or a generated public API, and handwritten source must remain fully supported. Record the commit hash here once this work is committed so the measurement can be re-derived.
 
 ## Discussed, tried, and rejected
 

@@ -40,14 +40,12 @@ public class InteractiveSymRegParameters
 public sealed record VisualizationCallbackEvaluator(Func<ExpressionTree[], ObjectiveVector[], double[][]> PopulationCallback)
     : StatelessEvaluator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
 {
-    public override IReadOnlyList<EvaluatedCandidate<ExpressionTree>> Evaluate(IReadOnlyList<ExpressionTree> candidates, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, SymbolicRegressionProblem problem)
+    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<ExpressionTree> candidates, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, SymbolicRegressionProblem problem)
     {
         var objectives = problem.Evaluate(candidates, random);
         var callbackObjectives = PopulationCallback(candidates.ToArray(), objectives.ToArray());
 
-        return candidates
-            .Select((candidate, index) => candidate.ToEvaluated((ObjectiveVector)callbackObjectives[index]))
-            .ToArray();
+        return callbackObjectives.Select(objective => (ObjectiveVector)objective).ToArray();
     }
 }
 

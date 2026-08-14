@@ -51,8 +51,8 @@ public record BestPerEvaluationAnalysis<TCandidate, TSearchSpace, TProblem> : An
         foreach (var evaluator in Evaluators)
         {
             observations.Observe(evaluator,
-                (_, evaluatedCandidates, _, problem) =>
-                    AfterEvaluation(curve, evaluatedCandidates, problem));
+                (objectiveVectors, candidates, _, problem) =>
+                    AfterEvaluation(curve, candidates.ToEvaluated(objectiveVectors), problem));
         }
     }
 }

@@ -58,7 +58,7 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
             if (previousState is null)
             {
                 var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
-                var initialPopulation = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
+                var initialPopulation = initialSolutions.ToEvaluated(evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem));
                 return Population.From(initialPopulation).ToPopulationState();
             }
 
@@ -68,14 +68,14 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
             if (oldPopulation.Count <= 0)
             {
                 var initialCandidates = creator.Create(populationSize, random, problem.SearchSpace, problem);
-                newPop = evaluator.Evaluate(initialCandidates, random, problem.SearchSpace, problem);
+                newPop = initialCandidates.ToEvaluated(evaluator.Evaluate(initialCandidates, random, problem.SearchSpace, problem));
             }
             else
             {
                 var selected = selector.Select(oldPopulation, problem.Objective, maxEffort * 2, random, problem.SearchSpace, problem);
                 var population = crossover.Cross(selected.ToParents(problem.Objective), random, problem.SearchSpace, problem);
                 population = mutator.Mutate(population, random, problem.SearchSpace, problem);
-                newPop = evaluator.Evaluate(population, random, problem.SearchSpace, problem).Zip(selected.ToEvaluatedCandidatesPairs())
+                newPop = population.ToEvaluated(evaluator.Evaluate(population, random, problem.SearchSpace, problem)).Zip(selected.ToEvaluatedCandidatesPairs())
                     .Where(pair => pair.Item1.ObjectiveVector.Dominates(Combine(pair.Item2, problem.Objective, strictness), problem.Objective))
                     .Select(pair => pair.Item1).ToArray();
             }

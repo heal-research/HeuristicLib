@@ -18,7 +18,7 @@ public record HyperVolumeAnalysis<T, TS, TP>(
     public override void RegisterObservations(ObservationPlan observations, HyperVolumeState<T> result)
     {
         foreach (var evaluator in Evaluator)
-            observations.Observe(evaluator, (_, evaluatedCandidates, _, _) => AfterEvaluation(result, evaluatedCandidates));
+            observations.Observe(evaluator, (objectiveVectors, candidates, _, _) => AfterEvaluation(result, candidates.ToEvaluated(objectiveVectors)));
     }
 
     public void AfterEvaluation(HyperVolumeState<T> result, IReadOnlyList<EvaluatedCandidate<T>> evaluatedCandidates)

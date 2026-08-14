@@ -27,7 +27,7 @@ public sealed record CountingEvaluator<TCandidate, TSearchSpace, TProblem>
     private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationCounter counter, OperatorCountMetric metric)
         : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var objectives = ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
             counter.IncrementBy(metric == OperatorCountMetric.Calls ? 1 : candidates.Count);

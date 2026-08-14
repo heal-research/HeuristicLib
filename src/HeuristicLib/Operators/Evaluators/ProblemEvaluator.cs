@@ -8,19 +8,15 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 /// <summary>
-/// Adapts the score-only problem contract to the evaluator contract by pairing every objective vector with the
-/// candidate it was calculated for.
+/// Evaluates candidates directly through the problem. This is the ordinary evaluator and the innermost child of every
+/// evaluator composition.
 /// </summary>
 public record ProblemEvaluator<TCandidate, TSearchSpace, TProblem>
     : StatelessEvaluator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(
-        IReadOnlyList<TCandidate> candidates,
-        IRandomNumberGenerator random,
-        TSearchSpace searchSpace,
-        TProblem problem) =>
+    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
         ProblemEvaluator.Evaluate(candidates, random, problem);
 }
 
@@ -37,26 +33,16 @@ public static class ProblemEvaluator
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState => new();
 
-    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate<TCandidate, TSearchSpace>(
-        IReadOnlyList<TCandidate> candidates,
-        IRandomNumberGenerator random,
-        IProblem<TCandidate, TSearchSpace> problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-    {
-        var objectiveVectors = problem.Evaluate(candidates, random);
-        var evaluatedCandidates = new EvaluatedCandidate<TCandidate>[candidates.Count];
-        for (var i = 0; i < evaluatedCandidates.Length; i++)
-            evaluatedCandidates[i] = candidates[i].ToEvaluated(objectiveVectors[i]);
-
-        return evaluatedCandidates;
-    }
+    public static IReadOnlyList<ObjectiveVector> Evaluate<TCandidate, TSearchSpace>(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, IProblem<TCandidate, TSearchSpace> problem)
+        where TSearchSpace : class, ISearchSpace<TCandidate> =>
+        problem.Evaluate(candidates, random);
 }
 
 public static class ProblemEvaluatorExtensions
 {
-    public static ProblemEvaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
-        CreateEvaluator<TCandidate, TSearchSpace>(
-            this IProblem<TCandidate, TSearchSpace> problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate> =>
-        new();
+    extension<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+    {
+        public ProblemEvaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateEvaluator() => new();
+    }
 }

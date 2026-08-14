@@ -15,9 +15,5 @@ public interface IEvaluatorInstance<TCandidate, in TSearchSpace, in TProblem>
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(
-        IReadOnlyList<TCandidate> candidates,
-        IRandomNumberGenerator random,
-        TSearchSpace searchSpace,
-        TProblem problem);
+    IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

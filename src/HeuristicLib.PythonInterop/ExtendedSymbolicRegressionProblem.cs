@@ -21,18 +21,12 @@ public sealed record EquationScoringEvaluator(
     Func<ExpressionTree[], ObjectiveVector[], double[][]> PythonCallback)
     : StatelessEvaluator<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>
 {
-    public override IReadOnlyList<EvaluatedCandidate<ExpressionTree>> Evaluate(
-        IReadOnlyList<ExpressionTree> candidates,
-        IRandomNumberGenerator random,
-        ExpressionTreeSearchSpace searchSpace,
-        ExtendedSymbolicRegressionProblem problem)
+    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<ExpressionTree> candidates, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, ExtendedSymbolicRegressionProblem problem)
     {
         var normalObjectives = problem.Evaluate(candidates, random);
         var callbackObjectives = PythonCallback(candidates.ToArray(), normalObjectives.ToArray());
 
-        return candidates
-            .Select((candidate, index) => candidate.ToEvaluated((ObjectiveVector)callbackObjectives[index]))
-            .ToArray();
+        return callbackObjectives.Select(objectives => (ObjectiveVector)objectives).ToArray();
     }
 }
 

@@ -83,11 +83,11 @@ public class DynamicAnalysisTests
 
     private sealed record ProblemEvaluator : StatelessEvaluator<int, IntegerSearchSpace, IntegerDynamicProblem>
     {
-        public override IReadOnlyList<EvaluatedCandidate<int>> Evaluate(IReadOnlyList<int> candidates,
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates,
                                                                 IRandomNumberGenerator random,
                                                                 IntegerSearchSpace searchSpace,
                                                                 IntegerDynamicProblem problem) =>
-            candidates.Select(candidate => candidate.ToEvaluated(problem.Evaluate(candidate, random))).ToArray();
+            candidates.Select(candidate => problem.Evaluate(candidate, random)).ToArray();
     }
 
     private sealed record BatchEvaluationAlgorithm(IReadOnlyList<IReadOnlyList<int>> Batches)
@@ -113,9 +113,9 @@ public class DynamicAnalysisTests
                 foreach (var batch in batches)
                 {
                     ct.ThrowIfCancellationRequested();
-                    var evaluatedCandidates = evaluator.Evaluate(batch, random, problem.SearchSpace, problem);
+                    var objectiveVectors = evaluator.Evaluate(batch, random, problem.SearchSpace, problem);
 
-                    yield return Population.From(evaluatedCandidates).ToPopulationState();
+                    yield return Population.From(batch.ToEvaluated(objectiveVectors)).ToPopulationState();
                     await Task.CompletedTask;
                 }
             }

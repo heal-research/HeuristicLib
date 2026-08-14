@@ -74,7 +74,7 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
             if (previousState is null)
             {
                 var initialLayerPopulation = creator.Create(populationSize, random, searchSpace, problem);
-                var initialPopulation = evaluator.Evaluate(initialLayerPopulation, random, searchSpace, problem);
+                var initialPopulation = initialLayerPopulation.ToEvaluated(evaluator.Evaluate(initialLayerPopulation, random, searchSpace, problem));
                 return new()
                 {
                     Population = [Population.From(initialPopulation)],
@@ -96,7 +96,7 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
 
             var offspring = crossover.Cross(parentPairs, random, searchSpace, problem);
             offspring = mutator.Mutate(offspring, random, searchSpace, problem);
-            var offspringPopulation = evaluator.Evaluate(offspring, random, searchSpace, problem);
+            var offspringPopulation = offspring.ToEvaluated(evaluator.Evaluate(offspring, random, searchSpace, problem));
             var newPopulation = ElitismReplacer.Replace(oldPopulation, offspringPopulation, problem.Objective, offspringCount, elites);
 
             return new()

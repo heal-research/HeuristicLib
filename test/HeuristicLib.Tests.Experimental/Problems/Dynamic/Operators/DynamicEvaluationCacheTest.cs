@@ -38,7 +38,7 @@ file sealed record CountingEvaluator : StatelessEvaluator<DummyGenotype, DummySe
     public int LastBatchSize { get; private set; }
     public IRandomNumberGenerator? LastRandom { get; private set; }
 
-    public override IReadOnlyList<EvaluatedCandidate<DummyGenotype>> Evaluate(
+    public override IReadOnlyList<ObjectiveVector> Evaluate(
       IReadOnlyList<DummyGenotype> solutions,
       IRandomNumberGenerator random,
       DummySearchSpace searchSpace,
@@ -48,7 +48,7 @@ file sealed record CountingEvaluator : StatelessEvaluator<DummyGenotype, DummySe
         LastBatchSize = solutions.Count;
         LastRandom = random;
 
-        return solutions.Select(s => s.ToEvaluated(problem.Evaluate(s, random))).ToArray();
+        return solutions.Select(s => problem.Evaluate(s, random)).ToArray();
     }
 }
 
@@ -94,7 +94,7 @@ public class DynamicEvaluationCacheTests
 
         inner.Calls.ShouldBe(1);
         inner.LastBatchSize.ShouldBe(1);
-        res.Select(v => v.ObjectiveVector[0]).ToArray().ShouldBe([1.0, 1.0, 1.0]);
+        res.Select(v => v[0]).ToArray().ShouldBe([1.0, 1.0, 1.0]);
 
         // Only one real evaluation => one tick
         problem.EpochClock.Ticks.ShouldBe(1L);

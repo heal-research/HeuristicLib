@@ -15,9 +15,8 @@ public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
 {
     /// <summary>
     /// Gets the strategy that selects a candidate's cache key. Candidates that produce equal keys share one cached
-    /// evaluation result, so a cache hit returns the evaluated candidate that was cached under the key rather than the
-    /// candidate supplied to this call. Only use a key selector whose equal keys identify candidates that are
-    /// interchangeable for evaluation.
+    /// objective vector. Only use a key selector whose equal keys identify candidates that are interchangeable for
+    /// evaluation.
     /// </summary>
     public ICacheKeySelector<TCandidate, TKey> KeySelector { get; init; }
 
@@ -40,10 +39,10 @@ public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
     {
         private readonly MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
 
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var n = candidates.Count;
-            var results = new EvaluatedCandidate<TCandidate>[n];
+            var results = new ObjectiveVector[n];
             var uncachedCandidates = new List<TCandidate>();
             var uncachedKeys = new List<TKey>();
             var uncachedMap = new Dictionary<TKey, (int j, List<int> indices)>();
@@ -53,7 +52,7 @@ public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
                 var candidate = candidates[i];
                 var key = keySelector.SelectKey(candidate);
 
-                if (cache.TryGetValue(key, out EvaluatedCandidate<TCandidate>? cached))
+                if (cache.TryGetValue(key, out ObjectiveVector? cached))
                 {
                     results[i] = cached!;
                     continue;
@@ -77,19 +76,19 @@ public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
                 return results;
             }
 
-            var newEvaluatedCandidates = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
+            var newObjectiveVectors = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
 
             for (var k = 0; k < uncachedKeys.Count; k++)
             {
-                cache.Set(uncachedKeys[k], newEvaluatedCandidates[k], new MemoryCacheEntryOptions { Size = 1 });
+                cache.Set(uncachedKeys[k], newObjectiveVectors[k], new MemoryCacheEntryOptions { Size = 1 });
             }
 
             foreach (var (_, entry) in uncachedMap)
             {
-                var evaluatedCandidate = newEvaluatedCandidates[entry.j];
+                var objectiveVector = newObjectiveVectors[entry.j];
                 foreach (var i in entry.indices)
                 {
-                    results[i] = evaluatedCandidate;
+                    results[i] = objectiveVector;
                 }
             }
 

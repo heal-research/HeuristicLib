@@ -68,7 +68,7 @@ public class EvaluatorCompositionTests
 
         var result = instance.Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        result[0].ObjectiveVector.ShouldBe(new ObjectiveVector(0.5, -0.5));
+        result[0].ShouldBe(new ObjectiveVector(0.5, -0.5));
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public class EvaluatorCompositionTests
 
         var result = instance.Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        result[0].ObjectiveVector.ShouldBe(new ObjectiveVector(3.0));
+        result[0].ShouldBe(new ObjectiveVector(3.0));
     }
 
     private static IEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateEvaluator() =>

@@ -53,14 +53,14 @@ public record NSGA2<TCandidate, TSearchSpace, TProblem>
             if (previousState is null)
             {
                 var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
-                var initialPopulation = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
+                var initialPopulation = initialSolutions.ToEvaluated(evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem));
                 return Population.From(initialPopulation).ToPopulationState();
             }
 
             var parents = selector.Select(previousState.Population.EvaluatedCandidates, problem.Objective, populationSize * 2, random, problem.SearchSpace, problem).ToParents(problem.Objective);
             var children = crossover.Cross(parents, random, problem.SearchSpace, problem);
             var mutants = mutator.Mutate(children, random, problem.SearchSpace, problem);
-            var newPopulation = evaluator.Evaluate(mutants, random, problem.SearchSpace, problem);
+            var newPopulation = mutants.ToEvaluated(evaluator.Evaluate(mutants, random, problem.SearchSpace, problem));
             var nextPopulation = replacer.Replace(previousState.Population.EvaluatedCandidates, newPopulation, problem.Objective, populationSize, random, problem.SearchSpace, problem);
 
             return Population.From(nextPopulation).ToPopulationState();
