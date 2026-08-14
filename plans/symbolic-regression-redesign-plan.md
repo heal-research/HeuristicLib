@@ -35,7 +35,7 @@ Resolve these before or during Stage 0:
 - **Reference behavior scope:** maintain a matrix for each legacy symbol/behavior: new target, reference level, test status, and intentional difference.
 - **Instruction validity:** define runtime validation for non-empty code, RPN stack balance, arity, `SubtreeLength`, payload indexes, root position, max length/depth, and invalid opcodes.
 - **Formatting/serialization:** decide the Stage 1 minimum for equality/hash, debug/infix formatting, optional variable names, and whether binary/JSON serialization is included or deferred.
-- **Evaluator contract:** evaluators return authoritative `EvaluatedCandidate<TCandidate>` values, not only objective values, so evaluation can explicitly return a refined or repaired candidate together with its objectives.
+- **Evaluator contract:** evaluators measure and never transform. They return objective vectors positionally paired with their input candidates, mirroring `IProblem.Evaluate`. Refinement and repair belong to the `Refiner` operator role.
 - **Operator validity:** decide bounded retry versus repair behavior for creation, mutation, crossover, and repair failure.
 - **Numeric literal metadata:** settle fixed versus optimizable literal representation and authoring names before Stage 1 hardens the genotype.
 - **Symbol definition versus instance:** split search-space admissibility from concrete genotype occurrences, including fixed constants and ephemeral random constants. See [symbol-definition-instance-plan.md](symbol-definition-instance-plan.md).
@@ -61,7 +61,8 @@ Resolve these before or during Stage 0:
 | `ExpressionInterpreter`             | Executes opcodes over series/batch buffers and maps variable indexes to dataset columns from the supplied dataset/input-variable order.                                                                                          |
 | `SymbolicRegressionProblem`                 | Composition root for data, search space, interpreter, objectives, bounds policy, and problem context needed by typed operators.                                                                                                  |
 | `SymbolicExpressionEvaluator`               | Problem-specific evaluator surface for symbolic-expression regression, including optional numeric-parameter optimization before objective calculation.                                                                           |
-| `Evaluator`                                 | Operator that receives a candidate and returns the authoritative `EvaluatedCandidate<TCandidate>` that was actually evaluated. The returned candidate may be identical to the input candidate or an immutable refined/repaired replacement. |
+| `Evaluator`                                 | Operator that receives candidates and returns their objective vectors. It measures and never replaces a candidate; it is the composable hook where counting, limiting, caching, and observation attach. |
+| `Refiner`                                   | Operator that receives a candidate and returns a candidate. Refinement, repair, simplification, and numeric constant optimization live here. A refiner may consult a configured evaluator when it needs objective information. |
 
 Boundary rules:
 
@@ -77,7 +78,7 @@ Boundary rules:
 - A symbolic regression problem instance has exactly one expression search-space instance. Unrestricted versus grammar-constrained behavior is selected when the problem is constructed, not switched dynamically during a run.
 - The unrestricted scalar search space is not represented as a `SimpleGrammar`. Fast unrestricted operators must not call grammar predicates or enumerate grammar-derived cut points.
 - Prediction bounds, penalties, and objectives stay outside expression interpretation.
-- Evaluation never mutates candidates in place. Any numeric constant optimization returns a replacement `ExpressionTree`, and the evaluator returns an `EvaluatedCandidate<ExpressionTree>` containing the candidate that was actually evaluated.
+- Evaluation never mutates candidates in place and never replaces them. Numeric constant optimization returns a replacement `ExpressionTree` from a refiner, which the algorithm then evaluates.
 - `Problem.Evaluate(...)` is the batch native problem contract. `SingleSolutionProblem.Evaluate(...)` stays scalar and pure for scalar authoring, while its batch override currently adapts scalar evaluation through `BatchExecution`.
 - Interceptors run after an algorithm step and are too late for candidate changes that affect offspring fitness or replacement.
 - Determinism is required: the same candidate, problem data, evaluator configuration, and explicit random source must produce the same returned solution.
@@ -201,16 +202,14 @@ Defaults:
 
 Evaluation contract:
 
-- use the evaluator contract that returns `EvaluatedCandidate<TCandidate>` instead of only `ObjectiveVector`
-- the returned solution is authoritative: replacement, selection, logging, and analysis consume the genotype and objective vector returned by the evaluator
-- evaluators may return the original genotype unchanged or an immutable refined/repaired replacement genotype
-- evaluator-driven candidate changes must be explicit in the return value; evaluators must not mutate input candidates in place or update hidden genotype state through caches
+- evaluators return objective vectors paired positionally with their input candidates; they never return a replacement candidate
+- evaluators must not mutate input candidates in place or update hidden genotype state through caches
 - concrete evaluators can be problem-specific and extract required context from the typed problem instance
 - the general evaluator call shape includes the candidate, explicit random source when needed, search space, and problem, matching other operators; it does not accept symbolic-regression-specific arguments such as input variables or target variable directly
-- numeric-parameter optimization is authored as evaluator configuration, for example `SymbolicExpressionEvaluator.OptimizeNumericParameters(...)`, even if the first implementation uses Levenberg-Marquardt internally
-- global budget accounting is out of scope; evaluators that perform refinement expose local counters/status where useful
+- numeric-parameter optimization is a refiner, not evaluator configuration. The algorithm applies it after variation and before evaluation; see [symbolic-regression-constant-optimization-plan.md](symbolic-regression-constant-optimization-plan.md)
+- evaluation that must be visible to budgets, termination, analysis, or instrumentation goes through an evaluator operator; an operator calling `problem.Evaluate` directly is legal but invisible and therefore discouraged
 
-Stage 2 tests: problem API specs, evaluation composition, metric fixtures, no in-place evaluation mutation, evaluator contract shape, replacement of raw candidates by returned solutions, and fixed-constant behavior.
+Stage 2 tests: problem API specs, evaluation composition, metric fixtures, no in-place evaluation mutation, evaluator contract shape, and fixed-constant behavior.
 
 ## Stage 3: Unrestricted Search Space And Operators
 
@@ -286,7 +285,30 @@ The replacement proceeds through independently usable layers:
 5. adapt immutable symbolic expressions to those capabilities;
 6. integrate constant optimization into symbolic-regression evaluation.
 
-The immutable-candidate invariant remains settled: any accepted constant optimization returns a replacement `ExpressionTree`, and the evaluator returns the authoritative candidate paired with its objective vector.
+The immutable-candidate invariant remains settled: any accepted constant optimization returns a replacement `ExpressionTree`.
+
+Refinement integration is settled as well:
+
+- A `Refiner` operator role with the contract `Candidate → Candidate` is the
+  single refinement mechanism. Algorithms place it explicitly after creation and
+  after final variation, immediately before evaluation.
+- Evaluators measure and never transform. `IEvaluatorInstance.Evaluate` returns
+  objective vectors, mirroring `IProblem.Evaluate`. There is no
+  candidate-transforming evaluator.
+- Objective-aware retention is `ImprovementCheckingRefiner`, a wrapping refiner
+  that takes a nullable evaluator and a nullable comparer and returns the better
+  of the original and refined candidate. Because it is an ordinary refiner, it
+  composes with every other refiner topology.
+- Evaluation visibility, not capability, is the invariant: any operator can
+  reach `problem.Evaluate`, but evaluation that should count towards budgets,
+  termination, analysis, or instrumentation must go through an evaluator
+  operator.
+- Sharing one evaluator configuration instance between the algorithm and a
+  refiner makes their evaluations share one execution instance, and therefore
+  one counter and one cache. This is how refinement cost is included in or
+  excluded from an evaluation budget.
+- Repeated refinement is expressed through iterated or pipeline refiner
+  topologies, not by placing the same refiner at two lifecycle points.
 
 ## Stage 4: Grammar Search Space And Operators
 
@@ -415,6 +437,6 @@ dotnet format ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severit
   names would otherwise collide.
 - Formatting/serialization: Stage 1 includes debug/infix formatting; full serialization is deferred.
 - Problem and search spaces: one symbolic-regression problem concept, with unrestricted and grammar-constrained scalar search spaces as distinct operator families.
-- Evaluation/refinement: evaluators return authoritative `EvaluatedCandidate<TCandidate>` values, not only objective values. An evaluator may return the original candidate or an immutable refined/repaired replacement candidate, and algorithms must pass that returned evaluated candidate into replacement, selection, logging, and analysis.
+- Evaluation/refinement: evaluators return objective vectors and never replace candidates. The `Refiner` operator role, `Candidate → Candidate`, owns refinement, repair, simplification, and constant optimization, and `ImprovementCheckingRefiner` adds objective-aware retention as an ordinary composable refiner.
 - Problem evaluation: `IProblem` and `Problem` are batch native. `SingleSolutionProblem` is the scalar authoring base and currently owns the scalar to batch adapter.
 - Extensions: compose around expression components; add search-space types only when local structural admissibility changes. Shape constraints live in evaluator/evaluation-strategy objects, not the base problem.

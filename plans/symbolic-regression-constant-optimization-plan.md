@@ -493,7 +493,13 @@ This stage was initially deferred until the direct constant-optimization slice e
 Candidate → Candidate
 ```
 
-A refiner transforms candidates without evaluating them and does not promise improvement according to the problem objective. Algorithms may place refinement wherever their lifecycle requires it. The conventional placement for ordinary optimization algorithms is after initial creation and after structural or stochastic variation, immediately before evaluation:
+The explicit algorithm refiner is the single integration mechanism for
+refinement. There is no candidate-transforming evaluator and no second default
+path. Objective-aware retention is available as one particular refiner, the
+improvement-checking refiner described below, and therefore composes like any
+other refiner.
+
+A refiner returns a candidate and never a fitness value, and it does not promise improvement according to the problem objective. Algorithms may place refinement wherever their lifecycle requires it. The conventional placement for ordinary optimization algorithms is after initial creation and after structural or stochastic variation, immediately before evaluation:
 
 ```text
 Creation → Refinement → Evaluation
@@ -502,30 +508,291 @@ Variation → Refinement → Evaluation
 
 Already evaluated candidates carried forward unchanged, such as elites, are not normally refined again. Algorithms remain responsible for explicit placement because initialization, offspring production, neighborhood generation, restarts, and final postprocessing are not one universal lifecycle event. Shared orchestration may reduce repetitive refine-then-evaluate code, but it must not hide the `Refiner` operator from algorithm configuration.
 
-The explicit refiner path performs one problem evaluation. A successful refinement result is evaluated and used directly; the general refiner contract contains no before/after objective comparison or retention guarantee. A particular refiner may use its own internal numerical acceptance information, but that does not become a general problem-objective promise.
+An ordinary refiner performs no problem evaluation, so the algorithm evaluates its result exactly once. The general refiner contract contains no before/after objective comparison or retention guarantee. A particular refiner may use its own internal numerical acceptance information, such as the least-squares loss inside constant optimization, but that does not become a general problem-objective promise.
 
-### Objective-aware refinement evaluation
+### Operators, evaluation, and visibility
 
-`RefinementEvaluator` is the second canonical integration mechanism. It composes an inner evaluator with a refiner and deliberately performs objective-aware retention:
+An earlier draft of this plan claimed a refiner cannot check improvement "by
+construction." That was wrong. Every operator role already receives the problem —
+`IMutatorInstance.Mutate(parents, random, searchSpace, problem)` and its
+counterparts — and `IProblem.Evaluate(candidates, random)` is public. Any
+operator can therefore evaluate today.
+
+The invariant that actually matters is about visibility, not capability:
+
+> Evaluation that should be visible to budgets, termination, analysis, and
+> instrumentation must go through an evaluator operator. Calling
+> `problem.Evaluate` directly from an operator is legal but invisible, and is
+> therefore discouraged.
+
+This is precisely why the evaluator exists as an operator rather than as a plain
+method call: it is the hook where counting, limiting, caching, and observation
+attach. A refiner that needs objective information therefore takes an
+`IEvaluator` as a configured dependency. That is not an exception to the role
+model; it is the correct way to do something operators could otherwise do
+invisibly.
+
+### Refiner composition topologies
+
+Refinement is composed through ordinary operator topologies rather than through
+repeated placement in the algorithm lifecycle. The role provides the usual set:
+
+- **Pipeline.** An ordered sequence such as `repair → simplification → constant
+  optimization`. Ordering is semantically significant, and a stage may appear
+  more than once, as in `simplification → constant optimization →
+  simplification`. The composite preserves the configured order.
+- **Iterated.** Feeds the refined candidate back into the same refiner for a
+  configured number of rounds, mirroring
+  `Operators/Evaluators/IteratedEvaluator.cs`. This is the intended way to
+  express repeated refinement of one candidate.
+- **Choose-one, multi, wrapping, observable, and instrumentation** variants
+  follow the conventions of the other roles.
+
+Repetition is expressed through these topologies and never by placing the same
+refiner at two lifecycle points.
+
+### Improvement-checking refiner
+
+`ImprovementCheckingRefiner` is a wrapping refiner that adds objective-aware
+retention to any inner refiner. It is an ordinary refiner: its contract is still
+`Candidate → Candidate`, and it returns whichever candidate its comparison
+preferred.
 
 ```text
 Evaluate original candidate
-→ Refine candidate
+→ Refine candidate with the inner refiner
 → Evaluate refined candidate
-→ Return the better evaluated candidate
+→ Return the better candidate
 ```
 
-The refinement evaluator owns both evaluations and returns the retained `EvaluatedCandidate`; the algorithm must not evaluate that result a third time. Its result may therefore contain either the original or refined candidate, and its objective vector always describes the returned candidate. This requires retaining the evaluator contract in which the returned evaluated candidate is authoritative.
+Its configuration surface is two nullable settings, following the repository
+convention that a nullable setting inherits a sensible default rather than
+requiring explicit configuration:
 
-The initial retention rule should use the problem's objective comparison and retain the original when the configured improvement requirement is not met. The precise configuration surface for strict improvement, equality, thresholds, multi-objective comparison, and refinement failure remains part of the evaluator checkpoint rather than the `Refiner` contract. A scalar improvement threshold is only meaningful where the objective model supports it explicitly.
+- **`Evaluator`** — the evaluator used for both comparison evaluations. A `null`
+  value constructs an ordinary `ProblemEvaluator`. Because counting, limiting,
+  caching, and observation are wrapper behavior rather than properties of the
+  evaluator role, a default `ProblemEvaluator` is simply unwrapped and therefore
+  invisible to budgets and analysis. Users who want the comparison evaluations
+  counted pass the same evaluator instance the algorithm uses; see the examples
+  below.
+- **`Comparer`** — decides what counts as an improvement. A `null` value uses the
+  problem's `ObjectiveDirections`. Supplying a comparer lets a user drive
+  acceptance from one dimension of a multi-objective problem while selection
+  continues to use the full objective vector.
 
-The explicit algorithm refiner and a refinement evaluator containing the same refiner are alternative placements; configuring both intentionally applies refinement more than once.
+The retention rule is a distinct decision from the comparer and must be explicit
+in the implementation checkpoint. Three defensible semantics exist: retain only
+on strict improvement, retain on "not worse", and, for multi-objective problems,
+retain only when the refined candidate dominates the original. The first
+implementation uses strict improvement for single-objective problems, so a tie
+keeps the original candidate and refinement is a no-op under equality, and
+dominance for multi-objective problems. A scalar improvement threshold is only
+meaningful where the objective model supports it explicitly, and follows the
+repository rule that configured thresholds are retained as given rather than
+clamped.
+
+Refinement failure inside the inner refiner returns the original candidate
+unchanged; the improvement check never converts a failure into a worse candidate.
+
+This refiner costs two problem evaluations, and the algorithm still evaluates the
+returned candidate afterwards, so a naive configuration performs three
+evaluations per refined candidate instead of one. That is one more than a
+candidate-transforming evaluator would need, and it is accepted deliberately:
+the cost is visible, configurable, and removable through caching, while the
+transforming-evaluator alternative bought its saving by making every algorithm
+responsible for using a returned candidate instead of the one it passed in. For
+constant optimization the extra evaluation is small next to the Levenberg-Marquardt
+solve; for cheap refiners it is not, which is what the caching composition below
+addresses.
+
+### Composition examples
+
+These examples are the reason the improvement check belongs in a refiner taking
+an evaluator rather than in a bespoke mechanism. Nothing here is a new feature;
+it is all ordinary operator composition.
+
+Evaluation accounting is decided by **reference identity**.
+`ExecutionInstanceRegistry` resolves execution instances through a
+`ReferenceEqualityComparer`, so the same evaluator configuration object always
+resolves to one execution instance, and therefore to one counter and one cache.
+Two separately constructed but structurally identical configurations resolve to
+two independent instances.
+
+**1. Default: comparison evaluations are invisible.**
+
+```csharp
+algorithm.Evaluator = new LimitEvaluator<...>(new ProblemEvaluator<...>(), maxEvaluations: 100_000);
+algorithm.Refiner = new ImprovementCheckingRefiner<...>(constantOptimization);
+```
+
+Three problem evaluations per refined candidate, one of which counts against the
+budget. Refinement cost is excluded from the evaluation budget.
+
+**2. Shared evaluator: every evaluation counts.**
+
+```csharp
+var evaluator = new LimitEvaluator<...>(new ProblemEvaluator<...>(), maxEvaluations: 100_000);
+
+algorithm.Evaluator = evaluator;
+algorithm.Refiner = new ImprovementCheckingRefiner<...>(constantOptimization) { Evaluator = evaluator };
+```
+
+The same instance is handed to both, so the registry resolves one
+`LimitEvaluator` execution instance holding one counter. All three evaluations
+count, and the budget describes total evaluation effort including refinement.
+
+**3. Shared cache: pay for two evaluations, not three.**
+
+```csharp
+var evaluator = new CachingEvaluator<...>(new ProblemEvaluator<...>(), keySelector);
+
+algorithm.Evaluator = evaluator;
+algorithm.Refiner = new ImprovementCheckingRefiner<...>(constantOptimization) { Evaluator = evaluator };
+```
+
+The refiner evaluates the original and the refined candidate; the algorithm's
+subsequent evaluation of the returned candidate is a cache hit. Sharing one cache
+requires sharing the instance, which is also what makes the hit possible.
+
+**4. Cache and budget composed in either order.**
+
+```csharp
+new LimitEvaluator<...>(new CachingEvaluator<...>(problemEvaluator, keySelector), 100_000)  // hits count
+new CachingEvaluator<...>(new LimitEvaluator<...>(problemEvaluator, 100_000), keySelector)  // hits do not count
+```
+
+Wrapper order decides whether the budget means "evaluation requests" or "actual
+problem evaluations". Both are legitimate; the documentation must state which
+one a preset chooses.
+
+**5. Separate accounting for refinement.**
+
+```csharp
+algorithm.Refiner = new ImprovementCheckingRefiner<...>(constantOptimization)
+{
+    Evaluator = new CountingEvaluator<...>(new ProblemEvaluator<...>())
+};
+```
+
+Comparison evaluations are counted and reported on their own counter, separate
+from the algorithm's evaluation count, so analysis can attribute effort to
+refinement.
+
+**6. Per-round acceptance versus one final acceptance.**
+
+```csharp
+new IteratedRefiner<...>(new ImprovementCheckingRefiner<...>(constantOptimization), rounds: 5)
+new ImprovementCheckingRefiner<...>(new IteratedRefiner<...>(constantOptimization, rounds: 5))
+```
+
+The first is a memetic hill-climb: each round is kept only if it improves. The
+second runs five refinement rounds and accepts or rejects the final result once.
+Both are useful, they are genuinely different searches, and the difference is
+visible in the configuration. A candidate-transforming evaluator can only express
+the second.
+
+**7. Ordered pipeline.**
+
+```csharp
+new PipelineRefiner<...>(repair, simplification, new ImprovementCheckingRefiner<...>(constantOptimization))
+```
+
+Ordering is semantically significant, and only the stage that needs objective
+information carries an evaluator.
+
+One capability is deliberately **not** claimed here: evaluating acceptance
+against a different dataset, such as a validation set, is not expressible by
+configuration alone. An evaluator receives the problem as a call argument, so it
+measures whatever problem the algorithm is solving. Acceptance on a subset of the
+objective vector is expressible through `Comparer`; acceptance on different data
+requires a separate design decision and is out of scope here.
+
+### Evaluator contract
+
+The evaluator returns fitness and never a candidate:
+
+```text
+Refiner:   Candidate → Candidate    (may evaluate internally through a configured evaluator)
+Evaluator: Candidate → Fitness      (measures, never changes)
+Algorithm: orchestrates
+```
+
+`IEvaluatorInstance.Evaluate` therefore returns `IReadOnlyList<ObjectiveVector>`,
+positionally paired with its input, mirroring `IProblem.Evaluate` exactly. The
+evaluator role is then describable in one sentence: the composable, instrumentable
+hook around problem evaluation.
+
+This replaces the earlier decision in which evaluators returned an authoritative
+`EvaluatedCandidate<TCandidate>` so that evaluation could return a refined or
+repaired replacement candidate. That decision existed to carry exactly one
+workload — refinement during evaluation — and the refiner role now owns it. The
+remaining candidate-transforming cases relocate rather than disappear:
+
+| Previous transforming use | New owner |
+| --- | --- |
+| Constant optimization and other numeric refinement | Refiner |
+| Repair | Refiner; it is already the first stage of the pipeline example above |
+| Simplification and normalization | Refiner |
+| `IteratedEvaluator` | `IteratedRefiner`; iterating a pure evaluator is meaningless |
+| Caching, noisy-evaluation aggregation, surrogates, relative quality | Unchanged; these always wanted fitness only |
+
+Reasons for the change:
+
+- **A latent correctness obligation disappears.** The transforming contract
+  required every algorithm to use the returned candidate rather than the one it
+  passed in, and required every wrapping evaluator to preserve that. Nothing in
+  the type system enforced it, and a new algorithm that dropped the returned
+  candidate would fail silently.
+- **`CachingEvaluator` loses a wart.** Under the transforming contract a cache hit
+  returns the candidate that was cached under the key rather than the one
+  supplied, which its own documentation has to warn about. With fitness-only
+  results the warning is unnecessary.
+- **Refinement becomes visible in algorithm configuration** instead of hidden
+  inside an evaluator chain.
+
+Accepted costs:
+
+- **Positional pairing.** Callers pair results with inputs by position, exactly as
+  `IProblem.Evaluate` already requires. The pairing happens in few places.
+- **Repair discovered during evaluation.** A repair that is naturally found while
+  decoding a candidate must now be performed by a refiner beforehand, which can
+  mean decoding twice. If this becomes a real cost, the deferred refinement
+  artifacts below are the answer, not a transforming evaluator.
+- **Migration.** The evaluator instance generics appear in roughly 28 source
+  files: the evaluator wrappers, the built-in algorithms, and the analysis hooks.
+  The change is mechanical but not free.
+
+The middle option of keeping `EvaluatedCandidate<TCandidate>` as the return type
+while contractually forbidding transformation was considered and rejected. A type
+that can express what the contract forbids invites the violation and needs a
+runtime identity check to catch it. If evaluation does not transform, the
+signature should say so.
 
 ### Deferred producer composition
 
 Users may compose a refiner around candidate-producing operators, for example through a refining creator, crossover, or mutator, or adapt refinement into a probabilistic variation policy. These placements are valid but narrower: a creator wrapper affects initialization only, a crossover wrapper runs before later mutation, and a mutator wrapper does not cover initial candidates. They are not the canonical refinement integration.
 
-HeuristicLib will not initially provide `RefiningCreator`, `RefiningCrossover`, `RefiningMutator`, generalized offspring-creation, or similar producer wrappers. Revisit those conveniences only after the explicit algorithm refiner and `RefinementEvaluator` are implemented and their composition and observability behavior are understood.
+HeuristicLib will not initially provide `RefiningCreator`, `RefiningCrossover`, `RefiningMutator`, generalized offspring-creation, or similar producer wrappers. Revisit those conveniences only after the explicit algorithm refiner and its composition topologies are implemented and their composition and observability behavior are understood.
+
+### Deferred reusable refinement artifacts
+
+A refiner may already have computed information the following evaluation repeats,
+such as predictions, residuals, or a loss value. Constant optimization is the
+immediate example: its least-squares objective is a full-data mean squared error.
+
+That information is deliberately not part of the first `Refiner` contract,
+because a refiner's internal objective is not generally the problem objective. It
+may use a sampled row subset, a differentiable surrogate, a single objective
+where the problem is multi-objective, or omit complexity penalties and linear
+scaling. Reusing it unconditionally would silently change fitness.
+
+A later increment may let a refiner return optional artifacts that an evaluator
+consumes only when they are explicitly valid for the requested evaluation, or let
+a refiner populate a shared evaluation cache. Both remain performance
+optimizations and must not merge the refinement and evaluation responsibilities.
+Refinement provenance and refinement-budget accounting are open in the same way
+and are not settled by RF-0.
 
 ### Development-branch integration prerequisite
 
@@ -535,8 +802,12 @@ Before implementing the `Refiner` operator model, merge `dev` into the current w
 
 `dev` is merged. The reconciliation kept `dev`'s operator structure and this
 branch's evaluator semantics: `IEvaluatorInstance.Evaluate` still returns
-`IReadOnlyList<EvaluatedCandidate<TCandidate>>`, which RF-5 depends on, while the
-authoring bases, naming, and execution-instance factory come from `dev`.
+`IReadOnlyList<EvaluatedCandidate<TCandidate>>`, while the authoring bases,
+naming, and execution-instance factory come from `dev`.
+
+That evaluator return type is superseded by the [Evaluator contract](#evaluator-contract)
+decision above and is changed by RF-2. The reconciliation record is kept as
+history; nothing below depends on the transforming return.
 
 Findings that bear on the `Refiner` design:
 
@@ -562,7 +833,7 @@ Findings that bear on the `Refiner` design:
   semantics that need no validation. Decide which applies to `Refiner` before
   RF-2, and consider whether the stateless bases should expose a validation hook.
 - **Threshold semantics.** Rates and probabilities are retained as configured,
-  never clamped or rejected. If `RefinementEvaluator` grows an improvement
+  never clamped or rejected. If `ImprovementCheckingRefiner` grows an improvement
   threshold, it follows this rule.
 
 Validation: Release build clean with the operator authoring analyzer at error
@@ -575,13 +846,15 @@ Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted
 
 | Checkpoint | Status | Deliverable |
 | --- | --- | --- |
-| RF-0 Design contract | Awaiting review | Document the canonical `Candidate → Candidate` refiner role, conventional algorithm placement, absence of general improvement guarantees, objective-aware refinement evaluator, authoritative evaluator result, and deferred producer wrappers. No source code. |
-| RF-1 Development-branch integration | Awaiting review | Merge `dev` into the working branch, reconcile and review its operator-base improvements, run appropriate validation, and stop before implementing Refiner. Done; see [Development-branch integration outcome](#development-branch-integration-outcome). |
-| RF-2 Refiner operator model | Pending | Implement the general refiner configuration and execution-instance contracts, authoring bases, identity behavior, validation, and focused contract tests. |
-| RF-3 Explicit algorithm integration | Pending | Add configurable refinement to applicable built-in algorithms after creation and final variation but before evaluation, without re-refining carried evaluated candidates. |
-| RF-4 Constant-optimization refiner | Pending | Adapt symbolic-regression constant optimization to the general refiner role and define its failure behavior without adding problem-objective retention. |
-| RF-5 Refinement evaluator | Pending | Compose a refiner with an inner evaluator, evaluate original and refined candidates, apply a configurable acceptance policy, and return the retained authoritative evaluated candidate without a third evaluation. |
-| RF-6 Integration hardening | Pending | Verify batching, evaluator/refiner composition, objective directions, equality and threshold behavior, failure and cancellation, repeated refinement, observability, and explicit double-refinement configurations. |
+| RF-0 Design contract | Accepted | Document the `Candidate → Candidate` refiner role as the single refinement mechanism, conventional algorithm placement, the visibility rule for operator-issued evaluation, composition topologies, the improvement-checking refiner with its nullable evaluator and comparer, the fitness-only evaluator contract, the composition examples, and deferred producer wrappers and artifacts. No source code. |
+| RF-1 Development-branch integration | Accepted | Merge `dev` into the working branch, reconcile and review its operator-base improvements, run appropriate validation, and stop before implementing Refiner. Done; see [Development-branch integration outcome](#development-branch-integration-outcome). |
+| RF-2 Evaluator contract simplification | Pending | Change `IEvaluatorInstance.Evaluate` to return `IReadOnlyList<ObjectiveVector>`, migrate the evaluator wrappers, built-in algorithms, and analysis hooks, remove `IteratedEvaluator`, and remove the candidate-substitution caveat from `CachingEvaluator`. |
+| RF-3 Refiner operator model | Pending | Implement the general refiner configuration and execution-instance contracts, authoring bases in the three paths and three arities, `SingleCandidateRefiner.RefineCandidate`, concurrency, identity behavior, validation, and focused contract tests. |
+| RF-4 Refiner composition topologies | Pending | Add the pipeline, iterated, choose-one, multi, wrapping, and observable refiner topologies, restoring iterated refinement after RF-2 removes `IteratedEvaluator`, with order-significant and repeated-stage tests. |
+| RF-5 Explicit algorithm integration | Pending | Add configurable refinement to applicable built-in algorithms after creation and final variation but before evaluation, without re-refining carried evaluated candidates. |
+| RF-6 Constant-optimization refiner | Pending | Adapt symbolic-regression constant optimization to the general refiner role and define its failure behavior without adding problem-objective retention. |
+| RF-7 Improvement-checking refiner | Pending | Implement the wrapping refiner with nullable `Evaluator` and `Comparer`, the strict-improvement and dominance retention rules, and original-on-failure behavior. |
+| RF-8 Integration hardening | Pending | Verify batching, refiner/evaluator composition, objective directions, equality and threshold behavior, failure and cancellation, iterated and pipeline refinement, observability, and each composition example including shared-instance accounting and cache/limit wrapper order. |
 
 ## Stage 4: Symbolic-Regression Constant Optimization
 
@@ -863,11 +1136,12 @@ Remaining decisions should be made from implementation evidence:
 | 7. Immutable rebuilding | One `ReplaceMany` operation produces the optimized expression | In-place mutation, fixed-constant replacement |
 | 8. Behavioral comparison | Predictions and raw MSE satisfy analytic expectations and match maintained legacy behavior where applicable | Exact parameter-vector or solver-trace equivalence |
 | 9. Development-branch integration | Current `dev` operator-base improvements integrated, reviewed, and validated | Refiner implementation |
-| 10. Refiner operator | Canonical candidate-to-candidate refinement plus explicit placement in applicable algorithms | Objective evaluation or retention inside the general refiner contract |
-| 11. Refinement evaluator | Objective-aware original-versus-refined retention with exactly two evaluator passes | A third evaluation or implicit use of the same refiner at two placement points |
-| 12. Producer refinement composition | Deferred creator, crossover, mutator, and offspring-production conveniences after canonical mechanisms are established | Producer wrappers treated as the primary refinement integration |
-| 13. Performance decision | AD, adapter, solver, refinement, evaluator, and complete pipeline benchmarked | Unmeasured backend abstraction or specialization |
-| 14. Later generalization | Public APIs, other optimizers, sampling, and additional memetic composition as justified | Changes made only for hypothetical reuse |
+| 10. Evaluator contract simplification | Fitness-only evaluator results, migrated wrappers, algorithms, and analysis hooks | Candidate-transforming evaluation of any kind |
+| 11. Refiner operator | Candidate-to-candidate refinement, composition topologies, plus explicit placement in applicable algorithms | Objective evaluation or retention inside the general refiner contract |
+| 12. Improvement-checking refiner | Objective-aware retention as a composable wrapping refiner with configurable evaluator and comparer | A second refinement integration mechanism, or acceptance hidden from configuration |
+| 13. Producer refinement composition | Deferred creator, crossover, mutator, and offspring-production conveniences after canonical mechanisms are established | Producer wrappers treated as the primary refinement integration |
+| 14. Performance decision | AD, adapter, solver, refinement, evaluator, and complete pipeline benchmarked | Unmeasured backend abstraction or specialization |
+| 15. Later generalization | Public APIs, other optimizers, sampling, and additional memetic composition as justified | Changes made only for hypothetical reuse |
 
 Each increment requires:
 
