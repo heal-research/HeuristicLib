@@ -305,6 +305,33 @@ public sealed class SymbolicExpressionTests
     }
 
     [Fact]
+    public void VariableSymbol_ReweightingKeepsTheVariablesAndResamples()
+    {
+        var original = new VariableSymbol(["x0", "x1"], [1.0, 0.0]);
+
+        var reweighted = original with { SelectionWeights = [0.0, 1.0] };
+
+        ((VariableExpressionNode)original.CreateNode(new SequenceRandomNumberGenerator())).VariableName.ShouldBe("x0");
+        ((VariableExpressionNode)reweighted.CreateNode(new SequenceRandomNumberGenerator())).VariableName.ShouldBe("x1");
+        reweighted.Variables.ShouldBe(["x0", "x1"]);
+        reweighted.SelectionWeights.ShouldBe([0.0, 1.0]);
+        reweighted.ShouldBe(new VariableSymbol(["x0", "x1"], [0.0, 1.0]));
+
+        // Reweighting produces a different symbol by value, so it is a configuration-time facility only.
+        reweighted.ShouldNotBe(original);
+        reweighted.CanPerturb(original.CreateNode(new SequenceRandomNumberGenerator())).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void VariableSymbol_ReweightingKeepsTheVariableCountFixed()
+    {
+        var symbol = new VariableSymbol(["x0", "x1"]);
+
+        Should.Throw<ArgumentException>(() => { _ = symbol with { SelectionWeights = [1.0] }; });
+        (symbol with { SelectionWeights = [] }).SelectionWeights.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void Equality_IsStructuralAndProducesConsistentHashCodes()
     {
         var first = CreateLinearExpression();

@@ -13,10 +13,8 @@ public sealed record FullTreeCreator
     /// </summary>
     public int? Depth { get; init; }
 
-    public override ExpressionTree CreateCandidate(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
-    {
-        return FullTreeCreation.Create(random, searchSpace, Depth);
-    }
+    public override ExpressionTree CreateCandidate(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace) =>
+        FullTreeCreation.Create(random, searchSpace, Depth);
 }
 
 public static class FullTreeCreation

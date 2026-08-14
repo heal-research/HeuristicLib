@@ -8,25 +8,15 @@ namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
 public sealed record ShrinkSubtreeMutator
     : SingleCandidateMutator<ExpressionTree, ExpressionTreeSearchSpace>
 {
-    public override ExpressionTree MutateCandidate(
-        ExpressionTree parent,
-        IRandomNumberGenerator random,
-        ExpressionTreeSearchSpace searchSpace)
-    {
-        return ShrinkSubtreeMutation.Mutate(parent, random, searchSpace);
-    }
+    public override ExpressionTree MutateCandidate(ExpressionTree parent, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace) =>
+        ShrinkSubtreeMutation.Mutate(parent, random, searchSpace);
 }
 
 public static class ShrinkSubtreeMutation
 {
-    public static ExpressionTree Mutate(
-        ExpressionTree parent,
-        IRandomNumberGenerator random,
-        ExpressionTreeSearchSpace searchSpace)
+    public static ExpressionTree Mutate(ExpressionTree parent, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
     {
-        var candidates = parent.RootPoint.TraversePreOrder()
-            .Where(point => point.Node is OperationExpressionNode)
-            .ToArray();
+        var candidates = parent.RootPoint.TraversePreOrder().Where(point => point.Node is OperationExpressionNode).ToArray();
         if (candidates.Length == 0)
             return parent;
 

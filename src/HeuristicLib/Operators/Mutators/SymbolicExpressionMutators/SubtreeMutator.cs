@@ -8,10 +8,8 @@ namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
 public sealed record SubtreeMutator
     : SingleCandidateMutator<ExpressionTree, ExpressionTreeSearchSpace>
 {
-    public override ExpressionTree MutateCandidate(ExpressionTree parent, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
-    {
-        return SubtreeMutation.Mutate(parent, random, searchSpace);
-    }
+    public override ExpressionTree MutateCandidate(ExpressionTree parent, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace) =>
+        SubtreeMutation.Mutate(parent, random, searchSpace);
 }
 
 public static class SubtreeMutation

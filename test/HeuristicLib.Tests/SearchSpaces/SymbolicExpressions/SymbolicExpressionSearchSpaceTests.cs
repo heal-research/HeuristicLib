@@ -239,6 +239,51 @@ public sealed class SymbolicExpressionSearchSpaceTests
         searchSpace.GetSymbols(2).ShouldBe([Symbols.Addition, Symbols.Addition]);
     }
 
+    [Fact]
+    public void Reweighting_RebuildsTheDerivedAritySamplers()
+    {
+        Symbol[] symbols = [Symbols.Addition, Symbols.Multiplication, new VariableSymbol(["x0"])];
+        var searchSpace = new ExpressionTreeSearchSpace(10, 5, symbols, [1.0, 0.0, 0.0]);
+
+        var reweighted = searchSpace with { SelectionWeights = [0.0, 1.0, 0.0] };
+
+        // Both the per-arity and the precomputed arity-range samplers slice the weights, so both must be rebuilt.
+        searchSpace.SelectSymbol(2, new SequenceRandomNumberGenerator()).ShouldBe(Symbols.Addition);
+        reweighted.SelectSymbol(2, new SequenceRandomNumberGenerator()).ShouldBe(Symbols.Multiplication);
+        searchSpace.SelectSymbol(0, 2, new SequenceRandomNumberGenerator()).ShouldBe(Symbols.Addition);
+        reweighted.SelectSymbol(0, 2, new SequenceRandomNumberGenerator()).ShouldBe(Symbols.Multiplication);
+
+        reweighted.Symbols.ShouldBe(searchSpace.Symbols);
+        reweighted.SelectionWeights.ShouldBe([0.0, 1.0, 0.0]);
+        reweighted.ShouldNotBe(searchSpace);
+        reweighted.ShouldBe(new ExpressionTreeSearchSpace(10, 5, symbols, [0.0, 1.0, 0.0]));
+    }
+
+    [Fact]
+    public void Reweighting_KeepsTheSymbolCountFixed()
+    {
+        var searchSpace = new ExpressionTreeSearchSpace(10, 5, [Symbols.Addition, new VariableSymbol(["x0"])], [1.0, 2.0]);
+
+        Should.Throw<ArgumentException>(() => { _ = searchSpace with { SelectionWeights = [1.0] }; });
+        (searchSpace with { SelectionWeights = [] }).SelectionWeights.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ChangingALimit_LeavesTheDerivedSamplersIntact()
+    {
+        var searchSpace = new ExpressionTreeSearchSpace(10, 5, [Symbols.Addition, Symbols.Multiplication, new VariableSymbol(["x0"])], [1.0, 0.0, 0.0]);
+
+        var deeper = searchSpace with { MaximumDepth = 8 };
+
+        deeper.MaximumDepth.ShouldBe(8);
+        deeper.MaximumLength.ShouldBe(10);
+        deeper.SelectionWeights.ShouldBe([1.0, 0.0, 0.0]);
+        deeper.SelectSymbol(2, new SequenceRandomNumberGenerator()).ShouldBe(Symbols.Addition);
+        deeper.ShouldNotBe(searchSpace);
+        Should.Throw<ArgumentOutOfRangeException>(() => { _ = searchSpace with { MaximumDepth = 0 }; });
+        Should.Throw<ArgumentOutOfRangeException>(() => { _ = searchSpace with { MaximumLength = 0 }; });
+    }
+
     private static ExpressionTree CreateLinearExpression() =>
         (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build();
 

@@ -1,12 +1,23 @@
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Random.Distributions;
 
 namespace HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 
+/// <remarks>
+/// <see cref="MaximumLength"/>, <see cref="MaximumDepth"/> and <see cref="SelectionWeights"/> are the only members a
+/// <c>with</c> expression may set. Setting the weights rebuilds every derived sampler for the unchanged symbols;
+/// searching a different set of symbols means constructing a new search space.
+/// </remarks>
 public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
 {
+    private const int MaximumPrecomputedArity = 2;
+
     private readonly Dictionary<int, Symbol[]> symbolsByArity;
-    private readonly Dictionary<int, ImmutableArray<double>> selectionWeightsByArity;
+    private readonly Dictionary<int, WeightedItemSampler<Symbol>> samplerByArity;
+    private readonly Dictionary<(int MinimumArity, int MaximumArity), WeightedItemSampler<Symbol>> samplerByArityRange;
+    private readonly WeightedItemSampler<Symbol> sampler;
+    private readonly int maximumSymbolArity;
     private readonly HashSet<string> allowedVariableNames;
     private readonly bool allowsVariables;
     private readonly bool allowsEvolvableConstants;
@@ -21,12 +32,12 @@ public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
     {
     }
 
-    public ExpressionTreeSearchSpace(int maximumLength, int maximumDepth, IEnumerable<Symbol> symbols)
+    public ExpressionTreeSearchSpace(int maximumLength, int maximumDepth, IReadOnlyList<Symbol> symbols)
         : this(maximumLength, maximumDepth, symbols, selectionWeights: null)
     {
     }
 
-    public ExpressionTreeSearchSpace(int maximumLength, int maximumDepth, IEnumerable<(Symbol Symbol, double Weight)> symbols)
+    public ExpressionTreeSearchSpace(int maximumLength, int maximumDepth, IReadOnlyList<(Symbol Symbol, double Weight)> symbols)
         : this(maximumLength, maximumDepth, CreateWeightedSymbolSet(symbols))
     {
     }
@@ -36,19 +47,20 @@ public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
     {
     }
 
-    public ExpressionTreeSearchSpace(int maximumLength, int maximumDepth, IEnumerable<Symbol> symbols, IEnumerable<double>? selectionWeights)
+    public ExpressionTreeSearchSpace(int maximumLength, int maximumDepth, IReadOnlyList<Symbol> symbols, IReadOnlyList<double>? selectionWeights)
     {
         if (maximumLength <= 0)
             throw new ArgumentOutOfRangeException(nameof(maximumLength));
         if (maximumDepth <= 0)
             throw new ArgumentOutOfRangeException(nameof(maximumDepth));
+
         MaximumLength = maximumLength;
         MaximumDepth = maximumDepth;
-        Symbols = symbols.ToImmutableArray();
-        if (Symbols.IsEmpty)
+        var items = symbols.ToValueArray();
+        if (items.IsEmpty)
             throw new ArgumentException("At least one symbol must be supplied.", nameof(symbols));
 
-        SelectionWeights = WeightSelection.Normalize(selectionWeights?.ToArray(), Symbols.Count);
+        sampler = new WeightedItemSampler<Symbol>(items, selectionWeights);
 
         symbolsByArity = Symbols
             .GroupBy(symbol => symbol.Arity)
@@ -56,13 +68,11 @@ public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
         if (!symbolsByArity.TryGetValue(0, out var terminalSymbols))
             throw new ArgumentException("At least one terminal symbol must be allowed.", nameof(symbols));
         TerminalSymbols = terminalSymbols.ToImmutableArray();
-        selectionWeightsByArity = symbolsByArity.Keys.ToDictionary(
-            arity => arity,
-            arity => CreateSelection(Symbols
-                .Select((symbol, index) => (Symbol: symbol, Index: index))
-                .Where(entry => entry.Symbol.Arity == arity)
-                .Select(entry => entry.Index)
-                .ToArray()));
+        maximumSymbolArity = symbolsByArity.Keys.Max();
+
+        // Both sampler dictionaries slice the configured weights, so the SelectionWeights accessor rebuilds them.
+        samplerByArity = CreateAritySamplers();
+        samplerByArityRange = CreateCommonRangeSamplers();
         allowedVariableNames = Symbols
             .OfType<VariableSymbol>()
             .SelectMany(symbol => symbol.Variables)
@@ -71,11 +81,45 @@ public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
         allowsEvolvableConstants = Symbols.OfType<EvolvableConstantSymbol>().Any();
     }
 
-    public int MaximumLength { get; }
-    public int MaximumDepth { get; }
-    public ValueArray<Symbol> Symbols { get; }
+    public int MaximumLength
+    {
+        get;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            field = value;
+        }
+    }
+
+    public int MaximumDepth
+    {
+        get;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            field = value;
+        }
+    }
+
+    public ValueArray<Symbol> Symbols => sampler.Items;
     public ImmutableArray<Symbol> TerminalSymbols { get; }
-    public ValueArray<double> SelectionWeights { get; }
+
+    /// <summary>
+    /// Gets the configured selection weights, exactly as supplied, or an empty collection for uniform selection.
+    /// Setting them reweights <see cref="Symbols"/> and rebuilds the derived per-arity samplers; an empty collection
+    /// restores uniform selection.
+    /// </summary>
+    public ValueArray<double> SelectionWeights
+    {
+        get => sampler.Weights;
+        init
+        {
+            sampler = sampler with { Weights = value };
+            samplerByArity = CreateAritySamplers();
+            samplerByArityRange = CreateCommonRangeSamplers();
+        }
+    }
+
     public bool AllowsVariables => allowsVariables;
     public bool AllowsEvolvableConstants => allowsEvolvableConstants;
 
@@ -98,12 +142,10 @@ public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
 
     public Symbol SelectSymbol(int arity, IRandomNumberGenerator random)
     {
-        if (!symbolsByArity.TryGetValue(arity, out var symbols))
+        if (!samplerByArity.TryGetValue(arity, out var aritySampler))
             throw new ArgumentException($"No symbols with arity {arity} are allowed.", nameof(arity));
 
-        var weights = selectionWeightsByArity[arity];
-        var index = WeightSelection.SelectIndex(random, symbols.Length, weights.AsSpan());
-        return symbols[index];
+        return aritySampler.Sample(random);
     }
 
     public Symbol SelectSymbol(int minimumArity, int maximumArity, IRandomNumberGenerator random)
@@ -111,56 +153,18 @@ public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
         ArgumentOutOfRangeException.ThrowIfNegative(minimumArity);
         ArgumentOutOfRangeException.ThrowIfLessThan(maximumArity, minimumArity);
 
-        var candidateCount = Symbols.Count(symbol => symbol.Arity >= minimumArity && symbol.Arity <= maximumArity);
+        if (minimumArity == maximumArity)
+            return SelectSymbol(minimumArity, random);
 
-        if (candidateCount == 0)
-            throw new ArgumentException($"No symbols with arity in [{minimumArity}, {maximumArity}] are allowed.", nameof(maximumArity));
+        var effectiveMaximumArity = Math.Min(maximumArity, maximumSymbolArity);
+        if (minimumArity == effectiveMaximumArity)
+            return SelectSymbol(minimumArity, random);
 
-        if (SelectionWeights.IsEmpty)
-        {
-            var selectedIndex = random.NextInt(candidateCount);
-            foreach (var symbol in Symbols)
-            {
-                if (symbol.Arity < minimumArity || symbol.Arity > maximumArity)
-                    continue;
-                if (selectedIndex-- == 0)
-                    return symbol;
-            }
-        }
-        else
-        {
-            var totalWeight = 0.0;
-            for (var i = 0; i < Symbols.Count; i++)
-            {
-                if (Symbols[i].Arity >= minimumArity && Symbols[i].Arity <= maximumArity)
-                    totalWeight += SelectionWeights[i];
-            }
+        if (samplerByArityRange.TryGetValue((minimumArity, effectiveMaximumArity), out var rangeSampler))
+            return rangeSampler.Sample(random);
 
-            var value = random.NextDouble() * totalWeight;
-            Symbol? lastCandidate = null;
-            for (var i = 0; i < Symbols.Count; i++)
-            {
-                var symbol = Symbols[i];
-                if (symbol.Arity < minimumArity || symbol.Arity > maximumArity)
-                    continue;
-
-                lastCandidate = symbol;
-                value -= SelectionWeights[i];
-                if (value < 0.0)
-                    return symbol;
-            }
-
-            if (lastCandidate is not null)
-                return lastCandidate;
-        }
-
-        throw new InvalidOperationException("Symbol selection failed despite an available candidate.");
+        return CreateRangeSampler(minimumArity, maximumArity).Sample(random);
     }
-
-    internal ImmutableArray<double> GetSelectionWeights(int arity) =>
-        selectionWeightsByArity.TryGetValue(arity, out var weights)
-            ? weights
-            : throw new ArgumentException($"No symbols with arity {arity} are allowed.", nameof(arity));
 
     public Symbol? ResolveUniqueSymbol(Func<Symbol, bool> predicate)
     {
@@ -209,14 +213,57 @@ public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
         _ => node.Symbol is OperationSymbol operation && Symbols.Contains(operation),
     };
 
-    private ImmutableArray<double> CreateSelection(IReadOnlyList<int> indexes)
+    private WeightedItemSampler<Symbol> CreateRangeSampler(int minimumArity, int maximumArity)
     {
-        return WeightSelection.Normalize(
-            SelectionWeights.IsEmpty ? null : indexes.Select(index => SelectionWeights[index]).ToArray(),
-            indexes.Count);
+        var indexes = new List<int>();
+        for (var i = 0; i < Symbols.Count; i++)
+        {
+            if (Symbols[i].Arity >= minimumArity && Symbols[i].Arity <= maximumArity)
+                indexes.Add(i);
+        }
+
+        if (indexes.Count == 0)
+            throw new ArgumentException($"No symbols with arity in [{minimumArity}, {maximumArity}] are allowed.", nameof(maximumArity));
+
+        return CreateSampler(indexes);
     }
 
-    private static IEnumerable<Symbol> ComposeCommonSymbols(IEnumerable<OperationSymbol> operations, IEnumerable<string> variables, IEnumerable<ConstantSymbol> constants)
+    private Dictionary<int, WeightedItemSampler<Symbol>> CreateAritySamplers() =>
+        symbolsByArity.Keys.ToDictionary(
+            arity => arity,
+            arity => CreateSampler(Symbols
+                .Select((symbol, index) => (Symbol: symbol, Index: index))
+                .Where(entry => entry.Symbol.Arity == arity)
+                .Select(entry => entry.Index)
+                .ToArray()));
+
+    private Dictionary<(int MinimumArity, int MaximumArity), WeightedItemSampler<Symbol>> CreateCommonRangeSamplers()
+    {
+        var samplers = new Dictionary<(int MinimumArity, int MaximumArity), WeightedItemSampler<Symbol>>();
+        var precomputedMaximumArity = Math.Min(MaximumPrecomputedArity, maximumSymbolArity);
+        for (var minimumArity = 0; minimumArity < precomputedMaximumArity; minimumArity++)
+        {
+            for (var maximumArity = minimumArity + 1; maximumArity <= precomputedMaximumArity; maximumArity++)
+            {
+                var indexes = Symbols
+                    .Select((symbol, index) => (Symbol: symbol, Index: index))
+                    .Where(entry => entry.Symbol.Arity >= minimumArity && entry.Symbol.Arity <= maximumArity)
+                    .Select(entry => entry.Index)
+                    .ToArray();
+                if (indexes.Length > 0)
+                    samplers.Add((minimumArity, maximumArity), CreateSampler(indexes));
+            }
+        }
+
+        return samplers;
+    }
+
+    private WeightedItemSampler<Symbol> CreateSampler(IReadOnlyList<int> indexes) =>
+        new(
+            [.. indexes.Select(index => Symbols[index])],
+            sampler.Weights.IsEmpty ? null : [.. indexes.Select(index => sampler.Weights[index])]);
+
+    private static IReadOnlyList<Symbol> ComposeCommonSymbols(IEnumerable<OperationSymbol> operations, IEnumerable<string> variables, IEnumerable<ConstantSymbol> constants)
     {
         var symbols = new List<Symbol>();
         symbols.AddRange(operations);
@@ -227,7 +274,7 @@ public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
         return symbols;
     }
 
-    private static WeightedSymbolSet CreateWeightedSymbolSet(IEnumerable<(Symbol Symbol, double Weight)> symbols)
+    private static WeightedSymbolSet CreateWeightedSymbolSet(IReadOnlyList<(Symbol Symbol, double Weight)> symbols)
     {
         var entries = symbols.ToArray();
         return new WeightedSymbolSet(entries.Select(entry => entry.Symbol).ToArray(), entries.Select(entry => entry.Weight).ToArray());

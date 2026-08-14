@@ -10,6 +10,7 @@ using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.States;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
@@ -181,61 +182,47 @@ public class ChooseOneOperatorTests
     }
 
     [Fact]
-    public void WeightedBatchDispatch_PreservesOriginalWeightsAndPositiveInfinityOverridesFiniteWeights()
+    public void WeightedDispatcher_SelectsAndInvokesOneOperator()
     {
-        var dispatch = new WeightedBatchDispatch([1.0, 3.3, double.PositiveInfinity, double.PositiveInfinity]);
-        var random = new SequenceRandomNumberGenerator(0.1, 0.9);
+        int[] operators = [100, 200];
+        var dispatcher = WeightedDispatcher.Create(operators, [1.0, 3.0]);
 
-        dispatch.Weights.ShouldBe([1.0, 3.3, double.PositiveInfinity, double.PositiveInfinity]);
-        dispatch.ChooseOperator(random, 4).ShouldBe(2);
-        dispatch.ChooseOperator(random, 4).ShouldBe(3);
+        var result = dispatcher.Dispatch(
+            new SequenceRandomNumberGenerator(0.9),
+            1,
+            static (value, offset) => value + offset);
+
+        result.ShouldBe(201);
     }
 
     [Fact]
-    public void WeightedBatchDispatch_IgnoresNeverWeightsAndPreservesPositiveFiniteRatios()
+    public void WeightedBatchDispatcher_UsesItsRetainedSamplerAndRestoresInputOrder()
     {
-        var dispatch = new WeightedBatchDispatch([double.NaN, double.NegativeInfinity, -2.0, 0.0, 1.0, 3.0]);
-        var random = new SequenceRandomNumberGenerator(0.2, 0.8);
-
-        dispatch.ChooseOperator(random, 6).ShouldBe(4);
-        dispatch.ChooseOperator(random, 6).ShouldBe(5);
-    }
-
-    [Fact]
-    public void WeightedBatchDispatch_AllNeverWeightsFallBackToUniformSelection()
-    {
-        var dispatch = new WeightedBatchDispatch([double.NaN, double.NegativeInfinity, -1.0, 0.0]);
-        var random = new SequenceRandomNumberGenerator(0.1, 0.3, 0.6, 0.9);
-
-        dispatch.ChooseOperator(random, 4).ShouldBe(0);
-        dispatch.ChooseOperator(random, 4).ShouldBe(1);
-        dispatch.ChooseOperator(random, 4).ShouldBe(2);
-        dispatch.ChooseOperator(random, 4).ShouldBe(3);
-    }
-
-    [Fact]
-    public void WeightedBatchDispatch_ScalesLargeFiniteWeightsWithoutOverflow()
-    {
-        var dispatch = new WeightedBatchDispatch([double.MaxValue, double.MaxValue / 2]);
-        var random = new SequenceRandomNumberGenerator(0.2, 0.8);
-
-        dispatch.ChooseOperator(random, 2).ShouldBe(0);
-        dispatch.ChooseOperator(random, 2).ShouldBe(1);
-    }
-
-    [Fact]
-    public void WeightedBatchDispatch_EmptyWeightsUseUniformSelectionAcrossOperators()
-    {
-        var dispatch = new WeightedBatchDispatch([]);
+        var dispatcher = new WeightedBatchDispatcher(2);
         var random = new SequenceRandomNumberGenerator(0.1, 0.6, 0.9);
 
-        var result = dispatch.Dispatch(
+        var result = dispatcher.Dispatch(
             [1, 2, 3],
             [100, 200],
             random,
             static (value, batch) => Enumerable.Repeat(value, batch.Count).ToArray());
 
-        dispatch.Weights.ShouldBeEmpty();
+        result.ShouldBe([100, 200, 200]);
+    }
+
+    [Fact]
+    public void WeightedBatchDispatcher_DispatchesARequestedCountWithoutPlaceholderInputs()
+    {
+        var dispatcher = new WeightedBatchDispatcher(2);
+        var random = new SequenceRandomNumberGenerator(0.1, 0.6, 0.9);
+
+        var result = dispatcher.Dispatch(
+            count: 3,
+            operators: [100, 200],
+            random,
+            state: 0,
+            static (value, batchCount, _) => Enumerable.Repeat(value, batchCount).ToArray());
+
         result.ShouldBe([100, 200, 200]);
     }
 

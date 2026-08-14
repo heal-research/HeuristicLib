@@ -48,43 +48,55 @@ public sealed record ResampleInitialNumericPerturbation : NumericPerturbation
     }
 }
 
+/// <remarks>
+/// <see cref="Weights"/> is the only member a <c>with</c> expression may set, so <c>choice with { Weights = … }</c>
+/// reweights the unchanged options. Choosing from a different set of options means constructing a new choice.
+/// </remarks>
 public sealed record ChooseNumericPerturbation : NumericPerturbation
 {
-    public ValueArray<NumericPerturbation> Options { get; }
-    public ValueArray<double> Weights { get; }
+    private readonly WeightedItemSampler<NumericPerturbation> sampler;
 
-    public ChooseNumericPerturbation(ImmutableArray<NumericPerturbation> options)
+    public ValueArray<NumericPerturbation> Options => sampler.Items;
+
+    /// <summary>
+    /// Gets the configured weights, exactly as supplied, or an empty collection for uniform selection. Setting them
+    /// reweights <see cref="Options"/>; an empty collection restores uniform selection.
+    /// </summary>
+    public ValueArray<double> Weights
     {
-        if (options.IsDefaultOrEmpty)
-            throw new ArgumentException("A choice needs at least one perturbation.", nameof(options));
-
-        Options = options;
-        Weights = ImmutableArray<double>.Empty;
+        get => sampler.Weights;
+        init => sampler = sampler with { Weights = value };
     }
 
-    public ChooseNumericPerturbation(ImmutableArray<NumericPerturbation> options, ImmutableArray<double> weights)
+    public ChooseNumericPerturbation(IReadOnlyList<NumericPerturbation> options, IReadOnlyList<double>? weights = null)
     {
-        if (options.IsDefaultOrEmpty)
+        if (options.Count == 0)
             throw new ArgumentException("A choice needs at least one perturbation.", nameof(options));
 
-        Options = options;
-        Weights = WeightSelection.Normalize(weights, options.Length);
+        sampler = new WeightedItemSampler<NumericPerturbation>(options, weights);
     }
 
-    public ChooseNumericPerturbation(IEnumerable<(NumericPerturbation Perturbation, double Weight)> options)
+    public ChooseNumericPerturbation(IReadOnlyList<(NumericPerturbation Perturbation, double Weight)> options)
     {
-        var entries = options.ToArray();
-        if (entries.Length == 0)
+        if (options.Count == 0)
             throw new ArgumentException("A choice needs at least one perturbation.", nameof(options));
 
-        Options = entries.Select(entry => entry.Perturbation).ToImmutableArray();
-        Weights = WeightSelection.Normalize(entries.Select(entry => entry.Weight).ToArray(), entries.Length);
+        var perturbations = new NumericPerturbation[options.Count];
+        var weights = new double[options.Count];
+        for (var i = 0; i < options.Count; i++)
+        {
+            perturbations[i] = options[i].Perturbation;
+            weights[i] = options[i].Weight;
+        }
+
+        sampler = new WeightedItemSampler<NumericPerturbation>(
+            ValueArray.FromOwnedArray(perturbations),
+            ValueArray.FromOwnedArray(weights));
     }
 
     public override bool TryApply(double value, EvolvableConstantSymbol symbol, IRandomNumberGenerator random, out double perturbed)
     {
-        var perturbationIndex = WeightSelection.SelectIndex(random, Options.Count, Weights.AsSpan());
-        var perturbation = Options[perturbationIndex];
+        var perturbation = sampler.Sample(random);
         return perturbation.TryApply(value, symbol, random, out perturbed);
     }
 }
@@ -93,12 +105,12 @@ public sealed record ChainNumericPerturbation : NumericPerturbation
 {
     public ValueArray<NumericPerturbation> Stages { get; }
 
-    public ChainNumericPerturbation(ImmutableArray<NumericPerturbation> stages)
+    public ChainNumericPerturbation(IReadOnlyList<NumericPerturbation> stages)
     {
-        if (stages.IsDefaultOrEmpty)
+        if (stages.Count == 0)
             throw new ArgumentException("A chain needs at least one perturbation.", nameof(stages));
 
-        Stages = stages;
+        Stages = stages.ToValueArray();
     }
 
     public override bool TryApply(double value, EvolvableConstantSymbol symbol, IRandomNumberGenerator random, out double perturbed)

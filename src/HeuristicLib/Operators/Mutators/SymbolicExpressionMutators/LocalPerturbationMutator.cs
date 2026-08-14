@@ -6,25 +6,19 @@ namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
 
 public abstract record LocalPerturbationTargetSelection
 {
-    internal abstract IReadOnlyList<ExpressionPoint> Select(
-        IReadOnlyList<ExpressionPoint> eligiblePoints,
-        IRandomNumberGenerator random);
+    internal abstract IReadOnlyList<ExpressionPoint> Select(IReadOnlyList<ExpressionPoint> eligiblePoints, IRandomNumberGenerator random);
 }
 
 public sealed record OneLocalPerturbationTarget : LocalPerturbationTargetSelection
 {
-    internal override IReadOnlyList<ExpressionPoint> Select(IReadOnlyList<ExpressionPoint> eligiblePoints, IRandomNumberGenerator random)
-    {
-        return [eligiblePoints[random.NextInt(eligiblePoints.Count)]];
-    }
+    internal override IReadOnlyList<ExpressionPoint> Select(IReadOnlyList<ExpressionPoint> eligiblePoints, IRandomNumberGenerator random) =>
+        [eligiblePoints[random.NextInt(eligiblePoints.Count)]];
 }
 
 public sealed record AllLocalPerturbationTargets : LocalPerturbationTargetSelection
 {
-    internal override IReadOnlyList<ExpressionPoint> Select(IReadOnlyList<ExpressionPoint> eligiblePoints, IRandomNumberGenerator random)
-    {
-        return eligiblePoints;
-    }
+    internal override IReadOnlyList<ExpressionPoint> Select(IReadOnlyList<ExpressionPoint> eligiblePoints, IRandomNumberGenerator random) =>
+        eligiblePoints;
 }
 
 public sealed record EachLocalPerturbationTarget : LocalPerturbationTargetSelection
@@ -42,10 +36,8 @@ public sealed record EachLocalPerturbationTarget : LocalPerturbationTargetSelect
     /// </remarks>
     public double Probability { get; init; }
 
-    internal override IReadOnlyList<ExpressionPoint> Select(IReadOnlyList<ExpressionPoint> eligiblePoints, IRandomNumberGenerator random)
-    {
-        return eligiblePoints.Where(_ => random.NextDouble() < Probability).ToArray();
-    }
+    internal override IReadOnlyList<ExpressionPoint> Select(IReadOnlyList<ExpressionPoint> eligiblePoints, IRandomNumberGenerator random) =>
+        eligiblePoints.Where(_ => random.NextDouble() < Probability).ToArray();
 }
 
 public static class LocalPerturbationTargets
@@ -75,10 +67,8 @@ public sealed record LocalPerturbationMutator
     {
     }
 
-    public override ExpressionTree MutateCandidate(ExpressionTree parent, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
-    {
-        return LocalPerturbationMutation.Mutate(parent, random, TargetSelection);
-    }
+    public override ExpressionTree MutateCandidate(ExpressionTree parent, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace) =>
+        LocalPerturbationMutation.Mutate(parent, random, TargetSelection);
 }
 
 public static class LocalPerturbationMutation

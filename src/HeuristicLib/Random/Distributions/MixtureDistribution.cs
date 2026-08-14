@@ -1,42 +1,44 @@
 namespace HEAL.HeuristicLib.Random.Distributions;
 
+/// <remarks>
+/// <see cref="Weights"/> is the only member a <c>with</c> expression may set, so <c>mixture with { Weights = … }</c>
+/// reweights the unchanged components. Mixing a different set of distributions means constructing a new mixture.
+/// </remarks>
 public sealed record MixtureDistribution<T> : IDistribution<T>
 {
-    public ValueArray<IDistribution<T>> Distributions { get; }
-    public ValueArray<double> Weights { get; }
+    private readonly WeightedItemSampler<IDistribution<T>> sampler;
 
-    public MixtureDistribution(ImmutableArray<IDistribution<T>> distributions)
+    public ValueArray<IDistribution<T>> Distributions => sampler.Items;
+
+    /// <summary>
+    /// Gets the configured weights, exactly as supplied, or an empty collection for uniform selection. Setting them
+    /// reweights <see cref="Distributions"/>; an empty collection restores uniform selection.
+    /// </summary>
+    public ValueArray<double> Weights
     {
-        if (distributions.IsDefaultOrEmpty)
-            throw new ArgumentException("A mixture needs at least one distribution.", nameof(distributions));
-
-        Distributions = distributions;
-        Weights = ImmutableArray<double>.Empty;
+        get => sampler.Weights;
+        init => sampler = sampler with { Weights = value };
     }
 
-    public MixtureDistribution(ImmutableArray<IDistribution<T>> distributions, ImmutableArray<double> weights)
+    public MixtureDistribution(IReadOnlyList<IDistribution<T>> distributions, IReadOnlyList<double>? weights = null)
     {
-        if (distributions.IsDefaultOrEmpty)
+        if (distributions.Count == 0)
             throw new ArgumentException("A mixture needs at least one distribution.", nameof(distributions));
 
-        Distributions = distributions;
-        Weights = WeightSelection.Normalize(weights, distributions.Length);
+        sampler = new WeightedItemSampler<IDistribution<T>>(distributions, weights);
     }
 
-    public MixtureDistribution(IEnumerable<(IDistribution<T> Distribution, double Weight)> distributions)
+    public MixtureDistribution(params IEnumerable<(IDistribution<T> Distribution, double Weight)> distributions)
     {
         var entries = distributions.ToArray();
         if (entries.Length == 0)
             throw new ArgumentException("A mixture needs at least one distribution.", nameof(distributions));
 
-        Distributions = entries.Select(entry => entry.Distribution).ToImmutableArray();
-        Weights = WeightSelection.Normalize(entries.Select(entry => entry.Weight).ToArray(), entries.Length);
+        sampler = new WeightedItemSampler<IDistribution<T>>(
+            entries.Select(entry => entry.Distribution).ToImmutableArray(),
+            entries.Select(entry => entry.Weight).ToImmutableArray());
     }
 
-    public T Sample(IRandomNumberGenerator random)
-    {
-        var distributionIndex = WeightSelection.SelectIndex(random, Distributions.Count, Weights.AsSpan());
-        var distribution = Distributions[distributionIndex];
-        return distribution.Sample(random);
-    }
+    public T Sample(IRandomNumberGenerator random) =>
+        sampler.Sample(random).Sample(random);
 }

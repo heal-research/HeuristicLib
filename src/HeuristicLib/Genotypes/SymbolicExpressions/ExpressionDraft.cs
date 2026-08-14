@@ -14,7 +14,7 @@ public abstract record ExpressionDraft
         return new ExpressionTree(BuildNode(this, searchSpace));
     }
 
-    public ExpressionTree Build(IEnumerable<Symbol> symbols)
+    public ExpressionTree Build(IReadOnlyList<Symbol> symbols)
     {
         return Build(new ExpressionTreeSearchSpace(int.MaxValue, int.MaxValue, symbols));
     }
@@ -33,7 +33,7 @@ public abstract record ExpressionDraft
         }
     }
 
-    public bool TryBuild(IEnumerable<Symbol> symbols, out ExpressionTree expression)
+    public bool TryBuild(IReadOnlyList<Symbol> symbols, out ExpressionTree expression)
     {
         try
         {

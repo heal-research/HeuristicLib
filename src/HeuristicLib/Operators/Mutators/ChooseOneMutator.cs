@@ -37,10 +37,10 @@ public sealed record ChooseOneMutator<TCandidate, TSearchSpace, TProblem>
         if (Weights.Count > 0 && Weights.Count != ChildMutators.Count)
             throw new InvalidOperationException("Weights must have the same length as mutators.");
 
-        return new Instance(childMutators, new WeightedBatchDispatch(Weights));
+        return new Instance(childMutators, new WeightedBatchDispatcher(childMutators.Length, Weights));
     }
 
-    private sealed class Instance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedBatchDispatch dispatcher)
+    private sealed class Instance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedBatchDispatcher dispatcher)
         : MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(childMutators)
     {
         public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
@@ -73,6 +73,8 @@ public static class ChooseOneMutatorExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public ChooseOneMutator<TCandidate, TSearchSpace, TProblem> WithRate(double mutationRate) =>
-            ChooseOneMutator.Create([mutator, NoChangeMutator<TCandidate>.Instance], WeightedBatchDispatch.GetRateWeights(mutationRate));
+            ChooseOneMutator.Create(
+                [mutator, NoChangeMutator<TCandidate>.Instance],
+                [mutationRate, double.IsNaN(mutationRate) ? double.PositiveInfinity : 1 - mutationRate]);
     }
 }

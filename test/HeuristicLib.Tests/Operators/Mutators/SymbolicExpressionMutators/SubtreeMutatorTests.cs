@@ -44,10 +44,8 @@ public sealed class SubtreeMutatorTests
             0.5,  // Select the multiplication subtree at preorder index 2.
             0.0,  // Create an addition as the replacement root.
             0.0,  // Allocate one node to the first child.
-            0.0,  // Select the variable terminal symbol.
             0.75, // Sample x1.
             0.0,  // Allocate one node to the second child.
-            0.0,  // Select the variable terminal symbol.
             0.0); // Sample x0.
 
         var offspring = SubtreeMutation.Mutate(parent, random, searchSpace);
@@ -72,7 +70,6 @@ public sealed class SubtreeMutatorTests
         var parent = (Variable("x0") + Variable("x1") * Variable("x0")).Build(searchSpace);
         var random = new SequenceRandomNumberGenerator(
             0.3,  // Select the left terminal at preorder index 1.
-            0.0,  // Select the variable terminal symbol.
             0.75); // Sample x1.
 
         var offspring = new SubtreeMutator().MutateCandidate(parent, random, searchSpace);

@@ -35,6 +35,22 @@ public sealed class NumericConfigurationTests
     }
 
     [Fact]
+    public void MixtureDistribution_SnapshotsReadOnlyListInputsIntoValueArrays()
+    {
+        var first = new UniformDoubleDistribution(0.0, 1.0);
+        var second = new UniformDoubleDistribution(1.0, 2.0);
+        var distributions = new List<IDistribution<double>> { first, second };
+        var weights = new List<double> { 1.0, 3.0 };
+
+        var mixture = new MixtureDistribution<double>(distributions, weights);
+        distributions[0] = second;
+        weights[0] = 100.0;
+
+        mixture.Distributions.ShouldBe([first, second]);
+        mixture.Weights.ShouldBe([1.0, 3.0]);
+    }
+
+    [Fact]
     public void Chain_AppliesPerturbationsInOrder()
     {
         var symbol = new EvolvableConstantSymbol();
@@ -59,6 +75,41 @@ public sealed class NumericConfigurationTests
         perturbation.TryApply(2.0, symbol, new SequenceRandomNumberGenerator(0.9, 0.0), out var value).ShouldBeTrue();
 
         value.ShouldBe(10.0);
+    }
+
+    [Fact]
+    public void Choose_SnapshotsReadOnlyListInputsIntoValueArrays()
+    {
+        var first = new ResampleInitialNumericPerturbation();
+        var second = new AdditiveNumericPerturbation(new UniformDoubleDistribution(1.0, 1.0));
+        var options = new List<NumericPerturbation> { first, second };
+        var weights = new List<double> { 1.0, 3.0 };
+
+        var perturbation = new ChooseNumericPerturbation(options, weights);
+        options[0] = second;
+        weights[0] = 100.0;
+
+        perturbation.Options.ShouldBe([first, second]);
+        perturbation.Weights.ShouldBe([1.0, 3.0]);
+    }
+
+    [Fact]
+    public void Choose_ReweightingKeepsTheOptions()
+    {
+        var symbol = new EvolvableConstantSymbol();
+        var add = new AdditiveNumericPerturbation(new UniformDoubleDistribution(1.0, 1.0));
+        var resample = new ResampleNumericPerturbation(new UniformDoubleDistribution(10.0, 10.0));
+        var perturbation = new ChooseNumericPerturbation([add, resample], [1.0, 0.0]);
+
+        var reweighted = perturbation with { Weights = [0.0, 1.0] };
+
+        perturbation.TryApply(2.0, symbol, new SequenceRandomNumberGenerator(0.0), out var added).ShouldBeTrue();
+        reweighted.TryApply(2.0, symbol, new SequenceRandomNumberGenerator(0.0), out var resampled).ShouldBeTrue();
+        added.ShouldBe(3.0);
+        resampled.ShouldBe(10.0);
+        reweighted.Options.ShouldBe([add, resample]);
+        reweighted.ShouldBe(new ChooseNumericPerturbation([add, resample], [0.0, 1.0]));
+        Should.Throw<ArgumentException>(() => { _ = perturbation with { Weights = [1.0] }; });
     }
 
     [Fact]
@@ -127,7 +178,7 @@ public sealed class NumericConfigurationTests
     }
 
     [Fact]
-    public void EqualWeights_UseTheUniformSelectionFastPath()
+    public void EqualWeights_AreRetainedEvenThoughSamplingIsUniform()
     {
         var variable = new VariableSymbol(["x0", "x1"], [2.0, 2.0]);
         var mixture = new MixtureDistribution<double>(
@@ -139,20 +190,34 @@ public sealed class NumericConfigurationTests
             [new ResampleInitialNumericPerturbation(), new ResampleInitialNumericPerturbation()],
             [2.0, 2.0]);
 
-        variable.SelectionWeights.ShouldBeEmpty();
-        mixture.Weights.ShouldBeEmpty();
-        perturbation.Weights.ShouldBeEmpty();
+        variable.SelectionWeights.ShouldBe([2.0, 2.0]);
+        mixture.Weights.ShouldBe([2.0, 2.0]);
+        perturbation.Weights.ShouldBe([2.0, 2.0]);
     }
 
     [Fact]
-    public void VariableSymbol_UsesItsNormalizedSelectionWeights()
+    public void VariableSymbol_RetainsAndUsesItsSelectionWeights()
     {
         var symbol = new VariableSymbol(["x0", "x1"], [1.0, 3.0]);
 
         var node = symbol.CreateNode(new SequenceRandomNumberGenerator(0.9)).ShouldBeOfType<VariableExpressionNode>();
 
         node.VariableName.ShouldBe("x1");
-        symbol.SelectionWeights.ShouldBe([0.25, 0.75]);
+        symbol.SelectionWeights.ShouldBe([1.0, 3.0]);
+    }
+
+    [Fact]
+    public void VariableSymbol_SnapshotsReadOnlyListInputsIntoValueArrays()
+    {
+        var variables = new List<string> { "x0", "x1" };
+        var weights = new List<double> { 1.0, 3.0 };
+
+        var symbol = new VariableSymbol(variables, weights);
+        variables[0] = "changed";
+        weights[0] = 100.0;
+
+        symbol.Variables.ShouldBe(["x0", "x1"]);
+        symbol.SelectionWeights.ShouldBe([1.0, 3.0]);
     }
 
     private sealed record InapplicableNumericPerturbation : NumericPerturbation

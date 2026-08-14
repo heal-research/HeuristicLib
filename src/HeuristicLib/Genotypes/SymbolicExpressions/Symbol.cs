@@ -101,23 +101,41 @@ public sealed record EvolvableConstantSymbol(IDistribution<double> InitialDistri
     internal double SampleInitialValue(IRandomNumberGenerator random) => InitialDistribution.Sample(random);
 }
 
+/// <remarks>
+/// <see cref="SelectionWeights"/> is the only member a <c>with</c> expression may set, so
+/// <c>symbol with { SelectionWeights = … }</c> reweights the unchanged variables. Sampling a different set of variables
+/// means constructing a new symbol, which is also the honest operation: a symbol is compared by value, so a reweighted
+/// symbol no longer matches the nodes an earlier one created. Reweighting is therefore a configuration-time facility,
+/// not a way to retune a running algorithm.
+/// </remarks>
 public sealed record VariableSymbol : TerminalSymbol
 {
-    public VariableSymbol(IEnumerable<string> variables, IEnumerable<double>? selectionWeights = null)
+    public VariableSymbol(IReadOnlyList<string> variables, IReadOnlyList<double>? selectionWeights = null)
         : base("variable")
     {
-        Variables = variables.ToImmutableArray();
-        if (Variables.IsEmpty)
+        var items = variables.ToValueArray();
+        if (items.IsEmpty)
             throw new ArgumentException("At least one variable must be supplied.", nameof(variables));
 
-        if (Variables.Any(string.IsNullOrWhiteSpace))
+        if (items.Any(string.IsNullOrWhiteSpace))
             throw new ArgumentException("Variable names must not be empty.", nameof(variables));
 
-        SelectionWeights = WeightSelection.Normalize(selectionWeights?.ToImmutableArray(), Variables.Count);
+        sampler = new WeightedItemSampler<string>(items, selectionWeights);
     }
 
-    public ValueArray<string> Variables { get; }
-    public ValueArray<double> SelectionWeights { get; }
+    private readonly WeightedItemSampler<string> sampler;
+
+    public ValueArray<string> Variables => sampler.Items;
+
+    /// <summary>
+    /// Gets the configured selection weights, exactly as supplied, or an empty collection for uniform selection.
+    /// Setting them reweights <see cref="Variables"/>; an empty collection restores uniform selection.
+    /// </summary>
+    public ValueArray<double> SelectionWeights
+    {
+        get => sampler.Weights;
+        init => sampler = sampler with { Weights = value };
+    }
 
     public override bool SupportsLocalPerturbation => true;
 
@@ -154,8 +172,7 @@ public sealed record VariableSymbol : TerminalSymbol
 
     internal string Sample(IRandomNumberGenerator random)
     {
-        var index = WeightSelection.SelectIndex(random, Variables.Count, SelectionWeights.AsSpan());
-        return Variables[index];
+        return sampler.Sample(random);
     }
 }
 
@@ -278,5 +295,5 @@ public static class Symbols
     }
 
     public static FixedConstantSymbol FixedConstant(double value, string? displayName = null) => new(value, displayName);
-    public static VariableSymbol Variable(IEnumerable<string> variables, IEnumerable<double>? selectionWeights = null) => new(variables, selectionWeights);
+    public static VariableSymbol Variable(IReadOnlyList<string> variables, IReadOnlyList<double>? selectionWeights = null) => new(variables, selectionWeights);
 }

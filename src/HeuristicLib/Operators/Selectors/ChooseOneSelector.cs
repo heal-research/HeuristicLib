@@ -35,14 +35,19 @@ public sealed record ChooseOneSelector<TCandidate, TSearchSpace, TProblem>
         if (Weights.Count > 0 && Weights.Count != ChildSelectors.Count)
             throw new InvalidOperationException("Weights must have the same length as selectors.");
 
-        return new Instance(childSelectors, new WeightedBatchDispatch(Weights));
+        return new Instance(
+            childSelectors,
+            WeightedDispatcher.Create(childSelectors, Weights));
     }
 
-    private sealed class Instance(ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> childSelectors, WeightedBatchDispatch dispatcher)
+    private sealed class Instance(ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> childSelectors, WeightedDispatcher<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> dispatcher)
         : MultiSelectorInstance<TCandidate, TSearchSpace, TProblem>(childSelectors)
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            ChildSelectors[dispatcher.ChooseOperator(random, ChildSelectors.Length)].Select(population, objective, count, random, searchSpace, problem);
+            dispatcher.Dispatch(
+                random,
+                (population, objective, count, random, searchSpace, problem),
+                static (selector, state) => selector.Select(state.population, state.objective, state.count, state.random, state.searchSpace, state.problem));
     }
 }
 

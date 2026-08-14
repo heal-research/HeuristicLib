@@ -200,15 +200,17 @@ public sealed class FeatureImportanceTests
     }
 
     [Fact]
-    public void Resampling_RejectsInvalidExplicitDistribution()
+    public void Resampling_NegativeStandardDeviationMirrorsAroundTheMean()
     {
-        var perturbation = FeaturePerturbations.Resampling(
-            new NormalDoubleDistribution(0.0, -1.0));
+        var positive = new double[1];
+        FeaturePerturbations.Resampling(new NormalDoubleDistribution(0.0, 1.0))
+            .Apply([1.0], positive, RandomNumberGenerator.Create(42));
 
-        Should.Throw<ArgumentOutOfRangeException>(() => perturbation.Apply(
-            [1.0],
-            new double[1],
-            RandomNumberGenerator.Create(42)));
+        var mirrored = new double[1];
+        FeaturePerturbations.Resampling(new NormalDoubleDistribution(0.0, -1.0))
+            .Apply([1.0], mirrored, RandomNumberGenerator.Create(42));
+
+        mirrored[0].ShouldBe(-positive[0]);
     }
 
     private static (WeightedSumRegressor Predictor, RegressionData Data) CreateRegressionFixture()

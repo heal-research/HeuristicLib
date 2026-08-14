@@ -39,10 +39,7 @@ internal sealed class ExpressionTreeBuilder
         position.Terminal = terminal;
     }
 
-    public ExpressionNode Build(IRandomNumberGenerator random)
-    {
-        return Build(Root, random);
-    }
+    public ExpressionNode Build(IRandomNumberGenerator random) => Build(Root, random);
 
     private static ExpressionNode Build(Position position, IRandomNumberGenerator random)
     {

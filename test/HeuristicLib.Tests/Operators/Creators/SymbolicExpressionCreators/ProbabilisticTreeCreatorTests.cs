@@ -18,13 +18,12 @@ public sealed class ProbabilisticTreeCreatorTests
             operations: [Symbols.Addition],
             variables: ["x0"],
             constants: []);
+        // Selecting from singleton symbol sets is deterministic and does not consume random values.
         var random = new SequenceRandomNumberGenerator(
-            0.0,  // Select Addition as the root.
             0.99, // Expand the root's right child.
-            0.0,  // Select Addition for that child.
-            0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0);
+            0.0,  // Complete the remaining frontier positions.
+            0.0,
+            0.0);
 
         var expression = ProbabilisticTreeCreation.Create(random, searchSpace, requestedLength: 5);
 
