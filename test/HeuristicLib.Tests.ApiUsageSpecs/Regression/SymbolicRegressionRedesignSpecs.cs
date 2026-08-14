@@ -15,7 +15,6 @@ using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
-using Xunit;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Regression;

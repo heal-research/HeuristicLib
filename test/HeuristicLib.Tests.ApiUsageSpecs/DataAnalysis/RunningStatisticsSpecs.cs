@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.DataAnalysis;
-using Xunit;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.DataAnalysis;
 

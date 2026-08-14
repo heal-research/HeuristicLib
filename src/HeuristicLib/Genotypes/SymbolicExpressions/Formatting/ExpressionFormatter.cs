@@ -3,6 +3,11 @@ using System.Text;
 
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
+public interface IExpressionFormatter
+{
+    string Format(ExpressionTree expression);
+}
+
 public abstract class ExpressionFormatter : IExpressionFormatter
 {
     public string Format(ExpressionTree expression) =>
@@ -81,4 +86,12 @@ public abstract class ExpressionFormatter : IExpressionFormatter
 
         return formats;
     }
+}
+
+public static class ExpressionFormatters
+{
+    public static InfixExpressionFormatter Infix { get; } = new();
+    public static IExpressionFormatter CSharp { get; } = new CSharpExpressionFormatter();
+    public static IExpressionFormatter Python { get; } = new PythonExpressionFormatter();
+    public static IExpressionFormatter Latex { get; } = new LatexExpressionFormatter();
 }

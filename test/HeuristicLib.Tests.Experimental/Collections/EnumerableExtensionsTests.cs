@@ -1,5 +1,3 @@
-using HEAL.HeuristicLib.Collections;
-
 namespace HEAL.HeuristicLib.Tests.Collections;
 
 public class EnumerableExtensionsTests

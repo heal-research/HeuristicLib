@@ -10,7 +10,6 @@ using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.States;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
