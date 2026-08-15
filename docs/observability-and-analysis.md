@@ -163,7 +163,7 @@ var observed = mutator.CountMutatedCandidates(counter);
 // later: counter.CurrentCount contains total mutated candidates
 ```
 
-The same naming pattern is used for other batched operators where an item count is meaningful, for example `CountCreatedCandidates(...)`, `CountCrossedCandidates(...)`, `CountEvaluatedCandidates(...)`, `CountMutatedCandidates(...)`, `CountSelectedCandidates(...)`, and `CountReplacementCandidates(...)`.
+The same naming pattern is used for other batched operators where an item count is meaningful, for example `CountCreatedCandidates(...)`, `CountCrossedCandidates(...)`, `CountEvaluatedCandidates(...)`, `CountMutatedCandidates(...)`, `CountRefinedCandidates(...)`, `CountSelectedCandidates(...)`, and `CountReplacementCandidates(...)`.
 
 The observed boundary is part of the budget. For example, these are different budgets:
 
@@ -203,7 +203,7 @@ var measured = evaluator.MeasureEvaluatorDuration(duration);
 // later: duration.CurrentDuration contains total observed evaluator work duration
 ```
 
-The same measurement pattern is available for other operator families, for example `MeasureCreatorDuration(...)`, `MeasureCrossoverDuration(...)`, `MeasureMutatorDuration(...)`, `MeasureSelectorDuration(...)`, `MeasureReplacerDuration(...)`, `MeasureInterceptorDuration(...)`, and `MeasureTerminatorDuration(...)`.
+The same measurement pattern is available for other operator families, for example `MeasureCreatorDuration(...)`, `MeasureCrossoverDuration(...)`, `MeasureMutatorDuration(...)`, `MeasureRefinerDuration(...)`, `MeasureSelectorDuration(...)`, `MeasureReplacerDuration(...)`, `MeasureInterceptorDuration(...)`, and `MeasureTerminatorDuration(...)`.
 
 This is not whole-run elapsed time or active algorithm duration. It increases only while the measured operator call is executing. Duration is recorded even if the observed operator call throws, because the failed call still consumed observed work time. Use `AfterElapsedTimeTerminator(...)` when the budget should include idle time between stream pulls, use `WithMaxAlgorithmDuration(...)` when the budget should cover active state-production work by the wrapped algorithm, and use operator duration when the budget should apply only to observed operator work.
 

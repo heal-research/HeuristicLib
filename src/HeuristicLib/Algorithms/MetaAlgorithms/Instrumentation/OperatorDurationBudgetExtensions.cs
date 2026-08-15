@@ -5,6 +5,7 @@ using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
@@ -136,6 +137,26 @@ public static class OperatorDurationBudgetExtensions
                 timeProvider,
                 static (observedOperator, duration, timeProvider) =>
                     observedOperator.MeasureMutatorDuration(duration, timeProvider));
+        }
+
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IRefiner<TCandidate, TSearchSpace, TProblem>, IRefinerInstance<TCandidate, TSearchSpace, TProblem>> WithMaxRefinerDuration(
+            IRefiner<TCandidate, TSearchSpace, TProblem> refiner,
+            TimeSpan maximumDuration)
+        {
+            return algorithm.WithMaxRefinerDuration(refiner, maximumDuration, TimeProvider.System);
+        }
+
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IRefiner<TCandidate, TSearchSpace, TProblem>, IRefinerInstance<TCandidate, TSearchSpace, TProblem>> WithMaxRefinerDuration(
+            IRefiner<TCandidate, TSearchSpace, TProblem> refiner,
+            TimeSpan maximumDuration,
+            TimeProvider timeProvider)
+        {
+            return algorithm.WithMaxOperatorDuration(
+                refiner,
+                maximumDuration,
+                timeProvider,
+                static (observedOperator, duration, timeProvider) =>
+                    observedOperator.MeasureRefinerDuration(duration, timeProvider));
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ISelector<TCandidate, TSearchSpace, TProblem>, ISelectorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxSelectorDuration(

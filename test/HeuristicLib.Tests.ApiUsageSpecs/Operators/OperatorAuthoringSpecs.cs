@@ -10,6 +10,7 @@ using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
@@ -123,6 +124,146 @@ public class OperatorAuthoringSpecs
         observable.Observers.ShouldBe([observer]);
         callbackObservable.Observers.Count.ShouldBe(1);
         counting.ChildMutator.ShouldBeSameAs(childMutator);
+    }
+
+    [Fact]
+    public void StatelessRefiner_AuthoringExample_UsesConfigurationAndExplicitInputs()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        var refiner = new HalveRefiner();
+        var instance = ResolveRefiner(refiner);
+
+        var refined = instance.Refine(
+            [RealVector.Repeat(1.0, 3)],
+            RandomNumberGenerator.Create(12),
+            problem.SearchSpace,
+            problem);
+
+        refined.ShouldBe([RealVector.Repeat(0.5, 3)]);
+    }
+
+    [Fact]
+    public void SingleCandidateRefiner_CanRefineOneCandidateDirectly()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        SingleCandidateRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem> refiner = new HalveRefiner();
+
+        var refined = refiner.RefineCandidate(
+            RealVector.Repeat(1.0, 3),
+            RandomNumberGenerator.Create(12),
+            problem.SearchSpace,
+            problem);
+
+        refined.ShouldBe(RealVector.Repeat(0.5, 3));
+    }
+
+    [Fact]
+    public void StatefulRefiner_AuthoringExample_GetsIndependentExecutionDataPerInstance()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        var refiner = new CountingStatefulRefiner();
+        var firstInstance = ResolveRefiner(refiner);
+        var secondInstance = ResolveRefiner(refiner);
+        var candidate = RealVector.Repeat(0.0, 3);
+
+        var first = firstInstance.Refine([candidate], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var second = firstInstance.Refine([candidate], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        var independent = secondInstance.Refine([candidate], RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
+
+        first.ShouldBe([RealVector.Repeat(1.0, 3)]);
+        second.ShouldBe([RealVector.Repeat(2.0, 3)]);
+        independent.ShouldBe([RealVector.Repeat(1.0, 3)]);
+    }
+
+    [Fact]
+    public void ExplicitRefiner_AuthoringExample_OwnsResolvedChildInstance()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        var refiner = new ApplyTwiceRefiner(new HalveRefiner());
+        var instance = ResolveRefiner(refiner);
+
+        var refined = instance.Refine(
+            [RealVector.Repeat(1.0, 3)],
+            RandomNumberGenerator.Create(34),
+            problem.SearchSpace,
+            problem);
+
+        refined.ShouldBe([RealVector.Repeat(0.25, 3)]);
+    }
+
+    [Fact]
+    public void TopologyRefiners_AcceptProblemSpecificChildren()
+    {
+        // Refinement is composed through operator topologies rather than through repeated lifecycle placement, so an
+        // ordered pipeline such as repair, simplification and constant optimization is an ordinary configuration.
+        var problem = CreateRastriginProblem(dimension: 3);
+        var pipeline = PipelineRefiner.Create<RealVector, RealVectorSearchSpace, TestFunctionProblem>(
+            new HalveRefiner(),
+            NoChangeRefiner<RealVector>.Instance);
+
+        var refined = ResolveRefiner(pipeline).Refine(
+            [RealVector.Repeat(1.0, 3)],
+            RandomNumberGenerator.Create(34),
+            problem.SearchSpace,
+            problem);
+
+        refined.ShouldBe([RealVector.Repeat(0.5, 3)]);
+    }
+
+    [Fact]
+    public void IteratedRefiner_RepeatsOneRefinerInsteadOfPlacingItTwice()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        var refiner = new HalveRefiner().AsIterated(3);
+
+        var refined = ResolveRefiner(refiner).Refine(
+            [RealVector.Repeat(1.0, 3)],
+            RandomNumberGenerator.Create(34),
+            problem.SearchSpace,
+            problem);
+
+        refined.ShouldBe([RealVector.Repeat(0.125, 3)]);
+    }
+
+    [Fact]
+    public void RefinerCompositionFactories_InferRoleTypes()
+    {
+        IRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem> childRefiner = new HalveRefiner();
+        IRefinerObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem> observer =
+            new ActionRefinerObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem>((_, _, _, _) => { });
+
+        var observable = ObservableRefiner.Create(childRefiner, observer);
+        var callbackObservable = ObservableRefiner.Create(childRefiner, _ => { });
+        var counting = CountingRefiner.Create(childRefiner, new ObservationCounter(), OperatorCountMetric.Calls);
+        var iterated = IteratedRefiner.Create(childRefiner, 2);
+
+        observable.ChildRefiner.ShouldBeSameAs(childRefiner);
+        observable.Observers.ShouldBe([observer]);
+        callbackObservable.Observers.Count.ShouldBe(1);
+        counting.ChildRefiner.ShouldBeSameAs(childRefiner);
+        iterated.ChildRefiner.ShouldBeSameAs(childRefiner);
+    }
+
+    /// <summary>
+    /// Refinement evaluation is Baldwinian: the refined candidate is measured but discarded, so the caller keeps the
+    /// candidate it supplied. Configuring the same refiner as an algorithm's refiner makes it Lamarckian instead.
+    /// </summary>
+    [Fact]
+    public void RefinementEvaluator_MeasuresARefinedCandidateWithoutReplacingIt()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        var candidate = RealVector.Repeat(1.0, 3);
+        var evaluator = new ProblemEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>()
+            .WithRefinement(new HalveRefiner());
+
+        var objectiveVectors = new ExecutionInstanceRegistry().Resolve(evaluator).Evaluate(
+            [candidate],
+            RandomNumberGenerator.Create(7),
+            problem.SearchSpace,
+            problem);
+
+        objectiveVectors[0].ShouldBe(problem.Evaluate(RealVector.Repeat(0.5, 3), RandomNumberGenerator.Create(7)));
+        candidate.ShouldBe(RealVector.Repeat(1.0, 3));
     }
 
     [Fact]
@@ -667,6 +808,11 @@ public class OperatorAuthoringSpecs
     private static IMutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> ResolveMutator(IMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem> mutator)
     {
         return new ExecutionInstanceRegistry().Resolve(mutator);
+    }
+
+    private static IRefinerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> ResolveRefiner(IRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem> refiner)
+    {
+        return new ExecutionInstanceRegistry().Resolve(refiner);
     }
 
     private sealed record PrefixingWrappingCreator(ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Child)
@@ -1274,6 +1420,57 @@ public class OperatorAuthoringSpecs
             {
                 var first = ChildMutator.Mutate(parents, random, searchSpace, problem);
                 return ChildMutator.Mutate(first, random, searchSpace, problem);
+            }
+        }
+    }
+
+    private sealed record HalveRefiner
+      : SingleCandidateRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+        public override RealVector RefineCandidate(
+          RealVector candidate,
+          IRandomNumberGenerator random,
+          RealVectorSearchSpace searchSpace,
+          TestFunctionProblem problem)
+        {
+            return new RealVector(candidate.Select(x => x * 0.5));
+        }
+    }
+
+    private sealed record CountingStatefulRefiner : StatefulRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem, CountingStatefulRefiner.ExecutionState>
+    {
+        public sealed class ExecutionState
+        {
+            public int Calls { get; set; }
+        }
+
+        protected override ExecutionState CreateInitialState() => new();
+
+        protected override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, ExecutionState state, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        {
+            state.Calls++;
+            return candidates.Select(candidate => new RealVector(candidate.Select(value => value + state.Calls))).ToArray();
+        }
+    }
+
+    private sealed record ApplyTwiceRefiner
+        : WrappingRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+        public ApplyTwiceRefiner(IRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem> childRefiner)
+            : base(childRefiner)
+        {
+        }
+
+        protected override WrappingRefinerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(IRefinerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childRefiner) =>
+            new Instance(childRefiner);
+
+        private sealed class Instance(IRefinerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childRefiner)
+            : WrappingRefinerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>(childRefiner)
+        {
+            public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+            {
+                var first = ChildRefiner.Refine(candidates, random, searchSpace, problem);
+                return ChildRefiner.Refine(first, random, searchSpace, problem);
             }
         }
     }

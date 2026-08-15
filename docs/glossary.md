@@ -370,11 +370,11 @@ See also: Candidate, Creator, Crossover, Operator.
 
 Status: `Canonical`
 
-A refiner is the operator role that transforms a candidate into a refined candidate without evaluating either candidate. Refinement normally follows creation or variation and precedes evaluation. The general refiner contract does not guarantee improvement according to the problem objective.
+A refiner is an operator that works on existing candidates to improve a chosen aspect of them. Common refinements include fitting candidate parameters, repairing invalid candidates, simplifying or normalizing representations, and applying local-improvement procedures.
 
-Do not use refiner as a synonym for mutator. Mutation creates search variation, while refinement intentionally applies a candidate-improvement or normalization procedure.
+Algorithms normally refine newly created or varied candidates before evaluation and then continue with the refined candidates. Refiners can be chained in pipelines, repeated, selected, wrapped, observed, and instrumented.
 
-A refinement evaluator combines a refiner with objective-aware retention: it evaluates the original candidate, applies the refiner, evaluates the refined candidate, and returns whichever evaluated candidate satisfies its configured acceptance policy. Use it when retention justifies the second evaluation; use an explicit refiner followed by ordinary evaluation when unconditional successful refinement and one evaluation are preferred.
+A refiner may use an evaluator when objective values guide the refinement or decide whether to retain its result. Continuing the search with the refined candidate is Lamarckian refinement; refinement evaluation instead evaluates a temporary refined candidate and associates its objective vector with the original candidate, providing Baldwinian refinement.
 
 See also: Candidate, Creator, Crossover, Evaluated candidate, Evaluator, Mutator, Operator.
 

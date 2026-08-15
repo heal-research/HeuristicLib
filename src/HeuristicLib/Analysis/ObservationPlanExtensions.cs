@@ -4,6 +4,7 @@ using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
@@ -69,6 +70,16 @@ public static class ObservationPlanExtensions
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
           => observations.Observe(mutator, new ActionMutatorObserver<TCandidate, TSearchSpace, TProblem>(afterMutate));
+
+        public void Observe<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner, IRefinerObserver<TCandidate, TSearchSpace, TProblem> observer)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+          => observations.Observe<IRefiner<TCandidate, TSearchSpace, TProblem>, IRefinerInstance<TCandidate, TSearchSpace, TProblem>, IRefinerObserver<TCandidate, TSearchSpace, TProblem>>(refiner, observer, static (r, o) => r.ObserveWith(o));
+
+        public void Observe<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner, Action<IReadOnlyList<TCandidate>, IReadOnlyList<TCandidate>, TSearchSpace, TProblem> afterRefine)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+          => observations.Observe(refiner, new ActionRefinerObserver<TCandidate, TSearchSpace, TProblem>(afterRefine));
 
         public void Observe<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, IReplacerObserver<TCandidate, TSearchSpace, TProblem> observer)
           where TSearchSpace : class, ISearchSpace<TCandidate>

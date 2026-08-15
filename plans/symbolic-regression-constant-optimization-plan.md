@@ -547,6 +547,9 @@ repeated placement in the algorithm lifecycle. The role provides the usual set:
   express repeated refinement of one candidate.
 - **Choose-one, multi, wrapping, observable, and instrumentation** variants
   follow the conventions of the other roles.
+- **Refinement evaluation.** Applies a refiner temporarily, evaluates the refined
+  candidate, and associates its objective vector with the original candidate.
+  Its public name is settled with the other composition types in RF-4.
 
 Repetition is expressed through these topologies and never by placing the same
 refiner at two lifecycle points.
@@ -576,21 +579,96 @@ requiring explicit configuration:
   invisible to budgets and analysis. Users who want the comparison evaluations
   counted pass the same evaluator instance the algorithm uses; see the examples
   below.
-- **`Comparer`** — decides what counts as an improvement. A `null` value uses the
-  problem's `ObjectiveDirections`. Supplying a comparer lets a user drive
-  acceptance from one dimension of a multi-objective problem while selection
-  continues to use the full objective vector.
+- **`Criterion`** — decides what counts as an improvement. A `null` value uses
+  `ImprovementChecking.Default`. Supplying a criterion lets a user drive acceptance
+  from one dimension of a multi-objective problem while selection continues to use
+  the full objective vector.
 
-The retention rule is a distinct decision from the comparer and must be explicit
-in the implementation checkpoint. Three defensible semantics exist: retain only
-on strict improvement, retain on "not worse", and, for multi-objective problems,
-retain only when the refined candidate dominates the original. The first
-implementation uses strict improvement for single-objective problems, so a tie
-keeps the original candidate and refinement is a no-op under equality, and
-dominance for multi-objective problems. A scalar improvement threshold is only
-meaningful where the objective model supports it explicitly, and follows the
-repository rule that configured thresholds are retained as given rather than
-clamped.
+The criterion is an explicit strategy rather than an `IComparer<ObjectiveVector>`.
+Two findings settled this during RF-3/RF-4:
+
+- **A comparer cannot see the objective directions.** An improvement threshold has
+  to move one operand by a delta, and whether that means adding or subtracting
+  depends on the direction of each objective. A comparer constructed without the
+  directions cannot apply the shift correctly, so the threshold would silently
+  invert on a maximization objective.
+- **A threshold breaks the comparer contract.** Shifting one operand makes
+  `Compare(a, b)` and `-Compare(b, a)` disagree. `IComparer<ObjectiveVector>` is an
+  ordering device, and the repository rule that a type must not be able to express
+  what its contract forbids applies directly: such an object reaching a sort is a
+  latent defect with no compile-time guard.
+
+The criterion therefore names its asymmetry and receives the directions:
+
+```csharp
+public interface IImprovementCriterion
+{
+    bool IsImprovement(ObjectiveVector refined, ObjectiveVector original, ObjectiveDirections objectiveDirections);
+}
+```
+
+The interface, its built-in implementations and the `ImprovementChecking` companion
+live in `ImprovementCheckingRefiner.cs` beside their only consumer. They follow the
+`IObjectiveVectorAggregator` /
+`ObjectiveVectorAggregation` convention: immutable records behind a static companion
+exposing named instances. The retention rule and the criterion are therefore one
+concept rather than two:
+
+| `ImprovementChecking` member | Semantics |
+| --- | --- |
+| `Default` | Strictly better by the problem's total objective order where one exists, dominance where it does not. |
+| `StrictlyBetter` | Strictly better by the total objective order; throws where none is defined. |
+| `NotWorse` | Not worse by the total objective order; throws where none is defined. |
+| `Dominance` | Refined dominates original; works at any arity and needs no total order. |
+| `MinimumImprovement(delta)` | Every objective improves by at least `delta` in its own direction. |
+| `MinimumRelativeImprovement(fraction)` | Every objective improves by at least `abs(original) * fraction` in its own direction. |
+
+`Default` keys off whether `ObjectiveDirections.TotalOrderComparer` is a
+`NoTotalOrderComparer` rather than off the objective count, so a multi-objective
+problem configured with a weighted-sum or lexicographic order uses the order its
+author deliberately chose instead of falling back to dominance. Single-objective
+problems always define a total order, so they get strict improvement as specified.
+
+Threshold margins are direction-correct by construction — `original - refined` for a
+minimized objective and `refined - original` for a maximized one — so a positive
+threshold always means "better by at least this much". Every objective must clear the
+margin, which is strict for multi-objective problems; `Dominance` is the criterion to
+use where objectives trade off. Thresholds are retained as given rather than clamped,
+so zero accepts anything not worse and a negative value deliberately tolerates a
+bounded worsening. A `NaN` objective value is never an improvement.
+
+This criterion belongs to `ImprovementCheckingRefiner` alone. `RefinementEvaluator`
+refines and evaluates without comparing anything, so it needs neither an evaluation
+of the original candidate nor a criterion.
+
+Dominance and a total order coincide on every single-objective problem, so the choice
+only matters once objectives can trade off. They diverge in three ways: dominance
+abstains on an incomparable pair while a total order still decides; a total order
+accepts a trade-off that dominance refuses; and dominance's `Equivalent` means
+componentwise identical, whereas a total order can rate two different vectors equal.
+Dominance is otherwise the stricter criterion, but only while the total order is
+consistent with it — nothing validates weights, so a negative weight reverses the
+implication. Each case is pinned by a test.
+
+**Blocker for RF-7.** `ObjectiveVector.CompareTo` opens with
+`if (ReferenceEquals(this, other)) return 0;`, and `0` is `DominanceRelation.Dominates`
+rather than `Equivalent`, so a vector reports that it dominates itself. `Dominance`
+and `Default` therefore accept a non-improvement whenever both evaluations return the
+same `ObjectiveVector` instance, which a shared `CachingEvaluator` makes likely — and
+that is exactly the configuration the composition examples above recommend. This is a
+pre-existing defect that also reaches `DominationCalculator`; `ParetoFront` happens to
+guard against it by excluding self-comparisons first. Fix it before RF-7 consumes
+these criteria.
+
+**Second blocker for RF-7.** Every order-based criterion ranks through
+`double.CompareTo`, which orders `NaN` below every number, so `StrictlyBetter`,
+`NotWorse`, `Dominance` and `Default` all accept a refinement that produced a `NaN`
+objective value as the best possible outcome. Constant optimization deliberately
+propagates non-finite results, so this is on the direct path of the first refiner that
+will use these criteria. The threshold criteria are already safe, because a comparison
+against a `NaN` margin is false. Decide before RF-7 whether the criteria reject
+non-finite objective values themselves or whether `ObjectiveVector` ordering is fixed
+at its root; the behavior is pinned by a test either way.
 
 Refinement failure inside the inner refiner returns the original candidate
 unchanged; the improvement check never converts a failure into a worse candidate.
@@ -705,7 +783,7 @@ One capability is deliberately **not** claimed here: evaluating acceptance
 against a different dataset, such as a validation set, is not expressible by
 configuration alone. An evaluator receives the problem as a call argument, so it
 measures whatever problem the algorithm is solving. Acceptance on a subset of the
-objective vector is expressible through `Comparer`; acceptance on different data
+objective vector is expressible through `Criterion`; acceptance on different data
 requires a separate design decision and is out of scope here.
 
 ### Evaluator contract
@@ -774,6 +852,33 @@ signature should say so.
 Users may compose a refiner around candidate-producing operators, for example through a refining creator, crossover, or mutator, or adapt refinement into a probabilistic variation policy. These placements are valid but narrower: a creator wrapper affects initialization only, a crossover wrapper runs before later mutation, and a mutator wrapper does not cover initial candidates. They are not the canonical refinement integration.
 
 HeuristicLib will not initially provide `RefiningCreator`, `RefiningCrossover`, `RefiningMutator`, generalized offspring-creation, or similar producer wrappers. Revisit those conveniences only after the explicit algorithm refiner and its composition topologies are implemented and their composition and observability behavior are understood.
+
+#### Transformed operators must be reconsidered as a whole
+
+`TransformedCreator` and `TransformedCrossover` already exist and predate the refiner role. Each takes a source operator plus a `TransformationMutator` and always invokes that mutator on the produced batch. Adding the refiner does not simply extend them with a second accepted child type; it invalidates the concept they were designed around, so increment 13 must re-decide what a transformed operator is rather than bolt a refiner onto the current shape.
+
+Three findings drive that reconsideration.
+
+**The motivating use case moved out from under the feature.** Transformed composition was introduced for postprocessing such as repair and normalization, and [operator-composition.md](../docs/operator-composition.md) still teaches it with a `repairMutator`. Repair, simplification and normalization are refiner work under the role model settled by RF-0, and the [Evaluator contract](#evaluator-contract) relocation table assigns them to the refiner explicitly. The remaining honest mutator case is cross-then-mutate, which the algorithm lifecycle already sequences on its own; the composition earns its keep there only when the pairing must be local, such as one branch of a `ChooseOneCrossover` that needs the mutation while the others do not. Whether that narrow case justifies a general mechanism is itself part of the decision.
+
+**No union type is needed, and none would help.** `IMutatorInstance.Mutate` and `IRefinerInstance.Refine` have identical signatures, and `IOperator<out TExecutionInstance>` is covariant. A shape-only supertype over the two instance interfaces therefore makes both `IMutator` and `IRefiner` usable as one child type by ordinary variance, with no adapter object, no wrapper allocation and no per-call dispatch. A future C# union of the two configuration interfaces would be strictly worse: it would still force a discriminating switch when the child is resolved and again when its instance is invoked. Do not wait for the language feature to decide this.
+
+**A shape-defined operator role is rejected.** Introducing `Transformer` as a tenth role was considered and decided against. It would be the only role defined by its signature rather than its intent, it would need the full topology family that every role carries, and it would create a third answer to the question of what to derive from for a candidate-to-candidate operator, which is precisely the question the role model exists to answer. Adapters between the existing roles, such as `refiner.AsMutator()`, are rejected for a related reason: an adapted refiner would be assignable to `algorithm.Mutator` and would misrepresent its intent at that slot.
+
+The remaining choice is between two shapes:
+
+| Option | Shape | Cost |
+| --- | --- | --- |
+| Intent-named composites | Keep `TransformedCreator` taking a mutator and add `RefiningCreator` and `RefiningCrossover` taking a refiner | Four near-identical composites; matches the existing convention that roles are deliberately parallel rather than abstracted, as the `Operators/Mutators` to `Operators/Refiners` copy already established |
+| Shape-typed child | One composite per producer whose child is typed as the shape supertype, with role-typed entry points such as `TransformWith(mutator)` and `WithRefinement(refiner)` | Adds a member to two public instance contracts, which is breaking for direct implementers unless a default interface member forwards it; renames `TransformationMutator` to `Transformation`; intent moves from the composite's name to the child's type |
+
+The question that decides between them is whether cross-role composition is wanted at all — whether `mutate, then simplify` should be expressible as one operator. `PipelineMutator` accepts mutators only and `PipelineRefiner` refiners only, so it currently is not. If producer composition remains the only need, intent-named composites are sufficient and cheaper; if cross-role pipelines are also wanted, the shape supertype is what makes them expressible.
+
+Answering this needs evidence rather than analysis. RF-5 places refinement in the algorithm lifecycle and RF-6 makes constant optimization a real refiner, and only then does it become visible whether users reach for producer-attached refinement or whether the algorithm refiner slot already covers it. Increment 13 therefore begins by re-deciding the concept, and only then chooses between the two shapes above. Neither option is foreclosed by waiting: intent-named composites are purely additive, and the shape supertype stays available through a forwarding default interface member.
+
+### Transient-refinement evaluation
+
+The RF-4 evaluator composition refines a candidate temporarily, evaluates the refined candidate through a child evaluator, discards it, and associates its objective vector with the original candidate. This provides Baldwinian refinement without changing the evaluator contract; the same refiner is Lamarckian when an algorithm retains its result. RF-4 settles the public name as `RefinementEvaluator`. Whether it should also accept a mutator or a generic candidate transformation is part of the same open question as the transformed operators; see [Transformed operators must be reconsidered as a whole](#transformed-operators-must-be-reconsidered-as-a-whole).
 
 ### Deferred reusable refinement artifacts
 
@@ -874,20 +979,149 @@ four test projects; `dotnet format` whitespace and analyzer checks are clean.
 `dotnet format style` reports pre-existing IDE0021 warnings in
 `DataAnalysis/Statistics/Statistics.cs`, a file untouched by this change.
 
+### Refiner operator model outcome
+
+RF-3 and RF-4 are implemented as one step. The role's shape was already settled by the
+mutator slice, which [developer-guidelines](../docs/developer-guidelines.md) names as the
+reference role and [operator-authoring](../docs/operator-authoring.md) explicitly sanctions
+copying, so the bulk of the work was a directory copy of `Operators/Mutators` into
+`Operators/Refiners` with a `Mutator → Refiner` / `Mutate → Refine` rename. Splitting the
+two checkpoints would have separated the copy from the topologies it copies.
+
+Delivered:
+
+- `IRefiner` and `IRefinerInstance` in `HeuristicLib.Contracts`, both contravariant in
+  `TSearchSpace` and `TProblem`. The operation is
+  `Refine(candidates, random, searchSpace, problem)`; the random number generator is
+  retained for parity with the other eight roles, because stochastic refiners exist and
+  `SingleCandidateRefiner` forks per-item generators from batch position.
+- Authoring bases in all three paths at all three arities: `Refiner`/`RefinerInstance`,
+  `StatelessRefiner`, `StatefulRefiner`, plus `SingleCandidateRefiner.RefineCandidate` with
+  its `ExecutionConcurrency Concurrency` setting, and `NoChangeRefiner` for identity
+  behavior.
+- Topologies `WrappingRefiner`, `MultiRefiner`, `PipelineRefiner` (with `Then`),
+  `ChooseOneRefiner` (with `WithRate`), `ObservableRefiner` with `IRefinerObserver`, and the
+  `CountingRefiner`/`DurationMeasuringRefiner` instrumentation pair.
+- `IteratedRefiner`, which restores the capability RF-2 removed with `IteratedEvaluator`. It
+  applies its child exactly `Iterations` times with a per-iteration forked generator and
+  validates a positive count in the protected post-resolution factory. There is deliberately
+  no early exit on an unchanged candidate: candidate equality is not generally meaningful and
+  a fixed count keeps the result reproducible.
+- `RefinementEvaluator` is the settled name for the transient Baldwinian composition. It
+  derives from the `Evaluator` role base rather than `WrappingEvaluator`, because the
+  wrapping base's protected overload receives only the resolved child evaluator and cannot
+  resolve a second child. It declares `Refiner` as its required constructor child and an
+  `Evaluator` setting default-initialized to an ordinary `ProblemEvaluator`, and resolves
+  both in `CreateExecutionInstance`. Its XML documentation states explicitly that the
+  refined candidates are discarded and never written back, and that the default evaluator
+  is unwrapped and therefore invisible to budgets and analysis.
+- `ImprovementCheckingRefiner` together with `IImprovementCriterion`, the
+  `ImprovementChecking` companion and the six built-in criteria described above, delivered as
+  RF-7 in the same pass. See [Improvement-checking refiner outcome](#improvement-checking-refiner-outcome).
+- Cross-role plumbing: `ObservationPlanExtensions.Observe` overloads,
+  `WithMaxRefinerCalls`/`WithMaxRefinedCandidates`, and both `WithMaxRefinerDuration`
+  overloads.
+
+Findings:
+
+- **RF-2 made the Baldwinian composition trivial.** Associating the objective vector with the
+  original candidate needs no code at all now that evaluation is fitness-only and positionally
+  paired. The refined copies simply go out of scope. Under the previous transforming contract
+  this composition would have needed an explicit guard against returning the refined candidate.
+- **No analyzer change was needed.** `OperatorAuthoringAnalyzer` keys off `IOperator` and a
+  `CreateInitialState` type parameter rather than a role list, so `StatefulRefiner` is covered
+  by `HLib0002` and `HLib0004` without modification.
+- **The stateless validation gap is inherited unchanged.** `StatelessRefiner` seals
+  `CreateExecutionInstance` exactly as `StatelessMutator` does, so a stateless refiner still
+  has nowhere to validate configuration. Adding a validation hook would change all nine roles
+  at once and remains its own increment. The refiner topologies that need validation
+  (`ChooseOneRefiner`, `IteratedRefiner`) validate in their protected overload.
+- **No concrete refiner ships in this step.** The encoding-specific mutators were dropped from
+  the copy; RF-6 adds the first concrete refiner.
+- **`Iterated` is retained deliberately.** It is the exact term for repeated self-composition,
+  `refine(refine(refine(x)))` being the n-th iterate of the refiner, and it preserves the
+  contrast with `RepeatingEvaluator`, which applies a child to the *same* input repeatedly and
+  aggregates. `Recursive` was considered and rejected: the refiner never calls itself, so the
+  name would suggest self-reference and a base case that do not exist. The summary states the
+  mechanism explicitly so the name does not have to carry it alone.
+- **The improvement criterion has exactly one consumer.** `RefinementEvaluator` refines and
+  evaluates without comparing, so it needs no criterion and costs one evaluation. The criteria
+  therefore live with `ImprovementCheckingRefiner`, which is why RF-7 was pulled into this pass.
+- **`ObjectiveVector` reports that it dominates itself.** Found while implementing
+  `DominanceCriterion`; recorded as an RF-7 blocker above. It is a pre-existing defect that
+  is not fixed here because it also reaches `DominationCalculator` and therefore NSGA-II
+  fronts, which is its own change with its own validation.
+
+Validation: Release build clean across the solution; 2134 tests pass across all four test
+projects; `dotnet format` whitespace and analyzer checks are clean. `dotnet format style`
+reports the same pre-existing IDE0021 warnings in `DataAnalysis/Statistics/Statistics.cs`
+recorded for RF-2, in a file untouched by this change.
+
+### Improvement-checking refiner outcome
+
+RF-7 is implemented in the same pass as RF-3 and RF-4, because the improvement
+criterion has exactly one consumer and splitting the two would have left a public
+strategy interface in the library with nothing using it.
+
+`ImprovementCheckingRefiner` derives from the `Refiner` role base rather than
+`WrappingRefiner`, for the same reason `RefinementEvaluator` does not use
+`WrappingEvaluator`: the topology base's protected overload receives only the resolved
+child of its own role and cannot resolve the evaluator. Its three children are named for
+the part they play: `Refiner` as the required constructor child, plus the `Evaluator` and
+`Criterion` settings. `Refiner` rather than `ChildRefiner`, because the type is not a
+topology base and the name should say what the child is rather than restate that it is a
+child; this mirrors `RefinementEvaluator.Refiner`.
+
+Both settings are default-initialized rather than nullable, matching the decision made
+for `RefinementEvaluator.Evaluator`: `Evaluator` defaults to an ordinary
+`ProblemEvaluator` and `Criterion` to `ImprovementChecking.Default`. This supersedes the
+"two nullable settings" wording above. A default value is a value, so structural
+equality still distinguishes configurations correctly, and there is no null branch to
+document.
+
+Findings:
+
+- **Original-on-failure needs no code.** A refiner that cannot improve a candidate
+  returns it unchanged, so its objective vector is unchanged and the criterion keeps the
+  original. The plan's requirement that failure never produces a worse candidate falls out
+  of the comparison rather than needing a failure channel on the refiner contract.
+- **The batch contract is checked.** A child refiner returning a different number of
+  candidates is a programming error and throws `InvalidOperationException` from the role
+  method, which is where operation-input validation belongs.
+- **Composition order is observably different.** A refiner that reaches a better candidate
+  only by passing through a worse one settles the plan's claim that the two nestings are
+  genuinely different searches: accepting each round rejects the uphill step and never
+  arrives, while accepting once at the end keeps the better result. Pinned by a test.
+- **`NotWorse` versus `StrictlyBetter` needs a lateral move to be observable.** The test
+  minimizes an absolute value and negates the candidate, so the objective vector is
+  unchanged while the candidate is not; only `NotWorse` takes the move.
+- **Evaluation accounting is verified, not assumed.** `OperatorBudgetAlgorithm` registers its
+  counting replacement against the observed operator *instance* in a child registry, and
+  `ExecutionInstanceRegistry` resolves replacements by reference. A refiner holding the same
+  evaluator instance therefore resolves the counted replacement too, so its comparison
+  evaluations count against the budget that decides when the run stops. A refiner left on its
+  inherited default holds a different instance and stays outside the budget. Both directions
+  are pinned by tests, and [operator-composition.md](../docs/operator-composition.md) documents them.
+- **The two blockers recorded above are unchanged and still open.** Self-dominance makes
+  `Dominance` and `Default` accept a non-improvement whenever both evaluations return the
+  same `ObjectiveVector` instance, and every order-based criterion treats `NaN` as the best
+  possible value. Neither is triggered by the shipped tests, but both are on the direct path
+  of RF-6 constant optimization.
+
 ### Refinement checkpoints
 
 Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted`. Implementation stops at `Awaiting review`; only explicit user acceptance advances to the next checkpoint.
 
 | Checkpoint | Status | Deliverable |
 | --- | --- | --- |
-| RF-0 Design contract | Accepted | Document the `Candidate → Candidate` refiner role as the single refinement mechanism, conventional algorithm placement, the visibility rule for operator-issued evaluation, composition topologies, the improvement-checking refiner with its nullable evaluator and comparer, the fitness-only evaluator contract, the composition examples, and deferred producer wrappers and artifacts. No source code. |
+| RF-0 Design contract | Accepted | Document the `Candidate → Candidate` refiner role as the single refinement mechanism, conventional algorithm placement, the visibility rule for operator-issued evaluation, composition topologies, transient-refinement evaluation, the improvement-checking refiner with its nullable evaluator and comparer, the fitness-only evaluator contract, the composition examples, and deferred producer wrappers and artifacts. No source code. |
 | RF-1 Development-branch integration | Accepted | Merge `dev` into the working branch, reconcile and review its operator-base improvements, run appropriate validation, and stop before implementing Refiner. Done; see [Development-branch integration outcome](#development-branch-integration-outcome). |
-| RF-2 Evaluator contract simplification | Awaiting review | Change `IEvaluatorInstance.Evaluate` to return `IReadOnlyList<ObjectiveVector>`, migrate the evaluator wrappers, built-in algorithms, and analysis hooks, remove `IteratedEvaluator`, and remove the candidate-substitution caveat from `CachingEvaluator`. `EvaluatedCandidate<TCandidate>` is retained as the population and state pairing type; only the evaluator stops producing it. `IEvaluatorObserver.AfterEvaluation` becomes `(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, ...)`, adopting the output-first parameter order that the other seven observer interfaces already use and that evaluation was the sole exception to. |
-| RF-3 Refiner operator model | Pending | Implement the general refiner configuration and execution-instance contracts, authoring bases in the three paths and three arities, `SingleCandidateRefiner.RefineCandidate`, concurrency, identity behavior, validation, and focused contract tests. |
-| RF-4 Refiner composition topologies | Pending | Add the pipeline, iterated, choose-one, multi, wrapping, and observable refiner topologies, restoring iterated refinement after RF-2 removes `IteratedEvaluator`, with order-significant and repeated-stage tests. |
+| RF-2 Evaluator contract simplification | Accepted | Change `IEvaluatorInstance.Evaluate` to return `IReadOnlyList<ObjectiveVector>`, migrate the evaluator wrappers, built-in algorithms, and analysis hooks, remove `IteratedEvaluator`, and remove the candidate-substitution caveat from `CachingEvaluator`. `EvaluatedCandidate<TCandidate>` is retained as the population and state pairing type; only the evaluator stops producing it. `IEvaluatorObserver.AfterEvaluation` becomes `(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, ...)`, adopting the output-first parameter order that the other seven observer interfaces already use and that evaluation was the sole exception to. |
+| RF-3 Refiner operator model | Awaiting review | Implement the general refiner configuration and execution-instance contracts, authoring bases in the three paths and three arities, `SingleCandidateRefiner.RefineCandidate`, concurrency, identity behavior, validation, and focused contract tests. Delivered together with RF-4; see [Refiner operator model outcome](#refiner-operator-model-outcome). |
+| RF-4 Refiner composition topologies | Awaiting review | Add the pipeline, iterated, choose-one, multi, wrapping, and observable refiner topologies; design and add the evaluator composition for transient Baldwinian refinement; restore iterated refinement after RF-2 removes `IteratedEvaluator`; and cover order-significant, repeated-stage, no-write-back, and evaluation-accounting behavior. Delivered together with RF-3; see [Refiner operator model outcome](#refiner-operator-model-outcome). |
 | RF-5 Explicit algorithm integration | Pending | Add configurable refinement to applicable built-in algorithms after creation and final variation but before evaluation, without re-refining carried evaluated candidates. |
 | RF-6 Constant-optimization refiner | Pending | Adapt symbolic-regression constant optimization to the general refiner role and define its failure behavior without adding problem-objective retention. |
-| RF-7 Improvement-checking refiner | Pending | Implement the wrapping refiner with nullable `Evaluator` and `Comparer`, the strict-improvement and dominance retention rules, and original-on-failure behavior. |
+| RF-7 Improvement-checking refiner | Awaiting review | Implement the refiner with its `Evaluator` and `Criterion` settings, the `IImprovementCriterion` strategy with its strict-improvement, not-worse, dominance and threshold implementations, and original-on-failure behavior. Delivered alongside RF-3/RF-4; see [Improvement-checking refiner outcome](#improvement-checking-refiner-outcome). |
 | RF-8 Integration hardening | Pending | Verify batching, refiner/evaluator composition, objective directions, equality and threshold behavior, failure and cancellation, iterated and pipeline refinement, observability, and each composition example including shared-instance accounting and cache/limit wrapper order. |
 
 ## Stage 4: Symbolic-Regression Constant Optimization
@@ -1171,9 +1405,9 @@ Remaining decisions should be made from implementation evidence:
 | 8. Behavioral comparison | Predictions and raw MSE satisfy analytic expectations and match maintained legacy behavior where applicable | Exact parameter-vector or solver-trace equivalence |
 | 9. Development-branch integration | Current `dev` operator-base improvements integrated, reviewed, and validated | Refiner implementation |
 | 10. Evaluator contract simplification | Fitness-only evaluator results, migrated wrappers, algorithms, and analysis hooks | Candidate-transforming evaluation of any kind |
-| 11. Refiner operator | Candidate-to-candidate refinement, composition topologies, plus explicit placement in applicable algorithms | Objective evaluation or retention inside the general refiner contract |
+| 11. Refiner operator | Candidate-to-candidate refinement, composition topologies including transient-refinement evaluation, plus explicit placement in applicable algorithms | Objective evaluation or retention inside the general refiner contract |
 | 12. Improvement-checking refiner | Objective-aware retention as a composable wrapping refiner with configurable evaluator and comparer | A second refinement integration mechanism, or acceptance hidden from configuration |
-| 13. Producer refinement composition | Deferred creator, crossover, mutator, and offspring-production conveniences after canonical mechanisms are established | Producer wrappers treated as the primary refinement integration |
+| 13. Producer refinement composition | A re-decided transformed-operator concept, then the deferred creator, crossover, mutator, and offspring-production conveniences after canonical mechanisms are established | Producer wrappers treated as the primary refinement integration, or a refiner accepted by the existing transformed operators without revisiting the concept |
 | 14. Performance decision | AD, adapter, solver, refinement, evaluator, and complete pipeline benchmarked | Unmeasured backend abstraction or specialization |
 | 15. Later generalization | Public APIs, other optimizers, sampling, and additional memetic composition as justified | Changes made only for hypothetical reuse |
 
@@ -1202,7 +1436,7 @@ Each increment requires:
 - a public automatic-differentiation authoring API;
 - L-BFGS or a baseline gradient optimizer;
 - a general solver-backend plugin architecture;
-- producer-specific refinement wrappers before the canonical refiner and refinement-evaluator mechanisms are established;
+- producer-specific refinement wrappers before the canonical refiner and improvement-checking mechanisms are established;
 - acceptance through the problem's configured regression metric;
 - differentiating through evaluation-time linear scaling or injecting root scaling parameters;
 - replacing every existing HeuristicLib optimization algorithm with a gradient-based one.
@@ -1224,4 +1458,4 @@ The first constant-optimization implementation is complete when:
 - benchmarks isolate AD, adapter, solver, and end-to-end costs and support an explicit MathNet retention or replacement decision;
 - the direct capability is documented well enough to design its eventual public facade without exposing AD internals.
 
-The broader redesign is complete later when justified public numerical-optimization APIs, explicit refiner integration, the refinement evaluator, additional solvers, and legacy retirement each have an explicit outcome. They are deliberately not conditions for completing the first vertical slice.
+The broader redesign is complete later when justified public numerical-optimization APIs, explicit refiner integration, transient-refinement evaluation, additional solvers, and legacy retirement each have an explicit outcome. They are deliberately not conditions for completing the first vertical slice.

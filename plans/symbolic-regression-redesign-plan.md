@@ -295,6 +295,11 @@ Refinement integration is settled as well:
 - Evaluators measure and never transform. `IEvaluatorInstance.Evaluate` returns
   objective vectors, mirroring `IProblem.Evaluate`. There is no
   candidate-transforming evaluator.
+- The RF-4 evaluator composition applies a refiner transiently, evaluates the
+  refined candidate, discards it, and associates the objective vector with the
+  original candidate. This is Baldwinian refinement and does not reintroduce a
+  candidate-transforming evaluator because no candidate is returned or replaced.
+  RF-4 settles its public authoring name with the other refiner compositions.
 - Objective-aware retention is `ImprovementCheckingRefiner`, a wrapping refiner
   that takes a nullable evaluator and a nullable comparer and returns the better
   of the original and refined candidate. Because it is an ordinary refiner, it

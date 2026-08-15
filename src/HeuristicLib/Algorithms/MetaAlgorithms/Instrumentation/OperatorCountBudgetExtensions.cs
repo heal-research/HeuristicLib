@@ -5,6 +5,7 @@ using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
@@ -121,6 +122,26 @@ public static class OperatorCountBudgetExtensions
                 mutator,
                 maximumCandidates,
                 static (observedOperator, counter) => observedOperator.CountMutatedCandidates(counter));
+        }
+
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IRefiner<TCandidate, TSearchSpace, TProblem>, IRefinerInstance<TCandidate, TSearchSpace, TProblem>> WithMaxRefinerCalls(
+            IRefiner<TCandidate, TSearchSpace, TProblem> refiner,
+            int maximumCalls)
+        {
+            return algorithm.WithMaxCount(
+                refiner,
+                maximumCalls,
+                static (observedOperator, counter) => observedOperator.CountRefinerCalls(counter));
+        }
+
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IRefiner<TCandidate, TSearchSpace, TProblem>, IRefinerInstance<TCandidate, TSearchSpace, TProblem>> WithMaxRefinedCandidates(
+            IRefiner<TCandidate, TSearchSpace, TProblem> refiner,
+            int maximumCandidates)
+        {
+            return algorithm.WithMaxCount(
+                refiner,
+                maximumCandidates,
+                static (observedOperator, counter) => observedOperator.CountRefinedCandidates(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ISelector<TCandidate, TSearchSpace, TProblem>, ISelectorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxSelectorCalls(

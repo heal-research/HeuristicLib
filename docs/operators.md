@@ -13,6 +13,7 @@ The core roles used across algorithms in this repository are:
 - **Selector** (`ISelector`): selects evaluated candidates, usually as parents.
 - **Crossover** (`ICrossover`): combines parent candidates into offspring candidates.
 - **Mutator** (`IMutator`): perturbs candidates to create variation.
+- **Refiner** (`IRefiner`): improves a chosen aspect of existing candidates, for example by fitting candidate parameters, repairing, simplifying or applying a local-improvement procedure.
 - **Replacer** (`IReplacer`): decides how to form the next population.
 - **Terminator** (`ITerminator`): observes produced search states and decides whether the owning lifecycle should stop.
 - **Interceptor** (`IInterceptor`): transforms the produced search state.
