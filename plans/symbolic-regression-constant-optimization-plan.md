@@ -1197,6 +1197,81 @@ terms above, and both are deferred to their own branch rather than widening this
 Validation: Release build clean across the solution; 2169 tests pass across all four test
 projects; `dotnet format` whitespace and analyzer checks are clean.
 
+### Constant-optimization refiner outcome
+
+RF-6 is implemented. `ConstantOptimizationRefiner` lives in
+`Operators/Refiners/SymbolicRegressionRefiners` and derives from the three-arity
+`SingleCandidateRefiner<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>`.
+It is bound to the problem type because it needs `SymbolicRegressionProblem.TrainingData`; the
+namespace is named for symbolic regression rather than symbolic expressions for the same reason,
+while the operator role stays the primary grouping as the ownership map requires.
+
+Its whole body delegates to the existing internal component, which is the point: RF-6 adapts
+constant optimization to the role rather than reimplementing it.
+
+```csharp
+public override ExpressionTree RefineCandidate(ExpressionTree candidate, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, SymbolicRegressionProblem problem) =>
+    ConstantOptimizer.TryOptimize(candidate, problem.TrainingData, MaximumIterations, out var optimizedExpression)
+        ? optimizedExpression
+        : candidate;
+```
+
+Decisions:
+
+- **Failure is split by whether it describes the candidate or the configuration.** An unsuccessful
+  numerical solve is an ordinary per-candidate outcome, so that candidate is returned unchanged, as
+  RF-7 established for a refiner that cannot improve its input. An undifferentiable operation or an
+  unbound variable throws instead: both follow from the search space and the training data, so every
+  affected candidate fails identically and returning them unchanged would leave the refiner a silent
+  no-op for a whole run. `ConstantOptimizer.CreateException` is now shared with the throwing
+  `Optimize` form so the two do not restate the mapping. The identity shortcuts inside
+  `ConstantOptimizer` mean an expression with no evolvable constants, and a zero iteration count,
+  return the *same instance* rather than a copy.
+- **No problem-objective retention**, as the checkpoint requires. The fit minimizes mean squared
+  error against raw training targets, which need not be the problem objective, so the fitted
+  expression is returned without comparison. A test pins this using linear scaling, where the
+  unfitted expression already evaluates perfectly: the refiner still replaces it, and the same
+  configuration under `ImprovementCheckingRefiner` keeps the original instead.
+- **`MaximumIterations` defaults to `5`.** Zero is a documented identity, and a negative value throws
+  from the role method — the stateless bases seal `CreateExecutionInstance`, so there is nowhere to
+  validate at configuration time. This is the "check in the role method" branch of the gap RF-1
+  recorded.
+- **Linear scaling stays an evaluation concern.** The fit runs against raw targets even where the
+  problem applies scaling when it evaluates, exactly as Stage 4 specifies.
+- **Concurrency is inherited** from `SingleCandidateRefiner`, defaulting to sequential. A
+  Levenberg-Marquardt solve per candidate is expensive, so this is the setting users will reach for.
+
+Findings:
+
+- **The random generator is unused.** Constant optimization is deterministic. The parameter is
+  retained for parity across the nine roles, as RF-3 decided.
+- **Cancellation is not reachable.** `ConstantOptimizer` accepts a `CancellationToken`, but no
+  operator role signature carries one, so the refiner passes `default`. Recorded in the
+  [developer backlog](../docs/developer-backlog.md) as a general operator question rather than
+  solved here, because it interacts with the run-scoped execution-policy item already open there.
+- **No problem-bound construction helper.** One was written and removed: the repository's
+  `For(problem, ...)` convention exists to infer generic arguments, and `ConstantOptimizationRefiner`
+  is not generic, so the helper took a problem it never used. Direct construction is clearer.
+- **Row sampling is an optional dataset rather than a percentage.** HeuristicLab fits constants on a
+  configurable percentage of rows. A percentage cannot state *which* rows — resampled per candidate or
+  fixed, stratified, contiguous, driven by which generator — so `FittingData` takes a
+  `RegressionData` instead, with `null` meaning the problem's training data. Any sampling policy is
+  then expressible by the caller, the fitted rows stay explicit, and a percentage convenience remains
+  available later on top of it. The subset is fixed for the configuration, so every candidate is
+  fitted to the same rows; a fresh draw per candidate is deliberately not offered, because it costs a
+  binding per candidate for a benefit a fixed representative sample already provides. Being a
+  dataset, the setting takes part in configuration equality by reference rather than by value.
+  Sampling *candidates* rather than rows needs nothing new: `ChooseOneRefiner.WithRate` against
+  `NoChangeRefiner` already refines a proportion of a batch.
+- **Placement is unresolved and recorded in the backlog.** `Operators/Refiners` now holds both
+  general role machinery and a leaf only symbolic-regression users can instantiate. The three-tier
+  taxonomy — general, candidate-specific, problem-specific — and its options are in the
+  [developer backlog](../docs/developer-backlog.md); the current location follows the existing
+  role-first ownership rule until that decision is made.
+
+Validation: Release build clean across the solution; 2178 tests pass across all four test projects;
+`dotnet format` whitespace and analyzer checks are clean.
+
 ### Refinement checkpoints
 
 Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted`. Implementation stops at `Awaiting review`; only explicit user acceptance advances to the next checkpoint.
@@ -1209,7 +1284,7 @@ Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted
 | RF-3 Refiner operator model | Accepted | Implement the general refiner configuration and execution-instance contracts, authoring bases in the three paths and three arities, `SingleCandidateRefiner.RefineCandidate`, concurrency, identity behavior, validation, and focused contract tests. Delivered together with RF-4; see [Refiner operator model outcome](#refiner-operator-model-outcome). |
 | RF-4 Refiner composition topologies | Accepted | Add the pipeline, iterated, choose-one, multi, wrapping, and observable refiner topologies; design and add the evaluator composition for transient Baldwinian refinement; restore iterated refinement after RF-2 removes `IteratedEvaluator`; and cover order-significant, repeated-stage, no-write-back, and evaluation-accounting behavior. Delivered together with RF-3; see [Refiner operator model outcome](#refiner-operator-model-outcome). |
 | RF-5 Explicit algorithm integration | Pending | Add configurable refinement to applicable built-in algorithms after creation and final variation but before evaluation, without re-refining carried evaluated candidates. |
-| RF-6 Constant-optimization refiner | Pending | Adapt symbolic-regression constant optimization to the general refiner role and define its failure behavior without adding problem-objective retention. |
+| RF-6 Constant-optimization refiner | Awaiting review | Adapt symbolic-regression constant optimization to the general refiner role and define its failure behavior without adding problem-objective retention. See [Constant-optimization refiner outcome](#constant-optimization-refiner-outcome). |
 | RF-7 Improvement-checking refiner | Awaiting review | Implement the refiner with its `Evaluator` and `Criterion` settings, the `IImprovementCriterion` strategy with its strict-improvement, not-worse, dominance and threshold implementations, and original-on-failure behavior. Delivered alongside RF-3/RF-4; see [Improvement-checking refiner outcome](#improvement-checking-refiner-outcome). |
 | RF-8 Integration hardening | Pending | Verify batching, refiner/evaluator composition, objective directions, equality and threshold behavior, failure and cancellation, iterated and pipeline refinement, observability, and each composition example including shared-instance accounting and cache/limit wrapper order. |
 

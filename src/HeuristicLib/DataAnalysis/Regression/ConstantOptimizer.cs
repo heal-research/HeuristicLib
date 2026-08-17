@@ -12,15 +12,21 @@ internal static class ConstantOptimizer
         if (TryOptimize(expression, data, maximumIterations, out var optimizedExpression, out var failure, cancellationToken))
             return optimizedExpression;
 
-        throw failure switch
-        {
-            ConstantOptimizationFailure.Compilation(var compilation) => new NotSupportedException($"Expression symbol '{compilation.Symbol.Name}' emitted unsupported operation '{compilation.UnsupportedOperation}' during constant optimization."),
-            ConstantOptimizationFailure.VariableBinding({ Reason: VariableBindingFailureReason.Missing } binding) => new ArgumentException($"Regression data does not contain the expression variable '{binding.VariableName}'.", nameof(data)),
-            ConstantOptimizationFailure.VariableBinding({ Reason: VariableBindingFailureReason.IncompatibleType } binding) => new ArgumentException($"Regression data variable '{binding.VariableName}' is not a double series.", nameof(data)),
-            ConstantOptimizationFailure.NumericalOptimization(var numericalOptimization) => new InvalidOperationException($"Numerical constant optimization failed: {numericalOptimization.Message}"),
-            _ => new InvalidOperationException($"Unsupported constant-optimization failure: {failure.GetType().Name}.")
-        };
+        throw CreateException(failure, nameof(data));
     }
+
+    /// <summary>
+    /// Translates a failure into the exception the throwing form reports, so callers that throw for only some failure
+    /// kinds do not restate the message and exception-type mapping.
+    /// </summary>
+    internal static Exception CreateException(ConstantOptimizationFailure failure, string dataParameterName) => failure switch
+    {
+        ConstantOptimizationFailure.Compilation(var compilation) => new NotSupportedException($"Expression symbol '{compilation.Symbol.Name}' emitted unsupported operation '{compilation.UnsupportedOperation}' during constant optimization."),
+        ConstantOptimizationFailure.VariableBinding({ Reason: VariableBindingFailureReason.Missing } binding) => new ArgumentException($"Regression data does not contain the expression variable '{binding.VariableName}'.", dataParameterName),
+        ConstantOptimizationFailure.VariableBinding({ Reason: VariableBindingFailureReason.IncompatibleType } binding) => new ArgumentException($"Regression data variable '{binding.VariableName}' is not a double series.", dataParameterName),
+        ConstantOptimizationFailure.NumericalOptimization(var numericalOptimization) => new InvalidOperationException($"Numerical constant optimization failed: {numericalOptimization.Message}"),
+        _ => new InvalidOperationException($"Unsupported constant-optimization failure: {failure.GetType().Name}.")
+    };
 
     internal static bool TryOptimize(ExpressionTree expression, RegressionData data, int maximumIterations,
         [NotNullWhen(true)] out ExpressionTree? optimizedExpression, CancellationToken cancellationToken = default) =>
