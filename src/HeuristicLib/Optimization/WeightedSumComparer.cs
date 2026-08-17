@@ -64,8 +64,11 @@ public class WeightedSumComparer : IComparer<ObjectiveVector>
             var weight = directedWeights[i];
 
             // A zero weight excludes its objective, so it must contribute nothing even where the objective value is
-            // infinite. Multiplying would yield NaN and rank the whole vector last.
+            // infinite. Multiplying would yield NaN and rank the whole vector last. The comparison is exact by intent:
+            // only a weight of exactly zero excludes an objective, while a very small one still contributes.
+#pragma warning disable S1244 // exact comparison against zero is the intended semantics here
             if (weight != 0.0)
+#pragma warning restore S1244
             {
                 sum += weight * objectiveVector[i];
             }

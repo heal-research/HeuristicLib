@@ -98,11 +98,9 @@ public sealed class RegressionMetricTests
             .ShouldBe(Math.Sqrt(8.5), tolerance: 1e-12);
     }
 
-    /// <summary>
-    /// The replacement is the worst <em>finite</em> value, which is deliberately not
-    /// <see cref="ObjectiveValue.WorstValue"/>: that is an infinity, and handing downstream arithmetic a finite number
-    /// is the entire purpose of this metric.
-    /// </summary>
+    // The replacement is the worst finite value, which is deliberately not
+    // ObjectiveValue.WorstValue: that is an infinity, and handing downstream arithmetic a finite number
+    // is the entire purpose of this metric.
     [Theory]
     [InlineData(ObjectiveDirection.Minimize, double.MaxValue)]
     [InlineData(ObjectiveDirection.Maximize, double.MinValue)]

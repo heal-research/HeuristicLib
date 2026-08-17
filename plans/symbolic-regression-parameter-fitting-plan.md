@@ -730,7 +730,7 @@ two independent instances.
 
 ```csharp
 algorithm.Evaluator = new LimitEvaluator<...>(new ProblemEvaluator<...>(), maxEvaluations: 100_000);
-algorithm.Refiner = new ImprovementCheckingRefiner<...>(constantOptimization);
+algorithm.Refiner = new ImprovementCheckingRefiner<...>(parameterFitting);
 ```
 
 Three problem evaluations per refined candidate, one of which counts against the
@@ -742,7 +742,7 @@ budget. Refinement cost is excluded from the evaluation budget.
 var evaluator = new LimitEvaluator<...>(new ProblemEvaluator<...>(), maxEvaluations: 100_000);
 
 algorithm.Evaluator = evaluator;
-algorithm.Refiner = new ImprovementCheckingRefiner<...>(constantOptimization) { Evaluator = evaluator };
+algorithm.Refiner = new ImprovementCheckingRefiner<...>(parameterFitting) { Evaluator = evaluator };
 ```
 
 The same instance is handed to both, so the registry resolves one
@@ -755,7 +755,7 @@ count, and the budget describes total evaluation effort including refinement.
 var evaluator = new CachingEvaluator<...>(new ProblemEvaluator<...>(), keySelector);
 
 algorithm.Evaluator = evaluator;
-algorithm.Refiner = new ImprovementCheckingRefiner<...>(constantOptimization) { Evaluator = evaluator };
+algorithm.Refiner = new ImprovementCheckingRefiner<...>(parameterFitting) { Evaluator = evaluator };
 ```
 
 The refiner evaluates the original and the refined candidate; the algorithm's
@@ -776,7 +776,7 @@ one a preset chooses.
 **5. Separate accounting for refinement.**
 
 ```csharp
-algorithm.Refiner = new ImprovementCheckingRefiner<...>(constantOptimization)
+algorithm.Refiner = new ImprovementCheckingRefiner<...>(parameterFitting)
 {
     Evaluator = new CountingEvaluator<...>(new ProblemEvaluator<...>())
 };
@@ -789,8 +789,8 @@ refinement.
 **6. Per-round acceptance versus one final acceptance.**
 
 ```csharp
-new IteratedRefiner<...>(new ImprovementCheckingRefiner<...>(constantOptimization), rounds: 5)
-new ImprovementCheckingRefiner<...>(new IteratedRefiner<...>(constantOptimization, rounds: 5))
+new IteratedRefiner<...>(new ImprovementCheckingRefiner<...>(parameterFitting), rounds: 5)
+new ImprovementCheckingRefiner<...>(new IteratedRefiner<...>(parameterFitting, rounds: 5))
 ```
 
 The first is a memetic hill-climb: each round is kept only if it improves. The
@@ -802,7 +802,7 @@ the second.
 **7. Ordered pipeline.**
 
 ```csharp
-new PipelineRefiner<...>(repair, simplification, new ImprovementCheckingRefiner<...>(constantOptimization))
+new PipelineRefiner<...>(repair, simplification, new ImprovementCheckingRefiner<...>(parameterFitting))
 ```
 
 Ordering is semantically significant, and only the stage that needs objective
@@ -1276,6 +1276,9 @@ Findings:
 - **No problem-bound construction helper.** One was written and removed: the repository's
   `For(problem, ...)` convention exists to infer generic arguments, and `NumericParameterFittingRefiner`
   is not generic, so the helper took a problem it never used. Direct construction is clearer.
+- **Fitting a proportion of candidates needed no new API.** `refiner.WithRate(0.25)` already composes a
+  `ChooseOneRefiner` against `NoChangeRefiner`, so the HeuristicLab option for refining only some
+  candidates is expressible without a setting on this refiner.
 - **Row sampling is an optional dataset rather than a percentage.** HeuristicLab fits constants on a
   configurable percentage of rows. A percentage cannot state *which* rows — resampled per candidate or
   fixed, stratified, contiguous, driven by which generator — so `FittingData` takes a
@@ -1341,8 +1344,87 @@ Findings:
   no refiner configured. Every site binds the created batch to a local first and refines it in a
   separate statement.
 
-Validation: Release build clean across the solution; 2191 tests pass across all four test projects;
+The complete workflow is demonstrated by `NumericParameterFittingSpecs` in the API usage specs: a
+`GeneticAlgorithm` over a `SymbolicRegressionProblem` with the refiner in its `Refiner` slot, plus
+the improvement-check, rate-limited and row-subset compositions. The first spec runs the same seed
+with and without the refiner and asserts the fitted run reaches a lower mean squared error, so it
+fails if parameter fitting stops contributing rather than merely stops throwing.
+
+Validation: Release build clean across the solution; 2195 tests pass across all four test projects;
 `dotnet format` whitespace and analyzer checks are clean.
+
+### Complete operation coverage outcome
+
+The AD engine originally supported addition, subtraction, multiplication, division, negation, `exp`,
+`log`, `sin`, `cos`, `tan` and `tanh`, and reported every other built-in operation as an unsupported
+model. That gap was found through the Python interop: all three symbolic-regression entry points put
+`Symbols.SquareRoot` in their symbol set, so with the refiner throwing on undifferentiable
+operations, a run would have failed as soon as any candidate used it. The mixed-search-space case
+that RF-6 recorded as speculative was in fact the first real consumer.
+
+Every remaining built-in operation now has a differentiation rule:
+
+| Operation | Partials |
+| --- | --- |
+| `Sqrt(x)` | `0.5 / output` |
+| `Abs(x)` | `sign(x)` |
+| `Square(x)` | `2x` |
+| `Cube(x)` | `3x²` |
+| `CubeRoot(x)` | `1 / (3 · output²)` |
+| `Power(a, b)` | `b · a^(b-1)` and `output · ln(a)` |
+| `Root(a, b)` | `(1/b) · a^(1/b - 1)` and `-output · ln(a) / b²` |
+| `AnalyticQuotient(a, b)` | `1 / sqrt(1 + b²)` and `-a · b / (1 + b²)^(3/2)` |
+
+Decisions:
+
+- **`Abs` uses the zero subgradient at the origin.** The derivative does not exist there; zero is the
+  choice the established automatic-differentiation frameworks also make, and it keeps the value finite
+  where the one-sided limits disagree.
+- **`Power` and `Root` propagate `NaN` for a nonpositive base** in their exponent partial, because
+  `ln(a)` is undefined there. This is the engine's ordinary IEEE behavior rather than a special case.
+- **The three binary operations use scalar loops** rather than `TensorPrimitives`. `Pow` is
+  transcendental and the analytic quotient carries a square root, so neither maps onto a clean vector
+  kernel; the AD design contract allows a clear scalar loop where SIMD does not fit.
+- **Output-based rules reuse the retained primal** for `Sqrt` and `CubeRoot` rather than recomputing a
+  root, matching the existing `Tanh` shape.
+
+Findings:
+
+- **The unsupported-operation failure path is now unreachable through built-in symbols.** Every opcode
+  carrying arity metadata has a rule, and `OpCode.Invalid` throws from `OpCodes.GetArity` before the
+  differentiability check, so it cannot stand in for one. Five tests existed only to drive that path
+  and were removed; `EveryBuiltInOperationIsDifferentiable` replaces them by enumerating `OpCode` and
+  asserting each compiles, which fails as soon as an opcode is added without a rule.
+- **Coverage was lost and is not replaced.** The refiner's throw-on-undifferentiable-operation
+  behavior no longer has a test, because nothing built-in can trigger it. The behavior still matters
+  for a user's custom symbol emitting a rule-less opcode.
+- **The Python demonstrator's blocker closed as a side effect.** Its default symbol set is fully
+  differentiable, so the throw policy no longer fires there.
+
+### Python interop outcome
+
+Numeric parameter fitting is re-activated on the two Python entry points that can host it.
+
+- **`InteractiveSymbolicRegression.Run`** builds its algorithm over `SymbolicRegressionProblem`
+  directly, so the refiner drops into the `Refiner` slot with `MaximumIterations` taken from the
+  existing `ParameterOptimizationIterations`. Its guard is gone. The demonstrator shipped a default of
+  `5` in three places while the guard rejected anything above zero, so it could not run with its own
+  defaults; that is now correct rather than fatal.
+- **`PythonGenealogyAnalysis.RunAlgorithmConfigurable`** gained a `TProblem` type parameter and an
+  optional refiner argument. `ExperimentParameters` was deliberately *not* changed: its operators stay
+  declared over `IProblem`, and operator-role contravariance lets them fill the more specific slots.
+  The builders take explicit type arguments so `TProblem` comes from the problem rather than being
+  inferred from the operators, and the refiner is attached after `Build()`. The other three callers
+  needed no edits. `ProblemGeneration`'s guard is gone; a problem factory could not have owned a
+  refiner in any case.
+
+Two entry points remain blocked. `ExtendedSymbolicRegressionProblem` and
+`PythonInterOptEquationScoring` *compose* a `SymbolicRegressionProblem` as an inner problem rather
+than deriving from it, so a refiner declared over `SymbolicRegressionProblem` does not fit their
+algorithms and contravariance does not bridge a composition boundary. Their guards were restored as
+`NotSupportedException` with the reason stated, rather than accepting the parameter and ignoring it.
+Numeric parameter fitting is a symbolic-regression capability, so this is a limitation of those two
+wrapper problems rather than a reason to loosen the refiner. Revisit only if a real need appears.
 
 ### Refinement checkpoints
 

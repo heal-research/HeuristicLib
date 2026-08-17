@@ -83,8 +83,8 @@ var fluentMutator = firstMutator.Then(secondMutator);
 `PipelineRefiner` does the same for refiners. Ordering is semantically significant and a stage may appear more than once, so `repair`, `simplification`, `parameter fitting`, `simplification` is an ordinary configuration rather than a special case.
 
 ```csharp
-var refiner = PipelineRefiner.Create(repair, simplification, constantOptimization);
-var fluentRefiner = repair.Then(simplification, constantOptimization);
+var refiner = PipelineRefiner.Create(repair, simplification, parameterFitting);
+var fluentRefiner = repair.Then(simplification, parameterFitting);
 ```
 
 `PipelineInterceptor` similarly passes the transformed search state from each interceptor to the next interceptor.
@@ -105,8 +105,8 @@ Creators do not form a natural pipeline because a creator does not consume candi
 Repeated refinement is expressed through `IteratedRefiner` rather than by placing the same refiner at two lifecycle points. It applies its child exactly `Iterations` times, feeding each result back in and forking a random number generator per iteration. There is no early exit when an iteration leaves a candidate unchanged, because candidate equality is not generally meaningful and a fixed iteration count keeps the result reproducible.
 
 ```csharp
-var refiner = IteratedRefiner.Create(constantOptimization, iterations: 5);
-var fluentRefiner = constantOptimization.AsIterated(5);
+var refiner = IteratedRefiner.Create(parameterFitting, iterations: 5);
+var fluentRefiner = parameterFitting.AsIterated(5);
 ```
 
 ### Improvement checking
@@ -114,7 +114,7 @@ var fluentRefiner = constantOptimization.AsIterated(5);
 An ordinary refiner returns whatever it produced, which is sometimes worse than what it started from: a local optimizer can diverge, a simplification can lose accuracy. `ImprovementCheckingRefiner` wraps any refiner and keeps its result only when it is an improvement.
 
 ```csharp
-var refiner = constantOptimization.WithImprovementCheck();
+var refiner = parameterFitting.WithImprovementCheck();
 ```
 
 ```text
@@ -138,7 +138,7 @@ It remains an ordinary refiner returning a candidate, so it composes like any ot
 | `MinimumRelativeImprovement(fraction)` | Every objective improved by at least `abs(original) * fraction` |
 
 ```csharp
-constantOptimization.WithImprovementCheck(ImprovementChecking.MinimumImprovement(0.01))
+parameterFitting.WithImprovementCheck(ImprovementChecking.MinimumImprovement(0.01))
 ```
 
 Use a threshold when a marginal improvement is not worth keeping, for example when refinement makes a candidate harder to interpret or when tiny numeric gains are noise. The margin is applied in each objective's own direction, so a positive threshold always means "better by at least this much" whether the objective is minimized or maximized. Thresholds are retained exactly as configured: zero accepts anything not worse, and a negative value deliberately tolerates a bounded worsening.
@@ -148,8 +148,8 @@ A criterion is deliberately not an `IComparer<ObjectiveVector>`. It answers a di
 Nesting decides where acceptance happens, and the two orders are genuinely different searches rather than two spellings of one:
 
 ```csharp
-new IteratedRefiner<...>(constantOptimization.WithImprovementCheck(), 5)   // memetic hill climb
-constantOptimization.AsIterated(5).WithImprovementCheck()                  // accept the final result once
+new IteratedRefiner<...>(parameterFitting.WithImprovementCheck(), 5)   // memetic hill climb
+parameterFitting.AsIterated(5).WithImprovementCheck()                  // accept the final result once
 ```
 
 A refinement that has to pass through a worse candidate to reach a better one is rejected by the first, because the uphill step never survives its round, and kept by the second, which judges only the final result.
@@ -164,7 +164,7 @@ By default a refiner uses its own plain `ProblemEvaluator`, which is unwrapped a
 
 ```csharp
 algorithm.Evaluator = new ProblemEvaluator<...>().CountEvaluatedCandidates(out var counter);
-algorithm.Refiner = constantOptimization.WithImprovementCheck();
+algorithm.Refiner = parameterFitting.WithImprovementCheck();
 ```
 
 The counter sees only the algorithm's own evaluations here; refinement effort is not measured. Sharing the counting evaluator brings it in:
@@ -173,7 +173,7 @@ The counter sees only the algorithm's own evaluations here; refinement effort is
 var evaluator = new ProblemEvaluator<...>().CountEvaluatedCandidates(out var counter);
 
 algorithm.Evaluator = evaluator;
-algorithm.Refiner = constantOptimization.WithImprovementCheck(evaluator);
+algorithm.Refiner = parameterFitting.WithImprovementCheck(evaluator);
 ```
 
 All three evaluations now increment one counter, so it measures total evaluation effort including refinement.
@@ -184,7 +184,7 @@ That counter is what an algorithm terminator reads to stop the run. `AfterOperat
 var evaluator = new ProblemEvaluator<...>().CountEvaluatedCandidates(out var counter);
 
 algorithm.Evaluator = evaluator;
-algorithm.Refiner = constantOptimization.WithImprovementCheck(evaluator);
+algorithm.Refiner = parameterFitting.WithImprovementCheck(evaluator);
 
 var budgeted = algorithm.WithTerminator(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 100_000));
 ```
@@ -201,7 +201,7 @@ Sharing a `CachingEvaluator` pays for two evaluations rather than three, because
 var evaluator = new CachingEvaluator<...>(new ProblemEvaluator<...>(), keySelector);
 
 algorithm.Evaluator = evaluator;
-algorithm.Refiner = constantOptimization.WithImprovementCheck(evaluator);
+algorithm.Refiner = parameterFitting.WithImprovementCheck(evaluator);
 ```
 
 Where counting sits relative to the cache decides what the counter measures:
@@ -216,7 +216,7 @@ The first counts evaluation requests, the second counts actual problem evaluatio
 To attribute refinement effort separately instead of folding it into one counter, give the refiner its own counted evaluator:
 
 ```csharp
-algorithm.Refiner = constantOptimization.WithImprovementCheck(
+algorithm.Refiner = parameterFitting.WithImprovementCheck(
     new ProblemEvaluator<...>().CountEvaluatedCandidates(out var refinementCounter));
 ```
 
@@ -225,9 +225,9 @@ algorithm.Refiner = constantOptimization.WithImprovementCheck(
 `RefinementEvaluator` composes a refiner into the evaluator side instead. It refines the candidates, evaluates the refined copies through its evaluator and returns those objective vectors for the candidates that were supplied. The refined candidates are transient: they are discarded when the evaluation returns and are never written back into the population.
 
 ```csharp
-var evaluator = RefinementEvaluator.Create(constantOptimization);
-var sharedEvaluator = RefinementEvaluator.Create(constantOptimization, algorithm.Evaluator);
-var fluentEvaluator = algorithm.Evaluator.WithRefinement(constantOptimization);
+var evaluator = RefinementEvaluator.Create(parameterFitting);
+var sharedEvaluator = RefinementEvaluator.Create(parameterFitting, algorithm.Evaluator);
+var fluentEvaluator = algorithm.Evaluator.WithRefinement(parameterFitting);
 ```
 
 This is Baldwinian refinement, because the refinement influences fitness without becoming part of the candidate: a candidate is credited with what it could reach through refinement while the population keeps the unrefined genotype. Configuring the same refiner as the algorithm's refiner makes it Lamarckian, because the algorithm then continues with the refined candidate.

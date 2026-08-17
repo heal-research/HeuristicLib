@@ -117,6 +117,11 @@ internal static class DifferentiableExpressionCompiler
                     OpCode.Negate => builder.Negate(operand),
                     OpCode.Exp => builder.Exp(operand),
                     OpCode.Log => builder.Log(operand),
+                    OpCode.Sqrt => builder.Sqrt(operand),
+                    OpCode.Abs => builder.Abs(operand),
+                    OpCode.Square => builder.Square(operand),
+                    OpCode.Cube => builder.Cube(operand),
+                    OpCode.CubeRoot => builder.CubeRoot(operand),
                     OpCode.Sin => builder.Sin(operand),
                     OpCode.Cos => builder.Cos(operand),
                     OpCode.Tan => builder.Tan(operand),
@@ -134,6 +139,9 @@ internal static class DifferentiableExpressionCompiler
                     OpCode.Subtract => builder.Subtract(left, right),
                     OpCode.Multiply => builder.Multiply(left, right),
                     OpCode.Divide => builder.Divide(left, right),
+                    OpCode.Power => builder.Power(left, right),
+                    OpCode.Root => builder.Root(left, right),
+                    OpCode.AnalyticQuotient => builder.AnalyticQuotient(left, right),
                     _ => throw new InvalidOperationException($"Opcode {opCode} is not a supported binary operation.")
                 };
             }
@@ -180,7 +188,10 @@ internal static class DifferentiableExpressionCompiler
 
         private static bool IsSupported(OpCode opCode) => opCode is
             OpCode.Add or OpCode.Subtract or OpCode.Multiply or OpCode.Divide or
-            OpCode.Negate or OpCode.Exp or OpCode.Log or OpCode.Sin or OpCode.Cos or OpCode.Tan or OpCode.Tanh;
+            OpCode.Power or OpCode.Root or OpCode.AnalyticQuotient or
+            OpCode.Negate or OpCode.Exp or OpCode.Log or OpCode.Sqrt or OpCode.Abs or
+            OpCode.Square or OpCode.Cube or OpCode.CubeRoot or
+            OpCode.Sin or OpCode.Cos or OpCode.Tan or OpCode.Tanh;
 
         private sealed class EmissionFrame(ExpressionPoint point, int stackStart)
         {

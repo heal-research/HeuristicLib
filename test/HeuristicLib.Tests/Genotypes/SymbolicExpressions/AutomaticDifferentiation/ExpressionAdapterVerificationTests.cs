@@ -15,6 +15,14 @@ public sealed class ExpressionAdapterVerificationTests
     [InlineData(OpCode.Negate)]
     [InlineData(OpCode.Exp)]
     [InlineData(OpCode.Log)]
+    [InlineData(OpCode.Sqrt)]
+    [InlineData(OpCode.Abs)]
+    [InlineData(OpCode.Square)]
+    [InlineData(OpCode.Cube)]
+    [InlineData(OpCode.CubeRoot)]
+    [InlineData(OpCode.Power)]
+    [InlineData(OpCode.Root)]
+    [InlineData(OpCode.AnalyticQuotient)]
     [InlineData(OpCode.Sin)]
     [InlineData(OpCode.Cos)]
     [InlineData(OpCode.Tan)]
@@ -24,35 +32,32 @@ public sealed class ExpressionAdapterVerificationTests
         VerifyEvaluationAndJacobian(CreateSupportedExpression(operation));
     }
 
+    // Every operation an expression can contain has a differentiation rule, so the compiler's unsupported-operation
+    // failure is currently unreachable through built-in symbols and only a custom symbol emitting an opcode without a
+    // rule can produce it. This fails as soon as an opcode is added without a matching rule, which is the point.
+    [Fact]
+    public void EveryBuiltInOperationIsDifferentiable()
+    {
+        var operations = Enum.GetValues<OpCode>()
+            .Where(operation => operation is not (OpCode.Invalid or OpCode.Variable or OpCode.Constant))
+            .ToArray();
+
+        operations.ShouldNotBeEmpty();
+        foreach (var operation in operations)
+        {
+            DifferentiableExpressionCompiler
+                .TryCompile(CreateSupportedExpression(operation), out _, out var failure)
+                .ShouldBeTrue($"{operation} has no differentiation rule.");
+            failure.ShouldBeNull();
+        }
+    }
+
     [Fact]
     public void MacroMatchesExpressionEvaluationAndFiniteDifferences()
     {
         var expression = Sigmoid(Constant(0.2) * Variable("x") + FixedConstant(0.8)).Build();
 
         VerifyEvaluationAndJacobian(expression);
-    }
-
-    [Theory]
-    [InlineData(OpCode.Sqrt)]
-    [InlineData(OpCode.Abs)]
-    [InlineData(OpCode.Square)]
-    [InlineData(OpCode.Cube)]
-    [InlineData(OpCode.CubeRoot)]
-    [InlineData(OpCode.Power)]
-    [InlineData(OpCode.Root)]
-    [InlineData(OpCode.AnalyticQuotient)]
-    public void UnsupportedBuiltInOperationProducesACompilationFailure(OpCode operation)
-    {
-        var expression = CreateUnsupportedExpression(operation);
-
-        var success = DifferentiableExpressionCompiler.TryCompile(expression, out var differentiableExpression, out var failure);
-
-        success.ShouldBeFalse();
-        differentiableExpression.ShouldBeNull();
-        failure.ShouldNotBeNull();
-        failure.Point.Node.ShouldBeSameAs(expression.Root);
-        failure.Symbol.ShouldBeSameAs(expression.Root.Symbol);
-        failure.UnsupportedOperation.ShouldBe(operation);
     }
 
     [Theory]
@@ -137,27 +142,18 @@ public sealed class ExpressionAdapterVerificationTests
             OpCode.Negate => Negate(left).Build(),
             OpCode.Exp => Exp(left).Build(),
             OpCode.Log => Log(left).Build(),
+            OpCode.Sqrt => Sqrt(left).Build(),
+            OpCode.Abs => Abs(left).Build(),
+            OpCode.Square => Square(left).Build(),
+            OpCode.Cube => Cube(left).Build(),
+            OpCode.CubeRoot => CubeRoot(left).Build(),
+            OpCode.Power => Power(left, FixedConstant(2.0)).Build(),
+            OpCode.Root => Root(left, FixedConstant(2.0)).Build(),
+            OpCode.AnalyticQuotient => AnalyticQuotient(left, right).Build(),
             OpCode.Sin => Sin(left).Build(),
             OpCode.Cos => Cos(left).Build(),
             OpCode.Tan => Tan(left).Build(),
             OpCode.Tanh => Tanh(left).Build(),
-            _ => throw new ArgumentOutOfRangeException(nameof(operation))
-        };
-    }
-
-    private static ExpressionTree CreateUnsupportedExpression(OpCode operation)
-    {
-        var x = Variable("x");
-        return operation switch
-        {
-            OpCode.Sqrt => Sqrt(x).Build(),
-            OpCode.Abs => Abs(x).Build(),
-            OpCode.Square => Square(x).Build(),
-            OpCode.Cube => Cube(x).Build(),
-            OpCode.CubeRoot => CubeRoot(x).Build(),
-            OpCode.Power => Power(x, FixedConstant(2.0)).Build(),
-            OpCode.Root => Root(x, FixedConstant(2.0)).Build(),
-            OpCode.AnalyticQuotient => AnalyticQuotient(x, FixedConstant(2.0)).Build(),
             _ => throw new ArgumentOutOfRangeException(nameof(operation))
         };
     }

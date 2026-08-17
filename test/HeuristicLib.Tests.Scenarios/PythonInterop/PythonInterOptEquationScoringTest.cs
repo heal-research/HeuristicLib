@@ -54,7 +54,7 @@ public class PythonInterOptEquationScoringTest
     [Fact]
     public void DefaultConfiguration_ReportsUnavailableParameterOptimization()
     {
-        Should.Throw<NotImplementedException>(() => PythonInterOptEquationScoring.DefaultConf(
+        Should.Throw<NotSupportedException>(() => PythonInterOptEquationScoring.DefaultConf(
             "unused.csv",
             30,
             (x, y) => [y[0], y[0], 0.9, 0.9, 0.9]));

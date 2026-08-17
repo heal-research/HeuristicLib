@@ -53,8 +53,10 @@ public class ExtendedSymbolicRegressionProblem(
         bool useLinearScaling = true,
         int parameterOptimizationIterations = 5)
     {
+        // This problem composes a SymbolicRegressionProblem as its InnerProblem rather than deriving from it, so
+        // NumericParameterFittingRefiner does not fit this algorithm's refiner slot.
         if (parameterOptimizationIterations > 0)
-            throw new NotImplementedException("Parameter optimization is not yet available.");
+            throw new NotSupportedException("Numeric parameter fitting is not yet available for the extended symbolic-regression problem.");
 
         var data = PythonRegressionData.ReadCsv(file, trainingRowCount);
         var operations = new OperationSymbol[]

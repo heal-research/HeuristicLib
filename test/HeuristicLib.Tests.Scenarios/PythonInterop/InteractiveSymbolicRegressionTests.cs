@@ -27,24 +27,25 @@ public sealed class InteractiveSymbolicRegressionTests
     }
 
     [Fact]
-    public void Run_ThrowsWhenParameterOptimizationIsEnabled()
+    public void Run_FitsNumericParametersWhenEnabled()
     {
-        var callbackInvoked = false;
+        var callbackCount = 0;
         var parameters = CreateParameters();
-        parameters.ParameterOptimizationIterations = 1;
+        parameters.ParameterOptimizationIterations = 5;
 
-        Should.Throw<NotImplementedException>(() =>
-            InteractiveSymbolicRegression.Run(
-                [0.0],
-                [0.0],
-                (_, _) =>
-                {
-                    callbackInvoked = true;
-                    return [];
-                },
-                parameters));
+        var population = InteractiveSymbolicRegression.Run(
+            [-1.0, 0.0, 1.0, 2.0],
+            [-1.0, 0.0, 1.0, 2.0],
+            (trees, objectives) =>
+            {
+                callbackCount++;
+                return objectives.Select(objective => objective.ToArray()).ToArray();
+            },
+            parameters,
+            TestContext.Current.CancellationToken);
 
-        callbackInvoked.ShouldBeFalse();
+        population.EvaluatedCandidates.Count.ShouldBe(parameters.PopulationSize);
+        callbackCount.ShouldBe(parameters.Generations);
     }
 
     [Fact]

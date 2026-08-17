@@ -11,10 +11,6 @@ using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Refiners.SymbolicRegressionRefiners;
 
-/// <summary>
-/// Pins constant optimization as a refiner. The role contract is candidate to candidate, so the refiner fits and
-/// returns; deciding whether the fitted expression is worth keeping belongs to a wrapping improvement check.
-/// </summary>
 public sealed class NumericParameterFittingRefinerTests
 {
     [Fact]
@@ -28,10 +24,6 @@ public sealed class NumericParameterFittingRefinerTests
         Predictions(refined, problem).ShouldBe(Targets, tolerance: 1e-8);
     }
 
-    /// <summary>
-    /// The source expression is immutable and must survive refinement untouched, so an unrefined copy elsewhere in the
-    /// population is unaffected.
-    /// </summary>
     [Fact]
     public void RefineCandidate_LeavesTheSourceExpressionUnchanged()
     {
@@ -61,10 +53,8 @@ public sealed class NumericParameterFittingRefinerTests
         Refine(new NumericParameterFittingRefiner { MaximumIterations = 0 }, problem, expression).ShouldBeSameAs(expression);
     }
 
-    /// <summary>
-    /// A stateless refiner seals the execution-instance factory, so a negative iteration count is rejected by the role
-    /// method rather than at configuration time.
-    /// </summary>
+    // A stateless refiner seals the execution-instance factory, so a negative iteration count is rejected by the role
+    // method rather than at configuration time.
     [Fact]
     public void RefineCandidate_WithNegativeIterations_Throws()
     {
@@ -79,22 +69,6 @@ public sealed class NumericParameterFittingRefinerTests
     public void MaximumIterations_DefaultsToFive()
     {
         new NumericParameterFittingRefiner().MaximumIterations.ShouldBe(5);
-    }
-
-    /// <summary>
-    /// An operation the differentiation engine cannot handle is a property of the search space, not of one candidate,
-    /// so every affected candidate would fail identically. Returning them unchanged would leave the refiner a silent
-    /// no-op for a whole run.
-    /// </summary>
-    [Fact]
-    public void RefineCandidate_WithAnUndifferentiableOperation_Throws()
-    {
-        var problem = CreateProblem();
-        var expression = Sqrt(Constant(0.25) * Variable("x")).Build();
-
-        Should.Throw<NotSupportedException>(() =>
-            Refine(new NumericParameterFittingRefiner { MaximumIterations = 100 }, problem, expression))
-            .Message.ShouldContain("Sqrt");
     }
 
     [Fact]
@@ -114,10 +88,8 @@ public sealed class NumericParameterFittingRefinerTests
         left.ShouldNotBe(new NumericParameterFittingRefiner { MaximumIterations = 21 });
     }
 
-    /// <summary>
-    /// A dataset takes part in configuration equality by reference, because comparing it by value would cost a pass
-    /// over every row on each comparison.
-    /// </summary>
+    // A dataset takes part in configuration equality by reference, because comparing it by value would cost a pass
+    // over every row on each comparison.
     [Fact]
     public void Configurations_CompareFittingDataByReference()
     {
@@ -130,10 +102,6 @@ public sealed class NumericParameterFittingRefinerTests
             .ShouldNotBe(new NumericParameterFittingRefiner { FittingData = CreateProblem().TrainingData });
     }
 
-    /// <summary>
-    /// A supplied dataset replaces the problem's training data for the fit. The subset here describes a different
-    /// relation, so the fitted constants follow it rather than the problem's full training data.
-    /// </summary>
     [Fact]
     public void FittingData_WhenSupplied_FitsToItInsteadOfTheProblemTrainingData()
     {
@@ -172,11 +140,7 @@ public sealed class NumericParameterFittingRefinerTests
         }
     }
 
-    /// <summary>
-    /// The refiner fits against the raw training targets, which is not the problem objective. Here linear scaling
-    /// already makes the unfitted expression score perfectly, so the fit cannot improve the objective — and the
-    /// refiner still returns the fitted expression, because retention is not its job.
-    /// </summary>
+    // Linear scaling already makes the unfitted expression score perfectly, so the fit cannot improve the objective.
     [Fact]
     public void RefineCandidate_DoesNotConsultTheProblemObjective()
     {
@@ -190,10 +154,6 @@ public sealed class NumericParameterFittingRefinerTests
         refined.ShouldNotBeSameAs(expression);
     }
 
-    /// <summary>
-    /// Retention composes on top: the same configuration under an improvement check keeps the original, because the
-    /// fit did not improve the problem objective.
-    /// </summary>
     [Fact]
     public void UnderAnImprovementCheck_ANonImprovingFitIsRejected()
     {

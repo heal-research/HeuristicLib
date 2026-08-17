@@ -42,9 +42,6 @@ public class ProblemGeneration
 
     public static SymbolicRegressionProblem CreateSymbolicRegressionProblem(string file, SymRegExperimentParameters parameters)
     {
-        if (parameters.ParameterOptimizationIterations > 0)
-            throw new NotImplementedException("Parameter optimization is not yet available.");
-
         var data = SymRegCache.GetOrAdd((file, parameters.TrainingSplit), static key => PythonRegressionData.ReadCsv(key.Item1, key.Item2));
         var operations = new OperationSymbol[]
         {

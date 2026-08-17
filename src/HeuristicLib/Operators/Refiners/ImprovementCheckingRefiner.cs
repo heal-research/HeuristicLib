@@ -244,7 +244,12 @@ public sealed record MinimumImprovementCriterion(double Delta) : IImprovementCri
 
         for (var index = 0; index < refined.Count; index++)
         {
+            // The negation is required, not stylistic. A NaN margin arises whenever either objective value is NaN, and
+            // `!(margin >= Delta)` rejects it while `margin < Delta` would accept it, because every comparison against
+            // NaN is false. Rewriting this to the opposite operator would silently make a NaN objective an improvement.
+#pragma warning disable S1940 // negated comparison is what rejects a NaN margin
             if (!(ImprovementMargin.Signed(refined[index], original[index], objectiveDirections.Directions[index]) >= Delta))
+#pragma warning restore S1940
             {
                 return false;
             }
@@ -279,7 +284,12 @@ public sealed record MinimumRelativeImprovementCriterion(double Fraction) : IImp
         for (var index = 0; index < refined.Count; index++)
         {
             var required = Math.Abs(original[index]) * Fraction;
+
+            // As in MinimumImprovementCriterion, the negation is what rejects a NaN margin. See the note there before
+            // rewriting this to the opposite operator.
+#pragma warning disable S1940 // negated comparison is what rejects a NaN margin
             if (!(ImprovementMargin.Signed(refined[index], original[index], objectiveDirections.Directions[index]) >= required))
+#pragma warning restore S1940
             {
                 return false;
             }

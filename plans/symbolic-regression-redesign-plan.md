@@ -12,7 +12,7 @@ Implementation order:
 - Stage 1: build the immutable scalar expression core and reference behavior harness.
 - Stage 2: rebuild problem composition and the evaluator contract around the new genotype.
 - Stage 3: add the unrestricted scalar search space and fast unrestricted search operators.
-- Stage 3.1: add constant optimization with Levenberg-Marquardt and automatic differentiation after the unrestricted operators are stable.
+- Stage 3.1: add numeric parameter fitting with Levenberg-Marquardt and automatic differentiation after the unrestricted operators are stable.
 - Stage 4: add the grammar-constrained scalar search space and grammar-preserving search operators.
 - Stage 5: add extensions in sub-stages: templates, shape constraints, normalization/transformers, vectorial GP, time-series support, and interval-arithmetic evaluation.
 

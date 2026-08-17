@@ -378,6 +378,7 @@ Add XML documentation only when it communicates a nonobvious public contract, in
 - Do not add summaries that only repeat a type, member or parameter name.
 - Prefer clear names and signatures while the API is evolving.
 - Put broader design rationale and examples in `docs`.
+- Do not add XML documentation to tests. It exists for API consumers, and nothing consumes a test.
 
 ## Source and documentation organization
 

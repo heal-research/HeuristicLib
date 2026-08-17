@@ -28,6 +28,14 @@ internal sealed partial class Execution
                 Operation.Negate => -scalarPrimals[instruction.LeftOperand],
                 Operation.Exp => Math.Exp(scalarPrimals[instruction.LeftOperand]),
                 Operation.Log => Math.Log(scalarPrimals[instruction.LeftOperand]),
+                Operation.Sqrt => Math.Sqrt(scalarPrimals[instruction.LeftOperand]),
+                Operation.Abs => Math.Abs(scalarPrimals[instruction.LeftOperand]),
+                Operation.Square => scalarPrimals[instruction.LeftOperand] * scalarPrimals[instruction.LeftOperand],
+                Operation.Cube => scalarPrimals[instruction.LeftOperand] * scalarPrimals[instruction.LeftOperand] * scalarPrimals[instruction.LeftOperand],
+                Operation.CubeRoot => Math.Cbrt(scalarPrimals[instruction.LeftOperand]),
+                Operation.Power => Math.Pow(scalarPrimals[instruction.LeftOperand], scalarPrimals[instruction.RightOperand]),
+                Operation.Root => Math.Pow(scalarPrimals[instruction.LeftOperand], 1.0 / scalarPrimals[instruction.RightOperand]),
+                Operation.AnalyticQuotient => scalarPrimals[instruction.LeftOperand] / Math.Sqrt(1.0 + (scalarPrimals[instruction.RightOperand] * scalarPrimals[instruction.RightOperand])),
                 Operation.Sin => Math.Sin(scalarPrimals[instruction.LeftOperand]),
                 Operation.Cos => Math.Cos(scalarPrimals[instruction.LeftOperand]),
                 Operation.Tan => Math.Tan(scalarPrimals[instruction.LeftOperand]),
@@ -55,12 +63,20 @@ internal sealed partial class Execution
                 case Operation.Add:
                 case Operation.Subtract:
                 case Operation.Multiply:
+                case Operation.Power:
+                case Operation.Root:
+                case Operation.AnalyticQuotient:
                 case Operation.Divide:
                     EvaluateBinary(instruction, batch, destination);
                     break;
                 case Operation.Negate:
                 case Operation.Exp:
                 case Operation.Log:
+                case Operation.Sqrt:
+                case Operation.Abs:
+                case Operation.Square:
+                case Operation.Cube:
+                case Operation.CubeRoot:
                 case Operation.Sin:
                 case Operation.Cos:
                 case Operation.Tan:
@@ -113,6 +129,18 @@ internal sealed partial class Execution
             case Operation.Divide:
                 TensorPrimitives.Divide(left, right, destination);
                 break;
+            case Operation.Power:
+                for (var i = 0; i < destination.Length; i++)
+                    destination[i] = Math.Pow(left[i], right[i]);
+                break;
+            case Operation.Root:
+                for (var i = 0; i < destination.Length; i++)
+                    destination[i] = Math.Pow(left[i], 1.0 / right[i]);
+                break;
+            case Operation.AnalyticQuotient:
+                for (var i = 0; i < destination.Length; i++)
+                    destination[i] = left[i] / Math.Sqrt(1.0 + (right[i] * right[i]));
+                break;
             default:
                 throw new InvalidOperationException($"Operation {operation} is not binary.");
         }
@@ -133,6 +161,18 @@ internal sealed partial class Execution
                 break;
             case Operation.Divide:
                 TensorPrimitives.Divide(left, right, destination);
+                break;
+            case Operation.Power:
+                for (var i = 0; i < destination.Length; i++)
+                    destination[i] = Math.Pow(left[i], right);
+                break;
+            case Operation.Root:
+                for (var i = 0; i < destination.Length; i++)
+                    destination[i] = Math.Pow(left[i], 1.0 / right);
+                break;
+            case Operation.AnalyticQuotient:
+                for (var i = 0; i < destination.Length; i++)
+                    destination[i] = left[i] / Math.Sqrt(1.0 + (right * right));
                 break;
             default:
                 throw new InvalidOperationException($"Operation {operation} is not binary.");
@@ -155,6 +195,18 @@ internal sealed partial class Execution
             case Operation.Divide:
                 TensorPrimitives.Divide(left, right, destination);
                 break;
+            case Operation.Power:
+                for (var i = 0; i < destination.Length; i++)
+                    destination[i] = Math.Pow(left, right[i]);
+                break;
+            case Operation.Root:
+                for (var i = 0; i < destination.Length; i++)
+                    destination[i] = Math.Pow(left, 1.0 / right[i]);
+                break;
+            case Operation.AnalyticQuotient:
+                for (var i = 0; i < destination.Length; i++)
+                    destination[i] = left / Math.Sqrt(1.0 + (right[i] * right[i]));
+                break;
             default:
                 throw new InvalidOperationException($"Operation {operation} is not binary.");
         }
@@ -173,6 +225,22 @@ internal sealed partial class Execution
                 break;
             case Operation.Log:
                 TensorPrimitives.Log(operand, destination);
+                break;
+            case Operation.Sqrt:
+                TensorPrimitives.Sqrt(operand, destination);
+                break;
+            case Operation.Abs:
+                TensorPrimitives.Abs(operand, destination);
+                break;
+            case Operation.Square:
+                TensorPrimitives.Multiply(operand, operand, destination);
+                break;
+            case Operation.Cube:
+                TensorPrimitives.Multiply(operand, operand, destination);
+                TensorPrimitives.Multiply(destination, operand, destination);
+                break;
+            case Operation.CubeRoot:
+                TensorPrimitives.Cbrt(operand, destination);
                 break;
             case Operation.Sin:
                 TensorPrimitives.Sin(operand, destination);

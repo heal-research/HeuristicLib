@@ -61,7 +61,7 @@ The new immutable expression-tree operator family targets behavioral coverage ra
 | Strict structural shrinking | `RemoveBranchManipulation` | `ShrinkSubtreeMutator` | Implemented | Replaces a selected operation occurrence with a terminal sampled from the search space, guaranteeing a strict length reduction without retries. |
 | Hoist mutation | No direct legacy equivalent | Deferred | Optional | Replaces a selected subtree with one of its descendants. Consider only after measured need; shrink mutation already provides a simple anti-bloat structural operator. |
 | Size-fair or homologous crossover | No direct legacy equivalent | Deferred | Optional | These are alternative crossover policies, not prerequisites for numeric-parameter optimization. |
-| Evolvable-constant optimization | Levenberg-Marquardt parameter optimization | Reusable differentiation, numerical optimization, and refinement composition | Direct constant optimizer implemented; refinement integration planned | The implementation and remaining integration stages are specified in `symbolic-regression-parameter-fitting-plan.md`. |
+| Evolvable-constant optimization | Levenberg-Marquardt numeric parameter fitting | Reusable differentiation, numerical optimization, and refinement composition | Direct parameter fitter implemented; refiner and algorithm integration implemented | The implementation and remaining integration stages are specified in `symbolic-regression-parameter-fitting-plan.md`. |
 
 ## Stage 0 Design-Hole Outcomes
 

@@ -137,10 +137,6 @@ public class CrowdingDistanceTests
         result.ShouldContain(offspring[^1]);
     }
 
-    /// <summary>
-    /// A NaN objective value must not make its candidate a boundary point, which would award it the maximum crowding
-    /// distance and so make NSGA-II prefer it in a tie.
-    /// </summary>
     [Fact]
     public void NaNObjectiveValue_DoesNotBecomeABoundaryPoint()
     {
@@ -153,10 +149,6 @@ public class CrowdingDistanceTests
         d[3].ShouldBe(double.PositiveInfinity);
     }
 
-    /// <summary>
-    /// One NaN must not destroy the distances of the other candidates in that dimension, which happens when the range
-    /// is computed from it.
-    /// </summary>
     [Fact]
     public void NaNObjectiveValue_LeavesTheOtherDistancesIntact()
     {
@@ -167,9 +159,6 @@ public class CrowdingDistanceTests
         d[2].ShouldBe(1.0, tolerance: 1e-12);
     }
 
-    /// <summary>
-    /// An infinite spread cannot normalize a difference, so the dimension contributes nothing rather than NaN.
-    /// </summary>
     [Fact]
     public void InfiniteRange_ContributesNoDistance()
     {

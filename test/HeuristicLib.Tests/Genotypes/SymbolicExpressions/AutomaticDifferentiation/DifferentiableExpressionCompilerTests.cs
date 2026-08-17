@@ -232,23 +232,6 @@ public sealed class DifferentiableExpressionCompilerTests
     }
 
     [Fact]
-    public void Compile_AttributesUnsupportedOpcodeToTheEmittingExpressionPoint()
-    {
-        var symbol = new UnsupportedMacroSymbol();
-        var expression = Apply(symbol, Variable("x")).Build();
-
-        var success = DifferentiableExpressionCompiler.TryCompile(expression, out var differentiableExpression, out var failure);
-
-        success.ShouldBeFalse();
-        differentiableExpression.ShouldBeNull();
-        failure.ShouldNotBeNull();
-        failure.Point.Tree.ShouldBeSameAs(expression);
-        failure.Point.Node.ShouldBeSameAs(expression.Root);
-        failure.Symbol.ShouldBeSameAs(symbol);
-        failure.UnsupportedOperation.ShouldBe(OpCode.Sqrt);
-    }
-
-    [Fact]
     public void Compile_ThrowsWhenSymbolDoesNotEmitExactlyOneValue()
     {
         var expression = new ExpressionTree(new PayloadlessTerminalExpressionNode(new EmptySymbol()));
@@ -294,17 +277,6 @@ public sealed class DifferentiableExpressionCompilerTests
             emitter.EmitChild(0);
             emitter.EmitChild(0);
             emitter.EmitOperator(OpCode.Multiply);
-        }
-    }
-
-    private sealed record UnsupportedMacroSymbol() : OperationSymbol("unsupported-macro", 1)
-    {
-        public override void Emit(ExpressionNode node, IExpressionEmitter emitter)
-        {
-            emitter.EmitChild(0);
-            emitter.EmitOperator(OpCode.Sqrt);
-            emitter.EmitChild(0);
-            emitter.EmitOperator(OpCode.Add);
         }
     }
 

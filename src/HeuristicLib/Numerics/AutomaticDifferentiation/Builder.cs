@@ -34,6 +34,14 @@ internal sealed class Builder
     internal Value Negate(Value value) => Unary(Operation.Negate, value);
     internal Value Exp(Value value) => Unary(Operation.Exp, value);
     internal Value Log(Value value) => Unary(Operation.Log, value);
+    internal Value Sqrt(Value value) => Unary(Operation.Sqrt, value);
+    internal Value Abs(Value value) => Unary(Operation.Abs, value);
+    internal Value Square(Value value) => Unary(Operation.Square, value);
+    internal Value Cube(Value value) => Unary(Operation.Cube, value);
+    internal Value CubeRoot(Value value) => Unary(Operation.CubeRoot, value);
+    internal Value Power(Value left, Value right) => Binary(Operation.Power, left, right);
+    internal Value Root(Value left, Value right) => Binary(Operation.Root, left, right);
+    internal Value AnalyticQuotient(Value left, Value right) => Binary(Operation.AnalyticQuotient, left, right);
     internal Value Sin(Value value) => Unary(Operation.Sin, value);
     internal Value Cos(Value value) => Unary(Operation.Cos, value);
     internal Value Tan(Value value) => Unary(Operation.Tan, value);

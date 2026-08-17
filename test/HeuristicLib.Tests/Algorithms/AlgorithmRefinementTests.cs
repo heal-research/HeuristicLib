@@ -17,11 +17,6 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms;
 
-/// <summary>
-/// Pins how the built-in algorithms place refinement. A refiner runs after creation and after variation, immediately
-/// before evaluation, and never runs again on candidates that are carried forward with the objective vectors they
-/// already have.
-/// </summary>
 public class AlgorithmRefinementTests
 {
     [Fact]
@@ -33,10 +28,6 @@ public class AlgorithmRefinementTests
         CreateHillClimber(problem).Refiner.ShouldBeNull();
     }
 
-    /// <summary>
-    /// An unset refiner must leave the search untouched, not merely produce comparable results: the algorithm must
-    /// consume randomness identically, so the run is reproducible against a build without refinement.
-    /// </summary>
     [Fact]
     public void WithoutARefiner_TheRunIsUnchanged()
     {
@@ -64,10 +55,6 @@ public class AlgorithmRefinementTests
         refiner.BatchCount.ShouldBe(Generations);
     }
 
-    /// <summary>
-    /// The requirement RF-5 exists for. Elites already carry an objective vector, so refining them again would spend
-    /// the refinement budget re-doing settled work and would silently change candidates the population has accepted.
-    /// </summary>
     [Fact]
     public void GeneticAlgorithm_DoesNotRefineCarriedElites()
     {
@@ -91,9 +78,11 @@ public class AlgorithmRefinementTests
         var result = (CreateAlgorithm(problem) with { Refiner = new OriginShiftRefiner(), MaximumGenerations = 1 })
             .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
-        // The refiner moves every candidate to the origin, where the sphere function is exactly zero. A non-zero
-        // objective would mean the algorithm evaluated the candidate it had before refinement.
-        result.Population.EvaluatedCandidates.ShouldAllBe(candidate => candidate.ObjectiveVector[0] == 0.0);
+        // The refiner moves every candidate to the origin, where the sphere function is exactly zero.
+        foreach (var candidate in result.Population.EvaluatedCandidates)
+        {
+            candidate.ObjectiveVector[0].ShouldBe(0.0);
+        }
     }
 
     [Fact]
@@ -173,7 +162,6 @@ public class AlgorithmRefinementTests
             BatchSize = 2
         };
 
-    /// <summary>Records how often refinement ran and how many candidates it saw, without changing them.</summary>
     private sealed record CountingRefiner : Refiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
         private readonly Counter counter = new();
@@ -201,7 +189,6 @@ public class AlgorithmRefinementTests
         }
     }
 
-    /// <summary>Moves every candidate to the origin, which is the sphere function's optimum.</summary>
     private sealed record OriginShiftRefiner : SingleCandidateRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
         public override RealVector RefineCandidate(RealVector candidate, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>

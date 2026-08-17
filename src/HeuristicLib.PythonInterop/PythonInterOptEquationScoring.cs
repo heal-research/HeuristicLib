@@ -37,8 +37,10 @@ public class PythonInterOptEquationScoring(
         bool useLinearScaling = true,
         int parameterOptimizationIterations = 5)
     {
+        // Like ExtendedSymbolicRegressionProblem, this problem composes a SymbolicRegressionProblem rather than deriving
+        // from it, so NumericParameterFittingRefiner does not fit this algorithm's refiner slot.
         if (parameterOptimizationIterations > 0)
-            throw new NotImplementedException("Parameter optimization is not yet available.");
+            throw new NotSupportedException("Numeric parameter fitting is not yet available for the equation-scoring problem.");
 
         var data = PythonRegressionData.ReadCsv(file, trainingRowCount);
         var operations = new OperationSymbol[]

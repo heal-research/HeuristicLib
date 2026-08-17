@@ -3,10 +3,6 @@ using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Refiners;
 
-/// <summary>
-/// Pins the improvement criteria. The threshold criteria carry the load here: a margin has to be applied in each
-/// objective's own direction, which is precisely what an ordering-based comparer cannot see.
-/// </summary>
 public class ImprovementCriterionTests
 {
     [Fact]
@@ -59,10 +55,6 @@ public class ImprovementCriterionTests
         criterion.IsImprovement(Vector(1.6), Vector(2.0), SingleObjective.Minimize).ShouldBeFalse();
     }
 
-    /// <summary>
-    /// The direction-correctness check. A comparer shifting one operand by the same delta would accept exactly the
-    /// wrong side here, because it cannot know that higher is better.
-    /// </summary>
     [Fact]
     public void MinimumImprovement_OnAMaximizedObjective_MeasuresTheMarginUpwards()
     {
@@ -83,9 +75,6 @@ public class ImprovementCriterionTests
         criterion.IsImprovement(Vector(2.1), Vector(2.0), SingleObjective.Minimize).ShouldBeFalse();
     }
 
-    /// <summary>
-    /// A negative delta is retained as configured rather than clamped, so it deliberately tolerates a bounded worsening.
-    /// </summary>
     [Fact]
     public void MinimumImprovement_WithNegativeDelta_ToleratesABoundedWorsening()
     {
@@ -125,10 +114,6 @@ public class ImprovementCriterionTests
         criterion.IsImprovement(Vector(109.0), Vector(100.0), SingleObjective.Maximize).ShouldBeFalse();
     }
 
-    /// <summary>
-    /// The magnitude is taken as an absolute value, so a negative original value requires the same relative margin as
-    /// its positive counterpart rather than inverting the requirement.
-    /// </summary>
     [Fact]
     public void MinimumRelativeImprovement_WithANegativeOriginalValue_UsesItsMagnitude()
     {
@@ -167,10 +152,6 @@ public class ImprovementCriterionTests
         criterion.IsImprovement(Vector(1.0, 3.0), Vector(2.0, 2.0), directions).ShouldBeFalse();
     }
 
-    /// <summary>
-    /// A deliberately configured total order decides the comparison instead of dominance, so a weighted-sum problem
-    /// accepts a refinement that improves the weighted objective while worsening one component.
-    /// </summary>
     [Fact]
     public void Default_OnAProblemWithAConfiguredTotalOrder_UsesThatOrder()
     {
@@ -201,16 +182,6 @@ public class ImprovementCriterionTests
             criterion.IsImprovement(Vector(1.0, 1.0), Vector(2.0), MultiObjective.Minimize(2)));
     }
 
-    /// <summary>
-    /// Every criterion rejects a refinement that produced a <see cref="double.NaN"/> objective value, in both objective
-    /// directions. Constant optimization deliberately propagates non-finite results, so this is on the direct path of
-    /// the first refiner to use these criteria.
-    /// </summary>
-    /// <remarks>
-    /// The order-based criteria inherit this from
-    /// <see cref="ObjectiveValue.Compare(double, double, ObjectiveDirection)"/>; the threshold criteria already
-    /// rejected NaN, because a comparison against a NaN margin is false.
-    /// </remarks>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -228,10 +199,6 @@ public class ImprovementCriterionTests
         ImprovementChecking.MinimumRelativeImprovement(0.0).IsImprovement(nan, finite, directions).ShouldBeFalse();
     }
 
-    /// <summary>
-    /// A refinement that repairs a <see cref="double.NaN"/> original into a finite value is an improvement, because NaN
-    /// is the worst value rather than a value outside the comparison.
-    /// </summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -247,10 +214,6 @@ public class ImprovementCriterionTests
         ImprovementChecking.Default.IsImprovement(finite, nan, directions).ShouldBeTrue();
     }
 
-    /// <summary>
-    /// Two NaN values are equal to one another, so a refinement that leaves a NaN objective unchanged is not worse but
-    /// is not strictly better either.
-    /// </summary>
     [Fact]
     public void OrderBasedCriteria_TreatTwoNaNValuesAsEqual()
     {
@@ -258,10 +221,6 @@ public class ImprovementCriterionTests
         ImprovementChecking.NotWorse.IsImprovement(Vector(double.NaN), Vector(double.NaN), SingleObjective.Minimize).ShouldBeTrue();
     }
 
-    /// <summary>
-    /// Dominance and a total order agree exactly on a single-objective problem. They can only diverge once there is
-    /// more than one objective to trade off.
-    /// </summary>
     [Theory]
     [InlineData(1.0, 2.0)]
     [InlineData(2.0, 2.0)]
@@ -275,10 +234,6 @@ public class ImprovementCriterionTests
         }
     }
 
-    /// <summary>
-    /// Where the objectives are incomparable, dominance abstains while a total order still answers. This is the case
-    /// that makes the two criteria genuinely different rather than two spellings of one idea.
-    /// </summary>
     [Fact]
     public void OnAnIncomparablePair_DominanceRejectsWhileATotalOrderStillDecides()
     {
@@ -291,10 +246,6 @@ public class ImprovementCriterionTests
         ImprovementChecking.NotWorse.IsImprovement(refined, original, directions).ShouldBeTrue();
     }
 
-    /// <summary>
-    /// A lexicographic order decides on the first objective that differs, so it accepts a refinement that ruins a later
-    /// objective. Dominance never trades one objective for another.
-    /// </summary>
     [Fact]
     public void OnALexicographicOrder_ATradeOffIsAcceptedThatDominanceRejects()
     {
@@ -306,10 +257,6 @@ public class ImprovementCriterionTests
         ImprovementChecking.Dominance.IsImprovement(refined, original, directions).ShouldBeFalse();
     }
 
-    /// <summary>
-    /// Dominance is otherwise the stricter criterion, but that only holds while the total order is consistent with it.
-    /// A negative weight breaks the consistency, and nothing validates weights, so the implication reverses here.
-    /// </summary>
     [Fact]
     public void WithANegativeWeight_DominanceAcceptsWhatTheTotalOrderRejects()
     {

@@ -8,6 +8,7 @@ using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
+using HEAL.HeuristicLib.Operators.Refiners.SymbolicRegressionRefiners;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
@@ -114,9 +115,6 @@ public static class InteractiveSymbolicRegression
 
     public static Population<ExpressionTree> Run(double[] xValues, double[] yValues, Func<ExpressionTree[], ObjectiveVector[], double[][]> populationCallback, InteractiveSymRegParameters parameters, CancellationToken ct = default)
     {
-        if (parameters.ParameterOptimizationIterations > 0)
-            throw new NotImplementedException("Parameter optimization is not yet available.");
-
         var data = CreateRegressionDataFromArrays(xValues, yValues);
         var searchSpace = BuildSearchSpace(parameters.AllowedSymbols, ["x"], parameters.UseLinearScaling, parameters.TreeLength, parameters.TreeDepth);
         var problem = new SymbolicRegressionProblem(data, Metrics.R2, searchSpace, parameters.UseLinearScaling);
@@ -138,7 +136,8 @@ public static class InteractiveSymbolicRegression
             PopulationSize = parameters.PopulationSize,
             Elites = parameters.Elites,
             Evaluator = new VisualizationCallbackEvaluator(populationCallback),
-            MaximumGenerations = parameters.Generations
+            MaximumGenerations = parameters.Generations,
+            Refiner = new NumericParameterFittingRefiner { MaximumIterations = parameters.ParameterOptimizationIterations }
         };
         var seed = parameters.Seed >= 0
             ? parameters.Seed

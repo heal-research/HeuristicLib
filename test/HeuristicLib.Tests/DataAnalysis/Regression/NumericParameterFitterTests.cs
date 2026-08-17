@@ -146,43 +146,6 @@ public sealed class NumericParameterFitterTests
     }
 
     [Fact]
-    public void FitReportsUnsupportedExpressionOperation()
-    {
-        var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
-        var expression = Sqrt(Variable("x") + Constant(1.0)).Build();
-
-        var exception = Should.Throw<NotSupportedException>(() => NumericParameterFitter.Fit(expression, data, 100, TestContext.Current.CancellationToken));
-
-        exception.Message.ShouldContain("Sqrt");
-    }
-
-    [Fact]
-    public void DetailedTryFitReportsExpressionCompilationFailure()
-    {
-        var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
-        var expression = Sqrt(Variable("x") + Constant(1.0)).Build();
-
-        var success = NumericParameterFitter.TryFit(expression, data, 100, out var fittedExpression, out var failure, TestContext.Current.CancellationToken);
-
-        success.ShouldBeFalse();
-        fittedExpression.ShouldBeNull();
-        var compilation = failure.ShouldBeOfType<NumericParameterFittingFailure.Compilation>();
-        compilation.Failure.UnsupportedOperation.ShouldBe(OpCode.Sqrt);
-    }
-
-    [Fact]
-    public void ConvenienceTryFitReturnsFalseForExpressionCompilationFailure()
-    {
-        var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
-        var expression = Sqrt(Variable("x") + Constant(1.0)).Build();
-
-        var success = NumericParameterFitter.TryFit(expression, data, 100, out var fittedExpression, TestContext.Current.CancellationToken);
-
-        success.ShouldBeFalse();
-        fittedExpression.ShouldBeNull();
-    }
-
-    [Fact]
     public void FitReportsMissingExpressionVariable()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
@@ -316,4 +279,5 @@ public sealed class NumericParameterFitterTests
 
         fittedExpression.ShouldBeSameAs(expression);
     }
+
 }

@@ -40,7 +40,7 @@ public class ExtendedSymbolicRegressionProblemTest
         Func<ExpressionTree[], ObjectiveVector[], double[][]> populationCallback =
             (trees, objectives) => objectives.Select(objective => objective.ToArray()).ToArray();
 
-        Should.Throw<NotImplementedException>(() => ExtendedSymbolicRegressionProblem.RunDefault(
+        Should.Throw<NotSupportedException>(() => ExtendedSymbolicRegressionProblem.RunDefault(
             "unused.csv",
             40,
             null,
