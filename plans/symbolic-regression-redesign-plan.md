@@ -206,7 +206,7 @@ Evaluation contract:
 - evaluators must not mutate input candidates in place or update hidden genotype state through caches
 - concrete evaluators can be problem-specific and extract required context from the typed problem instance
 - the general evaluator call shape includes the candidate, explicit random source when needed, search space, and problem, matching other operators; it does not accept symbolic-regression-specific arguments such as input variables or target variable directly
-- numeric-parameter optimization is a refiner, not evaluator configuration. The algorithm applies it after variation and before evaluation; see [symbolic-regression-constant-optimization-plan.md](symbolic-regression-constant-optimization-plan.md)
+- numeric-parameter optimization is a refiner, not evaluator configuration. The algorithm applies it after variation and before evaluation; see [symbolic-regression-parameter-fitting-plan.md](symbolic-regression-parameter-fitting-plan.md)
 - evaluation that must be visible to budgets, termination, analysis, or instrumentation goes through an evaluator operator; an operator calling `problem.Evaluate` directly is legal but invisible and therefore discouraged
 
 Stage 2 tests: problem API specs, evaluation composition, metric fixtures, no in-place evaluation mutation, evaluator contract shape, and fixed-constant behavior.
@@ -274,7 +274,7 @@ Current executable vertical slice:
 ## Stage 3.1: Constant Optimization During Evaluation
 
 The detailed design and incremental implementation sequence now live in
-[symbolic-regression-constant-optimization-plan.md](symbolic-regression-constant-optimization-plan.md).
+[symbolic-regression-parameter-fitting-plan.md](symbolic-regression-parameter-fitting-plan.md).
 
 The replacement proceeds through independently usable layers:
 

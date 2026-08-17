@@ -80,7 +80,7 @@ var mutator = PipelineMutator.Create(firstMutator, secondMutator);
 var fluentMutator = firstMutator.Then(secondMutator);
 ```
 
-`PipelineRefiner` does the same for refiners. Ordering is semantically significant and a stage may appear more than once, so `repair`, `simplification`, `constant optimization`, `simplification` is an ordinary configuration rather than a special case.
+`PipelineRefiner` does the same for refiners. Ordering is semantically significant and a stage may appear more than once, so `repair`, `simplification`, `parameter fitting`, `simplification` is an ordinary configuration rather than a special case.
 
 ```csharp
 var refiner = PipelineRefiner.Create(repair, simplification, constantOptimization);

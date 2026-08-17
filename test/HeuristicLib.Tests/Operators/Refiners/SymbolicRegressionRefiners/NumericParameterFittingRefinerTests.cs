@@ -15,7 +15,7 @@ namespace HEAL.HeuristicLib.Tests.Operators.Refiners.SymbolicRegressionRefiners;
 /// Pins constant optimization as a refiner. The role contract is candidate to candidate, so the refiner fits and
 /// returns; deciding whether the fitted expression is worth keeping belongs to a wrapping improvement check.
 /// </summary>
-public sealed class ConstantOptimizationRefinerTests
+public sealed class NumericParameterFittingRefinerTests
 {
     [Fact]
     public void RefineCandidate_FitsTheEvolvableConstantsToTheTrainingData()
@@ -23,7 +23,7 @@ public sealed class ConstantOptimizationRefinerTests
         var problem = CreateProblem();
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var refined = Refine(new ConstantOptimizationRefiner { MaximumIterations = 100 }, problem, expression);
+        var refined = Refine(new NumericParameterFittingRefiner { MaximumIterations = 100 }, problem, expression);
 
         Predictions(refined, problem).ShouldBe(Targets, tolerance: 1e-8);
     }
@@ -38,7 +38,7 @@ public sealed class ConstantOptimizationRefinerTests
         var problem = CreateProblem();
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        Refine(new ConstantOptimizationRefiner { MaximumIterations = 100 }, problem, expression);
+        Refine(new NumericParameterFittingRefiner { MaximumIterations = 100 }, problem, expression);
 
         expression.RootPoint.Child(0).Child(0).Node.ShouldBeOfType<NumericConstantExpressionNode>().Value.ShouldBe(0.25);
     }
@@ -49,7 +49,7 @@ public sealed class ConstantOptimizationRefinerTests
         var problem = CreateProblem();
         var expression = (FixedConstant(2.0) * Variable("x")).Build();
 
-        Refine(new ConstantOptimizationRefiner { MaximumIterations = 100 }, problem, expression).ShouldBeSameAs(expression);
+        Refine(new NumericParameterFittingRefiner { MaximumIterations = 100 }, problem, expression).ShouldBeSameAs(expression);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public sealed class ConstantOptimizationRefinerTests
         var problem = CreateProblem();
         var expression = (Constant(0.25) * Variable("x")).Build();
 
-        Refine(new ConstantOptimizationRefiner { MaximumIterations = 0 }, problem, expression).ShouldBeSameAs(expression);
+        Refine(new NumericParameterFittingRefiner { MaximumIterations = 0 }, problem, expression).ShouldBeSameAs(expression);
     }
 
     /// <summary>
@@ -72,13 +72,13 @@ public sealed class ConstantOptimizationRefinerTests
         var expression = (Constant(0.25) * Variable("x")).Build();
 
         Should.Throw<ArgumentOutOfRangeException>(() =>
-            Refine(new ConstantOptimizationRefiner { MaximumIterations = -1 }, problem, expression));
+            Refine(new NumericParameterFittingRefiner { MaximumIterations = -1 }, problem, expression));
     }
 
     [Fact]
     public void MaximumIterations_DefaultsToFive()
     {
-        new ConstantOptimizationRefiner().MaximumIterations.ShouldBe(5);
+        new NumericParameterFittingRefiner().MaximumIterations.ShouldBe(5);
     }
 
     /// <summary>
@@ -93,14 +93,41 @@ public sealed class ConstantOptimizationRefinerTests
         var expression = Sqrt(Constant(0.25) * Variable("x")).Build();
 
         Should.Throw<NotSupportedException>(() =>
-            Refine(new ConstantOptimizationRefiner { MaximumIterations = 100 }, problem, expression))
+            Refine(new NumericParameterFittingRefiner { MaximumIterations = 100 }, problem, expression))
             .Message.ShouldContain("Sqrt");
     }
 
     [Fact]
     public void FittingData_DefaultsToNullMeaningTheProblemTrainingData()
     {
-        new ConstantOptimizationRefiner().FittingData.ShouldBeNull();
+        new NumericParameterFittingRefiner().FittingData.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Configurations_WithEqualSettings_AreEqual()
+    {
+        var left = new NumericParameterFittingRefiner { MaximumIterations = 20 };
+        var right = new NumericParameterFittingRefiner { MaximumIterations = 20 };
+
+        left.ShouldBe(right);
+        left.GetHashCode().ShouldBe(right.GetHashCode());
+        left.ShouldNotBe(new NumericParameterFittingRefiner { MaximumIterations = 21 });
+    }
+
+    /// <summary>
+    /// A dataset takes part in configuration equality by reference, because comparing it by value would cost a pass
+    /// over every row on each comparison.
+    /// </summary>
+    [Fact]
+    public void Configurations_CompareFittingDataByReference()
+    {
+        var data = CreateProblem().TrainingData;
+
+        new NumericParameterFittingRefiner { FittingData = data }
+            .ShouldBe(new NumericParameterFittingRefiner { FittingData = data });
+
+        new NumericParameterFittingRefiner { FittingData = CreateProblem().TrainingData }
+            .ShouldNotBe(new NumericParameterFittingRefiner { FittingData = CreateProblem().TrainingData });
     }
 
     /// <summary>
@@ -116,7 +143,7 @@ public sealed class ConstantOptimizationRefinerTests
             Series<double>.FromOwnedArray("y", [5.0, 10.0]));
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var refiner = new ConstantOptimizationRefiner { MaximumIterations = 100, FittingData = subset };
+        var refiner = new NumericParameterFittingRefiner { MaximumIterations = 100, FittingData = subset };
         var refined = Refine(refiner, problem, expression);
 
         // Fitted to y = 5x on the subset, so it reproduces the subset and not the problem's y = 2x + 3.
@@ -135,7 +162,7 @@ public sealed class ConstantOptimizationRefinerTests
             (Constant(-3.0) * Variable("x") + Constant(9.0)).Build()
         ];
 
-        var refined = new ConstantOptimizationRefiner { MaximumIterations = 100 }
+        var refined = new NumericParameterFittingRefiner { MaximumIterations = 100 }
             .Refine(candidates, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
         refined.Count.ShouldBe(2);
@@ -156,7 +183,7 @@ public sealed class ConstantOptimizationRefinerTests
         var problem = CreateProblem(useLinearScaling: true);
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var refined = Refine(new ConstantOptimizationRefiner { MaximumIterations = 100 }, problem, expression);
+        var refined = Refine(new NumericParameterFittingRefiner { MaximumIterations = 100 }, problem, expression);
 
         problem.Evaluate(expression)[0].ShouldBe(0.0, tolerance: 1e-12);
         problem.Evaluate(refined)[0].ShouldBe(0.0, tolerance: 1e-12);
@@ -173,7 +200,7 @@ public sealed class ConstantOptimizationRefinerTests
         var problem = CreateProblem(useLinearScaling: true);
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var instance = new ConstantOptimizationRefiner { MaximumIterations = 100 }
+        var instance = new NumericParameterFittingRefiner { MaximumIterations = 100 }
             .WithImprovementCheck()
             .CreateExecutionInstance(new ExecutionInstanceRegistry());
 
@@ -188,7 +215,7 @@ public sealed class ConstantOptimizationRefinerTests
         var problem = CreateProblem();
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var instance = new ConstantOptimizationRefiner { MaximumIterations = 100 }
+        var instance = new NumericParameterFittingRefiner { MaximumIterations = 100 }
             .WithImprovementCheck()
             .CreateExecutionInstance(new ExecutionInstanceRegistry());
 
@@ -200,7 +227,7 @@ public sealed class ConstantOptimizationRefinerTests
     private static readonly double[] Inputs = [-2.0, -1.0, 0.0, 1.0, 2.0];
     private static readonly double[] Targets = [-1.0, 1.0, 3.0, 5.0, 7.0];
 
-    private static ExpressionTree Refine(ConstantOptimizationRefiner refiner, SymbolicRegressionProblem problem, ExpressionTree expression) =>
+    private static ExpressionTree Refine(NumericParameterFittingRefiner refiner, SymbolicRegressionProblem problem, ExpressionTree expression) =>
         refiner.RefineCandidate(expression, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
     private static double[] Predictions(ExpressionTree expression, SymbolicRegressionProblem problem) =>

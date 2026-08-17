@@ -6,43 +6,43 @@ using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.DataAnalysis.Regression;
 
-public sealed class ConstantOptimizerTests
+public sealed class NumericParameterFitterTests
 {
     [Fact]
-    public void TryOptimizeFitsEvolvableConstantsAndRebuildsTheExpression()
+    public void TryFitAdjustsEvolvableConstantsAndRebuildsTheExpression()
     {
         double[] x = [-2.0, -1.0, 0.0, 1.0, 2.0];
         double[] targets = [-1.0, 1.0, 3.0, 5.0, 7.0];
         var data = new RegressionData(new DataFrame([Series<double>.FromOwnedArray("x", x)]), Series<double>.FromOwnedArray("y", targets));
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var success = ConstantOptimizer.TryOptimize(expression, data, 100, out var optimizedExpression, out var failure, TestContext.Current.CancellationToken);
+        var success = NumericParameterFitter.TryFit(expression, data, 100, out var fittedExpression, out var failure, TestContext.Current.CancellationToken);
 
         success.ShouldBeTrue();
-        optimizedExpression.ShouldNotBeNull();
+        fittedExpression.ShouldNotBeNull();
         failure.ShouldBeNull();
-        optimizedExpression.ShouldNotBeSameAs(expression);
-        var predictions = ExpressionInterpreter.Interpret(optimizedExpression.Compile(optimize: false), data.Inputs);
+        fittedExpression.ShouldNotBeSameAs(expression);
+        var predictions = ExpressionInterpreter.Interpret(fittedExpression.Compile(optimize: false), data.Inputs);
         predictions.ShouldBe(targets, tolerance: 1e-8);
     }
 
     [Fact]
-    public void TryOptimizeFitsAnInputFreeConstantToEveryTargetRow()
+    public void TryFitAdjustsAnInputFreeConstantToEveryTargetRow()
     {
         double[] targets = [1.0, 2.0, 3.0, 4.0, 5.0];
         var data = new RegressionData(new DataFrame([new Series<double>("unused", new double[targets.Length])]), new Series<double>("y", targets));
         var expression = Constant(-1.0).Build();
 
-        var success = ConstantOptimizer.TryOptimize(expression, data, 100, out var optimizedExpression, out var failure, TestContext.Current.CancellationToken);
+        var success = NumericParameterFitter.TryFit(expression, data, 100, out var fittedExpression, out var failure, TestContext.Current.CancellationToken);
 
         success.ShouldBeTrue();
-        optimizedExpression.ShouldNotBeNull();
+        fittedExpression.ShouldNotBeNull();
         failure.ShouldBeNull();
-        ExpressionInterpreter.Interpret(optimizedExpression.Compile(optimize: false), data.Inputs).ShouldBe([3.0, 3.0, 3.0, 3.0, 3.0], tolerance: 1e-8);
+        ExpressionInterpreter.Interpret(fittedExpression.Compile(optimize: false), data.Inputs).ShouldBe([3.0, 3.0, 3.0, 3.0, 3.0], tolerance: 1e-8);
     }
 
     [Fact]
-    public void TryOptimizeLeavesFixedConstantsUnchanged()
+    public void TryFitLeavesFixedConstantsUnchanged()
     {
         double[] x = [-2.0, -1.0, 0.0, 1.0, 2.0];
         var targets = x.Select(value => 10.0 + (3.0 * value)).ToArray();
@@ -50,24 +50,24 @@ public sealed class ConstantOptimizerTests
         var expression = (FixedConstant(10.0) + Constant(0.5) * Variable("x")).Build();
         var fixedConstant = expression.RootPoint.Child(0).Node;
 
-        ConstantOptimizer.TryOptimize(expression, data, 100, out var optimizedExpression, TestContext.Current.CancellationToken).ShouldBeTrue();
+        NumericParameterFitter.TryFit(expression, data, 100, out var fittedExpression, TestContext.Current.CancellationToken).ShouldBeTrue();
 
-        optimizedExpression.ShouldNotBeNull();
-        optimizedExpression.RootPoint.Child(0).Node.ShouldBeSameAs(fixedConstant);
-        optimizedExpression.RootPoint.Child(0).Node.ShouldBeOfType<NumericConstantExpressionNode>().Value.ShouldBe(10.0);
-        ExpressionInterpreter.Interpret(optimizedExpression.Compile(optimize: false), data.Inputs).ShouldBe(targets, tolerance: 1e-8);
+        fittedExpression.ShouldNotBeNull();
+        fittedExpression.RootPoint.Child(0).Node.ShouldBeSameAs(fixedConstant);
+        fittedExpression.RootPoint.Child(0).Node.ShouldBeOfType<NumericConstantExpressionNode>().Value.ShouldBe(10.0);
+        ExpressionInterpreter.Interpret(fittedExpression.Compile(optimize: false), data.Inputs).ShouldBe(targets, tolerance: 1e-8);
     }
 
     [Fact]
-    public void RepeatedOptimizationDoesNotModifyTheSourceExpression()
+    public void RepeatedFittingDoesNotModifyTheSourceExpression()
     {
         double[] x = [-2.0, -1.0, 0.0, 1.0, 2.0];
         var targets = x.Select(value => 2.0 * value).ToArray();
         var data = new RegressionData(new DataFrame([new Series<double>("x", x)]), new Series<double>("y", targets));
         var expression = (Constant(0.5) * Variable("x")).Build();
 
-        ConstantOptimizer.TryOptimize(expression, data, 100, out var first, TestContext.Current.CancellationToken).ShouldBeTrue();
-        ConstantOptimizer.TryOptimize(expression, data, 100, out var second, TestContext.Current.CancellationToken).ShouldBeTrue();
+        NumericParameterFitter.TryFit(expression, data, 100, out var first, TestContext.Current.CancellationToken).ShouldBeTrue();
+        NumericParameterFitter.TryFit(expression, data, 100, out var second, TestContext.Current.CancellationToken).ShouldBeTrue();
 
         first.ShouldNotBeNull();
         second.ShouldNotBeNull();
@@ -77,50 +77,50 @@ public sealed class ConstantOptimizerTests
     }
 
     [Fact]
-    public void TryOptimizePreservesASuccessfulNonFiniteResult()
+    public void TryFitPreservesASuccessfulNonFiniteResult()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("unused", [1.0, 2.0])]), new Series<double>("y", [0.0, 0.0]));
         var expression = (Constant(0.0) / FixedConstant(0.0)).Build();
 
-        var success = ConstantOptimizer.TryOptimize(expression, data, 10, out var optimizedExpression, out var failure, TestContext.Current.CancellationToken);
+        var success = NumericParameterFitter.TryFit(expression, data, 10, out var fittedExpression, out var failure, TestContext.Current.CancellationToken);
 
         success.ShouldBeTrue();
-        optimizedExpression.ShouldNotBeNull();
+        fittedExpression.ShouldNotBeNull();
         failure.ShouldBeNull();
-        ExpressionInterpreter.Interpret(optimizedExpression.Compile(optimize: false), data.Inputs).ShouldAllBe(value => double.IsNaN(value));
+        ExpressionInterpreter.Interpret(fittedExpression.Compile(optimize: false), data.Inputs).ShouldAllBe(value => double.IsNaN(value));
     }
 
     [Fact]
-    public void TryOptimizeReturnsTheOriginalExpressionWhenMaximumIterationsIsZero()
+    public void TryFitReturnsTheOriginalExpressionWhenMaximumIterationsIsZero()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
         var expression = Sqrt(Variable("unbound") + Constant(1.0)).Build();
 
-        var success = ConstantOptimizer.TryOptimize(expression, data, 0, out var optimizedExpression, out var failure, TestContext.Current.CancellationToken);
+        var success = NumericParameterFitter.TryFit(expression, data, 0, out var fittedExpression, out var failure, TestContext.Current.CancellationToken);
 
         success.ShouldBeTrue();
-        optimizedExpression.ShouldBeSameAs(expression);
+        fittedExpression.ShouldBeSameAs(expression);
         failure.ShouldBeNull();
     }
 
     [Fact]
-    public void TryOptimizePreservesAMacroAroundAnOptimizedConstant()
+    public void TryFitPreservesAMacroAroundAFittedParameter()
     {
         double[] x = [-2.0, -1.0, 0.0, 1.0, 2.0];
         var targets = x.Select(value => 1.0 / (1.0 + Math.Exp(-1.5 * value))).ToArray();
         var data = new RegressionData(new DataFrame([new Series<double>("x", x)]), new Series<double>("y", targets));
         var expression = Sigmoid(Constant(0.2) * Variable("x")).Build();
 
-        ConstantOptimizer.TryOptimize(expression, data, 100, out var optimizedExpression, TestContext.Current.CancellationToken).ShouldBeTrue();
+        NumericParameterFitter.TryFit(expression, data, 100, out var fittedExpression, TestContext.Current.CancellationToken).ShouldBeTrue();
 
-        optimizedExpression.ShouldNotBeNull();
-        optimizedExpression.Root.Symbol.ShouldBeSameAs(Symbols.Sigmoid);
+        fittedExpression.ShouldNotBeNull();
+        fittedExpression.Root.Symbol.ShouldBeSameAs(Symbols.Sigmoid);
         expression.RootPoint.Child(0).Child(0).Node.ShouldBeOfType<NumericConstantExpressionNode>().Value.ShouldBe(0.2);
-        ExpressionInterpreter.Interpret(optimizedExpression.Compile(optimize: false), data.Inputs).ShouldBe(targets, tolerance: 1e-8);
+        ExpressionInterpreter.Interpret(fittedExpression.Compile(optimize: false), data.Inputs).ShouldBe(targets, tolerance: 1e-8);
     }
 
     [Fact]
-    public void TryOptimizeTreatsReferenceSharedConstantsAtDifferentPathsAsIndependentParameters()
+    public void TryFitTreatsReferenceSharedConstantsAtDifferentPathsAsIndependentParameters()
     {
         double[] x = [-2.0, -1.0, 0.0, 1.0, 2.0];
         var targets = x.Select(value => (2.0 * value) + (3.0 * value * value)).ToArray();
@@ -133,187 +133,187 @@ public sealed class ConstantOptimizerTests
         var quadraticTerm = new BinaryExpressionNode(Symbols.Multiplication, sharedConstant, squaredVariable);
         var expression = new ExpressionTree(new BinaryExpressionNode(Symbols.Addition, linearTerm, quadraticTerm));
 
-        ConstantOptimizer.TryOptimize(expression, data, 100, out var optimizedExpression, TestContext.Current.CancellationToken).ShouldBeTrue();
+        NumericParameterFitter.TryFit(expression, data, 100, out var fittedExpression, TestContext.Current.CancellationToken).ShouldBeTrue();
 
-        optimizedExpression.ShouldNotBeNull();
-        var linearConstant = optimizedExpression.RootPoint.Child(0).Child(0).Node.ShouldBeOfType<NumericConstantExpressionNode>();
-        var quadraticConstant = optimizedExpression.RootPoint.Child(1).Child(0).Node.ShouldBeOfType<NumericConstantExpressionNode>();
+        fittedExpression.ShouldNotBeNull();
+        var linearConstant = fittedExpression.RootPoint.Child(0).Child(0).Node.ShouldBeOfType<NumericConstantExpressionNode>();
+        var quadraticConstant = fittedExpression.RootPoint.Child(1).Child(0).Node.ShouldBeOfType<NumericConstantExpressionNode>();
         linearConstant.ShouldNotBeSameAs(quadraticConstant);
         linearConstant.Value.ShouldBe(2.0, 1e-8);
         quadraticConstant.Value.ShouldBe(3.0, 1e-8);
         sharedConstant.Value.ShouldBe(0.25);
-        ExpressionInterpreter.Interpret(optimizedExpression.Compile(optimize: false), data.Inputs).ShouldBe(targets, tolerance: 1e-8);
+        ExpressionInterpreter.Interpret(fittedExpression.Compile(optimize: false), data.Inputs).ShouldBe(targets, tolerance: 1e-8);
     }
 
     [Fact]
-    public void OptimizeReportsUnsupportedExpressionOperation()
+    public void FitReportsUnsupportedExpressionOperation()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
         var expression = Sqrt(Variable("x") + Constant(1.0)).Build();
 
-        var exception = Should.Throw<NotSupportedException>(() => ConstantOptimizer.Optimize(expression, data, 100, TestContext.Current.CancellationToken));
+        var exception = Should.Throw<NotSupportedException>(() => NumericParameterFitter.Fit(expression, data, 100, TestContext.Current.CancellationToken));
 
         exception.Message.ShouldContain("Sqrt");
     }
 
     [Fact]
-    public void DetailedTryOptimizeReportsExpressionCompilationFailure()
+    public void DetailedTryFitReportsExpressionCompilationFailure()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
         var expression = Sqrt(Variable("x") + Constant(1.0)).Build();
 
-        var success = ConstantOptimizer.TryOptimize(expression, data, 100, out var optimizedExpression, out var failure, TestContext.Current.CancellationToken);
+        var success = NumericParameterFitter.TryFit(expression, data, 100, out var fittedExpression, out var failure, TestContext.Current.CancellationToken);
 
         success.ShouldBeFalse();
-        optimizedExpression.ShouldBeNull();
-        var compilation = failure.ShouldBeOfType<ConstantOptimizationFailure.Compilation>();
+        fittedExpression.ShouldBeNull();
+        var compilation = failure.ShouldBeOfType<NumericParameterFittingFailure.Compilation>();
         compilation.Failure.UnsupportedOperation.ShouldBe(OpCode.Sqrt);
     }
 
     [Fact]
-    public void ConvenienceTryOptimizeReturnsFalseForExpressionCompilationFailure()
+    public void ConvenienceTryFitReturnsFalseForExpressionCompilationFailure()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
         var expression = Sqrt(Variable("x") + Constant(1.0)).Build();
 
-        var success = ConstantOptimizer.TryOptimize(expression, data, 100, out var optimizedExpression, TestContext.Current.CancellationToken);
+        var success = NumericParameterFitter.TryFit(expression, data, 100, out var fittedExpression, TestContext.Current.CancellationToken);
 
         success.ShouldBeFalse();
-        optimizedExpression.ShouldBeNull();
+        fittedExpression.ShouldBeNull();
     }
 
     [Fact]
-    public void OptimizeReportsMissingExpressionVariable()
+    public void FitReportsMissingExpressionVariable()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
         var expression = (Variable("missing") + Constant(1.0)).Build();
 
-        var exception = Should.Throw<ArgumentException>(() => ConstantOptimizer.Optimize(expression, data, 100, TestContext.Current.CancellationToken));
+        var exception = Should.Throw<ArgumentException>(() => NumericParameterFitter.Fit(expression, data, 100, TestContext.Current.CancellationToken));
 
         exception.ParamName.ShouldBe("data");
         exception.Message.ShouldContain("missing");
     }
 
     [Fact]
-    public void DetailedTryOptimizeReportsVariableBindingFailure()
+    public void DetailedTryFitReportsVariableBindingFailure()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
         var expression = (Variable("missing") + Constant(1.0)).Build();
 
-        var success = ConstantOptimizer.TryOptimize(expression, data, 100, out var optimizedExpression, out var failure, TestContext.Current.CancellationToken);
+        var success = NumericParameterFitter.TryFit(expression, data, 100, out var fittedExpression, out var failure, TestContext.Current.CancellationToken);
 
         success.ShouldBeFalse();
-        optimizedExpression.ShouldBeNull();
-        var binding = failure.ShouldBeOfType<ConstantOptimizationFailure.VariableBinding>();
+        fittedExpression.ShouldBeNull();
+        var binding = failure.ShouldBeOfType<NumericParameterFittingFailure.VariableBinding>();
         binding.Failure.VariableName.ShouldBe("missing");
         binding.Failure.Reason.ShouldBe(VariableBindingFailureReason.Missing);
     }
 
     [Fact]
-    public void ConvenienceTryOptimizeReturnsFalseForVariableBindingFailure()
+    public void ConvenienceTryFitReturnsFalseForVariableBindingFailure()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
         var expression = (Variable("missing") + Constant(1.0)).Build();
 
-        var success = ConstantOptimizer.TryOptimize(expression, data, 100, out var optimizedExpression, TestContext.Current.CancellationToken);
+        var success = NumericParameterFitter.TryFit(expression, data, 100, out var fittedExpression, TestContext.Current.CancellationToken);
 
         success.ShouldBeFalse();
-        optimizedExpression.ShouldBeNull();
+        fittedExpression.ShouldBeNull();
     }
 
     [Fact]
-    public void OptimizeReportsAnIncompatibleExpressionVariableType()
+    public void FitReportsAnIncompatibleExpressionVariableType()
     {
         var data = new RegressionData(new DataFrame([new Series<int>("x", [1])]), new Series<double>("y", [1.0]));
         var expression = (Variable("x") + Constant(1.0)).Build();
 
-        var exception = Should.Throw<ArgumentException>(() => ConstantOptimizer.Optimize(expression, data, 100, TestContext.Current.CancellationToken));
+        var exception = Should.Throw<ArgumentException>(() => NumericParameterFitter.Fit(expression, data, 100, TestContext.Current.CancellationToken));
 
         exception.ParamName.ShouldBe("data");
         exception.Message.ShouldContain("not a double series");
     }
 
     [Fact]
-    public void DetailedTryOptimizeReportsAnIncompatibleVariableBindingFailure()
+    public void DetailedTryFitReportsAnIncompatibleVariableBindingFailure()
     {
         var data = new RegressionData(new DataFrame([new Series<int>("x", [1])]), new Series<double>("y", [1.0]));
         var expression = (Variable("x") + Constant(1.0)).Build();
 
-        var success = ConstantOptimizer.TryOptimize(expression, data, 100, out var optimizedExpression, out var failure, TestContext.Current.CancellationToken);
+        var success = NumericParameterFitter.TryFit(expression, data, 100, out var fittedExpression, out var failure, TestContext.Current.CancellationToken);
 
         success.ShouldBeFalse();
-        optimizedExpression.ShouldBeNull();
-        var binding = failure.ShouldBeOfType<ConstantOptimizationFailure.VariableBinding>();
+        fittedExpression.ShouldBeNull();
+        var binding = failure.ShouldBeOfType<NumericParameterFittingFailure.VariableBinding>();
         binding.Failure.VariableName.ShouldBe("x");
         binding.Failure.Reason.ShouldBe(VariableBindingFailureReason.IncompatibleType);
     }
 
     [Fact]
-    public void OptimizeReportsNumericalOptimizationFailure()
+    public void FitReportsNumericalOptimizationFailure()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
         var expression = (FixedConstant(1.0) / Constant(0.0)).Build();
 
-        var exception = Should.Throw<InvalidOperationException>(() => ConstantOptimizer.Optimize(expression, data, 10, TestContext.Current.CancellationToken));
+        var exception = Should.Throw<InvalidOperationException>(() => NumericParameterFitter.Fit(expression, data, 10, TestContext.Current.CancellationToken));
 
-        exception.Message.ShouldStartWith("Numerical constant optimization failed:");
+        exception.Message.ShouldStartWith("Numeric parameter fitting failed:");
     }
 
     [Fact]
-    public void DetailedTryOptimizeReportsNumericalOptimizationFailure()
+    public void DetailedTryFitReportsNumericalOptimizationFailure()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
         var expression = (FixedConstant(1.0) / Constant(0.0)).Build();
 
-        var success = ConstantOptimizer.TryOptimize(expression, data, 10, out var optimizedExpression, out var failure, TestContext.Current.CancellationToken);
+        var success = NumericParameterFitter.TryFit(expression, data, 10, out var fittedExpression, out var failure, TestContext.Current.CancellationToken);
 
         success.ShouldBeFalse();
-        optimizedExpression.ShouldBeNull();
-        failure.ShouldBeOfType<ConstantOptimizationFailure.NumericalOptimization>().Failure.Message.ShouldNotBeNullOrWhiteSpace();
+        fittedExpression.ShouldBeNull();
+        failure.ShouldBeOfType<NumericParameterFittingFailure.NumericalOptimization>().Failure.Message.ShouldNotBeNullOrWhiteSpace();
     }
 
     [Fact]
-    public void ConvenienceTryOptimizeReturnsFalseForNumericalOptimizationFailure()
+    public void ConvenienceTryFitReturnsFalseForNumericalOptimizationFailure()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
         var expression = (FixedConstant(1.0) / Constant(0.0)).Build();
 
-        var success = ConstantOptimizer.TryOptimize(expression, data, 10, out var optimizedExpression, TestContext.Current.CancellationToken);
+        var success = NumericParameterFitter.TryFit(expression, data, 10, out var fittedExpression, TestContext.Current.CancellationToken);
 
         success.ShouldBeFalse();
-        optimizedExpression.ShouldBeNull();
+        fittedExpression.ShouldBeNull();
     }
 
     [Fact]
-    public void TryOptimizeRejectsInvalidArgumentsBeforeAnIdentityShortcut()
+    public void TryFitRejectsInvalidArgumentsBeforeAnIdentityShortcut()
     {
         var nonEmptyData = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
         var emptyData = new RegressionData(new DataFrame([new Series<double>("x", [])]), new Series<double>("y", []));
         var expression = FixedConstant(1.0).Build();
 
-        Should.Throw<ArgumentOutOfRangeException>(() => ConstantOptimizer.TryOptimize(expression, nonEmptyData, -1, out _)).ParamName.ShouldBe("maximumIterations");
-        Should.Throw<ArgumentException>(() => ConstantOptimizer.TryOptimize(expression, emptyData, 10, out _, out _)).ParamName.ShouldBe("data");
+        Should.Throw<ArgumentOutOfRangeException>(() => NumericParameterFitter.TryFit(expression, nonEmptyData, -1, out _)).ParamName.ShouldBe("maximumIterations");
+        Should.Throw<ArgumentException>(() => NumericParameterFitter.TryFit(expression, emptyData, 10, out _, out _)).ParamName.ShouldBe("data");
     }
 
     [Fact]
-    public void TryOptimizePropagatesCancellationBeforeAnIdentityShortcut()
+    public void TryFitPropagatesCancellationBeforeAnIdentityShortcut()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
         var expression = FixedConstant(1.0).Build();
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
-        Should.Throw<OperationCanceledException>(() => ConstantOptimizer.TryOptimize(expression, data, 10, out _, out _, cancellation.Token));
+        Should.Throw<OperationCanceledException>(() => NumericParameterFitter.TryFit(expression, data, 10, out _, out _, cancellation.Token));
     }
 
     [Fact]
-    public void TryOptimizeReturnsTheSameExpressionWhenThereAreNoEvolvableConstants()
+    public void TryFitReturnsTheSameExpressionWhenThereAreNoEvolvableConstants()
     {
         var data = new RegressionData(new DataFrame([new Series<double>("x", [1.0])]), new Series<double>("y", [1.0]));
         var expression = Sqrt(Variable("unbound")).Build();
 
-        ConstantOptimizer.TryOptimize(expression, data, 100, out var optimizedExpression, TestContext.Current.CancellationToken).ShouldBeTrue();
+        NumericParameterFitter.TryFit(expression, data, 100, out var fittedExpression, TestContext.Current.CancellationToken).ShouldBeTrue();
 
-        optimizedExpression.ShouldBeSameAs(expression);
+        fittedExpression.ShouldBeSameAs(expression);
     }
 }

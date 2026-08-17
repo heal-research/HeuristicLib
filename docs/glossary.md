@@ -244,13 +244,23 @@ Status: `Canonical`
 
 An expression metric evaluates a symbolic expression's genotype without requiring prediction data. Examples include expression length, variable occurrence count, and structural complexity. A symbolic-regression problem may combine expression metrics with regression metrics in one objective vector.
 
-### Constant optimization
+### Numeric parameter fitting
 
 Status: `Canonical`
 
-Constant optimization fits the optimizable numeric constants of a symbolic expression to supervised regression data and returns an immutable expression containing the fitted values. Numerical optimization treats those constants as parameters, but parameter optimization is the mechanism rather than the symbolic-regression capability.
+Numeric parameter fitting fits the optimizable numeric values of a symbolic expression to supervised regression data by nonlinear least squares, and returns an immutable expression containing the fitted values.
 
-Each path from an expression root identifies a distinct constant occurrence. Two paths remain distinct occurrences even when they reference the same immutable node object, so constant optimization treats them as separate parameters.
+The fitted values are parameters of the model and constants of the expression: constant within one evaluation, which is why the genotype calls them constants, and free variables of the fit, which is why the numerics call them parameters. They are not restricted to constant leaves, since a fitted value may also appear as an exponent, an offset or a divisor.
+
+Each path from an expression root identifies a distinct constant occurrence. Two paths remain distinct occurrences even when they reference the same immutable node object, so numeric parameter fitting treats them as separate parameters.
+
+Related terms:
+
+- `Constant optimization`: `Alias`. The term used by PySR, HeuristicLab, and part of the symbolic-regression literature. Use it in prose that orients readers arriving from those tools. Avoid it in API names, and avoid it where fitted values are not constant leaves.
+- `Parameter identification`, `parameter optimization`: `Alias`. The terms used in the research literature for the same capability.
+- `Coefficient optimization`: `Avoid`. A coefficient is a multiplicative factor, which is narrower than the values this fits, and linear scaling is the operation in HeuristicLib that genuinely fits coefficients.
+
+See also: Expression metric, Refiner, Regression metric.
 
 ## Algorithms and Operators
 

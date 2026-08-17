@@ -7,10 +7,15 @@ using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 namespace HEAL.HeuristicLib.Operators.Refiners.SymbolicRegressionRefiners;
 
 /// <summary>
-/// Fits the evolvable constants of an expression to the problem's training data with Levenberg-Marquardt, and returns
+/// Fits the numeric parameters of an expression to the problem's training data by nonlinear least squares, and returns
 /// the expression rebuilt with the fitted values.
 /// </summary>
 /// <remarks>
+/// <para>
+/// The parameters are the occurrences of <see cref="EvolvableConstantSymbol"/> in the expression. They are constant
+/// within one evaluation, which is why the genotype calls them constants, and free variables of the fitted model,
+/// which is why the numerics call them parameters. PySR and HeuristicLab call this capability constant optimization.
+/// </para>
 /// <para>
 /// The fit minimizes the mean squared error against the raw training targets, which need not be the problem's
 /// configured objective. The fitted expression is therefore returned without being compared to the original. Wrap this
@@ -27,7 +32,7 @@ namespace HEAL.HeuristicLib.Operators.Refiners.SymbolicRegressionRefiners;
 /// when it evaluates.
 /// </para>
 /// </remarks>
-public sealed record ConstantOptimizationRefiner
+public sealed record NumericParameterFittingRefiner
     : SingleCandidateRefiner<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
 {
     /// <summary>
@@ -37,7 +42,7 @@ public sealed record ConstantOptimizationRefiner
     public int MaximumIterations { get; init; } = 5;
 
     /// <summary>
-    /// The data the constants are fitted to. A <see langword="null"/> value fits to the problem's training data.
+    /// The data the parameters are fitted to. A <see langword="null"/> value fits to the problem's training data.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -60,17 +65,17 @@ public sealed record ConstantOptimizationRefiner
 
     public override ExpressionTree RefineCandidate(ExpressionTree candidate, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, SymbolicRegressionProblem problem)
     {
-        if (ConstantOptimizer.TryOptimize(candidate, FittingData ?? problem.TrainingData, MaximumIterations, out var optimizedExpression, out var failure))
+        if (NumericParameterFitter.TryFit(candidate, FittingData ?? problem.TrainingData, MaximumIterations, out var fittedExpression, out var failure))
         {
-            return optimizedExpression;
+            return fittedExpression;
         }
 
         // A solve that does not converge is an ordinary outcome for one candidate among many, so that candidate is
         // simply left as it was. The other failures are not per-candidate: an undifferentiable operation or an unbound
         // variable follows from the search space and the training data, so every affected candidate fails identically
         // and skipping them silently would hide the misconfiguration for a whole run.
-        return failure is ConstantOptimizationFailure.NumericalOptimization
+        return failure is NumericParameterFittingFailure.NumericalOptimization
             ? candidate
-            : throw ConstantOptimizer.CreateException(failure, nameof(problem));
+            : throw NumericParameterFitter.CreateException(failure, nameof(problem));
     }
 }
