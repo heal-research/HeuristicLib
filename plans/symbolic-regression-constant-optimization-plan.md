@@ -650,25 +650,30 @@ Dominance is otherwise the stricter criterion, but only while the total order is
 consistent with it — nothing validates weights, so a negative weight reverses the
 implication. Each case is pinned by a test.
 
-**Blocker for RF-7.** `ObjectiveVector.CompareTo` opens with
-`if (ReferenceEquals(this, other)) return 0;`, and `0` is `DominanceRelation.Dominates`
-rather than `Equivalent`, so a vector reports that it dominates itself. `Dominance`
-and `Default` therefore accept a non-improvement whenever both evaluations return the
-same `ObjectiveVector` instance, which a shared `CachingEvaluator` makes likely — and
-that is exactly the configuration the composition examples above recommend. This is a
-pre-existing defect that also reaches `DominationCalculator`; `ParetoFront` happens to
-guard against it by excluding self-comparisons first. Fix it before RF-7 consumes
-these criteria.
+**Blocker for RF-7 — resolved.** `ObjectiveVector.CompareTo` opened with
+`if (ReferenceEquals(this, other)) return 0;`, and `0` was `DominanceRelation.Dominates`,
+so a vector reported that it dominated itself. `Dominance` and `Default` therefore
+accepted a non-improvement whenever both evaluations returned the same `ObjectiveVector`
+instance, which a shared `CachingEvaluator` makes likely — exactly the configuration the
+composition examples above recommend. It also reached `DominationCalculator`;
+`ParetoFront` happened to guard against it by excluding self-comparisons first.
 
-**Second blocker for RF-7.** Every order-based criterion ranks through
+The fast path was unnecessary: for a self-comparison the loop already reaches
+componentwise equality on its own, including for `NaN`, and skipping it also skipped the
+argument validation. It now sits below the argument checks and returns the named
+`DominanceRelation.Equal`. See [Objective ordering outcome](#objective-ordering-outcome).
+
+**Second blocker for RF-7 — resolved.** Every order-based criterion ranked through
 `double.CompareTo`, which orders `NaN` below every number, so `StrictlyBetter`,
-`NotWorse`, `Dominance` and `Default` all accept a refinement that produced a `NaN`
-objective value as the best possible outcome. Constant optimization deliberately
-propagates non-finite results, so this is on the direct path of the first refiner that
-will use these criteria. The threshold criteria are already safe, because a comparison
-against a `NaN` margin is false. Decide before RF-7 whether the criteria reject
-non-finite objective values themselves or whether `ObjectiveVector` ordering is fixed
-at its root; the behavior is pinned by a test either way.
+`NotWorse`, `Dominance` and `Default` all accepted a refinement that produced a `NaN`
+objective value as the best possible outcome. The threshold criteria were already safe,
+because a comparison against a `NaN` margin is false.
+
+Fixed at its root rather than in the criteria: ordering is now owned by
+`ObjectiveValue.Compare`, which ranks `NaN` worst *before* the objective direction is
+applied. Applying the direction first was the actual defect — it flipped `NaN` along with
+everything else, making it best when minimizing and worst when maximizing. That
+asymmetry is why the behavior was never deliberate.
 
 Refinement failure inside the inner refiner returns the original candidate
 unchanged; the improvement check never converts a failure into a worse candidate.
@@ -1102,11 +1107,95 @@ Findings:
   evaluations count against the budget that decides when the run stops. A refiner left on its
   inherited default holds a different instance and stays outside the budget. Both directions
   are pinned by tests, and [operator-composition.md](../docs/operator-composition.md) documents them.
-- **The two blockers recorded above are unchanged and still open.** Self-dominance makes
-  `Dominance` and `Default` accept a non-improvement whenever both evaluations return the
-  same `ObjectiveVector` instance, and every order-based criterion treats `NaN` as the best
-  possible value. Neither is triggered by the shipped tests, but both are on the direct path
-  of RF-6 constant optimization.
+- **The two blockers recorded above are now resolved.** Both were fixed in the objective
+  ordering layer rather than in the criteria; see
+  [Objective ordering outcome](#objective-ordering-outcome).
+
+### Objective ordering outcome
+
+The two RF-7 blockers were both defects in how objective values are ordered, so both were
+fixed at that layer and the criteria were left unchanged.
+
+- **One ordering primitive.** `ObjectiveValue.Compare(left, right, direction)` is now the
+  single place objective values are ordered; a negative result means `left` is better.
+  `ObjectiveVector.CompareTo`, `ObjectiveValue.CompareTo`, `SingleObjectiveComparer`,
+  `LexicographicComparer`, `WeightedSumComparer` and `HyperVolumeCalculator.DimensionComparer`
+  all delegate to it. Five of those six previously ranked `NaN` best when minimizing and
+  worst when maximizing.
+- **`NaN` is the worst value in both directions**, ranked before the direction is applied.
+  The infinities remain ordinary participants and therefore swap roles with the direction:
+  negative infinity is the best value of a minimized objective and the worst ordered value
+  of a maximized one. Only `NaN` sits outside the order.
+- **`NaN` was deliberately not made `Incomparable`.** `IComparer<ObjectiveVector>` has no
+  incomparable result, so that choice would give `NaN` one meaning under dominance and
+  another under a total order. It would also make a `NaN` candidate non-dominated, so
+  NSGA-II would preserve it in the first front, and it would make repairing a `NaN`
+  candidate back to a finite value invisible to `ImprovementCheckingRefiner` — which is
+  exactly the case RF-6 constant optimization needs to work.
+- **`DominanceRelation` reordered and renamed.** `Incomparable` is now the zero value, so a
+  defaulted value neither promotes nor eliminates a candidate; `Equivalent` became `Equal`,
+  which states the componentwise equality the code actually checks. Members are declared in
+  order of increasing strength of verdict and carry the literature notation (`‖`, `∼`, `≺`)
+  in their documentation. Note that `Equal` is deliberately *not* covered by `Incomparable`,
+  unlike HeuristicLab's single `IsNonDominated`.
+- **`BestValue`/`WorstValue` are now `∓∞`/`±∞`** rather than `double.MinValue`/`MaxValue`, so
+  they are genuine bounds of the ordered range — an objective value can legitimately be
+  infinite, and an extreme finite sentinel is beaten by one. They had no production callers.
+  `RegressionMetricExtensions.ToFinite` needs a finite replacement and now derives one
+  privately, guarded by the existing `double.IsFinite` check.
+
+Findings:
+
+- **The self-dominance fast path was pure overhead.** For a self-comparison the loop reaches
+  componentwise equality unaided, `NaN` included, so the shortcut only skipped work — and
+  skipped the argument validation with it.
+- **`MaxValue` never offered the arithmetic safety it appeared to.** `MaxValue - MinValue`
+  is `3.595e308`, which overflows to `+∞`, so range and normalization computations break
+  identically under both choices. The infinities also already enter through real objective
+  values, so a finite sentinel protects nothing.
+- **Three pre-existing arithmetic hazards were found and fixed alongside.** None was caused
+  by the ordering changes; all three were reachable from a non-finite objective value, which
+  symbolic regression produces.
+  - `WeightedSumComparer` turned a zero weight on an infinite objective into `0 × ∞ = NaN`
+    and ranked the vector last, so excluding an objective could decide the ranking. A zero
+    weight now contributes nothing. Its `directedWeights` are also hoisted into the
+    constructor: they are loop-invariant but were rebuilt per comparison, and with the
+    `RealVector` operators that cost six allocations on every call inside a sort.
+  - `ProportionalSelector` propagated `NaN` through `Math.Min`/`Math.Max` into both window
+    bounds, so one unusable fitness made every selection weight `NaN`. Bounds are now taken
+    over the ordered values only, a `NaN` fitness gets no share, an infinitely bad fitness is
+    clamped to zero instead of a negative share, and an infinite share restricts the draw to
+    the infinite entries uniformly, which is its limit.
+  - `CrowdingDistance` sorted `NaN` first through `IndexedComparer`, making it a boundary
+    point with infinite crowding distance — so NSGA-II preferred it in a tie — while the
+    resulting `NaN` range defeated the `range <= 0.0` guard and produced `NaN` distances for
+    the whole dimension. `NaN` now sorts last and is excluded from the dimension, and a
+    non-finite range skips it.
+- **The roulette wheel had two defects of its own**, both surfaced by the tests for the
+  above. Its cumulative comparison was exclusive, so a candidate with no share was selected
+  whenever the draw landed exactly on its cumulative sum — including a draw of zero against a
+  leading zero share. Shares are also rescaled by the largest one before the draw, because
+  shares derived from very large fitnesses summed to infinity, and `0 × ∞` then made the draw
+  itself `NaN`.
+
+`HyperVolumeCalculator` seeded its region bound with a magic `1E15`, leaving any objective
+value above it untracked. It is the first consumer of the new sentinel and now seeds with
+`ObjectiveValue.WorstValue(ObjectiveDirection.Minimize)`; that path is minimization-only and
+already returns early for an empty front, so the seed is always overwritten.
+
+#### Deferred infinity arithmetic
+
+Two places still produce `NaN` from arithmetic on genuinely infinite objective values. Both
+are cases where the arithmetic gives the answer it should, so neither is a defect on the
+terms above, and both are deferred to their own branch rather than widening this one:
+
+- `ObjectiveVector.Add` computes `∞ + (−∞)`, which is undefined.
+- `OpenEndedRelevantAllelesPreservingGeneticAlgorithm.Combine` interpolates two objective
+  vectors; its `0 × ∞` endpoints are already short-circuited, but an infinite objective at an
+  intermediate strictness still propagates.
+
+Validation: Release build clean across the solution; 2169 tests pass across all four test
+projects; `dotnet format` whitespace and analyzer checks are clean.
 
 ### Refinement checkpoints
 
@@ -1117,8 +1206,8 @@ Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted
 | RF-0 Design contract | Accepted | Document the `Candidate → Candidate` refiner role as the single refinement mechanism, conventional algorithm placement, the visibility rule for operator-issued evaluation, composition topologies, transient-refinement evaluation, the improvement-checking refiner with its nullable evaluator and comparer, the fitness-only evaluator contract, the composition examples, and deferred producer wrappers and artifacts. No source code. |
 | RF-1 Development-branch integration | Accepted | Merge `dev` into the working branch, reconcile and review its operator-base improvements, run appropriate validation, and stop before implementing Refiner. Done; see [Development-branch integration outcome](#development-branch-integration-outcome). |
 | RF-2 Evaluator contract simplification | Accepted | Change `IEvaluatorInstance.Evaluate` to return `IReadOnlyList<ObjectiveVector>`, migrate the evaluator wrappers, built-in algorithms, and analysis hooks, remove `IteratedEvaluator`, and remove the candidate-substitution caveat from `CachingEvaluator`. `EvaluatedCandidate<TCandidate>` is retained as the population and state pairing type; only the evaluator stops producing it. `IEvaluatorObserver.AfterEvaluation` becomes `(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, ...)`, adopting the output-first parameter order that the other seven observer interfaces already use and that evaluation was the sole exception to. |
-| RF-3 Refiner operator model | Awaiting review | Implement the general refiner configuration and execution-instance contracts, authoring bases in the three paths and three arities, `SingleCandidateRefiner.RefineCandidate`, concurrency, identity behavior, validation, and focused contract tests. Delivered together with RF-4; see [Refiner operator model outcome](#refiner-operator-model-outcome). |
-| RF-4 Refiner composition topologies | Awaiting review | Add the pipeline, iterated, choose-one, multi, wrapping, and observable refiner topologies; design and add the evaluator composition for transient Baldwinian refinement; restore iterated refinement after RF-2 removes `IteratedEvaluator`; and cover order-significant, repeated-stage, no-write-back, and evaluation-accounting behavior. Delivered together with RF-3; see [Refiner operator model outcome](#refiner-operator-model-outcome). |
+| RF-3 Refiner operator model | Accepted | Implement the general refiner configuration and execution-instance contracts, authoring bases in the three paths and three arities, `SingleCandidateRefiner.RefineCandidate`, concurrency, identity behavior, validation, and focused contract tests. Delivered together with RF-4; see [Refiner operator model outcome](#refiner-operator-model-outcome). |
+| RF-4 Refiner composition topologies | Accepted | Add the pipeline, iterated, choose-one, multi, wrapping, and observable refiner topologies; design and add the evaluator composition for transient Baldwinian refinement; restore iterated refinement after RF-2 removes `IteratedEvaluator`; and cover order-significant, repeated-stage, no-write-back, and evaluation-accounting behavior. Delivered together with RF-3; see [Refiner operator model outcome](#refiner-operator-model-outcome). |
 | RF-5 Explicit algorithm integration | Pending | Add configurable refinement to applicable built-in algorithms after creation and final variation but before evaluation, without re-refining carried evaluated candidates. |
 | RF-6 Constant-optimization refiner | Pending | Adapt symbolic-regression constant optimization to the general refiner role and define its failure behavior without adding problem-objective retention. |
 | RF-7 Improvement-checking refiner | Awaiting review | Implement the refiner with its `Evaluator` and `Criterion` settings, the `IImprovementCriterion` strategy with its strict-improvement, not-worse, dominance and threshold implementations, and original-on-failure behavior. Delivered alongside RF-3/RF-4; see [Improvement-checking refiner outcome](#improvement-checking-refiner-outcome). |

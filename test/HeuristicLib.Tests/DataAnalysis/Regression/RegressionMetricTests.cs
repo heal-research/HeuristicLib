@@ -98,10 +98,15 @@ public sealed class RegressionMetricTests
             .ShouldBe(Math.Sqrt(8.5), tolerance: 1e-12);
     }
 
+    /// <summary>
+    /// The replacement is the worst <em>finite</em> value, which is deliberately not
+    /// <see cref="ObjectiveValue.WorstValue"/>: that is an infinity, and handing downstream arithmetic a finite number
+    /// is the entire purpose of this metric.
+    /// </summary>
     [Theory]
     [InlineData(ObjectiveDirection.Minimize, double.MaxValue)]
     [InlineData(ObjectiveDirection.Maximize, double.MinValue)]
-    public void ToFinite_ReplacesNonFiniteResultsWithObjectiveWorst(
+    public void ToFinite_ReplacesNonFiniteResultsWithTheWorstFiniteValue(
         ObjectiveDirection direction,
         double expected)
     {
@@ -109,6 +114,9 @@ public sealed class RegressionMetricTests
 
         metric.Evaluate([1.0], [1.0]).ShouldBe(expected);
         metric.Direction.ShouldBe(direction);
+
+        double.IsFinite(metric.Evaluate([1.0], [1.0])).ShouldBeTrue();
+        double.IsFinite(ObjectiveValue.WorstValue(direction).Value).ShouldBeFalse();
     }
 
     [Fact]

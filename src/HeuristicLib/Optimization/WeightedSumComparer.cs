@@ -1,11 +1,11 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-
 namespace HEAL.HeuristicLib.Optimization;
 
+/// <summary>
+/// Orders objective vectors by their weighted sum. A zero weight excludes its objective from the comparison.
+/// </summary>
 public class WeightedSumComparer : IComparer<ObjectiveVector>
 {
-    private readonly ImmutableArray<ObjectiveDirection> objectives;
-    private readonly RealVector weights;
+    private readonly ImmutableArray<double> directedWeights;
 
     public WeightedSumComparer(IReadOnlyList<ObjectiveDirection> objectives, IReadOnlyList<double>? weights = null)
     {
@@ -14,15 +14,25 @@ public class WeightedSumComparer : IComparer<ObjectiveVector>
             throw new ArgumentException("Objective and weights must have the same length");
         }
 
-        this.objectives = objectives.ToImmutableArray();
-        this.weights = weights is null
-          ? RealVector.Repeat(1.0, this.objectives.Length)
-          : RealVector.Create(weights);
+        var builder = ImmutableArray.CreateBuilder<double>(objectives.Count);
+        for (var i = 0; i < objectives.Count; i++)
+        {
+            var direction = objectives[i] switch
+            {
+                ObjectiveDirection.Minimize => +1.0,
+                ObjectiveDirection.Maximize => -1.0,
+                _ => throw new InvalidOperationException($"Unsupported objective direction: {objectives[i]}.")
+            };
+
+            builder.Add((weights?[i] ?? 1.0) * direction);
+        }
+
+        directedWeights = builder.MoveToImmutable();
     }
 
     public int Compare(ObjectiveVector? x, ObjectiveVector? y)
     {
-        if ((x is not null && x.Count != objectives.Length) || (y is not null && y.Count != objectives.Length))
+        if ((x is not null && x.Count != directedWeights.Length) || (y is not null && y.Count != directedWeights.Length))
         {
             throw new ArgumentException("Objective vector must have the same length as the objective directions");
         }
@@ -42,20 +52,25 @@ public class WeightedSumComparer : IComparer<ObjectiveVector>
             return +1;
         }
 
-        var xObjectiveVector = new RealVector(x);
-        var yObjectiveVector = new RealVector(y);
+        // The directions are folded into the weights, so the lower directed sum is the better one.
+        return ObjectiveValue.Compare(WeightedSum(x), WeightedSum(y), ObjectiveDirection.Minimize);
+    }
 
-        var directions = new RealVector(objectives.Select(d => d switch
+    private double WeightedSum(ObjectiveVector objectiveVector)
+    {
+        var sum = 0.0;
+        for (var i = 0; i < directedWeights.Length; i++)
         {
-            ObjectiveDirection.Minimize => +1.0,
-            ObjectiveDirection.Maximize => -1.0,
-            _ => throw new InvalidOperationException($"Unsupported objective direction: {d}.")
-        }));
-        var directedWeights = weights * directions;
+            var weight = directedWeights[i];
 
-        var xSum = (xObjectiveVector * directedWeights).Sum();
-        var ySum = (yObjectiveVector * directedWeights).Sum();
+            // A zero weight excludes its objective, so it must contribute nothing even where the objective value is
+            // infinite. Multiplying would yield NaN and rank the whole vector last.
+            if (weight != 0.0)
+            {
+                sum += weight * objectiveVector[i];
+            }
+        }
 
-        return xSum.CompareTo(ySum);
+        return sum;
     }
 }

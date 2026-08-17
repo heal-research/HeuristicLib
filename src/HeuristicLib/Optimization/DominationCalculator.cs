@@ -95,7 +95,7 @@ public static class DominationCalculator
             for (var qI = pI + 1; qI < populationSize; qI++)
             {
                 var test = evaluatedCandidates[pI].ObjectiveVector.CompareTo(evaluatedCandidates[qI].ObjectiveVector, objective);
-                if (test == DominanceRelation.Equivalent)
+                if (test == DominanceRelation.Equal)
                 {
                     test = dominateOnEquals ? DominanceRelation.Dominates : DominanceRelation.Incomparable;
                 }
@@ -119,7 +119,7 @@ public static class DominationCalculator
                         }
                     case DominanceRelation.Incomparable:
                         break;
-                    case DominanceRelation.Equivalent:
+                    case DominanceRelation.Equal:
                     default:
                         throw new InvalidOperationException("Encountered invalid dominance relation");
                 }
@@ -160,7 +160,7 @@ public static class DominationCalculator
         {
             var relation = evaluatedCandidate.ObjectiveVector.CompareTo(existing.ObjectiveVector, objective);
 
-            if (relation == DominanceRelation.Equivalent)
+            if (relation == DominanceRelation.Equal)
             {
                 relation = dominateOnEqualQualities
                   ? DominanceRelation.Dominates
@@ -183,7 +183,7 @@ public static class DominationCalculator
                     result.Add(existing);
                     break;
 
-                case DominanceRelation.Equivalent:
+                case DominanceRelation.Equal:
                 default:
                     throw new InvalidOperationException("Encountered invalid dominance relation");
             }
@@ -207,7 +207,7 @@ public static class DominationCalculator
         {
             var relation = evaluatedCandidate.ObjectiveVector.CompareTo(front[i].ObjectiveVector, objective);
 
-            if (relation == DominanceRelation.Equivalent)
+            if (relation == DominanceRelation.Equal)
             {
                 relation = dominateOnEqualQualities
                   ? DominanceRelation.Dominates
@@ -226,7 +226,7 @@ public static class DominationCalculator
                 case DominanceRelation.Incomparable:
                     break;
 
-                case DominanceRelation.Equivalent:
+                case DominanceRelation.Equal:
                 default:
                     throw new InvalidOperationException("Encountered invalid dominance relation");
             }

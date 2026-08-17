@@ -29,11 +29,6 @@ public class SingleObjectiveComparer(ObjectiveDirection objectiveDirection) : IC
             return 0;
         }
 
-        return objectiveDirection switch
-        {
-            ObjectiveDirection.Minimize => x[0].CompareTo(y[0]),
-            ObjectiveDirection.Maximize => y[0].CompareTo(x[0]),
-            _ => throw new InvalidOperationException($"Unsupported objective direction: {objectiveDirection}.")
-        };
+        return ObjectiveValue.Compare(x[0], y[0], objectiveDirection);
     }
 }

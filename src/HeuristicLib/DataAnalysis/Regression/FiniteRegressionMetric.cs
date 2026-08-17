@@ -30,7 +30,18 @@ public static class RegressionMetricExtensions
     /// Replaces non-finite results with the worst finite value for the metric's objective direction.
     /// </summary>
     public static FiniteRegressionMetric ToFinite(this IRegressionMetric metric) =>
-        metric.ToFinite(ObjectiveValue.WorstValue(metric.Direction).Value);
+        metric.ToFinite(WorstFiniteValue(metric.Direction));
+
+    /// <summary>
+    /// The worst finite value for the direction. <see cref="ObjectiveValue.WorstValue"/> is an infinity and cannot
+    /// serve as the replacement, which has to be finite.
+    /// </summary>
+    private static double WorstFiniteValue(ObjectiveDirection objectiveDirection) => objectiveDirection switch
+    {
+        ObjectiveDirection.Minimize => double.MaxValue,
+        ObjectiveDirection.Maximize => double.MinValue,
+        _ => throw new InvalidOperationException($"Unsupported objective direction: {objectiveDirection}.")
+    };
 
     public static FiniteRegressionMetric ToFinite(this IRegressionMetric metric, double nonFiniteValue) =>
         new(metric, nonFiniteValue);

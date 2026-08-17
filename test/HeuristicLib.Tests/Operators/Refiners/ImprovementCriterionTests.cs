@@ -202,24 +202,60 @@ public class ImprovementCriterionTests
     }
 
     /// <summary>
-    /// Documents a hazard rather than a desirable behavior. Both the total-order comparers and dominance rank through
-    /// <see cref="double.CompareTo(double)"/>, which orders <see cref="double.NaN"/> below every number, so a refinement
-    /// that produces a non-finite objective value is currently accepted as the best possible outcome. Constant
-    /// optimization deliberately propagates non-finite results, so a criterion used with it must guard against this.
-    /// The threshold criteria already do, because a comparison against a <see cref="double.NaN"/> margin is false.
+    /// Every criterion rejects a refinement that produced a <see cref="double.NaN"/> objective value, in both objective
+    /// directions. Constant optimization deliberately propagates non-finite results, so this is on the direct path of
+    /// the first refiner to use these criteria.
     /// </summary>
-    [Fact]
-    public void OrderBasedCriteria_TreatNaNAsTheBestValue()
+    /// <remarks>
+    /// The order-based criteria inherit this from
+    /// <see cref="ObjectiveValue.Compare(double, double, ObjectiveDirection)"/>; the threshold criteria already
+    /// rejected NaN, because a comparison against a NaN margin is false.
+    /// </remarks>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void EveryCriterion_RejectsANaNRefinement(bool maximize)
     {
+        var directions = maximize ? SingleObjective.Maximize : SingleObjective.Minimize;
         var nan = Vector(double.NaN);
         var finite = Vector(2.0);
 
-        ImprovementChecking.StrictlyBetter.IsImprovement(nan, finite, SingleObjective.Minimize).ShouldBeTrue();
-        ImprovementChecking.Dominance.IsImprovement(nan, finite, SingleObjective.Minimize).ShouldBeTrue();
-        ImprovementChecking.Default.IsImprovement(nan, finite, SingleObjective.Minimize).ShouldBeTrue();
+        ImprovementChecking.StrictlyBetter.IsImprovement(nan, finite, directions).ShouldBeFalse();
+        ImprovementChecking.NotWorse.IsImprovement(nan, finite, directions).ShouldBeFalse();
+        ImprovementChecking.Dominance.IsImprovement(nan, finite, directions).ShouldBeFalse();
+        ImprovementChecking.Default.IsImprovement(nan, finite, directions).ShouldBeFalse();
+        ImprovementChecking.MinimumImprovement(0.0).IsImprovement(nan, finite, directions).ShouldBeFalse();
+        ImprovementChecking.MinimumRelativeImprovement(0.0).IsImprovement(nan, finite, directions).ShouldBeFalse();
+    }
 
-        ImprovementChecking.MinimumImprovement(0.0).IsImprovement(nan, finite, SingleObjective.Minimize).ShouldBeFalse();
-        ImprovementChecking.MinimumRelativeImprovement(0.0).IsImprovement(nan, finite, SingleObjective.Minimize).ShouldBeFalse();
+    /// <summary>
+    /// A refinement that repairs a <see cref="double.NaN"/> original into a finite value is an improvement, because NaN
+    /// is the worst value rather than a value outside the comparison.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void OrderBasedCriteria_AcceptARefinementAwayFromNaN(bool maximize)
+    {
+        var directions = maximize ? SingleObjective.Maximize : SingleObjective.Minimize;
+        var finite = Vector(2.0);
+        var nan = Vector(double.NaN);
+
+        ImprovementChecking.StrictlyBetter.IsImprovement(finite, nan, directions).ShouldBeTrue();
+        ImprovementChecking.NotWorse.IsImprovement(finite, nan, directions).ShouldBeTrue();
+        ImprovementChecking.Dominance.IsImprovement(finite, nan, directions).ShouldBeTrue();
+        ImprovementChecking.Default.IsImprovement(finite, nan, directions).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Two NaN values are equal to one another, so a refinement that leaves a NaN objective unchanged is not worse but
+    /// is not strictly better either.
+    /// </summary>
+    [Fact]
+    public void OrderBasedCriteria_TreatTwoNaNValuesAsEqual()
+    {
+        ImprovementChecking.StrictlyBetter.IsImprovement(Vector(double.NaN), Vector(double.NaN), SingleObjective.Minimize).ShouldBeFalse();
+        ImprovementChecking.NotWorse.IsImprovement(Vector(double.NaN), Vector(double.NaN), SingleObjective.Minimize).ShouldBeTrue();
     }
 
     /// <summary>

@@ -88,7 +88,8 @@ namespace HEAL.HeuristicLib.Optimization
                 descending = objective == ObjectiveDirection.Maximize ? -1 : 1;
             }
 
-            public int Compare(ObjectiveVector? x, ObjectiveVector? y) => x![dim].CompareTo(y![dim]) * descending;
+            public int Compare(ObjectiveVector? x, ObjectiveVector? y) =>
+                ObjectiveValue.Compare(x![dim], y![dim], descending < 0 ? ObjectiveDirection.Maximize : ObjectiveDirection.Minimize);
         }
 
         private static double CalculateMultiDimensional(IEnumerable<ObjectiveVector> front, ObjectiveVector referencePoint)
@@ -98,7 +99,9 @@ namespace HEAL.HeuristicLib.Optimization
 
             var objectives = referencePoint.Count;
             var fronList = front.OrderBy(x => x, new DimensionComparer(objectives - 1, ObjectiveDirection.Minimize)).ToList();
-            var regLow = Enumerable.Repeat(1E15, objectives).ToArray();
+            // This path is minimization-only, so the region starts at the worst value and every point pulls it down.
+            // A finite seed would leave an objective above it untracked.
+            var regLow = Enumerable.Repeat(ObjectiveValue.WorstValue(ObjectiveDirection.Minimize).Value, objectives).ToArray();
             foreach (var p in fronList)
             {
                 for (var i = 0; i < regLow.Length; i++)

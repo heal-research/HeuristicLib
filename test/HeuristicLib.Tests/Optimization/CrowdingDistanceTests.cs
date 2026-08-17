@@ -137,6 +137,49 @@ public class CrowdingDistanceTests
         result.ShouldContain(offspring[^1]);
     }
 
+    /// <summary>
+    /// A NaN objective value must not make its candidate a boundary point, which would award it the maximum crowding
+    /// distance and so make NSGA-II prefer it in a tie.
+    /// </summary>
+    [Fact]
+    public void NaNObjectiveValue_DoesNotBecomeABoundaryPoint()
+    {
+        var pop = new[] { OV(double.NaN, 1.0), OV(1.0, 1.0), OV(2.0, 1.0), OV(3.0, 1.0) };
+
+        var d = CrowdingDistance.CalculateCrowdingDistances(pop);
+
+        d[0].ShouldBe(0.0);
+        d[1].ShouldBe(double.PositiveInfinity);
+        d[3].ShouldBe(double.PositiveInfinity);
+    }
+
+    /// <summary>
+    /// One NaN must not destroy the distances of the other candidates in that dimension, which happens when the range
+    /// is computed from it.
+    /// </summary>
+    [Fact]
+    public void NaNObjectiveValue_LeavesTheOtherDistancesIntact()
+    {
+        var pop = new[] { OV(double.NaN, 1.0), OV(1.0, 1.0), OV(2.0, 1.0), OV(3.0, 1.0) };
+
+        var d = CrowdingDistance.CalculateCrowdingDistances(pop);
+
+        d[2].ShouldBe(1.0, tolerance: 1e-12);
+    }
+
+    /// <summary>
+    /// An infinite spread cannot normalize a difference, so the dimension contributes nothing rather than NaN.
+    /// </summary>
+    [Fact]
+    public void InfiniteRange_ContributesNoDistance()
+    {
+        var pop = new[] { OV(double.NegativeInfinity, 1.0), OV(1.0, 1.0), OV(2.0, 1.0), OV(double.PositiveInfinity, 1.0) };
+
+        var d = CrowdingDistance.CalculateCrowdingDistances(pop);
+
+        d.ShouldAllBe(value => !double.IsNaN(value));
+    }
+
     // ---------------- helpers ----------------
 
     private static EvaluatedCandidate<T> Sol<T>(params double[] objs) => new(default!, new ObjectiveVector(objs));
