@@ -19,18 +19,20 @@ public record HillClimber<TCandidate, TSearchSpace, TProblem>
     public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
     public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+    public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
     public required LocalSearchDirection Direction { get; init; }
     public required int MaxNeighbors { get; init; }
     public required int BatchSize { get; init; }
 
     protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
-        new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Mutator), Direction, MaxNeighbors, BatchSize);
+        new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Mutator), instanceRegistry.ResolveOptional(Refiner), Direction, MaxNeighbors, BatchSize);
 
     private sealed class Instance(
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor,
         IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
         ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
         IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator,
+        IRefinerInstance<TCandidate, TSearchSpace, TProblem>? refiner,
         LocalSearchDirection direction,
         int maxNeighbors,
         int batchSize)
@@ -61,7 +63,13 @@ public record HillClimber<TCandidate, TSearchSpace, TProblem>
 
         private SingleSolutionState<TCandidate> CreateInitialState(TProblem problem, IRandomNumberGenerator random)
         {
-            var initialSolution = creator.Create(1, random, problem.SearchSpace, problem)[0];
+            var created = creator.Create(1, random, problem.SearchSpace, problem);
+            if (refiner is not null)
+            {
+                created = refiner.Refine(created, random, problem.SearchSpace, problem);
+            }
+
+            var initialSolution = created[0];
             var initialCandidate = initialSolution.ToEvaluated(evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0]);
             return ToState(initialCandidate);
         }
@@ -73,6 +81,11 @@ public record HillClimber<TCandidate, TSearchSpace, TProblem>
             for (var i = 0; i < maxNeighbors; i += batchSize)
             {
                 var candidates = mutator.Mutate(Enumerable.Repeat(current.Candidate, batchSize).ToArray(), random, problem.SearchSpace, problem);
+                if (refiner is not null)
+                {
+                    candidates = refiner.Refine(candidates, random, problem.SearchSpace, problem);
+                }
+
                 var objectiveVectors = evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
                 var bestIndex = BestSelector.Select(objectiveVectors, problem.Objective, count: 1)[0];
 

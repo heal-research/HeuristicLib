@@ -1296,6 +1296,54 @@ Findings:
 Validation: Release build clean across the solution; 2178 tests pass across all four test projects;
 `dotnet format` whitespace and analyzer checks are clean.
 
+### Algorithm integration outcome
+
+RF-5 is implemented. Six built-in algorithms gained a nullable
+`IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner` setting: `GeneticAlgorithm`, `NSGA2`,
+`EvolutionStrategy`, `AlpsGeneticAlgorithm`,
+`OpenEndedRelevantAllelesPreservingGeneticAlgorithm`, and `HillClimber`. Each resolves it in
+`CreateExecutionInstance` and applies it as `refiner?.Refine(...) ?? candidates` immediately before
+evaluation, at every point where candidates are produced.
+
+Decisions:
+
+- **Nullable rather than a default `NoChangeRefiner`.** `null` means no refinement, matching the
+  existing `Terminator` setting, and avoids resolving an execution instance for an operator that
+  would do nothing. A test pins that an unset refiner leaves the run bit-identical, which matters
+  because refinement must not perturb reproducibility of existing configurations.
+- **Every production site is covered, not only the last one.**
+  `OpenEndedRelevantAllelesPreservingGeneticAlgorithm` creates candidates at three points — the
+  initial population, a repopulation branch when the population empties, and offspring — and all
+  three refine. `HillClimber` refines its initial candidate and each neighbor batch.
+- **Carried candidates are never re-refined.** Elites reach `ElitismReplacer` from the previous
+  population and never pass through the refiner, and `HillClimber`'s incumbent is likewise
+  untouched. This falls out of placing refinement on the production path rather than the
+  replacement path, and is pinned by a counting test with two elites.
+- **`ParameterlessPopulationPyramid` is excluded** because its implementation is entirely commented
+  out; it is a stub rather than a working algorithm.
+- **The algorithm builders are deliberately not extended.** Whether builders should gain full
+  feature parity or be phased out is an open backlog decision, so adding a refiner step to them
+  would prejudge it. `Refiner` is set through object initializers and `with` expressions.
+
+Findings:
+
+- **`GeneticAlgorithm` had a misnamed local, now removed.** `offspringSize` held
+  `populationSize * 2` but was passed to the selector as the number of candidates to select, making
+  it the mating pool size. `ToParentPairs` then halved it (`parents.Count / 2`) and crossover
+  produced one offspring per pair, so a generation yields `populationSize` offspring, not
+  `offspringSize`. The counting refiner measured 20 refined candidates over four generations at a
+  population size of five, which is `5 + (3 × 5)`, and that is what exposed the name. The local is
+  gone and `populationSize * 2` is now inline at the selection call, matching `NSGA2`; behavior is
+  unchanged.
+- **Refinement placement is easy to get wrong at the creation sites.** Where creation and refinement
+  are combined in one expression, it is simple to write `creator.Create(...)` on both sides of a
+  null check and consume randomness twice, which would silently break reproducibility for runs with
+  no refiner configured. Every site binds the created batch to a local first and refines it in a
+  separate statement.
+
+Validation: Release build clean across the solution; 2191 tests pass across all four test projects;
+`dotnet format` whitespace and analyzer checks are clean.
+
 ### Refinement checkpoints
 
 Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted`. Implementation stops at `Awaiting review`; only explicit user acceptance advances to the next checkpoint.
@@ -1307,7 +1355,7 @@ Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted
 | RF-2 Evaluator contract simplification | Accepted | Change `IEvaluatorInstance.Evaluate` to return `IReadOnlyList<ObjectiveVector>`, migrate the evaluator wrappers, built-in algorithms, and analysis hooks, remove `IteratedEvaluator`, and remove the candidate-substitution caveat from `CachingEvaluator`. `EvaluatedCandidate<TCandidate>` is retained as the population and state pairing type; only the evaluator stops producing it. `IEvaluatorObserver.AfterEvaluation` becomes `(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, ...)`, adopting the output-first parameter order that the other seven observer interfaces already use and that evaluation was the sole exception to. |
 | RF-3 Refiner operator model | Accepted | Implement the general refiner configuration and execution-instance contracts, authoring bases in the three paths and three arities, `SingleCandidateRefiner.RefineCandidate`, concurrency, identity behavior, validation, and focused contract tests. Delivered together with RF-4; see [Refiner operator model outcome](#refiner-operator-model-outcome). |
 | RF-4 Refiner composition topologies | Accepted | Add the pipeline, iterated, choose-one, multi, wrapping, and observable refiner topologies; design and add the evaluator composition for transient Baldwinian refinement; restore iterated refinement after RF-2 removes `IteratedEvaluator`; and cover order-significant, repeated-stage, no-write-back, and evaluation-accounting behavior. Delivered together with RF-3; see [Refiner operator model outcome](#refiner-operator-model-outcome). |
-| RF-5 Explicit algorithm integration | Pending | Add configurable refinement to applicable built-in algorithms after creation and final variation but before evaluation, without re-refining carried evaluated candidates. |
+| RF-5 Explicit algorithm integration | Awaiting review | Add configurable refinement to applicable built-in algorithms after creation and final variation but before evaluation, without re-refining carried evaluated candidates. See [Algorithm integration outcome](#algorithm-integration-outcome). |
 | RF-6 Numeric parameter-fitting refiner | Awaiting review | Adapt symbolic-regression numeric parameter fitting to the general refiner role and define its failure behavior without adding problem-objective retention. See [Numeric parameter-fitting refiner outcome](#numeric-parameter-fitting-refiner-outcome). |
 | RF-7 Improvement-checking refiner | Awaiting review | Implement the refiner with its `Evaluator` and `Criterion` settings, the `IImprovementCriterion` strategy with its strict-improvement, not-worse, dominance and threshold implementations, and original-on-failure behavior. Delivered alongside RF-3/RF-4; see [Improvement-checking refiner outcome](#improvement-checking-refiner-outcome). |
 | RF-8 Integration hardening | Pending | Verify batching, refiner/evaluator composition, objective directions, equality and threshold behavior, failure and cancellation, iterated and pipeline refinement, observability, and each composition example including shared-instance accounting and cache/limit wrapper order. |
