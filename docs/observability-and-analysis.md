@@ -171,6 +171,15 @@ The observed boundary is part of the budget. For example, these are different bu
 - calls that pass through the cache and reach the wrapped direct evaluator
 - candidates processed inside evaluator batches
 
+The same holds inside a composed operator, where instrumentation reports what its own position sees. A counter inside an iterated refiner counts one call per iteration; the same counter around that refiner counts one call for the whole iteration:
+
+```csharp
+parameterFitting.CountRefinerCalls(inner).AsIterated(3)  // inner counts 3
+parameterFitting.AsIterated(3).CountRefinerCalls(outer)  // outer counts 1
+```
+
+An item counter behaves likewise, and reports the population the observed operator actually returned rather than the one it received, which differ when a refiner filters candidates.
+
 Advanced users can pass the same `ObservationCounter` to several observed operators when one shared budget should aggregate work across those boundaries.
 
 ### Count operator calls with a fresh sink returned via `out`

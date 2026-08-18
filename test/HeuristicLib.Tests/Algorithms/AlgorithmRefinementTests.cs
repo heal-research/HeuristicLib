@@ -6,10 +6,12 @@ using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
@@ -85,6 +87,18 @@ public class AlgorithmRefinementTests
         }
     }
 
+    // The algorithm has no positional requirement on the production path; the replacer decides the surviving population.
+    [Fact]
+    public void GeneticAlgorithm_WithARefinerThatResizesThePopulation_ContinuesWithTheReturnedPopulation()
+    {
+        var problem = CreateProblem();
+
+        var result = (CreateAlgorithm(problem) with { Refiner = new DropLastRefiner() })
+            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+
+        result.Population.EvaluatedCandidates.Count.ShouldBe(PopulationSize - 1);
+    }
+
     [Fact]
     public void HillClimber_RefinesTheInitialCandidateAndEachNeighborBatch()
     {
@@ -96,6 +110,29 @@ public class AlgorithmRefinementTests
 
         refiner.BatchCount.ShouldBeGreaterThan(1);
         refiner.RefinedCount.ShouldBeGreaterThan(1);
+    }
+
+    // The Baldwinian counterpart of the refiner slot: the population keeps the produced candidates while their
+    // objective vectors come from transient refined copies.
+    [Fact]
+    public void GeneticAlgorithm_WithARefiningEvaluator_KeepsTheOriginalCandidatesAndTheRefinedObjectiveVectors()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            Evaluator = new ProblemEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>().WithRefinement(new OriginShiftRefiner()),
+            MaximumGenerations = 1
+        };
+
+        var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+
+        foreach (var candidate in result.Population.EvaluatedCandidates)
+        {
+            // The refined copy sits at the origin, where the sphere function is zero.
+            candidate.ObjectiveVector[0].ShouldBe(0.0);
+            // The population itself was never moved there.
+            candidate.Candidate.ShouldNotBe(RealVector.Repeat(0.0, candidate.Candidate.Count));
+        }
     }
 
     [Fact]
@@ -134,7 +171,113 @@ public class AlgorithmRefinementTests
         nsga2Refiner.BatchCount.ShouldBe(Generations);
     }
 
+    [Fact]
+    public void AlpsGeneticAlgorithm_RefinesTheInitialPopulationAndEachOffspringBatch()
+    {
+        var problem = CreateProblem();
+        var refiner = new CountingRefiner();
+
+        (CreateAlps(problem) with { Refiner = refiner })
+            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+
+        refiner.BatchCount.ShouldBe(Generations);
+    }
+
+    // ALPS carries its elites from the previous layer population, which never passes the production path again.
+    [Fact]
+    public void AlpsGeneticAlgorithm_DoesNotRefineCarriedElites()
+    {
+        var problem = CreateProblem();
+        var refiner = new CountingRefiner();
+
+        (CreateAlps(problem) with { Refiner = refiner, Elites = 2 })
+            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+
+        refiner.RefinedCount.ShouldBe(PopulationSize * Generations);
+    }
+
+    // The plus strategy carries the parents into the next generation, so only the children are produced and refined.
+    [Fact]
+    public void EvolutionStrategy_WithThePlusStrategy_DoesNotRefineCarriedParents()
+    {
+        var problem = CreateProblem();
+        var refiner = new CountingRefiner();
+
+        (CreateEvolutionStrategy(problem) with { Refiner = refiner })
+            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+
+        refiner.RefinedCount.ShouldBe(PopulationSize + (Children * (Generations - 1)));
+    }
+
+    // The repopulation branch is the one an ordinary run never reaches. A refiner that keeps every offspring from
+    // dominating its parents empties the population and forces that branch on the following generation.
+    [Fact]
+    public void OpenEndedGeneticAlgorithm_RefinesAtEveryProductionSiteIncludingRepopulation()
+    {
+        var problem = CreateProblem();
+        var refiner = new CountingRefiner();
+        var algorithm = new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        {
+            PopulationSize = PopulationSize,
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Crossover = new SinglePointCrossover(),
+            Mutator = new GaussianMutator(0.1, 0.1),
+            Selector = RandomSelector.For(problem),
+            Elites = 0,
+            MaxEffort = PopulationSize,
+            MaximumGenerations = Generations,
+            Refiner = PipelineRefiner.Create<RealVector, RealVectorSearchSpace, TestFunctionProblem>(new FarFromOriginRefiner(), refiner)
+        };
+
+        var populationSizes = new List<int>();
+        foreach (var state in algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken))
+        {
+            populationSizes.Add(state.Population.EvaluatedCandidates.Count);
+        }
+
+        // The run has to visit an empty population followed by a repopulated one, or it never reaches that branch.
+        var emptyIndex = populationSizes.IndexOf(0);
+        emptyIndex.ShouldBeGreaterThanOrEqualTo(0);
+        populationSizes[emptyIndex + 1].ShouldBe(PopulationSize);
+
+        // One refined batch per generation, including the repopulating one.
+        refiner.BatchCount.ShouldBe(populationSizes.Count);
+    }
+
+    // Refinement must not consume randomness when no refiner is configured, or adding the setting would have changed
+    // every existing run.
+    [Fact]
+    public void WithoutARefiner_EveryAlgorithmRunsExactlyAsItDoesWithAnIdentityRefiner()
+    {
+        var problem = CreateProblem();
+
+        foreach (var (name, run) in AllAlgorithms(problem))
+        {
+            run(null).ShouldBe(run(NoChangeRefiner<RealVector>.Instance), name);
+        }
+    }
+
+    private static IEnumerable<(string Name, Func<IRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>?, IReadOnlyList<ObjectiveVector>> Run)> AllAlgorithms(TestFunctionProblem problem)
+    {
+        yield return ("genetic algorithm", refiner => ObjectiveVectorsOf((CreateAlgorithm(problem) with { Refiner = refiner })
+            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
+        yield return ("hill climber", refiner => ObjectiveVectorsOf((CreateHillClimber(problem) with { Refiner = refiner })
+            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
+        yield return ("evolution strategy", refiner => ObjectiveVectorsOf((CreateEvolutionStrategy(problem) with { Refiner = refiner })
+            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
+        yield return ("nsga2", refiner => ObjectiveVectorsOf((CreateNsga2(problem) with { Refiner = refiner })
+            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
+        yield return ("alps", refiner => ObjectiveVectorsOf((CreateAlps(problem) with { Refiner = refiner })
+            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population.Single()));
+        yield return ("open ended", refiner => ObjectiveVectorsOf((CreateOpenEnded(problem) with { Refiner = refiner })
+            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
+    }
+
+    private static IReadOnlyList<ObjectiveVector> ObjectiveVectorsOf(Population<RealVector> population) =>
+        [.. population.EvaluatedCandidates.Select(candidate => candidate.ObjectiveVector)];
+
     private const int PopulationSize = 5;
+    private const int Children = 4;
     private const int Generations = 4;
 
     private static TestFunctionProblem CreateProblem() => new(new SphereFunction(dimension: 3));
@@ -187,6 +330,68 @@ public class AlgorithmRefinementTests
                 return candidates;
             }
         }
+    }
+
+    private static EvolutionStrategy<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateEvolutionStrategy(TestFunctionProblem problem) =>
+        new()
+        {
+            PopulationSize = PopulationSize,
+            NumberOfChildren = Children,
+            Strategy = EvolutionStrategyType.Plus,
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Mutator = new GaussianMutator(0.1, 0.1),
+            Crossover = null,
+            Selector = RandomSelector.For(problem),
+            MaximumGenerations = Generations
+        };
+
+    private static NSGA2<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateNsga2(TestFunctionProblem problem) =>
+        new()
+        {
+            PopulationSize = PopulationSize,
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Crossover = new SinglePointCrossover(),
+            Mutator = new GaussianMutator(0.1, 0.1),
+            Selector = RandomSelector.For(problem),
+            Replacer = ParetoCrowdingReplacer.For(problem, dominateOnEqualities: true),
+            MaximumGenerations = Generations
+        };
+
+    private static AlpsGeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlps(TestFunctionProblem problem) =>
+        new()
+        {
+            PopulationSize = PopulationSize,
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Crossover = new SinglePointCrossover(),
+            Mutator = new GaussianMutator(0.1, 0.1),
+            MutationRate = 0.5,
+            Selector = RandomSelector.For(problem),
+            MaximumGenerations = Generations
+        };
+
+    private static OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateOpenEnded(TestFunctionProblem problem) =>
+        new()
+        {
+            PopulationSize = PopulationSize,
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Crossover = new SinglePointCrossover(),
+            Mutator = new GaussianMutator(0.1, 0.1),
+            Selector = RandomSelector.For(problem),
+            MaxEffort = PopulationSize,
+            MaximumGenerations = Generations
+        };
+
+    // Moves every candidate far away from the optimum, so no offspring can dominate the parents it came from.
+    private sealed record FarFromOriginRefiner : SingleCandidateRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+        public override RealVector RefineCandidate(RealVector candidate, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            RealVector.Repeat(searchSpace.GetMaximum(0), candidate.Count);
+    }
+
+    private sealed record DropLastRefiner : StatelessRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+        public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            [.. candidates.Take(Math.Max(0, candidates.Count - 1))];
     }
 
     private sealed record OriginShiftRefiner : SingleCandidateRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>

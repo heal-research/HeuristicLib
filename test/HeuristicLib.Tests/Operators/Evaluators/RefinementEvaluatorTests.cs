@@ -10,10 +10,6 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Evaluators;
 
-/// <summary>
-/// Pins the transient nature of refinement evaluation. The refined candidates exist only for the duration of one
-/// evaluation, and the objective vectors they produce are returned positionally for the candidates that were supplied.
-/// </summary>
 public class RefinementEvaluatorTests
 {
     [Fact]
@@ -40,10 +36,8 @@ public class RefinementEvaluatorTests
         objectiveVectors.ShouldBe([new ObjectiveVector(15.0), new ObjectiveVector(11.0), new ObjectiveVector(13.0)]);
     }
 
-    /// <summary>
-    /// The refined candidates are transient. Nothing in the evaluator contract can hand them back, which is what makes
-    /// this composition Baldwinian: the caller keeps the candidates it supplied.
-    /// </summary>
+    // Nothing in the evaluator contract can hand the refined candidates back, which is what makes this composition
+    // Baldwinian.
     [Fact]
     public void Evaluate_LeavesTheSuppliedCandidatesUntouched()
     {
@@ -68,10 +62,7 @@ public class RefinementEvaluatorTests
         counter.CurrentCount.ShouldBe(3);
     }
 
-    /// <summary>
-    /// Evaluation accounting is decided by reference identity, so an algorithm sharing its evaluator configuration
-    /// instance with a refinement evaluator resolves one execution instance and therefore one counter.
-    /// </summary>
+    // Accounting follows reference identity, so sharing one evaluator configuration instance shares one counter.
     [Fact]
     public void Evaluate_SharesOneCounterWithAnAlgorithmUsingTheSameEvaluatorInstance()
     {
@@ -88,6 +79,17 @@ public class RefinementEvaluatorTests
         counter.CurrentCount.ShouldBe(4);
     }
 
+    // Refiners may resize a population, but an evaluator owes one objective vector per supplied candidate, so this
+    // composition requires the size to be preserved.
+    [Fact]
+    public void Evaluate_WithARefinerThatResizesThePopulation_Throws()
+    {
+        var instance = CreateEvaluator().WithRefinement(new DropLastRefiner()).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() => instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+    }
+
     [Fact]
     public void RefinementEvaluator_RetainsBothConfiguredChildren()
     {
@@ -100,10 +102,7 @@ public class RefinementEvaluatorTests
         evaluator.Refiner.ShouldBeSameAs(refiner);
     }
 
-    /// <summary>
-    /// The evaluator is optional. Leaving it unset measures the refined candidates through an ordinary
-    /// <c>ProblemEvaluator</c>, which is unwrapped and therefore invisible to budgets and analysis.
-    /// </summary>
+    // The unwrapped default measures through the problem and is therefore invisible to budgets and analysis.
     [Fact]
     public void RefinementEvaluator_WithoutAConfiguredEvaluator_MeasuresThroughTheProblem()
     {
@@ -121,10 +120,7 @@ public class RefinementEvaluatorTests
         objectiveVectors.ShouldBe([new ObjectiveVector(11.0), new ObjectiveVector(12.0)]);
     }
 
-    /// <summary>
-    /// The inherited default evaluator is a value, so two separately created refinement evaluators over equal refiners
-    /// remain structurally equal.
-    /// </summary>
+    // The inherited default evaluator is a value, so separately created evaluators over equal refiners stay equal.
     [Fact]
     public void RefinementEvaluator_WithInheritedDefaultEvaluators_IsEqual()
     {
@@ -163,5 +159,11 @@ public class RefinementEvaluatorTests
     private sealed record AddOffsetRefiner(int Offset) : SingleCandidateRefiner<int, DummySearchSpace<int>>
     {
         public override int RefineCandidate(int candidate, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => candidate + Offset;
+    }
+
+    private sealed record DropLastRefiner : StatelessRefiner<int, DummySearchSpace<int>>
+    {
+        public override IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) =>
+            [.. candidates.Take(Math.Max(0, candidates.Count - 1))];
     }
 }

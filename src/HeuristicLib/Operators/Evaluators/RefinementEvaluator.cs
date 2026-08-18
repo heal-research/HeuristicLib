@@ -24,6 +24,11 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 /// the refined candidate. The two are different searches and both are expressed by where the refiner is configured.
 /// </para>
 /// <para>
+/// Refiners are generally free to return a differently sized population, but this evaluator is not: it owes its caller
+/// one objective vector per supplied candidate. A refiner that changes the population size or order therefore throws
+/// here rather than producing a miscounted result.
+/// </para>
+/// <para>
 /// The evaluations issued here belong to <see cref="Evaluator"/>, so counting, limiting and caching attach in the usual
 /// way. Passing the same evaluator configuration instance that the algorithm uses resolves to one execution instance,
 /// and therefore to one counter and one cache.
@@ -64,6 +69,14 @@ public sealed record RefinementEvaluator<TCandidate, TSearchSpace, TProblem>
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var refined = refiner.Refine(candidates, random, searchSpace, problem);
+
+            // Refiners map a population to a population and are free to change its size. This evaluator is not: it owes
+            // its caller one objective vector per supplied candidate, in that order, so it needs a refiner that keeps
+            // both. Detecting that here names the cause; letting it through would surface as a miscounted or mispaired
+            // objective vector in the algorithm, where the refiner is no longer visible.
+            if (refined.Count != candidates.Count)
+                throw new InvalidOperationException($"The refiner returned {refined.Count} candidates for {candidates.Count} candidates. Transient refinement measures one refined candidate for each supplied candidate, so its refiner must preserve the population size and order.");
+
             return evaluator.Evaluate(refined, random, searchSpace, problem);
         }
     }

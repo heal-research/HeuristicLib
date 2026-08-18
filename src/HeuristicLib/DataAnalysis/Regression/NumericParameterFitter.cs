@@ -28,12 +28,10 @@ internal static class NumericParameterFitter
         _ => new InvalidOperationException($"Unsupported numeric parameter fitting failure: {failure.GetType().Name}.")
     };
 
-    internal static bool TryFit(ExpressionTree expression, RegressionData data, int maximumIterations,
-        [NotNullWhen(true)] out ExpressionTree? fittedExpression, CancellationToken cancellationToken = default) =>
+    internal static bool TryFit(ExpressionTree expression, RegressionData data, int maximumIterations, [NotNullWhen(true)] out ExpressionTree? fittedExpression, CancellationToken cancellationToken = default) =>
         TryFit(expression, data, maximumIterations, out fittedExpression, out _, cancellationToken);
 
-    internal static bool TryFit(ExpressionTree expression, RegressionData data, int maximumIterations,
-        [NotNullWhen(true)] out ExpressionTree? fittedExpression, [NotNullWhen(false)] out NumericParameterFittingFailure? failure, CancellationToken cancellationToken = default)
+    internal static bool TryFit(ExpressionTree expression, RegressionData data, int maximumIterations, [NotNullWhen(true)] out ExpressionTree? fittedExpression, [NotNullWhen(false)] out NumericParameterFittingFailure? failure, CancellationToken cancellationToken = default)
     {
         if (maximumIterations < 0)
             throw new ArgumentOutOfRangeException(nameof(maximumIterations), maximumIterations, "The maximum number of iterations must not be negative.");

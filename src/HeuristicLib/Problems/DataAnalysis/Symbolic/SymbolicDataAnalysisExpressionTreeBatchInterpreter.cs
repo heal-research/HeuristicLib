@@ -24,14 +24,23 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void LoadData(in BatchInstruction instr, ReadOnlySpan<int> rows, int startIndex, int batchSize)
     {
-        var data = instr.Data;
         var dst = instr.Buf;
-        var w = instr.Weight;
-        for (var i = 0; i < batchSize; ++i)
+        if (instr.Opcode is OpCodes.Variable)
         {
-            var row = rows[startIndex + i]; // ✅ use the i-th selected row
-            dst[i] = w * data[row];
+            var data = instr.Data;
+            var w = instr.Weight;
+            for (var i = 0; i < batchSize; ++i)
+            {
+                dst[i] = w * data[rows[startIndex + i]];
+            }
+
+            return;
         }
+
+        // Numbers and constants carry one value rather than a dataset column, so the batch is filled with it.
+        // Indexing them like a column would read past the end of their buffer as soon as a selected row index
+        // exceeded the batch size.
+        dst.AsSpan(0, batchSize).Fill(instr.Value);
     }
 
     private static void Evaluate(BatchInstruction[] code, ReadOnlySpan<int> rows, int rowIndex, int batchSize)
@@ -307,7 +316,6 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
                 case NumericTreeNode numeric:
                     {
                         v = numeric.Value;
-                        d = Enumerable.Repeat(v, BatchSize).ToArray();
 
                         break;
                     }

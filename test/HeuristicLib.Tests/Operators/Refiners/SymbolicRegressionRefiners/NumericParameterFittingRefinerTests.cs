@@ -1,9 +1,15 @@
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.DataAnalysis;
 using HEAL.HeuristicLib.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
+using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
+using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
+using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Operators.Refiners.SymbolicRegressionRefiners;
+using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
@@ -182,6 +188,67 @@ public sealed class NumericParameterFittingRefinerTests
         var refined = instance.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
         Predictions(refined.ShouldHaveSingleItem(), problem).ShouldBe(Targets, tolerance: 1e-8);
+    }
+
+    // A solve that does not converge describes one candidate, so only that candidate is left as it was.
+    [Fact]
+    public void Refine_WhenOneCandidateCannotBeSolved_LeavesItAloneAndStillFitsTheOthers()
+    {
+        var problem = CreateProblem();
+        var unsolvable = (FixedConstant(1.0) / Constant(0.0)).Build();
+        var fittable = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
+
+        var refined = new NumericParameterFittingRefiner { MaximumIterations = 100 }
+            .CreateExecutionInstance(new ExecutionInstanceRegistry())
+            .Refine([unsolvable, fittable], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+
+        refined[0].ShouldBeSameAs(unsolvable);
+        Predictions(refined[1], problem).ShouldBe(Targets, tolerance: 1e-8);
+    }
+
+    // An unbound variable describes the configuration rather than the candidate, so every affected candidate would
+    // fail the same way.
+    [Fact]
+    public void Refine_WithAVariableTheFittingDataDoesNotSupply_Throws()
+    {
+        var problem = CreateProblem();
+        var expression = (Constant(0.25) * Variable("missing") + Constant(-0.5)).Build();
+
+        Should.Throw<ArgumentException>(() => Refine(new NumericParameterFittingRefiner { MaximumIterations = 100 }, problem, expression))
+            .Message.ShouldContain("missing");
+    }
+
+    [Fact]
+    public void InARun_AVariableTheFittingDataDoesNotSupply_PropagatesOutOfTheAlgorithm()
+    {
+        // Evolvable constants, so every candidate actually reaches the solver instead of taking the identity shortcut.
+        var problem = new SymbolicRegressionProblem(
+            new RegressionData(
+                new DataFrame([Series<double>.FromOwnedArray("x", [.. Inputs])]),
+                Series<double>.FromOwnedArray("y", [.. Targets])),
+            Metrics.MSE,
+            new ExpressionTreeSearchSpace(
+                maximumLength: 15,
+                maximumDepth: 4,
+                operations: Symbols.MinimalOperations,
+                variables: ["x"],
+                constants: [new EvolvableConstantSymbol()]));
+        // The refiner fits against data that has no "x" column, so every candidate using the variable fails alike.
+        var fittingData = new RegressionData(
+            new DataFrame([Series<double>.FromOwnedArray("other", [.. Inputs])]),
+            Series<double>.FromOwnedArray("y", [.. Targets]));
+        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
+        {
+            PopulationSize = 4,
+            Creator = new GrowTreeCreator(),
+            Crossover = new SubtreeCrossover(),
+            Mutator = new SubtreeMutator(),
+            Selector = RandomSelector.For(problem),
+            MaximumGenerations = 2,
+            Refiner = new NumericParameterFittingRefiner { MaximumIterations = 5, FittingData = fittingData }
+        };
+
+        Should.Throw<ArgumentException>(() => algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
     }
 
     private static readonly double[] Inputs = [-2.0, -1.0, 0.0, 1.0, 2.0];

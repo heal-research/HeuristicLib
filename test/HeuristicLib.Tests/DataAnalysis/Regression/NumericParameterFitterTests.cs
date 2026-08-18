@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.DataAnalysis;
 using HEAL.HeuristicLib.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions.AutomaticDifferentiation;
+using HEAL.HeuristicLib.Numerics.Optimization;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.DataAnalysis.Regression;
@@ -280,4 +281,19 @@ public sealed class NumericParameterFitterTests
         fittedExpression.ShouldBeSameAs(expression);
     }
 
+    // No expression can currently produce a compilation failure, because every opcode carrying arity metadata has a
+    // differentiation rule. The mapping is still reachable from a constructed failure, and stays covered for the first
+    // operation that arrives without one.
+    [Fact]
+    public void CreateExceptionReportsTheSymbolAndOperationOfACompilationFailure()
+    {
+        var expression = Sqrt(Variable("x")).Build();
+        var failure = new NumericParameterFittingFailure.Compilation(
+            new ExpressionCompilationFailure(expression.RootPoint, OpCode.Sqrt));
+
+        var exception = NumericParameterFitter.CreateException(failure, "data").ShouldBeOfType<NotSupportedException>();
+
+        exception.Message.ShouldContain(expression.RootPoint.Node.Symbol.Name);
+        exception.Message.ShouldContain(nameof(OpCode.Sqrt));
+    }
 }

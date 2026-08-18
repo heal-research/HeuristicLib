@@ -34,7 +34,7 @@ public sealed class SubtreeCrossoverTests
     }
 
     [Fact]
-    public void Cross_SelectsTheConfiguredDestinationAndReservoirSampledDonor()
+    public void Cross_SelectsTheConfiguredDestinationAndDonor()
     {
         var searchSpace = new ExpressionTreeSearchSpace(
             maximumLength: 9,
@@ -48,11 +48,8 @@ public sealed class SubtreeCrossoverTests
         var parent2Root = parent2.Root.ShouldBeOfType<BinaryExpressionNode>();
         var donor = parent2Root.Left.ShouldBeOfType<BinaryExpressionNode>().Right;
         var random = new SequenceRandomNumberGenerator(
-            0.5,  // Destination: parent1's multiplication subtree at preorder index 2.
-            0.75, // Keep donor candidate 1 when candidate 2 is visited.
-            0.5,  // Keep donor candidate 1 when candidate 3 is visited.
-            0.0,  // Select donor candidate 4: parent2's x0 node.
-            0.5); // Keep donor candidate 4 when candidate 5 is visited.
+            0.5,   // Destination: parent1's multiplication subtree at preorder index 2.
+            0.75); // Donor: all five of parent2's nodes fit the limits, and this picks the fourth, its x0 node.
 
         var offspring = SubtreeCrossover.Cross(
             parent1,
@@ -82,7 +79,7 @@ public sealed class SubtreeCrossoverTests
         var parent2 = (Variable("x0") + Variable("x1")).Build(unrestricted);
         var random = new SequenceRandomNumberGenerator(
             0.0,  // The only destination node.
-            0.75); // Keep x0 when the second valid terminal donor is visited.
+            0.25); // Choose x0, the first of the two terminal donors that fit the limits.
 
         var offspring = SubtreeCrossover.Cross(
             parent1,
@@ -108,7 +105,7 @@ public sealed class SubtreeCrossoverTests
         var parent2 = (Variable("x2") + Variable("x3")).Build(searchSpace);
         var random = new SequenceRandomNumberGenerator(
             0.9,  // Select parent1's x1 terminal at preorder index 2.
-            0.75); // Retain x2 when x3 becomes the second valid donor.
+            0.25); // Choose x2, the first donor that fits both limits; the addition fits the length but not the depth.
 
         var offspring = SubtreeCrossover.Cross(
             parent1,

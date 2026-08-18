@@ -135,6 +135,38 @@ public class NumericParameterFittingSpecs
         return new SymbolicRegressionProblem(data, Metrics.MSE, searchSpace);
     }
 
+    // Whether refinement effort counts against the run's evaluation budget is decided by one thing: whether the
+    // algorithm and the improvement check hold the same evaluator object. Execution instances resolve by reference, so
+    // one object means one counter. Sharing it makes the budget describe total effort including refinement; leaving the
+    // check on its own evaluator keeps refinement outside the budget. Neither is a hidden default, and both are here.
+    [Fact]
+    public void DecidingWhetherRefinementEffortCountsAgainstTheEvaluationBudget()
+    {
+        var problem = CreateProblem();
+        var sharedEvaluator = new ProblemEvaluator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>()
+            .CountEvaluatedCandidates(out var sharedCounter);
+        var algorithmEvaluator = new ProblemEvaluator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>()
+            .CountEvaluatedCandidates(out var ownCounter);
+
+        var sharing = CreateAlgorithm(problem) with
+        {
+            Evaluator = sharedEvaluator,
+            Refiner = new NumericParameterFittingRefiner().WithImprovementCheck(sharedEvaluator)
+        };
+        var notSharing = CreateAlgorithm(problem) with
+        {
+            Evaluator = algorithmEvaluator,
+            Refiner = new NumericParameterFittingRefiner().WithImprovementCheck()
+        };
+
+        sharing.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        notSharing.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+
+        // The shared counter saw the algorithm's evaluations plus the two comparison evaluations per refined candidate.
+        // The private one saw only the algorithm's, over the very same search.
+        sharedCounter.CurrentCount.ShouldBeGreaterThan(ownCounter.CurrentCount);
+    }
+
     private static GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem> CreateAlgorithm(
         SymbolicRegressionProblem problem) =>
         new()

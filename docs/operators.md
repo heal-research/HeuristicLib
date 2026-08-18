@@ -54,6 +54,18 @@ This consistency reduces cognitive load: once you’ve implemented one operator,
 > - Operators assume their input candidates are already within the given search space. Passing out-of-space inputs is considered a usage error and may throw.
 > - Operators guarantee that any candidates they return are within the given search space.
 
+## Batches are populations
+
+Operators work on batches, and a batch is a population rather than a positional tuple. An operator maps an input population to an output population, and how it pairs inputs or how many outputs it returns is part of that operator's own semantics: a crossover may recombine three parents into one offspring or two parents into two, and a refiner that filters may return fewer candidates than it received.
+
+Returning one output per input is the common case, and most built-in operators do exactly that, but it is not a rule of the operator model. An operator that depends on positional pairing states and checks that requirement itself, at the point where the dependency exists:
+
+- `ImprovementCheckingRefiner` indexes candidates against their objective vectors, so it requires its child refiner to preserve the population.
+- `ChooseOneCreator`, `ChooseOneCrossover`, `ChooseOneMutator` and `ChooseOneRefiner` assign each input to a child and restore input order afterwards, so each child must return one result per input assigned to it.
+- `RefinementEvaluator` owes its caller one objective vector per supplied candidate, so its refiner must preserve the population.
+
+Algorithms impose no such requirement on the production path. A refiner that returns a differently sized population is an ordinary outcome there, and the replacer decides the surviving population.
+
 ## Choosing an operator authoring path
 
 Operator authoring is based on who owns execution data and execution graph dependencies. Choose the narrowest path that fits the operator.

@@ -29,7 +29,7 @@ public sealed record SubtreeCrossover
 
         return selectedDonor is null
             ? parent1
-            : parent1.Replace(destination, selectedDonor.Node);
+            : parent1.Replace(destination, selectedDonor);
     }
 
     private static ExpressionPoint SelectDestination(ExpressionTree parent, IRandomNumberGenerator random, double? internalNodeProbability)
@@ -43,7 +43,7 @@ public sealed record SubtreeCrossover
             ?? throw new InvalidOperationException("The parent expression does not contain a selectable point.");
     }
 
-    private static ExpressionPoint? SelectDonor(ExpressionTree parent1, ExpressionTree parent2, ExpressionPoint destination, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, double? internalNodeProbability)
+    private static ExpressionNode? SelectDonor(ExpressionTree parent1, ExpressionTree parent2, ExpressionPoint destination, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, double? internalNodeProbability)
     {
         if (internalNodeProbability is null)
             return SelectDonor(parent1, parent2, destination, random, searchSpace, internalNode: null);
@@ -53,29 +53,49 @@ public sealed record SubtreeCrossover
             ?? SelectDonor(parent1, parent2, destination, random, searchSpace, !selectInternalNode);
     }
 
-    private static ExpressionPoint? SelectDonor(ExpressionTree parent1, ExpressionTree parent2, ExpressionPoint destination, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, bool? internalNode)
+    private static ExpressionNode? SelectDonor(ExpressionTree parent1, ExpressionTree parent2, ExpressionPoint destination, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, bool? internalNode)
     {
-        ExpressionPoint? selectedDonor = null;
-        var candidateCount = 0;
+        var eligibleCount = CountEligible(parent2.Root);
+        if (eligibleCount == 0)
+            return null;
 
-        foreach (var donor in parent2.RootPoint.TraversePreOrder())
+        // A single eligible donor is not a choice, so it costs no randomness.
+        var selectedIndex = eligibleCount == 1 ? 0 : random.NextInt(eligibleCount);
+        return FindEligible(parent2.Root, ref selectedIndex);
+
+        int CountEligible(ExpressionNode donor)
         {
-            if (internalNode is not null && (donor.Node.Arity > 0) != internalNode.Value)
-                continue;
+            var count = IsEligible(donor) ? 1 : 0;
+            for (var i = 0; i < donor.Arity; i++)
+                count += CountEligible(donor.GetChild(i));
 
-            var offspringLength = parent1.Length - destination.Node.Length + donor.Node.Length;
-            var replacementDepth = destination.Depth + donor.Node.Depth;
-            if (offspringLength > searchSpace.MaximumLength || replacementDepth > searchSpace.MaximumDepth)
-                continue;
-
-            candidateCount++;
-            if (candidateCount > 1 && random.NextInt(candidateCount) != 0)
-                continue;
-
-            selectedDonor = donor;
+            return count;
         }
 
-        return selectedDonor;
+        ExpressionNode? FindEligible(ExpressionNode donor, ref int remaining)
+        {
+            if (IsEligible(donor) && remaining-- == 0)
+                return donor;
+
+            for (var i = 0; i < donor.Arity; i++)
+            {
+                var found = FindEligible(donor.GetChild(i), ref remaining);
+                if (found is not null)
+                    return found;
+            }
+
+            return null;
+        }
+
+        bool IsEligible(ExpressionNode donor)
+        {
+            if (internalNode is not null && (donor.Arity > 0) != internalNode.Value)
+                return false;
+
+            var offspringLength = parent1.Length - destination.Node.Length + donor.Length;
+            var replacementDepth = destination.Depth + donor.Depth;
+            return offspringLength <= searchSpace.MaximumLength && replacementDepth <= searchSpace.MaximumDepth;
+        }
     }
 
     private static ExpressionPoint? SelectPoint(IEnumerable<ExpressionPoint> points, bool internalNode, IRandomNumberGenerator random)

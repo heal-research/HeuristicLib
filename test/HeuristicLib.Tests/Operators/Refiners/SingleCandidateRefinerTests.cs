@@ -5,10 +5,6 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Refiners;
 
-/// <summary>
-/// Pins the batching contract of the single-candidate authoring base. Batching is a configuration decision rather than
-/// an override, so the same candidates must produce the same refinement results for every concurrency setting.
-/// </summary>
 public class SingleCandidateRefinerTests
 {
     [Fact]

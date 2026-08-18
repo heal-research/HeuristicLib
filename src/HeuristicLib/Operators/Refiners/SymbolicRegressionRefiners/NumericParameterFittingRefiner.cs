@@ -60,6 +60,11 @@ public sealed record NumericParameterFittingRefiner
     /// <para>
     /// Being a dataset, this setting takes part in configuration equality by reference rather than by value.
     /// </para>
+    /// <para>
+    /// Data that does not supply a variable the expressions use is reported when the first affected candidate is
+    /// refined. A search space whose constants are all fixed reaches the solver for no candidate at all, so such a
+    /// mismatch stays unreported until the search space also offers an <see cref="EvolvableConstantSymbol"/>.
+    /// </para>
     /// </remarks>
     public RegressionData? FittingData { get; init; }
 
@@ -70,10 +75,9 @@ public sealed record NumericParameterFittingRefiner
             return fittedExpression;
         }
 
-        // A solve that does not converge is an ordinary outcome for one candidate among many, so that candidate is
-        // simply left as it was. The other failures are not per-candidate: an undifferentiable operation or an unbound
-        // variable follows from the search space and the training data, so every affected candidate fails identically
-        // and skipping them silently would hide the misconfiguration for a whole run.
+        // A solve that does not converge failed for this candidate alone, so it is left as it was. An undifferentiable
+        // operation or an unbound variable follows from the search space and the data, so every affected candidate
+        // fails the same way and reporting it once is what keeps a misconfigured run from looking like an unlucky one.
         return failure is NumericParameterFittingFailure.NumericalOptimization
             ? candidate
             : throw NumericParameterFitter.CreateException(failure, nameof(problem));

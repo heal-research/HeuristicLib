@@ -1,3 +1,4 @@
+using System.Buffers;
 using HEAL.HeuristicLib.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Optimization;
@@ -55,16 +56,26 @@ public sealed class SymbolicRegressionProblem
 
         if (PredictionMetrics.Length > 0)
         {
-            var predictions = expression.Evaluate(TrainingData.Inputs);
-            var targets = TrainingData.Target.Values.Span;
-            if (UseLinearScaling)
+            var rowCount = TrainingData.Inputs.RowCount;
+            var buffer = ArrayPool<double>.Shared.Rent(rowCount);
+            try
             {
-                var parameters = LinearScaling.Fit(predictions, targets);
-                LinearScaling.Apply(predictions, parameters, predictions);
-            }
+                var predictions = buffer.AsSpan(0, rowCount);
+                expression.Evaluate(TrainingData.Inputs, predictions);
+                var targets = TrainingData.Target.Values.Span;
+                if (UseLinearScaling)
+                {
+                    var parameters = LinearScaling.Fit(predictions, targets);
+                    LinearScaling.Apply(predictions, parameters, predictions);
+                }
 
-            for (var i = 0; i < PredictionMetrics.Length; i++)
-                values[i] = PredictionMetrics[i].Evaluate(predictions, targets);
+                for (var i = 0; i < PredictionMetrics.Length; i++)
+                    values[i] = PredictionMetrics[i].Evaluate(predictions, targets);
+            }
+            finally
+            {
+                ArrayPool<double>.Shared.Return(buffer);
+            }
         }
 
         for (var i = 0; i < ExpressionMetrics.Length; i++)

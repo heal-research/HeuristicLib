@@ -10,10 +10,6 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Refiners;
 
-/// <summary>
-/// Pins objective-aware retention. The refiner returns a candidate either way, so what is being tested is which of the
-/// two candidates comes back and how many problem evaluations that costs.
-/// </summary>
 public class ImprovementCheckingRefinerTests
 {
     [Fact]
@@ -33,10 +29,7 @@ public class ImprovementCheckingRefinerTests
         Refine(instance, 10, 20).ShouldBe([10, 20]);
     }
 
-    /// <summary>
-    /// A refiner that cannot improve a candidate returns it unchanged, which the criterion sees as an unchanged
-    /// objective vector. Failure therefore never produces a worse candidate.
-    /// </summary>
+    // A refiner that cannot improve a candidate returns it unchanged, so failure never produces a worse candidate.
     [Fact]
     public void Refine_KeepsTheOriginalCandidateWhenTheRefinerChangesNothing()
     {
@@ -76,10 +69,7 @@ public class ImprovementCheckingRefinerTests
         counter.CurrentCount.ShouldBe(4);
     }
 
-    /// <summary>
-    /// Sharing one cache instance with the algorithm is what turns the algorithm's own evaluation of the returned
-    /// candidate into a cache hit, which is the documented way to pay for two evaluations instead of three.
-    /// </summary>
+    // Sharing one cache instance is what turns the algorithm's own evaluation of the returned candidate into a hit.
     [Fact]
     public void Refine_WithASharedCachingEvaluator_LetsALaterEvaluationHitTheCache()
     {
@@ -98,11 +88,8 @@ public class ImprovementCheckingRefinerTests
         counter.CurrentCount.ShouldBe(2);
     }
 
-    /// <summary>
-    /// Operator budgets install a counted replacement for the observed evaluator in a child registry, and replacements
-    /// are keyed by reference. A refiner holding the same evaluator instance therefore resolves the counted replacement
-    /// too, so its comparison evaluations count against the budget that decides when the algorithm stops.
-    /// </summary>
+    // Operator budgets install a counted replacement keyed by reference, so a refiner holding the same evaluator
+    // instance resolves it too.
     [Fact]
     public void Refine_WithTheEvaluatorAnOperatorBudgetObserves_CountsItsComparisonEvaluations()
     {
@@ -118,10 +105,7 @@ public class ImprovementCheckingRefinerTests
         counter.CurrentCount.ShouldBe(4);
     }
 
-    /// <summary>
-    /// The counterpart: a refiner left on its inherited default evaluator holds a different instance, so the budget's
-    /// replacement does not reach it and refinement effort stays outside the budget.
-    /// </summary>
+    // The counterpart: a different evaluator instance is not reached by the budget's replacement.
     [Fact]
     public void Refine_WithItsOwnEvaluator_KeepsComparisonEvaluationsOutOfTheBudget()
     {
@@ -149,10 +133,8 @@ public class ImprovementCheckingRefinerTests
         Refine(sufficient.CreateExecutionInstance(), 10).ShouldBe([5]);
     }
 
-    /// <summary>
-    /// Distinguishing the two criteria needs a candidate that differs while its objective vector does not, so this uses
-    /// a problem minimizing the absolute value and a refiner that negates. Only <c>NotWorse</c> takes the lateral move.
-    /// </summary>
+    // A lateral move needs a candidate that differs while its objective vector does not: the problem minimizes the
+    // absolute value and the refiner negates.
     [Fact]
     public void Refine_WithNotWorse_TakesALateralMoveThatStrictlyBetterRejects()
     {
@@ -181,10 +163,7 @@ public class ImprovementCheckingRefinerTests
         refiner.Criterion.ShouldBe(ImprovementChecking.Default);
     }
 
-    /// <summary>
-    /// Every combination of the two optional settings is reachable in one call, so configuring an existing evaluator
-    /// never needs a <c>with</c> expression after the fluent method.
-    /// </summary>
+    // Every combination of the two optional settings is reachable in one call, so no with expression is needed after it.
     [Fact]
     public void WithImprovementCheck_ReachesEverySettingCombinationInOneCall()
     {
@@ -239,11 +218,8 @@ public class ImprovementCheckingRefinerTests
         left.ShouldNotBe(new AddOffsetRefiner(-5).WithImprovementCheck(ImprovementChecking.NotWorse));
     }
 
-    /// <summary>
-    /// Wrapping order expresses two genuinely different searches, which this pins with a refiner that has to pass
-    /// through a worse candidate to reach a better one: 10 becomes 20, and 20 becomes 5.
-    /// Accepting each round rejects the uphill step and never gets there, while accepting once at the end keeps 5.
-    /// </summary>
+    // The refiner reaches a better candidate only through a worse one: 10 becomes 20, and 20 becomes 5. Accepting each
+    // round never gets there, while accepting once at the end keeps 5.
     [Fact]
     public void Refine_ComposedWithIteratedRefinerInBothOrders_SearchesDifferently()
     {
@@ -293,9 +269,7 @@ public class ImprovementCheckingRefinerTests
             -candidate;
     }
 
-    /// <summary>
-    /// Reaches a better candidate only by passing through a worse one, so the two composition orders disagree.
-    /// </summary>
+    // Reaches a better candidate only by passing through a worse one, so the two composition orders disagree.
     private sealed record UphillRefiner : SingleCandidateRefiner<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
         public override int RefineCandidate(int candidate, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>

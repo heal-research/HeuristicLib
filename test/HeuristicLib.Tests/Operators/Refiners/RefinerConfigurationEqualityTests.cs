@@ -8,11 +8,6 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Refiners;
 
-/// <summary>
-/// Pins structural equality of refiner configurations. The refiner family mirrors the mutator slice, which is the
-/// reference shape for every role, so each topology base and concern type is covered in both the equal and the
-/// not-equal direction.
-/// </summary>
 public class RefinerConfigurationEqualityTests
 {
     [Fact]
@@ -175,10 +170,8 @@ public class RefinerConfigurationEqualityTests
         left.ShouldNotBe(right);
     }
 
-    /// <summary>
-    /// Documents that a freshly allocated action observer defeats structural equality, which is why concern types
-    /// carrying only value-like settings must not be expressed as an observer wrapper.
-    /// </summary>
+    // A freshly allocated action observer defeats structural equality, which is why concern types carrying only
+    // value-like settings must not be expressed as an observer wrapper.
     [Fact]
     public void ObservableRefiner_WithSeparatelyConstructedActionObservers_IsNotEqual()
     {
@@ -284,10 +277,8 @@ public class RefinerConfigurationEqualityTests
         public override int RefineCandidate(int candidate, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => candidate + Offset;
     }
 
-    /// <summary>
-    /// An externally authored topology carrying no equality attribute, generator or hand-written comparison. Its
-    /// structural equality follows from <c>ChildRefiners</c> being a value array.
-    /// </summary>
+    // An externally authored topology with no equality attribute, generator or hand-written comparison: its structural
+    // equality follows from ChildRefiners being a value array.
     private sealed record FirstOfRefiner
         : MultiRefiner<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {

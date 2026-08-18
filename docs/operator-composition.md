@@ -102,6 +102,12 @@ Creators do not form a natural pipeline because a creator does not consume candi
 
 ## Refiner composition
 
+### What refinement costs
+
+Refinement is normally the most expensive thing an algorithm does, by a wide margin. Profiling a genetic algorithm over a symbolic-regression problem — 80 candidates, 30 generations, `NumericParameterFittingRefiner` at its default five iterations — attributed 96 to 99 percent of wall-clock time to the refiner at every dataset size from 200 to 20 000 rows, and enabling it multiplied total run time by between 45 and 120 times. Every other role, evaluation included, fell below two percent.
+
+Two consequences are worth carrying into a configuration. Optimizing anything else while refinement is enabled changes nothing measurable, and the setting that moves a run is how many candidates are refined at all: `refiner.WithRate(refinementRate)` is the usual lever, and a refiner's own iteration count is the next one. The exact numbers belong to one machine and one problem, but the order of magnitude is the point.
+
 Repeated refinement is expressed through `IteratedRefiner` rather than by placing the same refiner at two lifecycle points. It applies its child exactly `Iterations` times, feeding each result back in and forking a random number generator per iteration. There is no early exit when an iteration leaves a candidate unchanged, because candidate equality is not generally meaningful and a fixed iteration count keeps the result reproducible.
 
 ```csharp
@@ -212,6 +218,15 @@ new CachingEvaluator<...>(problemEvaluator.CountEvaluatedCandidates(out var solv
 ```
 
 The first counts evaluation requests, the second counts actual problem evaluations. Both are legitimate; documentation for a preset should state which one it chose.
+
+`LimitEvaluator` follows the same rule, and there the choice decides when a run stops rather than what a number reads:
+
+```csharp
+new CachingEvaluator<...>(problemEvaluator, keySelector).LimitEvaluations(100_000) // cache hits consume budget
+new CachingEvaluator<...>(problemEvaluator.LimitEvaluations(100_000), keySelector) // cache hits do not consume budget
+```
+
+With the limit outside, the budget means evaluation requests, so a refiner re-evaluating a candidate the cache already knows still spends from it. With the cache outside, the request never reaches the limit and the budget means actual problem evaluations.
 
 To attribute refinement effort separately instead of folding it into one counter, give the refiner its own counted evaluator:
 

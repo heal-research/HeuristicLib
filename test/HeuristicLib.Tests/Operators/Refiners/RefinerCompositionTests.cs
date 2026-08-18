@@ -9,10 +9,6 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Refiners;
 
-/// <summary>
-/// Pins the behavior of the refiner composition topologies. Refinement is composed through these topologies rather
-/// than through repeated placement in an algorithm lifecycle, so ordering, repetition and validation are contracts.
-/// </summary>
 public class RefinerCompositionTests
 {
     [Fact]
@@ -170,6 +166,66 @@ public class RefinerCompositionTests
         Should.Throw<InvalidOperationException>(() => Refine(instance, 3));
 
         observed.ShouldBe(0);
+    }
+
+    [Fact]
+    public void IteratedRefiner_WithOneIteration_MatchesTheBareRefiner()
+    {
+        var iterated = AddOffset(1).AsIterated(1).CreateExecutionInstance();
+
+        Refine(iterated, 3, 4).ShouldBe(Refine(AddOffset(1).CreateExecutionInstance(), 3, 4));
+    }
+
+    // Instrumentation reports what its own position sees, so the same counter says something different inside an
+    // iterated refiner than around it.
+    [Fact]
+    public void ObservableRefiner_ReportsOncePerCallAtItsOwnPositionInTheComposition()
+    {
+        var inside = new ObservationCounter();
+        var around = new ObservationCounter();
+        var insideInstance = AddOffset(1).CountRefinerCalls(inside).AsIterated(3).CreateExecutionInstance();
+        var aroundInstance = AddOffset(1).AsIterated(3).CountRefinerCalls(around).CreateExecutionInstance();
+
+        Refine(insideInstance, 3).ShouldBe([6]);
+        Refine(aroundInstance, 3).ShouldBe([6]);
+
+        inside.CurrentCount.ShouldBe(3);
+        around.CurrentCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void NestedComposition_AppliesEveryStageAndItsInstrumentation()
+    {
+        var counter = new ObservationCounter();
+        var instance = PipelineRefiner.Create(
+                AddOffset(1).CountRefinedCandidates(counter),
+                Multiply(2).AsIterated(2))
+            .CreateExecutionInstance();
+
+        Refine(instance, 3).ShouldBe([16]);
+        counter.CurrentCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void ChooseOneRefiner_WithTheSameSeed_MakesTheSameSelections()
+    {
+        var refiner = ChooseOneRefiner.Create([AddOffset(1), Multiply(2)], [1.0, 1.0]);
+        var candidates = new[] { 3, 3, 3, 3, 3, 3, 3, 3 };
+
+        var first = refiner.CreateExecutionInstance().Refine(candidates, RandomNumberGenerator.Create(7), DummySearchSpace<int>.Instance, CreateProblem());
+        var second = refiner.CreateExecutionInstance().Refine(candidates, RandomNumberGenerator.Create(7), DummySearchSpace<int>.Instance, CreateProblem());
+
+        second.ShouldBe(first);
+        // Both children are actually reachable, or the comparison above would be vacuous.
+        first.Distinct().Count().ShouldBe(2);
+    }
+
+    [Fact]
+    public void WithRate_OfOne_RefinesEveryCandidate()
+    {
+        var instance = AddOffset(1).WithRate(1.0).CreateExecutionInstance();
+
+        Refine(instance, 3, 4, 5).ShouldBe([4, 5, 6]);
     }
 
     private static AddOffsetRefiner AddOffset(int offset) => new(offset);

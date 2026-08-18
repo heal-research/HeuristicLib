@@ -486,7 +486,7 @@ Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted
 | LM-0 Design contract | Accepted | Document the `TryMinimize` boundary, model-plus-target formulation, Jacobian convention, result and failure semantics, non-finite behavior, cancellation, MathNet stopping behavior, storage ownership, and exclusions. No source code. |
 | LM-1 Successful solve path | Accepted | Implement the adapter, expose the required AD execution dimensions, wrap output and Jacobian arrays without copying, and verify a simple linear least-squares solve. |
 | LM-2 Outcome behavior | Accepted | Add argument validation, cancellation, MathNet-exception conversion, maximum-iteration behavior, and non-finite result propagation. |
-| LM-3 Verification and hardening | Accepted | Add fast nonlinear, mean-squared-error, Jacobian-orientation, repeated-solve, and storage-lifetime tests to the core suite; place calculation-intensive stress cases in the scenario suite; confirm the adapter remains independent of expressions, regression, and HeuristicLib algorithm/operator infrastructure; record duplicated-forward-sweep benchmarking as deferred work. |
+| LM-3 Verification and hardening | Accepted | Add fast nonlinear, mean-squared-error, Jacobian-orientation, repeated-solve, and storage-lifetime tests to the core suite; place calculation-intensive stress cases in the scenario suite; confirm the adapter remains independent of expressions, regression, and HeuristicLib algorithm/operator infrastructure; record duplicated-forward-sweep benchmarking as deferred work, since closed by the [solver cost attribution outcome](#solver-cost-attribution-outcome). |
 
 LM-0 through LM-3 cover only the MathNet workhorse adapter. They explicitly exclude HeuristicLib termination, evaluation accounting, algorithms, operators, general optimizer APIs, solver interchange abstractions, constant acceptance, and symbolic-expression rebuilding.
 
@@ -1426,6 +1426,343 @@ algorithms and contravariance does not bridge a composition boundary. Their guar
 Numeric parameter fitting is a symbolic-regression capability, so this is a limitation of those two
 wrapper problems rather than a reason to loosen the refiner. Revisit only if a real need appears.
 
+### Integration hardening plan
+
+RF-8 is the closing checkpoint of the refinement track. It is verification and
+hardening of what RF-3 through RF-7 delivered, not new capability. It adds no
+refiner type, changes no operator contract, and does no performance work;
+producer composition remains increment 13 and measurement remains increment 14.
+Where a check finds a genuine defect or an unsettled rule, RF-8 fixes it in the
+existing code or records an explicit decision, and states which.
+
+The refinement track already carries substantial focused coverage:
+`RefinerCompositionTests`, `RefinerConfigurationEqualityTests`,
+`SingleCandidateRefinerTests`, `ImprovementCheckingRefinerTests`,
+`ImprovementCriterionTests`, `RefinementEvaluatorTests`,
+`NumericParameterFittingRefinerTests`, `AlgorithmRefinementTests`, and
+`NumericParameterFittingSpecs`. RF-8 therefore targets the seams between those
+units rather than restating them: the batch contract as a shared rule, the
+accounting behavior the composition examples promise, the algorithms RF-5
+touched but did not pin, and the failure and cancellation behavior that only
+appears in a run.
+
+Work groups are ordered so that the cheap structural checks run first and the
+decision-bearing ones run once the surrounding behavior is pinned.
+
+#### H-1 Batch semantics across every topology
+
+The batch an operator receives is a population, not a positional tuple. An
+operator maps an input population to an output population, and how it pairs
+inputs or how many inputs contribute to one output is that operator's own
+semantics. A crossover may recombine three parents into one offspring or two
+parents into two; a mutator normally returns one candidate per input but may
+conceptually return a differently sized population; a refiner in its general
+form takes a population and returns a refined population.
+
+Equal input and output size is therefore **not** a general constraint of the
+refiner role, and RF-8 does not add a uniform guard. An operator that genuinely
+depends on positional pairing checks it locally, at the point where the
+dependency exists and where the message can name what it needed.
+
+`ImprovementCheckingRefiner` is such an operator and already checks: its
+accept-or-reject loop indexes candidates, refined candidates, and both objective
+vector lists together, so a differently sized result would mispair or overrun.
+Its existing `InvalidOperationException` stays as the model for a local check.
+
+`RefinementEvaluator` is the second such operator, and does not check today. It
+returns `evaluator.Evaluate(refined, ...)` directly, so a child refiner that
+changes the size makes the evaluator return a different number of objective
+vectors than the caller supplied candidates. The evaluator contract *is*
+positional, so this is a genuine local requirement rather than a general one:
+add a check with a message naming the refined size, the supplied size, and the
+reason the evaluator needs them equal.
+
+The algorithms need no such check. They apply `refiner?.Refine(...) ?? candidates`
+on the production path, and a refiner that returns a differently sized population
+is an ordinary outcome there; the replacer already decides the surviving
+population size.
+
+The work:
+
+- Pin the general semantics: a size-changing refiner passes through
+  `PipelineRefiner`, `IteratedRefiner`, `ChooseOneRefiner`, `WrappingRefiner`,
+  `ObservableRefiner`, `CountingRefiner` and `DurationMeasuringRefiner` without
+  any of them objecting, and the counting and duration instrumentation reports
+  the sizes it actually saw.
+- Pin the local requirements: `ImprovementCheckingRefiner` keeps its check, and
+  `RefinementEvaluator` gains an equivalent one.
+- Pin that a size-changing refiner inside a real algorithm run is accepted and
+  that the run continues with the population the refiner returned.
+- Cover empty, single-element and multi-element batches for every topology,
+  since the empty batch is the case each topology handles separately.
+- Pin that a refiner which changes nothing returns reference-identical
+  candidates, because elitism, caching keys and improvement checking all read
+  identity rather than value equality.
+
+#### H-2 Refiner and evaluator composition accounting
+
+Turn the seven composition examples into executable tests. Examples 3, 5, and 6
+have coverage today; the rest do not.
+
+- Example 1: a refiner with its own evaluator keeps comparison evaluations out
+  of an algorithm's `LimitEvaluator` budget. Today only the operator-budget
+  observer form is covered.
+- Example 2: one shared `LimitEvaluator` instance yields one counter, so a run
+  with refinement reaches the budget in fewer generations than the same run
+  without it.
+- Example 4: `LimitEvaluator(CachingEvaluator(...))` and
+  `CachingEvaluator(LimitEvaluator(...))` differ in whether cache hits consume
+  budget. Pin both.
+- Example 7: an ordered pipeline in which only the stage that needs objective
+  information carries an evaluator.
+- The accounting rule itself: `ExecutionInstanceRegistry` resolves by reference
+  identity, so one shared configuration object gives one counter and one cache,
+  while two structurally equal but separately constructed configurations give
+  two. Every example depends on this; pin it directly.
+- `RefinementEvaluator` inside a real run: the population keeps the original
+  candidates while their objective vectors come from the transient refined
+  copies, and sharing the algorithm's evaluator instance merges the counters.
+
+#### H-3 Algorithm integration completeness
+
+RF-5 added the `Refiner` setting to six algorithms; `AlgorithmRefinementTests`
+pins `GeneticAlgorithm` and `HillClimber` in detail and only checks that
+`EvolutionStrategy` and `NSGA2` accept a refiner.
+
+- Add `AlpsGeneticAlgorithm` and
+  `OpenEndedRelevantAllelesPreservingGeneticAlgorithm`. The latter refines at
+  three production sites; the repopulation branch needs a configuration that
+  actually empties the population, which is the site most likely to be missed.
+- Extend the carried-candidate rule beyond `GeneticAlgorithm` elites to the
+  plus-strategy parents of `EvolutionStrategy` and to candidates carried between
+  ALPS layers.
+- Parameterize the unset-refiner reproducibility check over all six algorithms.
+  It guards the property that made the creation sites delicate: refinement must
+  not consume randomness when no refiner is configured.
+
+#### H-4 Objective directions and acceptance criteria in composition
+
+`ImprovementCriterionTests` covers the criteria in isolation. RF-8 covers their
+wiring.
+
+- `ImprovementCheckingRefiner` on a maximized objective keeps the higher
+  objective vector, through a run rather than a direct call.
+- Default criterion resolution from the problem, single objective to strict
+  order, Pareto to dominance, and a configured total order to that order,
+  observed through the refiner.
+- `MinimumImprovement` and `MinimumRelativeImprovement` through the refiner, one
+  case each, including a rejected marginal improvement.
+- One multi-objective run under NSGA2 where acceptance is dominance-based.
+
+#### H-5 Failure behavior
+
+- A refiner that throws inside a run propagates out of `Complete` and of the
+  streaming enumeration, and instrumentation wrappers neither swallow it nor
+  lose their recorded state. The operator-level halves of this are covered; the
+  run-level halves are not.
+- `NumericParameterFittingRefiner` throws on configuration-level failures, an
+  undifferentiable operation or a variable the fitting data does not supply, on
+  the first affected candidate rather than after a full generation. RF-6
+  recorded that no built-in symbol can reach the undifferentiable path any more,
+  so this needs a custom symbol emitting a rule-less opcode. This restores the
+  coverage RF-6 recorded as lost.
+- A non-converging solve stays a per-candidate no-op when it happens inside a
+  run, not only at the component boundary.
+- Decide and pin how an exception from one candidate surfaces when `Concurrency`
+  is parallel, so that the failure a user sees is deterministic rather than
+  dependent on scheduling.
+
+#### H-6 Topology round-out
+
+- `IteratedRefiner` at its boundaries, and nested pipelines containing wrapping
+  refiners.
+- Observer semantics for a refiner nested inside a pipeline or an iterated
+  refiner: pin whether observers fire once per outer call or once per inner
+  stage, since both are defensible and only one is implemented.
+- `ChooseOneRefiner` reproducibility, where one seed gives one selection
+  sequence and `WithRate(1.0)` behaves as the bare refiner.
+
+#### Out of scope for RF-8
+
+**Cancellation.** `IRefinerInstance.Refine` takes no `CancellationToken`, so a
+run's token is honored at iteration boundaries through `RunStreamingAsync` and
+`CancellationTokenTerminator`, never inside a refiner call.
+`NumericParameterFitter.TryFit` accepts a token, but
+`NumericParameterFittingRefiner` has no way to supply one, so a long
+Levenberg-Marquardt solve cannot be interrupted once it starts. This is recorded
+rather than addressed: adding a token to the operator contract would touch every
+operator role, and a per-refiner setting is a separate decision. Neither belongs
+in a hardening checkpoint.
+
+**Documentation and usage specs.** The user-facing explanation of refinement is
+tracked separately as RF-9, so that RF-8 stays a behavioral checkpoint. RF-8
+still updates this plan's outcome section and the parity-matrix row, which are
+checkpoint bookkeeping rather than user documentation.
+
+#### Validation
+
+Run `HeuristicLib.Tests` throughout, and the API usage, experimental and
+scenario suites once at the end. Formatting, style, and analyzer checks must be
+clean before review.
+
+### Integration hardening outcome
+
+RF-8 is implemented. The refinement track's units were already well covered, so the work landed on the
+seams between them: batch semantics, evaluator accounting, the algorithms RF-5 wired but did not pin,
+acceptance wiring, and failure behavior inside a run.
+
+Decisions:
+
+- **Batch size is not a refiner contract.** An operator maps an input population to an output
+  population; how it pairs inputs and how many outputs it returns is that operator's own semantics, as
+  it already is for a three-parent crossover or a two-offspring one. RF-8 therefore added no uniform
+  guard. `IRefiner` now says this, and the composition topologies pass a resized population through
+  unchanged.
+- **Positional requirements are local and stated where they exist.** Three operators have one.
+  `ImprovementCheckingRefiner` indexes candidates against objective vectors and already checked.
+  `ChooseOneRefiner` restores input order through `WeightedBatchDispatcher`, which already checked and
+  documents the requirement. `RefinementEvaluator` did not check and now does: it owes its caller one
+  objective vector per supplied candidate, so a resizing refiner throws there instead of returning a
+  miscounted result that the algorithm would have tripped over later.
+- **Algorithms need no such check.** A refiner that returns a differently sized population on the
+  production path is an ordinary outcome; the replacer decides the surviving population. This is
+  pinned rather than merely assumed.
+- **Parallel batching keeps the execution layer's exception convention.** A candidate failure under
+  `ExecutionConcurrency.Concurrent` surfaces as an `AggregateException` wrapping the original, which is
+  the TPL behavior `BatchExecutionTests.Parallel_FollowsTplExceptionBehavior` already pins for every
+  batching operator. Refiners inherit it rather than introducing a second convention; sequential
+  batching throws the original exception. Both are deterministic, which was the actual requirement.
+
+Findings:
+
+- **`RefinementEvaluator` was the one composition that could silently break a contract.** Everything
+  else either checked already or had no positional requirement. Fixed with a check and a remark.
+- **The undifferentiable-operation failure is unreachable by construction, not merely by built-in
+  symbols.** RF-6 recorded the lost coverage as still mattering "for a user's custom symbol emitting a
+  rule-less opcode". It cannot: `OpCodes.GetArity` throws for any opcode without metadata, including
+  undefined enum values, before the differentiability check runs, and RF-6 gave every opcode with
+  metadata a rule. The guard in `DifferentiableExpressionCompiler` stays as future-proofing for an
+  opcode added without a rule, and `EveryBuiltInOperationIsDifferentiable` fails the moment that
+  happens. RF-8 covers the configuration failure that *is* reachable instead: a variable the fitting
+  data does not supply, at the refiner and through a run. Whether the design should change to make the
+  path reachable was reviewed separately; see
+  [Undifferentiable operations: reachability decision](#undifferentiable-operations-reachability-decision).
+- **A misconfigured fitting dataset is invisible without evolvable constants.** The refiner's identity
+  shortcut returns candidates untouched when an expression has no evolvable constant, so a search space
+  configured with only fixed constants never reaches the solver and never reports the mismatch. This
+  surfaced while writing the run-level failure test, which needed `EvolvableConstantSymbol` in the
+  search space to fail at all. It is correct behavior, but worth stating where the refiner is
+  documented.
+- **`GeneticAlgorithm` was the only algorithm whose refinement sites were pinned in detail.** ALPS, the
+  open-ended algorithm, and the plus-strategy carry rule of `EvolutionStrategy` were unverified. The
+  open-ended algorithm's repopulation branch needed a refiner that keeps every offspring from
+  dominating its parents before the branch could be reached at all.
+
+#### Undifferentiable operations: reachability decision
+
+The unreachable failure path raised the question of whether the design should change to make it testable.
+It should not, for a reason that only became clear on inspection: the path is dormant rather than dead.
+Stages 5.4 and 5.6 add vectorial and interval operations, and the first opcode that lands without a
+differentiation rule makes the branch live. `EveryBuiltInOperationIsDifferentiable` fails at that moment,
+which forces the author to either add the rule or exclude the opcode and write the test that is possible
+by then.
+
+Three layers were involved, and only one of them was actually untestable:
+
+| Layer | Reachable |
+| --- | --- |
+| The compiler recording an `ExpressionCompilationFailure` | No. An opcode without metadata throws from `OpCodes.GetArity` first, and every opcode with metadata has a rule. |
+| `NumericParameterFitter.CreateException` mapping it to a `NotSupportedException` | Yes, from a constructed failure. It was simply untested. |
+| The refiner reporting it instead of skipping the candidate | Only because the decision was inline behind a static call. |
+
+The exception mapping is now covered from a constructed compilation failure, which is the one layer that
+carries real risk: it asserts the exception type and the symbol and operation the message names.
+
+The refiner's classification stays an inline type test. Extracting it into a named member was tried and
+reverted: with one call site, a test over the extracted member restates its own one-line body and can
+only fail when that body is edited, while both branches the refiner can actually reach are already
+covered by behavior tests, a non-converging solve that skips a candidate and an unbound variable that
+throws. The branch that remains untested is the one no expression can produce.
+
+Rejected alternatives:
+
+- **Delete the path.** Everything involved is internal, so removal would cost nothing externally, but
+  Stage 5 reactivates it and re-adding structured failure handling later costs more than keeping it.
+- **Give operations extensible identity** so a custom symbol could emit an operation the engine does not
+  know. This would make the failure genuinely reachable from user code, but it contradicts the AD design
+  contract, which excludes runtime registries and dispatch in hot loops, and the closed opcode set is what
+  keeps the emission switch fast. Worth revisiting only if third-party primitive operations become a
+  product goal, which is not a testing decision.
+- **Report an undefined opcode as a compilation failure** instead of an argument exception. This conflates
+  a malformed symbol, which also breaks the ordinary interpreter, with a model limitation, and it cannot
+  work mechanically: the placeholder substitution that keeps the value stack balanced needs the arity that
+  an unknown opcode does not have.
+
+Deriving the compiler's supported-operation list from one operation catalog, rather than maintaining it
+beside the emission switch, belongs to the deferred operation-model consolidation review. It would make
+the drift this branch guards against impossible by construction.
+
+Coverage added:
+
+| Group | Where |
+| --- | --- |
+| H-1 batch semantics | `RefinerBatchSemanticsTests`, plus a resizing case in `AlgorithmRefinementTests` and `RefinementEvaluatorTests` |
+| H-2 evaluator accounting | `RefinerEvaluatorAccountingTests`, plus the Baldwinian run case in `AlgorithmRefinementTests` |
+| H-3 algorithm integration | `AlgorithmRefinementTests`: ALPS, the open-ended algorithm including repopulation, plus-strategy carry, and a six-algorithm reproducibility check |
+| H-4 acceptance wiring | `ImprovementCheckingCompositionTests` |
+| H-5 failure behavior | `RefinerFailureTests`, `NumericParameterFittingRefinerTests`, and the failure-classification and exception-mapping tests in `NumericParameterFitterTests` |
+| H-6 topology round-out | `RefinerCompositionTests` |
+
+Validation: Release build clean across the solution; 2022 core, 120 API usage, 64 experimental and 23
+scenario tests pass; `dotnet format` whitespace, style and analyzer checks report nothing in the
+touched files.
+
+### Refinement documentation outcome
+
+RF-9 is implemented. Its scope turned out to be much narrower than the checkpoint described, because most
+of what it planned to write already existed. `docs/operator-composition.md` carried the refiner
+topologies, the improvement-checking criteria table, both nesting orders, the reference-identity
+accounting rule with its shared-counter and shared-cache configurations, the terminator arrangement, and
+transient refinement evaluation. The glossary carried entries for both refiner and numeric parameter
+fitting, and the developer backlog already recorded the open cancellation and validation-phase decisions.
+The RF-8 outcome's claim that the accounting story was explained only in this plan was wrong.
+
+What was genuinely missing was the behavior RF-8 settled, plus the places refinement had never been
+described at all:
+
+- **Batch semantics.** `docs/operators.md` gains a section stating that a batch is a population, that
+  returning one output per input is the common case rather than a rule of the operator model, and which
+  operators hold a positional requirement of their own.
+- **Budget wrapper order.** The accounting section documented counting relative to a cache but not
+  limiting relative to one, which decides whether a refiner's repeat evaluation spends from the budget.
+- **Algorithm placement.** `docs/algorithm.md` had no refinement content at all. It now names the six
+  algorithms carrying a `Refiner`, states that refinement sits on the production path and therefore never
+  reaches carried elites, plus-strategy parents or a hill climber's incumbent, and that an unset refiner
+  consumes no randomness.
+- **Instrumentation position.** `docs/observability-and-analysis.md` gains the rule that a counter reports
+  what its own position sees, with the iterated-refiner example, and that item counters report the
+  population an operator returned rather than the one it received.
+- **The fitting-data caveat.** `NumericParameterFittingRefiner.FittingData` documents that a mismatch is
+  reported when the first affected candidate is refined, and stays unreported entirely while the search
+  space offers no evolvable constant.
+- **The accounting spec.** `NumericParameterFittingSpecs` gains a spec that runs the same search twice,
+  sharing the evaluator with the improvement check in one and not the other, and asserts the difference in
+  the counters.
+
+Deliberately not written: any statement about what refinement costs in time. That belongs with the
+measurements from the performance increment rather than with an estimate. Since written: the [whole-run
+profile outcome](#whole-run-profile-outcome) supplies those measurements, and
+`docs/operator-composition.md` now carries the cost statement they support.
+
+Not taken in review: a cancellation-boundary paragraph in `docs/execution-model.md` and a batch-semantics
+sentence in the glossary refiner entry. `docs/algorithm.md` states the boundary where refinement is
+configured, and `docs/operators.md` carries the batch semantics, so both subjects are documented; whether
+the general execution page should also state the operator-level cancellation boundary remains open
+alongside the backlog decision about how cancellation should reach operators.
+
+Validation: Release build clean across the solution; 2023 core and 121 API usage tests pass; `dotnet
+format` whitespace and analyzer checks are clean.
+
 ### Refinement checkpoints
 
 Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted`. Implementation stops at `Awaiting review`; only explicit user acceptance advances to the next checkpoint.
@@ -1437,10 +1774,11 @@ Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted
 | RF-2 Evaluator contract simplification | Accepted | Change `IEvaluatorInstance.Evaluate` to return `IReadOnlyList<ObjectiveVector>`, migrate the evaluator wrappers, built-in algorithms, and analysis hooks, remove `IteratedEvaluator`, and remove the candidate-substitution caveat from `CachingEvaluator`. `EvaluatedCandidate<TCandidate>` is retained as the population and state pairing type; only the evaluator stops producing it. `IEvaluatorObserver.AfterEvaluation` becomes `(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, ...)`, adopting the output-first parameter order that the other seven observer interfaces already use and that evaluation was the sole exception to. |
 | RF-3 Refiner operator model | Accepted | Implement the general refiner configuration and execution-instance contracts, authoring bases in the three paths and three arities, `SingleCandidateRefiner.RefineCandidate`, concurrency, identity behavior, validation, and focused contract tests. Delivered together with RF-4; see [Refiner operator model outcome](#refiner-operator-model-outcome). |
 | RF-4 Refiner composition topologies | Accepted | Add the pipeline, iterated, choose-one, multi, wrapping, and observable refiner topologies; design and add the evaluator composition for transient Baldwinian refinement; restore iterated refinement after RF-2 removes `IteratedEvaluator`; and cover order-significant, repeated-stage, no-write-back, and evaluation-accounting behavior. Delivered together with RF-3; see [Refiner operator model outcome](#refiner-operator-model-outcome). |
-| RF-5 Explicit algorithm integration | Awaiting review | Add configurable refinement to applicable built-in algorithms after creation and final variation but before evaluation, without re-refining carried evaluated candidates. See [Algorithm integration outcome](#algorithm-integration-outcome). |
-| RF-6 Numeric parameter-fitting refiner | Awaiting review | Adapt symbolic-regression numeric parameter fitting to the general refiner role and define its failure behavior without adding problem-objective retention. See [Numeric parameter-fitting refiner outcome](#numeric-parameter-fitting-refiner-outcome). |
-| RF-7 Improvement-checking refiner | Awaiting review | Implement the refiner with its `Evaluator` and `Criterion` settings, the `IImprovementCriterion` strategy with its strict-improvement, not-worse, dominance and threshold implementations, and original-on-failure behavior. Delivered alongside RF-3/RF-4; see [Improvement-checking refiner outcome](#improvement-checking-refiner-outcome). |
-| RF-8 Integration hardening | Pending | Verify batching, refiner/evaluator composition, objective directions, equality and threshold behavior, failure and cancellation, iterated and pipeline refinement, observability, and each composition example including shared-instance accounting and cache/limit wrapper order. |
+| RF-5 Explicit algorithm integration | Accepted | Add configurable refinement to applicable built-in algorithms after creation and final variation but before evaluation, without re-refining carried evaluated candidates. See [Algorithm integration outcome](#algorithm-integration-outcome). |
+| RF-6 Numeric parameter-fitting refiner | Accepted | Adapt symbolic-regression numeric parameter fitting to the general refiner role and define its failure behavior without adding problem-objective retention. See [Numeric parameter-fitting refiner outcome](#numeric-parameter-fitting-refiner-outcome). |
+| RF-7 Improvement-checking refiner | Accepted | Implement the refiner with its `Evaluator` and `Criterion` settings, the `IImprovementCriterion` strategy with its strict-improvement, not-worse, dominance and threshold implementations, and original-on-failure behavior. Delivered alongside RF-3/RF-4; see [Improvement-checking refiner outcome](#improvement-checking-refiner-outcome). |
+| RF-8 Integration hardening | Accepted | Verify batch semantics across every refiner topology, refiner/evaluator composition and accounting, objective directions and acceptance criteria in composition, failure behavior in a run, and the remaining topology semantics, including each composition example with its shared-instance accounting and cache/limit wrapper order. Cancellation and user documentation are out of scope. See [Integration hardening plan](#integration-hardening-plan) and [Integration hardening outcome](#integration-hardening-outcome). |
+| RF-9 Refinement documentation | Accepted | Document refinement for users: the evaluator-accounting rules including shared instances and cache/limit wrapper order, the refiner topologies, and the cancellation boundary; extend `NumericParameterFittingSpecs` with the accounting compositions; and reconcile `docs/operators.md`, `docs/operator-composition.md`, `docs/execution-model.md` and `docs/observability-and-analysis.md` with the behavior RF-8 pins. |
 
 ## Stage 4: Symbolic-Regression Numeric Parameter Fitting
 
@@ -1615,6 +1953,717 @@ Do not require identical optimized parameter vectors, iteration counts, or termi
 
 Performance work is continuous, but final specialization happens only after the layer boundaries are stable.
 
+### Legacy comparison outcome
+
+Numeric parameter fitting was compared between the maintained immutable implementation and the legacy
+mutable one through a throwaway measurement harness that is not part of the repository. Both call the same
+MathNet Levenberg-Marquardt, so the solver is held constant and the measurement isolates what this
+replacement changed: the internal automatic-differentiation engine against the AutoDiff package and its
+tree conversion.
+
+The harness fitted three expressions over 500 rows with ten solver iterations, taking fifty measured fits
+after five warmup fits. Fitting data covers every row on both sides, and the legacy tree is rebuilt outside
+the measured region because it
+is fitted in place.
+
+| Expression | Implementation | Fitted parameters | ms / fit | KB / fit | MSE |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `c*x + c` | immutable | 2 | 0.49 | 383 | 45.36 |
+| `c*x + c` | legacy | 2 | 4.07 | 3653 | 45.36 |
+| `c*x + c` | legacy, with variable weights | 3 | 5.52 | 4801 | 45.36 |
+| `c*x*x + c*x + c` | immutable | 3 | 0.76 | 708 | 8.193E-06 |
+| `c*x*x + c*x + c` | legacy | 3 | 4.38 | 3976 | 8.193E-06 |
+| `c*x*x + c*x + c` | legacy, with variable weights | 6 | 3.87 | 7094 | 8.193E-06 |
+| `(c*x + c) * (c*x + c) + c` | immutable | 5 | 1.16 | 1495 | 8.193E-06 |
+| `(c*x + c) * (c*x + c) + c` | legacy | 5 | 4.93 | 6601 | 8.193E-06 |
+| `(c*x + c) * (c*x + c) + c` | legacy, with variable weights | 7 | 3.37 | 7584 | 8.193E-06 |
+
+Outcome:
+
+- **The immutable implementation is faster on every case**, by roughly 4x to 8x at equal parameter counts,
+  and allocates roughly a fifth to a tenth as much. A second run reproduced every figure within ordinary
+  run-to-run variance.
+- **Both reach the same optimum.** Mean squared error agrees to four significant figures on all three
+  expressions, including the linear expression that cannot fit the quadratic target and where both settle
+  on the same least-squares line. This is the behavioral parity the migration plan asks for, measured
+  rather than assumed.
+- **Part of the legacy gap is its own acceptance policy**, not its differentiation. It evaluates the
+  expression before and after the solve to decide whether to keep the result, work the immutable
+  implementation does not do because acceptance belongs to the improvement-checking refiner. The remaining
+  difference is the AutoDiff conversion and its allocation behavior.
+- **Allocation per fit is dominated by setup and the solver, not by our marshalling.** Even the immutable
+  path allocates several hundred kilobytes per fit while the AD engine itself allocates nothing after
+  execution creation, so compilation, binding and MathNet's own per-iteration storage are where that
+  memory goes. Attributing it across those three is work for the performance increment.
+
+This closes the behavioral and performance comparison the migration sequence asks for before the legacy
+optimizer can be proposed for deletion. Retiring it would also remove the `AutoDiff` package, whose only
+remaining consumer is `TreeToAutoDiffTermConverter`.
+
+These figures are a single-machine smoke comparison, not a statistical benchmark. Their purpose is to show
+the direction and order of magnitude; the performance increment owns proper measurement.
+
+### Evaluation throughput outcome
+
+Evaluating an expression over a dataset was compared the same way, which is like for like: the same
+expressions produce the same predictions over the same rows and only the implementation differs. Equal
+checksums in every row confirm that. Three expressions over 5000 rows, one hundred measured runs after
+five warmup runs.
+
+| Expression | Implementation | ms / run | KB / run |
+| --- | --- | ---: | ---: |
+| `c*x + c` | compile | 0.0014 | 1.5 |
+| `c*x + c` | compile, optimized | 0.0013 | 1.5 |
+| `c*x + c` | immutable | 0.0199 | 39.1 |
+| `c*x + c` | immutable, optimized | 0.0202 | 39.1 |
+| `c*x + c` | immutable, optimized, caller buffers | 0.0171 | 0.0 |
+| `c*x + c` | legacy scalar | 0.0944 | 1.6 |
+| `c*x + c` | legacy batched | 0.1063 | 120.6 |
+| `c*x*x + c*x + c` | immutable, optimized | 0.0341 | 39.1 |
+| `c*x*x + c*x + c` | legacy scalar | 0.1654 | 2.5 |
+| `c*x*x + c*x + c` | legacy batched | 0.2016 | 124.1 |
+| `(c*x + c) * (c*x + c) + c` | immutable, optimized | 0.0394 | 39.1 |
+| `(c*x + c) * (c*x + c) + c` | legacy scalar | 0.1824 | 2.6 |
+| `(c*x + c) * (c*x + c) + c` | legacy batched | 0.1823 | 125.2 |
+
+Outcome:
+
+- **The compiled interpreter evaluates about 4.5 to 5 times faster** than the legacy scalar interpreter,
+  with identical predictions.
+- **Compilation is cheap relative to evaluation**, roughly six percent of the interpretation it enables at
+  5000 rows. Compiling every candidate once per generation is therefore not a cost worth engineering
+  around, which also means the interpret-only rows are close to the per-candidate reality.
+- **Compiler optimization makes no measurable difference on these expressions.** Constant folding and
+  identity elimination have nothing to fold where constants sit at leaves multiplied by variables, which
+  is the shape genetic programming produces. It costs nothing either, so the default stands; expressions
+  carrying foldable constant subtrees are where it would pay.
+- **The allocating interpret overload allocates the result array**, 39 KB for 5000 rows, where the legacy
+  interpreter returns a lazy sequence and allocates almost nothing. The overload taking caller-owned
+  destination and workspace buffers allocates nothing at all and is the one to use in a hot loop. This is
+  the one axis where the naive comparison favours the legacy implementation.
+
+- **The batched legacy interpreter is not faster than the scalar one**, and allocates roughly fifty times
+  as much. The comparison above therefore holds against the better of the two legacy implementations.
+
+The harness also surfaced a defect in `SymbolicDataAnalysisExpressionTreeBatchInterpreter`, which is now
+fixed. It compiled a numeric constant into a buffer of `BatchSize` values but then indexed that buffer by
+absolute dataset row, so it threw on any dataset longer than one batch that contained a constant. The only
+test covering it used eleven rows, where the batched loop never runs and only the remainder path executes,
+which is why the defect had never been exercised. `LoadData` now fills the batch from the instruction value
+for numbers and constants and indexes a dataset column only for variables, and the constant no longer
+carries a redundant buffer. `SymbolicDataAnalysisExpressionTreeBatchInterpreterTests` covers row counts on
+both sides of the batch boundary and pins agreement with the scalar interpreter; those tests fail against
+the previous implementation.
+
+### Solver cost attribution outcome
+
+This closes the duplicated-forward-sweep item that LM-3 deferred, and attributes per-fit allocation.
+
+**The duplicated forward sweep is real and immaterial.** Instrumenting the adapter for one fit of
+`c*x*x + c*x + c` over 500 rows recorded six model callbacks and six Jacobian callbacks, with all six
+Jacobian calls at the same parameter point as the model call immediately preceding them. MathNet asks for
+model values and the Jacobian through separate callbacks at one point, so the forward sweep that producing
+the Jacobian performs anyway is repeated by the value-only call every time.
+
+Removing it was implemented and reverted. Serving both callbacks from one combined evaluation cached by
+parameter vector produced no measurable improvement at 500 rows, and none at 20 000 rows either, where the
+three expressions measured 5.86, 8.27 and 35.3 milliseconds per fit against 6.07, 8.24 and 32.9 without the
+change: differences inside run-to-run variance and pointing in both directions. The change was therefore
+reverted rather than kept, because a specialization that measurement does not support is exactly what this
+increment is supposed to exclude. The redundant sweep costs a few percent at these sizes because a
+value-only sweep is small next to the Jacobian evaluation and the solver's own linear algebra.
+
+**Per-fit allocation is dominated by the solver, not by our marshalling.** Allocation scales linearly with
+row count and grows with parameter count: 0.38 MB per fit at 500 rows and two parameters, 15.1 MB at 20 000
+rows and two parameters, and 48 MB at 20 000 rows and five parameters. Raising the iteration cap from ten
+to forty barely moved it, so the solver converges well before either cap and the figures describe the
+iterations actually taken.
+
+The adapter's own allocation is bounded and one-off per solve: model values, the Jacobian, a target copy
+and the unused independent-variable vector, which is `(3 + parameterCount) * rowCount` doubles. At 20 000
+rows and five parameters that is roughly 1.3 MB against the 48 MB measured, so under three percent of the
+allocation belongs to this library. The remainder is MathNet's per-iteration dense storage.
+
+Consequence for the retained-MathNet decision: the solver's allocation behavior is now a quantified cost
+rather than a suspicion, and it is not addressable by adapter changes or solver configuration. It is
+nevertheless not sufficient to reopen the decision, because the only remedy is a Levenberg-Marquardt
+implementation of our own, and the complete path is already four to eight times faster than the
+implementation it replaces. The cost is recorded so that a whole-run profile showing garbage-collection
+pressure has something to point at.
+
+### Whole-run profile plan
+
+Done; see [Whole-run profile outcome](#whole-run-profile-outcome).
+
+This is the last open piece of the performance increment and the last completion criterion of the first
+vertical slice. Every measurement so far is per fit or per evaluation; none of them says whether those
+costs matter inside a run.
+
+Three questions depend on it:
+
+1. **Does the interpreter advantage matter?** Evaluating four to five times faster is worth little if
+   evaluation is a small share of a generation.
+2. **What does refinement cost per generation?** The refinement documentation deliberately carries no cost
+   statement, because there was no measurement to base one on.
+3. **Does the solver's allocation matter?** Fitting allocates 15 to 48 MB per fit at 20 000 rows. The
+   solver-backend gate names garbage-collection pressure in a whole run as the condition that would
+   reopen the retained-MathNet decision.
+
+#### Approach
+
+Assemble the profile from the library's own duration instrumentation rather than from anything added for
+measurement. Every operator role has a duration-measuring wrapper in
+`src/HeuristicLib/Operators/<Role>/Instrumentation/DurationMeasuring<Role>.cs`, exposed as
+`Measure<Role>Duration(ObservationDuration)` and an `out` overload in the role's own namespace.
+`ObservationDuration.CurrentDuration` accumulates across calls, so one instance per role covers a run.
+
+Using the public instrumentation is deliberate: it exercises that API for the purpose it exists for. If
+assembling the profile is awkward, that is a finding about the API and belongs in the outcome rather than
+being worked around.
+
+The harness is throwaway and stays out of the repository, like the earlier comparisons. Findings are
+recorded here.
+
+#### API traps when rebuilding a harness
+
+Three details cost time while the earlier comparison harnesses were built and are not evident from the API
+surface:
+
+- **Duration wrappers live in the role namespace rather than an instrumentation one.**
+  `MeasureSelectorDuration` and its siblings are declared in `HEAL.HeuristicLib.Operators.Selectors` even
+  though their files sit in an `Instrumentation` folder, so the ordinary role using directive is enough and
+  a nested one does not exist. This one affects the whole-run profile.
+- **A legacy `SymbolicExpressionTree` needs its program-root and start wrapper.** Handing the AutoDiff
+  converter or either legacy interpreter a bare operation node fails; the shape is `ProgramRootSymbol`,
+  then `StartSymbol`, then the expression. This affects any rebuilt comparison harness.
+- **The legacy and immutable `Symbol` types collide by name.** A file touching both needs an alias such as
+  `using LegacySymbol = HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Symbol;`, and
+  without it the compiler reports a confusing argument-type mismatch rather than an ambiguity. This also
+  affects any rebuilt comparison harness.
+
+#### Configuration
+
+One `GeneticAlgorithm` over a `SymbolicRegressionProblem`, using the shape of
+`SymbolicRegressionVerticalSliceScenario`: population 80, 30 generations, `RampedHalfAndHalfTreeCreator`,
+`SubtreeCrossover`, a `ChooseOneMutator` over the three symbolic mutators at rate 0.3, tournament
+selection of size 3, one elite, and a search space carrying an `EvolvableConstantSymbol` so that
+refinement has parameters to fit. Two synthetic inputs with a target that rewards fitted values, for
+example `2.5*x0 + 1.5*x0*x1 - 0.75`.
+
+Three configurations at one seed, so the search path is comparable:
+
+| Configuration | Purpose |
+| --- | --- |
+| No refiner | Baseline share per role |
+| `NumericParameterFittingRefiner` | Refinement cost per generation |
+| The same under `WithImprovementCheck` | Adds two comparison evaluations per candidate |
+
+Give the improvement check **its own** evaluator instance rather than the algorithm's, so its comparison
+evaluations are attributable separately. Sharing the algorithm's evaluator merges both into one duration;
+that is the shared-accounting arrangement rather than a measurement problem, and the outcome should say
+which one the figures describe.
+
+Sweep row counts of 200, 2 000 and 20 000 with everything else fixed. Row count moves evaluation and
+fitting cost while leaving variation cost alone, which is what separates "evaluation dominates" from
+"variation dominates".
+
+#### Reporting
+
+Per run: duration for creator, crossover, mutator, evaluator, selector, refiner and the check's evaluator;
+total wall-clock; the **unattributed remainder** as its own row; allocated bytes for the run; and
+`GC.CollectionCount(0/1/2)` deltas, which is the figure the allocation question actually needs.
+
+#### Caveats that belong in the outcome
+
+- **`GeneticAlgorithm` has no `Replacer` slot.** It calls `ElitismReplacer.Replace(...)` directly, so
+  replacement cannot be instrumented and lands in the remainder. `NSGA2` does have a configurable
+  replacer, and that asymmetry is worth recording as an API observation.
+- **The remainder is part of the run, not error.** State construction, elitism, randomness forking and
+  streaming overhead all sit outside operator calls.
+- **The algorithm wraps the mutator** in `WithRate` when `MutationRate` is below one, so a wrapper on the
+  configured mutator measures actual mutation calls rather than the rate dispatch around them. Crossover
+  has no such wrapper, so the two are not directly comparable without saying so.
+- **Instrumentation is not free.** Run one configuration with and without the wrappers and report the
+  difference, so the shares are known to be shares of a lightly perturbed run.
+- **Refinement changes the search trajectory.** Time per generation is comparable across configurations;
+  time to reach a given quality is a different question this profile does not answer.
+
+#### Verification
+
+Run the sweep twice and check that the shares agree within ordinary variance. Three checks must hold
+before any conclusion is drawn, because they catch a broken harness before it produces a plausible answer:
+the configuration without a refiner must report zero refiner duration; roles plus remainder must equal the
+measured total; and evaluation duration must grow roughly linearly with row count while crossover and
+mutation stay flat.
+
+Confirm that production is untouched with a release build and the core test suite.
+
+#### Done when
+
+The three questions above have numbers, a `Whole-run profile outcome` section records them in the same
+shape as the legacy comparison and cost attribution outcomes, and the first vertical slice's benchmark
+criterion can be marked complete. Any hotspot the profile reveals is written down as a candidate for
+separate work rather than fixed in the same pass.
+
+### Whole-run profile outcome
+
+A complete symbolic-regression run was profiled through the library's own duration instrumentation, in the
+configuration the plan above describes: one `GeneticAlgorithm` over a `SymbolicRegressionProblem` with
+population 80, 30 generations, `RampedHalfAndHalfTreeCreator`, `SubtreeCrossover`, a `ChooseOneMutator`
+over the three symbolic mutators at rate 0.3, tournament selection of size 3, one elite, and a search
+space carrying an `EvolvableConstantSymbol`, against `2.5*x0 + 1.5*x0*x1 - 0.75` at 200, 2 000 and 20 000
+rows. `NumericParameterFittingRefiner` runs at its default five iterations. The algorithm refines the
+initial population and each generation's offspring, so one run refines 30 batches of 80 candidates.
+
+Every role is wrapped in its `Measure<Role>Duration` wrapper. The improvement check holds its own
+evaluator, so its comparison evaluations are attributable separately; because that evaluator sits inside
+the refiner, its duration is a nested subtotal of the refiner rather than a further addend, and adding it
+to the role sum would count it twice.
+
+Shares below are sweep 1, which the second sweep reproduced within 0.2 points on every refining
+configuration.
+
+| Rows | Configuration | creator | crossover | mutator | evaluator | selector | refiner | remainder | s / run |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 200 | no refinement | 1.0% | 22.8% | 6.1% | 54.6% | 6.7% | 0.0% | 8.8% | 0.004 |
+| 200 | refinement | 0.0% | 0.9% | 0.3% | 1.8% | 0.2% | 96.4% | 0.4% | 0.164 |
+| 200 | refinement, improvement check | 0.0% | 0.8% | 0.3% | 1.6% | 0.2% | 96.7% | 0.4% | 0.166 |
+| 2 000 | no refinement | 0.4% | 10.3% | 2.9% | 79.1% | 2.7% | 0.0% | 4.7% | 0.010 |
+| 2 000 | refinement | 0.0% | 0.1% | 0.1% | 0.9% | 0.0% | 98.7% | 0.1% | 1.001 |
+| 2 000 | refinement, improvement check | 0.0% | 0.2% | 0.1% | 0.8% | 0.0% | 98.9% | 0.1% | 0.974 |
+| 20 000 | no refinement | 0.1% | 21.4% | 6.4% | 71.1% | 0.4% | 0.0% | 0.7% | 0.100 |
+| 20 000 | refinement | 0.0% | 0.1% | 0.0% | 0.7% | 0.0% | 99.3% | 0.0% | 11.967 |
+| 20 000 | refinement, improvement check | 0.0% | 0.1% | 0.0% | 0.6% | 0.0% | 99.3% | 0.0% | 12.603 |
+
+Two of these shares are not what they look like, and the section below on cost per candidate corrects them.
+The crossover and mutator shares of the unrefined 20 000-row run — 21.4 and 6.4 percent, for operators that
+do not touch a data row — are collection pause charged to whoever was executing rather than work.
+Evaluation's real share of that run is around 96 percent of the work it performs, not the 71 percent shown.
+
+| Rows | Configuration | MB / run | gen0 | gen1 | gen2 |
+| ---: | --- | ---: | ---: | ---: | ---: |
+| 200 | no refinement | 11.7 | 0 | 0 | 0 |
+| 200 | refinement | 682 | 46 | 7 | 0 |
+| 2 000 | no refinement | 44.7 | 2 | 0 | 0 |
+| 2 000 | refinement | 5 510 | 436 | 231 | 143 |
+| 20 000 | no refinement | 375 | 97 | 97 | 97 |
+| 20 000 | refinement | 51 292 | 11 349 | 11 330 | 11 324 |
+
+The improvement-checking rows allocate within two percent of the plain refining rows at every row count
+and are omitted from the second table.
+
+#### Cost per candidate
+
+A share cannot be checked for plausibility on its own, so each role was also divided by the candidates it
+actually processed, counted through the matching `Count<Role>Candidates` wrapper rather than assumed from
+the population arithmetic. This is the durable statistic; the shares above are what it produces in one
+particular configuration.
+
+| Rows | creator | crossover | mutator | evaluator | selector |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 200 | 1.56 | 0.48 | 0.97 | 1.07 | 0.065 |
+| 2 000 | 1.21 | 0.40 | 0.79 | 2.78 | 0.063 |
+| 20 000 | 1.01 | 9.35 † | 0.94 | 29.07 | 0.098 |
+
+Microseconds per candidate, unrefined runs, five runs aggregated per row count. Candidate counts per run
+are 80 for the creator, 2 320 for crossover, 690 for the mutator — the rate wrapper sits outside the
+duration wrapper, so this is the mutated subset rather than the whole offspring population — 2 400 for the
+evaluator and 4 640 for the selector. † is not a real cost; see below.
+
+Mean tree length in the final population is 10.1, 10.0 and 10.3 nodes at the three row counts, with a
+depth limit reached in every case, so tree size is effectively constant across the sweep and cannot explain
+any difference between row counts.
+
+Three things follow, and the first two answer the question a reader is likeliest to ask about the share
+table — why does crossover take a fifth of an unrefined run when evaluation supposedly does so much more
+work, and why does it stay a fifth when the rows grow a hundredfold?
+
+- **Evaluation over 200 rows is genuinely cheap, because the interpreter is vectorized.**
+  `ExpressionInterpreter` evaluates column-wise through `TensorPrimitives`, so a ten-node tree over 200 rows
+  is about ten SIMD kernel calls over 200-element spans. The intuition that evaluation does far more work
+  than crossover is right in scalar operation count and wrong in time.
+- **Crossover is not cheap, because it allocates.** Measured outside any algorithm on five-node parents,
+  one `SubtreeCrossover.Cross` costs 0.22 microseconds and 690 bytes. `SelectDonor` walks the second parent
+  through `ExpressionPoint.TraversePreOrder`, a recursive iterator that allocates a point object per node
+  and a nested state machine per subtree, before `Replace` rebuilds the path. At the ten-node trees the run
+  evolves that comes to the 0.4 microseconds the table shows. Crossover at a fifth of an unrefined 200-row
+  run is therefore real.
+- **Evaluation's per-candidate cost is linear in rows above a fixed floor.** It grows 2.78 to 29.07
+  microseconds from 2 000 to 20 000 rows, a factor of 10.4 for ten times the rows, but only 1.07 to 2.78
+  from 200 to 2 000, a factor of 2.6. Compiling each candidate costs the same at every row count and
+  dominates at 200 rows. This is the sublinearity the row-count check reports, with the mechanism attached.
+
+**† The 20 000-row crossover figure is measurement contamination, and the trend you would expect is real
+underneath it.** Crossover does no row-dependent work and the trees are the same size, yet it reads 9.35
+microseconds per candidate there against 0.40 at 2 000 rows, and it read 5.42 and 0.91 in other repetitions
+of the same measurement. The cause is directly measurable: `GC.GetTotalPauseDuration` reports 11.6
+milliseconds of pause in a 94-millisecond run at 20 000 rows across roughly 100 full blocking collections,
+against 0.36 milliseconds and no full collection at 2 000 rows. Wall-clock instrumentation charges that
+pause to whichever operator is executing when it happens, and the roles that do almost nothing absorb it
+disproportionately. Correcting crossover and the mutator to their row-independent costs leaves evaluation
+at essentially all of the run's actual work at 20 000 rows, which is the clean shift towards evaluation the
+share table appeared to contradict.
+
+Answers to the three questions:
+
+- **The interpreter advantage matters, but only where refinement is off.** Without a refiner, evaluation is
+  the dominant role at every row count and becomes more dominant as rows grow: 55 percent at 200 rows, 79
+  percent at 2 000, and about 96 percent of the work at 20 000 once the collection pause the share table
+  charges to other roles is put back. A four-to-five-times faster interpreter is therefore close to a
+  four-to-five-times faster run for ordinary genetic programming, which is what the evaluation-throughput
+  outcome could not say on its own.
+  Turn refinement on and the same evaluator falls to between 0.6 and 1.8 percent, where the interpreter
+  could be made free without changing the run. Both readings are true at once and the configuration decides
+  which one applies.
+- **Refinement costs about 70 microseconds per candidate at 200 rows, 440 at 2 000 and 5.1 milliseconds at
+  20 000**, which is 5.6, 35 and 407 milliseconds per generation of 80 candidates. As a share it is 96 to
+  99 percent of the run at every row count, and enabling it multiplies total run time by roughly 45 times
+  at 200 rows and around a hundredfold at 2 000 and 20 000. Refinement is not one cost among several: at
+  the default five iterations it is the run. The refinement documentation can now carry that statement.
+- **The improvement check costs what its documentation says and little more.** Its evaluator takes almost
+  exactly twice the algorithm's own evaluator at every row count — two comparison evaluations against
+  one — and lands at 3.3, 1.6 and 1.2 percent of the run. Adding the check changed total run time by less
+  than the difference between two sweeps of the same configuration, because it doubles a role that
+  refinement has already reduced to under two percent.
+- **The solver's allocation is real, large, and does not reopen the retained-MathNet decision.** At 20 000
+  rows a refining run allocates 51 GB and triggers 11 300 collections, against 375 MB and 97 without a
+  refiner: 137 times the allocation and 118 times the collections. Per refined candidate that is 21 MB and
+  4.7 full collections. The shape of the pressure is more informative than its size: at 20 000 rows the
+  gen0, gen1 and gen2 counts are equal, so nearly every collection is a full blocking one, while at 2 000
+  rows gen2 is a third of gen0 and at 200 rows it is zero. A row-length `double[]` is 160 KB at 20 000
+  rows and 16 KB at 2 000, so the large-object-heap threshold is crossed between those two row counts and
+  that crossing, not the row count itself, is what turns ordinary allocation into full collections.
+
+The gate asks for a quantified problem that neither adapter changes nor solver configuration can address.
+This one is addressable by both. `MaximumIterations` scales the per-iteration storage directly, and
+`FittingData` fits on a row subset, which is the setting that moves the arrays back below the large-object
+threshold; both are ordinary configuration of the shipped refiner. Of the 21 MB per candidate, the
+adapter's own marshalling is `(3 + parameterCount) * rowCount` doubles, under one megabyte at these
+parameter counts, which agrees with the under-three-percent attribution the solver cost outcome measured.
+**MathNet is retained**, and the figure is recorded so that the decision rests on a measurement rather than
+on an absence of one.
+
+Instrumentation cost: at 2 000 rows the instrumented and uninstrumented runs differed by between −25 and
++22 percent across four comparisons, changing sign between sweeps. The wrappers therefore cost less than
+the run-to-run variance of the configuration they measure, and the shares above are shares of a run that is
+perturbed by less than the noise floor.
+
+Harness checks, all of which hold: a run without a refiner reports exactly zero refiner duration across all
+40 such runs; no role sum exceeds its run, so the remainder is non-negative everywhere; evaluation grows 34
+times over a hundredfold row increase, sublinearly because compiling each candidate costs the same at every
+row count; crossover and mutation stay flat to within 12 percent up to 2 000 rows; and the two sweeps agree
+within 0.2 points on every refining configuration.
+
+Three findings came out of building the harness rather than out of the figures:
+
+- **Short runs charge collection pauses to whichever operator is executing.** This is the single largest
+  threat to a profile assembled this way, and it is quantified above: 11.6 milliseconds of measured pause in
+  a 94-millisecond run at 20 000 rows, inflating crossover by a factor of 23 on work that cannot depend on
+  the row count. Duration instrumentation measures wall clock, which is the right thing for attributing a
+  run and the wrong thing for attributing an operator, and nothing in the API says so. A role whose real
+  cost is small next to the pause budget cannot be measured this way at all; it needs a per-candidate cost
+  taken where the heap is quiet, which is what the isolated crossover measurement provides. The harness
+  reduces but does not remove the effect by aggregating five runs per point; an earlier version reporting
+  one median run put the same evaluator share at 97 percent in one sweep and 60 percent in the next.
+- **Assembling the profile is mildly awkward in one specific way**, which the plan asked to be recorded
+  rather than worked around. A file that declares a variable of a role interface, constructs a concrete
+  operator and wraps it needs three namespaces: `HEAL.HeuristicLib.Operators` for `IRefiner<,,>`,
+  `HEAL.HeuristicLib.Operators.Refiners` for the duration extension, and
+  `HEAL.HeuristicLib.Operators.Refiners.SymbolicRegressionRefiners` for the operator. Missing the middle
+  one produces `does not contain a definition for 'MeasureCreatorDuration'` rather than anything naming a
+  namespace. This is the same shape as the trap already recorded for the role namespace, one level deeper.
+- **Nesting is not expressible in the instrumentation.** Wrapping a composed refiner measures the whole
+  composition, so the improvement check's evaluator appears both inside the refiner duration and in its own
+  counter, and anyone summing role durations has to know the topology to avoid counting it twice. That is
+  inherent to wrapper-based measurement rather than a defect, but it is not visible from the API and the
+  arithmetic silently produces a plausible wrong answer for whoever does not know.
+
+Hotspots, recorded as candidates for separate work rather than fixed here:
+
+1. **Evaluation allocates a prediction array per candidate.** `SymbolicRegressionProblem.Evaluate` calls the
+   allocating `Evaluate(DataFrame)` overload, so each candidate allocates a row-length array — 160 KB and
+   therefore large-object-heap traffic at 20 000 rows, which is where the unrefined run's 375 MB and 100
+   full collections come from. `Evaluate(DataFrame, Span<double>, Span<double>)` already exists and the
+   evaluation-throughput outcome already measured it at zero allocation. This is the largest cost in a run
+   without refinement, the change is local to the problem, and it would additionally remove the pause that
+   currently makes every other role at 20 000 rows unmeasurable.
+2. **Crossover allocates a point object per node of the second parent.** One `SubtreeCrossover.Cross` costs
+   690 bytes and 0.22 microseconds on five-node parents, because `SelectDonor` enumerates
+   `ExpressionPoint.TraversePreOrder`, which allocates an `ExpressionPoint` per node and a nested iterator
+   state machine per subtree. Crossover only needs each candidate donor's node, length and depth, all of
+   which are already stored on `ExpressionNode`, so a non-allocating traversal would not change what the
+   operator selects. At a fifth of an unrefined run this is the second-largest cost in a run without
+   refinement, and it is invisible in a refining run.
+3. **Fitting allocates 21 MB per refined candidate at 20 000 rows.** Most of it is MathNet's per-iteration
+   dense storage, but the adapter's own buffers are allocated per solve and could be reused across
+   candidates. Worth attempting only with a measurement showing the reuse is visible in a whole run, since
+   the adapter is under five percent of the total.
+4. **Nothing else is worth optimizing while refinement is enabled.** Creator, selector and the remainder are
+   each under one percent of a refining run, and crossover and mutation together are under half a percent.
+   The configuration lever that matters is how many candidates get refined at all; `refiner.WithRate(...)`
+   changes the run by more than any implementation change to the roles measured here would.
+
+These are single-machine figures from a throwaway harness that is not part of the repository, taken in
+`Release` with five runs per point and two complete sweeps. Refinement also changes the search trajectory,
+so time per generation is comparable across configurations while time to reach a given quality is a
+different question this profile does not answer. Production is untouched: the release build is clean and
+the 2028 core tests pass.
+
+### Operator benchmark and runtime model outcome
+
+The whole-run profile divides a run across roles from the inside. This asks the opposite question: measure each
+operator on its own with BenchmarkDotNet, compose those costs into a predicted run, and see whether the
+prediction survives contact with a real one.
+
+Every operator is measured on one population-sized batch of 80 candidates, because that is how an algorithm
+calls it, so batch dispatch and allocation sit inside the measurement in the same proportion as in a run.
+Nominal tree sizes of 10, 30 and 60 nodes produce benchmarked populations averaging 7.3, 31.0 and 56.6 nodes,
+with 3.2, 15.0 and 27.8 operations and 1.5, 5.5 and 9.6 evolvable constants.
+
+| Operator | 7.3 nodes | 31.0 nodes | 56.6 nodes | KB / call at 7.3 nodes |
+| --- | ---: | ---: | ---: | ---: |
+| Creator | 17.4 µs | 28.6 µs | 46.9 µs | 68 |
+| Crossover | 18.7 µs | 74.7 µs | 137.7 µs | 83 |
+| Mutator | 7.9 µs | 14.5 µs | 21.7 µs | 26 |
+| Selector | 5.75 µs | 5.88 µs | 5.79 µs | 15 |
+
+| Operator | Rows | 7.3 nodes | 31.0 nodes | 56.6 nodes |
+| --- | ---: | ---: | ---: | ---: |
+| Evaluator | 200 | 0.038 ms | 0.126 ms | 0.233 ms |
+| Evaluator | 2 000 | 0.117 ms | 0.302 ms | 0.518 ms |
+| Evaluator | 20 000 | 5.04 ms | 6.57 ms | 8.46 ms |
+| Refiner | 200 | 14.1 ms | 54.0 ms | 63.3 ms |
+| Refiner | 2 000 | 49.7 ms | 192.0 ms | 268.5 ms |
+| Refiner | 20 000 | 272.1 ms | 741.7 ms | 1358.4 ms |
+
+Three results stand on their own, independently of the model:
+
+- **Selection does not depend on tree size**, 5.75 to 5.88 microseconds across an eightfold size range. It
+  compares objective vectors and never walks an expression, and the measurement says so.
+- **Crossover is close to linear in tree length**, 7.4 times the cost for 7.8 times the nodes, which is what an
+  operator that traverses one parent and rebuilds one path should do.
+- **Evaluation at 20 000 rows barely responds to tree size**, growing 1.7 times while the tree grows 7.8 times.
+  At that row count the per-candidate fixed cost — the 160 KB prediction array and the data columns behind it —
+  dominates the vectorized kernels that the expression itself contributes. This is independent evidence for the
+  allocation hotspot the whole-run profile recorded, arriving from the opposite direction.
+
+#### The model and what it got wrong
+
+The predicted run is `creator + 30 × evaluator + 29 × (selector + crossover + mutator)`, plus the refiner at
+every evaluation point when refinement is on. Those call counts come from the algorithm's structure and were
+confirmed exactly against the counting wrappers. Costs are interpolated between the benchmarked populations on
+the mean tree length the run actually evolved, which is not the length its search space allows: a search space
+capped at 65 nodes evolves populations averaging 8.5 to 18.2 nodes, because nothing in the objective rewards a
+larger expression once the target is fitted.
+
+| Configuration | Rows | mean length | predicted run | measured run | predicted / measured |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| no refinement | 200 | 6.8 | 2.1 ms | 4.1 ms | 52% |
+| no refinement | 2 000 | 6.8 | 4.5 ms | 10.1 ms | 44% |
+| no refinement | 20 000 | 7.4 | 152.2 ms | 68.1 ms | 223% |
+| no refinement | 20 000 | 12.4 | 162.3 ms | 96.3 ms | 169% |
+| refinement | 200 | 9.8 | 551.9 ms | 175.0 ms | 315% |
+| refinement | 2 000 | 9.5 | 1891.2 ms | 999.0 ms | 189% |
+| refinement | 200 | 25.7 | 1360.4 ms | 313.7 ms | 434% |
+
+**The model's structure is right and its inputs do not transfer.** It lands between 44 and 55 percent of
+measured wherever the run is cheap, and between 137 and 434 percent wherever allocation is heavy. Both errors
+are systematic rather than noisy, and neither is the unattributed remainder the model deliberately omits: that
+would produce a constant modest underprediction, not a sign change.
+
+Holding the population and the operator fixed and changing only the harness locates the cause:
+
+| Rows | BenchmarkDotNet | plain loop | inside a run |
+| ---: | ---: | ---: | ---: |
+| 200 | 0.038 ms | 0.069 ms | 0.079 ms |
+| 2 000 | 0.117 ms | 0.215 ms | 0.240 ms |
+| 20 000 | 5.04 ms | 1.79 ms | 2.10 ms |
+
+The plain loop and the in-run wrapper agree with each other within 18 percent at every row count. BenchmarkDotNet
+is the outlier in both directions, and its 20 000-row figure is not noise: its engine log shows 4.99, 5.00 and
+5.21 milliseconds per operation across iterations of 128 operations each.
+
+- **Below the large-object threshold it reads low**, by about half. Thousands of back-to-back operations on one
+  population keep those trees and columns in cache and train the branch predictors, which a run that touches
+  fresh trees every generation never gets. This is ordinary microbenchmark optimism.
+- **Above it, it reads high**, by two and a half times, because evaluation allocates 12.6 MB per call at 20 000
+  rows. Running that back to back allocates 1.6 GB per iteration and the collector never catches up, so every
+  call pays collection cost. A run calls it thirty times with other work in between and pays much less per call.
+  **For an allocation-bound operator, cost per call is a function of the call rate**, so an isolated
+  steady-state measurement describes a duty cycle the algorithm does not have.
+- **Refinement compounds this with a second error.** The benchmark refits the same unfitted population on every
+  operation, which is the worst case; after the first generation a run refits candidates whose parameters are
+  already near a fit, where Levenberg-Marquardt converges sooner. The refining predictions are the worst in the
+  table for both reasons at once.
+
+Consequences worth carrying forward:
+
+1. **Per-operator benchmarks answer "did this change make this operator faster", not "how long will a run take".**
+   For the first question they are the right instrument and the profile is not; for the second the ordering
+   reverses. Neither replaces the other, which is the concrete version of the conclusion the whole-run profile
+   reached about instrumentation.
+2. **A predicted run should be believed only for operators that are not allocation-bound.** Selection, crossover
+   and mutation transfer within the optimism factor; evaluation above the large-object threshold and refinement
+   anywhere do not. Since measured: the
+   [allocation hotspot fixes outcome](#allocation-hotspot-fixes-outcome) removed evaluation's allocation and
+   evaluation now transfers like the others, which confirms this rule by satisfying it. Refinement still does
+   not.
+3. **The allocation hotspots are now indicted twice.** The evaluator's per-candidate array is what makes its cost
+   rate-dependent, and the refiner's per-candidate megabytes do the same at a larger scale. Fixing the first
+   would make evaluation predictable as well as faster.
+
+These figures come from BenchmarkDotNet 0.15.8 on one machine, with five iterations after three warmup
+iterations for the throughput jobs and three after one for the monitoring job used for refinement. The harness
+is not part of the repository, and `docs/developer-guidelines.md` requires a separate accepted decision before
+any of it becomes standing infrastructure.
+
+### Allocation hotspot fixes outcome
+
+The two allocation hotspots the profile and the operator benchmarks both indicted are fixed. Neither needed an
+architectural change, and neither changes a single result: every recorded best objective across the nine
+profile configurations is bit-identical to the figures above, and the core, API usage, experimental and
+scenario suites pass unchanged.
+
+**Evaluation no longer allocates a prediction array per candidate.**
+`SymbolicRegressionProblem.Evaluate` called the allocating `Evaluate(DataFrame)` overload, which returns a
+fresh row-length array. It now borrows one from `ArrayPool<double>.Shared` and evaluates into it through the
+span overload. The scratch workspace was already pooled inside `ExpressionInterpreter`, and every consumer of
+the predictions — `LinearScaling.Fit` and `Apply`, `IPredictionMetric.Evaluate` — already took spans, so the
+change is confined to one method. A field would be faster still and is not available: `SingleSolutionProblem`
+evaluates a batch under a configurable `Concurrency`, so two candidates may be in flight at once and would
+share it.
+
+**Crossover no longer allocates an expression point per node of the second parent.** `SubtreeCrossover`
+selected its donor by walking `ExpressionPoint.TraversePreOrder` over the whole second parent, but used
+nothing from those points except `.Node`: the replacement takes a node, and the length and depth its
+eligibility test needs are stored on `ExpressionNode` already. Donor selection is now a recursive walk over
+nodes, visiting the same nodes in the same order and drawing the same random numbers.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Unrefined run, 20 000 rows | 100 ms | 45 ms |
+| Unrefined run allocation, 20 000 rows | 375 MB | 6.7 MB |
+| Unrefined run full collections, 20 000 rows | 97 | 0 |
+| Unrefined run allocation, 2 000 rows | 44.7 MB | 6.3 MB |
+| One crossover, 5.2-node parents | 0.222 µs, 690 B | 0.118 µs, 150 B |
+
+Run allocation is now effectively independent of row count — 6.3, 6.3 and 6.9 MB across a hundredfold row
+range, against 11.7, 44.7 and 375 MB before — because nothing in the unrefined path scales its allocation
+with the data any more.
+
+**The measurement defect the profile spent most of its effort on is gone with it.** The 20 000-row unrefined
+role shares were untrustworthy because roughly a fifth of that run was collection pause charged to whichever
+operator was executing. With no collections left to charge, the same table now reads:
+
+| Role | Before | After |
+| --- | ---: | ---: |
+| crossover | 21.4% | 1.5% |
+| mutator | 6.4% | 0.8% |
+| evaluator | 71.1% | 95.9% |
+
+That 95.9 percent is the corrected reading this plan predicted from the row-independent costs before the fix
+existed, now measured directly rather than reconstructed. The harness check that reports variation flatness at
+the largest row count passes for the first time, at exactly 1.0 in both operators.
+
+Consequences for the earlier outcomes, which remain accurate records of what was true when they were taken:
+
+- The whole-run profile's first answer is strengthened rather than changed. Evaluation was already the
+  dominant role in an unrefined run; it is now measurably 96 percent of one at 20 000 rows, so the
+  interpreter's advantage carries almost the whole run at that size.
+- The refining configurations barely move, exactly as their shares predict: refinement is 96 to 99 percent of
+  those runs and the evaluator it dwarfs got cheaper. Full collections at 20 000 rows drop about a quarter,
+  from roughly 11 300 to 8 500, which is the evaluator's share of the pressure leaving.
+- The solver-backend gate is unaffected. The remaining allocation at 20 000 rows is the fitting path's, which
+  the gate already considered and which configuration rather than adapter work addresses.
+
+Re-running the operator benchmarks measures both operators directly. Costs are per population-sized batch.
+
+| Operator | Population | Before | After | Allocation before | after |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Crossover | 7.3 nodes | 18.7 µs | 6.3 µs | 82.7 KB | 23.6 KB |
+| Crossover | 31.0 nodes | 74.7 µs | 18.0 µs | 286.8 KB | 35.0 KB |
+| Crossover | 56.6 nodes | 137.7 µs | 33.1 µs | 499.4 KB | 39.5 KB |
+| Evaluator | 7.3 nodes, 20 000 rows | 5 037 µs | 718 µs | 12 648 KB | 143.6 KB |
+| Evaluator | 31.0 nodes, 20 000 rows | 6 566 µs | 2 201 µs | 12 808 KB | 303.0 KB |
+| Evaluator | 56.6 nodes, 20 000 rows | 8 459 µs | 3 799 µs | 12 971 KB | 467.0 KB |
+
+Crossover is three to four times faster, and its allocation is now nearly flat in tree size — 23.6 to 39.5 KB
+across an eightfold size range, against 82.7 to 499.4 KB before — because the part that scaled with node
+count was the discarded points. Evaluation is two to seven times faster at 20 000 rows, and its allocation no
+longer depends on the row count at all: 143.6 KB whether the data has 200 rows or 20 000.
+
+**This also settles the diagnosis the operator-benchmark outcome could only argue for.** That outcome found
+BenchmarkDotNet disagreeing with in-run measurement in opposite directions either side of the large-object
+threshold, and attributed the over-reading to allocation saturating the collector under back-to-back
+execution. Removing the allocation removes the over-reading:
+
+| Rows | BenchmarkDotNet, before | in a run, before | BenchmarkDotNet, after | in a run, after |
+| ---: | ---: | ---: | ---: | ---: |
+| 200 | 0.038 ms | 0.079 ms | 0.037 ms | 0.068 ms |
+| 2 000 | 0.117 ms | 0.240 ms | 0.091 ms | 0.173 ms |
+| 20 000 | 5.04 ms | 2.10 ms | 0.718 ms | 1.248 ms |
+
+The 20 000-row row was the outlier, reading 2.4 times the in-run cost where every other row read about half
+of it. It now reads 0.58 of the in-run cost, in line with the others. What remains is one uniform effect in
+one direction — the ordinary optimism of a benchmark that reuses one population with warm caches — and the
+regime-dependent reversal is gone.
+
+The runtime model inherits that. Its unrefined predictions were 44 to 55 percent of measured below the
+threshold and 137 to 223 percent above it; they are now **37 to 52 percent everywhere**. A model that is
+uniformly optimistic by about half is usable with one correction factor, which one that changes sign with row
+count is not. The refining predictions are unchanged at 199 to 419 percent, as expected: the refiner was not
+touched, it is still allocation-bound, and the benchmark still refits an unfitted population on every
+operation where a run refits mostly-converged ones.
+
+#### Two follow-up decisions
+
+**Donor selection no longer preserves the random draw sequence, deliberately.** The first version of the fix
+kept reservoir sampling so that the same draws were made in the same order. Draw-order stability is not a
+property this operator promises, and giving it up buys a simpler algorithm: count the eligible donors, draw
+one index, walk to it. That is one random draw per crossover instead of one per eligible node, at the cost of
+a second walk over cached node fields, and it took an isolated crossover from 0.118 to 0.106 microseconds.
+Cumulatively the operator went from 0.222 microseconds and 690 bytes to 0.106 and 150.
+
+A single eligible donor is special-cased to draw nothing, which the reservoir version did implicitly and the
+index version otherwise would not. Three `SubtreeCrossoverTests` script an exact random sequence and were
+updated: two now select the first eligible donor rather than the second, and one had three of its five
+scripted draws left dead by the change and was reduced to the two the operator now makes. The behavior each
+test pins — that a donor exceeding the length or depth limit is rejected — is unchanged.
+
+**The prediction buffer stays on `ArrayPool<double>.Shared` rather than moving to a per-operator pool.** The
+concern was that renting thousands of times per run, potentially in parallel, makes the rent itself the
+bottleneck and merely moves work from the allocator to the pool. Measuring one generation's worth of
+acquisitions, eighty per operation, says otherwise:
+
+| Strategy | 200 rows | 2 000 rows | 20 000 rows | Allocated |
+| --- | ---: | ---: | ---: | ---: |
+| Allocate per candidate | 3 185 ns | 29 457 ns | 394 767 ns | up to 12.8 MB |
+| `ArrayPool.Shared` | 400 ns | 401 ns | 401 ns | none |
+| Buffer retained per thread | 35 ns | 38 ns | 35 ns | none |
+| `ArrayPool.Shared`, in parallel | 5 881 ns | 5 960 ns | 5 640 ns | 4.6 KB |
+| Retained per thread, in parallel | 4 235 ns | 4 377 ns | 4 364 ns | 4.2 KB |
+
+- **The pool costs about 5 nanoseconds per candidate and does not depend on the row count**, because
+  `ArrayPool.Shared` serves a rent and return on one thread from a thread-local slot without locking.
+  Evaluating one candidate at 20 000 rows costs about 9 microseconds, so acquisition is under a tenth of a
+  percent of the operation it serves.
+- **There is no contention to remove.** Both parallel rows sit near the 4.2-microsecond floor that
+  `Parallel.For` itself costs for eighty items, and the batch is partitioned into contiguous ranges, so each
+  worker rents and returns repeatedly on its own thread — the access pattern the thread-local slot exists for.
+- **A thread-retained buffer is genuinely faster to acquire**, 0.44 nanoseconds against 5, but that is 0.05
+  percent of a candidate's evaluation instead of 0.06. It buys nothing measurable and gives up the pool's
+  trimming: a retained buffer holds its memory for the life of the thread, 160 KB per worker at 20 000 rows,
+  after the problem that needed it is gone.
+
+One sharp edge is worth recording rather than acting on: `ArrayPool.Shared` keeps one array per size bucket
+per thread, and `SymbolicRegressionProblem.Evaluate` rents the destination while `ExpressionInterpreter`
+rents its workspace inside it. Should both ever land in one bucket, the inner rent misses the thread-local
+slot and takes the per-core locked path. The flat 401 nanoseconds says this is not happening at these sizes.
+
+Remaining hotspot candidates: the adapter's per-solve buffers could be reused across candidates, and the
+refiner is now the only allocation-bound operator left. Nothing else in a refining run is worth optimizing
+while refinement is 99 percent of it.
+
 ### Benchmarks
 
 Keep focused benchmark suites for:
@@ -1678,11 +2727,41 @@ Replacement proceeds by behavior, not by file name:
 3. establish symbolic-expression lowering parity;
 4. establish unconditional immutable replacement from successful LM results, including non-finite values;
 5. compare predictions and raw MSE with the maintained legacy implementation where applicable;
-6. measure representative end-to-end workloads and decide whether MathNet remains the backend;
+6. measure representative end-to-end workloads and attribute their cost across differentiation, adapter and solver;
 7. design evaluator or memetic integration only after the direct path is stable;
 8. remove old AutoDiff or MathNet dependencies only when no maintained library feature uses them.
 
 Do not delete tests merely because the implementation changes. Adapt behavioral tests to the owning replacement layer.
+
+### Solver-backend decision gate
+
+The original gate asked whether MathNet should be retained or replaced. That fork is not actionable as
+written, because no alternative Levenberg-Marquardt implementation exists to switch to and writing one is
+not work this replacement wants to take on. Inspection of the current code also settles part of the
+question outright:
+
+- **The legacy implementation calls the same MathNet Levenberg-Marquardt.**
+  `SymbolicRegressionParameterOptimization` invokes it directly, so old and new differ in their
+  differentiation and marshalling layers rather than in their solver. A comparison between them measures
+  exactly what this replacement changed, with the solver held constant on both sides.
+- **Dropping the solver would not drop the dependency.** `HyperVolumeCalculator` uses MathNet statistics
+  and the legacy optimizer uses its linear algebra, so the package reference stays regardless of what the
+  fitting path does.
+- **The dependency actually up for elimination is `AutoDiff`.** Its only remaining consumer is
+  `TreeToAutoDiffTermConverter`, reached solely through the legacy optimizer, so retiring that optimizer
+  removes a package while replacing MathNet removes none.
+
+The gate is therefore restated: **MathNet is retained.** Measurement attributes cost across the
+differentiation engine, the adapter and the solver, and only a specific quantified problem that neither
+adapter changes nor solver configuration can address would reopen the question. Writing a Levenberg-
+Marquardt implementation trades a maintained one for our own damping, trust-region and convergence-test
+edge cases, for a dependency that stays either way.
+
+One suspected cost is already recorded and is fixable without touching the solver. MathNet's calling
+convention asks for the model values and the Jacobian through separate callbacks, so the adapter computes
+the primal twice per iteration, once in `EvaluateModel` and once inside `EvaluateWithJacobian`. If
+measurement shows that duplicated forward sweep is material, the fix is to retain the primal computed
+during the Jacobian call inside our own adapter.
 
 ## Decision Gates
 
@@ -1704,7 +2783,7 @@ Remaining decisions should be made from implementation evidence:
 2. which built-in expression operations are supported in the first increment and their structured failure details;
 3. the exact MathNet API and storage shape with the lowest verified adapter overhead;
 4. stopping defaults and later retention or acceptance policy;
-5. whether MathNet performance justifies retention or replacement;
+5. whether any measured solver-side cost is large enough to reopen the retained-MathNet decision;
 6. the eventual public facade and generic local-improvement contract;
 7. whether pooled AD workspaces justify the `IDisposable` execution contract over ordinary execution-owned arrays.
 
@@ -1726,7 +2805,7 @@ Remaining decisions should be made from implementation evidence:
 | 11. Refiner operator | Candidate-to-candidate refinement, composition topologies including transient-refinement evaluation, plus explicit placement in applicable algorithms | Objective evaluation or retention inside the general refiner contract |
 | 12. Improvement-checking refiner | Objective-aware retention as a composable wrapping refiner with configurable evaluator and comparer | A second refinement integration mechanism, or acceptance hidden from configuration |
 | 13. Producer refinement composition | A re-decided transformed-operator concept, then the deferred creator, crossover, mutator, and offspring-production conveniences after canonical mechanisms are established | Producer wrappers treated as the primary refinement integration, or a refiner accepted by the existing transformed operators without revisiting the concept |
-| 14. Performance decision | AD, adapter, solver, refinement, evaluator, and complete pipeline benchmarked | Unmeasured backend abstraction or specialization |
+| 14. Performance decision | AD, adapter, solver, refinement, evaluator, and complete pipeline benchmarked, with cost attributed across the layers and compared against the legacy implementation | Unmeasured backend abstraction or specialization, or a solver written to replace one that measurement has not indicted |
 | 15. Later generalization | Public APIs, other optimizers, sampling, and additional memetic composition as justified | Changes made only for hypothetical reuse |
 
 Each increment requires:
@@ -1773,7 +2852,16 @@ The first parameter-fitting implementation is complete when:
 - the input tree remains unchanged and every successful LM parameter vector is applied through one `ReplaceMany` call;
 - non-finite optimized values propagate into the rebuilt expression without an implicit acceptance safeguard;
 - predictions and raw MSE match retained behavior within documented tolerances where the behavioral contracts overlap;
-- benchmarks isolate AD, adapter, solver, and end-to-end costs and support an explicit MathNet retention or replacement decision;
+- benchmarks isolate AD, adapter, solver, and end-to-end costs, attribute them across those layers, and compare the complete path against the legacy implementation;
 - the direct capability is documented well enough to design its eventual public facade without exposing AD internals.
+
+The benchmark criterion is met. [Legacy comparison outcome](#legacy-comparison-outcome) compares the
+complete path against the legacy implementation, [Evaluation throughput
+outcome](#evaluation-throughput-outcome) isolates evaluation, [Solver cost attribution
+outcome](#solver-cost-attribution-outcome) attributes per-fit cost and allocation across differentiation,
+adapter and solver, and [Whole-run profile outcome](#whole-run-profile-outcome) places all of it inside a
+run and gives refinement its cost statement. Together they close the performance-decision increment:
+MathNet is retained on measured grounds, and the hotspots the profile revealed are recorded as separate
+work rather than folded into this slice.
 
 The broader redesign is complete later when justified public numerical-optimization APIs, explicit refiner integration, transient-refinement evaluation, additional solvers, and legacy retirement each have an explicit outcome. They are deliberately not conditions for completing the first vertical slice.

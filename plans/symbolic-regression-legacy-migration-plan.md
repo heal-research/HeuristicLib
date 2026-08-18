@@ -92,8 +92,31 @@ types whose names collide with the modern API.
 The concrete mutable symbolic-expression compiler and interpreter implementations
 remain under `Problems/DataAnalysis/Symbolic`. Supporting operation catalogs,
 instruction models, dispatch helpers, state types, and interfaces remain active
-wherever their behavior is not yet completely replaced. Parameter optimization
-and AutoDiff conversion also remain active until working replacements exist.
+wherever their behavior is not yet completely replaced.
+
+`SymbolicRegressionParameterOptimization` and the `AutoDiff` package have reached
+replacement-verified state for the immutable system. Measurement shows the
+immutable implementation matching
+their mean squared error while fitting four to eight times faster and allocating
+a fifth to a tenth as much, and evaluating four to five times faster; the figures
+are recorded in
+[`symbolic-regression-parameter-fitting-plan.md`](symbolic-regression-parameter-fitting-plan.md).
+
+They are nevertheless retained, because the legacy `SymbolicRegressionProblem`
+calls `OptimizeParameters` from its own evaluation path. Consumers that cannot
+migrate until grammar-guided immutable GP exists would lose parameter fitting
+with no replacement available to them, since `NumericParameterFittingRefiner` is
+typed over the immutable problem and genotype. A later budgeted quality
+comparison between the two systems would also need parameter fitting enabled on
+both sides.
+
+Their deletion therefore belongs with the retirement of the legacy
+`SymbolicRegressionProblem` rather than as a separate batch, and the budgeted
+quality comparison between the two systems is a precondition of that batch rather
+than something that follows it. Once these components are gone, no comparison
+between the old and new systems can be run again. `AutoDiff` leaves
+with them: its only consumer is `TreeToAutoDiffTermConverter`, which only
+`SymbolicRegressionParameterOptimization` uses.
 
 Legacy source is deleted only after reference and test-parity checks and explicit
 approval. Operator tests are removed only after their behavior has been migrated

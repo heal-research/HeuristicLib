@@ -72,6 +72,22 @@ Resolution remains local and eager for ordinary algorithms. Do not retain the re
 
 `RunStreamingAsync(...)` is sealed on this base so a concrete iterative algorithm cannot accidentally bypass that ordering. Override `HasCompleted(...)`, `ExecuteStep(...)`, `TryExecuteStep(...)` or `IsTerminalState(...)` as required by the algorithm.
 
+## Refinement placement
+
+Built-in algorithms that produce candidates carry an optional `Refiner`. `GeneticAlgorithm`, `NSGA2`, `EvolutionStrategy`, `AlpsGeneticAlgorithm`, `OpenEndedRelevantAllelesPreservingGeneticAlgorithm` and `HillClimber` all apply it immediately before evaluation, at every point where candidates are produced: the initial population, each offspring batch, and any repopulation branch.
+
+```csharp
+var algorithm = geneticAlgorithm with { Refiner = parameterFitting.WithImprovementCheck() };
+```
+
+Placement on the production path rather than the replacement path is what keeps carried candidates out of it. Elites reaching an elitism replacer from the previous population, the parents a plus-strategy evolution strategy carries, and a hill climber's incumbent are never refined again, because they were refined when they were produced.
+
+The setting is nullable, and leaving it unset is not the same as configuring an identity refiner in principle but is in effect: an unset refiner consumes no randomness and leaves a run bit-identical to the same run before the setting existed.
+
+Refinement is composed through the refiner topologies rather than by placing a refiner at more than one lifecycle point. Repeated refinement is `IteratedRefiner`, an ordered sequence is `PipelineRefiner`, and applying refinement to only part of a population is `refiner.WithRate(...)`. See [Operator composition](operator-composition.md) for the topologies and their evaluation accounting.
+
+Cancellation is observed between iterations, not inside an operator call. A run cancels at the next iteration boundary, so a long-running refinement of the current batch finishes first.
+
 ## Noniterative algorithms
 
 Derive from `Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>` when the iterative lifecycle is not appropriate. Implement `CreateExecutionInstance(...)` and return an `AlgorithmInstance<...>` that owns the complete streaming behavior.
