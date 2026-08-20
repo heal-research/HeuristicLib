@@ -21,7 +21,7 @@ public class TreeSearchTsp(TravelingSalesmanProblem innerProblem) :
     }
 
     //TODO this is only valid for metric spaces
-    totalDistance += pd.GetDistance(candidate[^1], candidate[0]); // Return to the starting city 
+    totalDistance += pd.GetDistance(candidate[^1], candidate[0]); // Return to the starting city
 
     return totalDistance;
   }

@@ -28,15 +28,10 @@ public class LexicographicComparer : IComparer<ObjectiveVector>
 
         foreach (var dimension in order)
         {
-            var comparison = x[dimension].CompareTo(y[dimension]);
+            var comparison = ObjectiveValue.Compare(x[dimension], y[dimension], objectives[dimension]);
             if (comparison != 0)
             {
-                return objectives[dimension] switch
-                {
-                    ObjectiveDirection.Minimize => +comparison,
-                    ObjectiveDirection.Maximize => -comparison,
-                    _ => throw new InvalidOperationException($"Unsupported objective direction: {objectives[dimension]}.")
-                };
+                return comparison;
             }
         }
 

@@ -81,5 +81,3 @@
 
 //    IIncrementalObjectiveNeighborhoodInstance<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Move> IIncrementalObjectiveNeighborhood<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Move>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 //}
-
-

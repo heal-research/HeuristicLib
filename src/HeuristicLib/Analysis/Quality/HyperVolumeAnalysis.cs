@@ -18,12 +18,37 @@ public record HyperVolumeAnalysis<T, TS, TP>(
     public override void RegisterObservations(ObservationPlan observations, HyperVolumeState<T> result)
     {
         foreach (var evaluator in Evaluator)
-            observations.Observe(evaluator, (c, o, _, _) => AfterEvaluation(result, c, o));
+            observations.Observe(evaluator, (objectiveVectors, candidates, _, _) => AfterEvaluation(result, candidates.ToEvaluated(objectiveVectors)));
     }
 
-    public void AfterEvaluation(HyperVolumeState<T> result, IReadOnlyList<T> genotypes,
-                                IReadOnlyList<ObjectiveVector> objectives)
+    public void AfterEvaluation(HyperVolumeState<T> result, IReadOnlyList<EvaluatedCandidate<T>> evaluatedCandidates)
     {
-        result.AddPoints(genotypes.Zip(objectives).Select(x => x.First.ToEvaluated(x.Second)));
+        result.AddPoints(evaluatedCandidates);
+    }
+}
+
+public class HyperVolumeState<T>(ObjectiveVector referencePoint, ObjectiveDirections objective)
+    : ParetoState<T>(referencePoint, objective)
+{
+    private Lazy<double>? hyperVolumeLazy;
+    public double HyperVolume => hyperVolumeLazy?.Value ?? 0;
+
+    public override bool AddPoints(IEnumerable<EvaluatedCandidate<T>> evaluatedCandidates)
+    {
+        if (!base.AddPoints(evaluatedCandidates))
+            return false;
+
+        hyperVolumeLazy = new Lazy<double>(() =>
+            HyperVolumeCalculator.Calculate(
+                Front.Select(x => x.ObjectiveVector),
+                ReferencePoint,
+                Objective));
+        return true;
+    }
+
+    public override void Clear()
+    {
+        base.Clear();
+        hyperVolumeLazy = null;
     }
 }

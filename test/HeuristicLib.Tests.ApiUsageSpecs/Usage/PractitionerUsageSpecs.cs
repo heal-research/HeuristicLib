@@ -11,7 +11,6 @@ using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
-using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
@@ -170,7 +169,7 @@ public class PractitionerUsageSpecs
           RandomNumberGenerator.Create(2033));
         edgeChild.Order().ToArray().ShouldBe([0, 1, 2, 3]);
 
-        var evaluations = DirectEvaluator.Evaluate([parent], RandomNumberGenerator.Create(2034), problem);
+        var evaluations = problem.Evaluate([parent], RandomNumberGenerator.Create(2034));
         evaluations.Count.ShouldBe(1);
 
         IReadOnlyList<EvaluatedCandidate<RealVector>> evaluatedCandidates =

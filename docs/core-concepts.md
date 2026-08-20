@@ -19,7 +19,7 @@ The goal is a single dominant mental model:
 | Search state         | The public progress value produced by algorithms                          | `ISearchState`                                                                                              |
 | Algorithm loop       | The step based algorithm authoring model                                  | `IterativeAlgorithmInstance<...>`                                                                           |
 | Execution instance   | Run scoped behavior, resolved dependencies and mutable data               | `AlgorithmInstance<...>` or an operator instance contract                                                   |
-| Operators            | Pluggable building blocks used by algorithms                              | `ICreator`, `IEvaluator`, `ISelector`, `ICrossover`, `IMutator`, `IReplacer`, `ITerminator`, `IInterceptor` |
+| Operators            | Pluggable building blocks used by algorithms                              | `ICreator`, `IEvaluator`, `ISelector`, `ICrossover`, `IMutator`, `IRefiner`, `IReplacer`, `ITerminator`, `IInterceptor` |
 | Algorithm run        | One executable algorithm setup with its problem, randomness and analyzers | `AlgorithmRun<...>`                                                                                         |
 | Experiment           | A reusable family of independent algorithm runs                           | `GridExperiment<...>` or `RepeatedExperiment<...>`                                                          |
 | Experiment run       | One materialized and schedulable execution of an experiment               | `ExperimentRun<...>`                                                                                        |

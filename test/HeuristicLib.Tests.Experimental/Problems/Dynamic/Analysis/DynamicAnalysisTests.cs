@@ -113,9 +113,9 @@ public class DynamicAnalysisTests
                 foreach (var batch in batches)
                 {
                     ct.ThrowIfCancellationRequested();
-                    var objectives = evaluator.Evaluate(batch, random, problem.SearchSpace, problem);
+                    var objectiveVectors = evaluator.Evaluate(batch, random, problem.SearchSpace, problem);
 
-                    yield return Population.From(batch, objectives).ToPopulationState();
+                    yield return Population.From(batch.ToEvaluated(objectiveVectors)).ToPopulationState();
                     await Task.CompletedTask;
                 }
             }

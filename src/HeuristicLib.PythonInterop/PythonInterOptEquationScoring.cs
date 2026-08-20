@@ -1,103 +1,128 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Genotypes.Trees;
-using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers;
+using HEAL.HeuristicLib.DataAnalysis.Regression;
+using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
+using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
+using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
 using HEAL.HeuristicLib.Operators.Mutators;
-using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
+using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
+using HEAL.HeuristicLib.Operators.Refiners;
+using HEAL.HeuristicLib.Operators.Refiners.SymbolicRegressionRefiners;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Trees;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.Random.Distributions;
+using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 
 namespace HEAL.HeuristicLib.PythonInterop;
 
 /// <summary>
-/// This is a toy problem that uses a "normal" symbolic regression problem and adds more objectives provided by a generic function
+/// Symbolic regression problem that lets a Python callback augment the normal objectives of each expression.
 /// </summary>
-public class PythonInterOptEquationScoring(ObjectiveDirections objective, SymbolicExpressionTreeSearchSpace searchSpace, Func<SymbolicExpressionTree, ObjectiveVector, double[]> myEval)
-  : SingleSolutionProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>(objective, searchSpace)
+public class PythonInterOptEquationScoring(
+    ObjectiveDirections objective,
+    ExpressionTreeSearchSpace searchSpace,
+    Func<ExpressionTree, ObjectiveVector, double[]> score)
+    : SingleSolutionProblem<ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
 {
-    public required SymbolicRegressionProblem InnerProblem { get; init; }
-
-    public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random)
+    private sealed record InnerProblemParameterFittingRefiner(NumericParameterFittingRefiner ChildRefiner)
+        : SingleCandidateRefiner<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>
     {
-        return myEval(solution, InnerProblem.Evaluate(solution)).ToArray();
+        public override ExpressionTree RefineCandidate(ExpressionTree candidate, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, PythonInterOptEquationScoring problem) =>
+            ChildRefiner.RefineCandidate(candidate, random, searchSpace, problem.InnerProblem);
     }
 
-    #region CallTheseFromPython
-    public static PythonInterOptEquationScoring DefaultConf(string file, int trainingRowCount, Func<SymbolicExpressionTree, ObjectiveVector, double[]> myEval)
-    {
-        var data = RegressionCsvInstanceProvider.ImportData(file, trainingRowCount); //rows are not shuffled
-        var grammar = new SimpleSymbolicExpressionGrammar(); //Trees have 3 node min
-        var root = grammar.AddLinearScaling(); //adds Keijzer scaling to top of tree (+4 Nodes)
-        var symbols = new Symbol[] { //add a bunch of symbols and allow all combinations of them 
-      new Addition(),
-      new Subtraction(),
-      new Multiplication(),
-      new Division(),
-      new Number(),
-      new SquareRoot(),
-      new Logarithm(),
-      new Variable { VariableNames = data.InputVariables }
-    };
-        grammar.AddFullyConnectedSymbols(root, symbols);
+    public required SymbolicRegressionProblem InnerProblem { get; init; }
+    public int ParameterOptimizationIterations { get; init; } = 5;
 
-        var symbolicExpressionTreeSearchSpace = new SymbolicExpressionTreeSearchSpace(grammar, 40, 20);
-        var p = new SymbolicRegressionProblem(data,
-          symbolicExpressionTreeSearchSpace,
-          new PearsonR2Evaluator()
-        // new RootMeanSquaredErrorEvaluator(),
-        // new TreeLengthEvaluator() //... other evaluators
-        )
+    public override ObjectiveVector Evaluate(ExpressionTree solution, IRandomNumberGenerator random) =>
+        score(solution, InnerProblem.Evaluate(solution));
+
+    public static PythonInterOptEquationScoring DefaultConf(
+        string file,
+        int trainingRowCount,
+        Func<ExpressionTree, ObjectiveVector, double[]> score,
+        bool useLinearScaling = true,
+        int parameterOptimizationIterations = 5)
+    {
+        var data = PythonRegressionData.ReadCsv(file, trainingRowCount);
+        var operations = new OperationSymbol[]
         {
-            ParameterOptimizationIterations = 5 //this is the effort spent on Parameter-Optimization
+            Symbols.Addition,
+            Symbols.Subtraction,
+            Symbols.Multiplication,
+            Symbols.Division,
+            Symbols.SquareRoot,
+            Symbols.Logarithm
+        };
+        var constant = new EvolvableConstantSymbol(
+            new UniformDoubleDistribution(-20.0, 20.0),
+            new ChooseNumericPerturbation(
+            [
+                (new AdditiveNumericPerturbation(new NormalDoubleDistribution(0.0, 1.0)), 0.5),
+                (new MultiplicativeNumericPerturbation(new NormalDoubleDistribution(0.0, 0.03)), 0.5)
+            ]));
+        var searchSpace = new ExpressionTreeSearchSpace(
+            40,
+            20,
+            operations,
+            data.Inputs.Columns.Select(column => column.Name),
+            [constant]);
+        var innerProblem = new SymbolicRegressionProblem(
+            data,
+            Metrics.PearsonR2.ToFinite(),
+            searchSpace,
+            useLinearScaling);
+        var directions = new ObjectiveDirection[]
+        {
+            ObjectiveDirection.Maximize, // combined score, overridden by score
+            ObjectiveDirection.Maximize, // Pearson R2
+            ObjectiveDirection.Maximize, // dimensional consistency
+            ObjectiveDirection.Maximize, // limits and trends
+            ObjectiveDirection.Maximize  // symmetry
         };
 
-        var directions = new[] {
-      ObjectiveDirection.Maximize, // Combined Score, overridden by myEval, but we want to maximize it
-      ObjectiveDirection.Maximize, // PearsonR2Evaluator score
-      ObjectiveDirection.Maximize, // Dimensional Consistency
-      ObjectiveDirection.Maximize, // Limits & Trends
-      ObjectiveDirection.Maximize, // Symmetry
-    };
-        var objective = new ObjectiveDirections(directions, new LexicographicComparer(directions));
-
         return new PythonInterOptEquationScoring(
-            objective,
-            symbolicExpressionTreeSearchSpace, myEval)
-        { InnerProblem = p };
-    }
-
-    public static Population<SymbolicExpressionTree> RunDefault(PythonInterOptEquationScoring p, int seed = 42)
-    {
-        var symRegAllMutator = ChooseOneMutator.Create(
-          new ChangeNodeTypeManipulation(),
-          new FullTreeShaker(),
-          new OnePointShaker(),
-          new RemoveBranchManipulation(),
-          new ReplaceBranchManipulation()
-        );
-
-        var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), symRegAllMutator);
-        ga.MutationRate = 0.1;
-        ga.Selector = TournamentSelector.For(p, tournamentSize: 4);
-        ga.PopulationSize = 300;
-
-        var res = (ga.Build() with
+            new ObjectiveDirections(directions, new LexicographicComparer(directions)),
+            searchSpace,
+            score)
         {
-            MaximumGenerations = 200
-        }).Complete(p, RandomNumberGenerator.Create(seed), null, CancellationToken.None);
-        return res.Population;
+            InnerProblem = innerProblem,
+            ParameterOptimizationIterations = parameterOptimizationIterations
+        };
     }
 
-    public static Population<SymbolicExpressionTree> RunDefault(string file, int trainingRowCount, Func<SymbolicExpressionTree, ObjectiveVector, double[]> myEval, int seed = 42) => RunDefault(DefaultConf(file, trainingRowCount, myEval), seed);
-    #endregion
+    public static Population<ExpressionTree> RunDefault(PythonInterOptEquationScoring problem, int seed = 42)
+    {
+        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>
+        {
+            Creator = new ProbabilisticTreeCreator(),
+            Crossover = new SubtreeCrossover { InternalNodeProbability = 0.9 },
+            Mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>(
+                [.. SymbolicExpressionMutators.Default]),
+            MutationRate = 0.1,
+            Selector = new TournamentSelector<ExpressionTree>(4),
+            PopulationSize = 300,
+            MaximumGenerations = 200,
+            Refiner = new InnerProblemParameterFittingRefiner(
+                new NumericParameterFittingRefiner { MaximumIterations = problem.ParameterOptimizationIterations })
+        };
+
+        return algorithm
+            .Complete(problem, RandomNumberGenerator.Create(seed), ct: CancellationToken.None)
+            .Population;
+    }
+
+    public static Population<ExpressionTree> RunDefault(
+        string file,
+        int trainingRowCount,
+        Func<ExpressionTree, ObjectiveVector, double[]> score,
+        int seed = 42,
+        bool useLinearScaling = true,
+        int parameterOptimizationIterations = 5) =>
+        RunDefault(
+            DefaultConf(file, trainingRowCount, score, useLinearScaling, parameterOptimizationIterations),
+            seed);
 }

@@ -24,21 +24,36 @@ public static class CrowdingDistance
         {
             // Sort indices by objective value
             Array.Sort(indices, new IndexedComparer(population, obj));
+
+            // NaN sorts last and takes no part in this dimension. It is the worst possible value, so treating it as a
+            // boundary point would award it the maximum crowding distance. Its distance stays at zero instead.
+            var orderedCount = n;
+            while (orderedCount > 0 && double.IsNaN(population[indices[orderedCount - 1]][obj]))
+            {
+                orderedCount--;
+            }
+
+            if (orderedCount < 2)
+            {
+                continue;
+            }
+
             var minVal = population[indices[0]][obj];
-            var maxVal = population[indices[^1]][obj];
+            var maxVal = population[indices[orderedCount - 1]][obj];
             var range = maxVal - minVal;
 
-            if (range <= 0.0)
+            // A non-finite range cannot normalize a difference: every internal distance would collapse to zero or NaN.
+            if (range <= 0.0 || !double.IsFinite(range))
             {
                 continue; // avoid division by zero
             }
 
             // Boundary points get infinite distance
             distances[indices[0]] = double.PositiveInfinity;
-            distances[indices[^1]] = double.PositiveInfinity;
+            distances[indices[orderedCount - 1]] = double.PositiveInfinity;
 
             // Internal points
-            for (var j = 1; j < n - 1; j++)
+            for (var j = 1; j < orderedCount - 1; j++)
             {
                 var prev = population[indices[j - 1]][obj];
                 var next = population[indices[j + 1]][obj];

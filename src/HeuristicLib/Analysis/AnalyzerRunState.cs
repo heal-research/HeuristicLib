@@ -7,5 +7,3 @@
 
 //    public abstract void RegisterObservations(ObservationPlan observations);
 //}
-
-

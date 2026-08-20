@@ -137,6 +137,38 @@ public class CrowdingDistanceTests
         result.ShouldContain(offspring[^1]);
     }
 
+    [Fact]
+    public void NaNObjectiveValue_DoesNotBecomeABoundaryPoint()
+    {
+        var pop = new[] { OV(double.NaN, 1.0), OV(1.0, 1.0), OV(2.0, 1.0), OV(3.0, 1.0) };
+
+        var d = CrowdingDistance.CalculateCrowdingDistances(pop);
+
+        d[0].ShouldBe(0.0);
+        d[1].ShouldBe(double.PositiveInfinity);
+        d[3].ShouldBe(double.PositiveInfinity);
+    }
+
+    [Fact]
+    public void NaNObjectiveValue_LeavesTheOtherDistancesIntact()
+    {
+        var pop = new[] { OV(double.NaN, 1.0), OV(1.0, 1.0), OV(2.0, 1.0), OV(3.0, 1.0) };
+
+        var d = CrowdingDistance.CalculateCrowdingDistances(pop);
+
+        d[2].ShouldBe(1.0, tolerance: 1e-12);
+    }
+
+    [Fact]
+    public void InfiniteRange_ContributesNoDistance()
+    {
+        var pop = new[] { OV(double.NegativeInfinity, 1.0), OV(1.0, 1.0), OV(2.0, 1.0), OV(double.PositiveInfinity, 1.0) };
+
+        var d = CrowdingDistance.CalculateCrowdingDistances(pop);
+
+        d.ShouldAllBe(value => !double.IsNaN(value));
+    }
+
     // ---------------- helpers ----------------
 
     private static EvaluatedCandidate<T> Sol<T>(params double[] objs) => new(default!, new ObjectiveVector(objs));

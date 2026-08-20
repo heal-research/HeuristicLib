@@ -163,13 +163,22 @@ var observed = mutator.CountMutatedCandidates(counter);
 // later: counter.CurrentCount contains total mutated candidates
 ```
 
-The same naming pattern is used for other batched operators where an item count is meaningful, for example `CountCreatedCandidates(...)`, `CountCrossedCandidates(...)`, `CountEvaluatedCandidates(...)`, `CountMutatedCandidates(...)`, `CountSelectedCandidates(...)`, and `CountReplacementCandidates(...)`.
+The same naming pattern is used for other batched operators where an item count is meaningful, for example `CountCreatedCandidates(...)`, `CountCrossedCandidates(...)`, `CountEvaluatedCandidates(...)`, `CountMutatedCandidates(...)`, `CountRefinedCandidates(...)`, `CountSelectedCandidates(...)`, and `CountReplacementCandidates(...)`.
 
 The observed boundary is part of the budget. For example, these are different budgets:
 
 - calls made to a caching evaluator, including cache hits
 - calls that pass through the cache and reach the wrapped direct evaluator
 - candidates processed inside evaluator batches
+
+The same holds inside a composed operator, where instrumentation reports what its own position sees. A counter inside an iterated refiner counts one call per iteration; the same counter around that refiner counts one call for the whole iteration:
+
+```csharp
+parameterFitting.CountRefinerCalls(inner).AsIterated(3)  // inner counts 3
+parameterFitting.AsIterated(3).CountRefinerCalls(outer)  // outer counts 1
+```
+
+An item counter behaves likewise, and reports the population the observed operator actually returned rather than the one it received, which differ when a refiner filters candidates.
 
 Advanced users can pass the same `ObservationCounter` to several observed operators when one shared budget should aggregate work across those boundaries.
 
@@ -203,7 +212,7 @@ var measured = evaluator.MeasureEvaluatorDuration(duration);
 // later: duration.CurrentDuration contains total observed evaluator work duration
 ```
 
-The same measurement pattern is available for other operator families, for example `MeasureCreatorDuration(...)`, `MeasureCrossoverDuration(...)`, `MeasureMutatorDuration(...)`, `MeasureSelectorDuration(...)`, `MeasureReplacerDuration(...)`, `MeasureInterceptorDuration(...)`, and `MeasureTerminatorDuration(...)`.
+The same measurement pattern is available for other operator families, for example `MeasureCreatorDuration(...)`, `MeasureCrossoverDuration(...)`, `MeasureMutatorDuration(...)`, `MeasureRefinerDuration(...)`, `MeasureSelectorDuration(...)`, `MeasureReplacerDuration(...)`, `MeasureInterceptorDuration(...)`, and `MeasureTerminatorDuration(...)`.
 
 This is not whole-run elapsed time or active algorithm duration. It increases only while the measured operator call is executing. Duration is recorded even if the observed operator call throws, because the failed call still consumed observed work time. Use `AfterElapsedTimeTerminator(...)` when the budget should include idle time between stream pulls, use `WithMaxAlgorithmDuration(...)` when the budget should cover active state-production work by the wrapped algorithm, and use operator duration when the budget should apply only to observed operator work.
 

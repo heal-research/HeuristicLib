@@ -31,6 +31,7 @@ Use the [Glossary](glossary.md) for terminology, [Core concepts](core-concepts.m
 - Support algorithm and operator composition where the combined semantics are clear.
 - Support multi population and layered workflows.
 - Preserve static compatibility between candidates, search spaces, problems, algorithms and operators where practical.
+- Treat evaluator output as the authoritative evaluated candidate, so evaluator driven repair, refinement, caching and dynamic problem behavior can be expressed without mutating input candidates.
 
 ### Execution
 

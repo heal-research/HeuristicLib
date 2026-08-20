@@ -51,13 +51,11 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
     public override bool Equals(object? obj) => Equals(obj as ObjectiveVector);
     public override int GetHashCode() => values.Aggregate(0, HashCode.Combine);
 
+    /// <summary>
+    /// Determines the Pareto relation of this vector to <paramref name="other"/> under the given objective directions.
+    /// </summary>
     public DominanceRelation CompareTo(ObjectiveVector? other, ObjectiveDirections objective)
     {
-        if (ReferenceEquals(this, other))
-        {
-            return 0;
-        }
-
         ArgumentNullException.ThrowIfNull(other);
 
         if (Count != other.Count)
@@ -70,24 +68,30 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
             throw new ArgumentException("Objective values and directions must have the same length");
         }
 
-        var comparisons = new int[Count];
-        for (var i = 0; i < Count; i++)
+        // Skips the loop, which would reach the same result. Must stay below the argument checks.
+        if (ReferenceEquals(this, other))
         {
-            comparisons[i] = this[i].CompareTo(other[i]);
-            comparisons[i] *= objective.Directions[i] switch
-            {
-                ObjectiveDirection.Minimize => +1,
-                ObjectiveDirection.Maximize => -1,
-                _ => throw new InvalidOperationException($"Unsupported objective direction: {objective.Directions[i]}.")
-            };
+            return DominanceRelation.Equal;
         }
 
-        var thisNotWorse = comparisons.All(c => c <= 0);
-        var otherNotWorse = comparisons.All(c => c >= 0);
+        var thisNotWorse = true;
+        var otherNotWorse = true;
+        for (var i = 0; i < Count; i++)
+        {
+            var comparison = ObjectiveValue.Compare(this[i], other[i], objective.Directions[i]);
+            if (comparison < 0)
+            {
+                otherNotWorse = false;
+            }
+            else if (comparison > 0)
+            {
+                thisNotWorse = false;
+            }
+        }
 
         return (thisNotWorse, otherNotWorse) switch
         {
-            (true, true) => DominanceRelation.Equivalent,
+            (true, true) => DominanceRelation.Equal,
             (true, false) => DominanceRelation.Dominates,
             (false, true) => DominanceRelation.IsDominatedBy,
             _ => DominanceRelation.Incomparable
@@ -100,8 +104,8 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
     public bool IsDominatedBy(ObjectiveVector other, ObjectiveDirections objective) =>
         CompareTo(other, objective) == DominanceRelation.IsDominatedBy;
 
-    public bool IsEquivalentTo(ObjectiveVector other, ObjectiveDirections objective) =>
-        CompareTo(other, objective) == DominanceRelation.Equivalent;
+    public bool IsEqualTo(ObjectiveVector other, ObjectiveDirections objective) =>
+        CompareTo(other, objective) == DominanceRelation.Equal;
 
     public bool IsIncomparableTo(ObjectiveVector other, ObjectiveDirections objective) =>
         CompareTo(other, objective) == DominanceRelation.Incomparable;

@@ -20,7 +20,7 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProb
 
     public sealed override AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
-        var resolvedInterceptor = Interceptor is null ? null : instanceRegistry.Resolve(Interceptor);
+        var resolvedInterceptor = instanceRegistry.ResolveOptional(Interceptor);
         return CreateExecutionInstance(instanceRegistry, resolvedInterceptor);
     }
 

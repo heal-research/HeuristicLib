@@ -31,7 +31,7 @@ public class MetaOptimizationTests
           new GaussianMutator(0.5, 0.5), 0.25,
           TournamentSelector.For(problem, tournamentSize: 2),
           100,
-          DirectEvaluator.For(problem));
+          new ProblemEvaluator<RealVector>());
 
         //build meta problem (test some mutators
         var b = new MetaOptimizationProblemExamples.MetaOptimizationSearchSpaceBuilder();

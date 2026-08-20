@@ -51,7 +51,7 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
 
             var candidates = currentState.Population.Candidates.ToArray();
             var objectiveVectors = evaluator.Evaluate(candidates, random, searchSpace, problem);
-            return currentState with { Population = Population.From(candidates, objectiveVectors) };
+            return currentState with { Population = Population.From(candidates.ToEvaluated(objectiveVectors)) };
         }
     }
 }

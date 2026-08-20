@@ -91,6 +91,18 @@ public class ExecutionInstanceRegistry
         return instance;
     }
 
+    /// <summary>
+    /// Resolves an operator that may be absent, returning <see langword="null"/> when it is.
+    /// </summary>
+    /// <remarks>
+    /// Use this for optional slots such as a terminator or a refiner. <see cref="Resolve"/> stays strict, so passing a
+    /// possibly-null operator to it is a compile-time error rather than a null instance discovered later.
+    /// </remarks>
+    [return: NotNullIfNotNull(nameof(resolvable))]
+    public TExecutionInstance? ResolveOptional<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance>? resolvable)
+        where TExecutionInstance : class, IExecutionInstance =>
+        resolvable is null ? null : Resolve(resolvable);
+
     public void RegisterInstance<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable, TExecutionInstance instance)
         where TExecutionInstance : class, IExecutionInstance
     {

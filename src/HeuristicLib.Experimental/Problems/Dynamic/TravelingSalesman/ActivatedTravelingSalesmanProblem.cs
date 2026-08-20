@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
@@ -66,7 +65,7 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
     {
         return solution
                .Where(x => CurrentState[x])
-               .PairwiseRoundRobin(ProblemData.GetDistance)
+               .SelectCircularPairs(ProblemData.GetDistance)
                .Sum();
     }
 

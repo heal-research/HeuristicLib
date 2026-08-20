@@ -10,7 +10,7 @@ The experimental package is an incubation boundary. It is not a place to preserv
 
 Mature optional domain functionality may eventually move from the experimental package into a dedicated package instead of the main package.
 
-No source placement changes are part of this planning change.
+Implemented source movement is recorded in the relevant feature migration plans.
 
 ## Motivation
 
@@ -125,7 +125,7 @@ This list is a target boundary rather than an exhaustive permanent inventory.
 
 ### DataAnalysis And Symbolic Regression
 
-Move the complete `Problems/DataAnalysis` feature family into `HEAL.HeuristicLib.Experimental`.
+Keep the modern immutable DataAnalysis and symbolic regression implementation in the main package. Track the remaining mutable implementation through the symbolic regression migration plans.
 
 Move related source that directly depends on DataAnalysis types, including the symbolic expression tree linear scaling extension.
 
@@ -140,7 +140,7 @@ Reasons:
 
 Move the corresponding unit tests to `HeuristicLib.Tests.Experimental`. Keep broader Python and symbolic regression workflows in the scenario project.
 
-Long term, redesign and promote this feature family into a dedicated DataAnalysis package if it becomes a coherent supported domain extension.
+The modern DataAnalysis family remains a candidate for a dedicated package if that later produces a clearer product boundary.
 
 ### Quadratic Assignment
 
@@ -271,10 +271,10 @@ The builder API may later be redesigned or removed. That decision should be made
 ### Stage 3: Move Low Coupling Problem Families
 
 1. Move Quadratic Assignment source and tests.
-2. Move DataAnalysis and symbolic regression source and tests.
+2. Remove the retained mutable DataAnalysis and symbolic regression source and tests from Main while keeping maintained consumers operational.
 3. Move the linear scaling extension and any other direct DataAnalysis dependents.
 4. Update experimental dynamic problems and Python workflows without changing their public namespaces unnecessarily.
-5. Move AutoDiff and affected MathNet package references out of the main project when no main package usage remains.
+5. Remove AutoDiff from Main when no main package usage remains. Keep MathNet in Main while modern numerical code still uses it.
 
 ### Stage 4: Move The Multi Objective Feature Family
 

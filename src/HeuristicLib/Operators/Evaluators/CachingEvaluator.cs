@@ -14,12 +14,14 @@ public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
     where TKey : notnull
 {
     /// <summary>
-    /// Gets the strategy that selects a candidate's cache key. Candidates that produce equal keys share one cached objective vector.
+    /// Gets the strategy that selects a candidate's cache key. Candidates that produce equal keys share one cached
+    /// objective vector. Only use a key selector whose equal keys identify candidates that are interchangeable for
+    /// evaluation.
     /// </summary>
     public ICacheKeySelector<TCandidate, TKey> KeySelector { get; init; }
 
     /// <summary>
-    /// Gets the maximum number of cached objective vectors, or <see langword="null"/> when the cache has no configured size limit.
+    /// Gets the maximum number of cached evaluation results, or <see langword="null"/> when the cache has no configured size limit.
     /// </summary>
     public long? SizeLimit { get; init; }
 
@@ -74,16 +76,16 @@ public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
                 return results;
             }
 
-            var newObjectives = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
+            var newObjectiveVectors = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
 
             for (var k = 0; k < uncachedKeys.Count; k++)
             {
-                cache.Set(uncachedKeys[k], newObjectives[k], new MemoryCacheEntryOptions { Size = 1 });
+                cache.Set(uncachedKeys[k], newObjectiveVectors[k], new MemoryCacheEntryOptions { Size = 1 });
             }
 
             foreach (var (_, entry) in uncachedMap)
             {
-                var objectiveVector = newObjectives[entry.j];
+                var objectiveVector = newObjectiveVectors[entry.j];
                 foreach (var i in entry.indices)
                 {
                     results[i] = objectiveVector;
@@ -105,6 +107,33 @@ public sealed record CachingEvaluator<TCandidate, TSearchSpace, TProblem>
         : base(childEvaluator, CacheKeySelection<TCandidate>.Identity)
     {
     }
+}
+
+/// <summary>
+/// Selects the stable key by which candidate evaluations are cached.
+/// </summary>
+/// <typeparam name="TCandidate">The candidate type.</typeparam>
+/// <typeparam name="TKey">The cache-key type.</typeparam>
+public interface ICacheKeySelector<in TCandidate, out TKey>
+    where TKey : notnull
+{
+    /// <summary>
+    /// Selects the cache key for <paramref name="candidate"/>.
+    /// Candidates that produce equal keys share one cached objective vector.
+    /// </summary>
+    TKey SelectKey(TCandidate candidate);
+}
+
+public sealed record IdentityCacheKeySelector<TCandidate> : ICacheKeySelector<TCandidate, TCandidate>
+    where TCandidate : notnull
+{
+    public TCandidate SelectKey(TCandidate candidate) => candidate;
+}
+
+public static class CacheKeySelection<TCandidate>
+    where TCandidate : notnull
+{
+    public static IdentityCacheKeySelector<TCandidate> Identity { get; } = new();
 }
 
 public static class CachingEvaluatorExtensions

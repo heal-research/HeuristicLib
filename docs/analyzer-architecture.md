@@ -65,6 +65,7 @@ Typical hook points are:
 - `IEvaluator<...>`
 - `IInterceptor<...>`
 - `IMutator<...>`
+- `IRefiner<...>`
 - `ICrossover<...>`
 - `ISelector<...>`
 - `IReplacer<...>`
@@ -76,6 +77,7 @@ The concrete observable wrappers still do the actual callback work:
 - `ObservableEvaluator<...>`
 - `ObservableInterceptor<...>`
 - `ObservableMutator<...>`
+- `ObservableRefiner<...>`
 - `ObservableCrossover<...>`
 - `ObservableSelector<...>`
 - `ObservableReplacer<...>`

@@ -23,7 +23,9 @@ public record NSGA2<TCandidate, TSearchSpace, TProblem>
     public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
     public required ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
     public required IReplacer<TCandidate, TSearchSpace, TProblem> Replacer { get; init; }
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+    public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
+
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
     /// </summary>
@@ -31,7 +33,7 @@ public record NSGA2<TCandidate, TSearchSpace, TProblem>
     public int? MaximumGenerations { get; init; }
 
     protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor) =>
-        new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover), instanceRegistry.Resolve(Mutator), instanceRegistry.Resolve(Selector), instanceRegistry.Resolve(Replacer), PopulationSize, MaximumGenerations);
+        new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover), instanceRegistry.Resolve(Mutator), instanceRegistry.Resolve(Selector), instanceRegistry.Resolve(Replacer), instanceRegistry.ResolveOptional(Refiner), PopulationSize, MaximumGenerations);
 
     private sealed class Instance(
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
@@ -41,6 +43,7 @@ public record NSGA2<TCandidate, TSearchSpace, TProblem>
         IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator,
         ISelectorInstance<TCandidate, TSearchSpace, TProblem> selector,
         IReplacerInstance<TCandidate, TSearchSpace, TProblem> replacer,
+        IRefinerInstance<TCandidate, TSearchSpace, TProblem>? refiner,
         int populationSize,
         int? maximumGenerations)
         : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
@@ -53,15 +56,25 @@ public record NSGA2<TCandidate, TSearchSpace, TProblem>
             if (previousState is null)
             {
                 var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
-                var initialFitnesses = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
-                return Population.From(initialSolutions, initialFitnesses).ToPopulationState();
+                if (refiner is not null)
+                {
+                    initialSolutions = refiner.Refine(initialSolutions, random, problem.SearchSpace, problem);
+                }
+
+                var initialPopulation = initialSolutions.ToEvaluated(evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem));
+                return Population.From(initialPopulation).ToPopulationState();
             }
 
             var parents = selector.Select(previousState.Population.EvaluatedCandidates, problem.Objective, populationSize * 2, random, problem.SearchSpace, problem).ToParents(problem.Objective);
             var children = crossover.Cross(parents, random, problem.SearchSpace, problem);
             var mutants = mutator.Mutate(children, random, problem.SearchSpace, problem);
-            var newPopulation = Population.From(mutants, evaluator.Evaluate(mutants, random, problem.SearchSpace, problem));
-            var nextPopulation = replacer.Replace(previousState.Population.EvaluatedCandidates, newPopulation.EvaluatedCandidates, problem.Objective, populationSize, random, problem.SearchSpace, problem);
+            if (refiner is not null)
+            {
+                mutants = refiner.Refine(mutants, random, problem.SearchSpace, problem);
+            }
+
+            var newPopulation = mutants.ToEvaluated(evaluator.Evaluate(mutants, random, problem.SearchSpace, problem));
+            var nextPopulation = replacer.Replace(previousState.Population.EvaluatedCandidates, newPopulation, problem.Objective, populationSize, random, problem.SearchSpace, problem);
 
             return Population.From(nextPopulation).ToPopulationState();
         }

@@ -173,6 +173,95 @@ Use objective directions for the problem-level direction model. Objective direct
 
 See also: Objective direction, Objective vector.
 
+## Data Analysis
+
+### Series
+
+Status: `Canonical`
+
+A series is one immutable named column of values. Its name is the semantic column name and its generic element type defines the data type.
+
+### Data frame
+
+Status: `Canonical`
+
+A data frame is an immutable, insertion-ordered collection of equally sized series that may have different element types. Columns are addressed by their series names.
+
+### Supervised data
+
+Status: `Canonical`
+
+Supervised data pairs an input data frame with one named target series of the same row count. It does not imply whether the data is used for training, validation, or testing.
+
+### Predictor
+
+Status: `Canonical`
+
+A predictor is a fitted object that produces a named prediction series from an input data frame. It may also write predictions into caller-provided storage.
+
+Do not use predictor for an estimator configuration that still needs fitting.
+
+### Estimator
+
+Status: `Canonical`
+
+An estimator fits a predictor from training data. Fitting receives explicit randomness when the procedure may be stochastic.
+
+See also: Predictor.
+
+### Regressor
+
+Status: `Canonical`
+
+A regressor is a predictor whose predictions are `double` values.
+
+### Regression metric
+
+Status: `Canonical`
+
+A regression metric compares predicted and target numeric values and declares whether lower or higher values are better. A metric is independent of the problem that may use it as an optimization objective.
+
+### Prediction metric
+
+Status: `Canonical`
+
+A prediction metric compares predictions and targets of the same element type
+and declares whether lower or higher values are better. A regression metric is
+a prediction metric specialized for `double` values.
+
+### Perturbation feature importance
+
+Status: `Canonical`
+
+Perturbation feature importance measures how much a predictor's metric worsens
+when one input feature is replaced according to a perturbation policy. Positive
+importance always means degradation. Permutation feature importance is the
+common case where the policy shuffles the feature values.
+
+### Expression metric
+
+Status: `Canonical`
+
+An expression metric evaluates a symbolic expression's genotype without requiring prediction data. Examples include expression length, variable occurrence count, and structural complexity. A symbolic-regression problem may combine expression metrics with regression metrics in one objective vector.
+
+### Numeric parameter fitting
+
+Status: `Canonical`
+
+Numeric parameter fitting fits the optimizable numeric values of a symbolic expression to supervised regression data by nonlinear least squares, and returns an immutable expression containing the fitted values.
+
+The fitted values are parameters of the model and constants of the expression: constant within one evaluation, which is why the genotype calls them constants, and free variables of the fit, which is why the numerics call them parameters. They are not restricted to constant leaves, since a fitted value may also appear as an exponent, an offset or a divisor.
+
+Each path from an expression root identifies a distinct constant occurrence. Two paths remain distinct occurrences even when they reference the same immutable node object, so numeric parameter fitting treats them as separate parameters.
+
+Related terms:
+
+- `Constant optimization`: `Alias`. The term used by PySR, HeuristicLab, and part of the symbolic-regression literature. Use it in prose that orients readers arriving from those tools. Avoid it in API names, and avoid it where fitted values are not constant leaves.
+- `Parameter identification`, `parameter optimization`: `Alias`. The terms used in the research literature for the same capability.
+- `Coefficient optimization`: `Avoid`. A coefficient is a multiplicative factor, which is narrower than the values this fits, and linear scaling is the operation in HeuristicLib that genuinely fits coefficients.
+
+See also: Expression metric, Refiner, Regression metric.
+
 ## Algorithms and Operators
 
 ### Algorithm
@@ -233,7 +322,7 @@ Operator roles are the named categories of work that operators perform inside al
 
 Use operator role names when discussing the responsibility of an operator. Use concrete operator type names only when discussing a specific implementation.
 
-See also: Creator, Crossover, Evaluator, Interceptor, Mutator, Operator, Replacer, Selector, Terminator.
+See also: Creator, Crossover, Evaluator, Interceptor, Mutator, Operator, Refiner, Replacer, Selector, Terminator.
 
 #### Creator
 
@@ -286,6 +375,18 @@ A mutator is the operator role that perturbs candidates to create variation.
 Use mutator for changes derived from existing candidates. Use creator when candidates are generated without depending on parent candidates.
 
 See also: Candidate, Creator, Crossover, Operator.
+
+#### Refiner
+
+Status: `Canonical`
+
+A refiner is an operator that works on existing candidates to improve a chosen aspect of them. Common refinements include fitting candidate parameters, repairing invalid candidates, simplifying or normalizing representations, and applying local-improvement procedures.
+
+Algorithms normally refine newly created or varied candidates before evaluation and then continue with the refined candidates. Refiners can be chained in pipelines, repeated, selected, wrapped, observed, and instrumented.
+
+A refiner may use an evaluator when objective values guide the refinement or decide whether to retain its result. Continuing the search with the refined candidate is Lamarckian refinement; refinement evaluation instead evaluates a temporary refined candidate and associates its objective vector with the original candidate, providing Baldwinian refinement.
+
+See also: Candidate, Creator, Crossover, Evaluated candidate, Evaluator, Mutator, Operator.
 
 #### Replacer
 

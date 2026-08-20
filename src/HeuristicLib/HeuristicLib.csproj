@@ -22,10 +22,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="AutoDiff" Version="1.2.2" />
+        <PackageReference Include="CsvHelper" Version="33.1.0" />
         <PackageReference Include="MathNet.Numerics" Version="6.0.0-beta2" />
         <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.2" />
         <PackageReference Include="morelinq" Version="4.4.0" />
+        <PackageReference Include="Parlot" Version="1.5.7" />
         <PackageReference Include="System.Linq.Async" Version="7.0.0" />
+        <PackageReference Include="System.Numerics.Tensors" Version="10.0.8" />
     </ItemGroup>
 </Project>

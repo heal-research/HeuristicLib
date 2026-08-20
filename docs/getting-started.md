@@ -69,7 +69,7 @@ public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
     public int MaximumStates { get; init; } = 1;
 
     protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateExecutionInstance(
@@ -92,9 +92,9 @@ public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
         {
             producedStates++;
             var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
-            var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+            var evaluatedCandidate = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-            return SingleSolutionState.From(candidate, objectiveVector);
+            return SingleSolutionState.From(evaluatedCandidate);
         }
     }
 }

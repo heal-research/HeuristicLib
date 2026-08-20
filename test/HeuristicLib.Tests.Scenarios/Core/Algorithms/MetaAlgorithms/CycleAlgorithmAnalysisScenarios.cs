@@ -91,7 +91,7 @@ public class CycleAlgorithmAnalysisScenarios
 
         protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, ExecutionState executionState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
         {
-            return candidates.Select(_ => new ObjectiveVector(++executionState.Value)).ToArray();
+            return candidates.Select(candidate => new ObjectiveVector(++executionState.Value)).ToArray();
         }
     }
 
@@ -127,7 +127,7 @@ public class CycleAlgorithmAnalysisScenarios
                 ct.ThrowIfCancellationRequested();
 
                 var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
-                var currentState = Population.From([EvaluatedCandidate.From(candidate, objectiveVector)]).ToPopulationState();
+                var currentState = Population.From([candidate.ToEvaluated(objectiveVector)]).ToPopulationState();
 
                 yield return interceptor.Transform(currentState, initialState, random, problem.SearchSpace, problem);
                 await Task.CompletedTask;
@@ -142,7 +142,7 @@ public class CycleAlgorithmAnalysisScenarios
 
         public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
         {
-            observations.Observe(Evaluator, (_, objectiveVectors, _, _) => result.RecordObjectiveValues(objectiveVectors));
+            observations.Observe(Evaluator, (objectiveVectors, _, _, _) => result.RecordObjectiveValues(objectiveVectors));
         }
 
         public sealed class ExecutionState

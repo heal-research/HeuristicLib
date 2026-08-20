@@ -130,7 +130,7 @@ public class AlgorithmAuthoringSpecs
         : IterativeAlgorithm<SingleCreateAlgorithm, RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
         public required ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
-        public IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Evaluator { get; init; } = new DirectEvaluator<RealVector>();
+        public IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
         protected override IterativeAlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry,
             IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
@@ -147,9 +147,9 @@ public class AlgorithmAuthoringSpecs
             protected override SingleSolutionState<RealVector> ExecuteStep(SingleSolutionState<RealVector>? previousState, TestFunctionProblem problem, IRandomNumberGenerator random)
             {
                 var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
-                var objective = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+                var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-                return SingleSolutionState.From(candidate, objective);
+                return SingleSolutionState.From(candidate.ToEvaluated(objectiveVector));
             }
         }
     }
@@ -158,7 +158,7 @@ public class AlgorithmAuthoringSpecs
         : IterativeAlgorithm<DoubleCreateAlgorithm, RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
         public required ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
-        public IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Evaluator { get; init; } = new DirectEvaluator<RealVector>();
+        public IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
         protected override IterativeAlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry,
             IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
@@ -181,9 +181,9 @@ public class AlgorithmAuthoringSpecs
                 var first = creator.Create(1, random, problem.SearchSpace, problem)[0];
                 var second = creator.Create(1, random, problem.SearchSpace, problem)[0];
                 RealVector candidate = [first[0], second[0], steps];
-                var objective = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+                var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-                return SingleSolutionState.From(candidate, objective);
+                return SingleSolutionState.From(candidate.ToEvaluated(objectiveVector));
             }
         }
     }
@@ -279,7 +279,7 @@ public class AlgorithmAuthoringSpecs
                                                            TestFunctionProblem problem)
             {
                 owner.EvaluateCalls++;
-                return Enumerable.Range(0, candidates.Count)
+                return candidates
                                  .Select(_ => new ObjectiveVector(0.0))
                                  .ToArray();
             }

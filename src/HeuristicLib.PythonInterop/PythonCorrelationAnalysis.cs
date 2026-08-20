@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.DataAnalysis;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 using HEAL.HeuristicLib.Operators.Crossovers;
@@ -7,7 +8,6 @@ using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.States;
@@ -34,17 +34,17 @@ public static class PythonCorrelationAnalysis
     public static double[] GetCorrelations(IReadOnlyList<RealVector> candidates, RealVectorProblem problem, double[] delta, int count, int seed = 0)
     {
         var random = RandomNumberGenerator.Create(seed);
-        var evaluator = DirectEvaluator.For(problem);
+        var evaluator = new ProblemEvaluator<RealVector>();
         var res = new double[candidates.Count];
         var sigma = RealVector.Create(delta);
         Parallel.ForEach(candidates, (vector, state, i) =>
         {
             var r = random.Fork((int)i);
             var n = Enumerable.Range(0, count).Select(_ => NextSphere(r, vector, sigma, vector.Count, false)).ToArray();
-            var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem);
-            var d = OnlinePearsonsRCalculator.Calculate(
-              objectives.Select(x => x[0]),
-              objectives.Select(x => x[1]), out _);
+            var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem).ToArray();
+            var d = Statistics.Covariance(
+              objectives.Select(x => x[0]).ToArray(),
+              objectives.Select(x => x[1]).ToArray()).Correlation;
             res[i] = d;
         });
 
@@ -67,7 +67,7 @@ public static class PythonCorrelationAnalysis
     public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> candidates, RealVectorProblem problem)
     {
         var random = RandomNumberGenerator.Create(42);
-        var evaluator = DirectEvaluator.For(problem);
+        var evaluator = new ProblemEvaluator<RealVector>();
 
         return evaluator.Evaluate(candidates, random, problem.SearchSpace, problem).ToArray();
     }

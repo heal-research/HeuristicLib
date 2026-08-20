@@ -35,14 +35,19 @@ public sealed record ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>
         if (Weights.Count > 0 && Weights.Count != ChildReplacers.Count)
             throw new InvalidOperationException("Weights must have the same length as replacers.");
 
-        return new Instance(childReplacers, new WeightedBatchDispatch(Weights));
+        return new Instance(
+            childReplacers,
+            WeightedDispatcher.Create(childReplacers, Weights));
     }
 
-    private sealed class Instance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> childReplacers, WeightedBatchDispatch dispatcher)
+    private sealed class Instance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> childReplacers, WeightedDispatcher<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> dispatcher)
         : MultiReplacerInstance<TCandidate, TSearchSpace, TProblem>(childReplacers)
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            ChildReplacers[dispatcher.ChooseOperator(random, ChildReplacers.Length)].Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+            dispatcher.Dispatch(
+                random,
+                (previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem),
+                static (replacer, state) => replacer.Replace(state.previousPopulation, state.offspringPopulation, state.objective, state.count, state.random, state.searchSpace, state.problem));
     }
 }
 

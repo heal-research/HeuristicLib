@@ -374,7 +374,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var objectiveVectors = innerEvaluator.Evaluate(candidates, random, searchSpace, problem);
-            observer.AfterEvaluation(candidates, objectiveVectors, searchSpace, problem);
+            observer.AfterEvaluation(objectiveVectors, candidates, searchSpace, problem);
             return objectiveVectors;
         }
     }
@@ -399,7 +399,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         public int ModelObservationCount => CurveModel.ObservationCount;
         public OnlineWeibullCurveModel CurveModel { get; } = new();
 
-        public void AfterEvaluation(IReadOnlyList<TCandidate> candidates, IReadOnlyList<ObjectiveVector> objectiveVectors, TSearchSpace searchSpace, TProblem problem)
+        public void AfterEvaluation(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, TSearchSpace searchSpace, TProblem problem)
         {
             EvaluatedCandidateCount += candidates.Count;
             if (objectiveVectors.Count == 0)

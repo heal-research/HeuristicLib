@@ -14,7 +14,7 @@ public abstract record AlgorithmBuilder<TCandidate, TSearchSpace, TProblem, TSea
   where TSearchState : class, ISearchState
   where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; set; } = new DirectEvaluator<TCandidate>();
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; set; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
 
     public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; set; }
 

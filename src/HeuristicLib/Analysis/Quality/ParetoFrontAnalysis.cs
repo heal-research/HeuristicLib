@@ -18,12 +18,11 @@ public record ParetoFrontAnalysis<T, TS, TP>(
     public override void RegisterObservations(ObservationPlan observations, ParetoState<T> result)
     {
         foreach (var evaluator in Evaluator)
-            observations.Observe(evaluator, (c, o, _, _) => AfterEvaluation(result, c, o));
+            observations.Observe(evaluator, (objectiveVectors, candidates, _, _) => AfterEvaluation(result, candidates.ToEvaluated(objectiveVectors)));
     }
 
-    public void AfterEvaluation(ParetoState<T> result, IReadOnlyList<T> genotypes,
-                                IReadOnlyList<ObjectiveVector> objectives)
+    public void AfterEvaluation(ParetoState<T> result, IReadOnlyList<EvaluatedCandidate<T>> evaluatedCandidates)
     {
-        result.AddPoints(genotypes.Zip(objectives).Select(x => EvaluatedCandidate.From(x.First, x.Second)));
+        result.AddPoints(evaluatedCandidates);
     }
 }

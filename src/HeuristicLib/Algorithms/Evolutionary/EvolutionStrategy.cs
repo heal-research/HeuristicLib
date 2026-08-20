@@ -28,8 +28,10 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
     public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
     public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
     public required ICrossover<TCandidate, TSearchSpace, TProblem>? Crossover { get; init; }
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
     public required ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
+    public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
+
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
     /// </summary>
@@ -39,7 +41,7 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
     protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
         var mutator = instanceRegistry.Resolve(Mutator);
-        return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), mutator, instanceRegistry.Resolve(Selector), Crossover is null ? null : instanceRegistry.Resolve(Crossover), PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
+        return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), mutator, instanceRegistry.Resolve(Selector), instanceRegistry.ResolveOptional(Crossover), instanceRegistry.ResolveOptional(Refiner), PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
     }
 
     private sealed class Instance(
@@ -49,6 +51,7 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
         IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator,
         ISelectorInstance<TCandidate, TSearchSpace, TProblem> selector,
         ICrossoverInstance<TCandidate, TSearchSpace, TProblem>? crossover,
+        IRefinerInstance<TCandidate, TSearchSpace, TProblem>? refiner,
         int populationSize,
         int numberOfChildren,
         EvolutionStrategyType strategy,
@@ -63,8 +66,13 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
             if (previousState is null)
             {
                 var initialPopulation = creator.Create(populationSize, random, problem.SearchSpace, problem);
-                var objectives = evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
-                return Population.From(initialPopulation, objectives).ToPopulationState();
+                if (refiner is not null)
+                {
+                    initialPopulation = refiner.Refine(initialPopulation, random, problem.SearchSpace, problem);
+                }
+
+                var objectiveVectors = evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
+                return Population.From(initialPopulation.ToEvaluated(objectiveVectors)).ToPopulationState();
             }
 
             IReadOnlyList<TCandidate> parents;
@@ -84,11 +92,17 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
             }
 
             var children = mutator.Mutate(parents, random, problem.SearchSpace, problem);
-            var fitnesses = evaluator.Evaluate(children, random, problem.SearchSpace, problem);
+            if (refiner is not null)
+            {
+                children = refiner.Refine(children, random, problem.SearchSpace, problem);
+            }
+
+            var evaluatedChildren = children.ToEvaluated(evaluator.Evaluate(children, random, problem.SearchSpace, problem));
 
             if (mutator is IVariableStrengthMutatorInstance<TCandidate, TSearchSpace, TProblem> variableStrengthMutator)
             {
-                var successes = parentQualities.Zip(fitnesses).Count(t => t.Second.CompareTo(t.First, problem.Objective) == DominanceRelation.Dominates);
+                var successes = parentQualities.Zip(evaluatedChildren).Count(
+                    pair => pair.Second.ObjectiveVector.CompareTo(pair.First, problem.Objective) == DominanceRelation.Dominates);
                 var successRate = successes / (double)populationSize;
                 variableStrengthMutator.CurrentMutationStrength *= successRate switch
                 {
@@ -98,7 +112,7 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
                 };
             }
 
-            var population = Population.From(children, fitnesses);
+            var population = Population.From(evaluatedChildren);
             var newPopulation = strategy switch
             {
                 EvolutionStrategyType.Comma => ElitismReplacer.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, problem.Objective, numberOfChildren, 0),

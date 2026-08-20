@@ -51,5 +51,3 @@
 //        public IReadOnlyList<ObjectiveVector?> EvaluatePartial(IReadOnlyList<Permutation> genotypes, IRandomNumberGenerator random) => genotypes.Select(x => EvaluatePartial(x, random)).ToArray();
 //    }
 //}
-
-

@@ -36,5 +36,3 @@
 //    protected override ObjectiveVector? BoundIncrement(Solution genotype, Move move, State executionState, IRandomNumberGenerator random, RoarNetOperationsSearchSpace operationsSearchSpace, RoarNetOperationsProblem operationsProblem)
 //        => operationsProblem.Operations.lower_bound_increment(move, genotype);
 //}
-
-

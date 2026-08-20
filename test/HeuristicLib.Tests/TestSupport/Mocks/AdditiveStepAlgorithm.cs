@@ -13,7 +13,7 @@ namespace HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 public sealed record AdditiveStepAlgorithm(int Increment)
     : Algorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
 {
-    public IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator { get; init; } = new DirectEvaluator<int>();
+    public IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator { get; init; } = new ProblemEvaluator<int>();
 
     public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         new Instance(instanceRegistry.Resolve(Evaluator), Increment);
@@ -29,9 +29,9 @@ public sealed record AdditiveStepAlgorithm(int Increment)
 
             var current = initialState?.Population.EvaluatedCandidates.Single().Candidate ?? 0;
             var next = current + increment;
-            var objective = evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
+            var objectiveVector = evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
 
-            yield return Population.From([EvaluatedCandidate.From(next, objective)]).ToPopulationState();
+            yield return Population.From([next.ToEvaluated(objectiveVector)]).ToPopulationState();
 
             await Task.CompletedTask;
         }

@@ -101,13 +101,10 @@ public class PipelineAlgorithmTests
     private sealed record ForwardingEvaluator
         : StatelessEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(
-            IReadOnlyList<int> candidates,
-            IRandomNumberGenerator random,
-            DummySearchSpace<int> searchSpace,
-            IProblem<int, DummySearchSpace<int>> problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
         {
-            return problem.Evaluate(candidates, random);
+            return problem.Evaluate(candidates, random)
+                .ToArray();
         }
     }
 

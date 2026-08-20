@@ -27,9 +27,11 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     public required ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; init; }
     public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
     public required ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
 
     public int Elites { get; init; }
+    public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
+
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
     /// </summary>
@@ -49,7 +51,7 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     {
         var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate);
         return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover),
-            instanceRegistry.Resolve(effectiveMutator), instanceRegistry.Resolve(Selector), PopulationSize, Elites, MaximumGenerations);
+            instanceRegistry.Resolve(effectiveMutator), instanceRegistry.Resolve(Selector), instanceRegistry.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations);
     }
 
     private sealed class Instance(
@@ -59,6 +61,7 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
         ICrossoverInstance<TCandidate, TSearchSpace, TProblem> crossover,
         IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator,
         ISelectorInstance<TCandidate, TSearchSpace, TProblem> selector,
+        IRefinerInstance<TCandidate, TSearchSpace, TProblem>? refiner,
         int populationSize,
         int elites,
         int? maximumGenerations)
@@ -74,10 +77,15 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
             if (previousState is null)
             {
                 var initialLayerPopulation = creator.Create(populationSize, random, searchSpace, problem);
-                var initialFitnesses = evaluator.Evaluate(initialLayerPopulation, random, searchSpace, problem);
+                if (refiner is not null)
+                {
+                    initialLayerPopulation = refiner.Refine(initialLayerPopulation, random, searchSpace, problem);
+                }
+
+                var initialPopulation = initialLayerPopulation.ToEvaluated(evaluator.Evaluate(initialLayerPopulation, random, searchSpace, problem));
                 return new()
                 {
-                    Population = [Population.From(initialLayerPopulation, initialFitnesses)],
+                    Population = [Population.From(initialPopulation)],
                     Ages = [Enumerable.Repeat(0, populationSize).ToImmutableArray()]
                 };
             }
@@ -96,8 +104,12 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
 
             var offspring = crossover.Cross(parentPairs, random, searchSpace, problem);
             offspring = mutator.Mutate(offspring, random, searchSpace, problem);
-            var fitnesses = evaluator.Evaluate(offspring, random, searchSpace, problem);
-            var offspringPopulation = Population.From(offspring, fitnesses).EvaluatedCandidates;
+            if (refiner is not null)
+            {
+                offspring = refiner.Refine(offspring, random, searchSpace, problem);
+            }
+
+            var offspringPopulation = offspring.ToEvaluated(evaluator.Evaluate(offspring, random, searchSpace, problem));
             var newPopulation = ElitismReplacer.Replace(oldPopulation, offspringPopulation, problem.Objective, offspringCount, elites);
 
             return new()

@@ -1,5 +1,8 @@
 namespace HEAL.HeuristicLib.Optimization;
 
+/// <summary>
+/// Orders population indices by one objective value. <see cref="double.NaN"/> sorts last.
+/// </summary>
 public class IndexedComparer : IComparer<int>
 {
     private readonly IReadOnlyList<ObjectiveVector> population;
@@ -11,8 +14,7 @@ public class IndexedComparer : IComparer<int>
         this.dimension = dimension;
     }
 
-    public int Compare(int x, int y)
-    {
-        return population[x][dimension].CompareTo(population[y][dimension]);
-    }
+    // Ascending by value with NaN last, which is the ordering ObjectiveValue.Compare applies when minimizing.
+    public int Compare(int x, int y) =>
+        ObjectiveValue.Compare(population[x][dimension], population[y][dimension], ObjectiveDirection.Minimize);
 }

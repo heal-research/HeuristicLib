@@ -21,7 +21,9 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     public required ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; init; }
     public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
     public ITerminator<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? Terminator { get; init; }
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+    public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
+
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
     /// </summary>
@@ -45,7 +47,8 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     {
         var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate);
         return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover),
-            instanceRegistry.Resolve(effectiveMutator), instanceRegistry.Resolve(Selector), Terminator is null ? null : instanceRegistry.Resolve(Terminator), PopulationSize, MaximumGenerations, Elites);
+            instanceRegistry.Resolve(effectiveMutator), instanceRegistry.Resolve(Selector), instanceRegistry.ResolveOptional(Terminator),
+            instanceRegistry.ResolveOptional(Refiner), PopulationSize, MaximumGenerations, Elites);
     }
 
     private sealed class Instance(
@@ -56,6 +59,7 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
         IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator,
         ISelectorInstance<TCandidate, TSearchSpace, TProblem> selector,
         ITerminatorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? terminator,
+        IRefinerInstance<TCandidate, TSearchSpace, TProblem>? refiner,
         int populationSize,
         int? maximumGenerations,
         int elites)
@@ -72,17 +76,26 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
             if (previousState is null)
             {
                 var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
-                var initialFitnesses = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
-                return Population.From(initialSolutions, initialFitnesses).ToPopulationState();
+                if (refiner is not null)
+                {
+                    initialSolutions = refiner.Refine(initialSolutions, random, problem.SearchSpace, problem);
+                }
+
+                var initialObjectiveVectors = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
+                return Population.From(initialSolutions.ToEvaluated(initialObjectiveVectors)).ToPopulationState();
             }
 
             var oldPopulation = previousState.Population.EvaluatedCandidates;
-            var offspringSize = populationSize * 2;
-            var parents = selector.Select(oldPopulation, problem.Objective, offspringSize, random, problem.SearchSpace, problem).Select(x => x.Candidate).ToList();
+            var parentCount = populationSize * 2;
+            var parents = selector.Select(oldPopulation, problem.Objective, parentCount, random, problem.SearchSpace, problem).Select(x => x.Candidate).ToList();
             var offspring = crossover.Cross(parents.ToParentPairs(), random, problem.SearchSpace, problem);
             offspring = mutator.Mutate(offspring, random, problem.SearchSpace, problem);
-            var fitnesses = evaluator.Evaluate(offspring, random, problem.SearchSpace, problem);
-            var offspringPopulation = Population.From(offspring, fitnesses).EvaluatedCandidates;
+            if (refiner is not null)
+            {
+                offspring = refiner.Refine(offspring, random, problem.SearchSpace, problem);
+            }
+
+            var offspringPopulation = offspring.ToEvaluated(evaluator.Evaluate(offspring, random, problem.SearchSpace, problem));
             var newPopulation = ElitismReplacer.Replace(oldPopulation, offspringPopulation, problem.Objective, populationSize, elites);
             return Population.From(newPopulation).ToPopulationState();
         }

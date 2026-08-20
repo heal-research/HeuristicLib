@@ -4,5 +4,3 @@
 //{
 //    protected override Neighbourhood GetNeighborhood() => OperationsProblem.Operations.local_neighbourhood(OperationsProblem.RoarNetProblemInstance);
 //}
-
-

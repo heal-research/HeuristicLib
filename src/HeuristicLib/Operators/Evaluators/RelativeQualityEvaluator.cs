@@ -44,7 +44,7 @@ public sealed record RelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             ChildEvaluator.Evaluate(candidates, random, searchSpace, problem)
-                .Select(objective => RelativeQuality.Normalize(objective, bestKnown, zeroBestKnownPolicy))
+                .Select(objectiveVector => RelativeQuality.Normalize(objectiveVector, bestKnown, zeroBestKnownPolicy))
                 .ToArray();
     }
 }

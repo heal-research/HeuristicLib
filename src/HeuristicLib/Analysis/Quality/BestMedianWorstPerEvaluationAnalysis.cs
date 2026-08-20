@@ -30,7 +30,7 @@ public record
     {
         foreach (var evaluator in Evaluators)
         {
-            observations.Observe(evaluator, (candidates, _, _, _) => result.AfterEvaluation(candidates));
+            observations.Observe(evaluator, (_, candidates, _, _) => result.AfterEvaluation(candidates));
         }
 
         foreach (var interceptor in Interceptors)

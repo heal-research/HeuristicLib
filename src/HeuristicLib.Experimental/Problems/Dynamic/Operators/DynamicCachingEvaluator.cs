@@ -31,12 +31,12 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem,
     public TProblem SourceProblem { get; init; }
 
     /// <summary>
-    /// Gets the strategy that selects a candidate's cache key. Candidates that produce equal keys share one cached objective vector.
+    /// Gets the strategy that selects a candidate's cache key. Candidates that produce equal keys share one cached evaluation result.
     /// </summary>
     public ICacheKeySelector<TCandidate, TKey> KeySelector { get; init; }
 
     /// <summary>
-    /// Gets the maximum number of cached objective vectors, or <see langword="null"/> when the cache has no configured size limit.
+    /// Gets the maximum number of cached evaluation results, or <see langword="null"/> when the cache has no configured size limit.
     /// </summary>
     public long? SizeLimit { get; init; }
 
@@ -115,15 +115,15 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem,
 
             if (uncachedCandidates.Count > 0)
             {
-                var newObjectives = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
+                var newObjectiveVectors = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
                 for (var k = 0; k < uncachedKeys.Count; k++)
                 {
-                    cache.Set(uncachedKeys[k], newObjectives[k], new MemoryCacheEntryOptions { Size = 1 });
+                    cache.Set(uncachedKeys[k], newObjectiveVectors[k], new MemoryCacheEntryOptions { Size = 1 });
                 }
 
                 foreach (var (_, entry) in uncachedMap)
                 {
-                    var objectiveVector = newObjectives[entry.j];
+                    var objectiveVector = newObjectiveVectors[entry.j];
                     foreach (var i in entry.indices)
                     {
                         results[i] = objectiveVector;
@@ -178,11 +178,11 @@ public static class DynamicCachedEvaluatorExtension
 
     extension<TCandidate, TSearchSpace, TProblem, TKey>(TProblem problem) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TCandidate, TSearchSpace> where TKey : notnull
     {
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache(ICacheKeySelector<TCandidate, TKey> keySelector) => new(DirectEvaluator.For(problem), problem, keySelector);
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache(ICacheKeySelector<TCandidate, TKey> keySelector) => new(new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>(), problem, keySelector);
     }
 
     extension<TCandidate, TSearchSpace, TProblem>(TProblem problem) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TCandidate, TSearchSpace>
     {
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate> WithCache() => new(DirectEvaluator.For(problem), problem, CacheKeySelection<TCandidate>.Identity);
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate> WithCache() => new(new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>(), problem, CacheKeySelection<TCandidate>.Identity);
     }
 }

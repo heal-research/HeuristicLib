@@ -62,7 +62,7 @@ public class ObservableEvaluatorTests
     public void ObservableEvaluator_DoesNotInvokeObserversWhenEvaluationThrows()
     {
         var observed = 0;
-        var evaluator = new ThrowingEvaluator().ObserveWith((IReadOnlyList<int> _, IReadOnlyList<ObjectiveVector> _) => observed++);
+        var evaluator = new ThrowingEvaluator().ObserveWith((IReadOnlyList<ObjectiveVector> _, IReadOnlyList<int> _) => observed++);
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>

@@ -38,10 +38,10 @@ public sealed record ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>
         if (Weights.Count > 0 && Weights.Count != ChildCrossovers.Count)
             throw new InvalidOperationException("Weights must have the same length as crossovers.");
 
-        return new Instance(childCrossovers, new WeightedBatchDispatch(Weights));
+        return new Instance(childCrossovers, new WeightedBatchDispatcher(childCrossovers.Length, Weights));
     }
 
-    private sealed class Instance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> childCrossovers, WeightedBatchDispatch dispatcher)
+    private sealed class Instance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> childCrossovers, WeightedBatchDispatcher dispatcher)
         : MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem>(childCrossovers)
     {
         public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
@@ -74,6 +74,8 @@ public static class ChooseOneCrossoverExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> WithRate(double crossoverRate) =>
-            ChooseOneCrossover.Create([crossover, SelectFirstParentCrossover<TCandidate>.Instance], WeightedBatchDispatch.GetRateWeights(crossoverRate));
+            ChooseOneCrossover.Create(
+                [crossover, SelectFirstParentCrossover<TCandidate>.Instance],
+                [crossoverRate, double.IsNaN(crossoverRate) ? double.PositiveInfinity : 1 - crossoverRate]);
     }
 }

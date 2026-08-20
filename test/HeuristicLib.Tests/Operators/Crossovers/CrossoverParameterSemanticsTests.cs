@@ -2,7 +2,6 @@ using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
-using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
@@ -30,7 +29,6 @@ public sealed class CrossoverParameterSemanticsTests
     {
         new RandomCrossover<int> { Bias = value }.Bias.ShouldBe(value);
         new RoundedUniformArithmeticCrossover { Probability = value }.Probability.ShouldBe(value);
-        new SubtreeCrossover { InternalCrossoverPointProbability = value }.InternalCrossoverPointProbability.ShouldBe(value);
     }
 
     [Theory]
@@ -104,21 +102,6 @@ public sealed class CrossoverParameterSemanticsTests
         var result = SimulatedBinaryCrossover.Cross(Random, RealVector.Create(1.0), RealVector.Create(2.0), value);
 
         result.Count.ShouldBe(1);
-    }
-
-    [Theory]
-    [InlineData(-0.1, false)]
-    [InlineData(double.NaN, false)]
-    [InlineData(1.1, true)]
-    [InlineData(double.PositiveInfinity, true)]
-    public void InternalCrossoverPointProbability_SelectsLeafOrInternalPointsWithoutValidation(double value, bool prefersInternal)
-    {
-        var crossover = new SubtreeCrossover { InternalCrossoverPointProbability = value };
-
-        crossover.InternalCrossoverPointProbability.ShouldBe(value);
-        // The threshold is only compared against a drawn value, so no configuration is rejected up front.
-        Should.NotThrow(() => _ = crossover with { InternalCrossoverPointProbability = value });
-        (value > 1 || double.IsPositiveInfinity(value)).ShouldBe(prefersInternal);
     }
 
 }

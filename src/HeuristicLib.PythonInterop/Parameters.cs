@@ -1,10 +1,10 @@
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.SearchSpaces.Trees;
+using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 // These classes are used for cross language purposes and therefore have public properties and constructors.
@@ -52,12 +52,13 @@ public class ExperimentParameters<TCandidate, TSearchSpace> where TSearchSpace :
     }
 }
 
-public class SymRegExperimentParameters : ExperimentParameters<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
+public class SymRegExperimentParameters : ExperimentParameters<ExpressionTree, ExpressionTreeSearchSpace>
 {
     public int ParameterOptimizationIterations { get; set; } = 10;
     public double TrainingSplit { get; set; } = 0.66;
     public int TreeDepth { get; set; } = 40;
     public int TreeLength { get; set; } = 40;
+    public bool UseLinearScaling { get; set; } = true;
 
     public SymRegExperimentParameters() { }
 
@@ -67,6 +68,7 @@ public class SymRegExperimentParameters : ExperimentParameters<SymbolicExpressio
         TreeDepth = parameters.TreeDepth;
         TreeLength = parameters.TreeLength;
         ParameterOptimizationIterations = parameters.ParameterOptimizationIterations;
+        UseLinearScaling = parameters.UseLinearScaling;
     }
 }
 

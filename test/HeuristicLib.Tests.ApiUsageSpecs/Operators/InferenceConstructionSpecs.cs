@@ -30,8 +30,8 @@ public class InferenceConstructionSpecs
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
         var algorithm = CreateAlgorithm(problem);
 
-        var problemDirectEvaluator = DirectEvaluator.For(problem);
-        var directEvaluator = DirectEvaluator.For(algorithm);
+        var problemDirectEvaluator = ProblemEvaluator.For(problem);
+        var directEvaluator = ProblemEvaluator.For(algorithm);
         var problemTournamentSelector = TournamentSelector.For(problem, tournamentSize: 3);
         var tournamentSelector = TournamentSelector.For(algorithm, tournamentSize: 4);
         var randomSelector = RandomSelector.For(problem);
@@ -102,8 +102,8 @@ public class InferenceConstructionSpecs
         var fluentMultiCycleAlgorithm = firstStage.CycleWith([secondStage], maximumCycles: 2);
         var interfacePipelineAlgorithm = PipelineAlgorithm.Create(firstStage.Algorithm, firstStage);
 
-        problemDirectEvaluator.ShouldBeOfType<DirectEvaluator<RealVector>>();
-        directEvaluator.ShouldBeOfType<DirectEvaluator<RealVector>>();
+        problemDirectEvaluator.ShouldBeOfType<ProblemEvaluator<RealVector>>();
+        directEvaluator.ShouldBeOfType<ProblemEvaluator<RealVector>>();
         problemTournamentSelector.TournamentSize.ShouldBe(3);
         tournamentSelector.TournamentSize.ShouldBe(4);
         randomSelector.ShouldBeOfType<RandomSelector<RealVector>>();

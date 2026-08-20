@@ -80,7 +80,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
             var currentBestKnown = bestKnown ?? throw new InvalidOperationException("No best-known objective vector is available.");
 
             return ChildEvaluator.Evaluate(candidates, random, searchSpace, problem)
-                .Select(objective => RelativeQuality.Normalize(objective, currentBestKnown, zeroBestKnownPolicy))
+                .Select(objectiveVector => RelativeQuality.Normalize(objectiveVector, currentBestKnown, zeroBestKnownPolicy))
                 .ToArray();
         }
 

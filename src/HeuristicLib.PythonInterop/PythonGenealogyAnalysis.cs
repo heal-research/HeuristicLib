@@ -5,25 +5,26 @@ using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
-using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
+using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
-using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers;
+using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
-using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
+using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
+using HEAL.HeuristicLib.Operators.Refiners.SymbolicRegressionRefiners;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.SearchSpaces.Trees;
+using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.PythonInterop;
@@ -42,7 +43,7 @@ public class PythonGenealogyAnalysis
                              .ToArray();
     }
 
-    public static ExperimentResult<SymbolicExpressionTree>[] RunSymbolicRegressionConfigurable(
+    public static ExperimentResult<ExpressionTree>[] RunSymbolicRegressionConfigurable(
         string file, SymRegExperimentParameters parameters, int repetitions) =>
         RunConfigurableRepeated(
             repetitions,
@@ -68,7 +69,7 @@ public class PythonGenealogyAnalysis
             parameters.Seed);
     #endregion
 
-    public static ExperimentResult<SymbolicExpressionTree> RunSymbolicRegressionConfigurable(
+    public static ExperimentResult<ExpressionTree> RunSymbolicRegressionConfigurable(
         string file,
         SymRegExperimentParameters parameters,
         GenerationCallback? callback = null)
@@ -76,13 +77,19 @@ public class PythonGenealogyAnalysis
         parameters = new SymRegExperimentParameters(parameters)
         {
             Creator = parameters.Creator ?? new ProbabilisticTreeCreator(),
-            Crossover = parameters.Crossover ?? new SubtreeCrossover(),
-            Mutator = parameters.Mutator ?? CreateSymRegAllMutator()
+            Crossover = parameters.Crossover ?? new SubtreeCrossover { InternalNodeProbability = 0.9 },
+            Mutator = parameters.Mutator ??
+                new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace,
+                    IProblem<ExpressionTree, ExpressionTreeSearchSpace>>([.. SymbolicExpressionMutators.Default])
         };
         var problem = ProblemGeneration.CreateSymbolicRegressionProblem(file, parameters);
-        var actionCallback = callback is null ? null : new Action<PopulationState<SymbolicExpressionTree>>(callback);
+        var actionCallback = callback is null ? null : new Action<PopulationState<ExpressionTree>>(callback);
+        var parameterFitting = new NumericParameterFittingRefiner
+        {
+            MaximumIterations = parameters.ParameterOptimizationIterations
+        };
 
-        return RunAlgorithmConfigurable(problem, actionCallback, parameters);
+        return RunAlgorithmConfigurable(problem, actionCallback, parameters, parameterFitting);
     }
 
     public static ExperimentResult<Permutation> RunTravelingSalesmanConfigurable(
@@ -123,11 +130,13 @@ public class PythonGenealogyAnalysis
     #endregion
 
     #region generic helpers
-    public static ExperimentResult<TCandidate> RunAlgorithmConfigurable<TCandidate, TSearchSpace>(
-        IProblem<TCandidate, TSearchSpace> problem,
+    public static ExperimentResult<TCandidate> RunAlgorithmConfigurable<TCandidate, TSearchSpace, TProblem>(
+        TProblem problem,
         Action<PopulationState<TCandidate>>? callback,
-        ExperimentParameters<TCandidate, TSearchSpace> parameters) where TCandidate : notnull
+        ExperimentParameters<TCandidate, TSearchSpace> parameters,
+        IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null) where TCandidate : notnull
         where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         //var terminator = new AfterIterationsTerminator<TCandidate>(parameters.Iterations);
         if (parameters.NoChildren < 0)
@@ -139,7 +148,7 @@ public class PythonGenealogyAnalysis
         {
             case "ga":
                 {
-                    var ga = GeneticAlgorithm.GetBuilder(parameters.Creator!, parameters.Crossover!,
+                    var ga = GeneticAlgorithm.GetBuilder<TCandidate, TSearchSpace, TProblem>(parameters.Creator!, parameters.Crossover!,
                         parameters.Mutator!);
                     ga.PopulationSize = parameters.PopulationSize;
                     ga.MutationRate = parameters.MutationRate;
@@ -149,7 +158,7 @@ public class PythonGenealogyAnalysis
                         ga.Selector = parameters.Selector;
                     }
 
-                    var gaAlgorithm = ga.Build();
+                    var gaAlgorithm = ga.Build() with { Refiner = refiner };
                     if (callback is not null && gaAlgorithm.Interceptor is null)
                     {
                         gaAlgorithm = gaAlgorithm with
@@ -167,7 +176,7 @@ public class PythonGenealogyAnalysis
                 }
             case "es":
                 {
-                    var es = EvolutionStrategy.GetBuilder(parameters.Creator!, parameters.Mutator!);
+                    var es = EvolutionStrategy.GetBuilder<TCandidate, TSearchSpace, TProblem>(parameters.Creator!, parameters.Mutator!);
                     es.PopulationSize = parameters.PopulationSize;
                     es.NumberOfChildren = parameters.NoChildren;
                     es.Strategy = parameters.Strategy;
@@ -182,7 +191,7 @@ public class PythonGenealogyAnalysis
                         es.Crossover = parameters.Crossover;
                     }
 
-                    var esAlgorithm = es.Build();
+                    var esAlgorithm = es.Build() with { Refiner = refiner };
                     if (callback is not null && esAlgorithm.Interceptor is null)
                     {
                         esAlgorithm = esAlgorithm with
@@ -200,17 +209,17 @@ public class PythonGenealogyAnalysis
                     return analyzers.ToExperimentResult(esRun);
                 }
             case "ls":
-                var ls = HillClimber.GetBuilder(parameters.Creator!, parameters.Mutator!);
+                var ls = HillClimber.GetBuilder<TCandidate, TSearchSpace, TProblem>(parameters.Creator!, parameters.Mutator!);
                 ls.BatchSize = ls.MaxNeighbors = parameters.NoChildren;
                 //ls.Terminator = terminator;
 
-                var lsRun = ls.Build().WithMaxIterations(parameters.Iterations).CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed));
+                var lsRun = (ls.Build() with { Refiner = refiner }).WithMaxIterations(parameters.Iterations).CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed));
                 lsRun.Complete();
                 throw new NotSupportedException(
                     "Configured experiment result extraction is not implemented for local search in this analyzer pipeline.");
             case "nsga2":
                 {
-                    var nsga2 = NSGA2.GetBuilder(parameters.Creator!, parameters.Crossover!, parameters.Mutator!);
+                    var nsga2 = NSGA2.GetBuilder<TCandidate, TSearchSpace, TProblem>(parameters.Creator!, parameters.Crossover!, parameters.Mutator!);
                     nsga2.PopulationSize = parameters.PopulationSize;
                     nsga2.MutationRate = parameters.MutationRate;
                     if (parameters.Selector != null)
@@ -219,7 +228,7 @@ public class PythonGenealogyAnalysis
                     }
 
                     //nsga2.Terminator = terminator;
-                    var nsga2Algorithm = nsga2.Build();
+                    var nsga2Algorithm = nsga2.Build() with { Refiner = refiner };
                     if (callback is not null && nsga2Algorithm.Interceptor is null)
                     {
                         nsga2Algorithm = nsga2Algorithm with
@@ -344,16 +353,5 @@ public class PythonGenealogyAnalysis
         return new MyAnalyzers<TCandidate>(qualities, rankAnalysis, qc, apt, c);
     }
 
-    private static
-        ChooseOneMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace,
-            IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
-    {
-        return ChooseOneMutator.Create(
-            new ChangeNodeTypeManipulation(),
-            new FullTreeShaker(),
-            new OnePointShaker(),
-            new RemoveBranchManipulation(),
-            new ReplaceBranchManipulation());
-    }
     #endregion
 }

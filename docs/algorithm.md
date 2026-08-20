@@ -17,7 +17,7 @@ public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
     public int MaximumStates { get; init; } = 1;
 
     protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateExecutionInstance(
@@ -41,8 +41,8 @@ public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
         {
             producedStates++;
             var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
-            var objective = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
-            return SingleSolutionState.From(candidate, objective);
+            var evaluatedCandidate = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+            return SingleSolutionState.From(evaluatedCandidate);
         }
     }
 }
@@ -71,6 +71,22 @@ Resolution remains local and eager for ordinary algorithms. Do not retain the re
 `IterativeAlgorithmInstance<...>` owns the common stream lifecycle. It checks internal completion and cancellation, forks randomness by yielded state count, calls `TryExecuteStep(...)`, applies the resolved interceptor, evaluates terminal state logic, yields the state and then schedules the next iteration with `Task.Yield()`.
 
 `RunStreamingAsync(...)` is sealed on this base so a concrete iterative algorithm cannot accidentally bypass that ordering. Override `HasCompleted(...)`, `ExecuteStep(...)`, `TryExecuteStep(...)` or `IsTerminalState(...)` as required by the algorithm.
+
+## Refinement placement
+
+Built-in algorithms that produce candidates carry an optional `Refiner`. `GeneticAlgorithm`, `NSGA2`, `EvolutionStrategy`, `AlpsGeneticAlgorithm`, `OpenEndedRelevantAllelesPreservingGeneticAlgorithm` and `HillClimber` all apply it immediately before evaluation, at every point where candidates are produced: the initial population, each offspring batch, and any repopulation branch.
+
+```csharp
+var algorithm = geneticAlgorithm with { Refiner = parameterFitting.WithImprovementCheck() };
+```
+
+Placement on the production path rather than the replacement path is what keeps carried candidates out of it. Elites reaching an elitism replacer from the previous population, the parents a plus-strategy evolution strategy carries, and a hill climber's incumbent are never refined again, because they were refined when they were produced.
+
+The setting is nullable, and leaving it unset is not the same as configuring an identity refiner in principle but is in effect: an unset refiner consumes no randomness and leaves a run bit-identical to the same run before the setting existed.
+
+Refinement is composed through the refiner topologies rather than by placing a refiner at more than one lifecycle point. Repeated refinement is `IteratedRefiner`, an ordered sequence is `PipelineRefiner`, and applying refinement to only part of a population is `refiner.WithRate(...)`. See [Operator composition](operator-composition.md) for the topologies and their evaluation accounting.
+
+Cancellation is observed between iterations, not inside an operator call. A run cancels at the next iteration boundary, so a long-running refinement of the current batch finishes first.
 
 ## Noniterative algorithms
 

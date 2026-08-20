@@ -29,7 +29,7 @@ public sealed record ObservableEvaluator<TCandidate, TSearchSpace, TProblem>
             var result = ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
             foreach (var observer in observers)
             {
-                observer.AfterEvaluation(candidates, result, searchSpace, problem);
+                observer.AfterEvaluation(result, candidates, searchSpace, problem);
             }
 
             return result;
@@ -44,31 +44,31 @@ public static class ObservableEvaluator
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(childEvaluator, observers);
 
-    public static ObservableEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, Action<IReadOnlyList<TCandidate>, IReadOnlyList<ObjectiveVector>, TSearchSpace, TProblem> afterEvaluation)
+    public static ObservableEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, Action<IReadOnlyList<ObjectiveVector>, IReadOnlyList<TCandidate>, TSearchSpace, TProblem> afterEvaluation)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(childEvaluator, new ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>(afterEvaluation));
 
-    public static ObservableEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, Action<IReadOnlyList<TCandidate>, IReadOnlyList<ObjectiveVector>> afterEvaluation)
+    public static ObservableEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, Action<IReadOnlyList<ObjectiveVector>, IReadOnlyList<TCandidate>> afterEvaluation)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new(childEvaluator, new ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>((candidates, objectives, _, _) => afterEvaluation(candidates, objectives)));
+        new(childEvaluator, new ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>((objectiveVectors, candidates, _, _) => afterEvaluation(objectiveVectors, candidates)));
 }
 
 public interface IEvaluatorObserver<TCandidate, in TSearchSpace, in TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    void AfterEvaluation(IReadOnlyList<TCandidate> candidates, IReadOnlyList<ObjectiveVector> objectiveVectors, TSearchSpace searchSpace, TProblem problem);
+    void AfterEvaluation(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, TSearchSpace searchSpace, TProblem problem);
 }
 
-public sealed class ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>(Action<IReadOnlyList<TCandidate>, IReadOnlyList<ObjectiveVector>, TSearchSpace, TProblem> afterEvaluation)
+public sealed class ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>(Action<IReadOnlyList<ObjectiveVector>, IReadOnlyList<TCandidate>, TSearchSpace, TProblem> afterEvaluation)
     : IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public void AfterEvaluation(IReadOnlyList<TCandidate> candidates, IReadOnlyList<ObjectiveVector> objectiveVectors, TSearchSpace searchSpace, TProblem problem) =>
-        afterEvaluation(candidates, objectiveVectors, searchSpace, problem);
+    public void AfterEvaluation(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, TSearchSpace searchSpace, TProblem problem) =>
+        afterEvaluation(objectiveVectors, candidates, searchSpace, problem);
 }
 
 public static class ObservableEvaluatorExtensions
@@ -81,9 +81,9 @@ public static class ObservableEvaluatorExtensions
             new ObservableEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, observer);
         public ObservableEvaluator<TCandidate, TSearchSpace, TProblem> ObserveWith(params IReadOnlyList<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
             new ObservableEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, observers);
-        public ObservableEvaluator<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>, IReadOnlyList<ObjectiveVector>, TSearchSpace, TProblem> afterEvaluation) =>
+        public ObservableEvaluator<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<ObjectiveVector>, IReadOnlyList<TCandidate>, TSearchSpace, TProblem> afterEvaluation) =>
             evaluator.ObserveWith(new ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>(afterEvaluation));
-        public ObservableEvaluator<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>, IReadOnlyList<ObjectiveVector>> afterEvaluation) =>
-            evaluator.ObserveWith(new ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>((candidates, objectiveVectors, _, _) => afterEvaluation(candidates, objectiveVectors)));
+        public ObservableEvaluator<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<ObjectiveVector>, IReadOnlyList<TCandidate>> afterEvaluation) =>
+            evaluator.ObserveWith(new ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>((objectiveVectors, candidates, _, _) => afterEvaluation(objectiveVectors, candidates)));
     }
 }

@@ -6,6 +6,7 @@ using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.Dynamic.Operators;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
 namespace HEAL.HeuristicLib.Tests.Problems.Dynamic.TravelingSalesman;
@@ -135,7 +136,7 @@ public class TravelingSalesmanProblemTests
         var data = new TravelingSalesmanDistanceMatrixProblemData(distances);
         var env = RandomNumberGenerator.Create(0);
         var problem = new ActivatedTravelingSalesmanProblem(data, env, [true, true, true, false], 1.0);
-        var evaluator = DirectEvaluator.For(problem).WithDynamicRelativeQuality(problem,
+        var evaluator = new ProblemEvaluator<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>().WithDynamicRelativeQuality(problem,
             new ActivatedTravelingSalesmanExactBestKnownProvider(new HeldKarpTravelingSalesmanExactSolver()));
         var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
 
@@ -209,7 +210,7 @@ public class TravelingSalesmanProblemTests
         var env = RandomNumberGenerator.Create(0);
         var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], 1.0, epochLength: 200);
         Permutation tour = [0, 1, 2, 3];
-        var cachedEval = new ExecutionInstanceRegistry().Resolve(DirectEvaluator.For(p).WithCache());
+        var cachedEval = new ExecutionInstanceRegistry().Resolve(new ProblemEvaluator<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>().WithCache(p));
         p.EpochClock.CurrentEpoch.ShouldBe(0);
 
         var r1 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];

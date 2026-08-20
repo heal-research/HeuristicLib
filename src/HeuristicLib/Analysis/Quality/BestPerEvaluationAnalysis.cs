@@ -17,14 +17,13 @@ public record BestPerEvaluationAnalysis<TCandidate, TSearchSpace, TProblem> : An
         Evaluators = evaluators.ToImmutableArray();
     }
 
-    public void AfterEvaluation(QualityCurve<TCandidate> state, IReadOnlyList<TCandidate> candidates,
-                                IReadOnlyList<ObjectiveVector> objectiveVectors,
+    public void AfterEvaluation(QualityCurve<TCandidate> state,
+                                IReadOnlyList<EvaluatedCandidate<TCandidate>> evaluatedCandidates,
                                 IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
     {
-        for (var i = 0; i < candidates.Count; i++)
+        foreach (var evaluatedCandidate in evaluatedCandidates)
         {
-            var candidate = candidates[i];
-            var objectiveVector = objectiveVectors[i];
+            var objectiveVector = evaluatedCandidate.ObjectiveVector;
             state.EvalCount++;
 
             if (state.Best is not null)
@@ -41,7 +40,7 @@ public record BestPerEvaluationAnalysis<TCandidate, TSearchSpace, TProblem> : An
                 }
             }
 
-            state.Add(EvaluatedCandidate.From(candidate, objectiveVector));
+            state.Add(evaluatedCandidate);
         }
     }
 
@@ -52,8 +51,8 @@ public record BestPerEvaluationAnalysis<TCandidate, TSearchSpace, TProblem> : An
         foreach (var evaluator in Evaluators)
         {
             observations.Observe(evaluator,
-                (candidates, objectiveVectors, _, problem) =>
-                    AfterEvaluation(curve, candidates, objectiveVectors, problem));
+                (objectiveVectors, candidates, _, problem) =>
+                    AfterEvaluation(curve, candidates.ToEvaluated(objectiveVectors), problem));
         }
     }
 }
