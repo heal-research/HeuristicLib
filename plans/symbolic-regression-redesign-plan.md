@@ -2,7 +2,7 @@
 
 ## Goal
 
-Replace symbolic regression's mutable tree candidate with an immutable persistent hierarchical `ExpressionTree` genotype. Compile that genotype into a compact postorder/RPN `CompiledExpression` for execution. Move the current mutable `SymbolicExpressionTree` to a `Legacy` namespace with `[Obsolete]` markers and keep it only for temporary migration and golden reference behavior tests until the new system fully replaces it.
+Replace symbolic regression's mutable tree candidate with an immutable persistent hierarchical `ExpressionTree` genotype. Compile that genotype into a compact postorder/RPN `CompiledExpression` for execution. Keep the mutable system in the Experimental assembly for temporary migration and golden reference behavior tests until the new system fully replaces it.
 
 HeuristicLab is the behavioral reference, not the target architecture. The first reference package is [HeuristicLab.Problems.DataAnalysis.Symbolic.Regression/3.4](https://github.com/heal-research/HeuristicLab/tree/main/HeuristicLab.Problems.DataAnalysis.Symbolic.Regression/3.4).
 
@@ -28,9 +28,9 @@ Non-goals for the scalar Stages 1-4 redesign:
 Resolve these before or during Stage 0:
 
 - **API specs:** add executable usage specs before hardening public APIs.
-- **Legacy migration:** keep still-required mutable components in their domain
-  folders, use `.Legacy` namespaces only for actual name collisions, and remove
-  components only after consumer and test parity plus explicit approval.
+- **Legacy migration:** keep still-required mutable components in the Experimental
+  `Legacy` folder, preserve namespaces unless an actual name collision requires
+  `.Legacy`, and remove components only after consumer and test parity plus explicit approval.
 - **Interpreter binding:** define the Stage 1 name-first authoring contract: `ExpressionDraft.Variable(name)` interns names into the compiled expression variable table, variable instructions store payload indexes into that table, and the interpreter uses those names to fetch dataset series.
 - **Reference behavior scope:** maintain a matrix for each legacy symbol/behavior: new target, reference level, test status, and intentional difference.
 - **Instruction validity:** define runtime validation for non-empty code, RPN stack balance, arity, `SubtreeLength`, payload indexes, root position, max length/depth, and invalid opcodes.
@@ -115,7 +115,7 @@ Implement:
 - Constant side-table entries are plain `double` values. The `Constant` opcode references the table by `PayloadIndex`; fixed versus evolvable status remains genotype-side symbol information and is irrelevant to compiled evaluation.
 - Draft authoring APIs expose fixed and optimizable literal authoring through `FixedConstant(value)` and `Constant(value)`.
 - Revisit the draft API after the first operators clarify authoring pressure. Consider additional fluent expression composition and static-import helpers so common expressions can be authored without a static factory style.
-- Move old mutable symbolic-expression-tree APIs under a `HEAL.HeuristicLib.Legacy...` namespace. Legacy types and methods get `[Obsolete]` markers. If a legacy member name would clash with new API names, add a `Legacy` prefix or suffix to the legacy member.
+- Move old mutable symbolic-expression-tree APIs into `HEAL.HeuristicLib.Experimental` without broad namespace churn. Use `.Legacy` and `[Obsolete]` only where a concrete replacement path and a name collision justify them.
 
 Stage 1 opcodes:
 
@@ -436,10 +436,9 @@ dotnet format ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severit
 
 - Genotype: immutable `ExpressionTree`, explicit `OpCode : ushort`, binary arity in Stage 1, identical-instruction equality, and `NaN` for invalid numeric results.
 - Binding and execution: draft authoring is name-first, compiled variable instructions use payload indexes into an expression variable table, interpreter memory is not shared mutably, and Operon remains the postfix/contiguous-encoding reference.
-- Legacy migration: still-required mutable symbolic-expression APIs remain in
-  their established domain folders until complete replacements exist. Use a
-  `.Legacy` namespace, or a `Legacy` filename qualifier, only where old and new
-  names would otherwise collide.
+- Legacy migration: still-required mutable symbolic-expression APIs remain in the
+  Experimental `Legacy` folder until complete replacements exist. Preserve public
+  namespaces unless old and new names collide.
 - Formatting/serialization: Stage 1 includes debug/infix formatting; full serialization is deferred.
 - Problem and search spaces: one symbolic-regression problem concept, with unrestricted and grammar-constrained scalar search spaces as distinct operator families.
 - Evaluation/refinement: evaluators return objective vectors and never replace candidates. The `Refiner` operator role, `Candidate → Candidate`, owns refinement, repair, simplification, and constant optimization, and `ImprovementCheckingRefiner` adds objective-aware retention as an ordinary composable refiner.

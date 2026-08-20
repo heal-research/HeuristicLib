@@ -7,18 +7,18 @@ legacy capability operational until its consumers have migrated or the capabilit
 is explicitly removed.
 
 The immutable `ExpressionTree` system is the target genotype. Still-required
-mutable source remains compiled inside `HeuristicLib` in its established domain
-folders until its consumers migrate. Migration state is tracked in this plan and
-the parity matrix rather than through a physical legacy source directory.
+mutable source is compiled in `HeuristicLib.Experimental` under its physical
+`Legacy` folder until its consumers migrate. Existing namespaces remain stable
+except where a name collision already requires `.Legacy`.
 
 ## Migration Rules
 
 - Replace small, coherent dependency groups rather than rewriting the complete
   mutable system at once.
-- Keep a component in its established domain folder until a complete working
-  replacement, including behavior relied upon by maintained consumers, exists.
-  Age, architectural preference, or dependence on another old component is not
-  sufficient reason to remove it.
+- Keep an operational component in the Experimental `Legacy` folder until a
+  complete working replacement, including behavior relied upon by maintained
+  consumers, exists. Age, architectural preference or dependence on another old
+  component is not sufficient reason to remove it.
 - Preserve existing namespaces unless an actual type-name collision requires a
   `.Legacy` namespace. A `Legacy` filename qualifier may distinguish two source
   files without changing their public type names.
@@ -45,7 +45,7 @@ the parity matrix rather than through a physical legacy source directory.
 
 Each component progresses through these states:
 
-1. **Active**: maintained in its existing location.
+1. **Active**: maintained in the Experimental `Legacy` folder.
 2. **Retained operational**: superseded for some use cases but still compiled,
    functional, and required by at least one maintained consumer.
 3. **Replacement verified**: all consumers and relevant behavioral tests use the new
@@ -68,9 +68,9 @@ eligible for consumer migration and eventual deletion.
 The unrestricted PTC2 behavior now has an immutable `ProbabilisticTreeCreator`.
 The unrestricted PTC2 and balanced target-length behaviors now have immutable
 creators. The grammar-aware mutable `ProbabilisticTreeCreator`,
-`BalancedTreeCreator`, and their shared creator base remain compiled in their
-operator folders because grammar-guided creation does not yet have a complete
-replacement.
+`BalancedTreeCreator` and their shared creator base remain compiled in the
+Experimental `Legacy` folder because grammar-guided creation does not yet have a
+complete replacement.
 
 The first replacement group intentionally excludes:
 
@@ -84,13 +84,14 @@ Those consumers continue referencing the unchanged legacy namespaces.
 
 ### Current Status
 
-The mutable genotype and its remaining dependent components remain compiled and
-operational in their established genotype, operator, and data-analysis folders.
-Modern types use distinct namespaces; `.Legacy` is retained only for regression
-types whose names collide with the modern API.
+The mutable genotype and its remaining dependency closure are compiled in
+`HEAL.HeuristicLib.Experimental` under the physical `Legacy` folder. Modern types
+remain in `HEAL.HeuristicLib`. Public namespaces did not change as part of the
+assembly move. `.Legacy` remains only where regression type names collide with
+the modern API.
 
 The concrete mutable symbolic-expression compiler and interpreter implementations
-remain under `Problems/DataAnalysis/Symbolic`. Supporting operation catalogs,
+remain under `Legacy/Problems/DataAnalysis/Symbolic`. Supporting operation catalogs,
 instruction models, dispatch helpers, state types, and interfaces remain active
 wherever their behavior is not yet completely replaced.
 
@@ -162,6 +163,8 @@ explicit approval:
 - `BoundedSymbolicRegressionModel`, replaced by `BoundedRegressor` composed
   with `SymbolicRegressor` for the immutable genotype;
 - `CachedRegressionSolution`, which had no consumers or tests.
+- `RegressionCsvInstanceProvider` and `TableFileParser`, which had no consumers
+  or tests after the Python migration.
 
 The legacy creator base remains because the grammar-aware `BalancedTreeCreator`
 and `ProbabilisticTreeCreator` still depend on it.
@@ -197,20 +200,18 @@ legacy occurrence-local numeric weight, so that behavior cannot be preserved
 without a separate weighted-variable design. The old program, start, and
 linear-scaling wrapper nodes also no longer count against expression length.
 
-The evaluator-based regression objective layer remains under
-`Problems/DataAnalysis/Regression` and uses the
+The evaluator-based regression objective layer remains under the Experimental
+`Legacy/Problems/DataAnalysis/Regression` folder and uses the
 `Problems.DataAnalysis.Regression.Legacy` namespace where names collide. Modern
 symbolic regression uses `IRegressionMetric` and `IExpressionMetric` collections
 on `SymbolicRegressionProblem`. Explicit-grammar tests and the unreplaced
 automatic-differentiation parameter optimizer continue to import the legacy
 evaluators until those complete capabilities migrate.
 
-The complete still-operational `Dataset`-based support group remains under
-`Problems/DataAnalysis`. This includes the old data containers, problem-data
-base classes, and regression model contracts used by parameter optimization and
-its tests. `RegressionCsvInstanceProvider` and `TableFileParser` no longer have
-consumers after the Python migration and are deletion candidates pending the
-required explicit approval.
+The complete still-operational `Dataset`-based support group remains under the
+Experimental `Legacy/Problems/DataAnalysis` folder. This includes the old data
+containers, problem-data base classes and regression model contracts used by
+parameter optimization and its tests.
 
 The maintained data-analysis layer now provides numeric perturbation feature
 importance for modern predictors and supervised data. The superseded legacy

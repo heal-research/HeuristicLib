@@ -11,7 +11,6 @@ using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
@@ -228,7 +227,7 @@ public class SymbolicRegressionRedesignSpecs
     {
         /*
         var problem = SymbolicRegressionProblem.CreateDefault(
-          CreateLinearDataset(),
+          CreateLinearRegressionData(),
           inputVariables: ["x0"],
           metric: Metrics.RMSE,
           searchSpace: new ExpressionTreeSearchSpace(
@@ -261,7 +260,7 @@ public class SymbolicRegressionRedesignSpecs
     [Fact]
     public void GeneticAlgorithm_AuthoringShape_ConfiguresProblemSpecificNumericOptimizingEvaluator()
     {
-        var data = CreateLinearDataset();
+        var data = CreateLinearRegressionData();
 
         /*
         var problem = SymbolicRegressionProblem.CreateDefault(
@@ -297,7 +296,7 @@ public class SymbolicRegressionRedesignSpecs
         algorithm.Evaluator.Counters.FunctionEvaluations.ShouldBeGreaterThan(0);
         */
 
-        data.InputVariables.ShouldBe(["x0", "x1"]);
+        data.Inputs.Columns.Select(series => series.Name).ShouldBe(["x0", "x1"]);
         typeof(GeneticAlgorithm<,,>).ShouldNotBeNull();
     }
 
@@ -305,24 +304,6 @@ public class SymbolicRegressionRedesignSpecs
     {
         protected override string FormatOperation(OperationSymbol symbol, IReadOnlyList<string> children) =>
             $"{symbol.Name}[{string.Join(", ", children)}]";
-    }
-
-    private static RegressionProblemData CreateLinearDataset()
-    {
-        var dataset = Dataset.FromRowData(
-          ["x0", "x1", "y"],
-          new double[,]
-          {
-              { 1.0, 3.0, 7.0 },
-              { 2.0, 4.0, 10.0 },
-              { 3.0, 5.0, 13.0 }
-          });
-
-        return new RegressionProblemData(
-          dataset,
-          targetVariable: "y",
-          allowedInputVariables: ["x0", "x1"],
-          trainingRange: new Range(0, 3));
     }
 
     private static RegressionData CreateLinearRegressionData() =>

@@ -115,7 +115,7 @@ Before designing new public numerical APIs, document and reorganize the current 
 
 Current status:
 
-- still-required mutable components remain active in their established domain folders until their consumers migrate;
+- still-required mutable components remain active in the Experimental `Legacy` folder until their consumers migrate;
 - the maintained expression domain is organized under
   `HEAL.HeuristicLib.Genotypes.SymbolicExpressions`;
 - tabular data and prediction contracts live under
@@ -2356,8 +2356,8 @@ Outcome:
   memory goes. Attributing it across those three is work for the performance increment.
 
 This closes the behavioral and performance comparison the migration sequence asks for before the legacy
-optimizer can be proposed for deletion. Retiring it would also remove the `AutoDiff` package, whose only
-remaining consumer is `TreeToAutoDiffTermConverter`.
+optimizer can be proposed for deletion. Retiring it would remove `AutoDiff` from the Experimental package,
+whose only remaining consumer is `TreeToAutoDiffTermConverter`.
 
 These figures are a single-machine smoke comparison, not a statistical benchmark. Their purpose is to show
 the direction and order of magnitude; the performance increment owns proper measurement.
@@ -3108,7 +3108,7 @@ question outright:
   fitting path does.
 - **The dependency actually up for elimination is `AutoDiff`.** Its only remaining consumer is
   `TreeToAutoDiffTermConverter`, reached solely through the legacy optimizer, so retiring that optimizer
-  removes a package while replacing MathNet removes none.
+  removes the dependency from Experimental while replacing MathNet removes none.
 
 The gate is therefore restated: **MathNet is retained.** Measurement attributes cost across the
 differentiation engine, the adapter and the solver, and only a specific quantified problem that neither

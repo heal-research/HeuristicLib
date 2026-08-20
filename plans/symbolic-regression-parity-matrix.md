@@ -22,6 +22,8 @@ foundation described in
   transiently without changing the expression genotype;
 - the legacy mutable problem remains in the `.Legacy` namespace until its
   remaining consumers migrate.
+- the retained mutable dependency closure is shipped by `HEAL.HeuristicLib.Experimental`.
+  The main package contains only the modern symbolic-expression system.
 
 | Behavior | HeuristicLab reference | Current legacy type | New target | Reference level | Test status | Intentional differences |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -69,9 +71,9 @@ The new immutable expression-tree operator family targets behavioral coverage ra
 | --- | --- |
 | API specs | Initial executable specs live in `test/HeuristicLib.Tests.ApiUsageSpecs/Regression/SymbolicRegressionRedesignSpecs.cs`; future implementation should replace commented sketches with real API calls as each stage lands, then promote behavior-heavy checks into regular unit tests in the owning project. |
 | Problem metric API | Settled and implemented: the simple problem constructor defaults to `Metrics.MSE`; an explicit single prediction metric remains concise; advanced construction accepts ordered prediction and expression metric collections. Prediction values are calculated once for all prediction metrics, prediction objectives precede expression objectives, and zero total metrics is rejected. Multiple objectives use lexicographic total order by default while their declared directions govern dominance. |
-| Legacy regression evaluators | Superseded for the immutable problem by `IRegressionMetric` and `IExpressionMetric`. The old evaluator interfaces, implementations, evaluator-based regression problem, and evaluator-specific data extensions compile under `Problems.DataAnalysis.Regression.Legacy` for remaining explicit-grammar and parameter-optimization consumers. |
+| Legacy regression evaluators | Superseded for the immutable problem by `IRegressionMetric` and `IExpressionMetric`. The old evaluator interfaces, implementations, evaluator-based regression problem, and evaluator-specific data extensions compile in the Experimental assembly under `Problems.DataAnalysis.Regression.Legacy` for remaining explicit-grammar and parameter-optimization consumers. |
 | Search-space API | Current first draft: `ExpressionTreeSearchSpace` represents the unrestricted search space directly. No unrestricted factory or subtype is part of the first API. |
-| Legacy migration | Incremental replacement: still-required mutable components stay in their domain folders and are removed only after replacement coverage and explicit approval. `.Legacy` namespaces are used only where old and new public type names would otherwise collide. |
+| Legacy migration | Incremental replacement: still-required mutable components stay in the Experimental `Legacy` folder and are removed only after replacement coverage and explicit approval. `.Legacy` namespaces are used only where old and new public type names would otherwise collide. |
 | Interpreter binding | Settled: `ExpressionDraft.Variable(name)` interns names into the compiled expression variable table; variable instructions store payload indexes into that table, and the interpreter resolves the referenced names once against the supplied dataset. |
 | Reference behavior scope | Seeded by the matrix above; add rows before extending Stage 1 behavior coverage. |
 | Instruction validity | Stage 1 owner: `ExpressionTree` factories and ownership-transfer factories validate non-empty RPN, stack balance, arity, subtree length, payload indexes, root position, limits, and invalid opcodes. |
@@ -82,4 +84,4 @@ The new immutable expression-tree operator family targets behavioral coverage ra
 | Constant payloads | Settled: keep one `Constant` opcode with a `double` side table. `FixedConstant(value)` and `Constant(value)` are distinguished only in the expression tree. |
 | Buffer/cache boundary | Settled: scratch buffers and column caches are interpreter internals scoped to an evaluation call or execution instance. |
 | Thread safety | Settled: no shared mutable interpreter memory; shared state must be immutable. |
-| Extension migration | Python interop symbolic-regression workflows and sliding-window regression use the immutable system, including fitness-time linear scaling. The remaining explicit-linear-scaling-grammar consumers use maintained legacy core, experimental, and scenario-test components until they migrate. |
+| Extension migration | Python interop symbolic-regression workflows and sliding-window regression use the immutable system, including fitness-time linear scaling. The remaining explicit-linear-scaling-grammar consumers use the retained implementation from Experimental until they migrate. |
