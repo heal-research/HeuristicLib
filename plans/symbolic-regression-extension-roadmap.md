@@ -14,7 +14,7 @@ sequences them. It does not schedule them into one delivery.
 
 The foundation they extend is specified in
 [symbolic-regression-decisions.md](symbolic-regression-decisions.md) and documented for users in
-[`docs/symbolic-regression.md`](../docs/symbolic-regression.md). Read those first; this one assumes the
+[`docs/guide/domains/symbolic-regression.md`](../docs/guide/domains/symbolic-regression.md). Read those first; this one assumes the
 genotype, compiled representation, problem composition, evaluation contract, and unrestricted operator
 family as given.
 
@@ -124,7 +124,7 @@ that it needs none.
 
 ### EXT-1: Grammar-Constrained Symbolic Regression
 
-*Formerly redesign-plan Stage 4.*
+_Formerly redesign-plan Stage 4._
 
 Add the smallest typed grammar model needed for valid scalar symbolic regression:
 
@@ -197,7 +197,7 @@ Unblocks: the largest legacy batch. See
 
 ### EXT-2: Factor Variables And Typed Terminals
 
-*Formerly the deferred factor-variable row of the reference behavior matrix.*
+_Formerly the deferred factor-variable row of the reference behavior matrix._
 
 HeuristicLab's `FactorVariable` and `BinaryFactorVariable` have no replacement and are recorded as
 **not started**, because they require a deliberate categorical-data and terminal-payload design rather
@@ -221,7 +221,7 @@ establish the schema.
 
 ### EXT-3: Structure Templates
 
-*Formerly redesign-plan Stage 5.1.*
+_Formerly redesign-plan Stage 5.1._
 
 - Structure templates use a different composite genotype shape: one immutable fixed template plus one
   evolvable `ExpressionTree` component per wildcard slot.
@@ -258,7 +258,7 @@ a primary use case, but an unrestricted-only first implementation is viable.
 
 ### EXT-4: Shape Constraints
 
-*Formerly redesign-plan Stage 5.2.*
+_Formerly redesign-plan Stage 5.2._
 
 - Shape constraints are evaluation components over predictions, derivatives, sampled expression behavior,
   or other model observations. They should not create `ShapeConstrainedUnrestricted...` and
@@ -280,7 +280,7 @@ constraints can reuse the foundation's automatic-differentiation engine; interva
 
 ### EXT-5: Algebraic Normalization And Candidate Transformers
 
-*Formerly redesign-plan Stage 5.3.*
+_Formerly redesign-plan Stage 5.3._
 
 Algebraic normalization, simplification, constant folding, equivalent-form comparison, and numeric
 refinement are candidate transformers, comparers, or evaluators, not new expression search-space flavors.
@@ -294,7 +294,7 @@ Depends on: nothing structural. This is the smallest extension and a reasonable 
 
 ### EXT-6: Vectorial GP Value-System Support
 
-*Formerly redesign-plan Stage 5.4.*
+_Formerly redesign-plan Stage 5.4._
 
 - Vectorial GP means that one expression value for one observation can be a vector or tensor. This value
   dimension is distinct from the current interpreter's batched `double` buffers, which contain one scalar
@@ -337,7 +337,7 @@ extension and the one most likely to need its own multi-checkpoint plan.
 
 ### EXT-7: Time-Series Expression Support
 
-*Formerly redesign-plan Stage 5.5.*
+_Formerly redesign-plan Stage 5.5._
 
 Time-series support follows the same direction as vectorial GP when it changes value metadata or available
 opcodes. Lag and window semantics belong in operation signatures, interpreter binding, and data-view
@@ -350,7 +350,7 @@ Depends on: [EXT-6](#ext-6-vectorial-gp-value-system-support), or at least its v
 
 ### EXT-8: Interval-Arithmetic Evaluation
 
-*Formerly redesign-plan Stage 5.6.*
+_Formerly redesign-plan Stage 5.6._
 
 - Interval arithmetic is initially an alternative evaluation domain for an otherwise ordinary scalar
   expression, not a new genotype. A numeric constant `c` becomes the degenerate interval `[c, c]`,
@@ -423,16 +423,16 @@ extension branch that replaces them. The full process, lifecycle states, and man
 remain in
 [symbolic-regression-decisions.md](symbolic-regression-decisions.md#legacy-status).
 
-| Retained legacy component | Retired by |
-| --- | --- |
-| Grammar-aware mutable `ProbabilisticTreeCreator`, `BalancedTreeCreator`, and their shared creator base | [EXT-1](#ext-1-grammar-constrained-symbolic-regression) |
-| Legacy grammars, symbols, and tree search spaces | [EXT-1](#ext-1-grammar-constrained-symbolic-regression) |
-| Legacy `SymbolicRegressionProblem` and the evaluator-based regression objective layer | [EXT-1](#ext-1-grammar-constrained-symbolic-regression) |
-| `SymbolicRegressionParameterOptimization`, `TreeToAutoDiffTermConverter`, and the `AutoDiff` dependency | [EXT-1](#ext-1-grammar-constrained-symbolic-regression), as one batch with the legacy problem |
-| `RemoveBranchManipulation` and its required base | [EXT-1](#ext-1-grammar-constrained-symbolic-regression) |
-| The mutable genotype, compiler, and interpreter | last, after every consumer above has migrated |
-| The `Dataset`-based data-analysis support group | with its final consumer, per [data-analysis-modernization-plan.md](data-analysis-modernization-plan.md) |
-| HeuristicLab `FactorVariable` and `BinaryFactorVariable` behavior | [EXT-2](#ext-2-factor-variables-and-typed-terminals) |
+| Retained legacy component                                                                               | Retired by                                                                                              |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Grammar-aware mutable `ProbabilisticTreeCreator`, `BalancedTreeCreator`, and their shared creator base  | [EXT-1](#ext-1-grammar-constrained-symbolic-regression)                                                 |
+| Legacy grammars, symbols, and tree search spaces                                                        | [EXT-1](#ext-1-grammar-constrained-symbolic-regression)                                                 |
+| Legacy `SymbolicRegressionProblem` and the evaluator-based regression objective layer                   | [EXT-1](#ext-1-grammar-constrained-symbolic-regression)                                                 |
+| `SymbolicRegressionParameterOptimization`, `TreeToAutoDiffTermConverter`, and the `AutoDiff` dependency | [EXT-1](#ext-1-grammar-constrained-symbolic-regression), as one batch with the legacy problem           |
+| `RemoveBranchManipulation` and its required base                                                        | [EXT-1](#ext-1-grammar-constrained-symbolic-regression)                                                 |
+| The mutable genotype, compiler, and interpreter                                                         | last, after every consumer above has migrated                                                           |
+| The `Dataset`-based data-analysis support group                                                         | with its final consumer, per [data-analysis-modernization-plan.md](data-analysis-modernization-plan.md) |
+| HeuristicLab `FactorVariable` and `BinaryFactorVariable` behavior                                       | [EXT-2](#ext-2-factor-variables-and-typed-terminals)                                                    |
 
 Two constraints carry over from the migration plan and must not be lost in the branch split:
 

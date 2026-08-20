@@ -95,7 +95,7 @@ DataAnalysis and symbolic regression are the clearest current candidates for thi
 
 The placement rules in this plan are proposed repository policy, not plan specific background. Before this plan is considered complete, the settled main package admission criteria, experimental package criteria and promotion criteria must be added to durable contributor guidance.
 
-`docs/developer-guidelines.md` should become the canonical source for these criteria. Package facing documentation should summarize the user visible distinction and link to the canonical guidance where appropriate.
+`docs/contributing/developer-guidelines.md` should become the canonical source for these criteria. Package facing documentation should summarize the user visible distinction and link to the canonical guidance where appropriate.
 
 This plan must not be removed or archived until that documentation exists. Future placement and promotion decisions should cite the durable guidance rather than this plan.
 
@@ -255,7 +255,7 @@ The builder API may later be redesigned or removed. That decision should be made
 ### Stage 1: Record And Enforce The Boundary
 
 1. Settle the main package admission, experimental package and promotion criteria proposed by this plan.
-2. Add the settled criteria to `docs/developer-guidelines.md` as durable repository policy.
+2. Add the settled criteria to `docs/contributing/developer-guidelines.md` as durable repository policy.
 3. Update package documentation to state the main and experimental package promises.
 4. Add an architecture test that prevents references from the main package or contracts package to the experimental package.
 5. Add a lightweight inventory test or reviewed list for feature families intentionally owned by the experimental package.
@@ -333,7 +333,7 @@ Final acceptance criteria:
 7. No public moved component is an empty implementation or inaccessible result container.
 8. Main package documentation describes a coherent standard optimization toolkit.
 9. Experimental package documentation describes instability and known limitations without implying low quality is acceptable.
-10. `docs/developer-guidelines.md` contains the canonical criteria for admitting a component to the main package, placing it in the experimental package and promoting it later.
+10. `docs/contributing/developer-guidelines.md` contains the canonical criteria for admitting a component to the main package, placing it in the experimental package and promoting it later.
 11. The documented criteria remain sufficient for future placement decisions without referring to this plan.
 
 ## Promotion Checklist

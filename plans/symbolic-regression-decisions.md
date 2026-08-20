@@ -3,11 +3,11 @@
 Why the symbolic-regression foundation is built the way it is: decisions that could
 otherwise be reopened, and the measurements that settled them.
 
-Usage documentation is in [`docs/symbolic-regression.md`](../docs/symbolic-regression.md)
-and [`docs/symbolic-expressions.md`](../docs/symbolic-expressions.md). Planned
+Usage documentation is in [`docs/guide/domains/symbolic-regression.md`](../docs/guide/domains/symbolic-regression.md)
+and [`docs/guide/domains/symbolic-expressions.md`](../docs/guide/domains/symbolic-expressions.md). Planned
 extensions are in [symbolic-regression-extension-roadmap.md](symbolic-regression-extension-roadmap.md).
 Symbol, constant, and perturbation semantics are documented for users in
-[`docs/symbolic-regression.md`](../docs/symbolic-regression.md#symbols-and-numeric-terminals).
+[`docs/guide/domains/symbolic-regression.md`](../docs/guide/domains/symbolic-regression.md#symbols-and-numeric-terminals).
 
 Measurements are single-machine and establish direction and order of magnitude, not
 statistical precision.
@@ -20,12 +20,12 @@ after the genotype boundary as `CompiledExpression`.**
 Four immutable prototypes were benchmarked: contiguous struct RPN, contiguous class
 RPN, persistent hierarchy, and chunked RPN (a rope).
 
-| Workload | Struct RPN | Class RPN | Hierarchy | Chunked RPN |
-| --- | ---: | ---: | ---: | ---: |
-| Evolution time | 81.70 ms | 74.99 ms | **13.22 ms** | 115.40 ms |
-| Evolution allocation | 85.89 MB | 73.77 MB | **17.55 MB** | 109.87 MB |
-| Full GP pipeline | 25.57 ms | 25.11 ms | **20.48 ms** | 33.54 ms |
-| GC collections over 25 generations | 8 / 5 / 1 | 6 / 0 / 0 | **0 / 0 / 0** | 10 / 6 / 4 |
+| Workload                           | Struct RPN | Class RPN |     Hierarchy | Chunked RPN |
+| ---------------------------------- | ---------: | --------: | ------------: | ----------: |
+| Evolution time                     |   81.70 ms |  74.99 ms |  **13.22 ms** |   115.40 ms |
+| Evolution allocation               |   85.89 MB |  73.77 MB |  **17.55 MB** |   109.87 MB |
+| Full GP pipeline                   |   25.57 ms |  25.11 ms |  **20.48 ms** |    33.54 ms |
+| GC collections over 25 generations |  8 / 5 / 1 | 6 / 0 / 0 | **0 / 0 / 0** |  10 / 6 / 4 |
 
 - **Structural sharing is the whole story.** A hierarchical edit copies the changed
   node and its ancestor path; a flat immutable RPN edit copies most of a contiguous
@@ -88,9 +88,9 @@ Invariants. Breaking one is a design change.
   need be equivalent to it. Variable symbols `{x}` and `{y}` together cover an origin
   allowing `{x, y}`, and `{x, y}` covers an origin allowing only `{x}`. Selection
   weights, initial distributions, and perturbation policies are proposal guidance and
-  play no part. Two rejected alternatives: *structural matching* (an equal origin
+  play no part. Two rejected alternatives: _structural matching_ (an equal origin
   symbol must be configured) is inflexible enough that changing guidance can
-  invalidate a valid expression; *admissibility-equivalence matching* needs a second
+  invalidate a valid expression; _admissibility-equivalence matching_ needs a second
   equivalence relation beside symbol equality and does not reconcile with
   origin-authoritative perturbation. Aggregate coverage suits unrestricted scalar GP
   because every scalar subtree composes and symbol partitioning carries no meaning.
@@ -150,7 +150,7 @@ batched loop never runs. Fixed and covered on both sides of the boundary.
 - **Refinement dominates any run that enables it**: 96 to 99 percent of wall clock at
   every size from 200 to 20 000 rows, multiplying total run time by 45 to 120 times.
   Every other role including evaluation falls below two percent. User-facing guidance
-  is in [`docs/operator-composition.md`](../docs/operator-composition.md#refiner-composition).
+  is in [`docs/guide/extending/operator-composition.md`](../docs/guide/extending/operator-composition.md#refiner-composition).
 - **In unrefined runs, evaluation dominates at scale** — 95.9 percent at 20 000 rows —
   but is genuinely cheap at small row counts because the interpreter is vectorized
   through `TensorPrimitives`. The intuition that evaluation does far more work than
@@ -163,12 +163,12 @@ batched loop never runs. Fixed and covered on both sides of the boundary.
 Two hotspots were removed without architectural change and without altering a single
 result:
 
-| | Before | After |
-| --- | ---: | ---: |
-| Unrefined run, 20 000 rows | 100 ms | 45 ms |
-| Unrefined run allocation, 20 000 rows | 375 MB | 6.7 MB |
-| Full GC collections, 20 000 rows | 97 | 0 |
-| One crossover, 5.2-node parents | 0.222 µs, 690 B | 0.106 µs, 150 B |
+|                                       |          Before |           After |
+| ------------------------------------- | --------------: | --------------: |
+| Unrefined run, 20 000 rows            |          100 ms |           45 ms |
+| Unrefined run allocation, 20 000 rows |          375 MB |          6.7 MB |
+| Full GC collections, 20 000 rows      |              97 |               0 |
+| One crossover, 5.2-node parents       | 0.222 µs, 690 B | 0.106 µs, 150 B |
 
 `SymbolicRegressionProblem.Evaluate` now rents its prediction buffer from
 `ArrayPool<double>.Shared` instead of allocating per candidate — a field is not
@@ -210,7 +210,7 @@ solver configuration can address.
 
 Two wider rejected approaches — typed operator invocation and generated operator
 families — are recorded in
-[`docs/developer-backlog.md`](../docs/developer-backlog.md#discussed-tried-and-rejected).
+[`developer-backlog.md`](developer-backlog.md#discussed-tried-and-rejected).
 
 ## Do Not Add
 
@@ -249,7 +249,7 @@ needs new evidence, not a fresh opinion.
   before the run starts.
 
 The last two are tracked with their design context in
-[`docs/developer-backlog.md`](../docs/developer-backlog.md).
+[`developer-backlog.md`](developer-backlog.md).
 
 ## Legacy Status
 
@@ -259,22 +259,22 @@ forces `.Legacy`.
 
 ### Replacement Mapping
 
-| Legacy capability | Replacement | State |
-| --- | --- | --- |
-| Grow / Full / ramped half-and-half creation | `GrowTreeCreator`, `FullTreeCreator`, `RampedHalfAndHalfTreeCreator` | Legacy removed |
-| Balanced creation | `BalancedTreeCreator` | Unrestricted done; grammar-aware legacy remains |
-| Probabilistic PTC2 creation | `ProbabilisticTreeCreator` | Unrestricted done; grammar-aware legacy remains |
-| `SubtreeCrossover` | `SubtreeCrossover` | Done |
-| `ChangeNodeTypeManipulation` | `NodeReplacementMutator` | Done |
-| `ReplaceBranchManipulation` | `SubtreeMutator` | Done |
-| `RemoveBranchManipulation` | `ShrinkSubtreeMutator` | Not equivalent; legacy remains |
-| `OnePointShaker` / `FullTreeShaker` | `LocalPerturbationMutator(One)` / `(All)` | Done |
-| `MultiSymbolicExpressionTreeManipulator` | `ChooseOneMutator` composition | Legacy removed |
-| `BoundedSymbolicRegressionModel` | `BoundedRegressor` over `SymbolicRegressor` | Legacy removed |
-| Regression evaluators | `IRegressionMetric` + `IExpressionMetric` | Legacy layer remains for grammar consumers |
-| `SymbolicRegressionParameterOptimization` + `AutoDiff` | `NumericParameterFitter` / `NumericParameterFittingRefiner` | Verified faster and equal-quality; retained, see below |
-| `RegressionVariableImpactsCalculator` | `FeatureImportance` (numeric perturbation only) | Legacy removed; categorical out of scope |
-| `FactorVariable` / `BinaryFactorVariable` | None | Not started, [EXT-2](symbolic-regression-extension-roadmap.md#ext-2-factor-variables-and-typed-terminals) |
+| Legacy capability                                      | Replacement                                                          | State                                                                                                     |
+| ------------------------------------------------------ | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Grow / Full / ramped half-and-half creation            | `GrowTreeCreator`, `FullTreeCreator`, `RampedHalfAndHalfTreeCreator` | Legacy removed                                                                                            |
+| Balanced creation                                      | `BalancedTreeCreator`                                                | Unrestricted done; grammar-aware legacy remains                                                           |
+| Probabilistic PTC2 creation                            | `ProbabilisticTreeCreator`                                           | Unrestricted done; grammar-aware legacy remains                                                           |
+| `SubtreeCrossover`                                     | `SubtreeCrossover`                                                   | Done                                                                                                      |
+| `ChangeNodeTypeManipulation`                           | `NodeReplacementMutator`                                             | Done                                                                                                      |
+| `ReplaceBranchManipulation`                            | `SubtreeMutator`                                                     | Done                                                                                                      |
+| `RemoveBranchManipulation`                             | `ShrinkSubtreeMutator`                                               | Not equivalent; legacy remains                                                                            |
+| `OnePointShaker` / `FullTreeShaker`                    | `LocalPerturbationMutator(One)` / `(All)`                            | Done                                                                                                      |
+| `MultiSymbolicExpressionTreeManipulator`               | `ChooseOneMutator` composition                                       | Legacy removed                                                                                            |
+| `BoundedSymbolicRegressionModel`                       | `BoundedRegressor` over `SymbolicRegressor`                          | Legacy removed                                                                                            |
+| Regression evaluators                                  | `IRegressionMetric` + `IExpressionMetric`                            | Legacy layer remains for grammar consumers                                                                |
+| `SymbolicRegressionParameterOptimization` + `AutoDiff` | `NumericParameterFitter` / `NumericParameterFittingRefiner`          | Verified faster and equal-quality; retained, see below                                                    |
+| `RegressionVariableImpactsCalculator`                  | `FeatureImportance` (numeric perturbation only)                      | Legacy removed; categorical out of scope                                                                  |
+| `FactorVariable` / `BinaryFactorVariable`              | None                                                                 | Not started, [EXT-2](symbolic-regression-extension-roadmap.md#ext-2-factor-variables-and-typed-terminals) |
 
 Built-in operation symbols (arithmetic, `Log`, `Sqrt`, trigonometric, `Abs`,
 `Square`, `Cube`, `CubeRoot`, `Power`, `Root`, `AnalyticQuotient`) all map 1:1 to

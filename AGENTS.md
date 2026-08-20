@@ -2,9 +2,9 @@
 
 Contributor contract for this repository.
 
-Follow [docs/developer-guidelines.md](docs/developer-guidelines.md) for implementation rules, public API conventions and architectural decisions. Durable product and architectural principles live in [docs/design-goals.md](docs/design-goals.md).
+Follow [docs/contributing/developer-guidelines.md](docs/contributing/developer-guidelines.md) for implementation rules, public API conventions and architectural decisions. Durable product and architectural principles live in [docs/contributing/design-goals.md](docs/contributing/design-goals.md).
 
-Use [docs/glossary.md](docs/glossary.md) for canonical HeuristicLib terminology when editing code, docs, tests, examples, and plans. Prefer glossary terms over legacy or ad hoc wording unless a local context explicitly defines a narrower meaning.
+Use [docs/guide/glossary.md](docs/guide/glossary.md) for canonical HeuristicLib terminology when editing code, docs, tests, examples, and plans. Prefer glossary terms over legacy or ad hoc wording unless a local context explicitly defines a narrower meaning.
 
 ## Repository map
 
