@@ -1,5 +1,6 @@
 using System.Globalization;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
+using HEAL.HeuristicLib.Numerics;
 using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 
 namespace HEAL.HeuristicLib.Tests.Genotypes.SymbolicExpressions.Formatting;
@@ -327,7 +328,7 @@ public sealed class InfixExpressionParserTests
         public override void Emit(ExpressionNode node, IExpressionEmitter emitter)
         {
             emitter.EmitChild(0);
-            emitter.EmitOperator(OpCode.Negate);
+            emitter.EmitOperation(Operation.Negate);
         }
     }
 }

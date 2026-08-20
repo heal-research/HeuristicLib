@@ -1,3 +1,5 @@
+using HEAL.HeuristicLib.Numerics;
+
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
 public readonly struct CompiledSubExpression
@@ -12,7 +14,7 @@ public readonly struct CompiledSubExpression
     }
 
     public Instruction Instruction => expression.GetInstruction(rootInstructionIndex);
-    public OpCode OpCode => Instruction.OpCode;
+    public Operation Operation => Instruction.Operation;
     public int Arity => Instruction.Arity;
     public int Length => Instruction.SubtreeLength;
 
@@ -39,7 +41,7 @@ public readonly struct CompiledSubExpression
 
     public bool TryGetConstantValue(out double value)
     {
-        if (Instruction.OpCode != OpCode.Constant)
+        if (Instruction.Operation != Operation.Constant)
         {
             value = default;
             return false;
@@ -51,7 +53,7 @@ public readonly struct CompiledSubExpression
 
     public bool TryGetVariableReference(out VariableReference variableReference)
     {
-        if (Instruction.OpCode != OpCode.Variable)
+        if (Instruction.Operation != Operation.Variable)
         {
             variableReference = default;
             return false;

@@ -1,9 +1,11 @@
-using System.Numerics.Tensors;
-
 namespace HEAL.HeuristicLib.Numerics.AutomaticDifferentiation;
 
 internal sealed partial class Execution
 {
+    /// <remarks>
+    /// An instruction independent of every input has one value rather than a span of them, so the whole subexpression
+    /// is evaluated once instead of once per row.
+    /// </remarks>
     private void EvaluateScalarInstructions(ReadOnlySpan<double> parameters)
     {
         var instructions = program.Instructions;
@@ -17,31 +19,18 @@ internal sealed partial class Execution
                 continue;
             }
 
-            scalarPrimals[instructionIndex] = instruction.Operation switch
+            ref readonly var info = ref OperationCatalog.GetInfo(instruction.Operation);
+            scalarPrimals[instructionIndex] = info.PayloadKind switch
             {
-                Operation.Parameter => parameters[instruction.PayloadIndex],
-                Operation.Constant => constants[instruction.PayloadIndex],
-                Operation.Add => scalarPrimals[instruction.LeftOperand] + scalarPrimals[instruction.RightOperand],
-                Operation.Subtract => scalarPrimals[instruction.LeftOperand] - scalarPrimals[instruction.RightOperand],
-                Operation.Multiply => scalarPrimals[instruction.LeftOperand] * scalarPrimals[instruction.RightOperand],
-                Operation.Divide => scalarPrimals[instruction.LeftOperand] / scalarPrimals[instruction.RightOperand],
-                Operation.Negate => -scalarPrimals[instruction.LeftOperand],
-                Operation.Exp => Math.Exp(scalarPrimals[instruction.LeftOperand]),
-                Operation.Log => Math.Log(scalarPrimals[instruction.LeftOperand]),
-                Operation.Sqrt => Math.Sqrt(scalarPrimals[instruction.LeftOperand]),
-                Operation.Abs => Math.Abs(scalarPrimals[instruction.LeftOperand]),
-                Operation.Square => scalarPrimals[instruction.LeftOperand] * scalarPrimals[instruction.LeftOperand],
-                Operation.Cube => scalarPrimals[instruction.LeftOperand] * scalarPrimals[instruction.LeftOperand] * scalarPrimals[instruction.LeftOperand],
-                Operation.CubeRoot => Math.Cbrt(scalarPrimals[instruction.LeftOperand]),
-                Operation.Power => Math.Pow(scalarPrimals[instruction.LeftOperand], scalarPrimals[instruction.RightOperand]),
-                Operation.Root => Math.Pow(scalarPrimals[instruction.LeftOperand], 1.0 / scalarPrimals[instruction.RightOperand]),
-                Operation.AnalyticQuotient => scalarPrimals[instruction.LeftOperand] / Math.Sqrt(1.0 + (scalarPrimals[instruction.RightOperand] * scalarPrimals[instruction.RightOperand])),
-                Operation.Sin => Math.Sin(scalarPrimals[instruction.LeftOperand]),
-                Operation.Cos => Math.Cos(scalarPrimals[instruction.LeftOperand]),
-                Operation.Tan => Math.Tan(scalarPrimals[instruction.LeftOperand]),
-                Operation.Tanh => Math.Tanh(scalarPrimals[instruction.LeftOperand]),
-                Operation.Input => throw new InvalidOperationException("An input instruction cannot be evaluated as a scalar."),
-                _ => throw new InvalidOperationException($"Unsupported automatic-differentiation operation: {instruction.Operation}."),
+                PayloadKind.Parameter => parameters[instruction.PayloadIndex],
+                PayloadKind.Constant => constants[instruction.PayloadIndex],
+                PayloadKind.VariableReference => throw new InvalidOperationException("An input instruction cannot be evaluated as a scalar."),
+                _ => info.Arity switch
+                {
+                    1 => OperationCatalog.GetUnary(instruction.Operation).Scalar(scalarPrimals[instruction.LeftOperand]),
+                    2 => OperationCatalog.GetBinary(instruction.Operation).Scalar(scalarPrimals[instruction.LeftOperand], scalarPrimals[instruction.RightOperand]),
+                    _ => throw new NotSupportedException($"Operation {instruction.Operation} has unsupported arity {info.Arity}.")
+                }
             };
         }
     }
@@ -52,220 +41,58 @@ internal sealed partial class Execution
         for (var instructionIndex = 0; instructionIndex < instructions.Length; instructionIndex++)
         {
             var instruction = instructions[instructionIndex];
-            if (!instruction.DependsOnInput || instruction.Operation == Operation.Input)
+            if (!instruction.DependsOnInput || instruction.Operation == Operation.Variable)
             {
                 continue;
             }
 
             var destination = GetVectorPrimalSlot(instruction.VectorPrimalSlot, batch.Count);
-            switch (instruction.Operation)
+            var arity = OperationCatalog.GetInfo(instruction.Operation).Arity;
+            switch (arity)
             {
-                case Operation.Add:
-                case Operation.Subtract:
-                case Operation.Multiply:
-                case Operation.Power:
-                case Operation.Root:
-                case Operation.AnalyticQuotient:
-                case Operation.Divide:
-                    EvaluateBinary(instruction, batch, destination);
-                    break;
-                case Operation.Negate:
-                case Operation.Exp:
-                case Operation.Log:
-                case Operation.Sqrt:
-                case Operation.Abs:
-                case Operation.Square:
-                case Operation.Cube:
-                case Operation.CubeRoot:
-                case Operation.Sin:
-                case Operation.Cos:
-                case Operation.Tan:
-                case Operation.Tanh:
+                case 1:
                     EvaluateUnary(instruction, batch, destination);
                     break;
+                case 2:
+                    EvaluateBinary(instruction, batch, destination);
+                    break;
                 default:
-                    throw new InvalidOperationException($"Unsupported batched automatic-differentiation operation: {instruction.Operation}.");
+                    throw new NotSupportedException($"Operation {instruction.Operation} has unsupported arity {arity}.");
             }
         }
     }
 
+    /// <remarks>
+    /// At least one operand depends on an input, because otherwise this instruction would not, so the operands are
+    /// never both single values and the catalog always has a span-producing shape to apply.
+    /// </remarks>
     private void EvaluateBinary(Instruction instruction, BatchRange batch, Span<double> destination)
     {
-        var instructions = program.Instructions;
-        var leftInstruction = instructions[instruction.LeftOperand];
-        var rightInstruction = instructions[instruction.RightOperand];
+        var left = ResolveOperand(instruction.LeftOperand, batch);
+        var right = ResolveOperand(instruction.RightOperand, batch);
 
-        if (leftInstruction.DependsOnInput)
-        {
-            var left = GetVectorPrimal(instruction.LeftOperand, batch);
-            if (rightInstruction.DependsOnInput)
-            {
-                EvaluateBinary(instruction.Operation, left, GetVectorPrimal(instruction.RightOperand, batch), destination);
-            }
-            else
-            {
-                EvaluateBinary(instruction.Operation, left, scalarPrimals[instruction.RightOperand], destination);
-            }
-        }
-        else
-        {
-            EvaluateBinary(instruction.Operation, scalarPrimals[instruction.LeftOperand], GetVectorPrimal(instruction.RightOperand, batch), destination);
-        }
+        OperationCatalog.ApplyToSpan(
+            in OperationCatalog.GetBinary(instruction.Operation), left, right, destination, ScratchFor(batch.Count));
     }
 
-    private static void EvaluateBinary(Operation operation, ReadOnlySpan<double> left, ReadOnlySpan<double> right, Span<double> destination)
-    {
-        switch (operation)
-        {
-            case Operation.Add:
-                TensorPrimitives.Add(left, right, destination);
-                break;
-            case Operation.Subtract:
-                TensorPrimitives.Subtract(left, right, destination);
-                break;
-            case Operation.Multiply:
-                TensorPrimitives.Multiply(left, right, destination);
-                break;
-            case Operation.Divide:
-                TensorPrimitives.Divide(left, right, destination);
-                break;
-            case Operation.Power:
-                for (var i = 0; i < destination.Length; i++)
-                    destination[i] = Math.Pow(left[i], right[i]);
-                break;
-            case Operation.Root:
-                for (var i = 0; i < destination.Length; i++)
-                    destination[i] = Math.Pow(left[i], 1.0 / right[i]);
-                break;
-            case Operation.AnalyticQuotient:
-                for (var i = 0; i < destination.Length; i++)
-                    destination[i] = left[i] / Math.Sqrt(1.0 + (right[i] * right[i]));
-                break;
-            default:
-                throw new InvalidOperationException($"Operation {operation} is not binary.");
-        }
-    }
+    private Operand ResolveOperand(int operandIndex, BatchRange batch) =>
+        program.Instructions[operandIndex].DependsOnInput
+            ? Operand.FromSpan(GetVectorPrimal(operandIndex, batch))
+            : Operand.FromScalar(scalarPrimals[operandIndex]);
 
-    private static void EvaluateBinary(Operation operation, ReadOnlySpan<double> left, double right, Span<double> destination)
-    {
-        switch (operation)
-        {
-            case Operation.Add:
-                TensorPrimitives.Add(left, right, destination);
-                break;
-            case Operation.Subtract:
-                TensorPrimitives.Subtract(left, right, destination);
-                break;
-            case Operation.Multiply:
-                TensorPrimitives.Multiply(left, right, destination);
-                break;
-            case Operation.Divide:
-                TensorPrimitives.Divide(left, right, destination);
-                break;
-            case Operation.Power:
-                for (var i = 0; i < destination.Length; i++)
-                    destination[i] = Math.Pow(left[i], right);
-                break;
-            case Operation.Root:
-                for (var i = 0; i < destination.Length; i++)
-                    destination[i] = Math.Pow(left[i], 1.0 / right);
-                break;
-            case Operation.AnalyticQuotient:
-                for (var i = 0; i < destination.Length; i++)
-                    destination[i] = left[i] / Math.Sqrt(1.0 + (right * right));
-                break;
-            default:
-                throw new InvalidOperationException($"Operation {operation} is not binary.");
-        }
-    }
-
-    private static void EvaluateBinary(Operation operation, double left, ReadOnlySpan<double> right, Span<double> destination)
-    {
-        switch (operation)
-        {
-            case Operation.Add:
-                TensorPrimitives.Add(right, left, destination);
-                break;
-            case Operation.Subtract:
-                TensorPrimitives.Subtract(left, right, destination);
-                break;
-            case Operation.Multiply:
-                TensorPrimitives.Multiply(right, left, destination);
-                break;
-            case Operation.Divide:
-                TensorPrimitives.Divide(left, right, destination);
-                break;
-            case Operation.Power:
-                for (var i = 0; i < destination.Length; i++)
-                    destination[i] = Math.Pow(left, right[i]);
-                break;
-            case Operation.Root:
-                for (var i = 0; i < destination.Length; i++)
-                    destination[i] = Math.Pow(left, 1.0 / right[i]);
-                break;
-            case Operation.AnalyticQuotient:
-                for (var i = 0; i < destination.Length; i++)
-                    destination[i] = left / Math.Sqrt(1.0 + (right[i] * right[i]));
-                break;
-            default:
-                throw new InvalidOperationException($"Operation {operation} is not binary.");
-        }
-    }
-
-    private void EvaluateUnary(Instruction instruction, BatchRange batch, Span<double> destination)
-    {
-        var operand = GetVectorPrimal(instruction.LeftOperand, batch);
-        switch (instruction.Operation)
-        {
-            case Operation.Negate:
-                TensorPrimitives.Negate(operand, destination);
-                break;
-            case Operation.Exp:
-                TensorPrimitives.Exp(operand, destination);
-                break;
-            case Operation.Log:
-                TensorPrimitives.Log(operand, destination);
-                break;
-            case Operation.Sqrt:
-                TensorPrimitives.Sqrt(operand, destination);
-                break;
-            case Operation.Abs:
-                TensorPrimitives.Abs(operand, destination);
-                break;
-            case Operation.Square:
-                TensorPrimitives.Multiply(operand, operand, destination);
-                break;
-            case Operation.Cube:
-                TensorPrimitives.Multiply(operand, operand, destination);
-                TensorPrimitives.Multiply(destination, operand, destination);
-                break;
-            case Operation.CubeRoot:
-                TensorPrimitives.Cbrt(operand, destination);
-                break;
-            case Operation.Sin:
-                TensorPrimitives.Sin(operand, destination);
-                break;
-            case Operation.Cos:
-                TensorPrimitives.Cos(operand, destination);
-                break;
-            case Operation.Tan:
-                TensorPrimitives.Tan(operand, destination);
-                break;
-            case Operation.Tanh:
-                TensorPrimitives.Tanh(operand, destination);
-                break;
-            default:
-                throw new InvalidOperationException($"Operation {instruction.Operation} is not unary.");
-        }
-    }
+    private void EvaluateUnary(Instruction instruction, BatchRange batch, Span<double> destination) =>
+        OperationCatalog.GetUnary(instruction.Operation).Span(GetVectorPrimal(instruction.LeftOperand, batch), destination, ScratchFor(batch.Count));
 
     private ReadOnlySpan<double> GetVectorPrimal(int instructionIndex, BatchRange batch)
     {
         var instruction = program.Instructions[instructionIndex];
-        return instruction.Operation == Operation.Input
+        return instruction.Operation == Operation.Variable
             ? inputColumns[instruction.PayloadIndex].Span.Slice(batch.Offset, batch.Count)
             : GetVectorPrimalSlot(instruction.VectorPrimalSlot, batch.Count);
     }
 
     private Span<double> GetVectorPrimalSlot(int slot, int count) => vectorPrimals.AsSpan(slot * batchCapacity, count);
+
+    private ScratchSpans ScratchFor(int count) =>
+        scratchSpanCount == 0 ? ScratchSpans.None : new ScratchSpans(scratch.AsSpan(0, scratchSpanCount * count), count);
 }

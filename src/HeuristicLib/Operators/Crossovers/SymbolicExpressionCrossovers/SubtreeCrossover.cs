@@ -55,6 +55,12 @@ public sealed record SubtreeCrossover
 
     private static ExpressionNode? SelectDonor(ExpressionTree parent1, ExpressionTree parent2, ExpressionPoint destination, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, bool? internalNode)
     {
+        // Hoisted because the eligibility test runs once per node on each of the two walks, and these do not change.
+        var lengthWithoutDestination = parent1.Length - destination.Node.Length;
+        var destinationDepth = destination.Depth;
+        var maximumLength = searchSpace.MaximumLength;
+        var maximumDepth = searchSpace.MaximumDepth;
+
         var eligibleCount = CountEligible(parent2.Root);
         if (eligibleCount == 0)
             return null;
@@ -92,9 +98,8 @@ public sealed record SubtreeCrossover
             if (internalNode is not null && (donor.Arity > 0) != internalNode.Value)
                 return false;
 
-            var offspringLength = parent1.Length - destination.Node.Length + donor.Length;
-            var replacementDepth = destination.Depth + donor.Depth;
-            return offspringLength <= searchSpace.MaximumLength && replacementDepth <= searchSpace.MaximumDepth;
+            return lengthWithoutDestination + donor.Length <= maximumLength
+                   && destinationDepth + donor.Depth <= maximumDepth;
         }
     }
 

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Numerics;
 using HEAL.HeuristicLib.Numerics.AutomaticDifferentiation;
 
 namespace HEAL.HeuristicLib.Tests.Numerics.AutomaticDifferentiation;
@@ -17,7 +18,7 @@ public sealed class BuilderTests
         var program = builder.Build(root);
 
         program.Instructions.ToArray().ShouldBe([
-            new Instruction(Operation.Input, -1, -1, 0, -1, -1),
+            new Instruction(Operation.Variable, -1, -1, 0, -1, -1),
             new Instruction(Operation.Parameter, -1, -1, 0, -1, 0),
             new Instruction(Operation.Constant, -1, -1, 0, -1, -1),
             new Instruction(Operation.Multiply, 1, 0, -1, 0, 1),
@@ -64,7 +65,7 @@ public sealed class BuilderTests
         var program = builder.Build(root);
 
         program.Instructions.ToArray().Select(instruction => instruction.Operation)
-            .ShouldBe([Operation.Input, Operation.Parameter, Operation.Multiply]);
+            .ShouldBe([Operation.Variable, Operation.Parameter, Operation.Multiply]);
         program.Constants.Length.ShouldBe(0);
         program.Instructions[2].LeftOperand.ShouldBe(1);
         program.Instructions[2].RightOperand.ShouldBe(0);

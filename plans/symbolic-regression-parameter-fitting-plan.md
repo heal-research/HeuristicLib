@@ -378,6 +378,8 @@ AD-6b confirms that warmed `Evaluate` and `EvaluateWithJacobian` calls allocate 
 
 ### Deferred operation-model consolidation review
 
+Done; see [Operation-model consolidation review outcome](#operation-model-consolidation-review-outcome).
+
 Do not generalize the operation model during the current AD checkpoints. At the complete vertical-slice review, inventory the repeated operation semantics and dispatch across symbolic symbols, expression lowering, scalar and batched expression evaluation, AD lowering, scalar and batched AD evaluation, reverse differentiation, formatting, and expression drafts.
 
 The vertical-slice review must make and document an explicit decision among at least these outcomes:
@@ -387,6 +389,363 @@ The vertical-slice review must make and document an explicit decision among at l
 - retain selected duplication where representations or hot-path requirements materially differ, with those differences recorded.
 
 This review must distinguish numerical primitives from domain-level symbols and macros. It must not introduce a runtime registry, delegate dispatch, reflection, or polymorphic hot-loop architecture merely to reduce source repetition. Any consolidation deferred beyond the first parameter-fitting slice requires a named follow-up increment rather than an untracked cleanup note.
+
+### Operation-model consolidation review outcome
+
+The review the AD stage deferred to the complete vertical-slice review is done. It decides for **one shared
+operation identity and one declaration site per operation**, dispatched through a table rather than through
+repeated switches. This is the second of the three outcomes the deferred review named — generating the
+consumers' dispatch from one operation catalog — with the catalog written by hand rather than by a source
+generator, because the measurements below make a generator unnecessary.
+
+#### Inventory
+
+Three operation identities exist, with no compile-time link: `OpCode` (public, `ushort`, genotype side, 22
+members), `Operation` (internal, `byte`, AD engine, 22 members) and the legacy byte constants under
+`Problems/DataAnalysis/Symbolic`. The first two are near-identical sets with different numbering, bridged by
+a hand-written map in `DifferentiableExpressionCompiler`.
+
+Sixteen sites carry per-operation knowledge on the maintained side: the opcode metadata switch; the built-in
+symbol records; two constant-folding switches in `ExpressionCompiler`; the interpreter's switch and its 21
+kernels; `CompiledExpression.ToInfixString`; the AD compiler's unary and binary maps and its supported-set
+predicate; the AD `Builder`; six switches across AD forward execution; the AD reverse derivative rules; four
+formatters; and the infix parser.
+
+The same forward math is written four times — constant fold, interpreter kernel, AD forward scalar, AD
+forward vector — plus once more as a derivative. Adding an operation touches twelve to sixteen places and
+**not one of them fails to compile if a place is missed**, because C# does not check enum switch
+exhaustiveness and every site has a discard arm. The failure surfaces at runtime.
+
+Three things are deliberately *not* duplication and must survive consolidation: span kernels genuinely differ
+from scalar kernels, derivative rules are different information rather than copies, and formatter output is
+target-specific. What repeats in the formatters is the twenty-way dispatch shape, not the content.
+
+#### Measured basis for the decision
+
+Nothing in the maintained hot paths dispatches per element. The interpreter, AD forward and AD reverse all
+dispatch once per instruction and then process a whole span or batch, so dispatch cost is amortised over the
+row count. A throwaway spike measured five dispatch mechanisms over a ten-instruction program, in that
+amortised regime and in a row-major scalar regime that amortises nothing:
+
+| Mechanism | Span regime | Scalar regime |
+| --- | ---: | ---: |
+| Switch | 1.00 | 1.00 |
+| Static abstract through a generic type parameter | 1.00 | 1.00 |
+| Function-pointer table | 1.00 | 0.96 |
+| Delegate table | 0.98–1.01 | 1.02–1.03 |
+| Interface singleton table | 0.99–1.01 | 1.13–1.17 |
+
+In the span regime every mechanism is indistinguishable at 200, 2 000 and 20 000 rows. In the scalar regime
+an ordering appears — function pointers beat a switch by about four percent, delegates trail it by three, and
+interface dispatch trails by thirteen to seventeen — but no maintained path is in that regime today. **The
+performance objection to consolidation does not survive measurement**, which is why the decision is made on
+design grounds.
+
+#### The decision
+
+1. **One operation identity, named `OpCode`.** `Operation` is internal and disappears into it. `OpCode` keeps
+   its name because it is already the public one, and because in this design its role is exactly the value
+   stored in an instruction and shipped to a backend. Keeping it also means the merge carries no rename, so
+   the namespace move is the only break. The name is provisional: it is understood, and it is cheap to
+   revisit once the catalog exists and its use is visible. `IOperation` and `AddOperation` name the types
+   carrying semantics, which the retained `OpCode` leaves free.
+2. **Opcode values are append-only.** Genotypes are persistable and store symbols, so an opcode value is a
+   compatibility contract: never reordered, never reused after retirement. The value space is expected to go
+   sparse over time; the dispatch table is sized to the largest value and stays small under disciplined
+   numbering, with a `byte` remap to a dense index available if it ever does not.
+3. **One struct per built-in operation, with `static abstract` members** carrying every facet: span kernel,
+   scalar kernel, adjoint rule, constant fold, arity, payload kind and differentiability. The compiler then
+   enforces that an operation defines everything, which is the property the current design lacks entirely,
+   and static members make it impossible for an operation to carry state.
+4. **One catalog binds opcode to operation type**, projected into a table indexed by opcode. Consumers index
+   the table; no consumer holds a switch. Declaration and dispatch are deliberately separable: the operation
+   structs do not know how they are dispatched.
+5. **Delegates are the first table form.** Bound from the static abstract members, which is verified to
+   compile and to bind correctly per instantiation. This avoids `unsafe` at no measured cost in any
+   maintained path. Swapping to a function-pointer table later, should a row-major path make four percent
+   matter, changes the catalog file alone and leaves every operation type byte-identical.
+6. **Primitives stay closed; extension is by symbol.** A consumer defines an `OperationSymbol` whose `Emit`
+   expands into built-in opcodes, which `SigmoidSymbol` already demonstrates and which is already public API.
+   Such a symbol works across interpreter, AD, formatters and parser without touching the catalog. This is
+   also what keeps every user expression portable to a future GPU backend: a user cannot introduce a kernel
+   that only exists on the host.
+7. **The instruction stream is data; the catalog is behavior.** Instructions stay blittable value types
+   holding an opcode and integer operands, with variable names in a side table — which is already true today.
+   No reference, string, delegate or function pointer ever enters an instruction. Opcode numeric values are
+   explicit and stable, because a separately compiled device kernel switching on them makes them a
+   cross-language contract. The dispatch table stays host-side and keyed by opcode; a device backend supplies
+   its own.
+
+Deliberately out of scope: the four formatters and the infix parser keep their own dispatch. They map
+*symbols* to target languages rather than opcodes to kernels, and a macro symbol such as `SigmoidSymbol` has
+no opcode at all, so their dispatch cannot key on the catalog. The legacy opcode set under
+`Problems/DataAnalysis/Symbolic` is untouched and leaves with the legacy system.
+
+Not chosen, with reasons: a source generator produces the same code the hand-written catalog does and adds a
+build-time surface to maintain; retaining the duplication with a conformance test fixes only the silent-miss
+symptom and leaves the same math written four times; and an interface singleton table was the slowest
+mechanism measured and would have permitted an operation to hold state.
+
+#### Where the shared identity lives
+
+The differentiation core currently has no dependency on symbolic expressions, which the AD scope statement
+requires: "It has no dependency on symbolic expressions, data analysis, regression, MathNet, or solver
+policy." Merging into the genotype's `OpCode` where it stands would break that, so **the merged identity and
+its catalog move to a neutral home under `HEAL.HeuristicLib.Numerics`**, which both the differentiation core
+and the genotype depend on. A numerics layer that the symbolic-regression genotype builds on is the right
+direction of dependency; the reverse is not.
+
+This adds no translation step. One shared type means the genotype's instruction stores it directly rather
+than carrying its own. The only translation that exists today is the hand-written opcode-to-operation map
+inside `DifferentiableExpressionCompiler`, and the merge deletes it, so the change removes an indirection
+rather than introducing one.
+
+Moving a public enum is a source-breaking namespace change for consumers. That break is accepted, and any
+rename is folded into it so that consumers absorb one break rather than two.
+
+#### Resolved details
+
+- **Non-differentiable operations carry `IsDifferentiable = false` and throw if their adjoint is requested.**
+  One interface and one table, no second tier. The throw is a programming-error guard rather than a control
+  path: the real check stays where `IsSupported` sits today, at lowering time, so a non-differentiable
+  operation is rejected before any adjoint is asked for.
+- **Terminals are `Variable`, `Constant` and `Parameter`.** `Variable` replaces the AD engine's `Input`,
+  being the more understandable of two names for one concept. `Parameter` stays a distinct member because
+  forward evaluation genuinely fetches from a different array than `Constant` does. The genotype emits only
+  `Variable` and `Constant`; the distinction between an evolvable and a fixed constant is a property of the
+  symbol, and it is AD lowering that turns an evolvable occurrence into a `Parameter`. A shared instruction
+  set having members that one producer never emits is ordinary, and expression-program validation rejects
+  any operation whose payload kind is invalid for that program.
+- **The catalog also drives the AD `Builder` and `CompiledExpression.ToInfixString`**, removing two further
+  hand-maintained switches.
+- **The catalog and the operation types are public.** Users extend through symbols rather than kernels, but
+  nothing is gained by hiding the vocabulary they emit into.
+- **The two program representations stay separate.** Merging the identity does not merge the genotype and AD
+  instruction layouts, which keep their own operand encodings and slot assignments.
+- **The enum merge lands first**, then the catalog with metadata facets replacing `OpCodes.TryGetMetadata`
+  and the AD supported-set predicate, then one consumer at a time: interpreter, AD forward, AD reverse,
+  constant folding, builder, display.
+- **Behavioral equivalence is the expectation, not an absolute gate.** The 2 236 tests across four suites and
+  the nine best-objective values the profile harness reports are the check. Should the refactor change a
+  result, the change is examined on its merits rather than assumed to be a defect.
+
+#### A seventeenth site the inventory missed
+
+The interpreter sizes its workspace from a hardcoded list of the operations needing a scratch column:
+`opCode is OpCode.Root or OpCode.AnalyticQuotient`. Nothing connected that list to the kernels that use the
+scratch, so the two could disagree silently. It is now a `ScratchColumns` facet declared with the operation,
+which is the clearest case yet for the catalog: the knowledge was invisible until an operation had to be
+described completely.
+
+#### Open items carried into the implementation
+
+These are recorded rather than settled, because they are easier to judge against working code than in advance.
+
+- **Naming is provisional.** A later pass should consider `Operation` for the enum and `OperationDefinition`
+  for the interface an operation implements, which would leave today's `OperationDefinition` record needing a
+  name of its own, such as `OperationEntry`. Deferred so that the names are chosen while reading the code
+  that uses them.
+- **`PayloadKind` is genotype-shaped and redundant.** It is fully determined by the opcode — the three
+  terminals map one to one onto its three values and everything else is `None` — and only the genotype layer
+  reads it. It sits on `ITerminalOperation` for now so that it is at least declared with the operation rather
+  than typed into a list. Whether it belongs in the shared layer at all is open.
+- **Two things per operation look like one thing twice.** An operation declares `static abstract Apply`, and
+  the table holds a delegate bound to it. The delegate is a handle rather than a second declaration, because
+  an array slot needs a value, but the pair is easy to misread and the names should make the distinction
+  obvious.
+- **A dispatch interface would replace the delegates and is worth revisiting.** A generic adapter written
+  once — `BinaryDispatch<TOperation> : IBinaryDispatch` whose instance methods forward to the operation's
+  static ones — would let the table hold an object with methods instead of a row of delegate handles, while
+  the operation itself stays entirely static, so state remains impossible and the compiler still enforces
+  every member. It costs interface dispatch instead of a delegate call, which the spike measured at 1.13 to
+  1.17 in the scalar regime and 1.00 in the span regime that every current consumer uses. Delegates were kept
+  because they measured fastest and add no type; the adapter reads better and is a contained change, since
+  the operation types do not move either way.
+- **Arity is deliberately not declared.** It follows from which interface an operation implements, so
+  declaring it would allow an operation to contradict itself.
+- **Arity two is the declared ceiling and stays that way until an operation needs more.** The consumers'
+  arity dispatch is the cheap part of the assumption; the binding constraints are that `Instruction` encodes
+  exactly two operand slots and that `IBinaryOperationDefinition` names four kernel shapes for the
+  scalar/span combinations, which a ternary operation would take to eight. Generalizing now would mean either
+  losing that specialization or maintaining an n-ary path with no consumer. It is deferred rather than
+  ignored because every arity switch ends in a throw naming the operation and its arity, so an undeclared
+  arity fails loudly at its own site instead of silently. When one is needed, the contained change is a
+  span-only `ITernaryOperationDefinition` — skipping the scalar specializations rather than doubling them —
+  plus a third operand slot in `Instruction`. It is contained precisely because the catalog centralizes what
+  the sixteen sites used to each restate.
+
+#### AD reverse sweep
+
+The reverse sweep was the one site increment 16 initially left alone. `Execution.Reverse.cs` switched twenty
+ways on `Operation` and dispatched to twenty hand-written `AccumulateAdjointsFor*` methods, so it was the last
+place that had to be edited by hand when an operation was added, and the last place that failed at runtime
+rather than at compile time when that edit was forgotten. Removing that switch was the entire prize; no math
+was deleted, because adjoint rules are different information rather than copies, as the inventory above
+records.
+
+An adjoint rule does not fit the forward kernel shape. It needs the upstream adjoints, both operand primals,
+the instruction's own forward result for the rules that reuse it rather than recompute it, and up to *two*
+destinations that it accumulates into rather than assigns, either of which may be dead because its operand
+does not depend on a parameter. Three shapes were considered for handing a rule that much: a
+`BinaryAdjointContext` ref struct bundling it, a wide parameter list, and leaving the switch alone.
+
+**Decided: the wide parameter list.** Two signatures, matching the forward unary/binary split:
+
+```csharp
+// IUnaryOperationDefinition
+static abstract void Adjoint(
+    ReadOnlySpan<double> upstream, Operand operand, Operand result,
+    Span<double> operandAdjoints);
+
+// IBinaryOperationDefinition
+static abstract void Adjoint(
+    ReadOnlySpan<double> upstream, Operand left, Operand right, Operand result,
+    Span<double> leftAdjoints, bool leftIsActive,
+    Span<double> rightAdjoints, bool rightIsActive);
+```
+
+Unary carries no activity flag, because with one operand the driver skips the call instead. Binary carries one
+per side, because either side can be active alone. **Active** and **passive** are the activity-analysis terms
+from the automatic-differentiation literature, chosen over the borrowed compiler-dataflow sense of live and
+dead: an operand is active when it depends on a parameter, and a passive one has no derivative to receive. The
+flags are redundant with the adjoint span being empty, and that redundancy is deliberate: encoding activity as
+an empty span would be an implicit rule the reader has to already know, which is the class of cleverness this
+codebase has been removing. The rule bodies move across unchanged, and `count` comes from `upstream.Length`
+rather than a parameter.
+
+The context struct was rejected as the more general answer to a generality that is not needed yet. It wins
+only when a seventh input arrives, since it absorbs that as one field where the wide form edits twenty
+signatures. Leaving the switch alone was rejected because the compile-time-safety gap it preserves is the
+specific defect this whole consolidation exists to close.
+
+**The seventh input arrived, and wide was kept.** Scratch spans were added to both adjoint signatures shortly
+after the sweep landed, for the reason recorded under [Adjoint scratch](#adjoint-scratch) rather than the
+`Tanh`/`Sqrt`/`CubeRoot` recomputation this section had anticipated. The decision was re-taken deliberately and
+came out the same way: one more parameter is tolerable, the forward path already establishes how scratch is
+declared and reserved, and that precedent is worth more than the parameter it saves.
+
+Two consequences are preconditions rather than side effects, and belong to whichever increment does the work:
+
+- Five helpers currently private to `Execution` — `AccumulateScaled`, `AccumulateWithPrimalFactor`,
+  `AccumulateDividedByPrimal`, `ValueAt` and `GetVectorizedElementCount` — must become a shared internal
+  static class, because the rules that call them leave that class. It belongs at the end of the definitions
+  file rather than in one of its own, since only the rules in that file use it.
+- The twenty bodies average roughly twenty-eight lines and land in `OperationDefinitions.cs`, which already
+  holds twenty-two structs, so that file roughly doubles.
+
+Both preconditions were met as part of the work. `AdjointAccumulation`, at the end of the definitions file, holds the three
+accumulation shapes the rules share — `AddScaled`, `AddProduct` and `AddQuotient` — plus the SIMD tail split; the division denominator
+partial went to `DivideDefinition` as a private member, being specific to one operation rather than shared;
+and `Operand.ValueAt` replaced the private broadcast reader, since reading either shape at an index is what
+the two shapes exist for. `OperationDefinitions.cs` stayed one file, ordered by arity — terminals, then unary,
+then binary — rather than being split per arity as this section originally anticipated.
+
+**Outcome.** `Execution.Reverse.cs` went from 663 lines to 116: the backward loop, the two arity branches that
+gather forward values and decide liveness, and the three lookups they need. The twenty rule bodies moved
+across unchanged. No `case Operation.` remains anywhere in `src`, so every consumer now reads the catalog and
+the compiler requires each operation to supply its own adjoint rule. The two switches that remain are on
+`PayloadKind`, which has three values and is read from the catalog. All nineteen differentiable operations are
+covered individually by the per-operation verification theory in `ExpressionAdapterVerificationTests`, which
+passes unchanged.
+
+#### Adjoint scratch
+
+`Power`, `Root` and `AnalyticQuotient` were the three rules that could not be composed from primitives. Every
+piece they need — `Pow`, `Log`, `Multiply`, `Divide`, `Sqrt` — exists in `TensorPrimitives`; what was missing
+was somewhere to put the intermediates, so all three fell back to element loops reading operands through a
+broadcast accessor on `Operand`. That accessor branched on operand shape once per element.
+
+Both adjoint signatures now take `ScratchSpans`, declared through `AdjointScratchSpanCount` on the operation.
+It is declared apart from the forward `ScratchSpanCount` because a derivative builds different intermediates
+than the value does: the three rules that need it declare two spans each and every other operation declares
+none, whereas forward `Root` and `AnalyticQuotient` declare one. `Execution` reserves a second buffer sized the
+same way as the forward one.
+
+`TensorPrimitivesEx` holds what `TensorPrimitives` does not: forms taking an `Operand`, which cannot use its
+overload-per-shape approach because an operand carries its shape at run time, and an accumulating divide to
+match its `MultiplyAdd`. The three rules are now primitive compositions, `Operand.ValueAt` is gone, and shape
+is decided once per span instead of once per element.
+
+The rewrite replaced all the broadcast handling in those rules, and the existing per-operation theory only
+covered one shape combination each, so `BinaryOperationMatchesFiniteDifferencesForEveryOperandShape` covers
+all four combinations of span and parameter-only operands for the three of them. Mutating the scalar branches
+fails six of the twelve cases, so the coverage is real rather than nominal.
+
+#### Broadcast spike
+
+> **This finding must outlive this document.** This plan is deleted when the branch merges, and the result below
+> is the kind that is expensive to lose: the duplication it justifies *looks* like something to clean up, so a
+> later reader who does not know these numbers will propose exactly this unification again. Without the
+> measurements they either re-derive them or, far worse, carry the change through and silently give up a factor
+> of 45 to 80 on the hottest path in the library — a regression that no test fails on and that end-to-end timings
+> would show only as "the evaluator got slower." Relocate this section, its numbers and its re-test trigger to a
+> durable home before this plan is removed. `BroadcastSpikeBenchmarks` must move with it or be kept, because the
+> numbers are only re-checkable while the harness exists.
+
+The shape duplication that survives consolidation is real and visible: fourteen mixed-shape forward overloads
+across seven binary operations, nine adjoint rules branching on operand shape, and eight shape branches inside
+`TensorPrimitivesEx`. The fourteen are the ones that recur, because every new binary operation pays them.
+
+The proposal was to delete all of it by replacing `Operand` — which is a hand-rolled broadcasting tensor
+restricted to stride zero and stride one — with the general `Tensor` API, which broadcasts. `Tensor<T>`,
+`TensorSpan<T>` and `ReadOnlyTensorSpan<T>` are present and no longer experimental in the referenced
+`System.Numerics.Tensors` 10.0.8, and a stride-zero view over a one-element buffer broadcasts correctly with no
+materialisation, so the idea was sound on its face. `Tensor<T>` itself was excluded before measuring, being a
+class that would allocate per operand per instruction.
+
+Measured on .NET 10.0.11, Intel Core Ultra 7 265, at the row counts the whole-run profile used. Costs are per
+element, and are flat across row counts to within a few percent, which is the important part: this is a
+per-element cost, not a startup cost that a larger batch amortises.
+
+| Variant | Multiply ns/element | Pow ns/element |
+| --- | ---: | ---: |
+| `TensorPrimitives`, span and single value | 0.08 | 6.63 |
+| `TensorPrimitives`, span and span | 0.11 | 6.66 |
+| `Tensor`, span and single value | 4.01 | 10.89 |
+| `Tensor`, span and stride-zero broadcast | 6.43 | 15.31 |
+| `Tensor`, span and span | 6.35 | 15.47 |
+| `Tensor<T>` object, span and span | 6.41 | — |
+| `Tensor<T>` object, stride-zero broadcast | 6.46 | — |
+
+Nothing here is an allocation artifact, and the comparison does not charge the tensor path for buffers the
+baseline gets free. Every variant reads and writes the *same* arrays, allocated once in setup; `TensorPrimitives`
+takes them as spans and the tensor variants wrap them, since both `Tensor.Create` and the ref struct views alias
+existing memory rather than copying it. Every variant allocated zero bytes under the memory diagnoser.
+
+Two controls establish where the cost is. Building the three views costs **8.3 ns per call**, flat across all
+three row counts, which at twenty thousand rows is six thousandths of one percent of the operation. And
+`Tensor<T>` held in fields, built once in setup so that the measurement contains no construction at all, comes
+out the same as the ref struct views to within noise. Removing construction entirely changes nothing: the cost
+is inside the operation, per element, and identical whether the tensor is a class or a view, dense or
+broadcast.
+
+**Broadcasting is not what costs.** The `Tensor` operation layer costs about 6.4 ns per element whether it
+broadcasts or not, against 0.08 to 0.15 ns for `TensorPrimitives`, so the penalty is the abstraction rather
+than the stride-zero view. A tensor multiply over 20 000 rows takes 128 986 ns; a `TensorPrimitives` **pow**
+over the same rows takes 133 331 ns. The abstraction costs about as much per element as computing a power
+function.
+
+A flat per-element cost that survives every attempt to remove overhead around it is the signature of a scalar
+loop. `TensorPrimitives` at 0.039 ns per element is roughly four doubles per cycle, which is a vectorised one.
+Both span views report `IsDense` true, so a dense fast path had every opportunity to apply and evidently is not
+there for these operations at this version.
+
+The penalty is smaller for expensive operations, as expected — 2.3 times for `Pow` against 45 to 80 times for
+`Multiply` — because per-element math dilutes fixed overhead. That does not rescue it: `Multiply` and `Add`
+dominate evolved expressions, and the profile puts the evaluator above half of run time. Every variant
+allocated nothing, so the ref struct views behave as intended; throughput alone decides this.
+
+**Decision: `Operand` and the shape overloads stay, and the shape duplication is deliberate rather than
+unfinished.** The duplication buys a factor of 45 to 80 on the hottest path in the library, which is not a trade
+worth making for deleting fourteen one-line overloads. Anyone proposing to unify the shapes — through the
+`Tensor` API or any other single-entry-point abstraction — should re-run the spike first and be required to show
+that the unified form holds the per-element costs in the table above. This measures
+one implementation at one version, and the `Tensor` API is young; the spike is kept as
+`BroadcastSpikeBenchmarks` and runs with `dotnet run -- broadcast`, so the question can be reopened cheaply
+when the runtime changes rather than re-argued from first principles.
+
+Implementation was increment 16 in the delivery sequence. It is deliberately not part of the first vertical
+slice, which is complete.
 
 ### First integration-ready artifact
 
@@ -2807,6 +3166,7 @@ Remaining decisions should be made from implementation evidence:
 | 13. Producer refinement composition | A re-decided transformed-operator concept, then the deferred creator, crossover, mutator, and offspring-production conveniences after canonical mechanisms are established | Producer wrappers treated as the primary refinement integration, or a refiner accepted by the existing transformed operators without revisiting the concept |
 | 14. Performance decision | AD, adapter, solver, refinement, evaluator, and complete pipeline benchmarked, with cost attributed across the layers and compared against the legacy implementation | Unmeasured backend abstraction or specialization, or a solver written to replace one that measurement has not indicted |
 | 15. Later generalization | Public APIs, other optimizers, sampling, and additional memetic composition as justified | Changes made only for hypothetical reuse |
+| 16. Operation-model consolidation | One `Operation`, one struct per operation carrying every facet through static abstract members, one catalog projected into a delegate table, and consumers reading that table instead of holding switches. Done, the AD reverse sweep included. See [Operation-model consolidation review outcome](#operation-model-consolidation-review-outcome) and [AD reverse sweep](#ad-reverse-sweep) | A source generator, a runtime registry, open primitive kernels, behavior inside the instruction stream, or reordered opcode values |
 
 Each increment requires:
 

@@ -1,3 +1,6 @@
+using System.Globalization;
+using HEAL.HeuristicLib.Numerics;
+
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
 public sealed class CompiledExpression : IEquatable<CompiledExpression>
@@ -63,73 +66,28 @@ public sealed class CompiledExpression : IEquatable<CompiledExpression>
         var stack = new Stack<string>();
         foreach (var instruction in instructions)
         {
-            switch (instruction.OpCode)
+            ref readonly var info = ref OperationCatalog.GetInfo(instruction.Operation);
+            switch (info)
             {
-                case OpCode.Variable:
+                case { PayloadKind: PayloadKind.VariableReference }:
                     stack.Push(variableReferences[instruction.PayloadIndex].Name);
                     break;
-                case OpCode.Constant:
-                    stack.Push(constants[instruction.PayloadIndex].ToString("G", System.Globalization.CultureInfo.InvariantCulture));
+                case { PayloadKind: PayloadKind.Constant }:
+                    stack.Push(constants[instruction.PayloadIndex].ToString("G", CultureInfo.InvariantCulture));
                     break;
-                case OpCode.Add:
-                    PushBinary(stack, "+");
+                case { Arity: 1 }:
+                    stack.Push($"{info.Name}({stack.Pop()})");
                     break;
-                case OpCode.Subtract:
-                    PushBinary(stack, "-");
-                    break;
-                case OpCode.Multiply:
-                    PushBinary(stack, "*");
-                    break;
-                case OpCode.Divide:
-                    PushBinary(stack, "/");
-                    break;
-                case OpCode.Negate:
-                    PushUnary(stack, "negate");
-                    break;
-                case OpCode.Exp:
-                    PushUnary(stack, "exp");
-                    break;
-                case OpCode.Sin:
-                    PushUnary(stack, "sin");
-                    break;
-                case OpCode.Cos:
-                    PushUnary(stack, "cos");
-                    break;
-                case OpCode.Tan:
-                    PushUnary(stack, "tan");
-                    break;
-                case OpCode.Tanh:
-                    PushUnary(stack, "tanh");
-                    break;
-                case OpCode.Log:
-                    PushUnary(stack, "log");
-                    break;
-                case OpCode.Sqrt:
-                    PushUnary(stack, "sqrt");
-                    break;
-                case OpCode.Abs:
-                    PushUnary(stack, "abs");
-                    break;
-                case OpCode.Square:
-                    PushUnary(stack, "square");
-                    break;
-                case OpCode.Cube:
-                    PushUnary(stack, "cube");
-                    break;
-                case OpCode.CubeRoot:
-                    PushUnary(stack, "cbrt");
-                    break;
-                case OpCode.Power:
-                    PushBinaryFunction(stack, "pow");
-                    break;
-                case OpCode.Root:
-                    PushBinaryFunction(stack, "root");
-                    break;
-                case OpCode.AnalyticQuotient:
-                    PushBinaryFunction(stack, "aq");
+                case { Arity: 2 }:
+                    // The operands come off the stack in reverse.
+                    var right = stack.Pop();
+                    var left = stack.Pop();
+                    stack.Push(info.Notation == OperationNotation.Infix
+                        ? $"({left} {info.Name} {right})"
+                        : $"{info.Name}({left}, {right})");
                     break;
                 default:
-                    throw new InvalidOperationException($"Unsupported opcode {instruction.OpCode}.");
+                    throw new NotSupportedException($"Operation {info.Operation} has unsupported arity {info.Arity}.");
             }
         }
 
@@ -158,25 +116,6 @@ public sealed class CompiledExpression : IEquatable<CompiledExpression>
 
     public static bool operator !=(CompiledExpression? left, CompiledExpression? right) => !Equals(left, right);
 
-    private static void PushBinary(Stack<string> stack, string op)
-    {
-        var right = stack.Pop();
-        var left = stack.Pop();
-        stack.Push($"({left} {op} {right})");
-    }
-
-    private static void PushUnary(Stack<string> stack, string functionName)
-    {
-        var child = stack.Pop();
-        stack.Push($"{functionName}({child})");
-    }
-
-    private static void PushBinaryFunction(Stack<string> stack, string functionName)
-    {
-        var right = stack.Pop();
-        var left = stack.Pop();
-        stack.Push($"{functionName}({left}, {right})");
-    }
 
     private static int ValidateAndCalculateDepth(Instruction[] instructions, double[] constants, VariableReference[] variableReferences)
     {
@@ -225,25 +164,23 @@ public sealed class CompiledExpression : IEquatable<CompiledExpression>
         {
             if (variableReferences[i].Index != i)
             {
-                throw new ArgumentException(
-                  $"Variable reference '{variableReferences[i].Name}' declares index {variableReferences[i].Index} but is stored at index {i}.",
-                  nameof(variableReferences));
+                throw new ArgumentException($"Variable reference '{variableReferences[i].Name}' declares index {variableReferences[i].Index} but is stored at index {i}.", nameof(variableReferences));
             }
         }
     }
 
     private static void ValidateInstructionShape(Instruction instruction, double[] constants, VariableReference[] variableReferences)
     {
-        if (instruction.OpCode == OpCode.Invalid)
-            throw new ArgumentException("Invalid opcode is not allowed.");
+        if (instruction.Operation == Operation.Invalid)
+            throw new ArgumentException("An invalid operation is not allowed.");
 
-        if (!OpCodes.MatchesArity(instruction.OpCode, instruction.Arity))
-            throw new ArgumentException($"Unsupported symbol opcode {instruction.OpCode} with arity {instruction.Arity}.");
+        if (!OperationCatalog.TryGetInfo(instruction.Operation, out var arityDefinition) || arityDefinition.Arity != instruction.Arity)
+            throw new ArgumentException($"Unsupported symbol operation {instruction.Operation} with arity {instruction.Arity}.");
 
         if (instruction.SubtreeLength <= 0)
             throw new ArgumentException("SubtreeLength must be positive.");
 
-        switch (OpCodes.GetPayloadKind(instruction.OpCode))
+        switch (OperationCatalog.GetInfo(instruction.Operation).PayloadKind)
         {
             case PayloadKind.VariableReference:
                 ValidatePayloadIndex(instruction.PayloadIndex, variableReferences.Length, "variable reference");
@@ -253,7 +190,7 @@ public sealed class CompiledExpression : IEquatable<CompiledExpression>
                 break;
             case PayloadKind.None:
                 if (instruction.PayloadIndex != -1)
-                    throw new ArgumentException($"Opcode {instruction.OpCode} must not have a payload index.");
+                    throw new ArgumentException($"Operation {instruction.Operation} must not have a payload index.");
                 break;
         }
     }

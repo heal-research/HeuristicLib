@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.DataAnalysis;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions.AutomaticDifferentiation;
+using HEAL.HeuristicLib.Numerics;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.Genotypes.SymbolicExpressions.AutomaticDifferentiation;
@@ -8,26 +9,26 @@ namespace HEAL.HeuristicLib.Tests.Genotypes.SymbolicExpressions.AutomaticDiffere
 public sealed class ExpressionAdapterVerificationTests
 {
     [Theory]
-    [InlineData(OpCode.Add)]
-    [InlineData(OpCode.Subtract)]
-    [InlineData(OpCode.Multiply)]
-    [InlineData(OpCode.Divide)]
-    [InlineData(OpCode.Negate)]
-    [InlineData(OpCode.Exp)]
-    [InlineData(OpCode.Log)]
-    [InlineData(OpCode.Sqrt)]
-    [InlineData(OpCode.Abs)]
-    [InlineData(OpCode.Square)]
-    [InlineData(OpCode.Cube)]
-    [InlineData(OpCode.CubeRoot)]
-    [InlineData(OpCode.Power)]
-    [InlineData(OpCode.Root)]
-    [InlineData(OpCode.AnalyticQuotient)]
-    [InlineData(OpCode.Sin)]
-    [InlineData(OpCode.Cos)]
-    [InlineData(OpCode.Tan)]
-    [InlineData(OpCode.Tanh)]
-    public void SupportedOperationMatchesExpressionEvaluationAndFiniteDifferences(OpCode operation)
+    [InlineData(Operation.Add)]
+    [InlineData(Operation.Subtract)]
+    [InlineData(Operation.Multiply)]
+    [InlineData(Operation.Divide)]
+    [InlineData(Operation.Negate)]
+    [InlineData(Operation.Exp)]
+    [InlineData(Operation.Log)]
+    [InlineData(Operation.Sqrt)]
+    [InlineData(Operation.Abs)]
+    [InlineData(Operation.Square)]
+    [InlineData(Operation.Cube)]
+    [InlineData(Operation.CubeRoot)]
+    [InlineData(Operation.Power)]
+    [InlineData(Operation.Root)]
+    [InlineData(Operation.AnalyticQuotient)]
+    [InlineData(Operation.Sin)]
+    [InlineData(Operation.Cos)]
+    [InlineData(Operation.Tan)]
+    [InlineData(Operation.Tanh)]
+    public void SupportedOperationMatchesExpressionEvaluationAndFiniteDifferences(Operation operation)
     {
         VerifyEvaluationAndJacobian(CreateSupportedExpression(operation));
     }
@@ -38,8 +39,9 @@ public sealed class ExpressionAdapterVerificationTests
     [Fact]
     public void EveryBuiltInOperationIsDifferentiable()
     {
-        var operations = Enum.GetValues<OpCode>()
-            .Where(operation => operation is not (OpCode.Invalid or OpCode.Variable or OpCode.Constant))
+        // Terminals are excluded by their arity rather than by name, so adding one does not silently enrol it here.
+        var operations = Enum.GetValues<Operation>()
+            .Where(operation => operation is not Operation.Invalid && !OperationCatalog.GetInfo(operation).IsTerminal)
             .ToArray();
 
         operations.ShouldNotBeEmpty();
@@ -52,6 +54,41 @@ public sealed class ExpressionAdapterVerificationTests
         }
     }
 
+    /// <remarks>
+    /// A parameter-only operand carries no input, so it reaches an adjoint rule as a single value rather than a span.
+    /// Both sides of a binary operation can take either shape independently, and the rules that build intermediates
+    /// have to broadcast correctly in all four combinations rather than only the one a fixed test expression happens
+    /// to produce.
+    /// </remarks>
+    [Theory]
+    [InlineData(Operation.Power, false, false)]
+    [InlineData(Operation.Power, false, true)]
+    [InlineData(Operation.Power, true, false)]
+    [InlineData(Operation.Power, true, true)]
+    [InlineData(Operation.Root, false, false)]
+    [InlineData(Operation.Root, false, true)]
+    [InlineData(Operation.Root, true, false)]
+    [InlineData(Operation.Root, true, true)]
+    [InlineData(Operation.AnalyticQuotient, false, false)]
+    [InlineData(Operation.AnalyticQuotient, false, true)]
+    [InlineData(Operation.AnalyticQuotient, true, false)]
+    [InlineData(Operation.AnalyticQuotient, true, true)]
+    public void BinaryOperationMatchesFiniteDifferencesForEveryOperandShape(Operation operation, bool leftIsParameterOnly, bool rightIsParameterOnly)
+    {
+        var x = Variable("x");
+        var left = leftIsParameterOnly ? Constant(1.5) : Constant(0.2) * x + FixedConstant(0.8);
+        var right = rightIsParameterOnly ? Constant(1.25) : Constant(-0.15) * x + FixedConstant(1.5);
+        var expression = operation switch
+        {
+            Operation.Power => Power(left, right).Build(),
+            Operation.Root => Root(left, right).Build(),
+            Operation.AnalyticQuotient => AnalyticQuotient(left, right).Build(),
+            _ => throw new ArgumentOutOfRangeException(nameof(operation))
+        };
+
+        VerifyEvaluationAndJacobian(expression);
+    }
+
     [Fact]
     public void MacroMatchesExpressionEvaluationAndFiniteDifferences()
     {
@@ -61,16 +98,16 @@ public sealed class ExpressionAdapterVerificationTests
     }
 
     [Theory]
-    [InlineData(OpCode.Divide)]
-    [InlineData(OpCode.Log)]
-    public void NonFiniteResultsMatchExpressionEvaluation(OpCode operation)
+    [InlineData(Operation.Divide)]
+    [InlineData(Operation.Log)]
+    public void NonFiniteResultsMatchExpressionEvaluation(Operation operation)
     {
         double[] x = [0.0, -1.0, 1.0];
         var dataFrame = new DataFrame([Series<double>.FromOwnedArray("x", x)]);
         var expression = operation switch
         {
-            OpCode.Divide => (FixedConstant(1.0) / Variable("x")).Build(),
-            OpCode.Log => Log(Variable("x")).Build(),
+            Operation.Divide => (FixedConstant(1.0) / Variable("x")).Build(),
+            Operation.Log => Log(Variable("x")).Build(),
             _ => throw new ArgumentOutOfRangeException(nameof(operation))
         };
         var differentiableExpression = CompileSuccessfully(expression);
@@ -128,32 +165,32 @@ public sealed class ExpressionAdapterVerificationTests
         differentiableExpression.CreateInitialParameterValues().ShouldBe(parameters);
     }
 
-    private static ExpressionTree CreateSupportedExpression(OpCode operation)
+    private static ExpressionTree CreateSupportedExpression(Operation operation)
     {
         var x = Variable("x");
         var left = Constant(0.2) * x + FixedConstant(0.8);
         var right = Constant(-0.15) * x + FixedConstant(1.5);
         return operation switch
         {
-            OpCode.Add => (left + right).Build(),
-            OpCode.Subtract => (left - right).Build(),
-            OpCode.Multiply => (left * right).Build(),
-            OpCode.Divide => (left / right).Build(),
-            OpCode.Negate => Negate(left).Build(),
-            OpCode.Exp => Exp(left).Build(),
-            OpCode.Log => Log(left).Build(),
-            OpCode.Sqrt => Sqrt(left).Build(),
-            OpCode.Abs => Abs(left).Build(),
-            OpCode.Square => Square(left).Build(),
-            OpCode.Cube => Cube(left).Build(),
-            OpCode.CubeRoot => CubeRoot(left).Build(),
-            OpCode.Power => Power(left, FixedConstant(2.0)).Build(),
-            OpCode.Root => Root(left, FixedConstant(2.0)).Build(),
-            OpCode.AnalyticQuotient => AnalyticQuotient(left, right).Build(),
-            OpCode.Sin => Sin(left).Build(),
-            OpCode.Cos => Cos(left).Build(),
-            OpCode.Tan => Tan(left).Build(),
-            OpCode.Tanh => Tanh(left).Build(),
+            Operation.Add => (left + right).Build(),
+            Operation.Subtract => (left - right).Build(),
+            Operation.Multiply => (left * right).Build(),
+            Operation.Divide => (left / right).Build(),
+            Operation.Negate => Negate(left).Build(),
+            Operation.Exp => Exp(left).Build(),
+            Operation.Log => Log(left).Build(),
+            Operation.Sqrt => Sqrt(left).Build(),
+            Operation.Abs => Abs(left).Build(),
+            Operation.Square => Square(left).Build(),
+            Operation.Cube => Cube(left).Build(),
+            Operation.CubeRoot => CubeRoot(left).Build(),
+            Operation.Power => Power(left, FixedConstant(2.0)).Build(),
+            Operation.Root => Root(left, FixedConstant(2.0)).Build(),
+            Operation.AnalyticQuotient => AnalyticQuotient(left, right).Build(),
+            Operation.Sin => Sin(left).Build(),
+            Operation.Cos => Cos(left).Build(),
+            Operation.Tan => Tan(left).Build(),
+            Operation.Tanh => Tanh(left).Build(),
             _ => throw new ArgumentOutOfRangeException(nameof(operation))
         };
     }

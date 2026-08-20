@@ -1,3 +1,5 @@
+using HEAL.HeuristicLib.Numerics;
+
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
 public static class ExpressionCompiler
@@ -66,33 +68,32 @@ public static class ExpressionCompiler
             Push(new CompileNode(CompileNodeKind.Constant, instructions.Count - 1, 1, value));
         }
 
-        public void EmitOperator(OpCode opCode)
+        public void EmitOperation(Operation operation)
         {
-            var arity = OpCodes.GetArity(opCode);
+            var arity = OperationCatalog.GetInfo(operation).Arity;
             if (stackCount < arity)
-                throw new InvalidOperationException($"Opcode {opCode} requires {arity} operands but only {stackCount} are available.");
+                throw new InvalidOperationException($"Operation {operation} requires {arity} operands but only {stackCount} are available.");
 
-            if (optimize && (TryOptimizeConstantFold(opCode, arity) || TryOptimizeIdentityElimination(opCode, arity)))
+            if (optimize && (TryOptimizeConstantFold(operation, arity) || TryOptimizeIdentityElimination(operation, arity)))
                 return;
 
             if (arity == 1)
             {
                 var child = Pop();
-                instructions.Add(Instruction.Unary(opCode, child.Length));
+                instructions.Add(Instruction.Unary(operation, child.Length));
                 Push(new CompileNode(CompileNodeKind.Complex, instructions.Count - 1, child.Length + 1));
-                return;
             }
-
-            if (arity == 2)
+            else if (arity == 2)
             {
                 var right = Pop();
                 var left = Pop();
-                instructions.Add(Instruction.Binary(opCode, left.Length, right.Length));
+                instructions.Add(Instruction.Binary(operation, left.Length, right.Length));
                 Push(new CompileNode(CompileNodeKind.Complex, instructions.Count - 1, left.Length + right.Length + 1));
-                return;
             }
-
-            throw new InvalidOperationException($"Opcode {opCode} with arity {arity} is not supported by the symbolic expression compiler.");
+            else
+            {
+                throw new NotSupportedException($"Operation {operation} has unsupported arity {arity}.");
+            }
         }
 
         private void CompileExpressionNode(ExpressionNode node)
@@ -122,7 +123,7 @@ public static class ExpressionCompiler
             for (var i = 0; i < instructions.Count; i++)
             {
                 var instruction = instructions[i];
-                switch (OpCodes.GetPayloadKind(instruction.OpCode))
+                switch (OperationCatalog.GetInfo(instruction.Operation).PayloadKind)
                 {
                     case PayloadKind.Constant:
                         var constant = constants[instruction.PayloadIndex];
@@ -155,7 +156,7 @@ public static class ExpressionCompiler
             return CompiledExpression.FromOwnedArrays(compactedInstructions, compactedConstants.ToArray(), compactedVariables.ToArray());
         }
 
-        private bool TryOptimizeConstantFold(OpCode opCode, int arity)
+        private bool TryOptimizeConstantFold(Operation operation, int arity)
         {
             if (arity == 1)
             {
@@ -163,36 +164,15 @@ public static class ExpressionCompiler
                 if (child.Kind != CompileNodeKind.Constant)
                     return false;
 
-                var supported = true;
-                var value = opCode switch
-                {
-                    OpCode.Negate => -child.ConstantValue,
-                    OpCode.Exp => Math.Exp(child.ConstantValue),
-                    OpCode.Sin => Math.Sin(child.ConstantValue),
-                    OpCode.Cos => Math.Cos(child.ConstantValue),
-                    OpCode.Tan => Math.Tan(child.ConstantValue),
-                    OpCode.Tanh => Math.Tanh(child.ConstantValue),
-                    OpCode.Log => Math.Log(child.ConstantValue),
-                    OpCode.Sqrt => Math.Sqrt(child.ConstantValue),
-                    OpCode.Abs => Math.Abs(child.ConstantValue),
-                    OpCode.Square => child.ConstantValue * child.ConstantValue,
-                    OpCode.Cube => child.ConstantValue * child.ConstantValue * child.ConstantValue,
-                    OpCode.CubeRoot => Math.Cbrt(child.ConstantValue),
-                    _ => Unsupported()
-                };
-                if (!supported)
+                if (!OperationCatalog.TryGetInfo(operation, out var unaryInfo) || unaryInfo.Arity != 1)
                     return false;
+
+                var value = OperationCatalog.GetUnary(operation).Scalar(child.ConstantValue);
 
                 RollBackTo(child.RootIndex);
                 Pop();
                 EmitConstant(value);
                 return true;
-
-                double Unsupported()
-                {
-                    supported = false;
-                    return 0.0;
-                }
             }
 
             if (arity != 2)
@@ -203,49 +183,33 @@ public static class ExpressionCompiler
             if (left.Kind != CompileNodeKind.Constant || right.Kind != CompileNodeKind.Constant)
                 return false;
 
-            var supportedBinary = true;
-            var folded = opCode switch
-            {
-                OpCode.Add => left.ConstantValue + right.ConstantValue,
-                OpCode.Subtract => left.ConstantValue - right.ConstantValue,
-                OpCode.Multiply => left.ConstantValue * right.ConstantValue,
-                OpCode.Divide => left.ConstantValue / right.ConstantValue,
-                OpCode.Power => Math.Pow(left.ConstantValue, right.ConstantValue),
-                OpCode.Root => Math.Pow(left.ConstantValue, 1.0 / right.ConstantValue),
-                OpCode.AnalyticQuotient => left.ConstantValue / Math.Sqrt(1.0 + right.ConstantValue * right.ConstantValue),
-                _ => UnsupportedBinary()
-            };
-            if (!supportedBinary)
+            if (!OperationCatalog.TryGetInfo(operation, out var binaryInfo) || binaryInfo.Arity != 2)
                 return false;
+
+            var folded = OperationCatalog.GetBinary(operation).Scalar(left.ConstantValue, right.ConstantValue);
 
             RollBackTo(left.RootIndex);
             Pop();
             Pop();
             EmitConstant(folded);
             return true;
-
-            double UnsupportedBinary()
-            {
-                supportedBinary = false;
-                return 0.0;
-            }
         }
 
-        private bool TryOptimizeIdentityElimination(OpCode opCode, int arity)
+        private bool TryOptimizeIdentityElimination(Operation operation, int arity)
         {
             if (arity != 2 || stackCount < 2)
                 return false;
 
             var right = Peek();
             var left = compileStack[stackCount - 2];
-            if (IsRightIdentity(opCode, right))
+            if (IsRightIdentity(operation, right))
             {
                 RollBackTo(right.RootIndex);
                 Pop();
                 return true;
             }
 
-            if (!IsLeftIdentity(opCode, left))
+            if (!IsLeftIdentity(operation, left))
                 return false;
 
             var rightStartIndex = right.RootIndex - right.Length + 1;
@@ -256,15 +220,15 @@ public static class ExpressionCompiler
             return true;
         }
 
-        private static bool IsRightIdentity(OpCode opCode, CompileNode node) =>
+        private static bool IsRightIdentity(Operation operation, CompileNode node) =>
             node.Kind == CompileNodeKind.Constant
-            && ((opCode is OpCode.Add or OpCode.Subtract && node.ConstantValue == 0.0)
-                || (opCode is OpCode.Multiply or OpCode.Divide && node.ConstantValue == 1.0));
+            && ((operation is Operation.Add or Operation.Subtract && node.ConstantValue == 0.0)
+                || (operation is Operation.Multiply or Operation.Divide && node.ConstantValue == 1.0));
 
-        private static bool IsLeftIdentity(OpCode opCode, CompileNode node) =>
+        private static bool IsLeftIdentity(Operation operation, CompileNode node) =>
             node.Kind == CompileNodeKind.Constant
-            && ((opCode == OpCode.Add && node.ConstantValue == 0.0)
-                || (opCode == OpCode.Multiply && node.ConstantValue == 1.0));
+            && ((operation == Operation.Add && node.ConstantValue == 0.0)
+                || (operation == Operation.Multiply && node.ConstantValue == 1.0));
 
         private void MoveInstructionSpan(int sourceStart, int length, int targetStart)
         {

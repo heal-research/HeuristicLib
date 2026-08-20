@@ -1,6 +1,7 @@
 using System.Reflection;
 using HEAL.HeuristicLib.DataAnalysis;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
+using HEAL.HeuristicLib.Numerics;
 using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
@@ -743,9 +744,9 @@ public sealed class SymbolicExpressionTests
         {
             emitter.EmitChild(0);
             emitter.EmitChild(1);
-            emitter.EmitOperator(OpCode.Add);
+            emitter.EmitOperation(Operation.Add);
             emitter.EmitChild(2);
-            emitter.EmitOperator(OpCode.Add);
+            emitter.EmitOperation(Operation.Add);
         }
     }
 

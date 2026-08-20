@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.DataAnalysis;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions.AutomaticDifferentiation;
+using HEAL.HeuristicLib.Numerics;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 using AD = HEAL.HeuristicLib.Numerics.AutomaticDifferentiation;
 
@@ -276,7 +277,7 @@ public sealed class DifferentiableExpressionCompilerTests
         {
             emitter.EmitChild(0);
             emitter.EmitChild(0);
-            emitter.EmitOperator(OpCode.Multiply);
+            emitter.EmitOperation(Operation.Multiply);
         }
     }
 
@@ -286,7 +287,7 @@ public sealed class DifferentiableExpressionCompilerTests
         {
             emitter.EmitChild(1);
             emitter.EmitChild(0);
-            emitter.EmitOperator(OpCode.Subtract);
+            emitter.EmitOperation(Operation.Subtract);
         }
     }
 

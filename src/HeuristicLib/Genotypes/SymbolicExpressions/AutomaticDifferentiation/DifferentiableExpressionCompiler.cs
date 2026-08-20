@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using HEAL.HeuristicLib.Numerics;
 using AD = HEAL.HeuristicLib.Numerics.AutomaticDifferentiation;
 
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions.AutomaticDifferentiation;
@@ -89,18 +90,19 @@ internal static class DifferentiableExpressionCompiler
             valueStack.Add(builder.Constant(value));
         }
 
-        public void EmitOperator(OpCode opCode)
+        public void EmitOperation(Operation operation)
         {
             var frame = GetCurrentFrame();
-            if (opCode is OpCode.Variable or OpCode.Constant)
-                throw new InvalidOperationException($"Opcode {opCode} must be emitted through its terminal method.");
+            if (operation is Operation.Variable or Operation.Constant)
+                throw new InvalidOperationException($"Operation {operation} must be emitted through its terminal method.");
 
-            var arity = OpCodes.GetArity(opCode);
+            ref readonly var definition = ref OperationCatalog.GetInfo(operation);
+            var arity = definition.Arity;
             var availableValues = valueStack.Count - frame.StackStart;
             if (availableValues < arity)
-                throw new InvalidOperationException($"Symbol '{frame.Point.Node.Symbol.Name}' emitted {opCode}, which requires {arity} operands, but only {availableValues} are available.");
-            if (!IsSupported(opCode))
-                failure ??= new ExpressionCompilationFailure(frame.Point, opCode);
+                throw new InvalidOperationException($"Symbol '{frame.Point.Node.Symbol.Name}' emitted {operation}, which requires {arity} operands, but only {availableValues} are available.");
+            if (!definition.IsDifferentiable)
+                failure ??= new ExpressionCompilationFailure(frame.Point, operation);
             if (failure is not null)
             {
                 valueStack.RemoveRange(valueStack.Count - arity, arity);
@@ -108,45 +110,20 @@ internal static class DifferentiableExpressionCompiler
                 return;
             }
 
-            AD.Value result;
-            if (arity == 1)
+            switch (arity)
             {
-                var operand = Pop();
-                result = opCode switch
-                {
-                    OpCode.Negate => builder.Negate(operand),
-                    OpCode.Exp => builder.Exp(operand),
-                    OpCode.Log => builder.Log(operand),
-                    OpCode.Sqrt => builder.Sqrt(operand),
-                    OpCode.Abs => builder.Abs(operand),
-                    OpCode.Square => builder.Square(operand),
-                    OpCode.Cube => builder.Cube(operand),
-                    OpCode.CubeRoot => builder.CubeRoot(operand),
-                    OpCode.Sin => builder.Sin(operand),
-                    OpCode.Cos => builder.Cos(operand),
-                    OpCode.Tan => builder.Tan(operand),
-                    OpCode.Tanh => builder.Tanh(operand),
-                    _ => throw new InvalidOperationException($"Opcode {opCode} is not a supported unary operation.")
-                };
+                case 1:
+                    valueStack.Add(builder.Unary(operation, Pop()));
+                    break;
+                case 2:
+                    // The operands come off the stack in reverse.
+                    var right = Pop();
+                    var left = Pop();
+                    valueStack.Add(builder.Binary(operation, left, right));
+                    break;
+                default:
+                    throw new NotSupportedException($"Operation {operation} has unsupported arity {arity}.");
             }
-            else
-            {
-                var right = Pop();
-                var left = Pop();
-                result = opCode switch
-                {
-                    OpCode.Add => builder.Add(left, right),
-                    OpCode.Subtract => builder.Subtract(left, right),
-                    OpCode.Multiply => builder.Multiply(left, right),
-                    OpCode.Divide => builder.Divide(left, right),
-                    OpCode.Power => builder.Power(left, right),
-                    OpCode.Root => builder.Root(left, right),
-                    OpCode.AnalyticQuotient => builder.AnalyticQuotient(left, right),
-                    _ => throw new InvalidOperationException($"Opcode {opCode} is not a supported binary operation.")
-                };
-            }
-
-            valueStack.Add(result);
         }
 
         private AD.Value Lower(ExpressionPoint point)
@@ -185,13 +162,6 @@ internal static class DifferentiableExpressionCompiler
             valueStack.RemoveAt(index);
             return value;
         }
-
-        private static bool IsSupported(OpCode opCode) => opCode is
-            OpCode.Add or OpCode.Subtract or OpCode.Multiply or OpCode.Divide or
-            OpCode.Power or OpCode.Root or OpCode.AnalyticQuotient or
-            OpCode.Negate or OpCode.Exp or OpCode.Log or OpCode.Sqrt or OpCode.Abs or
-            OpCode.Square or OpCode.Cube or OpCode.CubeRoot or
-            OpCode.Sin or OpCode.Cos or OpCode.Tan or OpCode.Tanh;
 
         private sealed class EmissionFrame(ExpressionPoint point, int stackStart)
         {

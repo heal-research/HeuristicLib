@@ -11,6 +11,16 @@ internal sealed partial class Execution : IDisposable
     private double[] scalarPrimals;
     private double[] vectorPrimals;
     private double[] batchAdjoints;
+
+    // Working spans for operations that build an intermediate before producing their result. Sized for the most any
+    // one instruction in this program asks for, because no instruction holds scratch while another is using it.
+    private double[] scratch;
+    private readonly int scratchSpanCount;
+
+    // The same, for the reverse sweep. A separate buffer because a derivative builds different intermediates than the
+    // value does, and because the two are sized from counts each operation declares apart.
+    private double[] adjointScratch;
+    private readonly int adjointScratchSpanCount;
     private bool isDisposed;
 
     internal Execution(Program program, ReadOnlySpan<ReadOnlyMemory<double>> inputColumns, int rowCount, int batchCapacity)
@@ -24,6 +34,24 @@ internal sealed partial class Execution : IDisposable
         vectorPrimals = vectorBufferLength == 0 ? [] : ArrayPool<double>.Shared.Rent(vectorBufferLength);
         var adjointBufferLength = checked(program.AdjointSlotCount * batchCapacity);
         batchAdjoints = adjointBufferLength == 0 ? [] : ArrayPool<double>.Shared.Rent(adjointBufferLength);
+        scratchSpanCount = MaximumScratchSpanCount(program, static info => info.ScratchSpanCount);
+        var scratchLength = checked(scratchSpanCount * batchCapacity);
+        scratch = scratchLength == 0 ? [] : ArrayPool<double>.Shared.Rent(scratchLength);
+        adjointScratchSpanCount = MaximumScratchSpanCount(program, static info => info.AdjointScratchSpanCount);
+        var adjointScratchLength = checked(adjointScratchSpanCount * batchCapacity);
+        adjointScratch = adjointScratchLength == 0 ? [] : ArrayPool<double>.Shared.Rent(adjointScratchLength);
+    }
+
+    private static int MaximumScratchSpanCount(Program program, Func<OperationInfo, int> select)
+    {
+        var maximum = 0;
+        foreach (var instruction in program.Instructions)
+        {
+            if (OperationCatalog.TryGetInfo(instruction.Operation, out var info))
+                maximum = Math.Max(maximum, select(info));
+        }
+
+        return maximum;
     }
 
     internal int ParameterCount => program.ParameterCount;
@@ -82,6 +110,20 @@ internal sealed partial class Execution : IDisposable
         {
             buffer = batchAdjoints;
             batchAdjoints = [];
+            ArrayPool<double>.Shared.Return(buffer);
+        }
+
+        if (scratch.Length != 0)
+        {
+            buffer = scratch;
+            scratch = [];
+            ArrayPool<double>.Shared.Return(buffer);
+        }
+
+        if (adjointScratch.Length != 0)
+        {
+            buffer = adjointScratch;
+            adjointScratch = [];
             ArrayPool<double>.Shared.Return(buffer);
         }
     }

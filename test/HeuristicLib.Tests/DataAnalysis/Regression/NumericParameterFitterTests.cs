@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.DataAnalysis;
 using HEAL.HeuristicLib.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions.AutomaticDifferentiation;
+using HEAL.HeuristicLib.Numerics;
 using HEAL.HeuristicLib.Numerics.Optimization;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
@@ -289,11 +290,11 @@ public sealed class NumericParameterFitterTests
     {
         var expression = Sqrt(Variable("x")).Build();
         var failure = new NumericParameterFittingFailure.Compilation(
-            new ExpressionCompilationFailure(expression.RootPoint, OpCode.Sqrt));
+            new ExpressionCompilationFailure(expression.RootPoint, Operation.Sqrt));
 
         var exception = NumericParameterFitter.CreateException(failure, "data").ShouldBeOfType<NotSupportedException>();
 
         exception.Message.ShouldContain(expression.RootPoint.Node.Symbol.Name);
-        exception.Message.ShouldContain(nameof(OpCode.Sqrt));
+        exception.Message.ShouldContain(nameof(Operation.Sqrt));
     }
 }

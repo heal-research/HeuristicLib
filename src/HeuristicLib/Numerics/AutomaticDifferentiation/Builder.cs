@@ -12,7 +12,7 @@ internal sealed class Builder
     internal Value Input()
     {
         EnsureMutable();
-        return Append(Operation.Input, payloadIndex: inputCount++);
+        return Append(Operation.Variable, payloadIndex: inputCount++);
     }
 
     internal Value Parameter()
@@ -60,14 +60,14 @@ internal sealed class Builder
         return program;
     }
 
-    private Value Unary(Operation operation, Value value)
+    internal Value Unary(Operation operation, Value value)
     {
         EnsureMutable();
         var operand = GetInstructionIndex(value, nameof(value));
         return Append(operation, leftOperand: operand);
     }
 
-    private Value Binary(Operation operation, Value left, Value right)
+    internal Value Binary(Operation operation, Value left, Value right)
     {
         EnsureMutable();
         var leftOperand = GetInstructionIndex(left, nameof(left));
@@ -132,7 +132,7 @@ internal sealed class Builder
             }
 
             var instruction = instructions[instructionIndex];
-            if (instruction.Operation == Operation.Input)
+            if (instruction.Operation == Operation.Variable)
                 throw new InvalidOperationException($"Input {instruction.PayloadIndex} is not reachable from the program root.");
 
             if (instruction.Operation == Operation.Parameter)
@@ -171,7 +171,7 @@ internal sealed class Builder
                 constants.Add(source.ConstantValue);
             }
 
-            var vectorPrimalSlot = source.Operation != Operation.Input && dependsOnInput ? vectorPrimalSlotCount++ : NoIndex;
+            var vectorPrimalSlot = source.Operation != Operation.Variable && dependsOnInput ? vectorPrimalSlotCount++ : NoIndex;
             var adjointSlot = dependsOnParameter ? adjointSlotCount++ : NoIndex;
             var compiledInstructionIndex = compiledInstructions.Count;
 
@@ -203,7 +203,7 @@ internal sealed class Builder
     }
 
     private static bool DependsOnInput(Operation operation, int leftOperand, int rightOperand, List<Instruction> compiledInstructions) =>
-        operation == Operation.Input || OperandDependsOnInput(leftOperand, compiledInstructions) || OperandDependsOnInput(rightOperand, compiledInstructions);
+        operation == Operation.Variable || OperandDependsOnInput(leftOperand, compiledInstructions) || OperandDependsOnInput(rightOperand, compiledInstructions);
 
     private static bool DependsOnParameter(Operation operation, int leftOperand, int rightOperand, List<Instruction> compiledInstructions) =>
         operation == Operation.Parameter || OperandDependsOnParameter(leftOperand, compiledInstructions) || OperandDependsOnParameter(rightOperand, compiledInstructions);

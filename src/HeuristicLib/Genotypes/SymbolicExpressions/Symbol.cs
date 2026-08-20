@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Numerics;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Random.Distributions;
 
@@ -202,39 +203,39 @@ public abstract record OperationSymbol(string Name, int Arity) : Symbol(Name, Ar
     }
 }
 
-public abstract record BuiltInOperationSymbol(string Name, OpCode OpCode)
-    : OperationSymbol(Name, OpCodes.GetArity(OpCode))
+public abstract record BuiltInOperationSymbol(string Name, Operation Operation)
+    : OperationSymbol(Name, OperationCatalog.GetInfo(Operation).Arity)
 {
     public override void Emit(ExpressionNode node, IExpressionEmitter emitter)
     {
         for (var i = 0; i < Arity; i++)
             emitter.EmitChild(i);
 
-        emitter.EmitOperator(OpCode);
+        emitter.EmitOperation(Operation);
     }
 }
 
-public sealed record AdditionSymbol() : BuiltInOperationSymbol("+", OpCode.Add);
-public sealed record SubtractionSymbol() : BuiltInOperationSymbol("-", OpCode.Subtract);
-public sealed record MultiplicationSymbol() : BuiltInOperationSymbol("*", OpCode.Multiply);
-public sealed record DivisionSymbol() : BuiltInOperationSymbol("/", OpCode.Divide);
+public sealed record AdditionSymbol() : BuiltInOperationSymbol("+", Operation.Add);
+public sealed record SubtractionSymbol() : BuiltInOperationSymbol("-", Operation.Subtract);
+public sealed record MultiplicationSymbol() : BuiltInOperationSymbol("*", Operation.Multiply);
+public sealed record DivisionSymbol() : BuiltInOperationSymbol("/", Operation.Divide);
 
-public sealed record NegationSymbol() : BuiltInOperationSymbol("negate", OpCode.Negate);
-public sealed record ExponentialSymbol() : BuiltInOperationSymbol("exp", OpCode.Exp);
-public sealed record SineSymbol() : BuiltInOperationSymbol("sin", OpCode.Sin);
-public sealed record CosineSymbol() : BuiltInOperationSymbol("cos", OpCode.Cos);
-public sealed record TangentSymbol() : BuiltInOperationSymbol("tan", OpCode.Tan);
-public sealed record HyperbolicTangentSymbol() : BuiltInOperationSymbol("tanh", OpCode.Tanh);
-public sealed record LogarithmSymbol() : BuiltInOperationSymbol("log", OpCode.Log);
-public sealed record SquareRootSymbol() : BuiltInOperationSymbol("sqrt", OpCode.Sqrt);
-public sealed record AbsoluteSymbol() : BuiltInOperationSymbol("abs", OpCode.Abs);
-public sealed record SquareSymbol() : BuiltInOperationSymbol("square", OpCode.Square);
-public sealed record CubeSymbol() : BuiltInOperationSymbol("cube", OpCode.Cube);
-public sealed record CubeRootSymbol() : BuiltInOperationSymbol("cbrt", OpCode.CubeRoot);
+public sealed record NegationSymbol() : BuiltInOperationSymbol("negate", Operation.Negate);
+public sealed record ExponentialSymbol() : BuiltInOperationSymbol("exp", Operation.Exp);
+public sealed record SineSymbol() : BuiltInOperationSymbol("sin", Operation.Sin);
+public sealed record CosineSymbol() : BuiltInOperationSymbol("cos", Operation.Cos);
+public sealed record TangentSymbol() : BuiltInOperationSymbol("tan", Operation.Tan);
+public sealed record HyperbolicTangentSymbol() : BuiltInOperationSymbol("tanh", Operation.Tanh);
+public sealed record LogarithmSymbol() : BuiltInOperationSymbol("log", Operation.Log);
+public sealed record SquareRootSymbol() : BuiltInOperationSymbol("sqrt", Operation.Sqrt);
+public sealed record AbsoluteSymbol() : BuiltInOperationSymbol("abs", Operation.Abs);
+public sealed record SquareSymbol() : BuiltInOperationSymbol("square", Operation.Square);
+public sealed record CubeSymbol() : BuiltInOperationSymbol("cube", Operation.Cube);
+public sealed record CubeRootSymbol() : BuiltInOperationSymbol("cbrt", Operation.CubeRoot);
 
-public sealed record PowerSymbol() : BuiltInOperationSymbol("pow", OpCode.Power);
-public sealed record RootSymbol() : BuiltInOperationSymbol("root", OpCode.Root);
-public sealed record AnalyticQuotientSymbol() : BuiltInOperationSymbol("aq", OpCode.AnalyticQuotient);
+public sealed record PowerSymbol() : BuiltInOperationSymbol("pow", Operation.Power);
+public sealed record RootSymbol() : BuiltInOperationSymbol("root", Operation.Root);
+public sealed record AnalyticQuotientSymbol() : BuiltInOperationSymbol("aq", Operation.AnalyticQuotient);
 
 public sealed record SigmoidSymbol() : OperationSymbol("sigmoid", 1)
 {
@@ -243,10 +244,10 @@ public sealed record SigmoidSymbol() : OperationSymbol("sigmoid", 1)
         emitter.EmitConstant(1.0);
         emitter.EmitConstant(1.0);
         emitter.EmitChild(0);
-        emitter.EmitOperator(OpCode.Negate);
-        emitter.EmitOperator(OpCode.Exp);
-        emitter.EmitOperator(OpCode.Add);
-        emitter.EmitOperator(OpCode.Divide);
+        emitter.EmitOperation(Operation.Negate);
+        emitter.EmitOperation(Operation.Exp);
+        emitter.EmitOperation(Operation.Add);
+        emitter.EmitOperation(Operation.Divide);
     }
 }
 

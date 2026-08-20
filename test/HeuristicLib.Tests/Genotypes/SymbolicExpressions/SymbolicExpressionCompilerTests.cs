@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.DataAnalysis;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
+using HEAL.HeuristicLib.Numerics;
 using HEAL.HeuristicLib.Random.Distributions;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
@@ -15,7 +16,7 @@ public sealed class SymbolicExpressionCompilerTests
 
         var compiled = expression.Compile(optimize: false);
 
-        compiled.TraversePostOrder().Select(node => node.OpCode).ShouldBe([OpCode.Variable, OpCode.Constant, OpCode.Add]);
+        compiled.TraversePostOrder().Select(node => node.Operation).ShouldBe([Operation.Variable, Operation.Constant, Operation.Add]);
         expression.EvaluateSingleRow(("x0", 3.0)).ShouldBe(15.0);
     }
 
@@ -160,7 +161,7 @@ public sealed class SymbolicExpressionCompilerTests
     private static double[] GetConstants(CompiledExpression expression)
     {
         var constants = new List<double>();
-        foreach (var node in expression.TraversePostOrder().Where(node => node.OpCode == OpCode.Constant))
+        foreach (var node in expression.TraversePostOrder().Where(node => node.Operation == Operation.Constant))
         {
             node.TryGetConstantValue(out var value).ShouldBeTrue();
             constants.Add(value);
@@ -175,7 +176,7 @@ public sealed class SymbolicExpressionCompilerTests
         {
             emitter.EmitChild(0);
             emitter.EmitConstant(2.0);
-            emitter.EmitOperator(OpCode.Multiply);
+            emitter.EmitOperation(Operation.Multiply);
         }
     }
 }
