@@ -141,7 +141,10 @@ public readonly record struct MeanVarianceStatistics
 {
     private readonly MeanVarianceAccumulator accumulator;
 
-    internal MeanVarianceStatistics(MeanVarianceAccumulator accumulator) => this.accumulator = accumulator;
+    internal MeanVarianceStatistics(MeanVarianceAccumulator accumulator)
+    {
+        this.accumulator = accumulator;
+    }
 
     public long Count => accumulator.Count;
     public double Mean => Count > 0 ? accumulator.Mean : double.NaN;
@@ -155,7 +158,10 @@ public readonly record struct MomentStatistics
 {
     private readonly MomentAccumulator accumulator;
 
-    internal MomentStatistics(MomentAccumulator accumulator) => this.accumulator = accumulator;
+    internal MomentStatistics(MomentAccumulator accumulator)
+    {
+        this.accumulator = accumulator;
+    }
 
     public long Count => accumulator.Count;
     public double Mean => Count > 0 ? accumulator.Mean : double.NaN;
@@ -185,7 +191,10 @@ public readonly record struct CovarianceStatistics
 {
     private readonly CovarianceAccumulator accumulator;
 
-    internal CovarianceStatistics(CovarianceAccumulator accumulator) => this.accumulator = accumulator;
+    internal CovarianceStatistics(CovarianceAccumulator accumulator)
+    {
+        this.accumulator = accumulator;
+    }
 
     public long Count => accumulator.Count;
     public double MeanX => Count > 0 ? accumulator.MeanX : double.NaN;

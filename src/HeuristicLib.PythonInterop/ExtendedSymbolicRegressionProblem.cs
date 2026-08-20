@@ -7,6 +7,8 @@ using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
+using HEAL.HeuristicLib.Operators.Refiners;
+using HEAL.HeuristicLib.Operators.Refiners.SymbolicRegressionRefiners;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -39,6 +41,13 @@ public class ExtendedSymbolicRegressionProblem(
     Func<ExpressionTree, ObjectiveVector, double[]> individualPythonCallback)
     : SingleSolutionProblem<ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
 {
+    private sealed record InnerProblemParameterFittingRefiner(NumericParameterFittingRefiner ChildRefiner)
+        : SingleCandidateRefiner<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>
+    {
+        public override ExpressionTree RefineCandidate(ExpressionTree candidate, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, ExtendedSymbolicRegressionProblem problem) =>
+            ChildRefiner.RefineCandidate(candidate, random, searchSpace, problem.InnerProblem);
+    }
+
     public required SymbolicRegressionProblem InnerProblem { get; init; }
 
     public override ObjectiveVector Evaluate(ExpressionTree solution, IRandomNumberGenerator random) =>
@@ -53,11 +62,6 @@ public class ExtendedSymbolicRegressionProblem(
         bool useLinearScaling = true,
         int parameterOptimizationIterations = 5)
     {
-        // This problem composes a SymbolicRegressionProblem as its InnerProblem rather than deriving from it, so
-        // NumericParameterFittingRefiner does not fit this algorithm's refiner slot.
-        if (parameterOptimizationIterations > 0)
-            throw new NotSupportedException("Numeric parameter fitting is not yet available for the extended symbolic-regression problem.");
-
         var data = PythonRegressionData.ReadCsv(file, trainingRowCount);
         var operations = new OperationSymbol[]
         {
@@ -118,7 +122,9 @@ public class ExtendedSymbolicRegressionProblem(
             Selector = new TournamentSelector<ExpressionTree>(4),
             PopulationSize = 300,
             Evaluator = new EquationScoringEvaluator(populationwidePythonCallback),
-            MaximumGenerations = 200
+            MaximumGenerations = 200,
+            Refiner = new InnerProblemParameterFittingRefiner(
+                new NumericParameterFittingRefiner { MaximumIterations = parameterOptimizationIterations })
         };
 
         return algorithm

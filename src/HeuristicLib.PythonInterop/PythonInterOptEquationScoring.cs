@@ -6,6 +6,8 @@ using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
+using HEAL.HeuristicLib.Operators.Refiners;
+using HEAL.HeuristicLib.Operators.Refiners.SymbolicRegressionRefiners;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -25,7 +27,15 @@ public class PythonInterOptEquationScoring(
     Func<ExpressionTree, ObjectiveVector, double[]> score)
     : SingleSolutionProblem<ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
 {
+    private sealed record InnerProblemParameterFittingRefiner(NumericParameterFittingRefiner ChildRefiner)
+        : SingleCandidateRefiner<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>
+    {
+        public override ExpressionTree RefineCandidate(ExpressionTree candidate, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, PythonInterOptEquationScoring problem) =>
+            ChildRefiner.RefineCandidate(candidate, random, searchSpace, problem.InnerProblem);
+    }
+
     public required SymbolicRegressionProblem InnerProblem { get; init; }
+    public int ParameterOptimizationIterations { get; init; } = 5;
 
     public override ObjectiveVector Evaluate(ExpressionTree solution, IRandomNumberGenerator random) =>
         score(solution, InnerProblem.Evaluate(solution));
@@ -37,11 +47,6 @@ public class PythonInterOptEquationScoring(
         bool useLinearScaling = true,
         int parameterOptimizationIterations = 5)
     {
-        // Like ExtendedSymbolicRegressionProblem, this problem composes a SymbolicRegressionProblem rather than deriving
-        // from it, so NumericParameterFittingRefiner does not fit this algorithm's refiner slot.
-        if (parameterOptimizationIterations > 0)
-            throw new NotSupportedException("Numeric parameter fitting is not yet available for the equation-scoring problem.");
-
         var data = PythonRegressionData.ReadCsv(file, trainingRowCount);
         var operations = new OperationSymbol[]
         {
@@ -84,7 +89,8 @@ public class PythonInterOptEquationScoring(
             searchSpace,
             score)
         {
-            InnerProblem = innerProblem
+            InnerProblem = innerProblem,
+            ParameterOptimizationIterations = parameterOptimizationIterations
         };
     }
 
@@ -99,7 +105,9 @@ public class PythonInterOptEquationScoring(
             MutationRate = 0.1,
             Selector = new TournamentSelector<ExpressionTree>(4),
             PopulationSize = 300,
-            MaximumGenerations = 200
+            MaximumGenerations = 200,
+            Refiner = new InnerProblemParameterFittingRefiner(
+                new NumericParameterFittingRefiner { MaximumIterations = problem.ParameterOptimizationIterations })
         };
 
         return algorithm

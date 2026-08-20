@@ -22,6 +22,8 @@
       href: data-analysis.md
     - name: Symbolic expressions
       href: symbolic-expressions.md
+    - name: Symbolic regression
+      href: symbolic-regression.md
     - name: Problem
       href: problem.md
     - name: Search spaces

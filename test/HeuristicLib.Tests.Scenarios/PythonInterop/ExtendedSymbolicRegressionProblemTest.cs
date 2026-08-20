@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.PythonInterop;
@@ -19,8 +20,7 @@ public class ExtendedSymbolicRegressionProblemTest
             file,
             40,
             individualCallback,
-            populationCallback,
-            parameterOptimizationIterations: 0);
+            populationCallback);
         pop.EvaluatedCandidates.Count.ShouldBe(300);
         pop.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 5).ShouldBeTrue();
         pop.EvaluatedCandidates.All(solution => solution.ObjectiveVector.All(double.IsFinite)).ShouldBeTrue();
@@ -35,15 +35,76 @@ public class ExtendedSymbolicRegressionProblemTest
     }
 
     [Fact]
-    public void DefaultConfiguration_ReportsUnavailableParameterOptimization()
+    public void RunDefault_FitsNumericParametersBeforePythonCallback()
     {
-        Func<ExpressionTree[], ObjectiveVector[], double[][]> populationCallback =
-            (trees, objectives) => objectives.Select(objective => objective.ToArray()).ToArray();
+        var file = Path.Combine("TestData", "192_vineyard.tsv");
+        var unfitted = CaptureFirstPopulation(file, parameterOptimizationIterations: 0);
+        var fitted = CaptureFirstPopulation(file, parameterOptimizationIterations: 5);
 
-        Should.Throw<NotSupportedException>(() => ExtendedSymbolicRegressionProblem.RunDefault(
-            "unused.csv",
+        unfitted.Select(Structure).ShouldBe(fitted.Select(Structure));
+
+        var changedCandidates = unfitted.Zip(fitted)
+            .Where(pair => EvolvableConstantValues(pair.First).Count > 0)
+            .Where(pair => !EvolvableConstantValues(pair.First).SequenceEqual(EvolvableConstantValues(pair.Second)))
+            .ToArray();
+
+        changedCandidates.ShouldNotBeEmpty();
+
+        var fittingProblem = PythonInterOptEquationScoring.DefaultConf(
+            file,
             40,
-            null,
-            populationCallback));
+            (_, objective) => objective.ToArray(),
+            parameterOptimizationIterations: 0).InnerProblem;
+
+        changedCandidates.Any(pair =>
+            MeanSquaredError(pair.Second, fittingProblem.TrainingData) <
+            MeanSquaredError(pair.First, fittingProblem.TrainingData)).ShouldBeTrue();
+    }
+
+    private static ExpressionTree[] CaptureFirstPopulation(string file, int parameterOptimizationIterations)
+    {
+        ExpressionTree[]? population = null;
+
+        Should.Throw<OperationCanceledException>(() => ExtendedSymbolicRegressionProblem.RunDefault(
+            file,
+            40,
+            individualPythonCallback: null,
+            populationwidePythonCallback: (trees, _) =>
+            {
+                population = trees;
+                throw new OperationCanceledException();
+            },
+            parameterOptimizationIterations: parameterOptimizationIterations));
+
+        return population.ShouldNotBeNull();
+    }
+
+    private static string Structure(ExpressionTree tree) =>
+        string.Join(",", tree.TraversePreOrder().Select(node => node switch
+        {
+            NumericConstantExpressionNode => $"{node.Symbol.Name}:constant",
+            VariableExpressionNode variable => $"{node.Symbol.Name}:{variable.VariableName}",
+            _ => node.Symbol.Name
+        }));
+
+    private static IReadOnlyList<double> EvolvableConstantValues(ExpressionTree tree) =>
+        tree.TraversePreOrder()
+            .OfType<NumericConstantExpressionNode>()
+            .Where(node => node.Symbol is EvolvableConstantSymbol)
+            .Select(node => node.Value)
+            .ToArray();
+
+    private static double MeanSquaredError(ExpressionTree tree, RegressionData data)
+    {
+        var predictions = tree.Evaluate(data.Inputs);
+        var targets = data.Target.Values.Span;
+        var squaredError = 0.0;
+        for (var i = 0; i < predictions.Length; i++)
+        {
+            var error = predictions[i] - targets[i];
+            squaredError += error * error;
+        }
+
+        return squaredError / predictions.Length;
     }
 }

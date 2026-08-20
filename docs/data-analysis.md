@@ -46,6 +46,41 @@ non-thread-safe accumulators support individual observations, span batches,
 merging independent accumulators, and resetting. Batch updates use the same
 centered calculations as the one-shot API and do not retain observations.
 
+## Feature importance
+
+`FeatureImportance` measures how much a fitted predictor relies on each input feature
+by perturbing one feature at a time and observing how the metric changes:
+
+```csharp
+FeatureImportanceResults results = FeatureImportance.Permutation(regressor, data, random);
+```
+
+The simple entry point uses MSE, five repetitions, and every numeric input feature.
+Generic overloads accept any `IPredictor<T>` with a matching `IPredictionMetric<T>`,
+and a multi-metric overload reuses one baseline prediction and each perturbed
+prediction across all metrics.
+
+`Perturbation` takes an explicit replacement policy instead of assuming permutation:
+
+```csharp
+var results = FeatureImportance.Perturbation(
+    regressor, data, random, Metrics.MSE, FeaturePerturbations.Median);
+```
+
+`FeaturePerturbations` offers `Permutation`, `Mean`, `Median`, and
+`Resampling(distribution)`. Resampling without an explicit distribution derives a
+normal distribution from each feature's own mean and population standard deviation.
+
+**Positive importance always means perturbing the feature made the metric worse**,
+whether the metric is minimized or maximized. `FeatureImportanceResults` holds the
+baseline plus one `FeatureImportanceResult` per feature, each retaining the raw
+perturbed metric and importance values alongside their mean and population standard
+deviation.
+
+Row subsampling is deliberately absent: construct the `DataFrame` you want before
+calling. Population weights, parallel execution, grouped features, and categorical
+perturbation are not implemented.
+
 ## Linear scaling
 
 Least-squares linear scaling fits an affine transformation of raw predictions:

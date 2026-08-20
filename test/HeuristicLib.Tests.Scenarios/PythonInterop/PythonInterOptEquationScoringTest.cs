@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.PythonInterop;
@@ -17,8 +18,7 @@ public class PythonInterOptEquationScoringTest
         var p = PythonInterOptEquationScoring.DefaultConf(
             file,
             30,
-            (x, y) => [y[0], y[0], 0.9, 0.9, 0.9],
-            parameterOptimizationIterations: 0);
+            (x, y) => [y[0], y[0], 0.9, 0.9, 0.9]);
         p.SearchSpace.MaximumLength.ShouldBe(40);
         p.SearchSpace.MaximumDepth.ShouldBe(20);
         p.Objective.Directions.ShouldBe(Enumerable.Repeat(ObjectiveDirection.Maximize, 5));
@@ -39,6 +39,7 @@ public class PythonInterOptEquationScoringTest
             (new MultiplicativeNumericPerturbation(new NormalDoubleDistribution(0.0, 0.03)), 0.5)
         ]));
         p.InnerProblem.UseLinearScaling.ShouldBeTrue();
+        p.ParameterOptimizationIterations.ShouldBe(5);
         var pop = PythonInterOptEquationScoring.RunDefault(p);
         pop.EvaluatedCandidates.Count.ShouldBe(300);
         pop.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 5).ShouldBeTrue();
@@ -52,11 +53,74 @@ public class PythonInterOptEquationScoringTest
     }
 
     [Fact]
-    public void DefaultConfiguration_ReportsUnavailableParameterOptimization()
+    public void RunDefault_FitsNumericParametersBeforePythonCallback()
     {
-        Should.Throw<NotSupportedException>(() => PythonInterOptEquationScoring.DefaultConf(
-            "unused.csv",
+        var file = Path.Combine("TestData", "192_vineyard.tsv");
+        var unfitted = CaptureFirstPopulation(file, parameterOptimizationIterations: 0);
+        var fitted = CaptureFirstPopulation(file, parameterOptimizationIterations: 5);
+
+        unfitted.Candidates.Select(Structure).ShouldBe(fitted.Candidates.Select(Structure));
+
+        var changedCandidates = unfitted.Candidates.Zip(fitted.Candidates)
+            .Where(pair => EvolvableConstantValues(pair.First).Count > 0)
+            .Where(pair => !EvolvableConstantValues(pair.First).SequenceEqual(EvolvableConstantValues(pair.Second)))
+            .ToArray();
+
+        changedCandidates.ShouldNotBeEmpty();
+        changedCandidates.Any(pair =>
+            MeanSquaredError(pair.Second, fitted.Problem.InnerProblem.TrainingData) <
+            MeanSquaredError(pair.First, unfitted.Problem.InnerProblem.TrainingData)).ShouldBeTrue();
+    }
+
+    private static (IReadOnlyList<ExpressionTree> Candidates, PythonInterOptEquationScoring Problem) CaptureFirstPopulation(
+        string file,
+        int parameterOptimizationIterations)
+    {
+        var captured = new List<ExpressionTree>();
+        var problem = PythonInterOptEquationScoring.DefaultConf(
+            file,
             30,
-            (x, y) => [y[0], y[0], 0.9, 0.9, 0.9]));
+            (candidate, objective) =>
+            {
+                captured.Add(candidate);
+                if (captured.Count == 300)
+                    throw new OperationCanceledException();
+
+                return [objective[0], objective[0], 0.9, 0.9, 0.9];
+            },
+            parameterOptimizationIterations: parameterOptimizationIterations);
+
+        Should.Throw<OperationCanceledException>(() => PythonInterOptEquationScoring.RunDefault(problem));
+
+        return (captured, problem);
+    }
+
+    private static string Structure(ExpressionTree tree) =>
+        string.Join(",", tree.TraversePreOrder().Select(node => node switch
+        {
+            NumericConstantExpressionNode => $"{node.Symbol.Name}:constant",
+            VariableExpressionNode variable => $"{node.Symbol.Name}:{variable.VariableName}",
+            _ => node.Symbol.Name
+        }));
+
+    private static IReadOnlyList<double> EvolvableConstantValues(ExpressionTree tree) =>
+        tree.TraversePreOrder()
+            .OfType<NumericConstantExpressionNode>()
+            .Where(node => node.Symbol is EvolvableConstantSymbol)
+            .Select(node => node.Value)
+            .ToArray();
+
+    private static double MeanSquaredError(ExpressionTree tree, RegressionData data)
+    {
+        var predictions = tree.Evaluate(data.Inputs);
+        var targets = data.Target.Values.Span;
+        var squaredError = 0.0;
+        for (var i = 0; i < predictions.Length; i++)
+        {
+            var error = predictions[i] - targets[i];
+            squaredError += error * error;
+        }
+
+        return squaredError / predictions.Length;
     }
 }
