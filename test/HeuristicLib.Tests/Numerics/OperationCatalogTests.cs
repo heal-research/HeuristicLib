@@ -106,13 +106,19 @@ public sealed class OperationCatalogTests
     public void ArityMatchesTheOperation(Operation operation, int expected) =>
         OperationCatalog.GetInfo(operation).Arity.ShouldBe(expected);
 
-    [Theory]
-    [InlineData(Operation.Variable, PayloadKind.VariableReference)]
-    [InlineData(Operation.Constant, PayloadKind.Constant)]
-    [InlineData(Operation.Parameter, PayloadKind.Parameter)]
-    [InlineData(Operation.Multiply, PayloadKind.None)]
-    public void PayloadKindMatchesTheOperation(Operation operation, PayloadKind expected) =>
-        OperationCatalog.GetInfo(operation).PayloadKind.ShouldBe(expected);
+    // A fact rather than a theory because the payload kind is internal, and a public theory cannot take it as a
+    // parameter. The cases are the same.
+    [Fact]
+    public void PayloadKindMatchesTheOperation()
+    {
+        AssertPayloadKind(Operation.Variable, PayloadKind.VariableReference);
+        AssertPayloadKind(Operation.Constant, PayloadKind.Constant);
+        AssertPayloadKind(Operation.Parameter, PayloadKind.Parameter);
+        AssertPayloadKind(Operation.Multiply, PayloadKind.None);
+
+        static void AssertPayloadKind(Operation operation, PayloadKind expected) =>
+            OperationCatalog.GetInfo(operation).PayloadKind.ShouldBe(expected);
+    }
 
     [Theory]
     [InlineData(Operation.Variable, true)]
@@ -141,18 +147,22 @@ public sealed class OperationCatalogTests
 
     // Rendering an expression reads the name and the notation from here, so a wrong notation would print a binary
     // function as though it were an operator.
-    [Theory]
-    [InlineData(Operation.Add, "+", OperationNotation.Infix)]
-    [InlineData(Operation.Divide, "/", OperationNotation.Infix)]
-    [InlineData(Operation.Power, "pow", OperationNotation.Function)]
-    [InlineData(Operation.AnalyticQuotient, "aq", OperationNotation.Function)]
-    [InlineData(Operation.Exp, "exp", OperationNotation.Function)]
-    [InlineData(Operation.CubeRoot, "cbrt", OperationNotation.Function)]
-    public void NameAndNotationMatchTheOperation(Operation operation, string name, OperationNotation notation)
+    [Fact]
+    public void NameAndNotationMatchTheOperation()
     {
-        ref readonly var info = ref OperationCatalog.GetInfo(operation);
-        info.Name.ShouldBe(name);
-        info.Notation.ShouldBe(notation);
+        AssertNameAndNotation(Operation.Add, "+", OperationNotation.Infix);
+        AssertNameAndNotation(Operation.Divide, "/", OperationNotation.Infix);
+        AssertNameAndNotation(Operation.Power, "pow", OperationNotation.Function);
+        AssertNameAndNotation(Operation.AnalyticQuotient, "aq", OperationNotation.Function);
+        AssertNameAndNotation(Operation.Exp, "exp", OperationNotation.Function);
+        AssertNameAndNotation(Operation.CubeRoot, "cbrt", OperationNotation.Function);
+
+        static void AssertNameAndNotation(Operation operation, string name, OperationNotation notation)
+        {
+            ref readonly var info = ref OperationCatalog.GetInfo(operation);
+            info.Name.ShouldBe(name);
+            info.Notation.ShouldBe(notation);
+        }
     }
 
     [Fact]

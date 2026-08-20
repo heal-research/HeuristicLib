@@ -2,7 +2,7 @@ using HEAL.HeuristicLib.Numerics;
 
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
-public static class ExpressionCompiler
+internal static class ExpressionCompiler
 {
     public static CompiledExpression Compile(ExpressionTree expression, bool optimize = true)
     {

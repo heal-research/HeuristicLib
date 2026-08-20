@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Numerics;
 /// to supply them, which a switch cannot do: a switch that forgets a case still compiles. Arity is deliberately not
 /// declared, because it follows from which interface an operation implements and so cannot be stated wrongly.
 /// </remarks>
-public interface IOperationDefinition
+internal interface IOperationDefinition
 {
     static abstract Operation Operation { get; }
 
@@ -18,7 +18,7 @@ public interface IOperationDefinition
     static abstract bool IsDifferentiable { get; }
 }
 
-public interface ITerminalOperationDefinition : IOperationDefinition
+internal interface ITerminalOperationDefinition : IOperationDefinition
 {
     static abstract PayloadKind PayloadKind { get; }
 }
@@ -27,7 +27,7 @@ public interface ITerminalOperationDefinition : IOperationDefinition
 /// An operand is either one value, when a constant subexpression folded, or a span of values. Both shapes are
 /// declared so a caller can pick without the operation knowing how operands are stored.
 /// </remarks>
-public interface IUnaryOperationDefinition : IOperationDefinition
+internal interface IUnaryOperationDefinition : IOperationDefinition
 {
     /// <summary>How many working spans this operation needs. Each is as long as the result.</summary>
     static abstract int ScratchSpanCount { get; }
@@ -63,7 +63,7 @@ public interface IUnaryOperationDefinition : IOperationDefinition
 /// broadcast forms that avoid expanding a single value into a whole span, and lets the caller route to the right
 /// one without every operation repeating that choice.
 /// </remarks>
-public interface IBinaryOperationDefinition : IOperationDefinition
+internal interface IBinaryOperationDefinition : IOperationDefinition
 {
     /// <summary>How many working spans this operation needs. Each is as long as the result.</summary>
     static abstract int ScratchSpanCount { get; }

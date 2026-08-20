@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Numerics;
 /// counted collection rather than as one span is what makes the declared count real: a single span parameter
 /// silently ignores any operation that asks for two.
 /// </remarks>
-public readonly ref struct ScratchSpans
+internal readonly ref struct ScratchSpans
 {
     private readonly Span<double> buffer;
     private readonly int spanLength;

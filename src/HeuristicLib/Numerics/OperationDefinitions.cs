@@ -13,7 +13,7 @@ namespace HEAL.HeuristicLib.Numerics;
 /// reverse sweep stops, not a step it takes: a variable and a constant contribute no derivative, and a parameter is
 /// where the accumulated adjoints are read out.
 /// </remarks>
-public readonly struct VariableDefinition : ITerminalOperationDefinition
+internal readonly struct VariableDefinition : ITerminalOperationDefinition
 {
     public static Operation Operation => Operation.Variable;
     public static string Name => "variable";
@@ -21,7 +21,7 @@ public readonly struct VariableDefinition : ITerminalOperationDefinition
     public static PayloadKind PayloadKind => PayloadKind.VariableReference;
 }
 
-public readonly struct ConstantDefinition : ITerminalOperationDefinition
+internal readonly struct ConstantDefinition : ITerminalOperationDefinition
 {
     public static Operation Operation => Operation.Constant;
     public static string Name => "constant";
@@ -29,7 +29,7 @@ public readonly struct ConstantDefinition : ITerminalOperationDefinition
     public static PayloadKind PayloadKind => PayloadKind.Constant;
 }
 
-public readonly struct ParameterDefinition : ITerminalOperationDefinition
+internal readonly struct ParameterDefinition : ITerminalOperationDefinition
 {
     public static Operation Operation => Operation.Parameter;
     public static string Name => "parameter";
@@ -37,7 +37,7 @@ public readonly struct ParameterDefinition : ITerminalOperationDefinition
     public static PayloadKind PayloadKind => PayloadKind.Parameter;
 }
 
-public readonly struct NegateDefinition : IUnaryOperationDefinition
+internal readonly struct NegateDefinition : IUnaryOperationDefinition
 {
     public static Operation Operation => Operation.Negate;
     public static string Name => "negate";
@@ -53,7 +53,7 @@ public readonly struct NegateDefinition : IUnaryOperationDefinition
         TensorPrimitives.MultiplyAdd(upstream, -1.0, operandAdjoints, operandAdjoints);
 }
 
-public readonly struct ExpDefinition : IUnaryOperationDefinition
+internal readonly struct ExpDefinition : IUnaryOperationDefinition
 {
     public static Operation Operation => Operation.Exp;
     public static string Name => "exp";
@@ -70,7 +70,7 @@ public readonly struct ExpDefinition : IUnaryOperationDefinition
         TensorPrimitivesEx.MultiplyAdd(upstream, result, operandAdjoints, operandAdjoints);
 }
 
-public readonly struct LogDefinition : IUnaryOperationDefinition
+internal readonly struct LogDefinition : IUnaryOperationDefinition
 {
     public static Operation Operation => Operation.Log;
     public static string Name => "log";
@@ -87,7 +87,7 @@ public readonly struct LogDefinition : IUnaryOperationDefinition
         TensorPrimitivesEx.DivideAdd(upstream, operand, operandAdjoints, operandAdjoints);
 }
 
-public readonly struct SqrtDefinition : IUnaryOperationDefinition
+internal readonly struct SqrtDefinition : IUnaryOperationDefinition
 {
     public static Operation Operation => Operation.Sqrt;
     public static string Name => "sqrt";
@@ -130,7 +130,7 @@ public readonly struct SqrtDefinition : IUnaryOperationDefinition
     }
 }
 
-public readonly struct AbsDefinition : IUnaryOperationDefinition
+internal readonly struct AbsDefinition : IUnaryOperationDefinition
 {
     public static Operation Operation => Operation.Abs;
     public static string Name => "abs";
@@ -162,7 +162,7 @@ public readonly struct AbsDefinition : IUnaryOperationDefinition
     }
 }
 
-public readonly struct SquareDefinition : IUnaryOperationDefinition
+internal readonly struct SquareDefinition : IUnaryOperationDefinition
 {
     public static Operation Operation => Operation.Square;
     public static string Name => "square";
@@ -201,7 +201,7 @@ public readonly struct SquareDefinition : IUnaryOperationDefinition
     }
 }
 
-public readonly struct CubeDefinition : IUnaryOperationDefinition
+internal readonly struct CubeDefinition : IUnaryOperationDefinition
 {
     public static Operation Operation => Operation.Cube;
     public static string Name => "cube";
@@ -241,7 +241,7 @@ public readonly struct CubeDefinition : IUnaryOperationDefinition
     }
 }
 
-public readonly struct CubeRootDefinition : IUnaryOperationDefinition
+internal readonly struct CubeRootDefinition : IUnaryOperationDefinition
 {
     public static Operation Operation => Operation.CubeRoot;
     public static string Name => "cbrt";
@@ -285,7 +285,7 @@ public readonly struct CubeRootDefinition : IUnaryOperationDefinition
     }
 }
 
-public readonly struct SinDefinition : IUnaryOperationDefinition
+internal readonly struct SinDefinition : IUnaryOperationDefinition
 {
     public static Operation Operation => Operation.Sin;
     public static string Name => "sin";
@@ -323,7 +323,7 @@ public readonly struct SinDefinition : IUnaryOperationDefinition
     }
 }
 
-public readonly struct CosDefinition : IUnaryOperationDefinition
+internal readonly struct CosDefinition : IUnaryOperationDefinition
 {
     public static Operation Operation => Operation.Cos;
     public static string Name => "cos";
@@ -361,7 +361,7 @@ public readonly struct CosDefinition : IUnaryOperationDefinition
     }
 }
 
-public readonly struct TanDefinition : IUnaryOperationDefinition
+internal readonly struct TanDefinition : IUnaryOperationDefinition
 {
     public static Operation Operation => Operation.Tan;
     public static string Name => "tan";
@@ -399,7 +399,7 @@ public readonly struct TanDefinition : IUnaryOperationDefinition
     }
 }
 
-public readonly struct TanhDefinition : IUnaryOperationDefinition
+internal readonly struct TanhDefinition : IUnaryOperationDefinition
 {
     public static Operation Operation => Operation.Tanh;
     public static string Name => "tanh";
@@ -437,7 +437,7 @@ public readonly struct TanhDefinition : IUnaryOperationDefinition
     }
 }
 
-public readonly struct AddDefinition : IBinaryOperationDefinition
+internal readonly struct AddDefinition : IBinaryOperationDefinition
 {
     public static Operation Operation => Operation.Add;
     public static string Name => "+";
@@ -462,7 +462,7 @@ public readonly struct AddDefinition : IBinaryOperationDefinition
     }
 }
 
-public readonly struct SubtractDefinition : IBinaryOperationDefinition
+internal readonly struct SubtractDefinition : IBinaryOperationDefinition
 {
     public static Operation Operation => Operation.Subtract;
     public static string Name => "-";
@@ -487,7 +487,7 @@ public readonly struct SubtractDefinition : IBinaryOperationDefinition
     }
 }
 
-public readonly struct MultiplyDefinition : IBinaryOperationDefinition
+internal readonly struct MultiplyDefinition : IBinaryOperationDefinition
 {
     public static Operation Operation => Operation.Multiply;
     public static string Name => "*";
@@ -512,7 +512,7 @@ public readonly struct MultiplyDefinition : IBinaryOperationDefinition
     }
 }
 
-public readonly struct DivideDefinition : IBinaryOperationDefinition
+internal readonly struct DivideDefinition : IBinaryOperationDefinition
 {
     public static Operation Operation => Operation.Divide;
     public static string Name => "/";
@@ -605,7 +605,7 @@ public readonly struct DivideDefinition : IBinaryOperationDefinition
     }
 }
 
-public readonly struct PowerDefinition : IBinaryOperationDefinition
+internal readonly struct PowerDefinition : IBinaryOperationDefinition
 {
     public static Operation Operation => Operation.Power;
     public static string Name => "pow";
@@ -644,7 +644,7 @@ public readonly struct PowerDefinition : IBinaryOperationDefinition
 }
 
 /// <remarks>The reciprocal of a span of degrees has to be built before it can be used as an exponent.</remarks>
-public readonly struct RootDefinition : IBinaryOperationDefinition
+internal readonly struct RootDefinition : IBinaryOperationDefinition
 {
     public static Operation Operation => Operation.Root;
     public static string Name => "root";
@@ -698,7 +698,7 @@ public readonly struct RootDefinition : IBinaryOperationDefinition
 }
 
 /// <remarks>The denominator span has to be built before the division can run.</remarks>
-public readonly struct AnalyticQuotientDefinition : IBinaryOperationDefinition
+internal readonly struct AnalyticQuotientDefinition : IBinaryOperationDefinition
 {
     public static Operation Operation => Operation.AnalyticQuotient;
     public static string Name => "aq";

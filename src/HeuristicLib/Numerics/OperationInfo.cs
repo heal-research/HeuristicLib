@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Numerics;
 /// Every field applies to every operation, so none of them is optional. Kernels are not here because they differ by
 /// arity, and mixing arities into one type is what would make them optional.
 /// </remarks>
-public readonly record struct OperationInfo(
+internal readonly record struct OperationInfo(
     Operation Operation,
     string Name,
     int Arity,
@@ -21,7 +21,7 @@ public readonly record struct OperationInfo(
 }
 
 /// <summary>How an instruction's payload index is read.</summary>
-public enum PayloadKind
+internal enum PayloadKind
 {
     None,
     VariableReference,
@@ -32,7 +32,7 @@ public enum PayloadKind
 }
 
 /// <summary>How an operation is written when an expression is rendered.</summary>
-public enum OperationNotation
+internal enum OperationNotation
 {
     /// <summary>Written as a call, such as <c>exp(x)</c> or <c>pow(x, y)</c>.</summary>
     Function,

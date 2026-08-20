@@ -19,7 +19,7 @@ namespace HEAL.HeuristicLib.Numerics;
 /// gaps. They stay small while numbering stays disciplined.
 /// </para>
 /// </remarks>
-public static class OperationCatalog
+internal static class OperationCatalog
 {
     private static readonly Declaration[] Declarations =
     [

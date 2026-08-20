@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Numerics;
 /// carries operands that are the same in every row. Keeping the two apart lets an operation use the broadcast form
 /// that avoids expanding one value into a whole span.
 /// </remarks>
-public readonly ref struct Operand
+internal readonly ref struct Operand
 {
     private readonly ReadOnlySpan<double> vector;
     private readonly double scalar;
