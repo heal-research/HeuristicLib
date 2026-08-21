@@ -10,7 +10,7 @@ A fourth part follows from the second rather than from the example: once constru
 
 Every design below was prototyped against the real library and compiled; the negative results are recorded as precisely as the positive ones, because they are permanent language constraints rather than matters of taste. One of them removed a parameter from the accepted design after measurement contradicted the reasoning behind it.
 
-Status: Part 3 is implemented and merged into the working tree. Parts 1, 2 and 4 are settled designs that have not been started; their prototypes were reverted after measurement.
+Status: Parts 2, 3 and 4 are implemented. `PermutationSearchSpace` and `TravelingSalesmanProblem` are the reference defaults flow. Defaults for other encodings and problems are deferred until their operator choices can be justified. Part 1 has not been started; its prototypes were reverted after measurement.
 
 ## Motivation
 
@@ -347,6 +347,20 @@ Because the argument would be inert, it should not be there. The IDE agrees, at 
 
 For a factory that takes operators it never is. The factory should therefore be named `Create`, replacing the existing `GeneticAlgorithm.Create`, and `For` should stay reserved for helpers where the anchor argument does real work.
 
+**As built, this rule names the two shapes apart.** `Create(creator, crossover, mutator, …)` takes the required collaborators and infers from them, with no anchor. `For(anchor, …)` takes something that carries the defaults — a problem or a search space — every remaining parameter is optional, and the anchor is the sole inference source for the type parameters in the return type. Three `For` overloads exist: a problem that states its own defaults, which pins `TProblem` to that concrete type; a problem that states none, which resolves everything from its encoding; and a search space alone, which needs no problem instance and yields a configuration that runs against any problem over that encoding.
+
+A member-free `IEncodingDefaults<TCandidate, TSearchSpace>` marker was added for the third, mirroring `IProblemDefaults` on the problem side and for the same reason: `TSearchSpace searchSpace` alone leaves `TCandidate` in constraint position, where inference cannot reach it.
+
+**`For` does make every operator optional, and the earlier reasoning against it was measuring the wrong overload.** [Overriding one operator](#overriding-one-operator-use-with-not-an-optional-parameter) records that an optional operator parameter widens `TSearchSpace` and breaks the encoding constraint. That is true only when the anchor argument occupies a *covariant* position: `IProblem<TCandidate, out TSearchSpace>` contributes a lower bound, so a one-arity operator's upper bound wins and fixing widens to `ISearchSpace<Permutation>`.
+
+Both surviving `For` overloads anchor on an **invariant** interface — `IProblemDefaults<TProblem, TCandidate, TSearchSpace>` and `IEncodingDefaults<TCandidate, TSearchSpace>` — which contributes an *exact* bound. `TSearchSpace` is then fixed by the anchor alone, and an operator argument is checked against it rather than merged with it. Verified: `For(tspProblem, crossover: new EdgeRecombinationCrossover())` compiles and types as `GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>`, and so does the two-arity `RandomPermutationCreator`.
+
+Each `For` therefore takes the anchor plus every operator role and every scalar, all optional — all twelve configurable members of `GeneticAlgorithm`. Resolution per role is *supplied argument, then problem, then encoding*.
+
+This is now a rule rather than a local choice: [developer guidelines § 8.6](../docs/contributing/developer-guidelines.md) requires a `Create` or `For` to be able to return a complete configuration, so a caller is never left finishing a partly configured result, and records that a `For` taking optional operators must anchor on an invariant parameter type. The existing `Create(creator, crossover, mutator, …)` does **not** satisfy this: it omits `Refiner`, `Terminator` and `MaximumGenerations`. Step 4 replaces it and is what brings it into line.
+
+**The `IProblem<TCandidate, TSearchSpace>` overload was removed** rather than kept without operator parameters. It returned the same type as the search-space overload, so it was sugar for `For(problem.SearchSpace, …)`, and it was the one shape that could not take overrides. Removing it also closed the hazard recorded below: a problem declaring only some of the roles an algorithm requires used to fall through to it silently. That now fails to compile, with `CS0311` naming exactly the role interfaces the problem is missing.
+
 The fully defaulted overloads under [Encoding and problem defaults](#encoding-and-problem-defaults) do satisfy the rule, and they satisfy it rather than excepting it. Their parameters are typed `IProblem<TCandidate, TSearchSpace>` and `IProblemDefaults<TProblem, TCandidate, TSearchSpace>`, so the type parameters appear in the argument's type where inference can reach them. The distinction to hold on to:
 
 | parameter | what infers from it |
@@ -556,6 +570,44 @@ Read the resolution as: *ask the problem; if it has no opinion for this instance
 
 Overload selection needs no help: a problem implementing `IProblemDefaults<,,>` binds to the second overload because its parameter type is more derived, and one that does not binds to the first. Verified for `TravelingSalesmanProblem` and `QuadraticAssignmentProblem` respectively, with no ambiguity error and no explicit type arguments at either call site.
 
+#### As built
+
+Steps 1 through 4 and 6 are done; step 5, rolling the encoding interfaces out to the remaining search spaces, is not.
+
+The design held exactly as specified: `static abstract` on the encoding side, `static virtual` returning `null` on the problem side, the CRTP self type making `TProblem` inferable, contravariance narrowing the `IProblem<…>`-typed returns, and overload selection needing no help. `GeneticAlgorithm.Create(tspProblem)` types as `GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>` with no type arguments and no operators at the call site, verified by assignment to an explicitly typed local.
+
+One simplification came from step 3 being done first: the overloads no longer set `Selector`, because the record already initializes it from `GeneticAlgorithmDefaults`. The plan's version set it explicitly, which would now be a second copy of the same decision.
+
+Three changes were made against this document's design while implementing it.
+
+**The role members are named `CreateDefault…`, not `GetDefault…`.** Operators are matched by reference where they anchor an observation, so whether a default hands back a fresh instance or a shared one changes behavior. `Get` leaves that open; `Create` states it. Each implementation must return a new operator, and the interfaces say so.
+
+**The defaults factories are named `For`, not `Create`.** Both were originally added as `Create` overloads. `Create` is the shape where the caller supplies the required collaborators; `For` is the shape where an anchor supplies them and everything else is optional. See [The problem argument does not belong in the signature](#the-problem-argument-does-not-belong-in-the-signature).
+
+**The problem side is one interface per role, and nothing bundles them.** This document specified a single `IProblemDefaults` carrying all three roles, on the grounds that per-role opt-in would otherwise force a factory overload per combination. That reasoning was wrong. The roles are `IProblemDefaultCreator`, `IProblemDefaultCrossover` and `IProblemDefaultMutator`, and `IProblemDefaults` survives only as a **member-free marker** that each role interface derives from. It declares no roles and never will; its sole job is to give the factory parameter one type mentioning the problem, the candidate and the search space together, which is what makes all three inferable. Problems never name it.
+
+Which roles are required is therefore stated by each algorithm's own constraints — a genetic algorithm demands all three, a hill climber will demand creator and mutator — rather than by a shared interface asserting that these are the problem-dependent operators. A role added later is a new interface and a new constraint, with nothing existing to edit.
+
+**The role members stay nullable, which does not follow from the split.** Implementing a role interface reads like opting in, so `static abstract` and a non-nullable return looks right. It is not, because a C# constraint cannot say *call this if the type has it*: an algorithm must name a fixed role set, so a problem wanting problem-side defaults for a genetic algorithm has to satisfy all three constraints whether or not it has three opinions. Declaring a role is thus forced by the algorithm, not chosen by the problem, and `null` is how "I declare this because the algorithm asks, and have no opinion" is expressed. `static abstract` would instead make `TravelingSalesmanProblem` hand-delegate creator and mutator back to `PermutationSearchSpace`, naming its own encoding and duplicating the fallback.
+
+**A partial declaration was briefly a silent hazard, and is now a compile error.** While a `For(IProblem<TCandidate, TSearchSpace>, …)` overload existed, a problem declaring some but not all of the roles an algorithm requires failed that algorithm's constraints and fell through to it, losing its stated defaults with no diagnostic. Removing that overload removed the fallback: such a call now fails with `CS0311` naming precisely the missing role interfaces.
+
+**The role members stay nullable for a different reason than opting out.** An algorithm names a fixed role set in its constraints, so a problem must declare every role that algorithm asks about. Declaring `IProblemDefaultCreator` without overriding it is how a problem says *this role exists and the encoding supplies it* — which is the meaning `null` carries. Making the members `static abstract` would force every problem to hand-delegate the roles it has no opinion about back to its own encoding type.
+
+**The concrete operator choices:**
+
+| | creator | crossover | mutator |
+| --- | --- | --- | --- |
+| `PermutationSearchSpace` | `RandomPermutationCreator` | `EdgeRecombinationCrossover` | `InversionMutator` |
+| `TravelingSalesmanProblem` | — | `OrderCrossover` | — |
+| `QuadraticAssignmentProblem` | — | — | — |
+
+Value-dependent defaults were **not** used, although the interfaces take the instance and still support them. The sketch's `searchSpace.Length < 20 ? new SwapMutator() : new InversionMutator()` would ship an arbitrary threshold as public behavior; the capability is worth keeping, the magic number is not.
+
+Validation: `dotnet format` whitespace, style and analyzers clean; `HeuristicLib.Tests` 2018, `ApiUsageSpecs` 134, `Tests.Experimental` 128, `Tests.Scenarios` 23, all passing. `EncodingAndProblemDefaultSpecs` pins the problem-override path, the encoding-only path, a defaulted algorithm running unconfigured, and the `with` touch-up.
+
+The interface sketches earlier in this section still show the original `GetDefault…` names and the bundled problem interface. Read them for the reasoning; read this subsection for what the API actually is.
+
 #### Implementation order for this piece
 
 1. Add the four interfaces to `HeuristicLib.Contracts` under `Operators/Defaults/`, namespace `HEAL.HeuristicLib.Operators`. Nothing else is needed: there is no helper class, no registry and no configuration behind any of this.
@@ -590,9 +642,21 @@ Verified to compile and run. This is a clean division of labour between the two 
 
 ### Sub-decision to settle during implementation
 
-`PopulationSize` and `Selector` are `required` on the `GeneticAlgorithm` record but defaulted on `GeneticAlgorithmBuilder`. Once defaults are centralized, the record can initialize both from `GeneticAlgorithmDefaults` and drop `required`, which makes direct object-initializer construction as forgiving as the factory. This predates the plan and should be decided either way rather than carried into a third form.
+**Settled: `required` was dropped from both.** `PopulationSize` and `Selector` now initialize from `GeneticAlgorithmDefaults` on the `GeneticAlgorithm` record, so object-initializer construction is as forgiving as the builder and there is no third variant. The decision also matters for Part 4: once the builder is deleted, the record is the only forgiving path left.
+
+`Creator`, `Crossover` and `Mutator` stay `required`. They have no encoding-independent default until the [encoding and problem defaults](#encoding-and-problem-defaults) design lands.
 
 Apply the same shape to the other concrete algorithms once it is settled for `GeneticAlgorithm`.
+
+### Step 3 as built
+
+`GeneticAlgorithmDefaults` holds `PopulationSize = 100`, `MutationRate = 0.1`, `Elites = 1` and `TournamentSize = 2` as `const`, plus the generic `Selector<…>()` and `Evaluator<…>()` factories. The record and `GeneticAlgorithmBuilder` both read from it, so the `0.1` versus `0.05` drift is gone at its source rather than patched on one side.
+
+The drift turned out to be **latent**: every one of the eight `GetBuilder` call sites sets `MutationRate` explicitly, so no existing run took the builder's `0.05`. Aligning the two changed no test result. That is worth recording — the bug was real but had not yet cost anything, which is the cheapest moment to fix it.
+
+`GeneticAlgorithmBuilderTests.GetBuilder_UsesCurrentDefaultParametersForUnconfiguredSettings` asserted the drifted `0.05` literal and now asserts the shared constants. `GeneticAlgorithmDefaultsTests` adds two regressions: that a record configured with operators alone takes every shared default, and that the record and the builder agree on all four.
+
+Validation: `dotnet format` whitespace, style and analyzers clean; `HeuristicLib.Tests` 2018, `ApiUsageSpecs` 129, `Tests.Experimental` 128, `Tests.Scenarios` 23, all passing.
 
 ## Part 3: Iteration-end observation
 
@@ -697,14 +761,33 @@ The `IBuilderWith*` capability interfaces are implemented by four builders and c
 
 ### Recommendation
 
-Retire the builders, and treat the factory as their replacement rather than as a fourth parallel style. Sequence:
+Retire the builders, and treat the factory as their replacement rather than as a fourth parallel style.
 
-1. Add `Create` and the defaults class for `GeneticAlgorithm` (Part 2). Builders keep working.
-2. Add both for the remaining concrete algorithms.
-3. Port `PythonInterop` and the meta-optimization scenario to `Create`.
-4. Delete `GetBuilder`, the concrete builders, `AlgorithmBuilder`, `IAlgorithmBuilder` and `BuilderCapabilities`, along with `GeneticAlgorithmBuilderTests`.
+### Part 4 as built
 
-Steps 1 and 2 are additive. Only step 4 is breaking, and by then nothing in the repository depends on what it removes.
+**The factory was never the prerequisite; the defaults were.** This plan sequenced the retirement behind `Create`, but once step 3 dropped `required` and published `GeneticAlgorithmDefaults`, the record itself became the forgiving path. `PythonInterop`'s entire use of builders was conditional assignment, and that is an object initializer with a `??`:
+
+```csharp
+Selector = parameters.Selector ?? GeneticAlgorithmDefaults.Selector<TCandidate, TSearchSpace, TProblem>(),
+```
+
+What the deletion actually required was `EvolutionStrategyDefaults`, `NSGA2Defaults` and `HillClimberDefaults`, plus dropping `required` from every member those builders defaulted. The `For` and encoding-defaults rollout was not needed at all.
+
+**A fifth builder existed** and this plan did not know about it: `OerapgaBuildBuilder`, declared at the bottom of `OpenEndedRelevantAllelesPreservingGeneticAlgorithm.cs`. It had no callers whatsoever — every test constructs that record directly — so it was deleted outright.
+
+**`NSGA2.MutationRate` was a capability that lived only on the builder**, folded in at build time as `Mutator.WithRate(MutationRate)`. It is now a record property applied in `CreateExecutionInstance`, exactly as `GeneticAlgorithm` does, so deleting the builder removed no capability.
+
+**One port needed a factory that did not exist.** The meta-optimization scenario infers its hill climber's type arguments from composite meta-problem operators that are impractical to spell, so `HillClimber.Create(creator, mutator, …)` was added. The other ports either use `GeneticAlgorithm.For(problem, …)` or spell type arguments the surrounding test already spells.
+
+**Where the port is genuinely longer:** the four symbolic-regression genealogy scenarios now name `GeneticAlgorithm<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<…>>` and friends, because `SymbolicExpressionTreeSearchSpace` states no encoding defaults and `SymbolicRegressionProblem` states no problem defaults, so no `For` overload binds. This plan claimed the port would make call sites shorter; it does for the travelling salesperson cases, which became `GeneticAlgorithm.For(prob, …)` with no type arguments, and not for symbolic expressions. Rolling the encoding defaults out to `SymbolicExpressionTreeSearchSpace` is what would close that gap.
+
+**The interop kept its type arguments at first, and did not need to.** The initial port used object initializers, which meant spelling `new GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>` in all four branches. Once step 4 gave `Create` its optional parameters, every branch became a `Create` call with no type arguments at all — inference reaches the method's own `TProblem` even though `ExperimentParameters` declares its operators at `IProblem<TCandidate, TSearchSpace>`, because the `refiner` argument is declared at `TProblem` and contributes the narrower upper bound, and with only upper bounds in play fixing selects the narrowest survivor.
+
+`For` is not usable there and never will be: the interop is generic over open type parameters, and `For` requires a search space and a problem that declare defaults, which an open parameter cannot guarantee. That is the boundary between the two shapes — `For` needs concrete types, `Create` works in generic code.
+
+Deleted: the five builders, `AlgorithmBuilder`, `IAlgorithmBuilder`, `BuilderCapabilities`, all four `GetBuilder` entry points, `GeneticAlgorithmBuilderTests`, and the `RecordAndBuilder_AgreeOnEveryDefault` regression, whose drift cannot recur once one construction path remains.
+
+Validation: `dotnet format` whitespace, style and analyzers clean; `HeuristicLib.Tests` 2015, `ApiUsageSpecs` 134, `Tests.Experimental` 128, `Tests.Scenarios` 23, all passing.
 
 ### What is genuinely lost
 
@@ -716,12 +799,12 @@ This closes the backlog question about whether builders should become polished a
 
 Each step is independently shippable and independently valuable.
 
-1. Fix the `README.md` example to drop the unnecessary third type argument. No code change. **Still outstanding** — the example was edited for Part 3 but its type arguments were left alone. Re-verified against the current tree: the full README shape, including `TournamentSelector.For(problem, 3)` and `CreateRun(problem, …)` with a concrete `TravelingSalesmanProblem`, compiles and runs as `GeneticAlgorithm<Permutation, PermutationSearchSpace>`.
+1. ~~Fix the `README.md` construction example.~~ **Done as part of the full documentation pass.** `GeneticAlgorithm.For(problem, ...)` replaced the explicit construction, so all three type arguments and the operator declarations disappeared rather than only the unnecessary third argument.
 2. ~~Add the iteration-end observation anchor (Part 3) and `TrackBestMedianWorst`.~~ **Done.** The placeholder interceptor is gone from `README.md`, the travelling salesperson example and the observability guide.
-3. Centralize `GeneticAlgorithm` defaults and resolve the required-versus-defaulted inconsistency (Part 2). Fixes the existing `0.1` versus `0.05` drift on its own.
-4. Add `GeneticAlgorithm.Create` on top of those defaults, replacing the current `Create`.
-5. Extend the defaults-plus-factory shape to the remaining concrete algorithms.
-6. Port `PythonInterop` and the meta-optimization scenario off builders, then delete the builder types (Part 4).
+3. ~~Centralize `GeneticAlgorithm` defaults and resolve the required-versus-defaulted inconsistency (Part 2).~~ **Done.** See [Step 3 as built](#step-3-as-built).
+4. ~~Add `GeneticAlgorithm.Create` on top of those defaults, replacing the current `Create`.~~ **Done.** The old signature required `mutationRate`, `selector`, `populationSize` and `evaluator` positionally and could not take a refiner, terminator or generation limit at all, which violated the completeness rule in [developer guidelines § 8.6](../docs/contributing/developer-guidelines.md). It now takes the three required operators and every other member as an optional parameter. Matching `Create` factories were added to `EvolutionStrategy`, `NSGA2` and `HillClimber`.
+5. ~~Extend the defaults-plus-factory shape to the remaining concrete algorithms.~~ **Done.** `EvolutionStrategyDefaults`, `NSGA2Defaults` and `HillClimberDefaults` exist, their records read from them, and each has `Create`, `For(problem, ...)` and `For(searchSpace, ...)` factories. The `For` constraints follow the roles each algorithm requires: creator and mutator for `EvolutionStrategy` and `HillClimber`, plus crossover for `NSGA2`. Defaults for other encodings and problems are deliberately deferred and tracked in the developer backlog.
+6. ~~Port `PythonInterop` and the meta-optimization scenario off builders, then delete the builder types (Part 4).~~ **Done.** See [Part 4 as built](#part-4-as-built).
 7. Namespace consolidation (Part 1), starting with `Permutations` as the smallest complete case and leaving `SymbolicExpressions` for last.
 8. Folder moves following the namespace rule, plus the architecture test, its transparent-folder list, and the assertion that transparent folders own no types.
 9. Split `DataAnalysis` into `Data`, `Statistics` and `Regression`, move `SymbolicRegressionProblem` to `Problems/Regression/`, move the matching glossary headings, and remove the term `DataAnalysis` from the repository. Separate branch.
@@ -731,6 +814,16 @@ Each step is independently shippable and independently valuable.
 Steps 2 through 4 together bring the example from fourteen `using` directives to ten with no namespace work. Step 7 brings it to four.
 
 Steps 7 and 8 are a large mechanical move touching most of `Operators/`, and the backlog already notes that namespace and folder cleanup should stay separate from glossary renaming. They are the natural candidate for their own branch.
+
+## Documentation pass as built
+
+The documentation now uses the two construction paths for different jobs. `For(...)` appears where `PermutationSearchSpace` and `TravelingSalesmanProblem` supply a complete defaults flow. `Create(...)` appears for real vectors, integer vectors, symbolic expressions and NSGA2, where the examples must keep their required operator choices visible.
+
+The first `README.md` example fell from twelve using directives to seven, from twelve nonblank configuration lines to six and from three explicit algorithm type arguments to none. The original baseline of fourteen directives included the observation interceptor removed in Part 3, so the complete ergonomics work reduced that example from fourteen directives to seven. Across `README.md` and `docs/`, all twelve explicit generic algorithm constructions fell to zero.
+
+The shorter syntax did not require inventing defaults for other encodings. The `README.md` uses the unmodified traveling salesperson defaults. The detailed traveling salesperson example explicitly overrides only the crossover with `EdgeRecombinationCrossover`, preserving both its teaching purpose and its recorded output. The algorithms guide explains problem precedence, encoding fallback, algorithm defaults, `For(searchSpace, ...)`, explicit overrides and the reproducibility cost of relying on defaults.
+
+Validation: the documentation site builds, all 137 API usage specs pass and the executable real vector and symbolic expression examples compile and run through `Create(...)`.
 
 ## Validation performed
 

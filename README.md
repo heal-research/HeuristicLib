@@ -51,33 +51,22 @@ This example loads the named `berlin52` benchmark from a standard TSPLIB file, s
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 var instance = TsplibTspInstanceProvider.LoadData(
     "berlin52.tsp",
     bestQuality: 7542);
 var problem = new TravelingSalesmanProblem(instance.ToCoordinatesData());
 
-var algorithm =
-    new GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>
-    {
-        PopulationSize = 100,
-        MaximumGenerations = 500,
-        Creator = new RandomPermutationCreator(),
-        Crossover = new EdgeRecombinationCrossover(),
-        Mutator = new InversionMutator(),
-        Selector = TournamentSelector.For(problem, tournamentSize: 3),
-        MutationRate = 0.05,
-        Elites = 1
-    };
+var algorithm = GeneticAlgorithm.For(
+    problem,
+    selector: TournamentSelector.For(problem, tournamentSize: 3),
+    populationSize: 100,
+    maximumGenerations: 500,
+    mutationRate: 0.05);
 
 var run = algorithm
     .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
@@ -101,7 +90,9 @@ foreach (var (entry, generation) in qualityCurve.Select((entry, i) => (entry, i 
 }
 ```
 
-The algorithm configuration stays reusable. Change the TSPLIB file to run another named instance. Change the crossover or mutation operator to test another search policy. Keep the problem, seed schedule and analyzer unchanged when comparing configurations.
+`GeneticAlgorithm.For(problem, ...)` asks the problem and its encoding for suggested operators. Here the traveling salesperson problem supplies order crossover, while the permutation encoding supplies random creation and inversion mutation. Algorithm settings come from `GeneticAlgorithmDefaults` unless the call overrides them. Defaults are starting points rather than tuned choices. Configure an operator explicitly when an experiment depends on that choice.
+
+The algorithm configuration stays reusable. Change the TSPLIB file to run another named instance. Use a `with` expression to change the crossover or mutation operator and test another search policy. Keep the problem, seed schedule and analyzer unchanged when comparing configurations.
 
 See [problems](docs/guide/fundamentals/problems.md), [operators](docs/guide/fundamentals/operators.md), [observability and analysis](docs/guide/execution/observability-and-analysis.md) and [experiments](docs/guide/execution/experiments.md) for the underlying APIs.
 
@@ -146,25 +137,21 @@ var problem = new SymbolicRegressionProblem(
     Metrics.MSE,
     searchSpace);
 
-var algorithm =
-    new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
+var algorithm = GeneticAlgorithm.Create(
+    new RampedHalfAndHalfTreeCreator(),
+    new SubtreeCrossover(),
+    ChooseOneMutator.Create(
+        new NodeReplacementMutator(),
+        new LocalPerturbationMutator(),
+        new SubtreeMutator()),
+    refiner: new NumericParameterFittingRefiner
     {
-        PopulationSize = 100,
-        MaximumGenerations = 50,
-        Creator = new RampedHalfAndHalfTreeCreator(),
-        Crossover = new SubtreeCrossover(),
-        Mutator = ChooseOneMutator.Create(
-            new NodeReplacementMutator(),
-            new LocalPerturbationMutator(),
-            new SubtreeMutator()),
-        Refiner = new NumericParameterFittingRefiner
-        {
-            MaximumIterations = 10
-        },
-        Selector = TournamentSelector.For(problem, tournamentSize: 3),
-        MutationRate = 0.25,
-        Elites = 1
-    };
+        MaximumIterations = 10
+    },
+    selector: TournamentSelector.For(problem, tournamentSize: 3),
+    populationSize: 100,
+    maximumGenerations: 50,
+    mutationRate: 0.25);
 
 var finalState = await algorithm.CompleteAsync(
     problem,

@@ -295,6 +295,7 @@ Make intended use easy and misuse difficult.
 - Public authoring bases expose required constructors, state and hooks as `protected`, not `private protected`. Otherwise do not present the type as an authoring base.
 - Keep related abstractions and operator roles structurally consistent.
 - Make defaults, side effects and potentially expensive behavior visible.
+- Do not give a nullable operator slot a non-null default. `null` would then mean both "not supplied, use the default" and "deliberately absent", and a caller could no longer express the second. Either the slot stays nullable and absence is its default, or it becomes non-nullable with a no-op implementation as the default, such as an identity interceptor. A nullable _parameter_ on a factory is unaffected: it means "not supplied" for a slot that cannot itself be null.
 - Return the most concrete accessible type useful to callers.
 - Add capability interfaces only for concrete use cases.
 - Do not add marker interfaces without behavior or a concrete static typing requirement.
@@ -341,6 +342,9 @@ Do not make callers spell generic arguments available values can determine.
 
 - Put public constructors on the configuration type.
 - Put `Create(...)`, `For(problem, ...)` and `For(algorithm, ...)` on a static companion named after the type.
+- Use `Create(...)` when the caller supplies the required collaborators and they determine the type arguments. Use `For(anchor, ...)` when an anchor value supplies both the type arguments and the defaults, so every remaining parameter can be optional.
+- A `Create(...)` or `For(...)` must be able to return a complete configuration. Accept every configurable member as a parameter, required in `Create` and optional in `For`, so a caller is never left finishing a partly configured result. `with` changes a configuration that already exists; it is not the way to complete one the factory could not build.
+- Anchor a `For(...)` that also takes optional operators on an invariant parameter type. A covariant anchor such as `IProblem<TCandidate, out TSearchSpace>` contributes only a lower bound, so an operator declared at a reduced arity widens the inferred search space and fails against constraints the caller never named. An invariant anchor contributes an exact bound, fixing the type from the anchor alone.
 - Treat a `For(...)` argument as a type witness unless the contract says it is retained.
 - Add a fluent extension only when its receiver becomes part of the configuration.
 - Put fluent methods in `<Type>Extensions`. A concern specific helper such as `WithRate` may use its own companion.

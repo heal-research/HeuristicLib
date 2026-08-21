@@ -122,37 +122,3 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
         }
     }
 }
-
-public record OerapgaBuildBuilder<TCandidate, TSearchSpace, TProblem>
-  : AlgorithmBuilder<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>, OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>>,
-    IBuilderWithCreator<TCandidate, TSearchSpace, TProblem>,
-    IBuilderWithSelector<TCandidate, TSearchSpace, TProblem>,
-    IBuilderWithCrossover<TCandidate, TSearchSpace, TProblem>,
-    IBuilderWithMutator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    public double MutationRate { get; set; } = 0.05;
-    public int Elites { get; set; } = 1;
-    public required int MaxEffort { get; set; }
-    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; set; }
-    public required ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; set; }
-    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; set; }
-    public int PopulationSize { get; set; } = 100;
-    public ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; set; } = new TournamentSelector<TCandidate>(2);
-
-    public override OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem> Build()
-    {
-        return new()
-        {
-            PopulationSize = PopulationSize,
-            Creator = Creator,
-            Crossover = Crossover,
-            Selector = Selector,
-            Evaluator = Evaluator,
-            Interceptor = Interceptor,
-            Mutator = Mutator.WithRate(MutationRate),
-            MaxEffort = MaxEffort
-        };
-    }
-}

@@ -24,7 +24,6 @@ Replace `Program.cs` with this program:
 ```csharp
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
@@ -32,21 +31,17 @@ using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
 
-var algorithm = new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
-{
-    PopulationSize = 200,
-    MaximumGenerations = 500,
-    Creator = new UniformDistributedCreator(),
-    Crossover = new AlphaBetaBlendCrossover { Alpha = 0.7 },
-    Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
-    Selector = TournamentSelector.For(problem, tournamentSize: 2),
-    MutationRate = 0.2,
-    Elites = 1
-};
+var algorithm = GeneticAlgorithm.Create(
+    new UniformDistributedCreator(),
+    new AlphaBetaBlendCrossover { Alpha = 0.7 },
+    new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
+    selector: TournamentSelector.For(problem, tournamentSize: 2),
+    populationSize: 200,
+    maximumGenerations: 500,
+    mutationRate: 0.2);
 
 var finalState = await algorithm.CompleteAsync(
     problem,
@@ -86,7 +81,7 @@ Seed `123` reproduces exactly these numbers. A heuristic search does not guarant
 | Selector                | Chooses candidates that can reproduce             |
 | Random number generator | Makes the stochastic decisions reproducible       |
 
-The generic type parameters connect compatible components at compile time. A real vector algorithm cannot accidentally receive a permutation search space.
+`GeneticAlgorithm.Create(...)` infers its candidate, search space and problem types from the operators. Those types still connect compatible components at compile time. A real vector algorithm cannot accidentally receive a permutation search space.
 
 ### Two settings are both called a mutation rate
 

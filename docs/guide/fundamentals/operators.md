@@ -18,17 +18,14 @@ Operators are focused search steps that algorithms combine. Most users configure
 A typical generation selects parents, crosses them, mutates offspring, evaluates the new candidates and replaces part of the population. The algorithm controls that sequence. Operators provide each policy.
 
 ```csharp
-var algorithm = new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
-{
-    Creator = new UniformDistributedCreator(problem.SearchSpace),
-    Crossover = new AlphaBetaBlendCrossover { Alpha = 0.7 },
-    Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
-    Selector = TournamentSelector.For(problem, tournamentSize: 2),
-    MutationRate = 0.2,
-    Elites = 1,
-    PopulationSize = 50,
-    MaximumGenerations = 100
-};
+var algorithm = GeneticAlgorithm.Create(
+    new UniformDistributedCreator(problem.SearchSpace),
+    new AlphaBetaBlendCrossover { Alpha = 0.7 },
+    new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
+    selector: TournamentSelector.For(problem, tournamentSize: 2),
+    populationSize: 50,
+    maximumGenerations: 100,
+    mutationRate: 0.2);
 ```
 
 ## Choose compatible operators

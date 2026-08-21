@@ -18,35 +18,24 @@ Download [`berlin52.tsp`](https://github.com/heal-research/HeuristicLib/blob/mai
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 var instance = TsplibTspInstanceProvider.LoadData(
     "berlin52.tsp",
     bestQuality: 7542);
 var problem = new TravelingSalesmanProblem(instance.ToCoordinatesData());
 
-var algorithm = new GeneticAlgorithm<
-    Permutation,
-    PermutationSearchSpace,
-    TravelingSalesmanProblem>
-{
-    PopulationSize = 300,
-    MaximumGenerations = 1000,
-    Creator = new RandomPermutationCreator(),
-    Crossover = new EdgeRecombinationCrossover(),
-    Mutator = new InversionMutator(),
-    Selector = TournamentSelector.For(problem, tournamentSize: 3),
-    MutationRate = 0.25,
-    Elites = 1
-};
+var algorithm = GeneticAlgorithm.For(
+    problem,
+    crossover: new EdgeRecombinationCrossover(),
+    selector: TournamentSelector.For(problem, tournamentSize: 3),
+    populationSize: 300,
+    maximumGenerations: 1000,
+    mutationRate: 0.25);
 
 var run = algorithm
     .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
@@ -90,11 +79,13 @@ Best tour length: 7797
 1000: best     7797  median     7797  worst    10181
 ```
 
-## Why use permutation operators
+## Defaults and the explicit crossover
 
 A valid tour contains each city once. Permutation creators and variation operators preserve that invariant. A real or integer vector operator could introduce duplicate cities and omit others.
 
-Edge recombination tries to retain city adjacencies from both parents. Inversion mutation reverses a segment of the route and often produces a meaningful local change.
+`GeneticAlgorithm.For(problem, ...)` gets random creation and inversion mutation from `PermutationSearchSpace`. `TravelingSalesmanProblem` normally suggests order crossover. This example overrides only that role with edge recombination so the remaining defaults stay visible.
+
+Edge recombination tries to retain city adjacencies from both parents. Inversion mutation reverses a segment of the route and often produces a meaningful local change. Neither is a tuned choice for every instance. Keep the operators explicit when comparing search policies.
 
 ## Read the quality curve
 

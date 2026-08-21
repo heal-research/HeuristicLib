@@ -43,15 +43,12 @@ public sealed record AdjacentSwapMutator : SingleCandidateMutator<Permutation>
 Assign it anywhere an `IMutator<Permutation, ...>` is expected:
 
 ```csharp
-var algorithm = new GeneticAlgorithm<
-    Permutation,
-    PermutationSearchSpace,
-    TravelingSalesmanProblem>
-{
-    Mutator = new AdjacentSwapMutator(),
-    MutationRate = 0.1,
-    // Other required operators and settings
-};
+var algorithm = GeneticAlgorithm.For(problem)
+    with
+    {
+        Mutator = new AdjacentSwapMutator(),
+        MutationRate = 0.1
+    };
 ```
 
 Reduced arity bases such as `SingleCandidateMutator<Permutation>` omit inputs the operator does not use. Choose a search space or problem specific base when the operation needs those values.

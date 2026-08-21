@@ -50,15 +50,17 @@ public class GenealogyGraphTests
     {
         var problem = CreateTestSymbolicRegressionProblem();
 
-        var builder = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(),
-            CreateSymRegAllMutator());
-        builder.PopulationSize = 8;
-        builder.MutationRate = 0.05;
-        builder.Selector = TournamentSelector.For(problem, tournamentSize: 3);
-        builder.Elites = 1;
         //ga.RandomSeed = AlgorithmRandomSeed;
-        //builder.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
-        var ga = builder.Build();
+        var ga = new GeneticAlgorithm<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>
+        {
+            Creator = new ProbabilisticTreeCreator(),
+            Crossover = new SubtreeCrossover(),
+            Mutator = CreateSymRegAllMutator(),
+            Selector = TournamentSelector.For(problem, tournamentSize: 3),
+            PopulationSize = 8,
+            MutationRate = 0.05,
+            Elites = 1
+        };
         var interceptor = ga.Interceptor ?? IdentityInterceptor.For(ga);
         ga = ga with
         {
@@ -87,15 +89,16 @@ public class GenealogyGraphTests
 
         const int gens = 6;
         const int popsize = 6;
-        var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(),
-            CreateSymRegAllMutator());
-        ga.PopulationSize = popsize;
-        ga.MutationRate = 0.05;
-        ga.Selector = TournamentSelector.For(problem, tournamentSize: 3);
-        ga.Elites = 1;
-        //ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(gens);
-
-        var algorithm = ga.Build();
+        var algorithm = new GeneticAlgorithm<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>
+        {
+            Creator = new ProbabilisticTreeCreator(),
+            Crossover = new SubtreeCrossover(),
+            Mutator = CreateSymRegAllMutator(),
+            Selector = TournamentSelector.For(problem, tournamentSize: 3),
+            PopulationSize = popsize,
+            MutationRate = 0.05,
+            Elites = 1
+        };
         var interceptor = algorithm.Interceptor ?? IdentityInterceptor.For(algorithm);
         algorithm = algorithm with
         {
@@ -130,8 +133,11 @@ public class GenealogyGraphTests
     public void GenealogyGraphOnLocalSearch()
     {
         var problem = CreateTestSymbolicRegressionProblem();
-        var builder = HillClimber.GetBuilder(new ProbabilisticTreeCreator(), CreateSymRegAllMutator());
-        var algorithm = builder.Build();
+        var algorithm = new HillClimber<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>
+        {
+            Creator = new ProbabilisticTreeCreator(),
+            Mutator = CreateSymRegAllMutator()
+        };
         var interceptor = algorithm.Interceptor ?? IdentityInterceptor.For(algorithm);
         algorithm = algorithm with { Interceptor = interceptor };
         var genealogy =
@@ -158,14 +164,14 @@ public class GenealogyGraphTests
         const int populationSize = 6;
         const int maximumIterations = 4;
         const double mutationRate = 0.05;
-        var nsga2 = NSGA2.GetBuilder(
-            new ProbabilisticTreeCreator(),
-            new SubtreeCrossover(),
-            symRegAllMutator);
-        nsga2.PopulationSize = populationSize;
-        nsga2.MutationRate = mutationRate;
-
-        var algorithm = nsga2.Build();
+        var algorithm = new NSGA2<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>
+        {
+            Creator = new ProbabilisticTreeCreator(),
+            Crossover = new SubtreeCrossover(),
+            Mutator = symRegAllMutator,
+            PopulationSize = populationSize,
+            MutationRate = mutationRate
+        };
         var interceptor = algorithm.Interceptor ?? IdentityInterceptor.For(algorithm);
         algorithm = algorithm with
         {

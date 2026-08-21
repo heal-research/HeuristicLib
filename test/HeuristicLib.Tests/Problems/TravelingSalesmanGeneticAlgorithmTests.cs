@@ -15,20 +15,18 @@ public class TravelingSalesmanGeneticAlgorithmTests
     public void GaWithDefaultTsp_Complete_ReturnsPopulationWithinProblemSearchSpace()
     {
         var problem = TravelingSalesmanProblem.CreateDefault();
-        var ga = GeneticAlgorithm.GetBuilder(
-          new RandomPermutationCreator(),
-          new OrderCrossover(),
-          new InversionMutator()
-        );
-        ga.PopulationSize = 5;
-        ga.MutationRate = 0.5;
-        ga.Selector = RandomSelector.For(problem);
-        ga.Elites = 0;
+        var ga = GeneticAlgorithm.For(
+          problem,
+          creator: new RandomPermutationCreator(),
+          crossover: new OrderCrossover(),
+          mutator: new InversionMutator(),
+          selector: RandomSelector.For(problem),
+          populationSize: 5,
+          maximumGenerations: 5,
+          mutationRate: 0.5,
+          elites: 0);
 
-        var result = (ga.Build() with
-        {
-            MaximumGenerations = 5
-        })
+        var result = ga
                        .Complete(
                          problem,
                          RandomNumberGenerator.Create(42),

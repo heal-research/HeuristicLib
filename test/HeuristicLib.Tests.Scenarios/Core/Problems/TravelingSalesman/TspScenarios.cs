@@ -22,23 +22,20 @@ public class TspScenarios
         var prob = new TravelingSalesmanProblem(cdata);
 
         // GA
-        var ga = GeneticAlgorithm.GetBuilder(
-          new RandomPermutationCreator(),
-          new EdgeRecombinationCrossover(),
-          new InversionMutator()
-        );
-
         // ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
-        // ga.RandomSeed = 42;
-        ga.PopulationSize = 100;
-        ga.MutationRate = 0.05;
-        ga.Selector = TournamentSelector.For(prob, tournamentSize: 2);
-        ga.Elites = 1;
+        var ga = GeneticAlgorithm.For(
+          prob,
+          creator: new RandomPermutationCreator(),
+          crossover: new EdgeRecombinationCrossover(),
+          mutator: new InversionMutator(),
+          selector: TournamentSelector.For(prob, tournamentSize: 2),
+          populationSize: 100,
+          maximumGenerations: 10,
+          mutationRate: 0.05,
+          elites: 1);
+
         // execute
-        var resGa = (ga.Build() with
-        {
-            MaximumGenerations = 10
-        }).Complete(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var resGa = ga.Complete(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         // look at results
         var objGa = resGa.Population

@@ -124,17 +124,14 @@ var workshop = new ProductionPlan(
 
 var problem = new ProductMixProblem(workshop);
 
-var algorithm = new GeneticAlgorithm<IntegerVector, IntegerVectorSearchSpace, ProductMixProblem>
-{
-    PopulationSize = 300,
-    MaximumGenerations = 500,
-    Creator = new UniformDistributedCreator(),
-    Crossover = new SinglePointCrossover(),
-    Mutator = new UniformSomePositionsMutator { Probability = 0.15 },
-    Selector = TournamentSelector.For(problem, tournamentSize: 3),
-    MutationRate = 0.4,
-    Elites = 1
-};
+var algorithm = GeneticAlgorithm.Create(
+    new UniformDistributedCreator(),
+    new SinglePointCrossover(),
+    new UniformSomePositionsMutator { Probability = 0.15 },
+    selector: TournamentSelector.For(problem, tournamentSize: 3),
+    populationSize: 300,
+    maximumGenerations: 500,
+    mutationRate: 0.4);
 
 var finalState = await algorithm.CompleteAsync(
     problem,

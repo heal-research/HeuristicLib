@@ -55,25 +55,21 @@ The search space limits tree size and specifies which symbols may occur. The pro
 ## Configure genetic programming
 
 ```csharp
-var algorithm =
-    new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
+var algorithm = GeneticAlgorithm.Create(
+    new RampedHalfAndHalfTreeCreator(),
+    new SubtreeCrossover(),
+    ChooseOneMutator.Create(
+        new NodeReplacementMutator(),
+        new LocalPerturbationMutator(),
+        new SubtreeMutator()),
+    refiner: new NumericParameterFittingRefiner
     {
-        PopulationSize = 100,
-        MaximumGenerations = 50,
-        Creator = new RampedHalfAndHalfTreeCreator(),
-        Crossover = new SubtreeCrossover(),
-        Mutator = ChooseOneMutator.Create(
-            new NodeReplacementMutator(),
-            new LocalPerturbationMutator(),
-            new SubtreeMutator()),
-        Refiner = new NumericParameterFittingRefiner
-        {
-            MaximumIterations = 10
-        },
-        Selector = TournamentSelector.For(problem, tournamentSize: 3),
-        MutationRate = 0.25,
-        Elites = 1
-    };
+        MaximumIterations = 10
+    },
+    selector: TournamentSelector.For(problem, tournamentSize: 3),
+    populationSize: 100,
+    maximumGenerations: 50,
+    mutationRate: 0.25);
 ```
 
 The creator generates trees of different shapes and depths. Crossover exchanges subtrees. Mutation either replaces a node, perturbs a constant or replaces a subtree. The numeric refiner fits constants after those structural changes.

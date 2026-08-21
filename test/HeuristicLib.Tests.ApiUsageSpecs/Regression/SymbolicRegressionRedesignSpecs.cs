@@ -197,21 +197,16 @@ public class SymbolicRegressionRedesignSpecs
         var data = CreateLinearRegressionData();
         var searchSpace = CreateSearchSpace();
         var problem = new SymbolicRegressionProblem(data, Metrics.RMSE, searchSpace);
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
-        {
-            PopulationSize = 24,
-            MaximumGenerations = 8,
-            Creator = new RampedHalfAndHalfTreeCreator(),
-            Crossover = new SubtreeCrossover(),
-            Mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(
-                [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()])
-            {
-                Weights = [1.0, 1.0, 1.0]
-            },
-            MutationRate = 0.2,
-            Selector = new TournamentSelector<ExpressionTree>(tournamentSize: 2),
-            Elites = 1
-        };
+        var algorithm = GeneticAlgorithm.Create(
+            new RampedHalfAndHalfTreeCreator(),
+            new SubtreeCrossover(),
+            ChooseOneMutator.Create(
+                [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()],
+                [1.0, 1.0, 1.0]),
+            selector: TournamentSelector.For(problem, tournamentSize: 2),
+            populationSize: 24,
+            maximumGenerations: 8,
+            mutationRate: 0.2);
 
         var finalState = await algorithm.CompleteAsync(
           problem,

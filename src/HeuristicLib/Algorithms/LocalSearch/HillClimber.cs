@@ -18,11 +18,11 @@ public record HillClimber<TCandidate, TSearchSpace, TProblem>
 {
     public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
     public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = HillClimberDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>();
     public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
-    public required LocalSearchDirection Direction { get; init; }
-    public required int MaxNeighbors { get; init; }
-    public required int BatchSize { get; init; }
+    public LocalSearchDirection Direction { get; init; } = HillClimberDefaults.Direction;
+    public int MaxNeighbors { get; init; } = HillClimberDefaults.MaxNeighbors;
+    public int BatchSize { get; init; } = HillClimberDefaults.BatchSize;
 
     protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
         new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Mutator), instanceRegistry.ResolveOptional(Refiner), Direction, MaxNeighbors, BatchSize);
@@ -110,14 +110,100 @@ public record HillClimber<TCandidate, TSearchSpace, TProblem>
 
 public static class HillClimber
 {
-    public static HillClimberBuilder<TCandidate, TSearchSpace, TProblem> GetBuilder<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator, IMutator<TCandidate, TSearchSpace, TProblem> mutator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    /// <summary>
+    /// Creates a hill climber for a problem that states its own operator preferences, asking the problem first and
+    /// falling back to the search space's encoding defaults for the required creator and mutator.
+    /// </summary>
+    public static HillClimber<TCandidate, TSearchSpace, TProblem> For<TProblem, TCandidate, TSearchSpace>(
+        IProblemDefaults<TProblem, TCandidate, TSearchSpace> problem,
+        ICreator<TCandidate, TSearchSpace, TProblem>? creator = null,
+        IMutator<TCandidate, TSearchSpace, TProblem>? mutator = null,
+        IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,
+        IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null,
+        IInterceptor<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor = null,
+        LocalSearchDirection direction = HillClimberDefaults.Direction,
+        int maxNeighbors = HillClimberDefaults.MaxNeighbors,
+        int batchSize = HillClimberDefaults.BatchSize)
+        where TProblem : class,
+                         IProblemDefaultCreator<TProblem, TCandidate, TSearchSpace>,
+                         IProblemDefaultMutator<TProblem, TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>,
+                             IEncodingDefaultCreator<TCandidate, TSearchSpace>,
+                             IEncodingDefaultMutator<TCandidate, TSearchSpace>
     {
+        var searchSpace = problem.SearchSpace;
+        var self = problem as TProblem;
+
         return new()
         {
-            Mutator = mutator,
-            Creator = creator
+            Creator = creator ?? (self is null ? null : TProblem.CreateDefaultCreator(self)) ?? TSearchSpace.CreateDefaultCreator(searchSpace),
+            Mutator = mutator ?? (self is null ? null : TProblem.CreateDefaultMutator(self)) ?? TSearchSpace.CreateDefaultMutator(searchSpace),
+            Evaluator = evaluator ?? HillClimberDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>(),
+            Refiner = refiner,
+            Interceptor = interceptor,
+            Direction = direction,
+            MaxNeighbors = maxNeighbors,
+            BatchSize = batchSize
         };
     }
+
+    /// <summary>
+    /// Creates a hill climber from a search space's creator and mutator defaults, with no problem instance.
+    /// </summary>
+    public static HillClimber<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> For<TCandidate, TSearchSpace>(
+        IEncodingDefaults<TCandidate, TSearchSpace> searchSpace,
+        ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? creator = null,
+        IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? mutator = null,
+        IEvaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? evaluator = null,
+        IRefiner<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? refiner = null,
+        IInterceptor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, SingleSolutionState<TCandidate>>? interceptor = null,
+        LocalSearchDirection direction = HillClimberDefaults.Direction,
+        int maxNeighbors = HillClimberDefaults.MaxNeighbors,
+        int batchSize = HillClimberDefaults.BatchSize)
+        where TSearchSpace : class, ISearchSpace<TCandidate>,
+                             IEncodingDefaultCreator<TCandidate, TSearchSpace>,
+                             IEncodingDefaultMutator<TCandidate, TSearchSpace>
+    {
+        var typedSearchSpace = (TSearchSpace)searchSpace;
+
+        return new()
+        {
+            Creator = creator ?? TSearchSpace.CreateDefaultCreator(typedSearchSpace),
+            Mutator = mutator ?? TSearchSpace.CreateDefaultMutator(typedSearchSpace),
+            Evaluator = evaluator ?? HillClimberDefaults.Evaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>(),
+            Refiner = refiner,
+            Interceptor = interceptor,
+            Direction = direction,
+            MaxNeighbors = maxNeighbors,
+            BatchSize = batchSize
+        };
+    }
+
+    /// <summary>
+    /// Creates a hill climber from the operators it requires, inferring the candidate, search space and problem types
+    /// from them. Every remaining member is optional and falls back to <see cref="HillClimberDefaults"/>.
+    /// </summary>
+    public static HillClimber<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
+        ICreator<TCandidate, TSearchSpace, TProblem> creator,
+        IMutator<TCandidate, TSearchSpace, TProblem> mutator,
+        IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,
+        IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null,
+        IInterceptor<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor = null,
+        LocalSearchDirection direction = HillClimberDefaults.Direction,
+        int maxNeighbors = HillClimberDefaults.MaxNeighbors,
+        int batchSize = HillClimberDefaults.BatchSize)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new()
+        {
+            Creator = creator,
+            Mutator = mutator,
+            Evaluator = evaluator ?? HillClimberDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>(),
+            Refiner = refiner,
+            Interceptor = interceptor,
+            Direction = direction,
+            MaxNeighbors = maxNeighbors,
+            BatchSize = batchSize
+        };
+
 }

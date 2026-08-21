@@ -148,17 +148,15 @@ public class PythonGenealogyAnalysis
         {
             case "ga":
                 {
-                    var ga = GeneticAlgorithm.GetBuilder<TCandidate, TSearchSpace, TProblem>(parameters.Creator!, parameters.Crossover!,
-                        parameters.Mutator!);
-                    ga.PopulationSize = parameters.PopulationSize;
-                    ga.MutationRate = parameters.MutationRate;
-                    ga.Elites = parameters.Elites;
-                    if (parameters.Selector != null)
-                    {
-                        ga.Selector = parameters.Selector;
-                    }
-
-                    var gaAlgorithm = ga.Build() with { Refiner = refiner };
+                    var gaAlgorithm = GeneticAlgorithm.Create(
+                        RequireCreator(parameters),
+                        RequireCrossover(parameters),
+                        RequireMutator(parameters),
+                        selector: parameters.Selector,
+                        refiner: refiner,
+                        populationSize: parameters.PopulationSize,
+                        mutationRate: parameters.MutationRate,
+                        elites: parameters.Elites);
                     if (callback is not null && gaAlgorithm.Interceptor is null)
                     {
                         gaAlgorithm = gaAlgorithm with
@@ -176,22 +174,15 @@ public class PythonGenealogyAnalysis
                 }
             case "es":
                 {
-                    var es = EvolutionStrategy.GetBuilder<TCandidate, TSearchSpace, TProblem>(parameters.Creator!, parameters.Mutator!);
-                    es.PopulationSize = parameters.PopulationSize;
-                    es.NumberOfChildren = parameters.NoChildren;
-                    es.Strategy = parameters.Strategy;
-                    //es.Terminator = terminator;
-                    if (parameters.Selector != null)
-                    {
-                        es.Selector = parameters.Selector;
-                    }
-
-                    if (parameters.WithCrossover)
-                    {
-                        es.Crossover = parameters.Crossover;
-                    }
-
-                    var esAlgorithm = es.Build() with { Refiner = refiner };
+                    var esAlgorithm = EvolutionStrategy.Create(
+                        RequireCreator(parameters),
+                        RequireMutator(parameters),
+                        crossover: parameters.WithCrossover ? parameters.Crossover : null,
+                        selector: parameters.Selector,
+                        refiner: refiner,
+                        populationSize: parameters.PopulationSize,
+                        numberOfChildren: parameters.NoChildren,
+                        strategy: parameters.Strategy);
                     if (callback is not null && esAlgorithm.Interceptor is null)
                     {
                         esAlgorithm = esAlgorithm with
@@ -209,26 +200,27 @@ public class PythonGenealogyAnalysis
                     return analyzers.ToExperimentResult(esRun);
                 }
             case "ls":
-                var ls = HillClimber.GetBuilder<TCandidate, TSearchSpace, TProblem>(parameters.Creator!, parameters.Mutator!);
-                ls.BatchSize = ls.MaxNeighbors = parameters.NoChildren;
-                //ls.Terminator = terminator;
+                var lsAlgorithm = HillClimber.Create(
+                    RequireCreator(parameters),
+                    RequireMutator(parameters),
+                    refiner: refiner,
+                    maxNeighbors: parameters.NoChildren,
+                    batchSize: parameters.NoChildren);
 
-                var lsRun = (ls.Build() with { Refiner = refiner }).WithMaxIterations(parameters.Iterations).CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed));
+                var lsRun = lsAlgorithm.WithMaxIterations(parameters.Iterations).CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed));
                 lsRun.Complete();
                 throw new NotSupportedException(
                     "Configured experiment result extraction is not implemented for local search in this analyzer pipeline.");
             case "nsga2":
                 {
-                    var nsga2 = NSGA2.GetBuilder<TCandidate, TSearchSpace, TProblem>(parameters.Creator!, parameters.Crossover!, parameters.Mutator!);
-                    nsga2.PopulationSize = parameters.PopulationSize;
-                    nsga2.MutationRate = parameters.MutationRate;
-                    if (parameters.Selector != null)
-                    {
-                        nsga2.Selector = parameters.Selector;
-                    }
-
-                    //nsga2.Terminator = terminator;
-                    var nsga2Algorithm = nsga2.Build() with { Refiner = refiner };
+                    var nsga2Algorithm = NSGA2.Create(
+                        RequireCreator(parameters),
+                        RequireCrossover(parameters),
+                        RequireMutator(parameters),
+                        selector: parameters.Selector,
+                        refiner: refiner,
+                        populationSize: parameters.PopulationSize,
+                        mutationRate: parameters.MutationRate);
                     if (callback is not null && nsga2Algorithm.Interceptor is null)
                     {
                         nsga2Algorithm = nsga2Algorithm with
@@ -310,6 +302,34 @@ public class PythonGenealogyAnalysis
             return analyzers;
         }
     }
+
+    /// <summary>
+    /// Reads an operator that the requested algorithm cannot run without, failing at the interop boundary with a
+    /// message naming the missing setting.
+    /// </summary>
+    /// <remarks>
+    /// The parameters arrive from Python, where every operator is optional and unset, so this is the boundary that has
+    /// to establish the contract the rest of the library relies on.
+    /// </remarks>
+    private static ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> RequireCreator<TCandidate, TSearchSpace>(
+        ExperimentParameters<TCandidate, TSearchSpace> parameters)
+        where TSearchSpace : class, ISearchSpace<TCandidate> =>
+        parameters.Creator ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Creator));
+
+    /// <inheritdoc cref="RequireCreator{TCandidate, TSearchSpace}"/>
+    private static ICrossover<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> RequireCrossover<TCandidate, TSearchSpace>(
+        ExperimentParameters<TCandidate, TSearchSpace> parameters)
+        where TSearchSpace : class, ISearchSpace<TCandidate> =>
+        parameters.Crossover ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Crossover));
+
+    /// <inheritdoc cref="RequireCreator{TCandidate, TSearchSpace}"/>
+    private static IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> RequireMutator<TCandidate, TSearchSpace>(
+        ExperimentParameters<TCandidate, TSearchSpace> parameters)
+        where TSearchSpace : class, ISearchSpace<TCandidate> =>
+        parameters.Mutator ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Mutator));
+
+    private static ArgumentException MissingOperator(string algorithmName, string operatorName) =>
+        new($"Algorithm '{algorithmName}' requires '{operatorName}' to be set on the experiment parameters.");
 
     private sealed record CallbackAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(
         IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Interceptor,

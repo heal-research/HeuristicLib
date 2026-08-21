@@ -22,24 +22,22 @@ public class DynamicTSPTests
         var prob = new ActivatedTravelingSalesmanProblem(cdata, RandomNumberGenerator.Create(0), epochLength: 10000);
 
         //GA
-        var ga = GeneticAlgorithm.GetBuilder(
-            new RandomPermutationCreator(),
-            new EdgeRecombinationCrossover(),
-            new InversionMutator()
-        );
-
         //ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
-        //ga.RandomSeed = 42;
-        ga.PopulationSize = 100;
-        ga.MutationRate = 0.05;
-        ga.Selector = TournamentSelector.For(prob, tournamentSize: 2);
-        ga.Elites = 1;
+        var ga = GeneticAlgorithm.For(
+            prob.SearchSpace,
+            creator: new RandomPermutationCreator(),
+            crossover: new EdgeRecombinationCrossover(),
+            mutator: new InversionMutator(),
+            selector: TournamentSelector.For(prob, tournamentSize: 2),
+            populationSize: 100,
+            mutationRate: 0.05,
+            elites: 1);
         //ga.Evaluator = prob.WrapEvaluator(ga.Evaluator);
 
         //prob.AttachTo(ga);
 
         //execute
-        var resGa = (ga.Build() with { MaximumGenerations = 1000 }).Complete(prob, RandomNumberGenerator.Create(42),
+        var resGa = (ga with { MaximumGenerations = 1000 }).Complete(prob, RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken);
 
         //look at results

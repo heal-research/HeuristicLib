@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -17,13 +18,22 @@ public record NSGA2<TCandidate, TSearchSpace, TProblem>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public required int PopulationSize { get; init; }
+    public int PopulationSize { get; init; } = NSGA2Defaults.PopulationSize;
     public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
     public required ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; init; }
     public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
-    public required ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
-    public required IReplacer<TCandidate, TSearchSpace, TProblem> Replacer { get; init; }
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+    public ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; } = NSGA2Defaults.Selector<TCandidate, TSearchSpace, TProblem>();
+    public IReplacer<TCandidate, TSearchSpace, TProblem> Replacer { get; init; } = NSGA2Defaults.Replacer<TCandidate, TSearchSpace, TProblem>();
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = NSGA2Defaults.Evaluator<TCandidate, TSearchSpace, TProblem>();
+
+    /// <summary>
+    /// Gets the probability that an offspring is mutated. The expected value is in <c>[0, 1]</c>.
+    /// </summary>
+    /// <remarks>
+    /// The rate is applied as a threshold against a random value in <c>[0, 1)</c>. A value at most zero, negative
+    /// infinity and <c>NaN</c> never mutate; a value at least one and positive infinity always mutate.
+    /// </remarks>
+    public double MutationRate { get; init; } = NSGA2Defaults.MutationRate;
     public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
 
     /// <summary>
@@ -33,7 +43,9 @@ public record NSGA2<TCandidate, TSearchSpace, TProblem>
     public int? MaximumGenerations { get; init; }
 
     protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor) =>
-        new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover), instanceRegistry.Resolve(Mutator), instanceRegistry.Resolve(Selector), instanceRegistry.Resolve(Replacer), instanceRegistry.ResolveOptional(Refiner), PopulationSize, MaximumGenerations);
+        new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover),
+            instanceRegistry.Resolve(MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate)), instanceRegistry.Resolve(Selector),
+            instanceRegistry.Resolve(Replacer), instanceRegistry.ResolveOptional(Refiner), PopulationSize, MaximumGenerations);
 
     private sealed class Instance(
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
@@ -85,18 +97,121 @@ public record NSGA2<TCandidate, TSearchSpace, TProblem>
 public static class NSGA2
 #pragma warning restore S101
 {
-    public static NSGA2Builder<TCandidate, TSearchSpace, TProblem> GetBuilder<TCandidate, TSearchSpace, TProblem>(
-      ICreator<TCandidate, TSearchSpace, TProblem> creator,
-      ICrossover<TCandidate, TSearchSpace, TProblem> crossover,
-      IMutator<TCandidate, TSearchSpace, TProblem> mutator, bool dominateOnEquals = true)
-      where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    /// <summary>
+    /// Creates an NSGA-II for a problem that states its own operator preferences, asking the problem first and falling
+    /// back to the search space's encoding defaults for every required role.
+    /// </summary>
+    public static NSGA2<TCandidate, TSearchSpace, TProblem> For<TProblem, TCandidate, TSearchSpace>(
+        IProblemDefaults<TProblem, TCandidate, TSearchSpace> problem,
+        ICreator<TCandidate, TSearchSpace, TProblem>? creator = null,
+        ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
+        IMutator<TCandidate, TSearchSpace, TProblem>? mutator = null,
+        ISelector<TCandidate, TSearchSpace, TProblem>? selector = null,
+        IReplacer<TCandidate, TSearchSpace, TProblem>? replacer = null,
+        IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,
+        IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null,
+        IInterceptor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor = null,
+        int populationSize = NSGA2Defaults.PopulationSize,
+        int? maximumGenerations = null,
+        double mutationRate = NSGA2Defaults.MutationRate)
+        where TProblem : class,
+                         IProblemDefaultCreator<TProblem, TCandidate, TSearchSpace>,
+                         IProblemDefaultCrossover<TProblem, TCandidate, TSearchSpace>,
+                         IProblemDefaultMutator<TProblem, TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>,
+                             IEncodingDefaultCreator<TCandidate, TSearchSpace>,
+                             IEncodingDefaultCrossover<TCandidate, TSearchSpace>,
+                             IEncodingDefaultMutator<TCandidate, TSearchSpace>
     {
+        var searchSpace = problem.SearchSpace;
+        var self = problem as TProblem;
+
         return new()
         {
-            Mutator = mutator,
-            Crossover = crossover,
-            Creator = creator,
-            Selector = new ParetoCrowdingTournamentSelector<TCandidate>(dominateOnEquals)
+            Creator = creator ?? (self is null ? null : TProblem.CreateDefaultCreator(self)) ?? TSearchSpace.CreateDefaultCreator(searchSpace),
+            Crossover = crossover ?? (self is null ? null : TProblem.CreateDefaultCrossover(self)) ?? TSearchSpace.CreateDefaultCrossover(searchSpace),
+            Mutator = mutator ?? (self is null ? null : TProblem.CreateDefaultMutator(self)) ?? TSearchSpace.CreateDefaultMutator(searchSpace),
+            Selector = selector ?? NSGA2Defaults.Selector<TCandidate, TSearchSpace, TProblem>(),
+            Replacer = replacer ?? NSGA2Defaults.Replacer<TCandidate, TSearchSpace, TProblem>(),
+            Evaluator = evaluator ?? NSGA2Defaults.Evaluator<TCandidate, TSearchSpace, TProblem>(),
+            Refiner = refiner,
+            Interceptor = interceptor,
+            PopulationSize = populationSize,
+            MaximumGenerations = maximumGenerations,
+            MutationRate = mutationRate
         };
     }
+
+    /// <summary>
+    /// Creates an NSGA-II from a search space's encoding defaults alone, with no problem instance.
+    /// </summary>
+    public static NSGA2<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> For<TCandidate, TSearchSpace>(
+        IEncodingDefaults<TCandidate, TSearchSpace> searchSpace,
+        ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? creator = null,
+        ICrossover<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? crossover = null,
+        IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? mutator = null,
+        ISelector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? selector = null,
+        IReplacer<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? replacer = null,
+        IEvaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? evaluator = null,
+        IRefiner<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? refiner = null,
+        IInterceptor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, PopulationState<TCandidate>>? interceptor = null,
+        int populationSize = NSGA2Defaults.PopulationSize,
+        int? maximumGenerations = null,
+        double mutationRate = NSGA2Defaults.MutationRate)
+        where TSearchSpace : class, ISearchSpace<TCandidate>,
+                             IEncodingDefaultCreator<TCandidate, TSearchSpace>,
+                             IEncodingDefaultCrossover<TCandidate, TSearchSpace>,
+                             IEncodingDefaultMutator<TCandidate, TSearchSpace>
+    {
+        var typedSearchSpace = (TSearchSpace)searchSpace;
+
+        return new()
+        {
+            Creator = creator ?? TSearchSpace.CreateDefaultCreator(typedSearchSpace),
+            Crossover = crossover ?? TSearchSpace.CreateDefaultCrossover(typedSearchSpace),
+            Mutator = mutator ?? TSearchSpace.CreateDefaultMutator(typedSearchSpace),
+            Selector = selector ?? NSGA2Defaults.Selector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>(),
+            Replacer = replacer ?? NSGA2Defaults.Replacer<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>(),
+            Evaluator = evaluator ?? NSGA2Defaults.Evaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>(),
+            Refiner = refiner,
+            Interceptor = interceptor,
+            PopulationSize = populationSize,
+            MaximumGenerations = maximumGenerations,
+            MutationRate = mutationRate
+        };
+    }
+
+    /// <summary>
+    /// Creates an NSGA-II from the operators it requires, inferring the candidate, search space and problem types from
+    /// them. Every remaining member is optional and falls back to <see cref="NSGA2Defaults"/>.
+    /// </summary>
+    public static NSGA2<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
+        ICreator<TCandidate, TSearchSpace, TProblem> creator,
+        ICrossover<TCandidate, TSearchSpace, TProblem> crossover,
+        IMutator<TCandidate, TSearchSpace, TProblem> mutator,
+        ISelector<TCandidate, TSearchSpace, TProblem>? selector = null,
+        IReplacer<TCandidate, TSearchSpace, TProblem>? replacer = null,
+        IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,
+        IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null,
+        IInterceptor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor = null,
+        int populationSize = NSGA2Defaults.PopulationSize,
+        int? maximumGenerations = null,
+        double mutationRate = NSGA2Defaults.MutationRate)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new()
+        {
+            Creator = creator,
+            Crossover = crossover,
+            Mutator = mutator,
+            Selector = selector ?? NSGA2Defaults.Selector<TCandidate, TSearchSpace, TProblem>(),
+            Replacer = replacer ?? NSGA2Defaults.Replacer<TCandidate, TSearchSpace, TProblem>(),
+            Evaluator = evaluator ?? NSGA2Defaults.Evaluator<TCandidate, TSearchSpace, TProblem>(),
+            Refiner = refiner,
+            Interceptor = interceptor,
+            PopulationSize = populationSize,
+            MaximumGenerations = maximumGenerations,
+            MutationRate = mutationRate
+        };
+
 }

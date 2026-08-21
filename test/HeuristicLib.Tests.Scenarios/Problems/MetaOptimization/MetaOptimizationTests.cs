@@ -28,10 +28,11 @@ public class MetaOptimizationTests
         var ga = GeneticAlgorithm.Create(
           new UniformDistributedCreator(),
           new SimulatedBinaryCrossover(),
-          new GaussianMutator(0.5, 0.5), 0.25,
-          TournamentSelector.For(problem, tournamentSize: 2),
-          100,
-          new ProblemEvaluator<RealVector>());
+          new GaussianMutator(0.5, 0.5),
+          selector: TournamentSelector.For(problem, tournamentSize: 2),
+          evaluator: new ProblemEvaluator<RealVector>(),
+          populationSize: 100,
+          mutationRate: 0.25);
 
         //build meta problem (test some mutators
         var b = new MetaOptimizationProblemExamples.MetaOptimizationSearchSpaceBuilder();
@@ -50,20 +51,23 @@ public class MetaOptimizationTests
         });
 
         //build meta alg
-        var hc = HillClimber.GetBuilder(
+        var hc = HillClimber.Create(
           creator: metaSpace.CombineCreators(
             new UniformDistributedCreator(),
             new Operators.Creators.IntegerVectorCreators.UniformDistributedCreator()), //operator name clash ...
           mutator: metaSpace.CombineMutator(
             new PolynomialMutator(),
-            new UniformOnePositionMutator()));
-        hc.BatchSize = 4;
-        hc.Evaluator = hc.Evaluator
-                         .AsRepeated(11, ObjectiveVectorAggregation.Median)
-                         .WithCache();
+            new UniformOnePositionMutator()),
+          batchSize: 4);
+        hc = hc with
+        {
+            Evaluator = hc.Evaluator
+                          .AsRepeated(11, ObjectiveVectorAggregation.Median)
+                          .WithCache()
+        };
 
         //run meta alg
-        var finalState = hc.Build()
+        var finalState = hc
           .WithMaxIterations(5)
           .Complete(metaProblem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 

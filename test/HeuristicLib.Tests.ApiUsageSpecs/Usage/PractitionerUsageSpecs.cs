@@ -200,17 +200,14 @@ public class PractitionerUsageSpecs
     public async Task GeneticAlgorithm_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
-        {
-            PopulationSize = 24,
-            MaximumGenerations = 8,
-            Creator = new UniformDistributedCreator(problem.SearchSpace),
-            Crossover = new AlphaBetaBlendCrossover { Alpha = 0.7 },
-            Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
-            Selector = TournamentSelector.For(problem, tournamentSize: 2),
-            MutationRate = 0.2,
-            Elites = 1
-        };
+        var algorithm = GeneticAlgorithm.Create(
+            new UniformDistributedCreator(problem.SearchSpace),
+            new AlphaBetaBlendCrossover { Alpha = 0.7 },
+            new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
+            selector: TournamentSelector.For(problem, tournamentSize: 2),
+            populationSize: 24,
+            maximumGenerations: 8,
+            mutationRate: 0.2);
 
         var finalState = await algorithm.CompleteAsync(
           problem,

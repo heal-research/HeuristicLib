@@ -17,17 +17,17 @@ public class NSGA2Tests
     public void Complete_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
     {
         var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
-        var algorithm = NSGA2.GetBuilder<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>(
-          new UniformDistributedCreator(problem.SearchSpace),
-          new SinglePointCrossover(),
-          new GaussianMutator(0.1, 0.1));
-        algorithm.PopulationSize = 5;
-        algorithm.MutationRate = 0.5;
-
-        var result = (algorithm.Build() with
+        var algorithm = new NSGA2<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
         {
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Crossover = new SinglePointCrossover(),
+            Mutator = new GaussianMutator(0.1, 0.1),
+            PopulationSize = 5,
+            MutationRate = 0.5,
             MaximumGenerations = 5
-        }).Complete(
+        };
+
+        var result = algorithm.Complete(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken);

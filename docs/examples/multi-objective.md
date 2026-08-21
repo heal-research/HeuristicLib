@@ -50,16 +50,14 @@ var problem = new FuncProblem<RealVector, RealVectorSearchSpace>(
 `NSGA2` takes the same creator, crossover and mutator as a genetic algorithm. Two things differ: selection and replacement must both understand dominance, and there is no `Elites` setting because the replacer already keeps the best fronts.
 
 ```csharp
-var algorithm = new NSGA2<RealVector, RealVectorSearchSpace, FuncProblem<RealVector, RealVectorSearchSpace>>
-{
-    PopulationSize = 100,
-    MaximumGenerations = 200,
-    Creator = new UniformDistributedCreator(),
-    Crossover = new AlphaBetaBlendCrossover { Alpha = 0.7 },
-    Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1),
-    Selector = ParetoCrowdingTournamentSelector.For(problem, dominateOnEqualities: false, tournamentSize: 2),
-    Replacer = ParetoCrowdingReplacer.For(problem, dominateOnEqualities: true)
-};
+var algorithm = NSGA2.Create(
+    new UniformDistributedCreator(),
+    new AlphaBetaBlendCrossover { Alpha = 0.7 },
+    new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1),
+    selector: ParetoCrowdingTournamentSelector.For(problem, dominateOnEqualities: false, tournamentSize: 2),
+    replacer: ParetoCrowdingReplacer.For(problem, dominateOnEqualities: false),
+    populationSize: 100,
+    maximumGenerations: 200);
 ```
 
 Both operators rank by dominance first and break ties by crowding distance, preferring candidates in sparse regions. That second criterion is what spreads the population along the front instead of letting it bunch up in one attractive corner.
