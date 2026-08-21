@@ -26,23 +26,39 @@ public class BatchExecutionTests
     }
 
     [Fact]
-    public void Concurrent_RespectsMaximumConcurrency()
+    public void Concurrent_DoesNotExceedMaximumConcurrency()
     {
         var active = 0;
         var maximumActive = 0;
-        var started = 0;
-        using var firstTwoStarted = new CountdownEvent(2);
 
-        _ = BatchExecution.Parallel(20, _ =>
+        _ = BatchExecution.Parallel(200, _ =>
+        {
+            var currentActive = Interlocked.Increment(ref active);
+            UpdateMaximum(ref maximumActive, currentActive);
+            Thread.SpinWait(2000);
+            Interlocked.Decrement(ref active);
+            return currentActive;
+        }, RandomNumberGenerator.Create(42), maximumConcurrency: 2);
+
+        maximumActive.ShouldBeLessThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public void Concurrent_RunsOperationsConcurrently()
+    {
+        // Exactly two operations, so the range partitioner cannot place both on the same worker,
+        // and a generous rendezvous timeout so slow thread pool injection on CI does not fail the test.
+        var active = 0;
+        var maximumActive = 0;
+        using var bothStarted = new CountdownEvent(2);
+
+        _ = BatchExecution.Parallel(2, _ =>
         {
             var currentActive = Interlocked.Increment(ref active);
             UpdateMaximum(ref maximumActive, currentActive);
 
-            if (Interlocked.Increment(ref started) <= 2)
-            {
-                firstTwoStarted.Signal();
-                firstTwoStarted.Wait(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
-            }
+            bothStarted.Signal();
+            bothStarted.Wait(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
             Interlocked.Decrement(ref active);
             return currentActive;
