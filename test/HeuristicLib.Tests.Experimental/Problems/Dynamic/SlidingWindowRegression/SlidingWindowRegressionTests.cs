@@ -1,10 +1,6 @@
-using HEAL.HeuristicLib.DataAnalysis;
-using HEAL.HeuristicLib.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
-using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
 using HEAL.HeuristicLib.Problems.Dynamic.SlidingWindowRegression;
-using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
+using HEAL.HeuristicLib.Problems.MachineLearning;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
 namespace HEAL.HeuristicLib.Tests.Problems.Dynamic.SlidingWindowRegression;

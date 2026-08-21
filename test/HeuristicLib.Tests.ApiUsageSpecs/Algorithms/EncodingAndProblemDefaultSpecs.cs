@@ -1,16 +1,10 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
+using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Algorithms;
 

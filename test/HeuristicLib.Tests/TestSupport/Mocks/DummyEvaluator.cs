@@ -1,7 +1,5 @@
 using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.TestSupport.Mocks;

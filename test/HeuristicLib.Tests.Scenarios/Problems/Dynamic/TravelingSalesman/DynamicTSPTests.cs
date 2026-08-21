@@ -1,12 +1,6 @@
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
-using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Problems.Dynamic;
-using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
-using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic.TravelingSalesman;
 

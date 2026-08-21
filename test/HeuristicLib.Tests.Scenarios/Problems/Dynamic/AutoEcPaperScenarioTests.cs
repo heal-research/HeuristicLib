@@ -1,24 +1,10 @@
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Genotypes;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
-using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
-using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Operators.Mutators.IntegerVectorMutators;
-using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
-using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
-using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Encodings.Composite;
+using HEAL.HeuristicLib.Encodings.IntegerVectors;
+using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Problems.Dynamic;
-using HEAL.HeuristicLib.Problems.Dynamic.Analysis;
-using HEAL.HeuristicLib.Problems.Dynamic.Operators;
-using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
-using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
-using HEAL.HeuristicLib.States;
+using HEAL.HeuristicLib.Problems.TravelingSalesman;
+using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
 namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
 
@@ -46,7 +32,7 @@ public class AutoEcPaperScenarioTests
         var metaSpace = CreateTspHyperParameterSearchSpace();
         var metaCreator = metaSpace.CombineCreators(
             new UniformDistributedCreator(),
-            new HEAL.HeuristicLib.Operators.Creators.IntegerVectorCreators.UniformDistributedCreator());
+            new HEAL.HeuristicLib.Encodings.IntegerVectors.UniformDistributedCreator());
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.1),
             new UniformOnePositionMutator());
@@ -106,7 +92,7 @@ public class AutoEcPaperScenarioTests
         var metaSpace = CreateHyperParameterSearchSpace();
         var metaCreator = metaSpace.CombineCreators(
             new UniformDistributedCreator(),
-            new HEAL.HeuristicLib.Operators.Creators.IntegerVectorCreators.UniformDistributedCreator());
+            new HEAL.HeuristicLib.Encodings.IntegerVectors.UniformDistributedCreator());
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.15),
             new UniformOnePositionMutator());

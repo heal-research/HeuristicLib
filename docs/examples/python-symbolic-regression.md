@@ -40,8 +40,8 @@ sys.path.append(str(publish_dir))
 clr.AddReference("HEAL.HeuristicLib.PythonInterop")
 
 from System import Array, Double, Func
-from HEAL.HeuristicLib.Genotypes.SymbolicExpressions import ExpressionTree
-from HEAL.HeuristicLib.Optimization import ObjectiveVector
+from HEAL.HeuristicLib.Encodings.SymbolicExpressions import ExpressionTree
+from HEAL.HeuristicLib.Objectives import ObjectiveVector
 from HEAL.HeuristicLib.PythonInterop import (
     InteractiveSymbolicRegression,
     InteractiveSymRegParameters,

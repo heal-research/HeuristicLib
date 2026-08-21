@@ -1,25 +1,34 @@
-#pragma warning disable S3887
 namespace HEAL.HeuristicLib.Problems.QuadraticAssignment;
 
-public sealed class QuadraticAssignmentProblemData(double[,] flows, double[,] distances) : IQuadraticAssignmentProblemData
+public sealed class QuadraticAssignmentProblemData : IQuadraticAssignmentProblemData
 {
-    public readonly double[,] Distances = ValidateSquare(distances, nameof(distances));
-    public readonly double[,] Flows = ValidateSquare(flows, nameof(flows));
-    public int Size { get; } = ValidateSameSize(flows, distances);
+    private readonly double[,] distances;
+    private readonly double[,] flows;
 
-    public double GetFlow(int facilityA, int facilityB) => Flows[facilityA, facilityB];
-    public double GetDistance(int locationA, int locationB) => Distances[locationA, locationB];
-
-    private static double[,] ValidateSquare(double[,] m, string name)
+    public QuadraticAssignmentProblemData(double[,] flows, double[,] distances)
     {
-        var n0 = m.GetLength(0);
-        var n1 = m.GetLength(1);
+        var flowSize = ValidateSquare(flows, nameof(flows));
+        var distanceSize = ValidateSquare(distances, nameof(distances));
+        if (flowSize != distanceSize)
+            throw new ArgumentException("Flows and distances must have the same size.", nameof(distances));
 
-        return n0 != n1 ? throw new ArgumentException($"{name} must be square.", name) : m;
+        this.flows = (double[,])flows.Clone();
+        this.distances = (double[,])distances.Clone();
+        Size = flowSize;
     }
 
-    private static int ValidateSameSize(double[,] flows, double[,] distances)
+    public int Size { get; }
+
+    public double GetFlow(int facilityA, int facilityB) => flows[facilityA, facilityB];
+    public double GetDistance(int locationA, int locationB) => distances[locationA, locationB];
+
+    private static int ValidateSquare(double[,] matrix, string parameterName)
     {
-        return flows.GetLength(0) != distances.GetLength(0) ? throw new ArgumentException("flows and distances must have the same size.") : flows.GetLength(0);
+        var rowCount = matrix.GetLength(0);
+        var columnCount = matrix.GetLength(1);
+        if (rowCount != columnCount)
+            throw new ArgumentException("The matrix must be square.", parameterName);
+
+        return rowCount;
     }
 }

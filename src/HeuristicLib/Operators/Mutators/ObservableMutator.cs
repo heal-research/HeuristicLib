@@ -1,8 +1,9 @@
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Mutators;
+namespace HEAL.HeuristicLib.Operators;
 
 public sealed record ObservableMutator<TCandidate, TSearchSpace, TProblem>
     : WrappingMutator<TCandidate, TSearchSpace, TProblem>

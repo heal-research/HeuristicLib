@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 
 namespace HEAL.HeuristicLib.Tests.Problems.TestFunctions.SingleObjectives;

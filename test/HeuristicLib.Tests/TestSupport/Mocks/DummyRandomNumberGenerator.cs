@@ -1,5 +1,3 @@
-using HEAL.HeuristicLib.Random;
-
 namespace HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 public sealed class DummyRandomNumberGenerator : IRandomNumberGenerator

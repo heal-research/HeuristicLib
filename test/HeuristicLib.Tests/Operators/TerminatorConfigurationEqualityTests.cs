@@ -1,8 +1,5 @@
-using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.States;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators;

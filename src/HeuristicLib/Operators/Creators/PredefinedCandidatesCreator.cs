@@ -1,9 +1,10 @@
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Creators;
+namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>
 /// Emits predefined candidates across successive calls before delegating remaining requests to a fallback creator.

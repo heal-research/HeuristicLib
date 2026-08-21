@@ -1,8 +1,5 @@
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.States;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Experiments;

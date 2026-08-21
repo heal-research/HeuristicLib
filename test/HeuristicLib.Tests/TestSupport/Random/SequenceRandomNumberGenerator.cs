@@ -1,5 +1,3 @@
-using HEAL.HeuristicLib.Random;
-
 namespace HEAL.HeuristicLib.Tests.TestSupport.Random;
 
 public sealed class SequenceRandomNumberGenerator(params double[] nextDoubles) : IRandomNumberGenerator

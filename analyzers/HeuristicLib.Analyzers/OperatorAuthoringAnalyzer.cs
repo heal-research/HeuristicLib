@@ -102,7 +102,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         {
             "HEAL.HeuristicLib.Problems.IProblem`2",
             "HEAL.HeuristicLib.SearchSpaces.ISearchSpace",
-            "HEAL.HeuristicLib.States.ISearchState",
+            "HEAL.HeuristicLib.Algorithms.ISearchState",
             "HEAL.HeuristicLib.Operators.IOperatorInstance"
         };
 

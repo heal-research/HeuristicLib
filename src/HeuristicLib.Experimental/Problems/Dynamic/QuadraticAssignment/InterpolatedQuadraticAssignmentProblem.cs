@@ -1,8 +1,7 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
@@ -116,45 +115,51 @@ public sealed class InterpolatedQuadraticAssignmentProblem
 
     private void RebuildCurrentMatrices()
     {
-        // flows
-        LerpInto(currentFlows, a.Flows, b.Flows, Alpha);
+        LerpFlowsInto(currentFlows, a, b, Alpha);
 
-        // distances
         if (interpolateDistances)
         {
-            LerpInto(currentDistances, a.Distances, b.Distances, Alpha);
+            LerpDistancesInto(currentDistances, a, b, Alpha);
         }
         else
         {
-            // keep A distances (copy once would be enough if you never mutate them)
-            CopyInto(currentDistances, a.Distances);
+            CopyDistancesInto(currentDistances, a);
         }
     }
 
-    private static void LerpInto(double[,] dst, double[,] x, double[,] y, double t)
+    private static void LerpFlowsInto(double[,] destination, IQuadraticAssignmentProblemData x, IQuadraticAssignmentProblemData y, double t)
     {
-        var n0 = dst.GetLength(0);
-        var n1 = dst.GetLength(1);
         var s = 1.0 - t;
 
-        for (var i = 0; i < n0; i++)
+        for (var i = 0; i < destination.GetLength(0); i++)
         {
-            for (var j = 0; j < n1; j++)
+            for (var j = 0; j < destination.GetLength(1); j++)
             {
-                dst[i, j] = s * x[i, j] + t * y[i, j];
+                destination[i, j] = s * x.GetFlow(i, j) + t * y.GetFlow(i, j);
             }
         }
     }
 
-    private static void CopyInto(double[,] dst, double[,] src)
+    private static void LerpDistancesInto(double[,] destination, IQuadraticAssignmentProblemData x, IQuadraticAssignmentProblemData y, double t)
     {
-        var n0 = dst.GetLength(0);
-        var n1 = dst.GetLength(1);
-        for (var i = 0; i < n0; i++)
+        var s = 1.0 - t;
+
+        for (var i = 0; i < destination.GetLength(0); i++)
         {
-            for (var j = 0; j < n1; j++)
+            for (var j = 0; j < destination.GetLength(1); j++)
             {
-                dst[i, j] = src[i, j];
+                destination[i, j] = s * x.GetDistance(i, j) + t * y.GetDistance(i, j);
+            }
+        }
+    }
+
+    private static void CopyDistancesInto(double[,] destination, IQuadraticAssignmentProblemData source)
+    {
+        for (var i = 0; i < destination.GetLength(0); i++)
+        {
+            for (var j = 0; j < destination.GetLength(1); j++)
+            {
+                destination[i, j] = source.GetDistance(i, j);
             }
         }
     }

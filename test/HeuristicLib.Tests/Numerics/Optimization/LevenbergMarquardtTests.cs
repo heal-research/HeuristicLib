@@ -1,5 +1,5 @@
 using HEAL.HeuristicLib.Numerics.AutomaticDifferentiation;
-using HEAL.HeuristicLib.Numerics.Optimization;
+using HEAL.HeuristicLib.Numerics.LeastSquares;
 using DifferentiationExecution = HEAL.HeuristicLib.Numerics.AutomaticDifferentiation.Execution;
 
 namespace HEAL.HeuristicLib.Tests.Numerics.Optimization;

@@ -1,0 +1,10 @@
+global using HEAL.HeuristicLib.Algorithms;
+global using HEAL.HeuristicLib.Analysis;
+global using HEAL.HeuristicLib.Data;
+global using HEAL.HeuristicLib.Execution;
+global using HEAL.HeuristicLib.MachineLearning;
+global using HEAL.HeuristicLib.Numerics;
+global using HEAL.HeuristicLib.Objectives;
+global using HEAL.HeuristicLib.Operators;
+global using HEAL.HeuristicLib.Operators.Crossovers;
+global using HEAL.HeuristicLib.Random;

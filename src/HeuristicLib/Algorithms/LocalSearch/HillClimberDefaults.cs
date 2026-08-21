@@ -1,10 +1,8 @@
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
+namespace HEAL.HeuristicLib.Algorithms;
 
 /// <inheritdoc cref="GeneticAlgorithmDefaults" path="/summary"/>
 /// <remarks><inheritdoc cref="GeneticAlgorithmDefaults" path="/remarks/node()"/></remarks>

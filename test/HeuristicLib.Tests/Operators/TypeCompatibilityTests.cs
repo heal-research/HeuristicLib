@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Operators;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 

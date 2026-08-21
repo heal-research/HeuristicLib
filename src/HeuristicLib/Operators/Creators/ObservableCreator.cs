@@ -1,8 +1,9 @@
+using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Creators;
+namespace HEAL.HeuristicLib.Operators;
 
 public sealed record ObservableCreator<TCandidate, TSearchSpace, TProblem>
     : WrappingCreator<TCandidate, TSearchSpace, TProblem>

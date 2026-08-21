@@ -1,9 +1,10 @@
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Creators;
+namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>
 /// Creates a candidate batch and then always applies one mutator to the created batch.

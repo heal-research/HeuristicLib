@@ -1,6 +1,3 @@
-using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Optimization;
-
 namespace HEAL.HeuristicLib.Tests.Operators.Evaluators;
 
 public class ObjectiveVectorAggregatorTests

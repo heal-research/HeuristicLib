@@ -410,7 +410,30 @@ Name a type for the narrowest domain or representation that binds it. Use genoty
 
 ### § 9.4 Allow authoring dependencies required by construction
 
-An authoring type may depend on a search space even when the genotype does not. The namespace dependency between `Genotypes.SymbolicExpressions` and `SearchSpaces.SymbolicExpressions` is accepted because construction needs it. Do not weaken the authoring API to remove it.
+An authoring type may depend on a search space even when the candidate representation does not. Construction may require this dependency. Do not weaken the authoring API to remove it.
+
+For example, `ExpressionDraft` takes an `ExpressionTreeSearchSpace` to resolve symbols while building, even though `ExpressionTree` itself does not depend on a search space.
+
+### § 9.5 Match namespaces and folders by audience
+
+- Put user facing types in concept namespaces.
+- Use detailed namespaces only for contracts, bases and machinery that authors reach for rather than users.
+- Give a concept one namespace. Do not split it into small public namespaces that a user has to import together.
+- A source subfolder adds a namespace segment only when it changes the audience. Folders may organize implementation categories without adding a namespace segment.
+- Use architecture tests for reviewed concept boundaries. Do not enforce a mechanical namespace to path equation across the project.
+- Keep project roots free of source files. Put every type in the folder for its owning concept even when its namespace is intentionally broader than that folder.
+
+### § 9.6 Keep package placement deliberate
+
+A component belongs in the main package when its responsibility is part of the standard HeuristicLib toolkit, its current contract is coherent and complete, its important behavior is tested and its dependencies are suitable for ordinary users.
+
+A component belongs in Experimental when it has a real use case but its public model or semantics remain unsettled, it is a research workflow with limited validation, it is retained legacy code or it depends on another experimental component.
+
+Do not move empty implementations, inaccessible results or known unbounded defects to Experimental. Remove them, make them internal or complete them first.
+
+Promote a feature from Experimental only when its responsibility belongs in the standard toolkit, its central API has no expected replacement, its ownership rules match this guide, its advertised behavior is complete, its normal setup has an API usage spec and its important failure behavior has unit tests. Promotion must not force unrelated experimental concepts or unsuitable dependencies into the main package.
+
+The main and Contracts packages must never reference Experimental. Experimental may reference the main package.
 
 ## § 10 Enforcement and implementation style
 

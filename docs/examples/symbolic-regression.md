@@ -8,19 +8,12 @@ This example learns the linear function `y = 2.5x + 1.3` from generated samples.
 
 ```csharp
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.DataAnalysis;
-using HEAL.HeuristicLib.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
-using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
-using HEAL.HeuristicLib.Operators.Mutators;
-using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
-using HEAL.HeuristicLib.Operators.Refiners.SymbolicRegressionRefiners;
-using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
+using HEAL.HeuristicLib.Data;
+using HEAL.HeuristicLib.MachineLearning;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems.MachineLearning;
 
 var x = Enumerable.Range(0, 40)
     .Select(index => (index - 20) * 0.25)

@@ -1,8 +1,8 @@
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Operators.Interceptors;
+namespace HEAL.HeuristicLib.Operators;
 
 public sealed record RemoveDuplicatesInterceptor<TCandidate, TSearchState>
     : StatelessInterceptor<TCandidate, TSearchState>

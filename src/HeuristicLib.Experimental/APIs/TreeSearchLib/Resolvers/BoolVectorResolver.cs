@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Encodings.BoolVectors;
 
 namespace HEAL.HeuristicLib.APIs.TreeSearchLib;
 

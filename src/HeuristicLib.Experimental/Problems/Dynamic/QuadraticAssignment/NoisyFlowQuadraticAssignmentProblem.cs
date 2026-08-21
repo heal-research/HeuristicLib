@@ -1,8 +1,7 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
@@ -26,8 +25,8 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
 
         baseProblemData = problemData;
         this.sigma = sigma;
-        noisyFlows = (double[,])baseProblemData.Flows.Clone();
-        Update(); // initialize state (or call RebuildNoisyFlows() directly)
+        noisyFlows = new double[baseProblemData.Size, baseProblemData.Size];
+        Update();
     }
 
     public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing)
@@ -41,7 +40,7 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
             for (var j = 0; j < n; j++)
             {
                 var lj = solution[j];
-                cost += noisyFlows[i, j] * baseProblemData.Distances[li, lj];
+                cost += noisyFlows[i, j] * baseProblemData.GetDistance(li, lj);
             }
         }
 
@@ -50,15 +49,13 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
 
     protected override void Update()
     {
-        // fresh noise each update (non-cumulative)
         var n = baseProblemData.Size;
-        var f0 = baseProblemData.Flows;
 
         for (var i = 0; i < n; i++)
         {
             for (var j = 0; j < n; j++)
             {
-                noisyFlows[i, j] = f0[i, j] + EnvironmentRandom.NextNormal(0, sigma);
+                noisyFlows[i, j] = baseProblemData.GetFlow(i, j) + EnvironmentRandom.NextNormal(0, sigma);
             }
         }
     }

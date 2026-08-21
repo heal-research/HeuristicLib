@@ -1,11 +1,11 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Operators.Selectors;
+namespace HEAL.HeuristicLib.Operators;
 
 public record TournamentSelector<TCandidate>
     : StatelessSelector<TCandidate>

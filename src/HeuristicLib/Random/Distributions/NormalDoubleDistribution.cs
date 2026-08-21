@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.Random.Distributions;
+namespace HEAL.HeuristicLib.Random;
 
 /// <summary>Samples a normally distributed value.</summary>
 /// <remarks>

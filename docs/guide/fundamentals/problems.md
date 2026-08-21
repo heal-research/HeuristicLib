@@ -7,10 +7,9 @@ A problem is the boundary between your domain and the search algorithm. It tells
 When evaluation is a single function, `FuncProblem.Create` is the shortest useful definition:
 
 ```csharp
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 var searchSpace = new RealVectorSearchSpace(
     length: 3,
@@ -38,7 +37,7 @@ Keep search policy in the algorithm configuration. Population size, mutation str
 
 ## Built-in problems
 
-The library includes benchmark and domain problems that are useful for learning, tests and comparisons. `TestFunctionProblem` wraps numerical benchmarks such as Rastrigin. Other namespaces cover traveling salesperson and data analysis tasks.
+The library includes benchmark and domain problems that are useful for learning, tests and comparisons. `TestFunctionProblem` wraps numerical benchmarks such as Rastrigin. Other namespaces cover traveling salesperson and machine learning tasks.
 
 Built-in problems expose their search space, so creators can use the same bounds:
 

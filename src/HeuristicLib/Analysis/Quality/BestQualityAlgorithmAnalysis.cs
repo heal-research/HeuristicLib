@@ -1,9 +1,9 @@
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Analysis.Quality;
+namespace HEAL.HeuristicLib.Analysis;
 
 public record BestQualityAlgorithmAnalysis<TCandidate, TSearchSpace, TProblem> : Analyzer<QualityState>
     where TSearchSpace : class, ISearchSpace<TCandidate>

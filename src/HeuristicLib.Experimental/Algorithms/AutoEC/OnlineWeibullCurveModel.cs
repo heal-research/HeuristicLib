@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Numerics;
 
 namespace HEAL.HeuristicLib.Algorithms.AutoEC;
 

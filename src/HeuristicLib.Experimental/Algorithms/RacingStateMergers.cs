@@ -1,5 +1,4 @@
-using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.States;
+using HEAL.HeuristicLib.Objectives;
 
 namespace HEAL.HeuristicLib.Algorithms;
 

@@ -1,9 +1,8 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 

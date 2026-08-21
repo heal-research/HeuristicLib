@@ -1,8 +1,9 @@
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Mutators;
+namespace HEAL.HeuristicLib.Operators;
 
 public sealed record PipelineMutator<TCandidate, TSearchSpace, TProblem>
     : MultiMutator<TCandidate, TSearchSpace, TProblem>

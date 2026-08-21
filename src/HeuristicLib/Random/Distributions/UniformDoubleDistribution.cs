@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.Random.Distributions;
+namespace HEAL.HeuristicLib.Random;
 
 /// <summary>Samples a uniformly distributed value from <c>[minimum, maximum)</c>.</summary>
 /// <remarks>

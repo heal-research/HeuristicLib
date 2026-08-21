@@ -1,11 +1,13 @@
 //using HEAL.HeuristicLib.APIs.TreeSearchLib;
-//using HEAL.HeuristicLib.Genotypes.Vectors;
+//using HEAL.HeuristicLib.Encodings.Vectors;
 //using HEAL.HeuristicLib.Operators;
-//using HEAL.HeuristicLib.Optimization;
+//using HEAL.HeuristicLib.Objectives;
+
+
 //using HEAL.HeuristicLib.Problems.Partial;
 //using HEAL.HeuristicLib.Problems.TravelingSalesman;
 //using HEAL.HeuristicLib.Random;
-//using HEAL.HeuristicLib.SearchSpaces.Vectors;
+//using HEAL.HeuristicLib.Encodings.Vectors;
 
 //namespace HEAL.HeuristicLib.Tests.APIs.TreeSearchLib;
 

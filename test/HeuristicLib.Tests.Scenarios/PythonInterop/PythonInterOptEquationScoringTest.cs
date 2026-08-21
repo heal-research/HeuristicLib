@@ -1,8 +1,7 @@
-using HEAL.HeuristicLib.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using HEAL.HeuristicLib.MachineLearning;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.PythonInterop;
-using HEAL.HeuristicLib.Random.Distributions;
 
 namespace HEAL.HeuristicLib.Tests.Scenarios.PythonInterop;
 

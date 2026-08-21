@@ -33,7 +33,6 @@ using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
 public sealed record TwoStageAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
     : Algorithm<TwoStageAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>,

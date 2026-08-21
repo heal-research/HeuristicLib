@@ -1,19 +1,5 @@
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.DataAnalysis;
-using HEAL.HeuristicLib.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
-using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
-using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
-using HEAL.HeuristicLib.Operators.Refiners;
-using HEAL.HeuristicLib.Operators.Refiners.SymbolicRegressionRefiners;
-using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
-using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
+using HEAL.HeuristicLib.Problems.MachineLearning;
+using static HEAL.HeuristicLib.Encodings.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Refiners.SymbolicRegressionRefiners;
 

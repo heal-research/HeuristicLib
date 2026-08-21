@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.Random.Distributions;
+namespace HEAL.HeuristicLib.Random;
 
 /// <remarks>
 /// <see cref="Weights"/> is the only member a <c>with</c> expression may set, so <c>mixture with { Weights = … }</c>

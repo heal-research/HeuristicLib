@@ -1,10 +1,11 @@
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Selectors;
+namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>
 /// Selects equal numbers of female and male candidates, then aligns them as consecutive pairs.

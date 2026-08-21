@@ -16,13 +16,11 @@ Download [`berlin52.tsp`](https://github.com/heal-research/HeuristicLib/blob/mai
 
 ```csharp
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Problems.TravelingSalesman;
-using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 var instance = TsplibTspInstanceProvider.LoadData(
     "berlin52.tsp",

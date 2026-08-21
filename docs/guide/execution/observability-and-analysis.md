@@ -49,8 +49,8 @@ An algorithm is an anchor by reference. `algorithm with { PopulationSize = 200 }
 Some observations are about what an operator did rather than about the resulting state — selection pressure, evaluation counts, crossover statistics — and cannot be derived from search states. Those anchor on the operator:
 
 ```csharp
-using HEAL.HeuristicLib.Operators.Interceptors;
-using HEAL.HeuristicLib.States;
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Operators;
 
 var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
 var observedAlgorithm = algorithm with { Interceptor = interceptor };

@@ -159,7 +159,7 @@ Use objective directions for the problem-level direction model. Objective direct
 
 See also: Objective direction, Objective vector.
 
-## Data Analysis
+## Data
 
 ### Series
 
@@ -178,6 +178,20 @@ A data frame is an immutable, insertion-ordered collection of equally sized seri
 Status: `Canonical`
 
 Supervised data pairs an input data frame with one named target series of the same row count. It does not imply whether the data is used for training, validation, or testing.
+
+## Machine learning
+
+### Supervised learning
+
+Status: `Canonical`
+
+Supervised learning fits a predictor from inputs paired with known target values. Regression and classification are supervised learning tasks distinguished by the meaning and type of their targets.
+
+### Regression
+
+Status: `Canonical`
+
+Regression is a supervised learning task whose targets and predictions are numeric values.
 
 ### Predictor
 
@@ -228,7 +242,7 @@ common case where the policy shuffles the feature values.
 
 Status: `Canonical`
 
-An expression metric evaluates a symbolic expression's genotype without requiring prediction data. Examples include expression length, variable occurrence count, and structural complexity. A symbolic-regression problem may combine expression metrics with regression metrics in one objective vector.
+An expression metric evaluates a symbolic expression candidate without requiring prediction data. Examples include expression length, variable occurrence count and structural complexity. A symbolic regression problem may combine expression metrics with regression metrics in one objective vector.
 
 ### Numeric parameter fitting
 

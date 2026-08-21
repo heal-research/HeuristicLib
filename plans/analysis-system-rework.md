@@ -258,7 +258,7 @@ Keep this model separate and document its external ownership. Do not force these
 
 ### Keep a small analyzer framework in core
 
-The earlier [core and experimental boundary plan](core_experimental_boundary.md) proposes moving the complete run-owned analyzer layer to Experimental. Revisit that decision before implementation.
+An earlier boundary proposal would have moved the complete run-owned analyzer layer to Experimental. That question is settled the other way: the analyzer framework stays in the main package, and only analyzers whose result, retention or objective semantics are unsettled live in Experimental, with their entry points on `ExperimentalAnalyzers`. The package admission and promotion policy behind that decision is [developer guidelines § 9.6](../docs/contributing/developer-guidelines.md#-96-keep-package-placement-deliberate).
 
 The current recommendation is to keep a small mature analyzer framework in the main package. Run-wide quality analysis is a normal optimization workflow and now appears in the README. Moving the whole concept would make an ordinary feature look provisional.
 
@@ -606,16 +606,16 @@ The rework is complete when:
 
 Do not start this rework before the planned early main release.
 
-Complete the mechanical namespace and folder restructuring first. Then do this rework on its own branch.
+The mechanical namespace and folder restructuring is complete, so this rework is unblocked. Do it on its own branch.
 
 This ordering may move or rename some analysis files a second time if the replacement API changes their concepts. That cost is acceptable because the namespace work is bounded and release-facing, while the analysis redesign needs more time and should not delay the next main release. Keep the namespace branch mechanical. Do not redesign analyzer contracts, results or lifecycle while moving files.
 
-Coordinate with these plans and backlog items:
+Coordinate with these backlog items:
 
-- [API ergonomics](api-ergonomics.md), especially the implemented algorithm observation work and pending namespace changes
-- [Core and Experimental package boundary](core_experimental_boundary.md), especially the unresolved placement of run-owned analysis
 - the `AlgorithmRun` and `ExperimentRun` lifecycle backlog item
 - the objective-system backlog item before finalizing Pareto and hypervolume analysis
+
+The algorithm observation anchor this rework builds on is already implemented and documented in [observability and analysis](../docs/guide/execution/observability-and-analysis.md). One defect it left behind is in scope here: only `BestMedianWorstAnalysis` was converted off a `params IInterceptor<…>[]` constructor to `ValueArray`, so the remaining interceptor-anchored analyses still take reference equality over their anchors.
 
 Keep the implementation on its own branch. Avoid mixing it with namespace moves, broad glossary renaming or unrelated algorithm work.
 
@@ -627,5 +627,3 @@ Keep the implementation on its own branch. Avoid mixing it with namespace moves,
 - [Collection ownership](../docs/contributing/developer-guidelines.md#-5-immutability-and-collection-ownership)
 - [Analyzer glossary entries](../docs/guide/glossary.md#analyzer)
 - [Developer backlog](developer-backlog.md)
-- [API ergonomics](api-ergonomics.md)
-- [Core and Experimental package boundary](core_experimental_boundary.md)

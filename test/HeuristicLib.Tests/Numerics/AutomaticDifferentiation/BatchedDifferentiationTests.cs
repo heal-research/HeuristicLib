@@ -1,5 +1,4 @@
 using System.Numerics;
-using HEAL.HeuristicLib.Numerics;
 using HEAL.HeuristicLib.Numerics.AutomaticDifferentiation;
 
 namespace HEAL.HeuristicLib.Tests.Numerics.AutomaticDifferentiation;

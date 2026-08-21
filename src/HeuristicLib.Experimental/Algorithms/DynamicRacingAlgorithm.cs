@@ -1,17 +1,15 @@
 using HEAL.HeuristicLib.Algorithms.AutoEC;
+using HEAL.HeuristicLib.Encodings.IntegerVectors;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
-
-using MetaOptimizationGenotype = HEAL.HeuristicLib.Genotypes.CompositeGenotype<HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector>;
-using MetaOptimizationProblem = HEAL.HeuristicLib.Problems.IProblem<HEAL.HeuristicLib.Genotypes.CompositeGenotype<HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector>, HEAL.HeuristicLib.Genotypes.CompositeSearchSpace<HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.SearchSpaces.Vectors.RealVectorSearchSpace, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector, HEAL.HeuristicLib.SearchSpaces.Vectors.IntegerVectorSearchSpace>>;
-using MetaOptimizationSearchSpace = HEAL.HeuristicLib.Genotypes.CompositeSearchSpace<HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.SearchSpaces.Vectors.RealVectorSearchSpace, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector, HEAL.HeuristicLib.SearchSpaces.Vectors.IntegerVectorSearchSpace>;
+using MetaOptimizationGenotype = HEAL.HeuristicLib.Encodings.Composite.CompositeGenotype<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector>;
+using MetaOptimizationProblem = HEAL.HeuristicLib.Problems.IProblem<HEAL.HeuristicLib.Encodings.Composite.CompositeGenotype<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector>, HEAL.HeuristicLib.Encodings.Composite.CompositeSearchSpace<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, HEAL.HeuristicLib.Encodings.RealVectors.RealVectorSearchSpace, HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector, HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVectorSearchSpace>>;
+using MetaOptimizationSearchSpace = HEAL.HeuristicLib.Encodings.Composite.CompositeSearchSpace<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, HEAL.HeuristicLib.Encodings.RealVectors.RealVectorSearchSpace, HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector, HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVectorSearchSpace>;
 
 namespace HEAL.HeuristicLib.Algorithms;
 

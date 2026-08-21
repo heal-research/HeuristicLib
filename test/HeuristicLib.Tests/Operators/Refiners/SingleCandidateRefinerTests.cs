@@ -1,6 +1,4 @@
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Refiners;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Refiners;

@@ -1,7 +1,5 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems.Dynamic.Operators;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
+using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Objectives;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 

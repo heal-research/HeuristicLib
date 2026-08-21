@@ -1,8 +1,9 @@
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Operators.Terminators;
+namespace HEAL.HeuristicLib.Operators;
 
 public sealed record AllTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
     : MultiTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>

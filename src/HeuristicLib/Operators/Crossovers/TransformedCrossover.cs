@@ -1,10 +1,10 @@
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Crossovers;
+namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>
 /// Crosses a parent batch and then always applies one mutator to the resulting candidate batch.

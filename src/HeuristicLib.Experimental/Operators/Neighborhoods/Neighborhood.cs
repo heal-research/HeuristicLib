@@ -1,7 +1,7 @@
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.MoveAppliers;
 using HEAL.HeuristicLib.Operators.MoveCreators;
 using HEAL.HeuristicLib.Operators.MoveEvaluators;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;

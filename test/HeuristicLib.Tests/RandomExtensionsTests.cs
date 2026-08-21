@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
 namespace HEAL.HeuristicLib.Tests;

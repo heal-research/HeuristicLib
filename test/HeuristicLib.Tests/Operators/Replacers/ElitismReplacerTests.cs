@@ -1,6 +1,3 @@
-using HEAL.HeuristicLib.Operators.Replacers;
-using HEAL.HeuristicLib.Optimization;
-
 namespace HEAL.HeuristicLib.Tests.Operators.Replacers;
 
 public class ElitismReplacerTests

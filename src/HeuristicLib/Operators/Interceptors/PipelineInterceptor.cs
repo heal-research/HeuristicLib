@@ -1,9 +1,10 @@
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Operators.Interceptors;
+namespace HEAL.HeuristicLib.Operators;
 
 public sealed record PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
     : MultiInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>

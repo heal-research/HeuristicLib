@@ -1,9 +1,10 @@
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Replacers;
+namespace HEAL.HeuristicLib.Operators;
 
 public sealed record ObservableReplacer<TCandidate, TSearchSpace, TProblem>
     : WrappingReplacer<TCandidate, TSearchSpace, TProblem>

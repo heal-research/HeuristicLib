@@ -1,16 +1,12 @@
-using HEAL.HeuristicLib.DataAnalysis;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
-using HEAL.HeuristicLib.Operators.Crossovers;
-using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
-using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Operators.Mutators;
-using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Numerics;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.States;
+using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
 namespace HEAL.HeuristicLib.PythonInterop;
 
@@ -42,7 +38,7 @@ public static class PythonCorrelationAnalysis
             var r = random.Fork((int)i);
             var n = Enumerable.Range(0, count).Select(_ => NextSphere(r, vector, sigma, vector.Count, false)).ToArray();
             var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem).ToArray();
-            var d = Statistics.Covariance(
+            var d = DescriptiveStatistics.Covariance(
               objectives.Select(x => x[0]).ToArray(),
               objectives.Select(x => x[1]).ToArray()).Correlation;
             res[i] = d;

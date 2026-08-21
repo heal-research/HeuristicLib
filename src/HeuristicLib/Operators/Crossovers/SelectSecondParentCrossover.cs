@@ -1,9 +1,9 @@
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Crossovers;
+namespace HEAL.HeuristicLib.Operators;
 
 public record SelectSecondParentCrossover<TCandidate>
     : SingleCandidateCrossover<TCandidate>

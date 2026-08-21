@@ -1,11 +1,11 @@
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Refiners;
+namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>
 /// Adds objective-aware retention to another refiner. It evaluates each candidate before and after refinement and keeps

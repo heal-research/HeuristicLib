@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Analyzers;
-using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -18,7 +17,7 @@ public class OperatorAuthoringAnalyzerTests
       using HEAL.HeuristicLib.Problems;
       using HEAL.HeuristicLib.Random;
       using HEAL.HeuristicLib.SearchSpaces;
-      using HEAL.HeuristicLib.States;
+      using HEAL.HeuristicLib.Algorithms;
 
       """;
 

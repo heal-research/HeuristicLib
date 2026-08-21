@@ -1,11 +1,11 @@
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators.Refiners;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Evaluators;
+namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>
 /// Refines the candidates temporarily, evaluates the refined candidates, and returns those objective vectors for the

@@ -1,17 +1,8 @@
 using System.Runtime.CompilerServices;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
-using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
-using HEAL.HeuristicLib.Operators.Interceptors;
-using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Operators.Terminators;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators;
@@ -98,8 +89,8 @@ public class OperatorStaticMethodGuidelineTests
     [Fact]
     public void ChangedOperatorRecords_ExposeOnlyImmutableConfigurationProperties()
     {
-        AssertImmutableDeclaredProperties(typeof(HeuristicLib.Operators.Creators.RealVectorCreators.NormalDistributedCreator));
-        AssertImmutableDeclaredProperties(typeof(HeuristicLib.Operators.Creators.IntegerVectorCreators.NormalDistributedCreator));
+        AssertImmutableDeclaredProperties(typeof(Encodings.RealVectors.NormalDistributedCreator));
+        AssertImmutableDeclaredProperties(typeof(Encodings.IntegerVectors.NormalDistributedCreator));
         AssertImmutableDeclaredProperties(typeof(BalancedTreeCreator));
         AssertImmutableDeclaredProperties(typeof(SelfAdaptiveSimulatedBinaryCrossover));
         AssertImmutableDeclaredProperties(typeof(SubtreeCrossover));

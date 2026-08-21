@@ -1,7 +1,7 @@
 using System.Globalization;
 using static System.String;
 
-namespace HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
+namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 public class TsplibParser
 {

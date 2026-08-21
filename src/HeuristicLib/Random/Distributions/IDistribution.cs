@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.Random.Distributions;
+namespace HEAL.HeuristicLib.Random;
 
 public interface IDistribution<out T>
 {

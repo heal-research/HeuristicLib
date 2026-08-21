@@ -168,7 +168,7 @@ bound training data and deliberately exposes no general prediction API.
 Set `useLinearScaling: true` to fit a least-squares slope and intercept for each
 candidate evaluation. Scaling is applied to the predictions every metric sees and
 leaves the genotype untouched, so it does not affect expression identity, length,
-containment, mutation, or crossover. See [data analysis](/guide/domains/data-analysis#linear-scaling).
+containment, mutation, or crossover. See [data and machine learning](/guide/domains/data-and-machine-learning#linear-scaling).
 
 ## Running a search
 

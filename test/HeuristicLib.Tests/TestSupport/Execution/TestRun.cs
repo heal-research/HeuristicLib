@@ -1,5 +1,3 @@
-using HEAL.HeuristicLib.Execution;
-
 namespace HEAL.HeuristicLib.Tests.TestSupport.Execution;
 
 internal sealed class TestRun : AlgorithmRun

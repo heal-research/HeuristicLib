@@ -1,6 +1,6 @@
 using System.Numerics;
-using HEAL.HeuristicLib.DataAnalysis;
-using HEAL.HeuristicLib.DataAnalysis.Regression;
+using HEAL.HeuristicLib.Data;
+using HEAL.HeuristicLib.MachineLearning;
 
 namespace HEAL.HeuristicLib.PythonInterop;
 

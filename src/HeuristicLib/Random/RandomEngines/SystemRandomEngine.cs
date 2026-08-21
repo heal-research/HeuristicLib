@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.Random.RandomEngines;
+namespace HEAL.HeuristicLib.Random;
 
 public sealed class SystemRandomEngine : IRandomEngine
 {

@@ -1,5 +1,3 @@
-using HEAL.HeuristicLib.Numerics;
-
 namespace HEAL.HeuristicLib.Tests.Numerics;
 
 public sealed class OperationCatalogTests

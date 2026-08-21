@@ -16,7 +16,7 @@ Choose a representation that makes invalid candidates difficult to express. A pe
 ## Define a real vector space
 
 ```csharp
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 
 var space = new RealVectorSearchSpace(
     length: 4,

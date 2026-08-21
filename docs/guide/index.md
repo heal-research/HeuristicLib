@@ -48,7 +48,7 @@ The parts stay separate. Compare algorithms on the same problem, swap a mutation
 - Reusable creation, crossover, mutation and selection operators
 - Single objective and multiobjective evaluation
 - Repeatable experiments, parameter grids and analysis helpers
-- Specialized support for data analysis, symbolic regression and symbolic expressions
+- Specialized support for machine learning, symbolic regression and symbolic expressions
 - Source based Python integration through pythonnet
 
 HeuristicLib targets .NET 10. The package is currently prerelease software, so expect APIs to evolve between versions.

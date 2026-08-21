@@ -1,7 +1,3 @@
-using HEAL.HeuristicLib.Operators.Crossovers;
-using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Random;
-
 namespace HEAL.HeuristicLib.Tests.TestSupport.SpecialTestEncoding;
 
 public record SpecialGenotypeCrossover : SingleCandidateCrossover<SpecialGenotype, SpecialSearchSpace, SpecialProblem>

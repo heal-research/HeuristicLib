@@ -1,11 +1,10 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.QuadraticAssignment;
 
-public class QuadraticAssignmentProblem(IQuadraticAssignmentProblemData problemData)
+public sealed class QuadraticAssignmentProblem(IQuadraticAssignmentProblemData problemData)
   : PermutationProblem(SingleObjective.Minimize, new PermutationSearchSpace(problemData.Size))
 {
     public IQuadraticAssignmentProblemData ProblemData { get; } = problemData;

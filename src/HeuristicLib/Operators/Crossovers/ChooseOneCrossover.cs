@@ -1,9 +1,9 @@
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Crossovers;
+namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>
 /// Chooses one child crossover independently for each parent group and restores the results to input order.

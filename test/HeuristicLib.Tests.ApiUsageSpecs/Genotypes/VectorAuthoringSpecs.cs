@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Encodings.Vectors;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Genotypes;
 

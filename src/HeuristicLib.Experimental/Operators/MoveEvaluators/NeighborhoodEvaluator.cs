@@ -1,5 +1,5 @@
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Neighborhoods;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;

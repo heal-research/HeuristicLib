@@ -1,16 +1,9 @@
 using System.Runtime.CompilerServices;
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.Dynamic;
-using HEAL.HeuristicLib.Problems.Dynamic.Analysis;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Tests.Problems.Dynamic.Analysis;
+namespace HEAL.HeuristicLib.Tests.Problems.Dynamic;
 
 public class DynamicAnalysisTests
 {

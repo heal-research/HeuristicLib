@@ -1,29 +1,9 @@
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.LocalSearch;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
-using HEAL.HeuristicLib.Genotypes.Trees;
-using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers;
-using HEAL.HeuristicLib.Operators.Interceptors;
-using HEAL.HeuristicLib.Operators.Mutators;
-using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
-using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Encodings.LegacySymbolicExpressions;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Problems.DataAnalysis;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.Evaluators;
-using HEAL.HeuristicLib.SearchSpaces.Trees;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars.Legacy;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
-using HEAL.HeuristicLib.States;
+using HEAL.HeuristicLib.Problems.MachineLearning.Legacy;
 using RandomNumberGenerator = HEAL.HeuristicLib.Random.RandomNumberGenerator;
-using SymbolicRegressionProblem = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.SymbolicRegressionProblem;
+using SymbolicRegressionProblem = HEAL.HeuristicLib.Problems.MachineLearning.Legacy.SymbolicRegressionProblem;
 
 namespace HEAL.HeuristicLib.Tests.Scenarios.GenealogyAnalysis;
 

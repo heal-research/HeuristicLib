@@ -1,12 +1,12 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Interceptors;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic.Operators;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
     : Interceptor<TCandidate, TSearchSpace, TProblem, TSearchState>

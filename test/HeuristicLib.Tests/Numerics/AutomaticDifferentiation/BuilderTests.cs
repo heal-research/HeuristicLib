@@ -1,5 +1,5 @@
-using HEAL.HeuristicLib.Numerics;
 using HEAL.HeuristicLib.Numerics.AutomaticDifferentiation;
+using Instruction = HEAL.HeuristicLib.Numerics.AutomaticDifferentiation.Instruction;
 
 namespace HEAL.HeuristicLib.Tests.Numerics.AutomaticDifferentiation;
 

@@ -1,8 +1,9 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
@@ -23,6 +24,16 @@ public static class ExperimentalAnalyzers
         where TR : PopulationState<T>
     {
         return new(interceptor);
+    }
+
+    public static HyperVolumeAnalysis<T, TS, TP> HyperVolume<T, TS, TP>(
+        ObjectiveDirections objective,
+        ObjectiveVector referencePoint,
+        params IEvaluator<T, TS, TP>[] evaluators)
+        where TS : class, ISearchSpace<T>
+        where TP : class, IProblem<T, TS>
+    {
+        return new(objective, referencePoint, evaluators);
     }
 
     public static GenealogyAnalysis<T, TS, TP, TR> Genealogy<T, TS, TP, TR>(

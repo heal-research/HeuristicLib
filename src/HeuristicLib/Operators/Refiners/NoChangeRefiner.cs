@@ -1,8 +1,9 @@
+using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Refiners;
+namespace HEAL.HeuristicLib.Operators;
 
 public record NoChangeRefiner<TCandidate> : SingleCandidateRefiner<TCandidate>
 {

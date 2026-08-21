@@ -1,5 +1,4 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.PythonInterop;
 
 namespace HEAL.HeuristicLib.Tests.Optimization;

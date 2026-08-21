@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.Random.Distributions;
+namespace HEAL.HeuristicLib.Random;
 
 /// <summary>
 /// Repeatedly samples an index from a weighted set of entries.

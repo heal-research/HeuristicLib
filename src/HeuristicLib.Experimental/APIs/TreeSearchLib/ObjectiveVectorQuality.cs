@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
 using TreesearchLib;
 
 namespace HEAL.HeuristicLib.APIs.TreeSearchLib;

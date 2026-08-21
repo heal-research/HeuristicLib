@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.Random.Distributions;
+namespace HEAL.HeuristicLib.Random;
 
 /// <summary>Repeatedly samples an item from a fixed weighted collection.</summary>
 /// <remarks>

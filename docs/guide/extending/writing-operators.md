@@ -21,7 +21,7 @@ Match the new operation to the role an algorithm already expects.
 Use a single candidate base when each candidate can be processed independently. This adjacent swap mutation preserves a permutation while making a local change:
 
 ```csharp
-using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Random;
 

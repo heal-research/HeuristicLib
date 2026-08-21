@@ -100,8 +100,8 @@ def _run_regression(points_json: str, params_json: str, result_queue: mp.Queue):
             InteractiveSymbolicRegression,
             InteractiveSymRegParameters,
         )
-        from HEAL.HeuristicLib.Genotypes.SymbolicExpressions import ExpressionTree
-        from HEAL.HeuristicLib.Optimization import ObjectiveVector
+        from HEAL.HeuristicLib.Encodings.SymbolicExpressions import ExpressionTree
+        from HEAL.HeuristicLib.Objectives import ObjectiveVector
         from System import Func, Array, Double
 
         # --- parse points & bin by x --------------------------------------

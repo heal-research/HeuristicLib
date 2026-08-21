@@ -1,10 +1,10 @@
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic.Operators;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public interface IBestKnownObjectiveProvider<TCandidate, TSearchSpace, in TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>

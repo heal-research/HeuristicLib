@@ -1,6 +1,6 @@
-using HEAL.HeuristicLib.DataAnalysis;
-using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
-using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
+using HEAL.HeuristicLib.Data;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using static HEAL.HeuristicLib.Encodings.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Genotypes;
 

@@ -1,8 +1,8 @@
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic.Analysis;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public sealed record QualityCurvePerEpochAnalysis<TCandidate, TSearchSpace, TProblem>
     : DynamicAnalysis<TCandidate, TSearchSpace, TProblem, QualityCurvePerEpochAnalysisResult<TCandidate>>

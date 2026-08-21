@@ -1,10 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Analysis.Quality;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
@@ -48,10 +45,4 @@ public static class Analyzer
         return new(evaluators);
     }
 
-    public static HyperVolumeAnalysis<T, TS, TP> HyperVolume<T, TS, TP>(ObjectiveDirections problemObjective, ObjectiveVector referencePoint, params IEvaluator<T, TS, TP>[] evaluators)
-        where TS : class, ISearchSpace<T>
-        where TP : class, IProblem<T, TS>
-    {
-        return new(problemObjective, referencePoint, evaluators);
-    }
 }

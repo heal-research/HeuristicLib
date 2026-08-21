@@ -1,5 +1,5 @@
 using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
 
 namespace HEAL.HeuristicLib.PythonInterop;
 

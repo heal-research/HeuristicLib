@@ -1,5 +1,3 @@
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;

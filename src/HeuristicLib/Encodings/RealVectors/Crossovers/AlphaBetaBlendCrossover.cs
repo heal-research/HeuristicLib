@@ -1,0 +1,24 @@
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Crossovers;
+using HEAL.HeuristicLib.Random;
+
+namespace HEAL.HeuristicLib.Encodings.RealVectors;
+
+public record AlphaBetaBlendCrossover : SingleCandidateCrossover<RealVector, RealVectorSearchSpace>
+{
+    public double Alpha { get; init; } = 0.7;
+    public double Beta => 1 - Alpha;
+
+    public override RealVector CrossParents(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) =>
+        Cross(parents.Parent1, parents.Parent2, random, searchSpace, Alpha);
+
+    public static RealVector Cross(RealVector parent1, RealVector parent2, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, double alpha) =>
+        Cross(parent1, parent2, random, alpha, searchSpace.Minimum, searchSpace.Maximum);
+
+    public static RealVector Cross(RealVector parent1, RealVector parent2, IRandomNumberGenerator random, double alpha, RealVector minimum, RealVector maximum)
+    {
+        var beta = 1 - alpha;
+        var result = (alpha * parent1) + (beta * parent2);
+        return RealVector.Clamp(result, minimum, maximum);
+    }
+}

@@ -1,10 +1,11 @@
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Evaluators;
+namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>
 /// Evaluates every candidate repeatedly and aggregates the resulting objective vectors.

@@ -1,6 +1,3 @@
-using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Random;
-
 namespace HEAL.HeuristicLib.Tests.ExecutionModel;
 
 public class BatchExecutionTests

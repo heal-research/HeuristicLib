@@ -23,14 +23,11 @@ Replace `Program.cs` with this program:
 
 ```csharp
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
-using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
-using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
-using HEAL.HeuristicLib.Random;
 
 var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
 
@@ -130,10 +127,9 @@ Starting the stream creates a fresh run. Reusing seed `123` reproduces the same 
 For a simple function, create a problem without defining a new class:
 
 ```csharp
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 var space = new RealVectorSearchSpace(
     length: 2,

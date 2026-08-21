@@ -1,6 +1,3 @@
-using HEAL.HeuristicLib.Operators.Refiners;
-using HEAL.HeuristicLib.Optimization;
-
 namespace HEAL.HeuristicLib.Tests.Operators.Refiners;
 
 public class ImprovementCriterionTests

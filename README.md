@@ -49,12 +49,10 @@ This example loads the named `berlin52` benchmark from a standard TSPLIB file, s
 
 ```csharp
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Problems.TravelingSalesman;
-using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 var instance = TsplibTspInstanceProvider.LoadData(
     "berlin52.tsp",
@@ -102,19 +100,12 @@ Symbolic regression searches for a mathematical expression instead of fitting co
 
 ```csharp
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.DataAnalysis;
-using HEAL.HeuristicLib.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
-using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
-using HEAL.HeuristicLib.Operators.Mutators;
-using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
-using HEAL.HeuristicLib.Operators.Refiners.SymbolicRegressionRefiners;
-using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
+using HEAL.HeuristicLib.Data;
+using HEAL.HeuristicLib.MachineLearning;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems.MachineLearning;
 
 var x = Enumerable.Range(0, 40)
     .Select(index => (index - 20) * 0.25)
@@ -182,13 +173,19 @@ The complete application is in [`examples/PythonInteractiveDemonstrator`](exampl
 
 | Area                      | Available components                                                                     |
 | ------------------------- | ---------------------------------------------------------------------------------------- |
-| Algorithms                | Genetic algorithm, evolution strategy, NSGA-II, ALPS and hill climbing                   |
+| Algorithms                | Genetic algorithm, evolution strategy, NSGA-II and hill climbing                         |
 | Candidate representations | Real, integer, Boolean and permutation vectors plus symbolic expression trees            |
 | Operators                 | Creation, crossover, mutation, selection, replacement, refinement and composition        |
 | Execution                 | Streamed states, cancellation, deterministic random streams and configurable concurrency |
 | Experiments               | Repetitions, typed parameter grids, concurrent trials and analyzers                      |
-| Analysis                  | Quality progress, evaluation counts, duration, diversity and genealogy                   |
+| Analysis                  | Quality progress, evaluation counts, duration and run observability                      |
 | Problems                  | Numerical test functions, traveling salesperson and symbolic regression                  |
+
+Research algorithms such as ALPS and the open ended relevant alleles preserving genetic algorithm are in `HEAL.HeuristicLib.Experimental`. The Experimental package also owns genealogy workflows and population level or Pareto history analyzers. Static Quadratic Assignment is part of the main package, while its dynamic variants remain Experimental. Add an explicit package reference when an example or application uses an Experimental feature:
+
+```console
+dotnet add package HEAL.HeuristicLib.Experimental --prerelease
+```
 
 ## Documentation
 

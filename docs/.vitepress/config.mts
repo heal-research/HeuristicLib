@@ -54,7 +54,7 @@ export default defineConfig({
                 {
                     text: "Domains",
                     items: [
-                        { text: "Data analysis", link: "/guide/domains/data-analysis" },
+                        { text: "Data and machine learning", link: "/guide/domains/data-and-machine-learning" },
                         { text: "Symbolic expressions", link: "/guide/domains/symbolic-expressions" },
                         { text: "Symbolic regression", link: "/guide/domains/symbolic-regression" },
                     ],

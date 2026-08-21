@@ -1,11 +1,11 @@
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic.Operators;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
     : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>

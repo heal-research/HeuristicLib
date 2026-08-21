@@ -1,28 +1,19 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.LocalSearch;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Encodings.IntegerVectors;
+using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Experiments;
-using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
-using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 using HEAL.HeuristicLib.Operators.Crossovers;
-using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
-using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
-using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
-using HEAL.HeuristicLib.Operators.Replacers;
-using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
-using HEAL.HeuristicLib.States;
+using NormalDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.NormalDistributedCreator;
+using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Usage;
 
@@ -79,7 +70,7 @@ public class PractitionerUsageSpecs
         var directPermutationFromSearchSpace = RandomNumberGenerator.Create(2026).NextPermutation(new PermutationSearchSpace(5));
         directPermutationFromSearchSpace.Order().ToArray().ShouldBe([0, 1, 2, 3, 4]);
 
-        var integerVector = HeuristicLib.Operators.Creators.IntegerVectorCreators.UniformDistributedCreator.Create(
+        var integerVector = Encodings.IntegerVectors.UniformDistributedCreator.Create(
           RandomNumberGenerator.Create(2027),
           length: 4,
           minimum: -2,
@@ -87,7 +78,7 @@ public class PractitionerUsageSpecs
         integerVector.Count.ShouldBe(4);
         integerVector.All(x => x is >= -2 and <= 2).ShouldBeTrue();
 
-        var searchSpaceIntegerVector = HeuristicLib.Operators.Creators.IntegerVectorCreators.UniformDistributedCreator.Create(
+        var searchSpaceIntegerVector = Encodings.IntegerVectors.UniformDistributedCreator.Create(
           integerSearchSpace,
           RandomNumberGenerator.Create(2027));
         searchSpaceIntegerVector.Count.ShouldBe(3);
@@ -131,7 +122,7 @@ public class PractitionerUsageSpecs
           sigmas: [0.0]);
         randomNormalRealVectorFromSearchSpace.ShouldBe(RealVector.Repeat(0.25, 3));
 
-        var normalIntegerVector = HeuristicLib.Operators.Creators.IntegerVectorCreators.NormalDistributedCreator.Create(
+        var normalIntegerVector = Encodings.IntegerVectors.NormalDistributedCreator.Create(
           RandomNumberGenerator.Create(2029),
           length: 3,
           means: [1.6],
@@ -140,7 +131,7 @@ public class PractitionerUsageSpecs
           maximum: integerSearchSpace.Maximum);
         normalIntegerVector.ShouldBe(new IntegerVector(2, 2, 2));
 
-        var normalIntegerVectorFromSearchSpace = HeuristicLib.Operators.Creators.IntegerVectorCreators.NormalDistributedCreator.Create(
+        var normalIntegerVectorFromSearchSpace = Encodings.IntegerVectors.NormalDistributedCreator.Create(
           RandomNumberGenerator.Create(2029),
           integerSearchSpace,
           means: [1.6],
