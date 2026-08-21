@@ -43,7 +43,7 @@ Current scope: encoding operators with HeuristicLab unit-test coverage under `He
 | ------------------------------------------------------------------------ | ----------------------------------------------------- | --------------- | ------------------- | -------------------------------------- |
 | `DiscreteCrossover` / `DiscreteCrossoverTest.cs`                         | `IntegerVectorCrossovers.DiscreteCrossover`           | migrated        | not started         | Add exact examples and boundary tests. |
 | `SinglePointCrossover` / `SinglePointCrossoverTest.cs`                   | `IntegerVectorCrossovers.SinglePointCrossover`        | migrated        | not started         | Add exact examples and boundary tests. |
-| `UniformOnePositionManipulator` / `UniformOnePositionManipulatorTest.cs` | `IntegerVectorMutators.UniformOnePositionManipulator` | migrated        | not started         | Add deterministic index/value test.    |
+| `UniformOnePositionManipulator` / `UniformOnePositionManipulatorTest.cs` | `IntegerVectorMutators.UniformOnePositionMutator` | migrated        | not started         | Add deterministic index/value test.    |
 
 ## Linear Linkage Operators
 
@@ -71,7 +71,7 @@ Current scope: encoding operators with HeuristicLab unit-test coverage under `He
 | `PermutationManipulation` / `PermutationManipulationTest.cs`                     | `Permutation` random/manipulation helpers          | migrated         | partial             | Some genotype tests exist; direct migration coverage needs review.                   |
 | `PositionBasedCrossover` / `PositionBasedCrossoverTest.cs`                       | not yet migrated                                   | not yet migrated | not started         | Candidate if the operator is still desired.                                          |
 | `ScrambleManipulator` / `ScrambleManipulatorTest.cs`                             | not yet migrated                                   | not yet migrated | not started         | Candidate permutation mutator.                                                       |
-| `Swap2Manipulator` / `Swap2ManipulatorTest.cs`                                   | `PermutationMutators.SwapSingleSolutionMutator`    | migrated         | complete            | Exact reference example exists.                                                      |
+| `Swap2Manipulator` / `Swap2ManipulatorTest.cs`                                   | `PermutationMutators.SwapMutator`                  | migrated         | complete            | Exact reference example exists.                                                      |
 | `Swap3Manipulator` / `Swap3ManipulatorTest.cs`                                   | not yet migrated                                   | not yet migrated | not started         | Candidate if three-position swap is desired.                                         |
 | `TranslocationInversionManipulator` / `TranslocationInversionManipulatorTest.cs` | not yet migrated                                   | not yet migrated | not started         | Candidate permutation mutator.                                                       |
 | `TranslocationManipulator` / `TranslocationManipulatorTest.cs`                   | not yet migrated                                   | not yet migrated | not started         | Candidate permutation mutator.                                                       |

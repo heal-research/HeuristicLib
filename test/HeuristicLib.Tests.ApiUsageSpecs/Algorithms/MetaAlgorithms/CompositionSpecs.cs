@@ -1,16 +1,9 @@
-using System.Collections.Immutable;
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.LocalSearch;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
-using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
-using HEAL.HeuristicLib.States;
-using Xunit;
+using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Algorithms.MetaAlgorithms;
 
@@ -21,24 +14,16 @@ public class CompositionSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
 
-        IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>[] stages = [
-          CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2),
-      CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(3)
-        ];
+        var firstStage = CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2);
+        var secondStage = CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(3);
+        var pipeline = firstStage.Then(secondStage);
 
-        var pipeline = new PipelineAlgorithm<
-          IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>,
-          RealVector,
-          RealVectorSearchSpace,
-          TestFunctionProblem,
-          SingleSolutionState<RealVector>>(ImmutableArray.Create(stages));
-
-        var finalState = await pipeline.RunToCompletionAsync(
+        var finalState = await pipeline.CompleteAsync(
           problem,
           RandomNumberGenerator.Create(111),
           ct: TestContext.Current.CancellationToken);
 
-        problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
+        problem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
     }
 
     [Fact]
@@ -46,28 +31,16 @@ public class CompositionSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
 
-        IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>[] stages = [
-          CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2),
-      CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(2)
-        ];
+        var firstStage = CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2);
+        var secondStage = CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(2);
+        var cycle = firstStage.CycleWith(secondStage, maximumCycles: 2);
 
-        var cycle = new CycleAlgorithm<
-          IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>,
-          RealVector,
-          RealVectorSearchSpace,
-          TestFunctionProblem,
-          SingleSolutionState<RealVector>>(ImmutableArray.Create(stages))
-        {
-            MaximumCycles = 2,
-            NewExecutionInstancesPerCycle = true
-        };
-
-        var finalState = await cycle.RunToCompletionAsync(
+        var finalState = await cycle.CompleteAsync(
           problem,
           RandomNumberGenerator.Create(222),
           ct: TestContext.Current.CancellationToken);
 
-        problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
+        problem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
     }
 
     private static TestFunctionProblem CreateRastriginProblem(int dimension)

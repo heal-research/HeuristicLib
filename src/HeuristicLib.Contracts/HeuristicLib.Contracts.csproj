@@ -7,5 +7,8 @@
         <Description>Foundational public contracts shared across HeuristicLib packages.</Description>
     </PropertyGroup>
 
-    <ItemGroup />
+    <ItemGroup>
+        <Using Include="System.Collections.Immutable" />
+        <Using Include="HEAL.HeuristicLib.Collections" />
+    </ItemGroup>
 </Project>

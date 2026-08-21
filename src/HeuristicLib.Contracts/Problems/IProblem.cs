@@ -1,15 +1,15 @@
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public interface IProblem<in TGenotype, out TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
+public interface IProblem<TCandidate, out TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     TSearchSpace SearchSpace { get; }
-    Objective Objective { get; }
+    ObjectiveDirections Objective { get; }
 
-    //ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random);
-    IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random);
+    //ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random);
+    IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
 }

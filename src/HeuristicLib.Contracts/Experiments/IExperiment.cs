@@ -1,30 +1,36 @@
-using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Experiments;
 
-// ToDo: either make a MultiStreamAlgorithm an Algorithm or provide an adapter that interleaves results, or take last, or any other of compression to a single stream.
-public interface IExperiment<TGenotype, in TSearchSpace, in TProblem, TSearchState, TAlgorithmKey>
-  : IExecutable<IExperimentInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TSearchState : class, ISearchState
+public interface IExperiment<TCandidate, in TSearchSpace, in TProblem, TSearchState, TAlgorithm, TKey>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
+    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
+    ImmutableArray<ExperimentCase<TAlgorithm, TKey>> MaterializeCases();
 }
 
-public interface IExperimentInstance<TGenotype, in TSearchSpace, in TProblem, TSearchState, TAlgorithmKey>
-  : IExecutionInstance
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TSearchState : class, ISearchState
+public sealed record ExperimentCase<TAlgorithm, TKey>
 {
-    IReadOnlyList<KeyValuePair<TAlgorithmKey, IAsyncEnumerable<TSearchState>>> RunStreamingAsync(
-      TProblem problem,
-      IRandomNumberGenerator random,
-      TSearchState? initialState = null,
-      CancellationToken ct = default
-    );
+    public TAlgorithm Algorithm { get; }
+
+    public TKey Key { get; }
+
+    public ImmutableArray<int> RandomForkPath { get; }
+
+    public ExperimentCase(TAlgorithm algorithm, TKey key, IReadOnlyList<int> randomForkPath)
+    {
+        Algorithm = algorithm;
+        Key = key;
+        RandomForkPath = randomForkPath.ToImmutableArray();
+    }
+}
+
+public static class ExperimentCase
+{
+    public static ExperimentCase<TAlgorithm, TKey> From<TAlgorithm, TKey>(TAlgorithm algorithm, TKey key, IReadOnlyList<int> randomForkPath) =>
+        new(algorithm, key, randomForkPath);
 }

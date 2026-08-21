@@ -1,15 +1,28 @@
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic.Analysis;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public class InvalidPerEpochAnalysis<TGenotype>(IDynamicProblem<TGenotype, ISearchSpace<TGenotype>> problem) : DynamicAnalysis<TGenotype>(problem)
+public sealed record InvalidPerEpochAnalysis<TCandidate, TSearchSpace, TProblem>
+    : DynamicAnalysis<TCandidate, TSearchSpace, TProblem, InvalidPerEpochAnalysisResult<TCandidate>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
 {
+    public InvalidPerEpochAnalysis(TProblem problem, params IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators)
+        : base(problem, evaluators)
+    { }
 
+    public override InvalidPerEpochAnalysisResult<TCandidate> CreateInitialResult() => new();
+}
+
+public sealed class InvalidPerEpochAnalysisResult<TCandidate> : IDynamicAnalysisResult<TCandidate>
+{
     private readonly Dictionary<int, int> invalidPerEpoch = [];
 
     public IReadOnlyDictionary<int, int> InvalidPerEpoch => invalidPerEpoch;
-    protected override void Problem_OnEvaluation(object? sender, IReadOnlyList<(TGenotype, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog)
+
+    public void AfterEvaluationLog(object? sender, IReadOnlyList<(TCandidate candidate, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog)
     {
         foreach (var e in evaluationLog.Where(x => !x.timing.Valid))
         {

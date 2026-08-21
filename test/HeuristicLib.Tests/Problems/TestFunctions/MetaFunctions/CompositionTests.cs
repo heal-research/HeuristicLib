@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
@@ -18,7 +18,7 @@ public class CompositionTests
         RealVector x = [1.0, 1.0];
 
         var value = inner.Evaluate(x);
-        var gradient = inner.EvaluateGradient(x);
+        inner.EvaluateGradient(x);
 
         (value > 0).ShouldBeTrue();
         SingleObjectiveTestFunctionHelper.AssertGradientMatchesFiniteDifferences(inner, x);

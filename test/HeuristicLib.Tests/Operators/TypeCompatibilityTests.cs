@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Operators;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -16,9 +15,9 @@ public class TypeCompatibilityTests
         using HEAL.HeuristicLib.Operators;
 
         public class
-    "));
+    ", cancellationToken: TestContext.Current.CancellationToken));
 
-        var diagnostics = compilation.GetDiagnostics();
+        var diagnostics = compilation.GetDiagnostics(cancellationToken: TestContext.Current.CancellationToken);
 
         diagnostics.ShouldContain(d => d.Severity == DiagnosticSeverity.Error);
     }

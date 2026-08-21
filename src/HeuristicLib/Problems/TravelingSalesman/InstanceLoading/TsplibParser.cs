@@ -1,8 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using static System.String;
 
-namespace HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
+namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 public class TsplibParser
 {
@@ -29,12 +28,16 @@ public class TsplibParser
     }
 
     public TsplibParser(string path)
-      : this() =>
-      source = new StreamReader(path);
+      : this()
+    {
+        source = new StreamReader(path);
+    }
 
     public TsplibParser(Stream stream)
-      : this() =>
-      source = new StreamReader(stream);
+      : this()
+    {
+        source = new StreamReader(stream);
+    }
 
     public string Name { get; private set; }
     public TSPLIBTypes Type { get; private set; }
@@ -686,8 +689,6 @@ public class TsplibParser
         EdgeWeightSection = 19
     }
 
-    [SuppressMessage("ReSharper", "IdentifierTypo")]
-    [SuppressMessage("ReSharper", "InconsistentNaming")]
     private enum TSPLIBEdgeWeightFormats
     {
         Unknown = 0,

@@ -1,100 +1,206 @@
+using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
+namespace HEAL.HeuristicLib.Algorithms;
 
-public record HillClimber<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, SingleSolutionState<TGenotype>, HillClimber<TGenotype, TSearchSpace, TProblem>.ExecutionState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public record HillClimber<TCandidate, TSearchSpace, TProblem>
+    : IterativeAlgorithm<HillClimber<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public new sealed class ExecutionState
-      : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, SingleSolutionState<TGenotype>, ExecutionState>.ExecutionState
-    {
-        public required ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
-        public required IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
-    }
+    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
+    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = HillClimberDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>();
+    public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
+    public LocalSearchDirection Direction { get; init; } = HillClimberDefaults.Direction;
+    public int MaxNeighbors { get; init; } = HillClimberDefaults.MaxNeighbors;
+    public int BatchSize { get; init; } = HillClimberDefaults.BatchSize;
 
-    public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
-    public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
-    public required LocalSearchDirection Direction { get; init; }
-    public required int MaxNeighbors { get; init; }
-    public required int BatchSize { get; init; }
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
+        new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Mutator), instanceRegistry.ResolveOptional(Refiner), Direction, MaxNeighbors, BatchSize);
 
-    protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
+    private sealed class Instance(
+        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor,
+        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
+        ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
+        IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator,
+        IRefinerInstance<TCandidate, TSearchSpace, TProblem>? refiner,
+        LocalSearchDirection direction,
+        int maxNeighbors,
+        int batchSize)
+        : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>(interceptor)
     {
-        return new ExecutionState
+        protected override SingleSolutionState<TCandidate> ExecuteStep(SingleSolutionState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random) =>
+            TryExecuteStep(previousState, problem, random, out var nextState)
+                ? nextState
+                : throw new InvalidOperationException("HillClimber has structurally completed and cannot produce another step.");
+
+        protected override bool TryExecuteStep(SingleSolutionState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random, [NotNullWhen(true)] out SingleSolutionState<TCandidate>? nextState)
         {
-            Evaluator = resolver.Resolve(Evaluator),
-            Interceptor = Interceptor is not null ? resolver.Resolve(Interceptor) : null,
-            Creator = resolver.Resolve(Creator),
-            Mutator = resolver.Resolve(Mutator)
-        };
-    }
-
-    protected override SingleSolutionState<TGenotype> ExecuteStep(
-      SingleSolutionState<TGenotype>? previousState,
-      ExecutionState executionState,
-      TProblem problem,
-      IRandomNumberGenerator random)
-    {
-        if (previousState is null)
-        {
-            var initialSolution = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
-            var initialFitness = executionState.Evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
-            return new SingleSolutionState<TGenotype>
+            if (previousState is null)
             {
-                Population = Population.From([initialSolution], [initialFitness])
-            };
-        }
-
-        var sol = previousState.Solution;
-        var newISolution = sol;
-
-        for (var i = 0; i < MaxNeighbors; i += BatchSize)
-        {
-            var child = executionState.Mutator.Mutate(Enumerable.Repeat(sol.Genotype, BatchSize).ToArray(), random, problem.SearchSpace, problem);
-            var res = executionState.Evaluator.Evaluate(child, random, problem.SearchSpace, problem);
-            var best = BestSelector.Select(res.Append(sol.ObjectiveVector).ToArray(), problem.Objective, 1)[0];
-            if (best == BatchSize)
-            {
-                continue;
+                nextState = CreateInitialState(problem, random);
+                return true;
             }
 
-            newISolution = new Solution<TGenotype>(child[best], res[best]);
-            if (Direction == LocalSearchDirection.FirstImprovement)
+            if (!TryFindImprovement(previousState.EvaluatedCandidate, problem, random, out var improvement))
             {
-                return new SingleSolutionState<TGenotype>
+                nextState = null;
+                return false;
+            }
+
+            nextState = ToState(improvement);
+            return true;
+        }
+
+        private SingleSolutionState<TCandidate> CreateInitialState(TProblem problem, IRandomNumberGenerator random)
+        {
+            var created = creator.Create(1, random, problem.SearchSpace, problem);
+            if (refiner is not null)
+            {
+                created = refiner.Refine(created, random, problem.SearchSpace, problem);
+            }
+
+            var initialSolution = created[0];
+            var initialCandidate = initialSolution.ToEvaluated(evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0]);
+            return ToState(initialCandidate);
+        }
+
+        private bool TryFindImprovement(EvaluatedCandidate<TCandidate> current, TProblem problem, IRandomNumberGenerator random, [NotNullWhen(true)] out EvaluatedCandidate<TCandidate>? improvement)
+        {
+            improvement = null;
+
+            for (var i = 0; i < maxNeighbors; i += batchSize)
+            {
+                var candidates = mutator.Mutate(Enumerable.Repeat(current.Candidate, batchSize).ToArray(), random, problem.SearchSpace, problem);
+                if (refiner is not null)
                 {
-                    Population = Population.From([newISolution.Genotype], [newISolution.ObjectiveVector])
-                };
+                    candidates = refiner.Refine(candidates, random, problem.SearchSpace, problem);
+                }
+
+                var objectiveVectors = evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
+                var bestIndex = BestSelector.Select(objectiveVectors, problem.Objective, count: 1)[0];
+
+                if (problem.Objective.TotalOrderComparer.Compare(objectiveVectors[bestIndex], current.ObjectiveVector) >= 0)
+                {
+                    continue;
+                }
+
+                improvement = candidates[bestIndex].ToEvaluated(objectiveVectors[bestIndex]);
+                if (direction == LocalSearchDirection.FirstImprovement)
+                {
+                    return true;
+                }
             }
+
+            return improvement is not null;
         }
 
-        return new SingleSolutionState<TGenotype>
-        {
-            Population = Population.From([newISolution.Genotype], [newISolution.ObjectiveVector])
-        };
+        private static SingleSolutionState<TCandidate> ToState(EvaluatedCandidate<TCandidate> solution) => new() { Population = Population.From([solution]) };
     }
 }
 
 public static class HillClimber
 {
-    public static HillClimberBuilder<TGenotype, TSearchSpace, TProblem> GetBuilder<TGenotype, TSearchSpace, TProblem>(
-      ICreator<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    /// <summary>
+    /// Creates a hill climber for a problem that states its own operator preferences, asking the problem first and
+    /// falling back to the search space's encoding defaults for the required creator and mutator.
+    /// </summary>
+    public static HillClimber<TCandidate, TSearchSpace, TProblem> For<TProblem, TCandidate, TSearchSpace>(
+        IProblemDefaults<TProblem, TCandidate, TSearchSpace> problem,
+        ICreator<TCandidate, TSearchSpace, TProblem>? creator = null,
+        IMutator<TCandidate, TSearchSpace, TProblem>? mutator = null,
+        IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,
+        IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null,
+        IInterceptor<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor = null,
+        LocalSearchDirection direction = HillClimberDefaults.Direction,
+        int maxNeighbors = HillClimberDefaults.MaxNeighbors,
+        int batchSize = HillClimberDefaults.BatchSize)
+        where TProblem : class,
+                         IProblemDefaultCreator<TProblem, TCandidate, TSearchSpace>,
+                         IProblemDefaultMutator<TProblem, TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>,
+                             IEncodingDefaultCreator<TCandidate, TSearchSpace>,
+                             IEncodingDefaultMutator<TCandidate, TSearchSpace>
     {
-        return new HillClimberBuilder<TGenotype, TSearchSpace, TProblem>
+        var searchSpace = problem.SearchSpace;
+        var self = problem as TProblem;
+
+        return new()
         {
-            Mutator = mutator,
-            Creator = creator
+            Creator = creator ?? (self is null ? null : TProblem.CreateDefaultCreator(self)) ?? TSearchSpace.CreateDefaultCreator(searchSpace),
+            Mutator = mutator ?? (self is null ? null : TProblem.CreateDefaultMutator(self)) ?? TSearchSpace.CreateDefaultMutator(searchSpace),
+            Evaluator = evaluator ?? HillClimberDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>(),
+            Refiner = refiner,
+            Interceptor = interceptor,
+            Direction = direction,
+            MaxNeighbors = maxNeighbors,
+            BatchSize = batchSize
         };
     }
+
+    /// <summary>
+    /// Creates a hill climber from a search space's creator and mutator defaults, with no problem instance.
+    /// </summary>
+    public static HillClimber<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> For<TCandidate, TSearchSpace>(
+        IEncodingDefaults<TCandidate, TSearchSpace> searchSpace,
+        ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? creator = null,
+        IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? mutator = null,
+        IEvaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? evaluator = null,
+        IRefiner<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? refiner = null,
+        IInterceptor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, SingleSolutionState<TCandidate>>? interceptor = null,
+        LocalSearchDirection direction = HillClimberDefaults.Direction,
+        int maxNeighbors = HillClimberDefaults.MaxNeighbors,
+        int batchSize = HillClimberDefaults.BatchSize)
+        where TSearchSpace : class, ISearchSpace<TCandidate>,
+                             IEncodingDefaultCreator<TCandidate, TSearchSpace>,
+                             IEncodingDefaultMutator<TCandidate, TSearchSpace>
+    {
+        var typedSearchSpace = (TSearchSpace)searchSpace;
+
+        return new()
+        {
+            Creator = creator ?? TSearchSpace.CreateDefaultCreator(typedSearchSpace),
+            Mutator = mutator ?? TSearchSpace.CreateDefaultMutator(typedSearchSpace),
+            Evaluator = evaluator ?? HillClimberDefaults.Evaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>(),
+            Refiner = refiner,
+            Interceptor = interceptor,
+            Direction = direction,
+            MaxNeighbors = maxNeighbors,
+            BatchSize = batchSize
+        };
+    }
+
+    /// <summary>
+    /// Creates a hill climber from the operators it requires, inferring the candidate, search space and problem types
+    /// from them. Every remaining member is optional and falls back to <see cref="HillClimberDefaults"/>.
+    /// </summary>
+    public static HillClimber<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
+        ICreator<TCandidate, TSearchSpace, TProblem> creator,
+        IMutator<TCandidate, TSearchSpace, TProblem> mutator,
+        IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,
+        IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null,
+        IInterceptor<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor = null,
+        LocalSearchDirection direction = HillClimberDefaults.Direction,
+        int maxNeighbors = HillClimberDefaults.MaxNeighbors,
+        int batchSize = HillClimberDefaults.BatchSize)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new()
+        {
+            Creator = creator,
+            Mutator = mutator,
+            Evaluator = evaluator ?? HillClimberDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>(),
+            Refiner = refiner,
+            Interceptor = interceptor,
+            Direction = direction,
+            MaxNeighbors = maxNeighbors,
+            BatchSize = batchSize
+        };
+
 }

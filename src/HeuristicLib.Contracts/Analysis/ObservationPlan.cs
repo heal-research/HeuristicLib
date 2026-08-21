@@ -1,33 +1,36 @@
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Analysis;
 
 public sealed class ObservationPlan
 {
-    private readonly Dictionary<IOperator, ObservationEntry> entries = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IExecutionInstanceResolvable, ObservationEntry> entries = new(ReferenceEqualityComparer.Instance);
 
-    public void Observe<TOperator, TExecutionInstance, TObserver>(
-      TOperator @operator,
-      TObserver observer,
-      Func<TOperator, IReadOnlyList<TObserver>, IExecutable<TExecutionInstance>> createObservable)
-      where TOperator : class, IOperator<TExecutionInstance>
-      where TExecutionInstance : class, IOperatorInstance
-      where TObserver : class
+    /// <summary>
+    /// Registers an observer at an observation anchor, which may be an operator or an algorithm.
+    /// </summary>
+    /// <remarks>
+    /// The anchor is used as a reference-identity key, so observers registered at the same anchor are merged into a
+    /// single observable replacement.
+    /// </remarks>
+    public void Observe<TAnchor, TExecutionInstance, TObserver>(TAnchor anchor, TObserver observer, Func<TAnchor, IReadOnlyList<TObserver>, IExecutionInstanceResolvable<TExecutionInstance>> createObservable)
+        where TAnchor : class, IExecutionInstanceResolvable<TExecutionInstance>
+        where TExecutionInstance : class, IExecutionInstance
+        where TObserver : class
     {
-        var entry = new ObservationEntry<TOperator, TExecutionInstance, TObserver>(@operator, observer, createObservable);
+        var entry = new ObservationEntry<TAnchor, TExecutionInstance, TObserver>(anchor, observer, createObservable);
 
-        if (entries.TryGetValue(@operator, out var existingEntry))
+        if (entries.TryGetValue(anchor, out var existingEntry))
         {
             if (existingEntry.TryMerge(entry))
             {
                 return;
             }
 
-            throw new InvalidOperationException($"Observation conflict for operator {@operator}.");
+            throw new InvalidOperationException($"Observation conflict for {anchor}.");
         }
 
-        entries.Add(@operator, entry);
+        entries.Add(anchor, entry);
     }
 
     internal void Install(ExecutionInstanceRegistry registry)
@@ -45,21 +48,18 @@ public sealed class ObservationPlan
         public abstract void Install(ExecutionInstanceRegistry registry);
     }
 
-    private sealed class ObservationEntry<TOperator, TExecutionInstance, TObserver>(
-      TOperator @operator,
-      TObserver observer,
-      Func<TOperator, IReadOnlyList<TObserver>, IExecutable<TExecutionInstance>> createObservable) : ObservationEntry
-      where TOperator : class, IOperator<TExecutionInstance>
-      where TExecutionInstance : class, IOperatorInstance
-      where TObserver : class
+    private sealed class ObservationEntry<TAnchor, TExecutionInstance, TObserver>(TAnchor anchor, TObserver observer, Func<TAnchor, IReadOnlyList<TObserver>, IExecutionInstanceResolvable<TExecutionInstance>> createObservable)
+        : ObservationEntry
+        where TAnchor : class, IExecutionInstanceResolvable<TExecutionInstance>
+        where TExecutionInstance : class, IExecutionInstance
+        where TObserver : class
     {
         private readonly List<TObserver> observers = [observer];
-        private TOperator Operator { get; } = @operator;
+        private TAnchor Anchor { get; } = anchor;
 
         public override bool TryMerge(ObservationEntry other)
         {
-            if (other is not ObservationEntry<TOperator, TExecutionInstance, TObserver> typedOther ||
-                !ReferenceEquals(typedOther.Operator, Operator))
+            if (other is not ObservationEntry<TAnchor, TExecutionInstance, TObserver> typedOther || !ReferenceEquals(typedOther.Anchor, Anchor))
             {
                 return false;
             }
@@ -70,7 +70,7 @@ public sealed class ObservationPlan
 
         public override void Install(ExecutionInstanceRegistry registry)
         {
-            registry.PreRegister(Operator, createObservable(Operator, observers));
+            registry.RegisterReplacement(Anchor, createObservable(Anchor, observers));
         }
     }
 }

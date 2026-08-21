@@ -1,25 +1,39 @@
-namespace HEAL.HeuristicLib.Operators.Terminators;
+using HEAL.HeuristicLib.Operators.Terminators;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 
-public record AfterIterationsTerminator<TGenotype>
-  : Terminator<TGenotype, AfterIterationsTerminator<TGenotype>.ExecutionState>
+namespace HEAL.HeuristicLib.Operators;
+
+public sealed record AfterIterationsTerminator<TCandidate>
+    : StatefulTerminator<TCandidate, AfterIterationsTerminator<TCandidate>.ExecutionState>
 {
     public sealed class ExecutionState
     {
-        public int CurrentCounter { get; set; }
+        public int CurrentCount { get; set; }
     }
-
-    private readonly int maximumIterations;
 
     public AfterIterationsTerminator(int maximumIterations)
     {
-        this.maximumIterations = maximumIterations;
+        MaximumIterations = maximumIterations;
     }
+
+    /// <summary>
+    /// Gets the iteration limit. The expected value is positive.
+    /// </summary>
+    /// <remarks>A nonpositive limit terminates on the first checked state.</remarks>
+    public int MaximumIterations { get; init; }
 
     protected override ExecutionState CreateInitialState() => new();
 
-    protected override bool ShouldTerminate(ExecutionState executionState)
+    protected override bool IsTerminalState(ExecutionState executionState)
     {
-        executionState.CurrentCounter += 1;
-        return executionState.CurrentCounter >= maximumIterations;
+        executionState.CurrentCount += 1;
+        return executionState.CurrentCount >= MaximumIterations;
     }
+}
+
+public static class AfterIterationsTerminator
+{
+    public static AfterIterationsTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, int maximumIterations)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(maximumIterations);
 }

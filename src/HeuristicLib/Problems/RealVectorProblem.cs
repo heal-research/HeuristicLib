@@ -1,7 +1,6 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
+using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Objectives;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public abstract class RealVectorProblem(Objective objective, RealVectorSearchSpace searchSpace) : SingleSolutionProblem<RealVector, RealVectorSearchSpace>(objective, searchSpace);
+public abstract class RealVectorProblem(ObjectiveDirections objective, RealVectorSearchSpace searchSpace) : SingleSolutionProblem<RealVector, RealVectorSearchSpace>(objective, searchSpace);

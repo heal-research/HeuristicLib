@@ -1,17 +1,16 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Encodings.Composite;
+using HEAL.HeuristicLib.Encodings.IntegerVectors;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
-using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Problems.MetaOptimization;
 
 public static class MetaOptimizationProblemExamples
 {
     public record HyperParameterSearchSpace(RealVectorSearchSpace SearchSpace, IntegerVectorSearchSpace SearchSpace2) :
-      CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(SearchSpace, SearchSpace2);
+        CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(SearchSpace, SearchSpace2);
 
     public class MetaOptimizationSearchSpaceBuilder
     {
@@ -21,10 +20,10 @@ public static class MetaOptimizationProblemExamples
         public readonly List<double> RealMaximum = [];
 
         public HyperParameterSearchSpace Build() => new HyperParameterSearchSpace(
-          new RealVectorSearchSpace(RealMinimum.Count, new RealVector(RealMinimum), new RealVector(RealMaximum)),
-          new IntegerVectorSearchSpace(IntegerMinimum.Count, new IntegerVector(IntegerMinimum), new IntegerVector(IntegerMaximum)));
+            new RealVectorSearchSpace(RealMinimum.Count, new RealVector(RealMinimum), new RealVector(RealMaximum)),
+            new IntegerVectorSearchSpace(IntegerMinimum.Count, new IntegerVector(IntegerMinimum), new IntegerVector(IntegerMaximum)));
 
-        public Func<CompositeGenotype<RealVector, IntegerVector>, T> AddChoiceParameter<T>(IReadOnlyList<T> values)
+        public Func<CompositeGenotype<RealVector, IntegerVector>, TCandidate> AddChoiceParameter<TCandidate>(IReadOnlyList<TCandidate> values)
         {
             var n = IntegerMinimum.Count;
             IntegerMinimum.Add(0);
@@ -32,7 +31,7 @@ public static class MetaOptimizationProblemExamples
             return x => values[x.Part2[n]];
         }
 
-        public Func<CompositeGenotype<RealVector, IntegerVector>, T> AddChoiceParameter<T>(params IEnumerable<T> values) => AddChoiceParameter(values.ToArray());
+        public Func<CompositeGenotype<RealVector, IntegerVector>, TCandidate> AddChoiceParameter<TCandidate>(params IEnumerable<TCandidate> values) => AddChoiceParameter(values.ToArray());
 
         public Func<CompositeGenotype<RealVector, IntegerVector>, int> AddIntegerParameter(int min, int max)
         {
@@ -55,18 +54,18 @@ public static class MetaOptimizationProblemExamples
         public Func<CompositeGenotype<RealVector, IntegerVector>, double> AddRealParameter((double min, double max) bounds) => AddRealParameter(bounds.min, bounds.max);
     }
 
-    public static MetaOptimizationProblem<T, TE, TP, PopulationState<T>> GeneticAlgorithmMetaOptimizationProblem<T, TE, TP>(
-      this TP problem,
-      ICreator<T, TE, TP>[] creators,
-      ICrossover<T, TE, TP>[] crossovers,
-      IEvaluator<T, TE, TP>[] evaluators,
-      IInterceptor<T, TE, TP, PopulationState<T>>[] interceptors,
-      IMutator<T, TE, TP>[] mutators,
+    public static MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> GeneticAlgorithmMetaOptimizationProblem<TCandidate, TSearchSpace, TProblem>(
+      this TProblem problem,
+      ICreator<TCandidate, TSearchSpace, TProblem>[] creators,
+      ICrossover<TCandidate, TSearchSpace, TProblem>[] crossovers,
+      IEvaluator<TCandidate, TSearchSpace, TProblem>[] evaluators,
+      IInterceptor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>[] interceptors,
+      IMutator<TCandidate, TSearchSpace, TProblem>[] mutators,
       (int min, int max) elites,
-      ISelector<T, TE, TP>[] selectors,
+      ISelector<TCandidate, TSearchSpace, TProblem>[] selectors,
       (int min, int max) populationSize,
       (double min, double max) mutationRate)
-      where TE : class, ISearchSpace<T> where TP : class, IProblem<T, TE> where T : class
+      where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> where TCandidate : class
     {
         var b = new MetaOptimizationSearchSpaceBuilder();
         var creatorExtractor = b.AddChoiceParameter(creators);
@@ -79,7 +78,7 @@ public static class MetaOptimizationProblemExamples
         var popSizeExtractor = b.AddIntegerParameter(populationSize);
         var rateExtractor = b.AddRealParameter(mutationRate);
         var combinedSearchSpace = b.Build();
-        return new MetaOptimizationProblem<T, TE, TP, PopulationState<T>>(problem, combinedSearchSpace, x => new GeneticAlgorithm<T, TE, TP>
+        return new MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(problem, combinedSearchSpace, x => new GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
         {
             Creator = creatorExtractor(x),
             Crossover = crossoversExtractor(x),
@@ -93,44 +92,45 @@ public static class MetaOptimizationProblemExamples
         });
     }
 
-    public static MetaOptimizationProblem<T, TE, TP, EvolutionStrategyState<T>> EvolutionStrategyMetaOptimizationProblem<T, TE, TP>(
-      this TP problem,
-      ICreator<T, TE, TP>[] creators,
-      ICrossover<T, TE, TP>[] crossovers,
-      IEvaluator<T, TE, TP>[] evaluators,
-      IInterceptor<T, TE, TP, EvolutionStrategyState<T>>[] interceptors,
-      IMutator<T, TE, TP>[] mutators,
+    public static MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> EvolutionStrategyMetaOptimizationProblem<TCandidate, TSearchSpace, TProblem>(
+      this TProblem problem,
+      ICreator<TCandidate, TSearchSpace, TProblem>[] creators,
+      ICrossover<TCandidate, TSearchSpace, TProblem>[] crossovers,
+      IEvaluator<TCandidate, TSearchSpace, TProblem>[] evaluators,
+      IInterceptor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>[] interceptors,
+      IMutator<TCandidate, TSearchSpace, TProblem>[] mutators,
       EvolutionStrategyType[] strategies,
-      IReplacer<T, TE, TP>[] replacers,
-      ISelector<T, TE, TP>[] selectors,
+      IReplacer<TCandidate, TSearchSpace, TProblem>[] replacers,
+      ISelector<TCandidate, TSearchSpace, TProblem>[] selectors,
       (int min, int max) populationSize,
       (int min, int max) numberOfChildren,
       (double min, double max) mutationRate)
-      where TE : class, ISearchSpace<T> where TP : class, IProblem<T, TE> where T : class
+      where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> where TCandidate : class
     {
         IntegerVector integerMins = [0, 0, 0, 0, 0, 0, 0, populationSize.min, numberOfChildren.min];
-        IntegerVector integerMaxs = [
-          creators.Length - 1,
-      crossovers.Length - 1,
-      evaluators.Length - 1,
-      interceptors.Length - 1,
-      mutators.Length - 1,
-      strategies.Length - 1,
-      replacers.Length - 1,
-      selectors.Length - 1,
-      populationSize.max,
-      numberOfChildren.max
+        IntegerVector integerMaxs =
+        [
+            creators.Length - 1,
+            crossovers.Length - 1,
+            evaluators.Length - 1,
+            interceptors.Length - 1,
+            mutators.Length - 1,
+            strategies.Length - 1,
+            replacers.Length - 1,
+            selectors.Length - 1,
+            populationSize.max,
+            numberOfChildren.max
         ];
         var integerVectorSearchSpace = new IntegerVectorSearchSpace(integerMins.Count, integerMins, integerMaxs);
         var realVectorSearchSpace = new RealVectorSearchSpace(1, mutationRate.min, mutationRate.max);
         var combinedSearchSpace = realVectorSearchSpace.WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(integerVectorSearchSpace);
 
-        return new MetaOptimizationProblem<T, TE, TP, EvolutionStrategyState<T>>(problem, combinedSearchSpace, AlgBuilder);
+        return new MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(problem, combinedSearchSpace, AlgBuilder);
 
-        IAlgorithm<T, TE, TP, EvolutionStrategyState<T>> AlgBuilder(CompositeGenotype<RealVector, IntegerVector> x)
+        IAlgorithm<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> AlgBuilder(CompositeGenotype<RealVector, IntegerVector> x)
         {
             var ints = x.Part2;
-            return new EvolutionStrategy<T, TE, TP>
+            return new EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
             {
                 Creator = creators[ints[0]],
                 Crossover = crossovers[ints[1]],

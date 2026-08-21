@@ -2,9 +2,9 @@ namespace HEAL.HeuristicLib.SearchSpaces;
 
 public interface ISearchSpace;
 
-public interface ISearchSpace<in TGenotype> : ISearchSpace
+public interface ISearchSpace<TCandidate> : ISearchSpace
 {
-    bool Contains(TGenotype genotype);
+    bool Contains(TCandidate candidate);
 
-    //bool IsSubspaceOf(ISearchSpace<TGenotype> other);
+    //bool IsSubspaceOf(ISearchSpace<TCandidate> other);
 }

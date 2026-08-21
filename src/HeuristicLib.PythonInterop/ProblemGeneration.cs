@@ -1,21 +1,17 @@
 using System.Collections.Concurrent;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using HEAL.HeuristicLib.MachineLearning;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Problems.DataAnalysis;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
+using HEAL.HeuristicLib.Problems.MachineLearning;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.BBoB;
 using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
-using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using RastriginFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.RastriginFunction;
 using SphereFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.SphereFunction;
 
@@ -27,7 +23,7 @@ public class ProblemGeneration
 
     private static readonly ConcurrentDictionary<string, ITravelingSalesmanProblemData> TSPCache = [];
 
-    private static readonly ConcurrentDictionary<(string, double), RegressionProblemData> SymRegCache = [];
+    private static readonly ConcurrentDictionary<(string, double), RegressionData> SymRegCache = [];
 
     public static TravelingSalesmanProblem CreateTravellingSalesmanProblem(string file)
     {
@@ -43,21 +39,36 @@ public class ProblemGeneration
 
     public static SymbolicRegressionProblem CreateSymbolicRegressionProblem(string file, SymRegExperimentParameters parameters)
     {
-        var problemData = SymRegCache.GetOrAdd((file, parameters.TrainingSplit),
-          valueFactory: key => RegressionCsvInstanceProvider.ImportData(key.Item1, key.Item2));
-        var problem = new SymbolicRegressionProblem(problemData, new RootMeanSquaredErrorEvaluator(), new TreeLengthEvaluator())
+        var data = SymRegCache.GetOrAdd((file, parameters.TrainingSplit), static key => PythonRegressionData.ReadCsv(key.Item1, key.Item2));
+        var operations = new OperationSymbol[]
         {
-            SearchSpace = {
-        TreeDepth = parameters.TreeDepth,
-        TreeLength = parameters.TreeLength
-      },
-            ParameterOptimizationIterations = parameters.ParameterOptimizationIterations
+            Symbols.Addition,
+            Symbols.Subtraction,
+            Symbols.Multiplication,
+            Symbols.Division,
+            Symbols.SquareRoot,
+            Symbols.Logarithm
         };
-        var root = problem.SearchSpace.Grammar.AddLinearScaling();
-        var symbols = new Symbol[] { new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = problemData.InputVariables } };
-        problem.SearchSpace.Grammar.AddFullyConnectedSymbols(root, symbols);
+        var constant = new EvolvableConstantSymbol(
+            new UniformDoubleDistribution(-20.0, 20.0),
+            new ChooseNumericPerturbation(
+            [
+                (new AdditiveNumericPerturbation(new NormalDoubleDistribution(0.0, 1.0)), 0.5),
+                (new MultiplicativeNumericPerturbation(new NormalDoubleDistribution(0.0, 0.03)), 0.5)
+            ]));
+        var searchSpace = new ExpressionTreeSearchSpace(
+            parameters.TreeLength,
+            parameters.TreeDepth,
+            operations,
+            data.Inputs.Columns.Select(column => column.Name),
+            [constant]);
 
-        return problem;
+        return new SymbolicRegressionProblem(
+            data,
+            Metrics.RMSE.ToFinite(),
+            ExpressionMetrics.Length,
+            searchSpace,
+            parameters.UseLinearScaling);
     }
 
     public static TestFunctionProblem CreateTestFunctionProblem(int function, int dimension, int instance) => new(BBoBSuite.GetProblem(function, dimension, instance));
@@ -65,8 +76,8 @@ public class ProblemGeneration
     public static MultiObjectiveTestFunctionProblem SphereRastriginProblem(int dimensions, double min, double max, double shift)
     {
         var testFunction = new CombinedGradientTestFunction(
-          new ShiftedGradientTestFunction(-shift, new SphereFunction(dimensions)),
-          new RastriginFunction(dimensions));
+            new ShiftedGradientTestFunction(-shift, new SphereFunction(dimensions)),
+            new RastriginFunction(dimensions));
         var encoding = new RealVectorSearchSpace(dimensions, min, max);
         var prob = new MultiObjectiveTestFunctionProblem(testFunction, encoding);
 
@@ -76,7 +87,7 @@ public class ProblemGeneration
     public static MultiObjectiveTravellingSalesmanProblem CreateMultiObjectiveRealVectorTravellingSalesmanProblem(params string[] files) => new(files.Select(CreateTravellingSalesmanProblem).ToArray());
 
     public class PythonProblem(CustomFunc cfunc, int dimensions, double min, double max, bool[] maximization)
-      : RealVectorProblem(MultiObjective.Create(maximization), new RealVectorSearchSpace(dimensions, min, max))
+        : RealVectorProblem(MultiObjective.Create(maximization), new RealVectorSearchSpace(dimensions, min, max))
     {
         public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) => cfunc(solution);
     }
@@ -95,10 +106,10 @@ public class ProblemGeneration
     }
 
     public class MultiObjectiveTravellingSalesmanProblem(TravelingSalesmanProblem[] tsps) :
-      RealVectorProblem(MultiObjective.Create(tsps.Select(_ => false).ToArray()),
-        new RealVectorSearchSpace(
-          tsps.Max(x => x.ProblemData.NumberOfCities),
-          [0.0], [1.0]))
+        RealVectorProblem(MultiObjective.Create(tsps.Select(_ => false).ToArray()),
+            new RealVectorSearchSpace(
+                tsps.Max(x => x.ProblemData.NumberOfCities),
+                [0.0], [1.0]))
     {
         private readonly TravelingSalesmanProblem[] tsps = tsps.ToArray();
 

@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
+namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 public enum TSPLIBTypes
 {

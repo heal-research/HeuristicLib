@@ -1,6 +1,5 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
+using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Objectives;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 
@@ -15,7 +14,7 @@ public abstract class Zdt : IMultiObjectiveGradientTestFunction
     public int Dimension { get; }
     public double Min => 0;
     public double Max => 1;
-    public Objective Objective => MultiObjective.Create(ObjectiveDirection.Minimize, ObjectiveDirection.Minimize);
+    public ObjectiveDirections Objective => MultiObjective.Create(ObjectiveDirection.Minimize, ObjectiveDirection.Minimize);
 
     public RealVector Evaluate(RealVector solution)
     {

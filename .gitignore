@@ -328,6 +328,11 @@ paket-files/
 __pycache__/
 *.pyc
 
+# Python virtual environments
+.venv/
+venv/
+env/
+
 # Cake - Uncomment if you are using it
 # tools/**
 # !tools/packages.config
@@ -421,14 +426,6 @@ FodyWeavers.xsd
 **/.idea/**/contentModel.xml
 **/.idea/**/modules.xml
 
-*.suo
-*.user
-.vs/
-[Bb]in/
-[Oo]bj/
-_UpgradeReport_Files/
-[Pp]ackages/
-
 Thumbs.db
 Desktop.ini
 .DS_Store
@@ -436,9 +433,7 @@ Desktop.ini
 # Ignore Verify received files
 *.received.*
 
-/_site/
-/api/
+/docs/.vitepress/cache/
+/docs/.vitepress/dist/
 /.idea/
 *.DotSettings
-examples/PythonInteroperability/PythonInteroperability.sln
-examples/PythonInteroperability/.venv

@@ -100,8 +100,8 @@ def _run_regression(points_json: str, params_json: str, result_queue: mp.Queue):
             InteractiveSymbolicRegression,
             InteractiveSymRegParameters,
         )
-        from HEAL.HeuristicLib.Genotypes.Trees import SymbolicExpressionTree
-        from HEAL.HeuristicLib.Optimization import ObjectiveVector
+        from HEAL.HeuristicLib.Encodings.SymbolicExpressions import ExpressionTree
+        from HEAL.HeuristicLib.Objectives import ObjectiveVector
         from System import Func, Array, Double
 
         # --- parse points & bin by x --------------------------------------
@@ -226,7 +226,7 @@ def _run_regression(points_json: str, params_json: str, result_queue: mp.Queue):
             return Array[Array[Double]](result)
 
         callback_func = Func[
-            Array[SymbolicExpressionTree],
+            Array[ExpressionTree],
             Array[ObjectiveVector],
             Array[Array[Double]]
         ](population_callback)
@@ -241,8 +241,8 @@ def _run_regression(points_json: str, params_json: str, result_queue: mp.Queue):
 
         # --- extract top solutions -----------------------------------------
         top_solutions = []
-        for sol in population.Solutions:
-            tree = sol.Genotype
+        for sol in population.EvaluatedCandidates:
+            tree = sol.Candidate
             r2 = float(sol.ObjectiveVector[0])
             expr = InteractiveSymbolicRegression.FormatTree(tree)
             latex = _expr_to_latex(expr)

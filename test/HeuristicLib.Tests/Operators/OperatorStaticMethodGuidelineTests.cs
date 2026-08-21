@@ -1,17 +1,8 @@
 using System.Runtime.CompilerServices;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
-using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers;
-using HEAL.HeuristicLib.Operators.Interceptors;
-using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Operators.Terminators;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators;
@@ -34,16 +25,16 @@ public class OperatorStaticMethodGuidelineTests
     [Fact]
     public void ParetoCrowdingTournamentSelector_InstanceAndStaticProduceSameSelection()
     {
-        IReadOnlyList<ISolution<int>> population = [
-          new Solution<int>(0, new ObjectiveVector(0.0, 10.0)),
-      new Solution<int>(1, new ObjectiveVector(10.0, 0.0)),
-      new Solution<int>(2, new ObjectiveVector(2.0, 9.0)),
-      new Solution<int>(3, new ObjectiveVector(9.0, 2.0)),
-      new Solution<int>(4, new ObjectiveVector(5.0, 5.0))
+        IReadOnlyList<EvaluatedCandidate<int>> population = [
+            EvaluatedCandidate.From(0, new ObjectiveVector(0.0, 10.0)),
+            EvaluatedCandidate.From(1, new ObjectiveVector(10.0, 0.0)),
+            EvaluatedCandidate.From(2, new ObjectiveVector(2.0, 9.0)),
+            EvaluatedCandidate.From(3, new ObjectiveVector(9.0, 2.0)),
+            EvaluatedCandidate.From(4, new ObjectiveVector(5.0, 5.0))
         ];
         var objective = CreateBiObjective();
 
-        var viaInstance = new ParetoCrowdingTournamentSelector<int>(dominateOnEqualities: false, tournamentSize: 3)
+        var viaInstance = new ParetoCrowdingTournamentSelector<int>(dominateOnEqualities: false) { TournamentSize = 3 }
           .Select(population, objective, count: 4, RandomNumberGenerator.Create(456));
         var viaStatic = ParetoCrowdingTournamentSelector.Select(population, objective, count: 4, RandomNumberGenerator.Create(456), dominateOnEqualities: false, tournamentSize: 3);
 
@@ -55,17 +46,14 @@ public class OperatorStaticMethodGuidelineTests
     {
         var objective = CreateSingleObjective();
         var problem = new DummyProblem<int>(DummySearchSpace<int>.Instance, objective);
-        var state = new PopulationState<int>
-        {
-            Population = Population.From<int>([
-            new Solution<int>(1, new ObjectiveVector(2.0)),
-        new Solution<int>(2, new ObjectiveVector(0.5))
-          ])
-        };
+        var state = Population.From([
+            EvaluatedCandidate.From(1, new ObjectiveVector(2.0)),
+            EvaluatedCandidate.From(2, new ObjectiveVector(0.5))
+        ]).ToPopulationState();
         var target = new ObjectiveVector(1.0);
 
-        var viaInstance = new TargetTerminator<int>(target).ShouldTerminate(state, DummySearchSpace<int>.Instance, problem);
-        var viaCore = TargetTerminator.ShouldTerminate(state, problem, target);
+        var viaInstance = new TargetTerminator<int>(target).IsTerminalState(state, DummySearchSpace<int>.Instance, problem);
+        var viaCore = TargetTerminator.IsTerminalState(state, problem, target);
 
         viaCore.ShouldBe(viaInstance);
     }
@@ -73,21 +61,18 @@ public class OperatorStaticMethodGuidelineTests
     [Fact]
     public void RemoveDuplicatesInterceptor_StaticOverloadMatchesInstanceBehavior()
     {
-        var state = new PopulationState<string>
-        {
-            Population = Population.From<string>([
-            new Solution<string>("A", new ObjectiveVector(1.0)),
-        new Solution<string>("a", new ObjectiveVector(2.0)),
-        new Solution<string>("B", new ObjectiveVector(3.0))
-          ])
-        };
+        var state = Population.From<string>([
+            EvaluatedCandidate.From("A", new ObjectiveVector(1.0)),
+            EvaluatedCandidate.From("a", new ObjectiveVector(2.0)),
+            EvaluatedCandidate.From("B", new ObjectiveVector(3.0))
+        ]).ToPopulationState();
         var comparer = CaseInsensitiveStringComparer.Instance;
 
-        var viaInstance = new RemoveDuplicatesInterceptor<string, PopulationState<string>>(comparer).Transform(state, previousState: null);
+        var viaInstance = new RemoveDuplicatesInterceptor<string, PopulationState<string>>(comparer).Transform(state, previousState: null, RandomNumberGenerator.Create(1));
         var viaStatic = RemoveDuplicatesInterceptor.Transform(state, previousState: null, comparer);
 
         viaStatic.Population.ShouldBe(viaInstance.Population);
-        viaStatic.Population.Select(x => x.Genotype).ShouldBe(["A", "B"]);
+        viaStatic.Population.Select(x => x.Candidate).ShouldBe(["A", "B"]);
     }
 
     [Fact]
@@ -104,8 +89,8 @@ public class OperatorStaticMethodGuidelineTests
     [Fact]
     public void ChangedOperatorRecords_ExposeOnlyImmutableConfigurationProperties()
     {
-        AssertImmutableDeclaredProperties(typeof(HeuristicLib.Operators.Creators.RealVectorCreators.NormalDistributedCreator));
-        AssertImmutableDeclaredProperties(typeof(HeuristicLib.Operators.Creators.IntegerVectorCreators.NormalDistributedCreator));
+        AssertImmutableDeclaredProperties(typeof(Encodings.RealVectors.NormalDistributedCreator));
+        AssertImmutableDeclaredProperties(typeof(Encodings.IntegerVectors.NormalDistributedCreator));
         AssertImmutableDeclaredProperties(typeof(BalancedTreeCreator));
         AssertImmutableDeclaredProperties(typeof(SelfAdaptiveSimulatedBinaryCrossover));
         AssertImmutableDeclaredProperties(typeof(SubtreeCrossover));
@@ -116,20 +101,20 @@ public class OperatorStaticMethodGuidelineTests
         AssertImmutableDeclaredProperties(typeof(RemoveDuplicatesInterceptor<string, PopulationState<string>>));
     }
 
-    private static IReadOnlyList<ISolution<int>> CreateSingleObjectivePopulation()
+    private static IReadOnlyList<EvaluatedCandidate<int>> CreateSingleObjectivePopulation()
     {
         return [
-          new Solution<int>(0, new ObjectiveVector(4.0)),
-      new Solution<int>(1, new ObjectiveVector(2.0)),
-      new Solution<int>(2, new ObjectiveVector(1.0)),
-      new Solution<int>(3, new ObjectiveVector(3.0))
+            EvaluatedCandidate.From(0, new ObjectiveVector(4.0)),
+            EvaluatedCandidate.From(1, new ObjectiveVector(2.0)),
+            EvaluatedCandidate.From(2, new ObjectiveVector(1.0)),
+            EvaluatedCandidate.From(3, new ObjectiveVector(3.0))
         ];
     }
 
-    private static Objective CreateSingleObjective()
+    private static ObjectiveDirections CreateSingleObjective()
       => new([ObjectiveDirection.Minimize], Comparer<ObjectiveVector>.Create((left, right) => left[0].CompareTo(right[0])));
 
-    private static Objective CreateBiObjective()
+    private static ObjectiveDirections CreateBiObjective()
       => new(
         [ObjectiveDirection.Minimize, ObjectiveDirection.Minimize],
         Comparer<ObjectiveVector>.Create((left, right) =>
@@ -138,13 +123,13 @@ public class OperatorStaticMethodGuidelineTests
             return first != 0 ? first : left[1].CompareTo(right[1]);
         }));
 
-    private sealed class DummyProblem<TGenotype>(ISearchSpace<TGenotype> searchSpace, Objective objective)
-      : IProblem<TGenotype, ISearchSpace<TGenotype>>
+    private sealed class DummyProblem<TCandidate>(ISearchSpace<TCandidate> searchSpace, ObjectiveDirections objective)
+      : IProblem<TCandidate, ISearchSpace<TCandidate>>
     {
-        public ISearchSpace<TGenotype> SearchSpace { get; } = searchSpace;
-        public Objective Objective { get; } = objective;
+        public ISearchSpace<TCandidate> SearchSpace { get; } = searchSpace;
+        public ObjectiveDirections Objective { get; } = objective;
 
-        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random)
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
           => throw new NotSupportedException();
     }
 

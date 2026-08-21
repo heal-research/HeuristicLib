@@ -1,39 +1,75 @@
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Selectors;
+namespace HEAL.HeuristicLib.Operators;
 
-// ToDo: If we assume that a selector cannot select the whole requested number of solutions, the EliteSelector could simply be a PipelineSelector with a BestSelector and then another selector for the remaining.
-public record EliteSelector<TGenotype, TSearchSpace, TProblem>
-  : WrappingSelector<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public record EliteSelector<TCandidate, TSearchSpace, TProblem>
+    : Selector<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    private readonly int elites;
-
-    public ISelector<TGenotype, TSearchSpace, TProblem> SelectorForRemaining => InnerSelector;
-
-    public EliteSelector(ISelector<TGenotype, TSearchSpace, TProblem> selectorForRemaining, int elites = 1)
-      : base(selectorForRemaining)
+    public EliteSelector(ISelector<TCandidate, TSearchSpace, TProblem> selectorForRemaining)
     {
-        this.elites = elites;
+        SelectorForRemaining = selectorForRemaining;
     }
 
-    protected override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
-                                                                  Objective objective, int count, InnerSelect innerSelect,
-                                                                  IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-    {
-        var selectedElites = BestSelector.Select(population, objective, elites);
-        var remainingCount = count - selectedElites.Count;
-        var selecterdRemaining = innerSelect(population, objective, remainingCount, random, searchSpace, problem);
+    /// <summary>
+    /// Gets the selector that fills the places remaining after the elites have been taken. It is asked for the
+    /// reduced count rather than for the complete selection.
+    /// </summary>
+    /// <remarks>
+    /// It is not called at all when the elites already fill the requested count, so it consumes no random draws in
+    /// that case.
+    /// </remarks>
+    public ISelector<TCandidate, TSearchSpace, TProblem> SelectorForRemaining { get; init; }
 
-        return selectedElites.Concat(selecterdRemaining).ToArray();
+    /// <summary>
+    /// Gets the number of best candidates taken before the remaining places are filled. The expected value is
+    /// nonnegative.
+    /// </summary>
+    /// <remarks>
+    /// The selection never returns more than the requested count, so a value above that count is capped and leaves
+    /// no remaining places. A nonpositive value takes no elites.
+    /// </remarks>
+    public int Elites { get; init; } = 1;
+
+    public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new Instance(instanceRegistry.Resolve(SelectorForRemaining), Elites);
+
+    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> selectorForRemaining, int elites)
+        : SelectorInstance<TCandidate, TSearchSpace, TProblem>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        {
+            var selectedElites = BestSelector.Select(population, objective, Math.Min(elites, count));
+            var remainingCount = count - selectedElites.Count;
+            if (remainingCount <= 0)
+                return selectedElites;
+
+            var selectedRemaining = selectorForRemaining.Select(population, objective, remainingCount, random, searchSpace, problem);
+
+            return selectedElites.Concat(selectedRemaining).ToArray();
+        }
     }
 }
 
-// public static class EliteSelector
-// {
-//   public static EliteSelector<TGenotype, TSearchSpace, TProblem> WithElites<TGenotype, TSearchSpace, TProblem>(this ISelector<TGenotype, TSearchSpace, TProblem> selector, int elites = 1) where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> => new(selector, elites);
-// }
+public static class EliteSelector
+{
+    public static EliteSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector, int elites = 1)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(selector) { Elites = elites };
+}
+
+public static class EliteSelectorExtensions
+{
+    extension<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        public EliteSelector<TCandidate, TSearchSpace, TProblem> WithElites(int elites = 1) => EliteSelector.Create(selector, elites);
+    }
+}

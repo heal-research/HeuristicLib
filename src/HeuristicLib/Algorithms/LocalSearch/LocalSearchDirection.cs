@@ -1,3 +1,3 @@
-namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
+namespace HEAL.HeuristicLib.Algorithms;
 
 public enum LocalSearchDirection { FirstImprovement, BestImprovement }

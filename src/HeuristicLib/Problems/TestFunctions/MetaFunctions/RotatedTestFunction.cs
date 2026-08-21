@@ -1,6 +1,4 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-
-#pragma warning disable S2368
+using HEAL.HeuristicLib.Encodings.RealVectors;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 

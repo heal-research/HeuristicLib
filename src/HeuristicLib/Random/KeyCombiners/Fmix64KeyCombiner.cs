@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.Random.KeyCombiners;
+namespace HEAL.HeuristicLib.Random;
 
 public class Fmix64KeyCombiner : IKeyCombiner
 {

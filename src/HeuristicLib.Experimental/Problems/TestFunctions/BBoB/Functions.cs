@@ -1,9 +1,3 @@
-// ReSharper disable UnusedMember.Global
-// ReSharper disable ForCanBeConvertedToForeach
-// ReSharper disable LoopCanBeConvertedToQuery
-
-#pragma warning disable S2368
-
 namespace HEAL.HeuristicLib.Problems.TestFunctions.BBoB;
 
 public static class Functions

@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.Random.KeyCombiners;
+namespace HEAL.HeuristicLib.Random;
 
 public sealed class SplitMix64KeyCombiner : IKeyCombiner
 {

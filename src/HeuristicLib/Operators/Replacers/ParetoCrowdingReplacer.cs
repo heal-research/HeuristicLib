@@ -1,35 +1,41 @@
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Replacers;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Replacers;
+namespace HEAL.HeuristicLib.Operators;
 
-public record ParetoCrowdingReplacer<TGenotype>
-  : StatelessReplacer<TGenotype>
+public sealed record ParetoCrowdingReplacer<TCandidate>
+    : StatelessReplacer<TCandidate>
 {
-    private readonly bool dominateOnEqualities;
+    public bool DominateOnEqualities { get; init; }
 
     public ParetoCrowdingReplacer(bool dominateOnEqualities)
     {
-        this.dominateOnEqualities = dominateOnEqualities;
+        DominateOnEqualities = dominateOnEqualities;
     }
 
-    public override IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random)
-      => ParetoCrowdingReplacer.Replace(previousPopulation, offspringPopulation, objective, count, dominateOnEqualities);
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
+        => ParetoCrowdingReplacer.Replace(previousPopulation, offspringPopulation, objective, count, DominateOnEqualities);
 }
 
 public static class ParetoCrowdingReplacer
 {
-    public static IReadOnlyList<ISolution<TGenotype>> Replace<TGenotype>(
-      IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-      IReadOnlyList<ISolution<TGenotype>> offspringPopulation,
-      Objective objective,
-      int count,
-      bool dominateOnEqualities)
+    public static ParetoCrowdingReplacer<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, bool dominateOnEqualities)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(dominateOnEqualities);
+
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace<TCandidate>(
+        IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
+        IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
+        ObjectiveDirections objective,
+        int count,
+        bool dominateOnEqualities)
     {
         var all = previousPopulation.Concat(offspringPopulation).ToArray();
         var fronts = DominationCalculator.CalculateAllParetoFronts(all, objective, out _, dominateOnEqualities);
 
-        var l = new List<ISolution<TGenotype>>();
+        var l = new List<EvaluatedCandidate<TCandidate>>();
         var size = count;
         foreach (var front in fronts)
         {

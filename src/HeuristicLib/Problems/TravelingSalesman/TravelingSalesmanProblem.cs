@@ -1,15 +1,23 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
-public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : PermutationProblem(SingleObjective.Minimize, GetEncoding(problemData)) /*, IDeterministicProblem<Permutation>*/
+public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
+    : PermutationProblem(SingleObjective.Minimize, GetEncoding(problemData)),
+      IProblemDefaultCreator<TravelingSalesmanProblem, Permutation, PermutationSearchSpace>,
+      IProblemDefaultCrossover<TravelingSalesmanProblem, Permutation, PermutationSearchSpace>,
+      IProblemDefaultMutator<TravelingSalesmanProblem, Permutation, PermutationSearchSpace> /*, IDeterministicProblem<Permutation>*/
 {
 
     public TravelingSalesmanProblem() : this(new TravelingSalesmanCoordinatesData(DefaultProblemCoordinates)) { }
     public ITravelingSalesmanProblemData ProblemData { get; } = problemData;
+
+    public static ICrossover<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>>? CreateDefaultCrossover(TravelingSalesmanProblem problem) =>
+        new OrderCrossover();
 
     public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random)
     {

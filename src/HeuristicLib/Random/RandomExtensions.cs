@@ -8,88 +8,40 @@ public static class RandomExtensions
 
         public int NextInt(int low, int high, bool inclusiveHigh = false)
         {
-            var range = ValidateAndGetIntRange(low, high, inclusiveHigh);
-            return NextIntUnchecked(random, low, range);
+            if (high <= low)
+                return low;
+
+            var range = (long)high - low + (inclusiveHigh ? 1L : 0L);
+            return low + (int)(random.NextDouble() * range);
         }
 
-        public bool NextBool(double probability = 0.5)
-        {
-            ValidateProbability(probability);
-            return NextBoolUnchecked(random, probability);
-        }
+        public bool NextBool(double probability = 0.5) => random.NextDouble() < probability;
 
         public bool[] NextBools(int length, double probability = 0.5)
         {
-            ValidateProbability(probability);
-
             var values = new bool[length];
-            random.FillBoolsUnchecked(values, probability);
+            random.NextBools(values, probability);
 
             return values;
+        }
+
+        public void NextBools(Span<bool> destination, double probability = 0.5)
+        {
+            for (var i = 0; i < destination.Length; i++)
+            {
+                destination[i] = random.NextBool(probability);
+            }
         }
 
         public double NextDouble(double low, double high)
         {
-            var width = ValidateAndGetWidth(low, high);
-            return NextDoubleUnchecked(random, low, width);
+            if (high <= low)
+                return low;
+
+            return random.NextDouble() * (high - low) + low;
         }
 
         public double NextNormal(double mu = 0, double sigma = 1)
-        {
-            ValidateSigma(sigma);
-            return NextNormalUnchecked(random, mu, sigma);
-        }
-
-        public double[] NextNormals(int length, double mu = 0, double sigma = 1)
-        {
-            ValidateSigma(sigma);
-
-            var values = new double[length];
-            random.FillNormalsUnchecked(values, mu, sigma);
-
-            return values;
-        }
-
-        public double[] NextDoubles(int length)
-        {
-            var values = new double[length];
-            random.FillDoublesUnchecked(values);
-
-            return values;
-        }
-
-        public double[] NextDoubles(int length, double low, double high)
-        {
-            var width = ValidateAndGetWidth(low, high);
-
-            var values = new double[length];
-            random.FillDoublesUnchecked(values, low, width);
-
-            return values;
-        }
-
-        public int[] NextInts(int length, int high, bool inclusiveHigh = false) => random.NextInts(length, 0, high, inclusiveHigh);
-
-        public int[] NextInts(int length, int low, int high, bool inclusiveHigh = false)
-        {
-            var range = ValidateAndGetIntRange(low, high, inclusiveHigh);
-
-            var values = new int[length];
-            random.FillIntsUnchecked(values, low, range);
-
-            return values;
-        }
-
-        internal int NextIntUnchecked(int low, long range)
-          => low + (int)(random.NextDouble() * range);
-
-        internal bool NextBoolUnchecked(double probability)
-          => random.NextDouble() < probability;
-
-        internal double NextDoubleUnchecked(double low, double width)
-          => random.NextDouble() * width + low;
-
-        internal double NextNormalUnchecked(double mu, double sigma)
         {
             double u;
             double s;
@@ -104,73 +56,87 @@ public static class RandomExtensions
             return mu + (sigma * u * s);
         }
 
-        private static long ValidateAndGetIntRange(int low, int high, bool inclusiveHigh = false)
+        public double[] NextNormals(int length, double mu = 0, double sigma = 1)
         {
+            var values = new double[length];
+            random.NextNormals(values, mu, sigma);
+
+            return values;
+        }
+
+        public void NextNormals(Span<double> destination, double mu = 0, double sigma = 1)
+        {
+            for (var i = 0; i < destination.Length; i++)
+            {
+                destination[i] = random.NextNormal(mu, sigma);
+            }
+        }
+
+        public double[] NextDoubles(int length)
+        {
+            var values = new double[length];
+            random.NextDoubles(values);
+
+            return values;
+        }
+
+        public void NextDoubles(Span<double> destination)
+        {
+            for (var i = 0; i < destination.Length; i++)
+            {
+                destination[i] = random.NextDouble();
+            }
+        }
+
+        public double[] NextDoubles(int length, double low, double high)
+        {
+            var values = new double[length];
+            random.NextDoubles(values, low, high);
+
+            return values;
+        }
+
+        public void NextDoubles(Span<double> destination, double low, double high)
+        {
+            if (high <= low)
+            {
+                destination.Fill(low);
+                return;
+            }
+
+            var width = high - low;
+            for (var i = 0; i < destination.Length; i++)
+            {
+                destination[i] = random.NextDouble() * width + low;
+            }
+        }
+
+        public int[] NextInts(int length, int high, bool inclusiveHigh = false) =>
+            random.NextInts(length, 0, high, inclusiveHigh);
+
+        public void NextInts(Span<int> destination, int high, bool inclusiveHigh = false) =>
+            random.NextInts(destination, 0, high, inclusiveHigh);
+
+        public int[] NextInts(int length, int low, int high, bool inclusiveHigh = false)
+        {
+            var values = new int[length];
+            random.NextInts(values, low, high, inclusiveHigh);
+
+            return values;
+        }
+
+        public void NextInts(Span<int> destination, int low, int high, bool inclusiveHigh = false)
+        {
+            if (high <= low)
+            {
+                destination.Fill(low);
+                return;
+            }
+
             var range = (long)high - low + (inclusiveHigh ? 1L : 0L);
-
-            if (range <= 0)
-                throw new ArgumentOutOfRangeException(nameof(high));
-
-            return range;
-        }
-
-        private static double ValidateAndGetWidth(double low, double high)
-        {
-            if (high < low)
-                throw new ArgumentOutOfRangeException(nameof(high));
-
-            return high - low;
-        }
-
-        private static void ValidateProbability(double probability)
-        {
-            if (probability is < 0 or > 1)
-                throw new ArgumentOutOfRangeException(nameof(probability));
-        }
-
-        private static void ValidateSigma(double sigma)
-        {
-            if (sigma < 0)
-                throw new ArgumentOutOfRangeException(nameof(sigma));
-        }
-
-        private void FillBoolsUnchecked(Span<bool> values, double probability)
-        {
-            for (var i = 0; i < values.Length; i++)
+            for (var i = 0; i < destination.Length; i++)
             {
-                values[i] = random.NextBoolUnchecked(probability);
-            }
-        }
-
-        private void FillNormalsUnchecked(Span<double> values, double mu, double sigma)
-        {
-            for (var i = 0; i < values.Length; i++)
-            {
-                values[i] = random.NextNormalUnchecked(mu, sigma);
-            }
-        }
-
-        private void FillDoublesUnchecked(Span<double> values)
-        {
-            for (var i = 0; i < values.Length; i++)
-            {
-                values[i] = random.NextDouble();
-            }
-        }
-
-        private void FillDoublesUnchecked(Span<double> values, double low, double width)
-        {
-            for (var i = 0; i < values.Length; i++)
-            {
-                values[i] = random.NextDoubleUnchecked(low, width);
-            }
-        }
-
-        private void FillIntsUnchecked(Span<int> values, int low, long range)
-        {
-            for (var i = 0; i < values.Length; i++)
-            {
-                values[i] = random.NextIntUnchecked(low, range);
+                destination[i] = low + (int)(random.NextDouble() * range);
             }
         }
     }

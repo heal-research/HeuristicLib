@@ -1,73 +1,82 @@
 using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Evaluators;
+namespace HEAL.HeuristicLib.Operators;
 
-public record LimitEvaluator<TG, TS, TP>
-  : WrappingEvaluator<TG, TS, TP, LimitEvaluator<TG, TS, TP>.ExecutionState>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public sealed record LimitEvaluator<TCandidate, TSearchSpace, TProblem>
+    : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public sealed class ExecutionState
+    public int MaxEvaluations { get; init; }
+
+    /// <summary>
+    /// Gets the objective vector returned for candidates that are not evaluated because the limit has been reached.
+    /// A <see langword="null"/> value uses <see cref="ObjectiveDirections.Worst"/> from the problem.
+    /// </summary>
+    public ObjectiveVector? FallbackObjectiveVector { get; init; }
+
+    /// <summary>
+    /// Gets whether <see cref="MaxEvaluations"/> is enforced within a batch that would cross the limit.
+    /// When <see langword="false"/>, a batch that starts below the limit is evaluated completely.
+    /// </summary>
+    public bool EnforceLimitWithinBatch { get; init; }
+
+    public LimitEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations)
+        : base(childEvaluator)
     {
-        public InvocationCounter Counter { get; } = new();
+        MaxEvaluations = maxEvaluations;
     }
 
-    private readonly int maxEvaluations;
-    private readonly ObjectiveVector? alternativeValue;
-    private readonly bool strict;
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
+        new Instance(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch);
 
-    // ToDo: document that strict means in-batch checking
-    public LimitEvaluator(IEvaluator<TG, TS, TP> evaluator, int maxEvaluations, ObjectiveVector? alternativeValue, bool strict = false)
-      : base(evaluator)
+    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch)
+        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
     {
-        this.maxEvaluations = maxEvaluations;
-        this.alternativeValue = alternativeValue;
-        this.strict = strict;
-    }
+        private readonly ObservationCounter counter = new();
 
-    protected override ExecutionState CreateInitialState() => new();
-
-    protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> genotypes, ExecutionState executionState,
-      InnerEvaluate innerEvaluate, IRandomNumberGenerator random, TS searchSpace, TP problem)
-    {
-        var remainingEvaluations = maxEvaluations - executionState.Counter.CurrentCount;
-
-        var alternative = alternativeValue ?? problem.Objective.Worst;
-
-        if (remainingEvaluations <= 0)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            return Enumerable.Repeat(alternative, genotypes.Count).ToArray();
+            var remainingEvaluations = maxEvaluations - counter.CurrentCount;
+            var fallback = fallbackObjectiveVector ?? problem.Objective.Worst;
+
+            if (remainingEvaluations <= 0)
+            {
+                return Enumerable.Repeat(fallback, candidates.Count).ToArray();
+            }
+
+            if (enforceLimitWithinBatch && remainingEvaluations < candidates.Count)
+            {
+                var candidatesToEvaluate = candidates.Take(remainingEvaluations).ToList();
+                var candidatesToSkip = candidates.Skip(remainingEvaluations).ToList();
+                var evaluated = ChildEvaluator.Evaluate(candidatesToEvaluate, random, searchSpace, problem);
+                counter.IncrementBy(candidatesToEvaluate.Count);
+                var skipped = Enumerable.Repeat(fallback, candidatesToSkip.Count);
+
+                return evaluated.Concat(skipped).ToArray();
+            }
+
+            var result = ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
+            counter.IncrementBy(candidates.Count);
+            return result;
         }
-
-        if (strict && remainingEvaluations < genotypes.Count)
-        {
-            var genotypesToEvaluate = genotypes.Take(remainingEvaluations).ToList();
-            var genotypesToSkip = genotypes.Skip(remainingEvaluations).ToList();
-
-            var evaluated = innerEvaluate(genotypesToEvaluate, random, searchSpace, problem);
-            executionState.Counter.IncrementBy(genotypesToEvaluate.Count);
-            var skipped = Enumerable.Repeat(alternative, genotypesToSkip.Count);
-
-            return evaluated.Concat(skipped).ToArray();
-        }
-
-        var result = innerEvaluate(genotypes, random, searchSpace, problem);
-        executionState.Counter.IncrementBy(genotypes.Count);
-        return result;
     }
 }
 
 public static class LimitEvaluatorExtensions
 {
-    extension<TG, TS, TP>(IEvaluator<TG, TS, TP> evaluator) where TS : class, ISearchSpace<TG> where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public LimitEvaluator<TG, TS, TP> LimitEvaluations(int maxEvaluations, ObjectiveVector? alternativeValue = null, bool strict = false)
+        public LimitEvaluator<TCandidate, TSearchSpace, TProblem> LimitEvaluations(int maxEvaluations, ObjectiveVector? fallbackObjectiveVector = null, bool enforceLimitWithinBatch = false)
         {
-            return new LimitEvaluator<TG, TS, TP>(evaluator, maxEvaluations, alternativeValue, strict);
+            return new(evaluator, maxEvaluations) { FallbackObjectiveVector = fallbackObjectiveVector, EnforceLimitWithinBatch = enforceLimitWithinBatch };
         }
     }
 }

@@ -1,59 +1,66 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Operators.Interceptors;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic.Operators;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public record ReevaluationInterceptor<T, TE, TP, TR>
-  : IInterceptor<T, TE, TP, TR>
-  where TR : PopulationState<T>
-  where TE : class, ISearchSpace<T>
-  where TP : DynamicProblem<T, TE>
+public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : Interceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchState : PopulationState<TCandidate>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
 {
-    private readonly IEvaluator<T, TE, TP> evaluator;
-    private readonly TP subscribedProblem;
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; }
+    public TProblem SourceProblem { get; init; }
 
-    public ReevaluationInterceptor(IEvaluator<T, TE, TP> evaluator, TP problem)
+    public ReevaluationInterceptor(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, TProblem sourceProblem)
     {
-        this.evaluator = evaluator;
-        subscribedProblem = problem;
+        Evaluator = evaluator;
+        SourceProblem = sourceProblem;
     }
 
-    public IInterceptorInstance<T, TE, TP, TR> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public override InterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
-        var evaluatorInstance = instanceRegistry.Resolve(evaluator);
-        var instance = new Instance(evaluatorInstance);
+        var instance = new Instance(instanceRegistry.Resolve(Evaluator));
 
-        // ToDo: maybe we have a memory leak here?
-        subscribedProblem.EpochClock.OnEpochChange += (_, _) => instance.RequestReevaluation();
+        // The subscription lifetime is shared with DynamicCachingEvaluator and requires a common lifecycle design.
+        SourceProblem.EpochClock.OnEpochChange += (_, _) => instance.RequestReevaluation();
 
         return instance;
     }
 
-    private sealed class Instance(IEvaluatorInstance<T, TE, TP> evaluator)
-      : IInterceptorInstance<T, TE, TP, TR>
+    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator)
+        : InterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
         private int requireReevaluation;
 
         public void RequestReevaluation() => Interlocked.Increment(ref requireReevaluation);
-        public bool ConsumeReevaluationRequest() => Interlocked.Exchange(ref requireReevaluation, 0) != 0;
 
-        public TR Transform(TR currentState, TR? previousState, TE searchSpace, TP problem)
+        private bool ConsumeReevaluationRequest() => Interlocked.Exchange(ref requireReevaluation, 0) != 0;
+
+        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            var result = currentState;
-
             if (!ConsumeReevaluationRequest())
             {
-                return result;
+                return currentState;
             }
 
-            var genotypes = result.Population.Genotypes.ToArray();
-            var objectiveVectors = evaluator.Evaluate(genotypes, null!, searchSpace, problem); // random is not available in the interceptor contract.
-            result = result with { Population = Population.From(genotypes, objectiveVectors) };
-
-            return result;
+            var candidates = currentState.Population.Candidates.ToArray();
+            var objectiveVectors = evaluator.Evaluate(candidates, random, searchSpace, problem);
+            return currentState with { Population = Population.From(candidates.ToEvaluated(objectiveVectors)) };
         }
     }
+}
+
+public static class ReevaluationInterceptor
+{
+    public static ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, TProblem sourceProblem)
+        where TSearchState : PopulationState<TCandidate>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : DynamicProblem<TCandidate, TSearchSpace> =>
+        new(evaluator, sourceProblem);
 }

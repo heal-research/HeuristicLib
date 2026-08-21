@@ -1,6 +1,6 @@
 namespace HEAL.HeuristicLib.SearchSpaces;
 
-public abstract record SearchSpace<TGenotype> : ISearchSpace<TGenotype>
+public abstract record SearchSpace<TCandidate> : ISearchSpace<TCandidate>
 {
-    public abstract bool Contains(TGenotype genotype);
+    public abstract bool Contains(TCandidate candidate);
 }

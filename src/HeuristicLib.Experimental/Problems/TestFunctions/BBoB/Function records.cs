@@ -1,9 +1,5 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
-
-// ReSharper disable UnusedParameter.Local
-#pragma warning disable S1172
-#pragma warning disable S1172
+using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Objectives;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions.BBoB;
 

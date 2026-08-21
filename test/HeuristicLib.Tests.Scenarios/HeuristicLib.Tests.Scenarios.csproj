@@ -31,6 +31,8 @@
     <ItemGroup>
         <Using Include="Shouldly" />
         <Using Include="Xunit" />
+        <Using Include="System.Collections.Immutable" />
+        <Using Include="HEAL.HeuristicLib.Collections" />
     </ItemGroup>
 
     <ItemGroup>

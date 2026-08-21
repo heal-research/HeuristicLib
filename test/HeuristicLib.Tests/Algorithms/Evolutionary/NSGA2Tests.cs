@@ -1,41 +1,34 @@
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
-using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
-using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
+using SinglePointCrossover = HEAL.HeuristicLib.Encodings.RealVectors.SinglePointCrossover;
+using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.Evolutionary;
 
-#pragma warning disable S101
 public class NSGA2Tests
-#pragma warning restore S101
 {
     [Fact]
-    public void RunToCompletion_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
+    public void Complete_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
     {
         var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
-        var algorithm = NSGA2.GetBuilder<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>(
-          new UniformDistributedCreator(problem.SearchSpace),
-          new SinglePointCrossover(),
-          new GaussianMutator(0.1, 0.1));
-        algorithm.PopulationSize = 5;
-        algorithm.MutationRate = 0.5;
+        var algorithm = new NSGA2<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
+        {
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Crossover = new SinglePointCrossover(),
+            Mutator = new GaussianMutator(0.1, 0.1),
+            PopulationSize = 5,
+            MutationRate = 0.5,
+            MaximumGenerations = 5
+        };
 
-        var result = algorithm.Build()
-                              .WithMaxIterations(5)
-                              .RunToCompletion(
-                                problem,
-                                RandomNumberGenerator.Create(42),
-                                ct: TestContext.Current.CancellationToken);
+        var result = algorithm.Complete(
+          problem,
+          RandomNumberGenerator.Create(42),
+          ct: TestContext.Current.CancellationToken);
 
-        result.Population.Solutions.Length.ShouldBe(5);
-        result.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
-        result.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 2).ShouldBeTrue();
+        result.Population.EvaluatedCandidates.Count.ShouldBe(5);
+        result.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
+        result.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 2).ShouldBeTrue();
     }
 }

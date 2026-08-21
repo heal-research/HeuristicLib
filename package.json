@@ -2,11 +2,14 @@
   "name": "heuristiclib",
   "private": true,
   "scripts": {
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "format": "npm run format:code && npm run format:text && npm run format:xml",
     "format:check": "npm run format:check:code && npm run format:check:text && npm run format:check:xml",
     "format:code": "dotnet format whitespace ./HEAL.HeuristicLib.sln --no-restore",
     "format:check:code": "dotnet format whitespace ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore",
-    "style:check": "dotnet format style ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity error",
+    "style:check": "dotnet format style ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity warn",
     "analyzers:check": "dotnet format analyzers ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity error",
     "format:text": "prettier --write \"**/*.{json,yml,yaml}\"",
     "format:check:text": "prettier --check \"**/*.{json,yml,yaml}\"",
@@ -17,6 +20,7 @@
   },
   "devDependencies": {
     "@prettier/plugin-xml": "^3.4.2",
-    "prettier": "^3.8.3"
+    "prettier": "^3.8.3",
+    "vitepress": "2.0.0-alpha.19"
   }
 }

@@ -1,5 +1,4 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.PythonInterop;
 
 namespace HEAL.HeuristicLib.Tests.Optimization;
@@ -25,7 +24,7 @@ public class MultiObjectiveTests
     [Fact]
     public void EmptyInput_ReturnsNoFronts_AndEmptyRank()
     {
-        var solutions = Array.Empty<ISolution<object>>();
+        var solutions = Array.Empty<EvaluatedCandidate<object>>();
         var objective = MinimizeAll(2);
 
         var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank);
@@ -55,7 +54,7 @@ public class MultiObjectiveTests
         ids[2].ShouldBe(["B"]); // Front 2
 
         // Rank array matches positions: A=0; C/D/E=1; B=2
-        var map = solutions.Select((s, i) => (s.Genotype, i)).ToDictionary(keySelector: x => x.Genotype, elementSelector: x => x.i);
+        var map = solutions.Select((s, i) => (s.Candidate, i)).ToDictionary(keySelector: x => x.Candidate, elementSelector: x => x.i);
         rank[map["A"]].ShouldBe(0);
         new[] { "C", "D", "E" }.ShouldAllBe(id => rank[map[id]] == 1);
         rank[map["B"]].ShouldBe(2);
@@ -77,7 +76,7 @@ public class MultiObjectiveTests
         ids[0].ShouldBe(["A", "B"]); // both non-dominated
         ids[1].ShouldBe(["C"]);
 
-        var map = solutions.Select((s, i) => (s.Genotype, i)).ToDictionary(keySelector: x => x.Genotype, elementSelector: x => x.i);
+        var map = solutions.Select((s, i) => (s.Candidate, i)).ToDictionary(keySelector: x => x.Candidate, elementSelector: x => x.i);
         rank[map["A"]].ShouldBe(0);
         rank[map["B"]].ShouldBe(0);
         rank[map["C"]].ShouldBe(1);
@@ -100,10 +99,10 @@ public class MultiObjectiveTests
         ids[2].ShouldBe(["C"]);
     }
 
-    private static string[][] FrontIds(List<List<ISolution<string>>> fronts)
-      => fronts.Select(f => f.Select(s => s.Genotype).OrderBy(x => x).ToArray()).ToArray();
+    private static string[][] FrontIds(List<List<EvaluatedCandidate<string>>> fronts)
+      => fronts.Select(f => f.Select(s => s.Candidate).OrderBy(x => x).ToArray()).ToArray();
 
-    private static Solution<string> Sol(string id, params double[] values) => new(id, values);
+    private static EvaluatedCandidate<string> Sol(string id, params double[] values) => new(id, values);
 
-    private static Objective MinimizeAll(int i) => new(Enumerable.Repeat(ObjectiveDirection.Minimize, i).ToArray(), NoTotalOrderComparer.Instance);
+    private static ObjectiveDirections MinimizeAll(int i) => new(Enumerable.Repeat(ObjectiveDirection.Minimize, i).ToArray(), NoTotalOrderComparer.Instance);
 }

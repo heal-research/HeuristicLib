@@ -1,22 +1,30 @@
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Operators.Terminators;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Terminators;
+namespace HEAL.HeuristicLib.Operators;
 
-public record AfterOperatorCountTerminator<TGenotype> : StatelessTerminator<TGenotype>
+public sealed record AfterOperatorCountTerminator<TCandidate> : StatelessTerminator<TCandidate>
 {
-    public AfterOperatorCountTerminator(InvocationCounter counter, int maximumCount)
+    public AfterOperatorCountTerminator(ObservationCounter counter, int maximumCount)
     {
-        this.counter = counter;
-        this.maximumCount = maximumCount;
+        Counter = counter;
+        MaximumCount = maximumCount;
     }
 
-    private readonly InvocationCounter counter;
-    private readonly int maximumCount;
+    public ObservationCounter Counter { get; init; }
 
-    public override bool ShouldTerminate()
+    public int MaximumCount { get; init; }
+
+    public override bool IsTerminalState()
     {
-        return counter.CurrentCount >= maximumCount;
+        return Counter.CurrentCount >= MaximumCount;
     }
 }
 
-// ToDo: add extensions for common counter hooks, e.g. after evaluations count terminator.
+public static class AfterOperatorCountTerminator
+{
+    public static AfterOperatorCountTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, ObservationCounter counter, int maximumCount)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(counter, maximumCount);
+}

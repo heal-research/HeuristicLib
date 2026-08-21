@@ -1,38 +1,31 @@
-using HEAL.HeuristicLib.Genotypes.Trees;
-using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems.DataAnalysis;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
+using HEAL.HeuristicLib.Data;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using HEAL.HeuristicLib.MachineLearning;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Problems.MachineLearning;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Trees;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.SlidingWindowRegression;
 
 public class SlidingWindowSymbolicRegressionProblem
-  : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
+    : DynamicProblem<ExpressionTree, ExpressionTreeSearchSpace>
 {
     private readonly SymbolicRegressionProblem innerProblem;
+    private SymbolicRegressionProblem windowProblem;
 
-    protected int[] CachedRows = [];
-    protected double[] CachedTargets = [];
-
-    public SlidingWindowSymbolicRegressionProblem(
-      SymbolicRegressionProblem problem,
-      int windowStart = 0,
-      int windowLength = 100,
-      int stepSize = 10,
-      UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-      int epochLength = int.MaxValue
-    ) : base(problem.Objective, problem.SearchSpace, RandomNumberGenerator.Create(0), updatePolicy, epochLength)
+    public SlidingWindowSymbolicRegressionProblem(SymbolicRegressionProblem problem, int windowStart = 0, int windowLength = 100, int stepSize = 10, UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation, int epochLength = int.MaxValue)
+        : base(problem.Objective, problem.SearchSpace, RandomNumberGenerator.Create(0), updatePolicy, epochLength)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(windowStart);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(windowLength);
         ArgumentOutOfRangeException.ThrowIfNegative(stepSize);
 
         innerProblem = problem;
+        windowProblem = problem;
         StepSize = stepSize;
         WindowLength = windowLength;
         CurrentState = (windowStart, windowStart + windowLength);
-        RebuildWindowCache();
+        RebuildWindowData();
     }
 
     public int StepSize { get; }
@@ -40,37 +33,46 @@ public class SlidingWindowSymbolicRegressionProblem
 
     public (int StartIndex, int EndIndex) CurrentState { get; private set; }
 
-    public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random, EvaluationTiming timing) => innerProblem.Evaluate(solution, CachedRows, CachedTargets);
+    public override ObjectiveVector Evaluate(ExpressionTree solution, IRandomNumberGenerator random, EvaluationTiming timing)
+    {
+        return windowProblem.Evaluate(solution);
+    }
 
     protected override void Update()
     {
         CurrentState = (CurrentState.StartIndex + StepSize, CurrentState.EndIndex + StepSize);
-        RebuildWindowCache();
+        RebuildWindowData();
     }
 
-    private void RebuildWindowCache()
+    private void RebuildWindowData()
     {
-        var trainingRange = innerProblem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training];
-        var rowCount = innerProblem.ProblemData.Dataset.Rows;
-        var rangeStart = trainingRange.Start.IsFromEnd ? rowCount - trainingRange.Start.Value : trainingRange.Start.Value;
-        var rangeEnd = trainingRange.End.IsFromEnd ? rowCount - trainingRange.End.Value : trainingRange.End.Value;
-        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(rangeEnd, rangeStart);
-        var rangeLength = rangeEnd - rangeStart;
+        var source = innerProblem.TrainingData;
+        var rowCount = source.RowCount;
         var start = CurrentState.StartIndex;
-
         var rows = new int[CurrentState.EndIndex - start];
         for (var k = 0; k < rows.Length; k++)
         {
-            var r = (start + k) % rangeLength;
-            var offset = r < 0 ? r + rangeLength : r;
-            rows[k] = rangeStart + offset;
+            var row = (start + k) % rowCount;
+            rows[k] = row < 0 ? row + rowCount : row;
         }
 
-        var targets = innerProblem.ProblemData.Dataset
-                                  .GetDoubleValues(innerProblem.ProblemData.TargetVariable, rows)
-                                  .ToArray();
+        var inputColumns = source.Inputs.Columns
+            .OfType<Series<double>>()
+            .Select(series => SelectRows(series, rows))
+            .ToArray();
+        var target = SelectRows(source.Target, rows);
 
-        CachedRows = rows;
-        CachedTargets = targets;
+        var windowData = new RegressionData(new DataFrame(inputColumns), target);
+        windowProblem = new SymbolicRegressionProblem(windowData, innerProblem.PredictionMetrics, innerProblem.ExpressionMetrics, innerProblem.SearchSpace, innerProblem.UseLinearScaling, innerProblem.Objective.TotalOrderComparer);
+    }
+
+    private static Series<double> SelectRows(Series<double> source, IReadOnlyList<int> rows)
+    {
+        var sourceValues = source.Values.Span;
+        var selectedValues = new double[rows.Count];
+        for (var i = 0; i < rows.Count; i++)
+            selectedValues[i] = sourceValues[rows[i]];
+
+        return Series<double>.FromOwnedArray(source.Name, selectedValues);
     }
 }

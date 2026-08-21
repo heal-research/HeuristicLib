@@ -9,6 +9,7 @@ charset = utf-8
 end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
+max_line_length = 120
 
 # C# files
 [*.cs]
@@ -45,7 +46,8 @@ dotnet_style_require_accessibility_modifiers = for_non_interface_members
 dotnet_style_coalesce_expression = true
 dotnet_style_collection_initializer = true
 dotnet_style_explicit_tuple_names = true
-dotnet_style_namespace_match_folder = true
+# Source folders organize implementation and do not define namespaces
+dotnet_style_namespace_match_folder = false
 dotnet_style_null_propagation = true
 dotnet_style_object_initializer = true
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
@@ -83,7 +85,7 @@ csharp_style_var_when_type_is_apparent = true:silent
 
 # Expression-bodied members
 csharp_style_expression_bodied_accessors = true:silent
-csharp_style_expression_bodied_constructors = when_on_single_line:silent
+csharp_style_expression_bodied_constructors = false:warning
 csharp_style_expression_bodied_indexers = true:silent
 csharp_style_expression_bodied_lambdas = true:silent
 csharp_style_expression_bodied_local_functions = false:silent
@@ -130,7 +132,7 @@ csharp_style_unused_value_assignment_preference = discard_variable:suggestion
 csharp_style_unused_value_expression_statement_preference = discard_variable:silent
 
 # 'using' directive preferences
-csharp_using_directive_placement = outside_namespace:silent
+csharp_using_directive_placement = outside_namespace:warning
 
 # New line preferences
 csharp_style_allow_blank_line_after_colon_in_constructor_initializer_experimental = true:silent
@@ -233,6 +235,8 @@ dotnet_diagnostic.S1694.severity = none # An abstract class should have both abs
 dotnet_diagnostic.S2094.severity = none # Classes should not be empty
 dotnet_diagnostic.S125.severity = none # Sections of code should not be commented out
 dotnet_diagnostics.S1144.severity = none # Unused private members should be removed
+dotnet_diagnostic.S3246.severity = none # Generic variance is an intentional API decision
+dotnet_diagnostic.S2368.severity = none # Multidimensional arrays are intentional in numerical APIs
 
 csharp_style_prefer_primary_constructors = false:suggestion
 csharp_prefer_system_threading_lock = true:suggestion

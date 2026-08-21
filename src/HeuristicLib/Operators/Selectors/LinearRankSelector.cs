@@ -1,27 +1,29 @@
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Selectors;
+namespace HEAL.HeuristicLib.Operators;
 
-public record LinearRankSelector<TGenotype>
-  : StatelessSelector<TGenotype>
+public record LinearRankSelector<TCandidate>
+    : StatelessSelector<TCandidate>
 {
-    public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
-      => LinearRankSelector.Select(population, objective, count, random);
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
+        LinearRankSelector.Select(population, objective, count, random);
 }
 
 public static class LinearRankSelector
 {
-    public static IReadOnlyList<ISolution<TGenotype>> Select<TGenotype>(
-      IReadOnlyList<ISolution<TGenotype>> population,
-      Objective objective,
-      int count,
-      IRandomNumberGenerator random)
+    public static LinearRankSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new();
+
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
     {
         var list = population.OrderByDescending(x => x.ObjectiveVector, objective.TotalOrderComparer).ToList();
 
         int lotSum = list.Count * (list.Count + 1) / 2;
-        var selected = new ISolution<TGenotype>[count];
+        var selected = new EvaluatedCandidate<TCandidate>[count];
         for (int i = 0; i < count; i++)
         {
             int selectedLot = random.NextInt(lotSum);

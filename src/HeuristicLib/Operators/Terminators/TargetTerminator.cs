@@ -1,12 +1,13 @@
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Operators.Terminators;
+namespace HEAL.HeuristicLib.Operators;
 
-public record TargetTerminator<TGenotype>
-  : StatelessTerminator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, PopulationState<TGenotype>>
+public sealed record TargetTerminator<TCandidate>
+    : StatelessTerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>>
 {
     public ObjectiveVector Target { get; init; }
 
@@ -15,16 +16,16 @@ public record TargetTerminator<TGenotype>
         Target = target;
     }
 
-    public override bool ShouldTerminate(PopulationState<TGenotype> state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
-      => TargetTerminator.ShouldTerminate(state, problem, Target);
+    public override bool IsTerminalState(PopulationState<TCandidate> state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+        TargetTerminator.IsTerminalState(state, problem, Target);
 }
 
 public static class TargetTerminator
 {
-    public static bool ShouldTerminate<TGenotype>(
-      PopulationState<TGenotype> state,
-      IProblem<TGenotype, ISearchSpace<TGenotype>> problem,
-      ObjectiveVector target)
+    public static TargetTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, ObjectiveVector target)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(target);
+
+    public static bool IsTerminalState<TCandidate>(PopulationState<TCandidate> state, IProblem<TCandidate, ISearchSpace<TCandidate>> problem, ObjectiveVector target)
     {
         return state.Population.Any(x => !target.Dominates(x.ObjectiveVector, problem.Objective));
     }

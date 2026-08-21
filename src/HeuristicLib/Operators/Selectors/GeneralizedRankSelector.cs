@@ -1,24 +1,25 @@
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Selectors;
+namespace HEAL.HeuristicLib.Operators;
 
-public record GeneralizedRankSelector<TGenotype>(double Pressure) : StatelessSelector<TGenotype>
+public record GeneralizedRankSelector<TCandidate>(double Pressure) : StatelessSelector<TCandidate>
 {
-    public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
-      => GeneralizedRankSelector.Select(population, objective, count, random, Pressure);
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
+        GeneralizedRankSelector.Select(population, objective, count, random, Pressure);
 }
 
 public static class GeneralizedRankSelector
 {
-    public static IReadOnlyList<ISolution<TGenotype>> Select<TGenotype>(
-      IReadOnlyList<ISolution<TGenotype>> population,
-      Objective objective,
-      int count,
-      IRandomNumberGenerator random,
-      double pressure)
+    public static GeneralizedRankSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, double pressure)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(pressure);
+
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, double pressure)
     {
-        var selected = new ISolution<TGenotype>[count];
+        var selected = new EvaluatedCandidate<TCandidate>[count];
         var source = population.OrderBy(x => x.ObjectiveVector, objective.TotalOrderComparer).ToArray();
         var scale = Math.Pow(population.Count, 1.0 / pressure) - 1;
         for (var i = 0; i < count; i++)

@@ -1,35 +1,33 @@
-using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.States;
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Operators.Interceptors;
+using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Operators.Interceptors;
+namespace HEAL.HeuristicLib.Operators;
 
-public record RemoveDuplicatesInterceptor<TGenotype, TSearchState>
-  : StatelessInterceptor<TGenotype, TSearchState>
-  where TSearchState : PopulationState<TGenotype>
+public sealed record RemoveDuplicatesInterceptor<TCandidate, TSearchState>
+    : StatelessInterceptor<TCandidate, TSearchState>
+    where TSearchState : PopulationState<TCandidate>
 {
-    public IEqualityComparer<TGenotype> Comparer { get; init; }
+    public IEqualityComparer<TCandidate> Comparer { get; init; }
 
-    public RemoveDuplicatesInterceptor(IEqualityComparer<TGenotype> comparer)
+    public RemoveDuplicatesInterceptor(IEqualityComparer<TCandidate> comparer)
     {
         Comparer = comparer;
     }
 
-    public override TSearchState Transform(TSearchState currentState, TSearchState? previousState)
-      => RemoveDuplicatesInterceptor.Transform(currentState, previousState, Comparer);
+    public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random)
+        => RemoveDuplicatesInterceptor.Transform(currentState, previousState, Comparer);
 }
 
 public static class RemoveDuplicatesInterceptor
 {
-    public static TSearchState Transform<TGenotype, TSearchState>(
-      TSearchState currentState,
-      TSearchState? previousState,
-      IEqualityComparer<TGenotype> comparer)
-      where TSearchState : PopulationState<TGenotype>
+    public static TSearchState Transform<TCandidate, TSearchState>(TSearchState currentState, TSearchState? previousState, IEqualityComparer<TCandidate> comparer)
+        where TSearchState : PopulationState<TCandidate>
     {
-        var newSolutions = currentState.Population.DistinctBy(s => s.Genotype, comparer).ToImmutableArray();
+        var newSolutions = currentState.Population.DistinctBy(s => s.Candidate, comparer).ToImmutableArray();
         return currentState with
         {
-            Population = new Population<TGenotype>(newSolutions)
+            Population = Population.From(newSolutions)
         };
     }
 }
