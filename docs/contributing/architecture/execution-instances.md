@@ -36,6 +36,8 @@ Important properties:
 
 Explicit operator and algorithm instance creation methods receive the registry. Ordinary creation methods should resolve their declared children eagerly. Meta algorithms, budget wrappers and other execution graph compositions may additionally create child registries, register replacements or control execution instance reuse.
 
+Obtain every child, operator or algorithm, through `Resolve(...)`. Calling `CreateExecutionInstance(...)` on a child configuration bypasses the replacement lookup that observation depends on, and does so silently: the search states are still correct, but analyzers anchored on that child, or on any operator inside it, record nothing.
+
 ## Registry replacements
 
 Advanced execution plumbing can register explicit registry entries before resolving a configuration.
@@ -53,8 +55,9 @@ Most users should not call these methods directly. They are intended for meta-al
 The current intended model is eager, local resolution:
 
 1. When an algorithm creates its execution instance, it resolves the operators it will use and passes them to that instance.
-2. When a wrapping or multi operator creates its execution instance, it resolves its declared inner operators once.
-3. Authored operator instances store resolved children as private instance data.
+2. When a meta algorithm creates its execution instance, it resolves its child algorithms the same way.
+3. When a wrapping or multi operator creates its execution instance, it resolves its declared inner operators once.
+4. Authored operator instances store resolved children as private instance data.
 
 This gives one-time resolution cost per execution instance and avoids per-call dictionary lookups during steady-state execution.
 
@@ -64,7 +67,7 @@ A role specific stateful operator base creates one state object whenever it crea
 
 Registry identity determines state sharing. Resolving the same configuration object repeatedly through one registry returns the same execution instance and state. Independent registries create independent instances and state objects. A child registry may reuse an instance from its parent registry, so it also reuses that instance's state.
 
-A child registry inherits replacement policy and may reuse instances already resolved by its parent. Runtime composing meta algorithms create child algorithm instances directly through child registries. This gives each requested stage or cycle a new algorithm instance without preventing intentional sharing of operator configurations from the parent execution graph.
+A child registry inherits replacement policy and may reuse instances already resolved by its parent. Runtime composing meta algorithms resolve each child algorithm through a freshly created child registry rather than through the parent. This gives each requested stage or cycle a new algorithm instance without preventing intentional sharing of operator configurations from the parent execution graph, and because the child registry inherits its parent's replacements, observation keeps working. Resolve through the child registry; do not call `CreateExecutionInstance(...)` on the child configuration.
 
 Stateful operator calls are not inherently thread safe. An operator may use ordinary mutable state, but concurrent use is valid only when the owning execution path provides suitable synchronization or the state implementation is itself safe for concurrent access.
 

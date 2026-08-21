@@ -598,7 +598,7 @@ See also: Analyzer, Observation, Observation plan, Run.
 
 Status: `Canonical`
 
-An observation plan is the run scoped registration plan that records which analyzer callbacks should be installed at which observable operator boundaries.
+An observation plan is the run scoped registration plan that records which analyzer callbacks should be installed at which observation anchors.
 
 Analyzer run states add their observation requirements to the observation plan. The run then uses the plan to install the required observable replacements into execution instance registries.
 
@@ -617,9 +617,11 @@ An observation may record data, but it must not change the observed operation's 
 Related terms:
 
 - `Observer`: the callback object or function that receives an observation.
+- `Observation anchor`: the algorithm or operator whose boundary an observation is registered at. An anchor is matched by reference, so a copy of an algorithm or operator is a different anchor.
 - `Observable operator`: an operator wrapper that installs observers around an operator boundary.
+- `Observable algorithm`: an algorithm wrapper that installs observers around the search states an algorithm yields, that is, at the end of every iteration.
 
-See also: Analyzer, Operator, Run.
+See also: Algorithm, Analyzer, Operator, Run.
 
 ### Experiment
 

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
@@ -19,6 +20,18 @@ public static class ObservationPlanExtensions
 {
     extension(ObservationPlan observations)
     {
+        public void Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, IAlgorithmObserver<TCandidate, TSearchSpace, TProblem, TSearchState> observer)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+          where TSearchState : class, ISearchState
+          => observations.Observe<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>, IAlgorithmObserver<TCandidate, TSearchSpace, TProblem, TSearchState>>(algorithm, observer, static (a, o) => a.ObserveWith(o));
+
+        public void Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, Action<TSearchState, TSearchState?, TSearchSpace, TProblem> afterIteration)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+          where TSearchState : class, ISearchState
+          => observations.Observe(algorithm, new ActionAlgorithmObserver<TCandidate, TSearchSpace, TProblem, TSearchState>(afterIteration));
+
         public void Observe<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator, ICreatorObserver<TCandidate, TSearchSpace, TProblem> observer)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>

@@ -113,3 +113,5 @@ A custom algorithm should:
 5. Work with interceptors when it derives from `IterativeAlgorithm`.
 
 Read [Running algorithms](/guide/execution/running-algorithms) for the consumer model and [Configuration vs execution instances](/contributing/architecture/execution-instances) for the internal ownership rules.
+
+To write an algorithm that coordinates other algorithms rather than operators, continue with [Write a meta-algorithm](/guide/extending/writing-meta-algorithms).

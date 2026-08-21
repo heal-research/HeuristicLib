@@ -91,7 +91,7 @@ public class PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TPr
             ct.ThrowIfCancellationRequested();
             var algRng = random.Fork(index);
             var childRegistry = registry.CreateChildRegistry();
-            var algorithmInstance = algorithm.CreateExecutionInstance(childRegistry);
+            var algorithmInstance = childRegistry.Resolve(algorithm);
 
             await foreach (var newState in algorithmInstance.RunStreamingAsync(problem, algRng, state, ct))
             {

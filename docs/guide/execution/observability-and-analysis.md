@@ -18,10 +18,37 @@ This is a good fit for logging and user interface updates. The consumer decides 
 
 ## Attach an analyzer
 
-An interceptor exposes an observation point in an iterative algorithm. An analyzer can then collect typed results from that point:
+An analyzer collects typed results from observation points in a run. The end of an iteration is an observation point on the algorithm itself, so recording a quality curve needs nothing but the run:
 
 ```csharp
 using HEAL.HeuristicLib.Analysis;
+
+var run = algorithm
+    .CreateRun(problem, RandomNumberGenerator.Create(seed: 777))
+    .TrackBestMedianWorst(out var analysis);
+
+await run.CompleteAsync();
+var series = run.GetResult(analysis);
+```
+
+Each entry is captured from a state the algorithm yields, after any interceptor has transformed it. Sub-iterations an algorithm does not yield are not observed.
+
+### Anchor on an algorithm by name
+
+`TrackBestMedianWorst` takes the anchor from the run. Name the algorithm instead when the anchor is not the algorithm the run was created from, such as the inner algorithm of a meta-algorithm:
+
+```csharp
+var innerQuality = Analyzer.BestMedianWorst(innerAlgorithm);
+var run = cycleAlgorithm.CreateRun(problem, random).WithAnalyzer(innerQuality);
+```
+
+An algorithm is an anchor by reference. `algorithm with { PopulationSize = 200 }` is a different object and therefore a different anchor, so an analyzer created for the original silently observes nothing when the copy is run. `TrackBestMedianWorst` resolves the anchor at attach time and cannot get this wrong.
+
+### Anchor on an operator
+
+Some observations are about what an operator did rather than about the resulting state — selection pressure, evaluation counts, crossover statistics — and cannot be derived from search states. Those anchor on the operator:
+
+```csharp
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.States;
 
@@ -32,10 +59,9 @@ var analysis = Analyzer.BestMedianWorst(interceptor);
 var run = observedAlgorithm
     .CreateRun(problem, RandomNumberGenerator.Create(seed: 777))
     .WithAnalyzer(analysis);
-
-await run.CompleteAsync();
-var series = run.GetResult(analysis);
 ```
+
+An interceptor anchor observes the state at that point in the iteration, which is what you want when several interceptors run and the distinction matters. For a plain quality curve, prefer the algorithm anchor: it needs no placeholder operator in the configuration.
 
 `series` is a `List<BestMedianWorstEntry<RealVector>>` with one entry per observed generation. Each entry holds three evaluated candidates, so both the objective values and the candidates behind them stay available:
 

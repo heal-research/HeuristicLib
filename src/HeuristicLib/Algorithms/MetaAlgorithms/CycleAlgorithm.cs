@@ -158,5 +158,5 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
     }
 
     private IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateChildAlgorithmInstance(TAlgorithm algorithm) =>
-        algorithm.CreateExecutionInstance(registry.CreateChildRegistry());
+        registry.CreateChildRegistry().Resolve(algorithm);
 }

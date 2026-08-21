@@ -60,7 +60,9 @@ It is reusable configuration information, not mutable execution state.
 Analyzers do not mutate the configuration graph directly.
 Instead, analyzer states declare observation requirements through `RegisterObservations(ObservationPlan)`.
 
-Typical hook points are:
+An observation is registered at an **anchor**, which may be an operator or an algorithm.
+
+Typical operator anchors are:
 
 - `IEvaluator<...>`
 - `IInterceptor<...>`
@@ -72,8 +74,11 @@ Typical hook points are:
 - `ITerminator<...>`
 - `ICreator<...>`
 
+`IAlgorithm<...>` is also an anchor. It observes every search state the algorithm yields, that is, the end of each iteration after any interceptor has transformed it. Prefer it for analyses that only read the produced state, so users do not have to configure a placeholder interceptor to create an observation point. Anchor on an operator when the observation is about what that operator did — selection pressure, evaluation counts, crossover statistics — which cannot be derived from search states.
+
 The concrete observable wrappers still do the actual callback work:
 
+- `ObservableAlgorithm<...>`
 - `ObservableEvaluator<...>`
 - `ObservableInterceptor<...>`
 - `ObservableMutator<...>`
@@ -84,7 +89,7 @@ The concrete observable wrappers still do the actual callback work:
 - `ObservableTerminator<...>`
 - `ObservableCreator<...>`
 
-What analyzers contribute is the **declarative registration** of which operator should be observed and with which callback.
+What analyzers contribute is the **declarative registration** of which anchor should be observed and with which callback.
 
 ### 3) Run-scoped analyzer state
 
@@ -192,11 +197,15 @@ An algorithm run can be executed only once. Attaching an analyzer after executio
 The observation plan stores merged observation entries.
 Those entries:
 
-- identify the original operator they belong to
-- merge multiple analyzer subscriptions for the same operator
+- identify the original anchor they belong to, by reference
+- merge multiple analyzer subscriptions for the same anchor
 - register one observable replacement into an `ExecutionInstanceRegistry`
 
-This keeps analyzer registration declarative while avoiding deep wrapper chains when several analyzers observe the same operator.
+This keeps analyzer registration declarative while avoiding deep wrapper chains when several analyzers observe the same anchor.
+
+Because an anchor is matched by reference, a copy produced by `with` is a different anchor. An analyzer registered against a configuration that is then copied observes nothing, which is why the run-level `TrackBestMedianWorst(out var analyzer)` form resolves its anchor from the run instead.
+
+Replacements only take effect where children are obtained through `ExecutionInstanceRegistry.Resolve`. A meta-algorithm that calls `CreateExecutionInstance` on a child algorithm itself bypasses the registry, and every analyzer anchored inside that child silently records nothing. See [Write a meta-algorithm](/guide/extending/writing-meta-algorithms).
 
 ### During execution
 
@@ -236,11 +245,12 @@ An analyzer usually has two responsibilities that should stay separate.
 
 This side answers:
 
+- Is the produced search state enough, so the algorithm itself is the anchor?
 - Which evaluator should I observe?
 - Which interceptor should I observe?
 - Do I need crossover, mutation, selector, replacer, creator, or terminator hooks?
 
-This is handled by the analyzer configuration holding references to the relevant operators.
+This is handled by the analyzer configuration holding references to the relevant anchors.
 
 ### Execution side: what to do with the data
 
@@ -264,7 +274,7 @@ Its analyzer result stores:
 
 ### `BestMedianWorstAnalysis<T, ...>`
 
-This analyzer observes iteration-boundary interception and stores one entry per completed iteration:
+This analyzer accepts both anchor kinds. It observes the search states an algorithm yields, an interceptor, or both, and stores one entry per observed iteration:
 
 - best evaluated candidate
 - median evaluated candidate
@@ -308,6 +318,7 @@ The registry is an execution detail; the run is the public analyzer-result scope
 - register observation needs through `RegisterObservations(...)`
 - retrieve analyzer results through `AlgorithmRun.GetResult(...)`
 - rely on observable wrappers as the callback mechanism
+- anchor on the algorithm when the analysis only reads the produced search state
 
 ### Do not
 
@@ -335,7 +346,7 @@ This keeps concerns separate:
 
 The distinction is:
 
-- an **observable operator** is a callback hook on one wrapped configuration
+- an **observable operator or algorithm** is a callback hook on one wrapped configuration
 - an **analyzer** is a run-scoped analysis object that uses those hooks
 
 In practice:
@@ -359,3 +370,4 @@ If you want users to retrieve a coherent result object from `AlgorithmRun`, pref
 - [Observability and analysis](/guide/execution/observability-and-analysis)
 - [Configuration vs execution instances](/contributing/architecture/execution-instances)
 - [Running algorithms](/guide/execution/running-algorithms)
+- [Write a meta-algorithm](/guide/extending/writing-meta-algorithms)

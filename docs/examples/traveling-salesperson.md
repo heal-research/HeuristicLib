@@ -21,22 +21,17 @@ using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
-using HEAL.HeuristicLib.States;
 
 var instance = TsplibTspInstanceProvider.LoadData(
     "berlin52.tsp",
     bestQuality: 7542);
 var problem = new TravelingSalesmanProblem(instance.ToCoordinatesData());
-
-var observationPoint =
-    new IdentityInterceptor<Permutation, PopulationState<Permutation>>();
 
 var algorithm = new GeneticAlgorithm<
     Permutation,
@@ -50,14 +45,12 @@ var algorithm = new GeneticAlgorithm<
     Mutator = new InversionMutator(),
     Selector = TournamentSelector.For(problem, tournamentSize: 3),
     MutationRate = 0.25,
-    Elites = 1,
-    Interceptor = observationPoint
+    Elites = 1
 };
 
-var qualityAnalyzer = Analyzer.BestMedianWorst(observationPoint);
 var run = algorithm
     .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .WithAnalyzer(qualityAnalyzer);
+    .TrackBestMedianWorst(out var qualityAnalyzer);
 
 await run.CompleteAsync();
 

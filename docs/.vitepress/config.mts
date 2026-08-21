@@ -70,6 +70,7 @@ export default defineConfig({
                         { text: "Compose operators", link: "/guide/extending/operator-composition" },
                         { text: "Write an operator", link: "/guide/extending/writing-operators" },
                         { text: "Write an algorithm", link: "/guide/extending/writing-algorithms" },
+                        { text: "Write a meta-algorithm", link: "/guide/extending/writing-meta-algorithms" },
                     ],
                 },
                 {
