@@ -3,7 +3,10 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
     title: "HeuristicLib",
     description: "Heuristic and evolutionary algorithms for modern .NET",
-    base: "/HeuristicLib/",
+    base: "/",
+    sitemap: {
+        hostname: "https://heuristiclib.github.io/",
+    },
     markdown: {
         theme: {
             light: "light-plus",

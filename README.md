@@ -7,9 +7,9 @@ Heuristic and evolutionary optimization for modern .NET
 [![CI](https://github.com/heal-research/HeuristicLib/actions/workflows/ci.yml/badge.svg)](https://github.com/heal-research/HeuristicLib/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/vpre/HEAL.HeuristicLib.svg)](https://www.nuget.org/packages/HEAL.HeuristicLib)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
-[![License: MIT](https://img.shields.io/badge/license-MIT-0b7285.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-0b7285.svg)](https://github.com/heal-research/HeuristicLib/blob/main/LICENSE)
 
-[Get started](docs/guide/getting-started.md) · [Read the guide](docs/guide/index.md) · [Browse examples](docs/examples/index.md) · [Report an issue](https://github.com/heal-research/HeuristicLib/issues)
+[Get started](https://heuristiclib.github.io/guide/getting-started.html) · [Read the guide](https://heuristiclib.github.io/guide/) · [Browse examples](https://heuristiclib.github.io/examples/) · [Report an issue](https://github.com/heal-research/HeuristicLib/issues)
 
 </div>
 
@@ -17,7 +17,7 @@ HeuristicLib is a .NET library for building, running and studying heuristic opti
 
 <p align="center">
   <a href="https://heal.heuristiclab.com/">
-    <img src="docs/public/heal-logo.png" alt="Heuristic and Evolutionary Algorithms Laboratory" width="360">
+    <img src="https://raw.githubusercontent.com/heal-research/HeuristicLib/main/docs/public/heal-logo.png" alt="Heuristic and Evolutionary Algorithms Laboratory" width="360">
   </a>
 </p>
 
@@ -45,7 +45,7 @@ dotnet add package HEAL.HeuristicLib --prerelease
 
 ## Example 1: solve a TSPLIB instance and record its quality curve
 
-This example loads the named `berlin52` benchmark from a standard TSPLIB file, solves it with a genetic algorithm and records the best, median and worst tour length after every generation. You can use the [`berlin52.tsp`](test/HeuristicLib.Tests.Scenarios/TestData/berlin52.tsp) file in this repository to run it.
+This example loads the named `berlin52` benchmark from a standard TSPLIB file, solves it with a genetic algorithm and records the best, median and worst tour length after every generation. You can use the [`berlin52.tsp`](https://github.com/heal-research/HeuristicLib/blob/main/test/HeuristicLib.Tests.Scenarios/TestData/berlin52.tsp) file in this repository to run it.
 
 ```csharp
 using HEAL.HeuristicLib.Algorithms;
@@ -92,7 +92,7 @@ foreach (var (entry, generation) in qualityCurve.Select((entry, i) => (entry, i 
 
 The algorithm configuration stays reusable. Change the TSPLIB file to run another named instance. Use a `with` expression to change the crossover or mutation operator and test another search policy. Keep the problem, seed schedule and analyzer unchanged when comparing configurations.
 
-See [problems](docs/guide/fundamentals/problems.md), [operators](docs/guide/fundamentals/operators.md), [observability and analysis](docs/guide/execution/observability-and-analysis.md) and [experiments](docs/guide/execution/experiments.md) for the underlying APIs.
+See [problems](https://heuristiclib.github.io/guide/fundamentals/problems.html), [operators](https://heuristiclib.github.io/guide/fundamentals/operators.html), [observability and analysis](https://heuristiclib.github.io/guide/execution/observability-and-analysis.html) and [experiments](https://heuristiclib.github.io/guide/execution/experiments.html) for the underlying APIs.
 
 ## Example 2: train a symbolic regression model
 
@@ -164,10 +164,10 @@ The trained candidate is an expression tree. Inspect it, format it as infix, C#,
 Draw a target curve in the Python demonstrator and watch HeuristicLib evolve candidate expressions. The browser displays each generation and the final tradeoff between fit and expression complexity.
 
 <p align="center">
-  <img src="examples/PythonInteractiveDemonstrator/documentation/demo.gif" alt="Interactive symbolic regression demonstrator" width="480">
+  <img src="https://raw.githubusercontent.com/heal-research/HeuristicLib/main/examples/PythonInteractiveDemonstrator/documentation/demo.gif" alt="Interactive symbolic regression demonstrator" width="480">
 </p>
 
-The complete application is in [`examples/PythonInteractiveDemonstrator`](examples/PythonInteractiveDemonstrator). It uses pythonnet to host HeuristicLib from a FastAPI application.
+The complete application is in [`examples/PythonInteractiveDemonstrator`](https://github.com/heal-research/HeuristicLib/tree/main/examples/PythonInteractiveDemonstrator). It uses pythonnet to host HeuristicLib from a FastAPI application.
 
 ## What is included
 
@@ -189,13 +189,13 @@ dotnet add package HEAL.HeuristicLib.Experimental --prerelease
 
 ## Documentation
 
-- [Build your first optimizer](docs/guide/getting-started.md)
-- [Understand the core concepts](docs/guide/fundamentals/core-concepts.md)
-- [Choose an algorithm](docs/guide/fundamentals/algorithms.md)
-- [Run repeatable experiments](docs/guide/execution/experiments.md)
-- [Train symbolic regression models](docs/examples/symbolic-regression.md)
-- [Work with symbolic expressions](docs/guide/domains/symbolic-expressions.md)
-- [Use HeuristicLib from Python](docs/guide/interop/python.md)
+- [Build your first optimizer](https://heuristiclib.github.io/guide/getting-started.html)
+- [Understand the core concepts](https://heuristiclib.github.io/guide/fundamentals/core-concepts.html)
+- [Choose an algorithm](https://heuristiclib.github.io/guide/fundamentals/algorithms.html)
+- [Run repeatable experiments](https://heuristiclib.github.io/guide/execution/experiments.html)
+- [Train symbolic regression models](https://heuristiclib.github.io/examples/symbolic-regression.html)
+- [Work with symbolic expressions](https://heuristiclib.github.io/guide/domains/symbolic-expressions.html)
+- [Use HeuristicLib from Python](https://heuristiclib.github.io/guide/interop/python.html)
 
 ## Build the repository
 
@@ -214,8 +214,8 @@ npm ci
 npm run docs:dev
 ```
 
-Contributor rules and validation commands are in [`AGENTS.md`](AGENTS.md). Implementation and public API conventions are in the [developer guidelines](docs/contributing/developer-guidelines.md).
+Contributor rules and validation commands are in [`AGENTS.md`](https://github.com/heal-research/HeuristicLib/blob/main/AGENTS.md). Implementation and public API conventions are in the [developer guidelines](https://heuristiclib.github.io/contributing/developer-guidelines.html).
 
 ## License
 
-HeuristicLib is available under the [MIT License](LICENSE).
+HeuristicLib is available under the [MIT License](https://github.com/heal-research/HeuristicLib/blob/main/LICENSE).
