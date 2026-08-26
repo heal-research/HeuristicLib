@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
@@ -145,7 +146,8 @@ public sealed class ConcordeTravelingSalesmanExactSolver : ITravelingSalesmanExa
         }
     }
 
-    private static string WriteExplicitFullMatrixTsplib(ITravelingSalesmanProblemData problemData, IReadOnlyList<int> cities)
+    private static string WriteExplicitFullMatrixTsplib(ITravelingSalesmanProblemData problemData,
+                                                        IReadOnlyList<int> cities)
     {
         var builder = new StringBuilder();
         builder.AppendLine("NAME: dynamic_epoch");
@@ -165,7 +167,7 @@ public sealed class ConcordeTravelingSalesmanExactSolver : ITravelingSalesmanExa
                 }
 
                 builder.Append(ToConcordeDistance(problemData.GetDistance(cities[i], cities[j]))
-                               .ToString(CultureInfo.InvariantCulture));
+                    .ToString(CultureInfo.InvariantCulture));
             }
 
             builder.AppendLine();

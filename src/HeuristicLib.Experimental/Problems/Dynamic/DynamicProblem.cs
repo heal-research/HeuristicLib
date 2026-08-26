@@ -29,6 +29,7 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     private readonly Lock epochLock = new();
     private readonly UpdatePolicy updatePolicy;
     private int pendingUpdates;
+    private long totalEvaluations;
     private bool disposed;
 
     protected DynamicProblem(ObjectiveDirections objective, TSearchSpace searchSpace, IRandomNumberGenerator environmentRandom, IEpochSchedule epochSchedule, UpdatePolicy updatePolicy = UpdatePolicy.AfterEachEvaluation) : base(objective, searchSpace)
@@ -48,6 +49,9 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     public int CurrentEpoch { get; private set; }
 
     protected IRandomNumberGenerator EnvironmentRandom { get; }
+
+    // Counts real problem evaluations independently of the epoch schedule and cache hits.
+    internal long TotalEvaluations => Interlocked.Read(ref totalEvaluations);
 
     /// <summary>
     /// Evaluates one batch of candidates.
@@ -218,6 +222,7 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     {
         lock (epochLock)
         {
+            Interlocked.Increment(ref totalEvaluations);
             EpochSchedule.RecordProgress();
             TakeDueEpochs();
 

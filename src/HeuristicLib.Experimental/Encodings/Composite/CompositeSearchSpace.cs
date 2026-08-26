@@ -62,8 +62,8 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
         {
             public IReadOnlyList<CompositeGenotype<T1, T2>> Create(int count, IRandomNumberGenerator random, CompositeSearchSpace<T1, TS1, T2, TS2> searchSpace, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>> problem)
             {
-                var parts1 = operatorExecution1.Create(count, random, searchSpace.SearchSpace, searchSpace.NoProblem1);
-                var parts2 = operatorExecution2.Create(count, random, searchSpace.SearchSpace2, searchSpace.NoProblem2);
+                var parts1 = operatorExecution1.Create(count, random.Fork(0), searchSpace.SearchSpace, searchSpace.NoProblem1);
+                var parts2 = operatorExecution2.Create(count, random.Fork(1), searchSpace.SearchSpace2, searchSpace.NoProblem2);
                 return parts1.Zip(parts2, (a, b) => new CompositeGenotype<T1, T2>(a, b)).ToList();
             }
         }
@@ -100,8 +100,8 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
         {
             public IReadOnlyList<CompositeGenotype<T1, T2>> Cross(IReadOnlyList<Parents<CompositeGenotype<T1, T2>>> parents, IRandomNumberGenerator random, CompositeSearchSpace<T1, TS1, T2, TS2> searchSpace, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>> problem)
             {
-                var res1 = operatorExecution1.Cross(parents.Select(Selector1).ToArray(), random, searchSpace.SearchSpace, searchSpace.NoProblem1);
-                var res2 = operatorExecution2.Cross(parents.Select(Selector2).ToArray(), random, searchSpace.SearchSpace2, searchSpace.NoProblem2);
+                var res1 = operatorExecution1.Cross(parents.Select(Selector1).ToArray(), random.Fork(0), searchSpace.SearchSpace, searchSpace.NoProblem1);
+                var res2 = operatorExecution2.Cross(parents.Select(Selector2).ToArray(), random.Fork(1), searchSpace.SearchSpace2, searchSpace.NoProblem2);
                 return res1.Zip(res2, ((a, b) => new CompositeGenotype<T1, T2>(a, b))).ToArray();
 
                 static Parents<T2> Selector2(Parents<CompositeGenotype<T1, T2>> x) => Parents.From(x.Parent1.Part2, x.Parent2.Part2);
@@ -146,23 +146,24 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
             {
                 if (all)
                 {
-                    var res1 = operatorExecution1.Mutate(parents.Select(x => x.Part1).ToArray(), random, searchSpace.SearchSpace, searchSpace.NoProblem1);
-                    var res2 = operatorExecution2.Mutate(parents.Select(x => x.Part2).ToArray(), random, searchSpace.SearchSpace2, searchSpace.NoProblem2);
+                    var res1 = operatorExecution1.Mutate(parents.Select(x => x.Part1).ToArray(), random.Fork(0), searchSpace.SearchSpace, searchSpace.NoProblem1);
+                    var res2 = operatorExecution2.Mutate(parents.Select(x => x.Part2).ToArray(), random.Fork(1), searchSpace.SearchSpace2, searchSpace.NoProblem2);
                     return res1.Zip(res2, ((a, b) => new CompositeGenotype<T1, T2>(a, b))).ToArray();
                 }
 
-                var assignments = parents.Select(_ => random.NextInt(0, 1, true)).ToArray();
+                var assignmentRandom = random.Fork(0);
+                var assignments = parents.Select(_ => assignmentRandom.NextInt(0, 1, true)).ToArray();
                 var result = parents.ToArray();
 
                 var p1 = parents.Select((p, i) => (p, i)).Where(t => assignments[t.i] == 0).Select(t => t.i).ToArray();
-                var mutants1 = operatorExecution1.Mutate(p1.Select(t => parents[t].Part1).ToArray(), random, searchSpace.SearchSpace, searchSpace.NoProblem1);
+                var mutants1 = operatorExecution1.Mutate(p1.Select(t => parents[t].Part1).ToArray(), random.Fork(1), searchSpace.SearchSpace, searchSpace.NoProblem1);
                 foreach (var (i, p) in p1.Zip(mutants1))
                 {
                     result[i] = result[i] with { Part1 = p };
                 }
 
                 var p2 = parents.Select((p, i) => (p, i)).Where(t => assignments[t.i] == 1).Select(t => t.i).ToArray();
-                var mutants2 = operatorExecution2.Mutate(p2.Select(t => parents[t].Part2).ToArray(), random, searchSpace.SearchSpace2, searchSpace.NoProblem2);
+                var mutants2 = operatorExecution2.Mutate(p2.Select(t => parents[t].Part2).ToArray(), random.Fork(2), searchSpace.SearchSpace2, searchSpace.NoProblem2);
                 foreach (var (i, p) in p2.Zip(mutants2))
                 {
                     result[i] = result[i] with { Part2 = p };

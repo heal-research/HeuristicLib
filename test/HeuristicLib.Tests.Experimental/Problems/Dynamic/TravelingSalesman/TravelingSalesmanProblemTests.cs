@@ -1,6 +1,9 @@
 using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
 namespace HEAL.HeuristicLib.Tests.Problems.Dynamic.TravelingSalesman;
@@ -143,6 +146,38 @@ public class TravelingSalesmanProblemTests
     }
 
     [Fact]
+    public void DynamicRelativeQualityEvaluator_RejectsDifferentProblemInstance()
+    {
+        var data = new TravelingSalesmanDistanceMatrixProblemData(D);
+        var problem = new ActivatedTravelingSalesmanProblem(data, RandomNumberGenerator.Create(0), [true, true, true, true], 0.0);
+        var otherProblem = new ActivatedTravelingSalesmanProblem(data, RandomNumberGenerator.Create(0), [true, true, true, true], 0.0);
+        var evaluator = new TypedTspDirectEvaluator().ScaledToDynamicBestKnown(problem, new CountingBestKnownProvider<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(_ => new ObjectiveVector(1.0)));
+        var instance = ResolutionScope.Create().Resolve<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(evaluator);
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Evaluate([[0, 1, 2, 3]], TestRandoms.NoRandom, otherProblem.SearchSpace, otherProblem));
+    }
+
+    [Fact]
+    public void DynamicRelativeQualityEvaluator_RefreshesBestKnownOnNextEvaluationAfterEpochChange()
+    {
+        var data = new TravelingSalesmanDistanceMatrixProblemData(D);
+        var problem = new ActivatedTravelingSalesmanProblem(data, RandomNumberGenerator.Create(0), [true, true, true, true], 0.0);
+        var provider = new CountingBestKnownProvider<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(
+            _ => new ObjectiveVector(1.0));
+        var evaluator = new TypedTspDirectEvaluator().ScaledToDynamicBestKnown(problem, provider);
+        var instance = ResolutionScope.Create().Resolve<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(evaluator);
+
+        provider.CallCount.ShouldBe(0);
+        _ = instance.Evaluate([[0, 1, 2, 3]], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        provider.CallCount.ShouldBe(1);
+        problem.UpdateOnce();
+        provider.CallCount.ShouldBe(1);
+        _ = instance.Evaluate([[0, 1, 2, 3]], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        provider.CallCount.ShouldBe(2);
+    }
+
+    [Fact]
     public void Evaluate_NoActiveCities_ReturnsZero()
     {
         var data = new TravelingSalesmanDistanceMatrixProblemData(D);
@@ -264,5 +299,31 @@ public class TravelingSalesmanProblemTests
         }
 
         return 0;
+    }
+
+    private sealed record TypedTspDirectEvaluator
+        : StatelessEvaluator<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>
+    {
+        public override IReadOnlyList<ObjectiveVector> Evaluate(
+            IReadOnlyList<Permutation> candidates,
+            IRandomNumberGenerator random,
+            PermutationSearchSpace searchSpace,
+            ActivatedTravelingSalesmanProblem problem) =>
+            problem.Evaluate(candidates, random);
+    }
+
+    private sealed class CountingBestKnownProvider<TCandidate, TSearchSpace, TProblem>(
+        Func<TProblem, ObjectiveVector> getBestKnown)
+        : IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
+    {
+        public int CallCount { get; private set; }
+
+        public ObjectiveVector GetBestKnown(TProblem problem)
+        {
+            CallCount++;
+            return getBestKnown(problem);
+        }
     }
 }

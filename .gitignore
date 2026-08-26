@@ -437,3 +437,4 @@ Desktop.ini
 /docs/.vitepress/dist/
 /.idea/
 *.DotSettings
+.codex-build/
