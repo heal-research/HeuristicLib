@@ -1,40 +1,37 @@
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Inspection;
+using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Problems;
 using System.Collections.Concurrent;
 using System.Text.Json;
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.AutoEC;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Data;
 using HEAL.HeuristicLib.Encodings.Composite;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
-using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.MachineLearning;
-using HEAL.HeuristicLib.Objectives;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Operators.Interceptors;
-using HEAL.HeuristicLib.Operators.Mutators;
-using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
-using HEAL.HeuristicLib.Problems.Dynamic.Operators;
 using HEAL.HeuristicLib.Problems.Dynamic.SlidingWindowRegression;
 using HEAL.HeuristicLib.Problems.MachineLearning;
 using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using MetaOptimizationGenotype =
     HEAL.HeuristicLib.Encodings.Composite.CompositeGenotype<HEAL.HeuristicLib.Encodings.RealVectors.RealVector,
         HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector>;
 using MetaOptimizationSearchSpace =
     HEAL.HeuristicLib.Encodings.Composite.CompositeSearchSpace<HEAL.HeuristicLib.Encodings.RealVectors.RealVector,
-        HEAL.HeuristicLib.Encodings.RealVectors.BoundedRealVectorSearchSpace, HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector,
+        HEAL.HeuristicLib.Encodings.RealVectors.BoundedRealVectorSearchSpace,
+        HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector,
         HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVectorSearchSpace>;
-using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
+using IntegerVectorUniformDistributedCreator =
+    HEAL.HeuristicLib.Encodings.IntegerVectors.UniformDistributedCreator;
+using RealVectorUniformDistributedCreator =
+    HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
 namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
 
@@ -82,6 +79,13 @@ public class AutoEcPaperScenarioTests
     private const int PrototypeRepetitions = 10;
     private const int PrototypeTargetEpochChanges = 300;
     private const int PrototypeEpochLength = 500;
+    private const int MatrixScaffoldRepetitions = 3;
+    private const int MatrixScaffoldTargetEpochChanges = 4;
+    private const int MatrixScaffoldEpochLength = 500;
+    private static readonly string[] MatrixScaffoldTspFiles =
+    [
+        "burma14.tsp", "bayg29.tsp", "att48.tsp"
+    ];
     private static readonly string[] PrototypeTspFiles =
     [
         "burma14.tsp", "bayg29.tsp", "bays29.tsp", "att48.tsp", "berlin52.tsp", "kroA100.tsp", "kroB150.tsp",
@@ -96,6 +100,15 @@ public class AutoEcPaperScenarioTests
     ];
 
     private sealed record PrototypeRunSpec(string TspFile, int InstanceIndex, int Repetition, int NoRacers);
+
+    private sealed record MatrixScaffoldRunSpec(
+        string ProblemKey,
+        int ProblemIndex,
+        string InstanceKey,
+        int Repetition,
+        AutoEcChildAlgorithmKind AlgorithmKind,
+        string? TspFile = null,
+        string? QapFile = null);
 
     private enum AutoEcChildAlgorithmKind
     {
@@ -210,87 +223,184 @@ public class AutoEcPaperScenarioTests
         orderedManifestRuns.Length.ShouldBe(tspFiles.Length * PrototypeRepetitions * PrototypeRacerVariants.Length);
     }
 
+    private record ExperimentContext(
+        ConcurrentBag<AutoEcScenarioBatchRun> ManifestRuns,
+        string? ConcordePath,
+        string RunsDirectory,
+        string OutputDirectory,
+        string BatchName);
+
     [Fact]
     public async Task DynamicRacingMatrix_WritesPaperScaffoldResults()
     {
         var concordePath = FindLocalFile("for_Agent", "Concorde", "executablescygwin", "concorde.exe");
-        var tspFile = FindLocalFile("tsp", "burma14.tsp");
+        var tspFiles = MatrixScaffoldTspFiles.Select(name => FindLocalFile("tsp", name))
+                                             .Where(file => file is not null)
+                                             .Cast<string>()
+                                             .ToArray();
+        var qapFiles = FindLocalFiles("qap", "*.dat")
+                       .Concat(FindLocalFiles("qaplib", "*.dat"))
+                       .Concat(FindLocalFiles("QAPLIB", "*.dat"))
+                       .Distinct(StringComparer.OrdinalIgnoreCase)
+                       .OrderBy(file => file)
+                       .Take(10)
+                       .ToArray();
         var batchName = $"auto-ec-matrix-scaffold-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}";
         var outputDirectory = Path.Combine(FindRepositoryRoot(), "artifacts", "autoec-paper-results", batchName);
         var runsDirectory = Path.Combine(outputDirectory, "runs");
         Directory.CreateDirectory(runsDirectory);
+        var manifestRuns = new ConcurrentBag<AutoEcScenarioBatchRun>();
+        var context = new ExperimentContext(manifestRuns, concordePath, runsDirectory, outputDirectory, batchName);
 
-        var manifestRuns = new List<AutoEcScenarioBatchRun>();
-        foreach (var algorithmKind in PrototypeAlgorithmVariants)
+        var problemSpecs = new List<(string ProblemKey, string InstanceKey, string? TspFile, string? QapFile)>
         {
-            await RunAndWriteScenario(
-                new MovingPeaksAutoEcScenario(algorithmKind),
-                "moving-peaks",
-                algorithmKind);
-            await RunAndWriteScenario(
-                new InterpolatedQapAutoEcScenario(algorithmKind),
-                "interpolated-qap",
-                algorithmKind);
-            await RunAndWriteScenario(
-                new SlidingWindowSymRegAutoEcScenario(algorithmKind),
-                "sliding-window-symreg",
-                algorithmKind);
+            ("moving-peaks", "default", null, null),
+            ("sliding-window-symreg", "synthetic-sine-trend", null, null)
+        };
 
-            if (tspFile is not null && concordePath is not null)
+        problemSpecs.AddRange(qapFiles.Select(file => (
+            "interpolated-qap",
+            Path.GetFileNameWithoutExtension(file),
+            TspFile: (string?)null,
+            QapFile: (string?)file)));
+
+        problemSpecs.AddRange(tspFiles.Select(file => (
+            "activated-tsp",
+            Path.GetFileNameWithoutExtension(file),
+            TspFile: (string?)file,
+            QapFile: (string?)null)));
+
+        var workItems = (
+            from problem in problemSpecs.Select((spec, index) => new
             {
-                await RunAndWriteScenario(
-                    new ActivatedTspAutoEcScenario(
-                        tspFile,
-                        concordePath,
-                        targetEpochChanges: 4,
-                        epochLength: 80,
-                        childAlgorithmKind: algorithmKind),
-                    "activated-tsp",
-                    algorithmKind);
-            }
-        }
+                spec.ProblemKey,
+                spec.InstanceKey,
+                spec.TspFile,
+                spec.QapFile,
+                Index = index
+            })
+            from algorithmKind in PrototypeAlgorithmVariants
+            from repetition in Enumerable.Range(0, MatrixScaffoldRepetitions)
+            select new MatrixScaffoldRunSpec(problem.ProblemKey, problem.Index, problem.InstanceKey, repetition,
+                algorithmKind, problem.TspFile, problem.QapFile)
+        ).ToArray();
 
-        var orderedManifestRuns = manifestRuns
-                                  .OrderBy(run => run.ProblemInstance)
-                                  .ThenBy(run => run.ScenarioName)
-                                  .ToArray();
+        await Parallel.ForEachAsync(
+            workItems,
+            TestContext.Current.CancellationToken,
+            async (workItem, cancellationToken) =>
+            {
+                var problemSeed = 2024 + workItem.ProblemIndex * 100 + workItem.Repetition;
+                var runSeed = 123 + workItem.ProblemIndex * 100 + workItem.Repetition;
+                await RunAndWriteScenario(workItem, problemSeed, runSeed, context, cancellationToken);
+            });
+
+        await WriteManifest(workItems, context, TestContext.Current.CancellationToken);
+    }
+
+    private static async Task WriteManifest(
+        MatrixScaffoldRunSpec[] workItems,
+        ExperimentContext context,
+        CancellationToken cancellationToken)
+    {
+        var orderedManifestRuns = context.ManifestRuns
+                                         .OrderBy(run => run.ProblemInstance)
+                                         .ThenBy(run => run.Repetition)
+                                         .ThenBy(run => run.ScenarioName)
+                                         .ToArray();
         var manifest = new AutoEcScenarioBatchManifest(
             "auto-ec-scenario-batch/v1",
-            batchName,
+            context.BatchName,
             DateTimeOffset.UtcNow,
             orderedManifestRuns.Length,
             orderedManifestRuns);
         await File.WriteAllTextAsync(
-            Path.Combine(outputDirectory, "manifest.json"),
+            Path.Combine(context.OutputDirectory, "manifest.json"),
             JsonSerializer.Serialize(manifest, JsonOptions),
-            TestContext.Current.CancellationToken);
+            cancellationToken);
 
-        var expectedProblemKindCount = tspFile is not null && concordePath is not null ? 4 : 3;
-        orderedManifestRuns.Length.ShouldBe(PrototypeAlgorithmVariants.Length * expectedProblemKindCount);
+        orderedManifestRuns.Length.ShouldBe(workItems.Length);
+    }
 
-        async Task RunAndWriteScenario<TCandidate, TSearchSpace, TProblem>(
-            AutoEcPaperScenario<TCandidate, TSearchSpace, TProblem> scenario,
-            string problemKey,
-            AutoEcChildAlgorithmKind algorithmKind)
-            where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
+    private static async Task RunScenarioAndWriteResult<TCandidate, TSearchSpace, TProblem>(
+        AutoEcPaperScenario<TCandidate, TSearchSpace, TProblem> scenario,
+        MatrixScaffoldRunSpec workItem,
+        ExperimentContext context,
+        CancellationToken cancellationToken)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
+    {
+        var result = await RunScenario(scenario);
+        AssertScenarioProducesExperimentSignals(result, minQualityEpochs: 1, minBbcpChanges: 1);
+
+        var fileName =
+            $"{workItem.ProblemKey}_{SanitizeFileName(workItem.InstanceKey)}_{FormatAlgorithmKind(workItem.AlgorithmKind)}_rep-{workItem.Repetition:00}.json";
+        var relativeFile = Path.Combine("runs", fileName);
+        await File.WriteAllTextAsync(
+            Path.Combine(context.RunsDirectory, fileName),
+            JsonSerializer.Serialize(result, JsonOptions),
+            cancellationToken);
+        context.ManifestRuns.Add(new AutoEcScenarioBatchRun(
+            result.Input.ScenarioName,
+            result.Input.Problem.Instance ?? workItem.ProblemKey,
+            workItem.Repetition,
+            result.Input.Seeds.ProblemSeed,
+            result.Input.Seeds.RunSeed,
+            relativeFile.Replace(Path.DirectorySeparatorChar, '/')));
+    }
+
+    private static async Task RunAndWriteScenario(MatrixScaffoldRunSpec workItem,
+                                                  int problemSeed,
+                                                  int runSeed,
+                                                  ExperimentContext context,
+                                                  CancellationToken cancellationToken)
+    {
+        switch (workItem.ProblemKey)
         {
-            var result = await RunScenario(scenario);
-            AssertScenarioProducesExperimentSignals(result, minQualityEpochs: 1, minBbcpChanges: 1);
+            case "moving-peaks":
+                await RunScenarioAndWriteResult(
+                    new MovingPeaksAutoEcScenario(
+                        workItem.AlgorithmKind,
+                        problemSeed,
+                        runSeed),
+                    workItem, context, cancellationToken);
+                break;
+            case "interpolated-qap":
+                await RunScenarioAndWriteResult(
+                    new InterpolatedQapAutoEcScenario(
+                        workItem.AlgorithmKind,
+                        problemSeed,
+                        runSeed,
+                        instanceKey: workItem.InstanceKey,
+                        qapFile: workItem.QapFile),
+                    workItem, context, cancellationToken);
+                break;
+            case "sliding-window-symreg":
+                await RunScenarioAndWriteResult(
+                    new SlidingWindowSymRegAutoEcScenario(
+                        workItem.AlgorithmKind,
+                        problemSeed,
+                        runSeed),
+                    workItem, context, cancellationToken);
+                break;
+            case "activated-tsp":
+                if (workItem.TspFile is null)
+                    throw new InvalidOperationException("Activated TSP matrix run requires TSP data.");
 
-            var fileName = $"{problemKey}_{FormatAlgorithmKind(algorithmKind)}.json";
-            var relativeFile = Path.Combine("runs", fileName);
-            await File.WriteAllTextAsync(
-                Path.Combine(runsDirectory, fileName),
-                JsonSerializer.Serialize(result, JsonOptions),
-                TestContext.Current.CancellationToken);
-            manifestRuns.Add(new AutoEcScenarioBatchRun(
-                result.Input.ScenarioName,
-                result.Input.Problem.Instance ?? problemKey,
-                Repetition: 0,
-                result.Input.Seeds.ProblemSeed,
-                result.Input.Seeds.RunSeed,
-                relativeFile.Replace(Path.DirectorySeparatorChar, '/')));
+                await RunScenarioAndWriteResult(
+                    new ActivatedTspAutoEcScenario(
+                        workItem.TspFile,
+                        context.ConcordePath,
+                        problemSeed,
+                        runSeed,
+                        targetEpochChanges: MatrixScaffoldTargetEpochChanges,
+                        noRacers: 2,
+                        epochLength: MatrixScaffoldEpochLength,
+                        childAlgorithmKind: workItem.AlgorithmKind),
+                    workItem, context, cancellationToken);
+                break;
+            default:
+                throw new InvalidOperationException($"Unknown matrix scaffold problem key '{workItem.ProblemKey}'.");
         }
     }
 
@@ -315,8 +425,21 @@ public class AutoEcPaperScenarioTests
         result.Output.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(minBbcpChanges);
         double.IsFinite(result.Output.BestBeforeChangePerformance).ShouldBeTrue();
         result.Output.RacingQualityTrace.Count.ShouldBeGreaterThan(0);
-        result.Output.RacingQualityTrace.Select(point => point.ContenderIndex).Distinct().Count()
-              .ShouldBe(result.Input.Racer.NoRacers);
+        var expectedContenderSlots = Enumerable.Range(0, result.Input.Racer.NoRacers).ToArray();
+        result.Output.RacingQualityTrace.ShouldAllBe(point =>
+            point.ContenderIndex >= 0 && point.ContenderIndex < result.Input.Racer.NoRacers);
+        var postBurnInTrace = result.Output.RacingQualityTrace
+                                    .Where(point => point.Epoch >= result.Input.Racer.BurnInEpochs)
+                                    .ToArray();
+        if (postBurnInTrace.Length > 0)
+        {
+            postBurnInTrace.GroupBy(point => point.Race)
+                           .Select(group => group.Select(point => point.ContenderIndex)
+                                                 .Distinct()
+                                                 .Order()
+                                                 .ToArray())
+                           .ShouldContain(contenderSlots => contenderSlots.SequenceEqual(expectedContenderSlots));
+        }
 
         var json = JsonSerializer.Serialize(result, JsonOptions);
         using var parsed = JsonDocument.Parse(json);
@@ -473,7 +596,8 @@ public class AutoEcPaperScenarioTests
         protected const int HypermutationDuration = 2;
         protected const double ChangeTriggeredImmigrantRate = 0.2;
 
-        public virtual int TargetEpochChanges => 4;
+        public virtual int TargetEpochChanges => MatrixScaffoldTargetEpochChanges;
+        protected virtual int EpochLength => MatrixScaffoldEpochLength;
         public abstract string ScenarioName { get; }
         public AutoEcChildAlgorithmKind ChildAlgorithmKind { get; } = childAlgorithmKind;
         public virtual int ProblemSeed => 321;
@@ -506,7 +630,7 @@ public class AutoEcPaperScenarioTests
         {
             var metaSpace = CreateHyperParameterSearchSpace();
             var metaCreator = metaSpace.CombineCreators(
-                new UniformDistributedCreator(),
+                new RealVectorUniformDistributedCreator(),
                 new HEAL.HeuristicLib.Encodings.IntegerVectors.UniformDistributedCreator());
             var metaMutator = metaSpace.CombineMutator(
                 new GaussianMutator(mutationRate: 1.0, mutationStrength: MetaMutationStrength),
@@ -550,7 +674,12 @@ public class AutoEcPaperScenarioTests
     }
 
     private sealed class MovingPeaksAutoEcScenario(
-        AutoEcChildAlgorithmKind childAlgorithmKind = AutoEcChildAlgorithmKind.GeneticAlgorithm)
+        AutoEcChildAlgorithmKind childAlgorithmKind = AutoEcChildAlgorithmKind.GeneticAlgorithm,
+        int problemSeed = 321,
+        int runSeed = 123,
+        int targetEpochChanges = MatrixScaffoldTargetEpochChanges,
+        int noRacers = 2,
+        int epochLength = MatrixScaffoldEpochLength)
         : AutoEcPaperScenario<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(childAlgorithmKind)
     {
         private readonly MovingPeaksParameters parameters = new(
@@ -567,6 +696,11 @@ public class AutoEcPaperScenarioTests
             WidthSeverity: 0.1);
 
         public override string ScenarioName => $"moving-peaks-{FormatAlgorithmKind(ChildAlgorithmKind)}-auto-ec-smoke";
+        public override int ProblemSeed => problemSeed;
+        public override int RunSeed => runSeed;
+        public override int TargetEpochChanges => targetEpochChanges;
+        public override int NoRacers => noRacers;
+        protected override int EpochLength => epochLength;
         public override IReadOnlyList<AutoEcParameterRange> HyperParameterRanges =>
         [
             new("mutationRate", "real", 0.05, 0.4),
@@ -576,8 +710,7 @@ public class AutoEcPaperScenarioTests
         public override MovingPeaksProblem CreateProblem() =>
             new(parameters,
                 RandomNumberGenerator.Create(ProblemSeed),
-                epochSchedule: new EvaluationCountSchedule(30),
-                updatePolicy: UpdatePolicy.AfterEachBatchEvaluation);
+                epochSchedule: new EvaluationCountSchedule(EpochLength), updatePolicy: UpdatePolicy.AfterEachBatchEvaluation);
 
         public override AutoEcProblemDescription CreateProblemDescription() =>
             new("MovingPeaks", null,
@@ -595,7 +728,7 @@ public class AutoEcPaperScenarioTests
                     [nameof(MovingPeaksParameters.HeightSeverity)] = parameters.HeightSeverity.ToString("R"),
                     [nameof(MovingPeaksParameters.WidthSeverity)] = parameters.WidthSeverity.ToString("R"),
                     ["UpdatePolicy"] = UpdatePolicy.AfterEachBatchEvaluation.ToString(),
-                    ["EpochLength"] = "30"
+                    ["EpochLength"] = EpochLength.ToString()
                 });
 
         public override AutoEcBaseAlgorithmDescription CreateBaseAlgorithmDescription() =>
@@ -603,7 +736,7 @@ public class AutoEcPaperScenarioTests
                 new Dictionary<string, string>
                 {
                     ["Encoding"] = "RealVector",
-                    ["Creator"] = nameof(UniformDistributedCreator),
+                    ["Creator"] = nameof(RealVectorUniformDistributedCreator),
                     ["Crossover"] = nameof(SimulatedBinaryCrossover),
                     ["Mutator"] = nameof(GaussianMutator),
                     ["MutationStrength"] = "0.5",
@@ -626,7 +759,7 @@ public class AutoEcPaperScenarioTests
                 IEvaluator<RealVector> evaluator,
                 MetaOptimizationGenotype hyperParameters)
         {
-            var creator = new UniformDistributedCreator();
+            var creator = new RealVectorUniformDistributedCreator();
             var crossover = new SimulatedBinaryCrossover();
             var mutator = new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5);
             var selector = TournamentSelector.For(problem, tournamentSize: 2);
@@ -643,15 +776,15 @@ public class AutoEcPaperScenarioTests
                     ChangeTriggeredRandomImmigrantGeneticAlgorithm.Create<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
                         creator, crossover, mutator, mutationRate, ChangeTriggeredImmigrantRate,
                         selector, populationSize, evaluator, interceptor: interceptor),
-                _ => GeneticAlgorithm.Create(creator, crossover, mutator, selector: selector,
-                    populationSize: populationSize, evaluator: evaluator, mutationRate: mutationRate, interceptor: interceptor)
+                _ => GeneticAlgorithm.Create(creator, crossover, mutator, selector, evaluator,
+                    populationSize: populationSize, mutationRate: mutationRate, interceptor: interceptor)
             };
         }
     }
 
     private sealed class ActivatedTspAutoEcScenario(
         string tspFile,
-        string concordePath,
+        string? concordePath,
         int problemSeed = 2024,
         int runSeed = 123,
         int targetEpochChanges = 50,
@@ -686,8 +819,7 @@ public class AutoEcPaperScenarioTests
                 RandomNumberGenerator.Create(ProblemSeed),
                 activationProb: ActivationProbability,
                 switchProbability: SwitchProbability,
-                epochSchedule: new EvaluationCountSchedule(epochLength),
-                updatePolicy: UpdatePolicy.AfterEachBatchEvaluation);
+                epochSchedule: new EvaluationCountSchedule(epochLength), updatePolicy: UpdatePolicy.AfterEachBatchEvaluation);
         }
 
         public override AutoEcProblemDescription CreateProblemDescription() =>
@@ -699,9 +831,9 @@ public class AutoEcPaperScenarioTests
                     ["SwitchProbability"] = SwitchProbability.ToString("R"),
                     ["UpdatePolicy"] = UpdatePolicy.AfterEachBatchEvaluation.ToString(),
                     ["EpochLength"] = epochLength.ToString(),
-                    ["QualityScale"] = "RelativeToExactEpochOptimum",
-                    ["ExactSolver"] = "Concorde",
-                    ["ExactSolverPath"] = concordePath,
+                    ["QualityScale"] = concordePath is null ? "AbsoluteObjectiveValue" : "RelativeToExactEpochOptimum",
+                    ["ExactSolver"] = concordePath is null ? "None" : "Concorde",
+                    ["ExactSolverPath"] = concordePath ?? string.Empty,
                     ["EvaluatorCache"] = "DynamicCachingEvaluator",
                     ["EvaluatorCacheKey"] = nameof(PermutationCacheKeySelector),
                     ["EvaluatorCacheGraceCount"] = epochLength.ToString()
@@ -725,15 +857,25 @@ public class AutoEcPaperScenarioTests
 
         public override IEvaluator<Permutation>
             CreateEvaluator(ActivatedTravelingSalesmanProblem problem) =>
-            ProblemEvaluator.For(problem)
-                           .ScaledToDynamicBestKnown(
-                               problem,
-                               new ActivatedTravelingSalesmanExactBestKnownProvider(
-                                   new ConcordeTravelingSalesmanExactSolver(concordePath)))
-                           .Cached(problem, PermutationCacheKeySelector.Instance) with
+            CreateBaseEvaluator(problem).Cached(problem, PermutationCacheKeySelector.Instance) with
             {
                 GraceCount = epochLength
             };
+
+        private IEvaluator<Permutation> CreateBaseEvaluator(
+            ActivatedTravelingSalesmanProblem problem)
+        {
+            var evaluator = ProblemEvaluator.For(problem);
+            if (concordePath is null)
+            {
+                return evaluator;
+            }
+
+            return evaluator.ScaledToDynamicBestKnown(
+                problem,
+                new ActivatedTravelingSalesmanExactBestKnownProvider(
+                    new ConcordeTravelingSalesmanExactSolver(concordePath)));
+        }
 
         protected override MetaOptimizationSearchSpace CreateHyperParameterSearchSpace() =>
             new BoundedRealVectorSearchSpace(1, new RealVector(0.01), new RealVector(0.2))
@@ -763,44 +905,65 @@ public class AutoEcPaperScenarioTests
                     ChangeTriggeredRandomImmigrantGeneticAlgorithm.Create<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(
                         creator, crossover, mutator, mutationRate, ChangeTriggeredImmigrantRate,
                         selector, populationSize, evaluator, interceptor: interceptor),
-                _ => GeneticAlgorithm.Create(creator, crossover, mutator, selector: selector,
-                    populationSize: populationSize, evaluator: evaluator, mutationRate: mutationRate, interceptor: interceptor)
+                _ => GeneticAlgorithm.Create(creator, crossover, mutator, selector, evaluator,
+                    populationSize: populationSize, mutationRate: mutationRate, interceptor: interceptor)
             };
         }
     }
 
     private sealed class InterpolatedQapAutoEcScenario(
-        AutoEcChildAlgorithmKind childAlgorithmKind = AutoEcChildAlgorithmKind.GeneticAlgorithm)
+        AutoEcChildAlgorithmKind childAlgorithmKind = AutoEcChildAlgorithmKind.GeneticAlgorithm,
+        int problemSeed = 321,
+        int runSeed = 123,
+        int targetEpochChanges = MatrixScaffoldTargetEpochChanges,
+        int noRacers = 2,
+        int epochLength = MatrixScaffoldEpochLength,
+        string instanceKey = "synthetic-4-a",
+        string? qapFile = null)
         : AutoEcPaperScenario<Permutation, PermutationSearchSpace, InterpolatedQuadraticAssignmentProblem>(
             childAlgorithmKind)
     {
-        public override string ScenarioName => $"interpolated-qap-{FormatAlgorithmKind(ChildAlgorithmKind)}-auto-ec-smoke";
+        public override string ScenarioName =>
+            $"interpolated-qap-{instanceKey}-{FormatAlgorithmKind(ChildAlgorithmKind)}-auto-ec-smoke";
+        public override int ProblemSeed => problemSeed;
+        public override int RunSeed => runSeed;
+        public override int TargetEpochChanges => targetEpochChanges;
+        public override int NoRacers => noRacers;
+        protected override int EpochLength => epochLength;
         public override IReadOnlyList<AutoEcParameterRange> HyperParameterRanges =>
         [
             new("mutationRate", "real", 0.01, 0.2),
             new("populationSize", "integer", 8, 20)
         ];
 
-        public override InterpolatedQuadraticAssignmentProblem CreateProblem() =>
-            new(CreateProblemDataA(), CreateProblemDataB(), RandomNumberGenerator.Create(ProblemSeed),
+        public override InterpolatedQuadraticAssignmentProblem CreateProblem()
+        {
+            var problemDataA = CreateProblemDataA();
+            var problemDataB = CreateProblemDataB(problemDataA);
+
+            return new InterpolatedQuadraticAssignmentProblem(
+                problemDataA,
+                problemDataB,
+                RandomNumberGenerator.Create(ProblemSeed),
                 alphaStart: 0.0,
                 alphaStep: 0.1,
                 interpolateDistances: true,
                 pingPong: true,
-                epochSchedule: new EvaluationCountSchedule(40),
-                updatePolicy: UpdatePolicy.AfterEachBatchEvaluation);
+                epochSchedule: new EvaluationCountSchedule(EpochLength), updatePolicy: UpdatePolicy.AfterEachBatchEvaluation);
+        }
 
         public override AutoEcProblemDescription CreateProblemDescription() =>
-            new("InterpolatedQuadraticAssignment", "synthetic-4",
+            new("InterpolatedQuadraticAssignment", instanceKey,
                 new Dictionary<string, string>
                 {
-                    ["Size"] = "4",
+                    ["SourceFile"] = qapFile ?? "synthetic",
+                    ["Size"] = CreateProblemDataA().Size.ToString(),
                     ["AlphaStart"] = "0",
                     ["AlphaStep"] = "0.1",
                     ["InterpolateDistances"] = "true",
                     ["PingPong"] = "true",
-                    ["UpdatePolicy"] = UpdatePolicy.AfterEachBatchEvaluation.ToString(),
-                    ["EpochLength"] = "40"
+                    ["UpdatePolicy"] = nameof(UpdatePolicy.AfterEachBatchEvaluation),
+                    ["EpochLength"] = EpochLength.ToString()
                 });
 
         public override AutoEcBaseAlgorithmDescription CreateBaseAlgorithmDescription() =>
@@ -847,32 +1010,109 @@ public class AutoEcPaperScenarioTests
                     ChangeTriggeredRandomImmigrantGeneticAlgorithm.Create<Permutation, PermutationSearchSpace, InterpolatedQuadraticAssignmentProblem>(
                         creator, crossover, mutator, mutationRate, ChangeTriggeredImmigrantRate,
                         selector, populationSize, evaluator, interceptor: interceptor),
-                _ => GeneticAlgorithm.Create(creator, crossover, mutator, selector: selector,
-                    populationSize: populationSize, evaluator: evaluator, mutationRate: mutationRate, interceptor: interceptor)
+                _ => GeneticAlgorithm.Create(creator, crossover, mutator, selector, evaluator,
+                    populationSize: populationSize, mutationRate: mutationRate, interceptor: interceptor)
             };
         }
 
-        private static QuadraticAssignmentProblemData CreateProblemDataA()
+        private QuadraticAssignmentProblemData CreateProblemDataA()
+        {
+            if (qapFile is not null)
+            {
+                return QaplibQapInstanceProvider.LoadData(qapFile).ToProblemData();
+            }
+
+            return CreateSyntheticProblemData(instanceKey);
+        }
+
+        private QuadraticAssignmentProblemData CreateProblemDataB(QuadraticAssignmentProblemData problemDataA)
+        {
+            if (qapFile is not null)
+            {
+                return CreatePermutedVariant(problemDataA, StableHash(instanceKey));
+            }
+
+            return instanceKey switch
+            {
+                "synthetic-4-b" => CreateSyntheticProblemData("synthetic-4-a"),
+                _ => CreateSyntheticProblemData("synthetic-4-b")
+            };
+        }
+
+        private static QuadraticAssignmentProblemData CreateSyntheticProblemData(string instance)
+        {
+            return instance switch
+            {
+                "synthetic-4-b" => CreateSyntheticProblemDataB(),
+                _ => CreateSyntheticProblemDataA()
+            };
+        }
+
+        private static QuadraticAssignmentProblemData CreateSyntheticProblemDataA()
         {
             var flowMatrix = new double[,] { { 0, 2, 0, 1 }, { 2, 0, 3, 0 }, { 0, 3, 0, 4 }, { 1, 0, 4, 0 } };
             var distanceMatrix = new double[,] { { 0, 1, 2, 3 }, { 1, 0, 1, 2 }, { 2, 1, 0, 1 }, { 3, 2, 1, 0 } };
             return new QuadraticAssignmentProblemData(flowMatrix, distanceMatrix);
         }
 
-        private static QuadraticAssignmentProblemData CreateProblemDataB()
+        private static QuadraticAssignmentProblemData CreateSyntheticProblemDataB()
         {
             var flowMatrix = new double[,] { { 0, 0, 0, 0 }, { 1, 0, 0, 0 }, { 1, 1, 0, 0 }, { 1, 1, 1, 0 } };
             var distanceMatrix = new double[,] { { 0, 1, 2, 3 }, { 1, 0, 1, 2 }, { 2, 1, 0, 1 }, { 3, 2, 1, 0 } };
             return new QuadraticAssignmentProblemData(flowMatrix, distanceMatrix);
         }
+
+        private static QuadraticAssignmentProblemData CreatePermutedVariant(
+            IQuadraticAssignmentProblemData source,
+            int offsetSeed)
+        {
+            var size = source.Size;
+            var offset = offsetSeed % Math.Max(1, size - 1) + 1;
+            var flows = new double[size, size];
+            var distances = new double[size, size];
+            for (var i = 0; i < size; i++)
+            {
+                var pi = (i + offset) % size;
+                for (var j = 0; j < size; j++)
+                {
+                    var pj = (j + offset) % size;
+                    flows[i, j] = source.GetFlow(pi, pj);
+                    distances[i, j] = source.GetDistance(pi, pj);
+                }
+            }
+
+            return new QuadraticAssignmentProblemData(flows, distances);
+        }
+
+        private static int StableHash(string value)
+        {
+            var hash = 17;
+            foreach (var c in value)
+            {
+                hash = unchecked(hash * 31 + c);
+            }
+
+            return hash & int.MaxValue;
+        }
     }
 
     private sealed class SlidingWindowSymRegAutoEcScenario(
-        AutoEcChildAlgorithmKind childAlgorithmKind = AutoEcChildAlgorithmKind.GeneticAlgorithm)
+        AutoEcChildAlgorithmKind childAlgorithmKind = AutoEcChildAlgorithmKind.GeneticAlgorithm,
+        int problemSeed = 321,
+        int runSeed = 123,
+        int targetEpochChanges = MatrixScaffoldTargetEpochChanges,
+        int noRacers = 2,
+        int epochLength = MatrixScaffoldEpochLength)
         : AutoEcPaperScenario<ExpressionTree, ExpressionTreeSearchSpace,
             SlidingWindowSymbolicRegressionProblem>(childAlgorithmKind)
     {
-        public override string ScenarioName => $"sliding-window-symreg-{FormatAlgorithmKind(ChildAlgorithmKind)}-auto-ec-smoke";
+        public override string ScenarioName =>
+            $"sliding-window-symreg-{FormatAlgorithmKind(ChildAlgorithmKind)}-auto-ec-smoke";
+        public override int ProblemSeed => problemSeed;
+        public override int RunSeed => runSeed;
+        public override int TargetEpochChanges => targetEpochChanges;
+        public override int NoRacers => noRacers;
+        protected override int EpochLength => epochLength;
         public override IReadOnlyList<AutoEcParameterRange> HyperParameterRanges =>
         [
             new("mutationRate", "real", 0.01, 0.2),
@@ -882,16 +1122,16 @@ public class AutoEcPaperScenarioTests
         public override SlidingWindowSymbolicRegressionProblem CreateProblem()
         {
             var data = CreateRegressionProblemData();
-            var searchSpace = new ExpressionTreeSearchSpace(maximumLength: 40, maximumDepth: 10,
-                operations: [Symbols.Addition, Symbols.Multiplication, Symbols.Sine], variables: ["x"]);
-            var inner = new SymbolicRegressionProblem(data, Metrics.RMSE, searchSpace);
+            var inner = new SymbolicRegressionProblem(
+                data,
+                Metrics.RMSE,
+                CreateSymbolicRegressionSearchSpace());
             return new SlidingWindowSymbolicRegressionProblem(
                 inner,
                 windowStart: 0,
                 windowLength: 12,
                 stepSize: 4,
-                epochSchedule: new EvaluationCountSchedule(40),
-                updatePolicy: UpdatePolicy.AfterEachBatchEvaluation);
+                epochSchedule: new EvaluationCountSchedule(EpochLength), updatePolicy: UpdatePolicy.AfterEachBatchEvaluation);
         }
 
         public override AutoEcProblemDescription CreateProblemDescription() =>
@@ -902,15 +1142,15 @@ public class AutoEcPaperScenarioTests
                     ["WindowStart"] = "0",
                     ["WindowLength"] = "12",
                     ["StepSize"] = "4",
-                    ["UpdatePolicy"] = UpdatePolicy.AfterEachBatchEvaluation.ToString(),
-                    ["EpochLength"] = "40"
+                    ["UpdatePolicy"] = nameof(UpdatePolicy.AfterEachBatchEvaluation),
+                    ["EpochLength"] = EpochLength.ToString()
                 });
 
         public override AutoEcBaseAlgorithmDescription CreateBaseAlgorithmDescription() =>
             new(FormatAlgorithmKind(ChildAlgorithmKind),
                 new Dictionary<string, string>
                 {
-                    ["Encoding"] = "ExpressionTree",
+                    ["Encoding"] = "SymbolicExpressionTree",
                     ["Creator"] = nameof(ProbabilisticTreeCreator),
                     ["Crossover"] = nameof(SubtreeCrossover),
                     ["Mutator"] = nameof(ChooseOneMutator),
@@ -950,8 +1190,8 @@ public class AutoEcPaperScenarioTests
                     ChangeTriggeredRandomImmigrantGeneticAlgorithm.Create<ExpressionTree, ExpressionTreeSearchSpace, SlidingWindowSymbolicRegressionProblem>(
                         creator, crossover, mutator, mutationRate, ChangeTriggeredImmigrantRate,
                         selector, populationSize, evaluator, interceptor: interceptor),
-                _ => GeneticAlgorithm.Create(creator, crossover, mutator, selector: selector,
-                    populationSize: populationSize, evaluator: evaluator, mutationRate: mutationRate, interceptor: interceptor)
+                _ => GeneticAlgorithm.Create(creator, crossover, mutator, selector, evaluator,
+                    populationSize: populationSize, mutationRate: mutationRate, interceptor: interceptor)
             };
         }
 
@@ -972,12 +1212,25 @@ public class AutoEcPaperScenarioTests
             }
 
             var frame = DataFrame.FromMatrix(["x", "y"], values);
-            return new RegressionData(new DataFrame([frame.Get<double>("x")]), frame.Get<double>("y"));
+            return new RegressionData(
+                new DataFrame([frame.Get<double>("x")]),
+                frame.Get<double>("y"));
         }
 
-        private static IMutator<ExpressionTree> CreateSymbolicRegressionMutator() =>
-            ChooseOneMutator.Create<ExpressionTree>([.. SymbolicExpressionMutators.Default]);
+        private static ExpressionTreeSearchSpace CreateSymbolicRegressionSearchSpace() =>
+            new(
+                maximumLength: 31,
+                maximumDepth: 6,
+                operations: [Symbols.Addition, Symbols.Subtraction, Symbols.Multiplication, Symbols.Sine],
+                variables: ["x"]);
 
+        private static ChooseOneMutator<ExpressionTree> CreateSymbolicRegressionMutator() =>
+            ChooseOneMutator.Create<ExpressionTree>(
+                new NodeReplacementMutator(),
+                new LocalPerturbationMutator(LocalPerturbationTargets.All),
+                new LocalPerturbationMutator(),
+                new ShrinkSubtreeMutator(),
+                new SubtreeMutator());
     }
 
     private sealed record PermutationCacheKeySelector : ICacheKeySelector<Permutation, string>
@@ -1000,5 +1253,28 @@ public class AutoEcPaperScenarioTests
         }
 
         return null;
+    }
+
+    private static IEnumerable<string> FindLocalFiles(string relativeDirectory, string searchPattern)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            var candidate = Path.Combine(directory.FullName, relativeDirectory);
+            if (Directory.Exists(candidate))
+            {
+                return Directory.EnumerateFiles(candidate, searchPattern, SearchOption.AllDirectories);
+            }
+
+            directory = directory.Parent;
+        }
+
+        return [];
+    }
+
+    private static string SanitizeFileName(string value)
+    {
+        var invalidCharacters = Path.GetInvalidFileNameChars();
+        return string.Concat(value.Select(c => invalidCharacters.Contains(c) ? '_' : c));
     }
 }
