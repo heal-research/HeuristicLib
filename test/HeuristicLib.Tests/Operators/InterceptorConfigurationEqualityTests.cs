@@ -44,30 +44,7 @@ public class InterceptorConfigurationEqualityTests
         left.ShouldNotBe(different);
     }
 
-    [Fact]
-    public void WrappingConcerns_IncludeChildAndSettingsInEquality()
-    {
-        var counter = new ObservationCounter();
-        var duration = new ObservationDuration();
-        var observer = new ActionInterceptorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>((_, _, _, _, _) => { });
 
-        new OffsetInterceptor(1).CountInterceptorCalls(counter).ShouldBe(new OffsetInterceptor(1).CountInterceptorCalls(counter));
-        new OffsetInterceptor(1).MeasureInterceptorDuration(duration, TimeProvider.System).ShouldBe(new OffsetInterceptor(1).MeasureInterceptorDuration(duration, TimeProvider.System));
-        new OffsetInterceptor(1).ObserveWith(observer).ShouldBe(new OffsetInterceptor(1).ObserveWith(observer));
-        new OffsetInterceptor(1).CountInterceptorCalls(counter).ShouldNotBe(new OffsetInterceptor(2).CountInterceptorCalls(counter));
-    }
-
-    [Fact]
-    public void ObservableInterceptor_SnapshotsObservers()
-    {
-        var observer = new ActionInterceptorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>((_, _, _, _, _) => { });
-        var observers = new List<IInterceptorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>> { observer };
-        var observable = new ObservableInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>(new OffsetInterceptor(1), observers);
-
-        observers.Clear();
-
-        observable.Observers.ShouldBe([observer]);
-    }
 
     private sealed record TestState(int Value) : SearchState;
 

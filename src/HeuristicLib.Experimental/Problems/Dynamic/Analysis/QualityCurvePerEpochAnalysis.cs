@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public sealed record QualityCurvePerEpochAnalysis<TCandidate, TSearchSpace, TProblem>
+public sealed class QualityCurvePerEpochAnalysis<TCandidate, TSearchSpace, TProblem>
     : DynamicAnalysis<TCandidate, TSearchSpace, TProblem, QualityCurvePerEpochAnalysisResult<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TCandidate, TSearchSpace>
@@ -13,7 +13,7 @@ public sealed record QualityCurvePerEpochAnalysis<TCandidate, TSearchSpace, TPro
         : base(problem, evaluators)
     { }
 
-    public override QualityCurvePerEpochAnalysisResult<TCandidate> CreateInitialResult() => new(Problem.Objective);
+    protected override QualityCurvePerEpochAnalysisResult<TCandidate> CreateInitialResult() => new(Problem.Objective);
 }
 
 public sealed class QualityCurvePerEpochAnalysisResult<TCandidate>(ObjectiveDirections objective)

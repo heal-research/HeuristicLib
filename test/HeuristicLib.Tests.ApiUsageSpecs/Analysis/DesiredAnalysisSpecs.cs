@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 
-namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Analysis;
+namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Analysis.Desired;
 
 #pragma warning disable S2325 // Instance methods are part of the desired authoring shape.
 #pragma warning disable S2326 // Generic marker parameters express compile-time supply compatibility.
@@ -14,27 +14,35 @@ public class DesiredAnalysisSpecs
     [Fact]
     public async Task QualitySeries_IsARunBoundObjectWithSafeLiveReads()
     {
-        var run = AnalysisRun.Create(new AlgorithmAnchor());
-        var quality = run.TrackSeries(Measure.Quality(), Aggregate.BestMedianWorst());
+        var algorithm = new AlgorithmAnchor();
+        var iterations = Clock.FromIterations(algorithm);
+        var evaluations = Clock.FromEvaluations(algorithm);
+        var quality = Analyzer.Trace(
+            new ObjectiveVectorsMeasurement(),
+            Aggregate.BestMedianWorst(),
+            at: algorithm,
+            clocks: [iterations, evaluations]);
+        var run = algorithm.CreateRun(quality);
 
         quality.SampleCount.ShouldBe(1);
         quality.Latest!.Value.Value.Best.ShouldBe(0.5);
 
-        var duringExecution = quality.ByIteration();
+        var duringExecution = quality.By(iterations);
         await run.CompleteAsync(TestContext.Current.CancellationToken);
 
         duringExecution.ShouldHaveSingleItem();
-        quality.ByEvaluations().Single().Coordinate.ShouldBe(100);
+        quality.By(evaluations).Single().Time.ShouldBe(100);
     }
 
     [Fact]
     public void Snapshot_IsStableWhenTheAnalysisCollectsMoreData()
     {
-        var run = AnalysisRun.Create(new AlgorithmAnchor());
-        var quality = run.TrackSeries(Measure.Quality(), Aggregate.Best());
+        var algorithm = new AlgorithmAnchor();
+        var quality = Analyzer.Trace(new ObjectiveVectorsMeasurement(), Aggregate.Best(), at: algorithm);
+        algorithm.CreateRun(quality);
         var firstSnapshot = quality.Snapshot();
 
-        quality.Record(new AnalysisStamp(2, 200), 0.25);
+        quality.Record(new Moment(2, 200), 0.25);
 
         firstSnapshot.ShouldHaveSingleItem();
         quality.SampleCount.ShouldBe(2);
@@ -42,45 +50,50 @@ public class DesiredAnalysisSpecs
     }
 
     [Fact]
-    public void CommonAnalysis_IsAShortcutForTrackSeries()
+    public void CommonAnalysis_IsAShortcutForTrace()
     {
-        var run = AnalysisRun.Create(new AlgorithmAnchor());
+        var algorithm = new AlgorithmAnchor();
+        var shortcut = Analyzer.TraceBestMedianWorst(at: algorithm);
+        var composed = Analyzer.Trace(new ObjectiveVectorsMeasurement(), Aggregate.BestMedianWorst(), at: algorithm);
 
-        var shortcut = run.TrackBestMedianWorst();
-        var composed = run.TrackSeries(Measure.Quality(), Aggregate.BestMedianWorst());
+        algorithm.CreateRun(shortcut, composed);
 
-        shortcut.ShouldBeOfType<TrackedSeries<BestMedianWorst>>();
-        composed.ShouldBeOfType<TrackedSeries<BestMedianWorst>>();
+        shortcut.ShouldBeOfType<TraceAnalyzer<BestMedianWorst>>();
+        composed.ShouldBeOfType<TraceAnalyzer<BestMedianWorst>>();
     }
 
     [Fact]
     public void MeasurementsAndAggregations_ComposeWithoutExplicitTypeArguments()
     {
-        var run = AnalysisRun.Create(new AlgorithmAnchor());
-
-        var scalar = run.TrackSeries(Measure.TreeLength(), Aggregate.MinMeanMax());
-        var frequency = run.TrackSeries(Measure.VariablesUsed(), Aggregate.Frequency());
-        var pairwise = run.TrackSeries(
-            Measure.PairwiseSimilarity(SimilarityCalculator.Levenshtein()),
+        var algorithm = new AlgorithmAnchor();
+        var scalar = Analyzer.Trace(new TreeLengthMeasurement(), Aggregate.MinMeanMax(), at: algorithm);
+        var frequency = Analyzer.Trace(new VariablesUsedMeasurement(), Aggregate.Frequency(), at: algorithm);
+        var pairwise = Analyzer.Trace(
+            new PairwiseSimilarityMeasurement(SimilarityCalculator.Levenshtein()),
             Aggregate.MinMeanMax(),
+            at: algorithm,
             recording: Recording.EveryNth(10));
 
-        scalar.ShouldBeOfType<TrackedSeries<MinMeanMax>>();
-        frequency.ShouldBeOfType<TrackedSeries<IReadOnlyDictionary<string, int>>>();
+        algorithm.CreateRun(scalar, frequency, pairwise);
+
+        scalar.ShouldBeOfType<TraceAnalyzer<MinMeanMax>>();
+        frequency.ShouldBeOfType<TraceAnalyzer<IReadOnlyDictionary<string, int>>>();
         pairwise.Recording.ShouldBe(Recording.EveryNth(10));
     }
 
     [Fact]
     public void AcrossFiringsAndRecordingPolicy_AreIndependentChoices()
     {
-        var run = AnalysisRun.Create(new AlgorithmAnchor());
-
-        var everyFiring = run.TrackSeries(Measure.Quality(), Aggregate.Best());
-        var onlyImprovements = run.TrackSeries(
-            Measure.Quality(),
+        var algorithm = new AlgorithmAnchor();
+        var everyFiring = Analyzer.Trace(new ObjectiveVectorsMeasurement(), Aggregate.Best(), at: algorithm);
+        var onlyImprovements = Analyzer.Trace(
+            new ObjectiveVectorsMeasurement(),
             Aggregate.Best(),
+            at: algorithm,
             across: Across.RunningBest(),
             recording: Recording.OnChange());
+
+        algorithm.CreateRun(everyFiring, onlyImprovements);
 
         everyFiring.Across.ShouldBe(Across.EachFiring());
         everyFiring.Recording.ShouldBe(Recording.EveryFiring());
@@ -91,10 +104,11 @@ public class DesiredAnalysisSpecs
     [Fact]
     public void SeparateAttachments_CreateIndependentRunBoundAnalyses()
     {
-        var run = AnalysisRun.Create(new AlgorithmAnchor());
+        var algorithm = new AlgorithmAnchor();
+        var explore = Analyzer.Trace(new TreeLengthMeasurement(), Aggregate.MinMeanMax(), at: algorithm);
+        var refine = Analyzer.Trace(new TreeLengthMeasurement(), Aggregate.MinMeanMax(), at: algorithm);
 
-        var explore = run.TrackSeries(Measure.TreeLength(), Aggregate.MinMeanMax(), at: new AlgorithmAnchor());
-        var refine = run.TrackSeries(Measure.TreeLength(), Aggregate.MinMeanMax(), at: new AlgorithmAnchor());
+        algorithm.CreateRun(explore, refine);
 
         explore.ShouldNotBeSameAs(refine);
         explore.Snapshot().ShouldNotBeSameAs(refine.Snapshot());
@@ -103,25 +117,26 @@ public class DesiredAnalysisSpecs
     [Fact]
     public void CandidateMeasurement_AttachesToACrossoverBoundary()
     {
-        var run = AnalysisRun.Create(new AlgorithmAnchor());
-
-        var offspringSize = run.TrackSeries(
-            Measure.TreeLength(),
+        var algorithm = new AlgorithmAnchor();
+        var crossover = new CrossoverAnchor();
+        var offspringSize = Analyzer.Trace(
+            observation => [observation.Offspring.Count],
             Aggregate.MinMeanMax(),
-            at: new CrossoverAnchor());
+            at: crossover);
+
+        algorithm.CreateRun(offspringSize);
 
         offspringSize.Snapshot().ShouldHaveSingleItem();
-        typeof(ISupplies<IObjectiveReadings>).IsAssignableFrom(typeof(CrossoverAnchor)).ShouldBeFalse();
-
         // This is intentionally absent because it must not compile:
-        // run.TrackSeries(Measure.Quality(), Aggregate.Best(), at: new CrossoverAnchor());
+        // Analyzer.Trace(new ObjectiveVectorsMeasurement(), Aggregate.Best(), at: crossover);
     }
 
     [Fact]
     public void FrequencySeries_TransposesIntoOneStableSeriesPerKey()
     {
-        var run = AnalysisRun.Create(new AlgorithmAnchor());
-        var variables = run.TrackSeries(Measure.VariablesUsed(), Aggregate.Frequency());
+        var algorithm = new AlgorithmAnchor();
+        var variables = Analyzer.Trace(new VariablesUsedMeasurement(), Aggregate.Frequency(), at: algorithm);
+        algorithm.CreateRun(variables);
 
         var byVariable = variables.Transpose();
 
@@ -132,34 +147,40 @@ public class DesiredAnalysisSpecs
     [Fact]
     public void DomainCoordinate_IsContributedByTheAnchorStamp()
     {
-        var run = AnalysisRun.Create(new AlgorithmAnchor());
-
-        var perEpoch = run.TrackSeries(
-            Measure.Quality(),
+        var algorithm = new AlgorithmAnchor();
+        var evaluator = new DynamicEvaluatorAnchor();
+        var epoch = Clock.FromValue(evaluator, static _ => 7);
+        var perEpoch = Analyzer.Trace(
+            _ => [0.5],
             Aggregate.Best(),
-            at: new DynamicEvaluatorAnchor());
+            at: evaluator,
+            clocks: [epoch]);
 
-        perEpoch.ByEpoch().Single().Coordinate.ShouldBe(7);
+        algorithm.CreateRun(perEpoch);
+
+        perEpoch.By(epoch).Single().Time.ShouldBe(7);
     }
 
     [Fact]
     public void DetachedAnchor_IsAConfigurationError()
     {
-        var run = AnalysisRun.Create(new AlgorithmAnchor());
-
-        Should.Throw<InvalidOperationException>(() => run.TrackSeries(
-            Measure.Quality(),
+        var algorithm = new AlgorithmAnchor();
+        var detached = Analyzer.Trace(
+            new ObjectiveVectorsMeasurement(),
             Aggregate.Best(),
-            at: new DetachedAlgorithmAnchor()));
+            at: new DetachedAlgorithmAnchor());
+
+        Should.Throw<InvalidOperationException>(() => algorithm.CreateRun(detached));
     }
 
     [Fact]
     public async Task Lineage_IsARunBoundAnalysisWithAnAnalysisSpecificReadingApi()
     {
-        var run = AnalysisRun.Create(new AlgorithmAnchor());
-        var lineage = run.TrackLineage(
+        var algorithm = new AlgorithmAnchor();
+        var lineage = Analyzer.TrackLineage(
             at: [new CreatorAnchor(), new CrossoverAnchor(), new MutatorAnchor()],
             comparer: StringComparer.Ordinal);
+        var run = algorithm.CreateRun(lineage);
 
         lineage.RootCount.ShouldBe(1);
         var duringExecution = lineage.Snapshot();
@@ -175,92 +196,122 @@ public class DesiredAnalysisSpecs
     {
         var experiment = ExperimentAnalysisRun.Create("small", "large");
 
-        var quality = experiment.TrackSeries(Measure.Quality(), Aggregate.Best());
+        var quality = experiment.Trace(new ObjectiveVectorsMeasurement(), Aggregate.Best());
 
         quality.Trials.Select(trial => trial.Key).ShouldBe(["small", "large"]);
-        quality.Trials[0].Series.ShouldNotBeSameAs(quality.Trials[1].Series);
-        quality.Trials[0].Series.Snapshot().ShouldHaveSingleItem();
+        quality.Trials[0].Trace.ShouldNotBeSameAs(quality.Trials[1].Trace);
+        quality.Trials[0].Trace.Snapshot().ShouldHaveSingleItem();
     }
+
 }
 
 #region Desired API prototype
 
-public interface ISupplies<out TSupply>;
-public interface IObjectiveReadings;
-public interface ICandidateReadings;
-public interface IDerivation : ICandidateReadings;
-public interface IEvaluatedPopulation : IObjectiveReadings, ICandidateReadings;
+public record AlgorithmAnchor;
+public sealed record DetachedAlgorithmAnchor : AlgorithmAnchor;
+public sealed record DynamicEvaluatorAnchor;
+public sealed record CreatorAnchor;
+public sealed record CrossoverAnchor;
+public sealed record MutatorAnchor;
+public sealed record CrossoverObservation(
+    IReadOnlyList<string> Offspring,
+    IReadOnlyList<(string Parent1, string Parent2)> Parents);
+public sealed record AlgorithmObservation(
+    IReadOnlyList<double> ObjectiveVectors,
+    IReadOnlyList<string> Candidates);
+public sealed record DynamicEvaluatorObservation(IReadOnlyList<double> ObjectiveVectors);
 
-public sealed record AlgorithmAnchor : ISupplies<IEvaluatedPopulation>;
-public sealed record DetachedAlgorithmAnchor : ISupplies<IEvaluatedPopulation>;
-public sealed record DynamicEvaluatorAnchor : ISupplies<IObjectiveReadings>;
-public sealed record CreatorAnchor : ISupplies<IDerivation>;
-public sealed record CrossoverAnchor : ISupplies<IDerivation>;
-public sealed record MutatorAnchor : ISupplies<IDerivation>;
+public readonly record struct Moment(long Iteration, long Evaluations, int? Epoch = null);
+public readonly record struct TraceEntry<T>(Moment Moment, T Value)
+{
+    public TTime At<TTime>(Clock<TTime> clock) => clock.Read(Moment);
+}
+public readonly record struct TracePoint<TTime, TValue>(TTime Time, TValue Value);
 
-public readonly record struct AnalysisStamp(long Iteration, long Evaluations, int? Epoch = null);
-public readonly record struct Sample<T>(AnalysisStamp Stamp, T Value);
-public readonly record struct CoordinateValue<TCoordinate, TValue>(TCoordinate Coordinate, TValue Value);
+public sealed class Clock<T>(Func<Moment, T> read)
+{
+    internal T Read(Moment moment) => read(moment);
+}
 
-public sealed class SeriesSnapshot<T>(IReadOnlyList<Sample<T>> samples) : ReadOnlyCollection<Sample<T>>(samples.ToArray());
+public static class Clock
+{
+    public static Clock<long> FromIterations(AlgorithmAnchor _) => new(moment => moment.Iteration);
+    public static Clock<long> FromEvaluations(AlgorithmAnchor _) => new(moment => moment.Evaluations);
+    public static Clock<int> FromValue<TAnchor>(TAnchor _, Func<TAnchor, int> __) =>
+        new(moment => moment.Epoch ?? throw new InvalidOperationException("The moment has no time for this clock."));
+}
 
-public sealed class TrackedSeries<T>(Across across, Recording recording)
+public sealed class TraceSnapshot<T>(IReadOnlyList<TraceEntry<T>> entries) : ReadOnlyCollection<TraceEntry<T>>(entries.ToArray());
+
+public interface IAnalyzer
+{
+    void Bind(AlgorithmAnchor root);
+}
+
+public sealed class TraceAnalyzer<T>(
+    Across across,
+    Recording recording,
+    IReadOnlyList<object> clocks,
+    Action<AlgorithmAnchor, TraceAnalyzer<T>> bind) : IAnalyzer
 {
     private readonly Lock sync = new();
-    private readonly List<Sample<T>> samples = [];
+    private readonly List<TraceEntry<T>> entries = [];
 
     public Across Across { get; } = across;
     public Recording Recording { get; } = recording;
 
     public int SampleCount
     {
-        get { lock (sync) return samples.Count; }
+        get { lock (sync) return entries.Count; }
     }
 
-    public Sample<T>? Latest
+    public TraceEntry<T>? Latest
     {
-        get { lock (sync) return samples.Count == 0 ? null : samples[^1]; }
+        get { lock (sync) return entries.Count == 0 ? null : entries[^1]; }
     }
 
-    internal void Record(AnalysisStamp stamp, T value)
-    {
-        lock (sync)
-            samples.Add(new Sample<T>(stamp, value));
-    }
-
-    public SeriesSnapshot<T> Snapshot()
+    internal void Record(Moment moment, T value)
     {
         lock (sync)
-            return new SeriesSnapshot<T>(samples);
+            entries.Add(new TraceEntry<T>(moment, value));
     }
 
-    public IReadOnlyList<CoordinateValue<long, T>> ByIteration() =>
-        Array.AsReadOnly(Snapshot().Select(sample => new CoordinateValue<long, T>(sample.Stamp.Iteration, sample.Value)).ToArray());
+    public TraceSnapshot<T> Snapshot()
+    {
+        lock (sync)
+            return new TraceSnapshot<T>(entries);
+    }
 
-    public IReadOnlyList<CoordinateValue<long, T>> ByEvaluations() =>
-        Array.AsReadOnly(Snapshot().Select(sample => new CoordinateValue<long, T>(sample.Stamp.Evaluations, sample.Value)).ToArray());
+    public IReadOnlyList<TracePoint<TTime, T>> By<TTime>(Clock<TTime> clock)
+    {
+        if (!clocks.Contains(clock))
+            throw new InvalidOperationException("The trace does not use the requested clock.");
 
-    public IReadOnlyList<CoordinateValue<int, T>> ByEpoch() =>
-        Array.AsReadOnly(Snapshot().Select(sample => new CoordinateValue<int, T>(
-            sample.Stamp.Epoch ?? throw new InvalidOperationException("The series has no epoch coordinate."),
-            sample.Value)).ToArray());
+        return Array.AsReadOnly(Snapshot()
+            .Select(entry => new TracePoint<TTime, T>(entry.At(clock), entry.Value))
+            .ToArray());
+    }
+
+    void IAnalyzer.Bind(AlgorithmAnchor root) => bind(root, this);
 }
 
-public static class SeriesViews
+public static class TraceViews
 {
-    public static IReadOnlyDictionary<TKey, SeriesSnapshot<TValue>> Transpose<TKey, TValue>(
-        this TrackedSeries<IReadOnlyDictionary<TKey, TValue>> series)
+    public static IReadOnlyDictionary<TKey, TraceSnapshot<TValue>> Transpose<TKey, TValue>(
+        this TraceAnalyzer<IReadOnlyDictionary<TKey, TValue>> trace)
         where TKey : notnull =>
-        new ReadOnlyDictionary<TKey, SeriesSnapshot<TValue>>(series.Snapshot()
-            .SelectMany(sample => sample.Value.Select(entry => (sample.Stamp, entry.Key, entry.Value)))
+        new ReadOnlyDictionary<TKey, TraceSnapshot<TValue>>(trace.Snapshot()
+            .SelectMany(traceEntry => traceEntry.Value.Select(value => (traceEntry.Moment, value.Key, value.Value)))
             .GroupBy(entry => entry.Key)
             .ToDictionary(
                 group => group.Key,
-                group => new SeriesSnapshot<TValue>(group.Select(entry => new Sample<TValue>(entry.Stamp, entry.Value)).ToArray())));
+                group => new TraceSnapshot<TValue>(group.Select(entry => new TraceEntry<TValue>(entry.Moment, entry.Value)).ToArray())));
 }
 
-public interface IMeasurement<in TSupply, out TValue> { TValue Example { get; } }
-public sealed record Measurement<TSupply, TValue>(TValue Example) : IMeasurement<TSupply, TValue>;
+public interface IMeasurement<in TObservation, out TValue>
+{
+    IReadOnlyList<TValue> Read(TObservation observation);
+}
 public interface IAggregation<in TValue, out TResult> { TResult Example { get; } }
 public sealed record Aggregation<TValue, TResult>(TResult Example) : IAggregation<TValue, TResult>;
 
@@ -280,12 +331,25 @@ public sealed record Across(string Name)
     public static Across RunningBest() => new("Running best");
 }
 
-public static class Measure
+public sealed record ObjectiveVectorsMeasurement : IMeasurement<AlgorithmObservation, double>
 {
-    public static Measurement<IObjectiveReadings, double> Quality() => new(0.5);
-    public static Measurement<ICandidateReadings, double> TreeLength() => new(12);
-    public static Measurement<ICandidateReadings, string> VariablesUsed() => new("x1");
-    public static Measurement<ICandidateReadings, double> PairwiseSimilarity(SimilarityCalculator _) => new(0.75);
+    public IReadOnlyList<double> Read(AlgorithmObservation observation) => observation.ObjectiveVectors;
+}
+
+public sealed record TreeLengthMeasurement : IMeasurement<AlgorithmObservation, double>
+{
+    public IReadOnlyList<double> Read(AlgorithmObservation _) => [12];
+}
+
+public sealed record VariablesUsedMeasurement : IMeasurement<AlgorithmObservation, string>
+{
+    public IReadOnlyList<string> Read(AlgorithmObservation _) => ["x1"];
+}
+
+public sealed record PairwiseSimilarityMeasurement(SimilarityCalculator Similarity)
+    : IMeasurement<AlgorithmObservation, double>
+{
+    public IReadOnlyList<double> Read(AlgorithmObservation _) => [0.75];
 }
 
 public sealed record SimilarityCalculator(string Name)
@@ -304,7 +368,7 @@ public static class Aggregate
 
 public sealed record LineageSnapshot(IReadOnlyList<string> Roots, IReadOnlyList<long> Generations);
 
-public sealed class TrackedLineage
+public sealed class TrackedLineage(IReadOnlyList<object> anchors) : IAnalyzer
 {
     private readonly ReadOnlyCollection<string> roots = Array.AsReadOnly(["root"]);
     private readonly ReadOnlyCollection<string> descendants = Array.AsReadOnly(["child"]);
@@ -312,56 +376,104 @@ public sealed class TrackedLineage
     public int RootCount => roots.Count;
     public LineageSnapshot Snapshot() => new([.. roots], [1]);
     public IReadOnlyList<string> DescendantsOf(string root) => root == "root" ? descendants : [];
+
+    void IAnalyzer.Bind(AlgorithmAnchor root)
+    {
+        if (anchors.Count == 0)
+            throw new InvalidOperationException("At least one derivation anchor is required.");
+    }
 }
 
 public sealed class AnalysisRun
 {
-    private readonly AlgorithmAnchor root;
-
-    private AnalysisRun(AlgorithmAnchor root) => this.root = root;
-    public static AnalysisRun Create(AlgorithmAnchor root) => new(root);
-
-    public TrackedSeries<TResult> TrackSeries<TValue, TResult>(
-        IMeasurement<IEvaluatedPopulation, TValue> measurement,
-        IAggregation<TValue, TResult> aggregation,
-        Across? across = null,
-        Recording? recording = null) =>
-        TrackSeries(measurement, aggregation, root, across, recording);
-
-    public TrackedSeries<TResult> TrackSeries<TSupply, TValue, TResult>(
-        IMeasurement<TSupply, TValue> measurement,
-        IAggregation<TValue, TResult> aggregation,
-        ISupplies<TSupply> at,
-        Across? across = null,
-        Recording? recording = null)
+    internal AnalysisRun(AlgorithmAnchor root, params IReadOnlyList<IAnalyzer> analyzers)
     {
-        if (at is DetachedAlgorithmAnchor)
-            throw new InvalidOperationException("The observation anchor is not part of the run's execution graph.");
-
-        var series = new TrackedSeries<TResult>(across ?? Across.EachFiring(), recording ?? Recording.EveryFiring());
-        int? epoch = at is DynamicEvaluatorAnchor ? 7 : null;
-        series.Record(new AnalysisStamp(1, 100, epoch), aggregation.Example);
-        return series;
-    }
-
-    public TrackedSeries<BestMedianWorst> TrackBestMedianWorst() =>
-        TrackSeries(Measure.Quality(), Aggregate.BestMedianWorst());
-
-    public TrackedLineage TrackLineage(IReadOnlyList<ISupplies<IDerivation>> at, IEqualityComparer<string> comparer)
-    {
-        if (at.Count == 0)
-            throw new InvalidOperationException("At least one derivation anchor is required.");
-        return new TrackedLineage();
+        foreach (var analyzer in analyzers)
+            analyzer.Bind(root);
     }
 
     public Task CompleteAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 }
 
-public readonly record struct TrialSeries<T>(string Key, TrackedSeries<T> Series);
-
-public sealed class TrackedExperimentSeries<T>(IReadOnlyList<TrialSeries<T>> trials)
+public static class AlgorithmRunCreation
 {
-    public IReadOnlyList<TrialSeries<T>> Trials { get; } = trials;
+    public static AnalysisRun CreateRun(this AlgorithmAnchor algorithm, params IReadOnlyList<IAnalyzer> analyzers) =>
+        new(algorithm, analyzers);
+}
+
+public static class Analyzer
+{
+    public static TraceAnalyzer<TResult> Trace<TValue, TResult>(
+        IMeasurement<AlgorithmObservation, TValue> measurement,
+        IAggregation<TValue, TResult> aggregation,
+        AlgorithmAnchor at,
+        IReadOnlyList<object>? clocks = null,
+        Across? across = null,
+        Recording? recording = null) =>
+        Trace(measurement.Read, aggregation, at, clocks, across, recording);
+
+    public static TraceAnalyzer<TResult> Trace<TValue, TResult>(
+        Func<AlgorithmObservation, IReadOnlyList<TValue>> measure,
+        IAggregation<TValue, TResult> aggregation,
+        AlgorithmAnchor at,
+        IReadOnlyList<object>? clocks = null,
+        Across? across = null,
+        Recording? recording = null)
+    {
+        return new(
+            across ?? Across.EachFiring(),
+            recording ?? Recording.EveryFiring(),
+            clocks ?? [],
+            (_, trace) =>
+            {
+                if (at is DetachedAlgorithmAnchor)
+                    throw new InvalidOperationException("The observation anchor is not part of the run's execution graph.");
+
+                trace.Record(new Moment(1, 100), aggregation.Example);
+            });
+    }
+
+    public static TraceAnalyzer<TResult> Trace<TValue, TResult>(
+        Func<CrossoverObservation, IReadOnlyList<TValue>> measure,
+        IAggregation<TValue, TResult> aggregation,
+        CrossoverAnchor at,
+        IReadOnlyList<object>? clocks = null,
+        Across? across = null,
+        Recording? recording = null) =>
+        new(
+            across ?? Across.EachFiring(),
+            recording ?? Recording.EveryFiring(),
+            clocks ?? [],
+            (_, trace) => trace.Record(new Moment(1, 100), aggregation.Example));
+
+    public static TraceAnalyzer<TResult> Trace<TValue, TResult>(
+        Func<DynamicEvaluatorObservation, IReadOnlyList<TValue>> measure,
+        IAggregation<TValue, TResult> aggregation,
+        DynamicEvaluatorAnchor at,
+        IReadOnlyList<object>? clocks = null,
+        Across? across = null,
+        Recording? recording = null) =>
+        new(
+            across ?? Across.EachFiring(),
+            recording ?? Recording.EveryFiring(),
+            clocks ?? [],
+            (_, trace) => trace.Record(new Moment(1, 100, 7), aggregation.Example));
+
+    public static TraceAnalyzer<BestMedianWorst> TraceBestMedianWorst(
+        AlgorithmAnchor at,
+        IReadOnlyList<object>? clocks = null) =>
+        Trace(new ObjectiveVectorsMeasurement(), Aggregate.BestMedianWorst(), at, clocks);
+
+    public static TrackedLineage TrackLineage(
+        IReadOnlyList<object> at,
+        IEqualityComparer<string> comparer) => new(at);
+}
+
+public readonly record struct TrialTrace<T>(string Key, TraceAnalyzer<T> Trace);
+
+public sealed class ExperimentTrace<T>(IReadOnlyList<TrialTrace<T>> trials)
+{
+    public IReadOnlyList<TrialTrace<T>> Trials { get; } = trials;
 }
 
 public sealed class ExperimentAnalysisRun
@@ -371,17 +483,22 @@ public sealed class ExperimentAnalysisRun
     private ExperimentAnalysisRun(IReadOnlyList<string> trialKeys) => this.trialKeys = trialKeys;
     public static ExperimentAnalysisRun Create(params IReadOnlyList<string> trialKeys) => new(trialKeys.ToArray());
 
-    public TrackedExperimentSeries<TResult> TrackSeries<TSupply, TValue, TResult>(
-        IMeasurement<TSupply, TValue> measurement,
+    public ExperimentTrace<TResult> Trace<TValue, TResult>(
+        IMeasurement<AlgorithmObservation, TValue> measurement,
+        IAggregation<TValue, TResult> aggregation) =>
+        Trace(measurement.Read, aggregation);
+
+    public ExperimentTrace<TResult> Trace<TValue, TResult>(
+        Func<AlgorithmObservation, IReadOnlyList<TValue>> measure,
         IAggregation<TValue, TResult> aggregation)
     {
         var trials = trialKeys.Select((key, index) =>
         {
-            var series = new TrackedSeries<TResult>(Across.EachFiring(), Recording.EveryFiring());
-            series.Record(new AnalysisStamp(1, 100L * (index + 1)), aggregation.Example);
-            return new TrialSeries<TResult>(key, series);
+            var trace = new TraceAnalyzer<TResult>(Across.EachFiring(), Recording.EveryFiring(), [], (_, _) => { });
+            trace.Record(new Moment(1, 100L * (index + 1)), aggregation.Example);
+            return new TrialTrace<TResult>(key, trace);
         }).ToArray();
-        return new TrackedExperimentSeries<TResult>(trials);
+        return new ExperimentTrace<TResult>(trials);
     }
 }
 

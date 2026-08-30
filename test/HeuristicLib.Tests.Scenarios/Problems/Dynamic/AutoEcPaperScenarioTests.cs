@@ -67,14 +67,13 @@ public class AutoEcPaperScenarioTests
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123))
-                        .WithAnalyzers(qualityCurve, bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123), qualityCurve, bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
             problem, targetEpochChanges, TestContext.Current.CancellationToken);
-        var qualityResult = run.GetResult(qualityCurve);
-        var bbcpResult = run.GetResult(bbcp);
+        var qualityResult = qualityCurve.Result;
+        var bbcpResult = bbcp.Result;
 
         finalState.Population.EvaluatedCandidates.Count.ShouldBeGreaterThan(0);
         finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
@@ -122,14 +121,13 @@ public class AutoEcPaperScenarioTests
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123))
-                        .WithAnalyzers(qualityCurve, bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123), qualityCurve, bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
             problem, targetEpochChanges, TestContext.Current.CancellationToken);
-        var qualityResult = run.GetResult(qualityCurve);
-        var bbcpResult = run.GetResult(bbcp);
+        var qualityResult = qualityCurve.Result;
+        var bbcpResult = bbcp.Result;
 
         finalState.Population.EvaluatedCandidates.Count.ShouldBeGreaterThan(0);
         finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>

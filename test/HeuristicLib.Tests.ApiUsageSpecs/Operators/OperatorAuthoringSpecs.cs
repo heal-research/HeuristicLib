@@ -109,16 +109,7 @@ public class OperatorAuthoringSpecs
     public void MutatorCompositionFactories_InferRoleTypes()
     {
         IMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem> childMutator = new PullTowardZeroMutator();
-        IMutatorObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem> observer =
-            new ActionMutatorObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem>((_, _, _, _) => { });
-
-        var observable = ObservableMutator.Create(childMutator, observer);
-        var callbackObservable = ObservableMutator.Create(childMutator, _ => { });
         var counting = CountingMutator.Create(childMutator, new ObservationCounter(), OperatorCountMetric.Calls);
-
-        observable.ChildMutator.ShouldBeSameAs(childMutator);
-        observable.Observers.ShouldBe([observer]);
-        callbackObservable.Observers.Count.ShouldBe(1);
         counting.ChildMutator.ShouldBeSameAs(childMutator);
     }
 
@@ -225,17 +216,8 @@ public class OperatorAuthoringSpecs
     public void RefinerCompositionFactories_InferRoleTypes()
     {
         IRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem> childRefiner = new HalveRefiner();
-        IRefinerObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem> observer =
-            new ActionRefinerObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem>((_, _, _, _) => { });
-
-        var observable = ObservableRefiner.Create(childRefiner, observer);
-        var callbackObservable = ObservableRefiner.Create(childRefiner, _ => { });
         var counting = CountingRefiner.Create(childRefiner, new ObservationCounter(), OperatorCountMetric.Calls);
         var iterated = IteratedRefiner.Create(childRefiner, 2);
-
-        observable.ChildRefiner.ShouldBeSameAs(childRefiner);
-        observable.Observers.ShouldBe([observer]);
-        callbackObservable.Observers.Count.ShouldBe(1);
         counting.ChildRefiner.ShouldBeSameAs(childRefiner);
         iterated.ChildRefiner.ShouldBeSameAs(childRefiner);
     }
@@ -429,19 +411,10 @@ public class OperatorAuthoringSpecs
     public void EvaluatorCompositionFactories_InferRoleTypes()
     {
         IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> child = new FirstValueEvaluator();
-        IEvaluatorObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem> observer =
-            new ActionEvaluatorObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem>((_, _, _, _) => { });
-
-        var observable = ObservableEvaluator.Create(child, observer);
-        var callbackObservable = ObservableEvaluator.Create(child, (_, _) => { });
         var counting = CountingEvaluator.Create(child, new ObservationCounter(), OperatorCountMetric.Calls);
         var duration = DurationMeasuringEvaluator.Create(child, new ObservationDuration());
         var repeating = child.AsRepeated(3, ObjectiveVectorAggregation.Median);
         var caching = child.WithCache(new FirstCoordinateCacheKeySelector());
-
-        observable.ChildEvaluator.ShouldBeSameAs(child);
-        observable.Observers.ShouldBe([observer]);
-        callbackObservable.Observers.Count.ShouldBe(1);
         counting.ChildEvaluator.ShouldBeSameAs(child);
         duration.ChildEvaluator.ShouldBeSameAs(child);
         repeating.ChildEvaluator.ShouldBeSameAs(child);
@@ -529,20 +502,8 @@ public class OperatorAuthoringSpecs
     public void SelectorCompositionFactories_InferRoleTypes()
     {
         ISelector<RealVector, RealVectorSearchSpace, TestFunctionProblem> childSelector = new FirstSelector();
-        ISelectorObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem> observer =
-            new ActionSelectorObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem>((_, _, _, _, _, _) => { });
-
-        var observable = childSelector.ObserveWith(observer);
-        var staticObservable = ObservableSelector.Create(childSelector, observer);
-        var callbackObservable = ObservableSelector.Create(childSelector, _ => { });
         var counting = childSelector.CountSelectorCalls(new ObservationCounter());
         var chooseOne = ChooseOneSelector.Create(childSelector, new LastSelector());
-
-        observable.ChildSelector.ShouldBeSameAs(childSelector);
-        observable.Observers.ShouldBe([observer]);
-        staticObservable.ChildSelector.ShouldBeSameAs(childSelector);
-        staticObservable.Observers.ShouldBe([observer]);
-        callbackObservable.Observers.Count.ShouldBe(1);
         counting.ChildSelector.ShouldBeSameAs(childSelector);
         chooseOne.ChildSelectors[0].ShouldBeSameAs(childSelector);
     }
@@ -619,17 +580,8 @@ public class OperatorAuthoringSpecs
     public void ReplacerCompositionFactories_InferRoleTypes()
     {
         IReplacer<RealVector, RealVectorSearchSpace, TestFunctionProblem> child = new OffspringReplacer();
-        IReplacerObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem> observer =
-            new ActionReplacerObserver<RealVector, RealVectorSearchSpace, TestFunctionProblem>((_, _, _, _, _, _) => { });
-
-        var observable = ObservableReplacer.Create(child, observer);
-        var callbackObservable = ObservableReplacer.Create(child, _ => { });
         var counting = CountingReplacer.Create(child, new ObservationCounter(), OperatorCountMetric.Calls);
         var duration = DurationMeasuringReplacer.Create(child, new ObservationDuration());
-
-        observable.ChildReplacer.ShouldBeSameAs(child);
-        observable.Observers.ShouldBe([observer]);
-        callbackObservable.Observers.Count.ShouldBe(1);
         counting.ChildReplacer.ShouldBeSameAs(child);
         duration.ChildReplacer.ShouldBeSameAs(child);
     }

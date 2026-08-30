@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public sealed record InvalidPerEpochAnalysis<TCandidate, TSearchSpace, TProblem>
+public sealed class InvalidPerEpochAnalysis<TCandidate, TSearchSpace, TProblem>
     : DynamicAnalysis<TCandidate, TSearchSpace, TProblem, InvalidPerEpochAnalysisResult<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TCandidate, TSearchSpace>
@@ -13,7 +13,7 @@ public sealed record InvalidPerEpochAnalysis<TCandidate, TSearchSpace, TProblem>
         : base(problem, evaluators)
     { }
 
-    public override InvalidPerEpochAnalysisResult<TCandidate> CreateInitialResult() => new();
+    protected override InvalidPerEpochAnalysisResult<TCandidate> CreateInitialResult() => new();
 }
 
 public sealed class InvalidPerEpochAnalysisResult<TCandidate> : IDynamicAnalysisResult<TCandidate>

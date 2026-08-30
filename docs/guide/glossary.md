@@ -481,7 +481,7 @@ An `AlgorithmRun` executes one algorithm configuration on a problem. An `Experim
 
 When a meta-algorithm coordinates child algorithms, the run is created by the algorithm started by the user. Child algorithms and operators participate in that same run unless they are explicitly started as separate runs.
 
-Analyzers are attached to a run, so their observations and results can span nested algorithms and multiple short-lived execution instances.
+Run analyzers are bound while a run is created, so their observations can span nested algorithms and multiple short-lived execution instances. A runnable `AlgorithmRun` does not accept more analyzers.
 
 See also: Analyzer, Configuration, Execution instance, Search state.
 
@@ -590,23 +590,70 @@ See also: Execution instance, Run.
 
 Status: `Canonical`
 
-An analyzer is a reusable, run-scoped analysis configuration.
+An analyzer is a stateful object that records or derives information about one run.
 
-An analyzer declares which observations it needs and exposes analysis results through the run. It records or derives information about execution; it should not control optimization behavior.
+The caller creates an analyzer before the run and specifies its observation anchors, clocks and analysis behavior. `CreateRun` installs its observations before materializing the execution graph. By convention, a stateful analyzer is used for one run. The analyzer holds the collected data and exposes typed safe reads during and after execution.
 
-See also: Analyzer result, Observation, Observation plan, Run.
+Properties on an analyzer return already published values without allocation. Methods may allocate immutable snapshots or projections. Do not expose the mutable accumulator through a read-only collection interface.
 
-### Analyzer result
+Do not use analyzer for Roslyn analyzers without the Roslyn qualifier when the context could be ambiguous.
+
+See also: Analysis snapshot, Observation, Observation plan, Run.
+
+### Analysis snapshot
 
 Status: `Canonical`
 
-An analyzer result is the run scoped object that stores the data produced by an analyzer during a run.
+An analysis snapshot is an immutable value published from an analyzer at a point in time.
 
-Analyzer results may contain counters, curves, traces, genealogy graphs or summaries. Users retrieve analyzer results from the run with the analyzer configuration that produced them.
+Snapshots may contain curves, traces, genealogy graphs or summaries. A snapshot remains unchanged while its analyzer collects more data. Creating a snapshot or projection may allocate, so these operations are methods rather than properties.
 
-Do not store analyzer result data on reusable analyzer configurations, observable operator wrappers or execution registries.
+The analyzer remains the owner of its mutable accumulator. The run owns observation installation and cleanup but is not a result lookup service.
 
 See also: Analyzer, Observation, Observation plan, Run.
+
+### Trace
+
+Status: `Canonical`
+
+A trace is an ordered history of values that a trace analyzer records while a run executes.
+
+Each trace entry contains one analyzed value and the moment when the value was observed. A trace analyzer owns its
+mutable trace and exposes safe live reads and immutable trace snapshots during and after execution.
+
+Do not use series for this concept. In HeuristicLib, a series is a named column in tabular data.
+
+See also: Analysis snapshot, Analyzer, Run.
+
+### Clock
+
+Status: `Canonical`
+
+A clock defines one typed notion of time for a trace. A clock may progress with algorithm iterations, candidate
+evaluations, elapsed duration or a domain event such as a dynamic-problem epoch.
+
+The caller explicitly selects the clocks a trace analyzer reads. The same clock object is used to project the trace by
+the time it reports.
+
+See also: Moment, Time, Trace.
+
+### Time
+
+Status: `Canonical`
+
+Time is the typed value read from one clock. Examples include an iteration number, cumulative evaluation count, elapsed
+duration and epoch number.
+
+See also: Clock, Moment.
+
+### Moment
+
+Status: `Provisional`
+
+A moment is the collective time of one trace entry. It contains simultaneous readings from every clock selected by that
+trace analyzer.
+
+See also: Clock, Time, Trace.
 
 ### Observation plan
 

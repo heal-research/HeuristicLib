@@ -8,9 +8,9 @@ Two separate problems sit on top of that idea.
 
 The first is mechanical. Observation merging depends on the caller's closed generic types, analyzer cleanup has lifecycle gaps, live results have no general concurrency contract and several public analyzers are incomplete or untested. Result naming, collection ownership and factory coverage also vary by type.
 
-The second is conceptual, and it matters more. Every analyzer today is a hand-written type that hard-codes what it measures, how it summarizes, and which coordinate it records against. Because the coordinate is baked in, the same metric needs a new analyzer per axis, which is why `BestMedianWorstAnalysis` and `BestMedianWorstPerEvaluationAnalysis` both exist. HeuristicLab reached the same state from the same cause and shipped `BestAverageWorstQualityAnalyzer`, `QualityPerEvaluationsAnalyzer` and `QualityPerClockAnalyzer` as three types for one metric.
+The second is conceptual, and it matters more. Every analyzer today is a hand-written type that hard-codes what it measures, how it summarizes, and which clock it records against. Because the clock is baked in, the same metric needs a new analyzer per axis, which is why `BestMedianWorstAnalysis` and `BestMedianWorstPerEvaluationAnalysis` both exist. HeuristicLab reached the same state from the same cause and shipped `BestAverageWorstQualityAnalyzer`, `QualityPerEvaluationsAnalyzer` and `QualityPerClockAnalyzer` as three types for one metric.
 
-Almost the whole useful catalog is one mechanism with four independent choices: **where** to observe, **what** to measure, **how** to summarize it, and **which coordinates** to record. Quality curves, variable frequencies, tree bloat, diversity, distribution histograms and dynamic per-epoch analysis are all combinations of those four. This plan therefore does two things: it repairs the run-owned framework, and it adds `TrackSeries` as the direct composition and attachment path for most of the catalog.
+Almost the whole useful catalog is one mechanism with four independent choices: **where** to observe, **what** to measure, **how** to summarize it, and **which clocks** to record. Quality curves, variable frequencies, tree bloat, diversity, distribution histograms and dynamic per-epoch analysis are all combinations of those four. This plan therefore does two things: it repairs the run-owned framework, and it adds `Analyzer.Trace` as the direct composition path for most of the catalog. `CreateRun` binds the resulting analyzers before it materializes the execution graph.
 
 The backlog phrase "desired-state analysis API" means an executable API usage spec for the intended replacement beside the current API specs. It does not mean analysis of a desired search state.
 
@@ -47,16 +47,16 @@ The first five are analysis. The last two are not: the final answer already come
 
 ### What the catalog has in common
 
-Ignoring the domain and looking only at how observations turn into data, nearly every entry above is the same act repeated: **at a defined boundary, read something, summarize it, and record the summary against the coordinates of that moment.**
+Ignoring the domain and looking only at how observations turn into data, nearly every entry above is the same act repeated: **at a defined boundary, read something, summarize it, and record the summary against the clocks of that moment.**
 
 The entries differ only in which of four choices they make.
 
 1. **Where** the reading happens. The end of an iteration, an evaluation batch, a specific operator, a named inner algorithm.
 2. **What** is read. An objective value, a tree length, the set of variables a candidate uses, a pairwise similarity, a validity flag.
 3. **How** many readings become one recorded value. Best, median, worst, mean, a histogram, a frequency map, a matrix, a non-dominated set, or no reduction at all.
-4. **Which coordinates** the recorded value is filed under. Iteration, cumulative evaluations, elapsed time, epoch.
+4. **Which explicitly selected clocks** the recorded value is filed under. Iteration, cumulative evaluations, elapsed time, epoch.
 
-Choice 4 is the one the current design gets wrong, and the mistake is worth stating precisely. These coordinates are not competing x-axes to pick between. When a reading is taken at the end of iteration 7, that reading is *simultaneously* at iteration 7, at evaluation 700, at 1.4 seconds and at epoch 2. They are coordinates of one event. Treating them as alternatives is what forces one analyzer per axis and makes two series impossible to plot against each other.
+Choice 4 is the one the current design gets wrong. Clocks are not competing x-axes to pick between. When selected, iteration, evaluations, elapsed time and epoch describe the same event and can all be read from one series. None is automatic: each clock names the algorithm, evaluator, problem or time source that defines it. Treating axes as separate analyzer types forces reruns; attaching every possible source would add observation cost and silently choose among ambiguous inner algorithms or evaluators.
 
 ### What this shape does not cover
 
@@ -66,9 +66,9 @@ Two classes in the catalog are not this shape, and saying so is part of the requ
 
 Separate the two halves of that problem. The *plumbing* half — several anchors of different roles contributing to one non-series store — is covered by the accumulator model described below, and genealogy should be remodelled onto it rather than left beside it. The *identity* half is not covered and is deferred: candidate identity, a first-class lineage model and operator attribution are revisited as their own piece of work once the measurement model is in place. Genealogy must keep working throughout, and nothing in this rework may foreclose provenance later.
 
-**Budget and cost** are already served by the caller-owned instrumentation sinks `ObservationCounter` and `ObservationDuration`, which are read live by policies such as terminators. That model stays separate. A series analyzer may sample such a sink at each coordinate, but the sink remains the source of truth.
+**Budget and cost** are already served by the caller-owned instrumentation sinks `ObservationCounter` and `ObservationDuration`, which are read live by policies such as terminators. That model stays separate. A trace analyzer may sample such a sink when it records an entry, but the sink remains the source of truth.
 
-**Terminal artifacts** are a degenerate series of length one and need no separate mechanism.
+**Terminal artifacts** are a degenerate trace of length one and need no separate mechanism.
 
 ## The analysis model
 
@@ -76,32 +76,33 @@ Separate the two halves of that problem. The *plumbing* half — several anchors
 
 | Component            | Meaning                                                                          |
 | -------------------- | -------------------------------------------------------------------------------- |
-| **Anchor**           | The algorithm or operator boundary where readings are taken. Already exists. An analyzer may bind several, and anchors are classified by what they supply rather than by role. |
-| **Supply**           | What a firing at an anchor makes available. A small closed set, unlike the open set of operator roles. |
+| **Anchor**           | The algorithm or operator boundary where readings are taken. Already exists. An analyzer may bind several. |
 | **Measurement**      | What is read at that boundary. A candidate property, a pairwise property, a population property or an external value. |
 | **Aggregation**      | How the readings taken at one firing become a single value, and how values carry across firings. |
-| **Stamp**            | The coordinates of that firing.                                                   |
+| **Clock**            | One typed notion of time and the source from which it progresses.                         |
+| **Moment**           | The simultaneous times read from the clocks selected for one trace entry.                 |
 | **Recording policy** | Whether a given firing produces a contribution at all.                            |
 | **Accumulator**      | How contributions fold into the analyzer's data. A series is one accumulator; a lineage graph is another. |
-| **Sample**           | One stamp paired with one aggregated value.                                       |
-| **Series**           | The ordered samples an analyzer produced during a run. The common accumulator and the common result. |
-| **Run-bound analysis** | The stateful object returned by a `Track...` method. It collects one run's data and provides safe live reads. |
+| **Trace**            | The ordered entries a trace analyzer recorded during a run. The common accumulator and result.       |
+| **Run-bound analysis** | The stateful object returned by an analyzer factory. It collects one run's data and provides safe live reads. |
 
-A stamp field is itself a measurement of the run — it is simply one that gets indexed by rather than plotted. That keeps extensibility to a single story: anything readable at a boundary can serve either as a value or as a coordinate. Dynamic problems already have a domain stamp in `EvaluationTiming`, though it needs the rework described below before it is a usable coordinate.
+A clock defines one typed notion of time. The same clock object installs any observation it needs and provides typed
+readback through `entry.At(clock)` and `trace.By(clock)`. Dynamic problems already have a domain clock in
+`EvaluationTiming`, though it needs the rework described below before it is usable.
 
 ### Repeated firing is the normal case
 
 An anchor fires many times in a run: once per generation, once per evaluation batch, once per operator call. The model must state what happens across those firings, because that is where the result shape is actually decided.
 
-Each `TrackSeries` firing runs the same cycle: measure, aggregate, stamp, and then decide whether to record. Its collected data is therefore always a series. A best-median-worst aggregation gives a series of triples; a histogram aggregation gives a series of histograms; a pairwise aggregation gives a series of matrices. There is no separate series mechanism for a single value. A single value is a series of length one, or the last sample of a longer one. HeuristicLab confirms the shape by having needed `DataTableHistory`, `HeatMapHistory` and `ScatterPlotHistory` as three distinct types for exactly this.
+Each `Trace` observation runs the same cycle: measure, aggregate, moment, and then decide whether to record. Its collected data is therefore always a trace. A best-median-worst aggregation gives a trace of triples; a histogram aggregation gives a trace of histograms; a pairwise aggregation gives a trace of matrices. There is no separate mechanism for a single value. A single value is a trace of length one, or the last entry of a longer trace. HeuristicLab confirms the shape by having needed `DataTableHistory`, `HeatMapHistory` and `ScatterPlotHistory` as three distinct types for exactly this.
 
 #### A firing yields at most one sample
 
-One firing, one stamp, one sample. Zero when the recording policy declines, never more.
+One firing, one moment, one sample. Zero when the recording policy declines, never more.
 
 This was challenged by dynamic problems, where `EvaluationTiming` is attached per evaluation so one evaluator firing appears to span several epochs. The conclusion is that the model is right and `DynamicProblem` is wrong, which is addressed below.
 
-The alternative was to let an aggregation partition its readings by a coordinate and emit one sample per partition. That is rejected, because nothing needs it. Keying *within* a sample is what frequency maps already do, and transposed views read those back as one line per key. Partitioning into several samples would be a second way to express keyed data, with a second shape to store and read.
+The alternative was to let an aggregation partition its readings by a clock and emit one sample per partition. That is rejected, because nothing needs it. Keying *within* a sample is what frequency maps already do, and transposed views read those back as one line per key. Partitioning into several samples would be a second way to express keyed data, with a second shape to store and read.
 
 #### Aggregation works on two axes
 
@@ -116,7 +117,7 @@ Reducing the readings of one firing is the common case, but some analyses carry 
 
 #### Recording policy decides what the series costs
 
-Not every firing should produce a sample, and the difference is currently hard-coded into separate types: `BestMedianWorstAnalysis` records at every firing while `BestPerEvaluationAnalysis` records only when the best improves. That is the same one-type-per-variation mistake as the coordinate problem, so recording belongs in the model as its own choice.
+Not every firing should produce a sample, and the difference is currently hard-coded into separate types: `BestMedianWorstAnalysis` records at every firing while `BestPerEvaluationAnalysis` records only when the best improves. That is the same one-type-per-variation mistake as the clock problem, so recording belongs in the model as its own choice.
 
 At minimum the model must support recording at every firing, recording only when the value changes, recording every nth firing, and recording only the final firing.
 
@@ -126,11 +127,11 @@ This is also what makes expensive aggregations affordable. A similarity matrix p
 
 A series of frequency maps and a map of series carry the same information, but users want different ones. Nobody plots "the variable frequency map of generation 12"; they plot one line per variable across generations. HeuristicLab's variable frequency analyzer produces the transposed form directly, which is why that analyzer could not share machinery with the quality analyzers.
 
-Store the series as ordered samples. Provide transposed views over it for keyed values such as frequency maps and per-dimension measurements. Do not introduce a second accumulator shape to serve the transposed reading.
+Store the trace as ordered entries. Provide transposed views over it for keyed values such as frequency maps and per-dimension measurements. Do not introduce a second accumulator shape to serve the transposed reading.
 
 ### The catalog as combinations
 
-| User need                          | Anchor            | Measurement           | Aggregation          | Stamp                     |
+| User need                          | Anchor            | Measurement           | Aggregation          | Moment                     |
 | ---------------------------------- | ----------------- | --------------------- | -------------------- | ------------------------- |
 | Quality curve per iteration        | root algorithm    | objective value       | best, median, worst  | iteration, evaluations    |
 | Quality curve per evaluation       | root algorithm    | objective value       | best, median, worst  | iteration, evaluations    |
@@ -159,7 +160,7 @@ Every row above produces a series, one sample per recorded firing. The recording
 | Full population capture          | every nth firing    | the only thing that makes it affordable at all          |
 | Final best solution              | final only          | a series of length one                                   |
 
-The first two rows of the main table are the point of the whole exercise. They are the *same configuration*; only the coordinate read at plot time differs. Under the current design they are two separate analyzer types, and consolidating them is listed below as a migration decision that this model dissolves entirely.
+The first two rows of the main table are the point of the whole exercise. They are the *same configuration*; only the clock read at plot time differs. Under the current design they are two separate analyzer types, and consolidating them is listed below as a migration decision that this model dissolves entirely.
 
 Rows four, twelve and thirteen show that "aggregation" is not limited to descriptive statistics — carrying a running best, a non-dominated set or a scalar computed from the whole reading set are the same slot.
 
@@ -173,72 +174,71 @@ The library supplies the combinable pieces; users combine them, and only write a
 
 **Aggregations, across firings.** Running best, running worst, cumulative sum and cumulative count.
 
-**Stamps.** Iteration, cumulative evaluations and elapsed time as the default set, with domain stamps such as the dynamic epoch supplied by the problem area that owns them. Elapsed time is opt-in because a clock read per evaluation is not free.
+**Clocks.** Explicit iteration, cumulative-evaluation, elapsed-time and domain sources. Nothing is included by default. Only selected sources install observers or contribute values to moments.
 
 **Recording policies.** Every firing, on change, every nth firing, and final only.
 
-**Views over a series.** Reading against a chosen coordinate, and transposition for keyed values such as frequency maps.
+**Views over a series.** Typed `By(source)` reads against a selected clock, and transposition for keyed values such as frequency maps.
 
-### Anchors are classified by supply, not by role
+### Measurements read typed observations
 
-An anchor determines what can be measured there. A crossover has produced offspring, but nothing has evaluated them, so an objective value cannot be read at that boundary.
+The supply-interface hierarchy was tried and rejected. Types such as `ICandidateReadings`, `IObjectiveReadings`,
+`IEvaluatedPopulation` and `IDerivation` existed mainly to make contravariance select valid anchor and measurement
+combinations. They exposed type-system machinery as if it were domain language.
 
-The obvious way to express that is a rule per operator role. It is the wrong way, because **the set of operator roles is open**. A user can introduce a role, so the analysis system cannot enumerate roles and must not name one anywhere in its API.
+Each role-specific `Analyzer.Trace` overload maps its anchor directly to that role's typed observation. A target-typed
+measurement lambda receives the complete observation and selects the data it needs. This is a runtime-only convenience;
+an analyzer created with a lambda does not have serializable measurement configuration. Common and reusable measurements
+are immutable classes implementing `IMeasurement<TObservation, TValue>`. Their settings are ordinary serializable
+properties rather than captured delegate state.
 
-What is closed, and small, is the set of things a firing can supply.
+No separate derivation value exists. `CrossoverObservation` already contains offspring, parent pairs, search space and
+problem. A measurement that needs any combination reads it directly rather than receiving a second, less precise carrier.
 
-| Supply               | Carries                                            | Provided by                                                    |
-| -------------------- | ---------------------------------------------------- | -------------------------------------------------------------- |
-| Objective readings   | objective vectors only                             | anything that has evaluated something                          |
-| Candidate readings   | candidates only                                    | anything that has candidates                                   |
-| Context              | search space and problem                           | every anchor                                                   |
-| Evaluated population | candidates, objective vectors, context             | algorithm, interceptor, selector, replacer                     |
-| Candidate batch      | candidates, context                                | creator and any role producing candidates                      |
-| Derivation           | candidates, context, and the inputs they came from | crossover, mutator, refiner, creator, any user role of that shape |
-| State transition     | one search state gave way to the next              | interceptor, algorithm                                         |
+This design accepts one typed installation overload per observable role. Those overloads establish the actual
+anchor-to-observation relationship and are easier to discover than a public hierarchy of superficial capability
+interfaces. Both the algorithm and crossover spikes now use this direct path.
 
-The first three are narrow and compose into the rest. A measurement declares the **narrowest** supply it needs, which is what keeps valid combinations wide rather than narrow: quality needs objective readings only, so it binds to an algorithm and an evaluator alike.
+Internally, a `TraceSource` retains the typed anchor, measurement and aggregation behind the simpler
+`TraceAnalyzer<TResult>` type. A role-specific source installs the recorder that turns its observations into trace
+entries. The source is retained configuration; the recorder is the execution-time callback.
 
-Search space and problem travel together in one context supply, as they already do on operator roles. Omitting them was tried and rejected because a problem-dependent measurement must read the problem belonging to the observed run.
+### Clocks use observation, not ambient execution state
 
-A measurement or contribution declares the supply it requires. Binding succeeds when the anchor provides it and fails otherwise, before the run starts.
+A caller explicitly selects each clock. Iterations observe a chosen algorithm, evaluations observe a chosen
+evaluator, an epoch observes or reads a chosen dynamic problem, and elapsed time reads a chosen `TimeProvider`. This choice
+is semantic: a nested algorithm has a different iteration count from the root, and several evaluator boundaries may count
+different work.
 
-An analysis may consume several supplies and may treat some as optional. Optional does not mean ignorable: **absence has defined behavior that is part of what the analysis means.** Lineage requires derivations, because without them there is nothing to record, and optionally consumes state transitions, which separate generations. Given no state transition it produces a valid graph with every node in one generation. Given no creator it produces a valid graph whose roots have no attributed origin, which is legitimate when only crossover is of interest and is a strong hint of a misconfiguration otherwise, so the result must make unattributed roots visible rather than throwing or hiding them.
+Clocks use one of three acquisition modes. A source reads from the current immutable boundary context when the
+analyzer and clock share a boundary. A source on another boundary uses the replacement and observer machinery to
+retain its latest immutable value. A source such as elapsed time reads its value when the analyzer captures the moment.
+Algorithms, operators and problems do not receive or write into an analysis context, and search states remain free of
+execution data as required by § 4.2.
 
-That is different from an anchor that was named but never reached, which stays a configuration error.
+All clock and analyzer registrations are collected before the execution registry resolves the root instance. Only
+selected sources install observable replacements. Child registries inherit those replacements as they do for existing
+analyzer observations.
 
-This single mechanism settles three separate problems.
-
-1. An unusable combination such as an objective value at a crossover is rejected by the type system rather than by a run-time check.
-2. Multiple anchors bind to one analyzer without the API naming roles, because qualification is by supply. Genealogy binds creation, crossover and mutation because all three supply derivations, creation being one with no inputs.
-3. A user-defined operator role participates in analysis by declaring its supply, with no change to the analysis system and no per-role registration.
-
-The exact taxonomy is not final. The supplies above cover the current roles and the known use cases, but whether terminators and replacers need their own, and whether derivation is one supply or splits by arity, should be settled against real measurements rather than in the abstract.
-
-This design was verified against a compiling spike rather than argued: every valid combination compiles with no explicit type arguments, and both invalid combinations tested are compile errors. Variance is what makes it work, and it is what allows the shipped catalog to be non-generic. See [the API sketch](analysis-api-sketch.md) for the observed results.
-
-### The stamp must be readable at every anchor firing
-
-A stamp is only useful if it is available wherever a firing happens, including deep inside an iteration at an operator boundary. This is a requirement on the stamp, not on any individual analyzer.
-
-The information already exists. `IterativeAlgorithm.RunStreamingAsync` drives its loop over `yieldedStateCount`, which is the iteration number, and every operator call for that iteration happens inside `ExecuteStep`, lexically nested within that loop iteration. Each algorithm execution instance runs its own loop, so a nested algorithm has its own counter and an operator inside it reports the nested iteration, which is the granularity a user wants.
-
-What is missing is a channel from the loop to the observation callback, and today's genealogy analyzer shows what filling that gap by hand looks like: it anchors on an interceptor purely so that `AfterInterception` can tell it a generation ended. The interceptor is the last thing an iteration does, so it works, but using a transformation hook as a clock is a workaround for a missing channel rather than a design.
+At a shared anchor, the observable wrapper creates an immutable observation before it dispatches analyzers. The observation
+contains intrinsic facts about that occurrence, such as the algorithm iteration number. The analyzer passes that observation
+to its selected clocks while capturing the moment. No clock observer or callback ordering is needed at
+that boundary. Cross-boundary retained values have their ordinary temporal meaning: the latest value observed before the
+entry. Built-in retained sources have an initial value, such as zero evaluations, so every selected clock is present
+in every moment.
 
 Two rules follow.
 
-1. **Anchor an interceptor when analyzing what that interceptor does, never to find out what time it is.** Counting the candidates a duplicate-elimination interceptor removed per iteration is a real measurement with the interceptor as its subject. Observing an interceptor to learn the generation number is not.
-2. **Generations are recovered by grouping, not by signalling.** If every contribution carries the iteration it happened in, generations are a projection over stamps. This also works for algorithms that have no interceptor and no clean generation boundary, which a boundary signal does not.
+1. Anchor an interceptor when analyzing what that interceptor does, never to learn an iteration number.
+2. Recover generations by grouping derivation samples with a selected iteration clock rather than using an interceptor as a clock.
 
-Genealogy therefore binds derivation anchors only.
-
-Two constraints shape how the stamp can reach an operator firing, and both are recorded here because they rule out the obvious answers. Search states cannot carry it: § 4.2 forbids execution data in search states, and `SearchState` is deliberately empty. Role execution contracts cannot carry it either, because widening them is a non-goal of this rework and approaches the rejected typed-invocation design. That leaves a run-scoped ambient context that the iteration loop advances and observations read. Which mechanism is an implementation question deliberately left open.
+Genealogy therefore binds derivation anchors and selects an iteration clock when generation grouping is wanted.
 
 ### The series is one accumulator, not the whole system
 
 It is tempting to treat the series model as the analysis system and everything else as an escape hatch. That is the wrong layering, and genealogy shows why.
 
-Decompose genealogy in the vocabulary above. Its anchor is a crossover; the firing supplies parents and offspring; what it reads is the parent-to-offspring relation; the coordinates of the firing are the same iteration and evaluation counts as anywhere else. Only one thing differs: contributions fold into a graph instead of appending to an ordered list.
+Decompose genealogy in the vocabulary above. Its anchor is a crossover; the firing supplies parents and offspring; what it reads is the parent-to-offspring relation; the clocks of the firing are the same iteration and evaluation counts as anywhere else. Only one thing differs: contributions fold into a graph instead of appending to an ordered list.
 
 So the general mechanism is:
 
@@ -252,11 +252,11 @@ an accumulator
 a safe read
 ```
 
-A series analysis appends stamped samples. A lineage analysis merges edges and node data. Both are stateful objects attached to one run. They share anchors, firings, stamps and the recording decision, and differ in their accumulation and reading APIs.
+A trace analyzer appends momented entries. A lineage analyzer merges edges and node data. Both are stateful objects created before a run and bound to exactly one run by `CreateRun`. They share anchors, observations, moments and the recording decision, and differ in their accumulation and reading APIs.
 
 This layering has three consequences.
 
-1. Genealogy is not a bypass. It is a second accumulator over the same plumbing, and remodelling it on the new system is a goal rather than a risk. It keeps its state-transition anchor: the run's iteration counter advances at root-algorithm boundaries, so for a nested or steady-state algorithm many derivation firings share one root iteration and the stamp alone cannot say which generation a derivation belongs to.
+1. Genealogy is not a bypass. It is a second accumulator over the same plumbing, and remodelling it on the new system is a goal rather than a risk. It keeps its state-transition anchor: the run's iteration counter advances at root-algorithm boundaries, so for a nested or steady-state algorithm many derivation firings share one root iteration and the moment alone cannot say which generation a derivation belongs to.
 2. **One run-bound analysis may bind several anchors.** Genealogy needs creation, crossover and mutation folding into one graph. Separate `Track...` calls create independent analyses.
 3. Analysis-specific accumulation remains an extension point. A user who needs something that is neither a series nor a graph can provide custom accumulation and safe reading behavior without duplicating observation plumbing.
 
@@ -271,20 +271,20 @@ These terms are proposed additions to the glossary and should be settled before 
 | Iteration       | The algorithm's own step. `Generation` is a population-algorithm alias.   |
 | Evaluations     | Cumulative candidate evaluations in the run. The comparable axis.        |
 | Elapsed         | Wall-clock time since the run started.                                    |
-| Stamp           | The set of coordinates recorded with one sample.                          |
+| Moment           | The collective time recorded with one trace entry.                        |
 | Firing          | One visit to an anchor. An anchor fires many times per run.               |
-| Sample          | One stamp and one aggregated value.                                       |
-| Series          | The ordered samples collected by one run-bound series analysis.            |
+| Trace entry     | One moment and one aggregated value.                                       |
+| Trace           | The ordered entries collected by one trace analyzer.                      |
 | Measurement     | The value strategy read at a boundary.                                    |
 | Aggregation     | The value strategy reducing readings to one value, within or across firings. |
 | Recording policy | The rule deciding whether a firing produces a sample.                    |
 
 ## Goals
 
-1. Express the mainstream catalog as combinations of anchor, measurement, aggregation, stamp and recording policy rather than as one hand-written type per metric.
-2. Record every sample against all available coordinates so that one series can be read per iteration, per evaluation or per second without a second analyzer.
+1. Express the mainstream catalog as combinations of anchor, measurement, aggregation, moment and recording policy rather than as one hand-written type per metric.
+2. Record every sample against its explicitly selected clocks so that one series can be read on several chosen axes without a second analyzer.
 3. Make retention a configured choice rather than a property of which analyzer type was picked, so expensive aggregations stay affordable.
-4. Make the accumulator the extension point, so that analysis which is not a series is a different fold over the same anchors, firings and stamps rather than a separate framework. Genealogy is the reference case.
+4. Make the accumulator the extension point, so that analysis which is not a series is a different fold over the same anchors, firings and moments rather than a separate framework. Genealogy is the reference case.
 5. Let one analyzer bind several anchors into a single result, qualifying them by supply rather than by role, and keep that distinct from attaching one analysis to several anchors for several results.
 6. Preserve one fresh analysis result per analyzer and run.
 7. Keep observations read only and separate from algorithm behavior.
@@ -311,16 +311,16 @@ These terms are proposed additions to the glossary and should be settled before 
 
 ## Terminology and scope
 
-This plan uses the glossary meanings of analyzer, analyzer result, observation, observation anchor and run. It introduces measurement, aggregation, stamp, sample and series as defined above; those are proposed glossary additions and must be settled before the specs are written.
+This plan uses the glossary meanings of analyzer, analyzer result, observation, observation anchor and run. It introduces measurement, aggregation, moment, sample and series as defined above; those are proposed glossary additions and must be settled before the specs are written.
 
 It covers:
 
-- the composition model of anchor, measurement, aggregation and stamp
+- the composition model of anchor, measurement, aggregation and moment
 - the measurement and aggregation catalog shipped with the main and encoding packages
-- run-owned analyzer configurations and results
+- stateful analyses bound to one run
 - observation registration and installation
 - observable algorithm and operator wrappers as analyzer infrastructure
-- analyzer attachment and lookup on `AlgorithmRun`
+- analysis binding during `CreateRun`
 - analyzer fan-out across `ExperimentRun` trials
 - concrete quality, population, diversity and dynamic analyzers
 - private analysis adapters in Python interop
@@ -368,6 +368,43 @@ AlgorithmRun.GetResult(analyzer)
 | Instrumentation wrappers | Caller-owned counters and duration measurements               | Useful but distinct from run-owned analysis         |
 | Experimental analysis    | Genealogy, rank and dynamic-problem analysis                  | Useful research code with unresolved ownership      |
 | Concrete core analyzers  | Quality, population, Pareto and diversity analysis            | Uneven quality and coverage                         |
+
+### Observation and analysis must not remain competing user APIs
+
+The current public API offers two ways to react to the same execution boundary. A caller can wrap an algorithm or
+operator with `ObserveWith`, or create an analyzer and pass it to `CreateRun`. Sharing the observable wrappers underneath
+the analysis implementation would remove some duplicated machinery, but it would not remove this user-facing choice.
+
+The preferred direction is one public analysis system. `CreateRun` installs analyzers before resolving the execution
+graph, and analyzers are the ordinary way to inspect execution. The existing observable configurations, public observer
+interfaces and `ObserveWith` authoring API should not remain as a parallel feature merely because analysis can implement
+those interfaces internally.
+
+Typed observations can still be useful as the data passed to custom analysis code. Internal role-specific trace
+recorders can consume them, for example `AlgorithmTraceRecorder` and `CrossoverTraceRecorder`. Those recorders are
+implementation details and are not glossary terms. The remaining design question is the smallest custom-analyzer API
+that exposes typed observations without recreating a second observer framework under another name.
+
+This direction also separates two performance decisions. Installing no analyzer must leave the ordinary operator path
+unchanged. When analysis is installed, observation delivery should still avoid a mandatory heap allocation per operator
+call, particularly for evaluators. The mutator observation prototype is useful for settling its data shape, but its
+current class representation is not yet a performance commitment.
+
+The crossover spike tests this direction. Crossover traces install an internal `CrossoverAnalysisHook`; the internal
+`CrossoverTraceRecorder` receives a typed `CrossoverObservation` directly and does not implement `ICrossoverObserver`.
+The former `ObservableCrossover`, `ICrossoverObserver`, action observer and `ObserveWith` API are obsolete. They remain
+temporarily so the spike can coexist with existing tests and consumers, but the new trace path does not use them.
+
+Custom crossover trace authoring targets its typed observation directly. For example, a custom
+`IMeasurement<CrossoverObservation<...>, TValue>` can analyze offspring and parents while reusing the standard trace
+lifecycle, clocks, aggregation and safe reads. The `Trace` lambda overload provides the same runtime-only path without
+spelling the long observation type. Persisted or reusable analyzer configuration uses a concrete measurement class. This
+needs no public observer or observation-installation API. The custom accumulator design
+remains open and is the next useful test case.
+
+The spike keeps `CrossoverObservation` as a regular record. Before this representation is copied to every role, benchmark
+the class allocation and garbage-collection cost against a readonly-struct representation, including the copying and
+stack costs of the larger value. Optimize from those measurements rather than assuming either representation wins.
 
 ### What should be preserved
 
@@ -435,7 +472,7 @@ The public authoring facade contains twenty overloads, two for every observable 
 
 An observation anchor is matched by reference. A configuration copied with `with` is a different anchor. An analyzer attached to the old object records nothing when the copy runs.
 
-`TrackBestMedianWorst` avoids this for the root algorithm because it reads the anchor from the run. Named inner algorithms and operators still rely on caller-managed identity. The framework does not distinguish an anchor that resolved but had no calls from an anchor that never existed in the execution graph.
+The obsolete run-level `TrackBestMedianWorst` avoids this for the root algorithm because it reads the anchor from the run. Named inner algorithms and operators still rely on caller-managed identity. The framework does not distinguish an anchor that resolved but had no calls from an anchor that never existed in the execution graph.
 
 ### Analyzer run state is mostly mechanical
 
@@ -444,6 +481,11 @@ For ordinary analyzers, `Analyzer<TResult>` creates a private `IAnalyzerRunState
 Dynamic analysis is the only current implementation that needs custom run-state behavior. It subscribes to `DynamicProblem.OnEvaluation` and implements `IDisposable` so the run can unsubscribe later.
 
 The public abstraction is therefore heavy for normal authoring while its exceptional cleanup behavior remains implicit.
+
+The replacement API removes `IAnalyzerRunState` and `CreateAnalyzerState`. A stateful analyzer registers observations
+directly and owns its accumulator. Run completion and cleanup need one explicit lifecycle contract rather than a second
+object whose ordinary implementation only forwards to the analyzer. The production spike temporarily returns the analyzer
+itself from `CreateAnalyzerState` while the existing analyzer catalog still depends on the old contract.
 
 `DynamicAnalysis` copies the private `RunState` wrapper from `Analyzer<TResult>` verbatim and adds `IDisposable` to it. That duplication is the concrete cost of having no cleanup contract, and it disappears once a registration lifetime exists.
 
@@ -541,7 +583,7 @@ Keep in core:
 - observable algorithm and operator contracts
 - observation installation needed by runs
 - run-bound analysis and safe snapshot contracts
-- `TrackSeries`, common `Track...` shortcuts and analysis-specific attachment methods
+- `Analyzer.Trace`, common `Track...` shortcuts and analysis-specific factories
 - experiment trial integration if its delegate configuration remains acceptable
 - a small set of mature general analyzers, starting with best, median and worst quality
 
@@ -559,10 +601,11 @@ The move itself is done. What remains is deciding whether the two weakest main-p
 
 The implementation still has separate responsibilities:
 
-1. A `Track...` call chooses the analysis behavior and anchors.
-2. The returned run-bound analysis receives observations and holds mutable work data.
-3. The run owns observation installation, registration lifetime and cleanup.
-4. Properties expose already published immutable values without allocation. Methods publish immutable snapshots or projections and may allocate.
+1. An `Analyzer.Track...` call chooses the analysis behavior, anchors and clocks.
+2. `CreateRun` binds the returned stateful analysis exactly once.
+3. The bound analysis receives observations and holds mutable work data.
+4. The run owns observation installation, registration lifetime and cleanup.
+5. Properties expose already published immutable values without allocation. Methods publish immutable snapshots or projections and may allocate.
 
 Do not force ordinary users through separate reusable configuration, attachment handle and result lookup objects. Do not require ordinary analyzer authors to implement a wrapper whose only job is to forward `RegisterObservations`.
 
@@ -570,13 +613,13 @@ Do not force ordinary users through separate reusable configuration, attachment 
 
 Add a desired-state API usage spec beside the current API specs before changing contracts. It should demonstrate:
 
-1. Attaching a quality analyzer to the run without an interceptor, in one line.
-2. Reading the same series against two different coordinates without a second analyzer.
+1. Creating a quality analysis and passing it directly to `CreateRun` without an interceptor or setup type.
+2. Reading the same series against two different clocks without a second analyzer.
 3. A scalar reduction, a frequency map and a pairwise aggregation composed from the same parts.
 4. An encoding-specific measurement used with a general aggregation.
 5. Observing an explicitly named inner algorithm.
 6. Observing an operator for data that search states do not contain.
-7. A domain stamp, using the dynamic epoch.
+7. A domain moment, using the dynamic epoch.
 8. A recorded-on-change series beside a recorded-every-firing one, from the same measurement.
 9. A transposed read of a frequency series, one line per key.
 10. Reading the same typed analysis during and after execution.
@@ -630,19 +673,15 @@ Three situations must stay distinguishable, and today they are not:
 
 Only the first is an error. The other two are valid empty analyses.
 
-**The preference is to fail as early as possible**, ideally at `Track`, on the line where the mistake was made and naming the analysis and the unreachable anchor.
+**The preference is to fail as early as possible**, during `CreateRun`, naming the analysis and the unreachable anchor. This is the point where the root algorithm, requested analyses and materialized execution graph first meet.
 
-How early is achievable is an implementation question and is deliberately left open. In preference order:
-
-1. Throw at `Track`. Requires walking the configuration graph from the run's root algorithm to collect reachable configurations by reference. No such traversal exists today: `IExecutionInstanceResolvable` is a bare marker and `IOperator` exposes only `CreateExecutionInstance`. Adding declared children to every configuration is a large new public contract and would need weighing against non-goal 1 rather than assumed.
-2. Throw when execution starts, if the instance graph turns out to be walkable at that point.
-3. Throw at completion. `ExecutionInstanceRegistry` records whether each installed replacement was ever consumed by `Resolve`; because replacement lookup walks up the parent chain, consumption in any child registry counts.
+How much validation can finish before instance resolution remains an implementation question. The registry can at least track whether each installed replacement was consumed by `Resolve`. Replacement lookup walks up the parent chain, so consumption in any child registry counts. `CreateRun` must finish binding and validation before it returns a runnable `AlgorithmRun`.
 
 Any of these satisfies the requirement that the failure is loud. Which one is taken should be decided when the cost of each is known, not now.
 
 What is not open: a resolved anchor with zero invocations must not throw, and silent empty results must not remain the only behavior.
 
-Anchors supplied at attachment already remove the most common form of this mistake, and root helpers such as `TrackBestMedianWorst` take their anchor from the run so the dominant case cannot hold a stale copy at all.
+Every analysis names its anchors before run creation. `CreateRun` validates those anchors against the execution graph while binding the analysis.
 
 ### Define live reading and publication
 
@@ -656,10 +695,10 @@ A published result must not be a moving target. Handing out the live accumulator
 
 Point 2 is the one that matters most, because it is silent.
 
-Live reads are supported. The stateful object returned by `TrackSeries` has one reading API during and after execution:
+Live reads are supported. The stateful object returned by `Trace` has one reading API during and after execution:
 
 - Properties such as `Latest`, `SampleCount` and `IsCompleted` return already published values that are safe to share. They do not allocate or perform projections.
-- Methods such as `Snapshot`, `ByIteration`, `ByEvaluations` and `Transpose` may allocate. Each returns an immutable value that never changes after publication.
+- Methods such as `Snapshot`, `By(clock)` and `Transpose` may allocate. Each returns an immutable value that never changes after publication.
 - Separate property reads are individually safe but are not transactional. Callers use one snapshot when several values must agree.
 - The analysis object never exposes its mutable accumulator through `IReadOnlyList<T>` or a deferred query.
 
@@ -737,11 +776,11 @@ The replacement should:
 5. Reject an empty observed population with a clear error.
 6. Preserve structural equality for retained anchor collections if anchors remain part of analyzer configuration.
 
-### Collapse the evaluation-count analyzers into the stamp model
+### Collapse the evaluation-count analyzers into the moment model
 
-`BestMedianWorstAnalysis`, `BestMedianWorstPerEvaluationAnalysis`, `BestPerEvaluationAnalysis` and `BestQualityAlgorithmAnalysis` are four types for what the composition model treats as at most two configurations. The first two differ only in which coordinate they record against, which stamps remove entirely. The last two differ only in aggregation, running best against best, median and worst.
+`BestMedianWorstAnalysis`, `BestMedianWorstPerEvaluationAnalysis`, `BestPerEvaluationAnalysis` and `BestQualityAlgorithmAnalysis` are four types for what the composition model treats as at most two configurations. The first two differ only in which clock they record against, which moments remove entirely. The last two differ only in aggregation, running best against best, median and worst.
 
-Do not migrate these four types. Replace them with the composed form and keep a convenience entry point for the dominant case so that `TrackBestMedianWorst` stays a single line.
+Do not migrate these four types. Replace them with the composed form and keep a convenience entry point for the dominant case so that `TraceBestMedianWorst` stays a single line.
 
 The one behavior worth carrying over deliberately is the retention difference: recording only on improvement produces a much smaller series than recording at every boundary. That is a property of the aggregation and recording policy, not a reason for a separate analyzer type.
 
@@ -787,25 +826,25 @@ Checked against the three of them:
 
 | Analyzer | Expression on the new model |
 | --- | --- |
-| `QualityCurvePerEpochAnalysis` | quality measurement, best aggregation, epoch coordinate |
-| `InvalidPerEpochAnalysis` | validity measurement, counting aggregation, epoch coordinate |
+| `QualityCurvePerEpochAnalysis` | quality measurement, best aggregation, epoch clock |
+| `InvalidPerEpochAnalysis` | validity measurement, counting aggregation, epoch clock |
 | `BestBeforeChangePerformanceAnalysis` | per-epoch best series plus an online curve model fitted across firings |
 
 The first two are ordinary compositions. The third is not a plain series: it maintains a fitted model and derives a prediction from it. That is the second accumulator besides lineage, which is useful evidence that the accumulator is the right extension point rather than an abstraction invented for one case.
 
-Two obligations follow. The epoch must be a stamp coordinate contributed by the problem area that owns it, not a bespoke event channel. And no dynamic analyzer may implement disposal, override analyzer state creation, or otherwise need machinery the other analyzers do not.
+Two obligations follow. The epoch must be a moment clock contributed by the problem area that owns it, not a bespoke event channel. And no dynamic analyzer may implement disposal, override analyzer state creation, or otherwise need machinery the other analyzers do not.
 
 ### Rework `EvaluationTiming` rather than bend the model around it
 
 `EvaluationTiming(long EpochCount, int Epoch, bool Valid)` is what made dynamic analysis look like it needed several samples per firing. It conflates two unrelated things.
 
-`EpochCount` is a free-running counter incremented once per evaluation. That is an evaluation index, and the run-owned `evaluations` coordinate supersedes it entirely. It is not an epoch and should not be named as one.
+`EpochCount` is a free-running counter incremented once per evaluation. That is an evaluation index, and an explicitly selected evaluator clock supersedes it entirely. It is not an epoch and should not be named as one.
 
-`Epoch` is the environment version, and it is the only genuine domain coordinate here. The important observation is that it is **already stable within a firing** for two of the three update policies: `ResolvePendingUpdates` runs at `AfterEvaluation` or `AfterInterception` boundaries, so every candidate in a batch was evaluated against the same environment even while the free-running counter ticked over mid-batch. Tagging those evaluations with different epoch numbers is therefore already misleading, independently of analysis.
+`Epoch` is the environment version, and it is the only genuine domain clock here. The important observation is that it is **already stable within a firing** for two of the three update policies: `ResolvePendingUpdates` runs at `AfterEvaluation` or `AfterInterception` boundaries, so every candidate in a batch was evaluated against the same environment even while the free-running counter ticked over mid-batch. Tagging those evaluations with different epoch numbers is therefore already misleading, independently of analysis.
 
 The rework is to record the environment version an evaluation was actually made against, and to drop the redundant counter. One firing then carries one environment version and the model holds without relaxation.
 
-`UpdatePolicy.Asynchronous` is the real exception, because it resolves updates inside `Evaluate` and the environment can genuinely change mid-batch. Three ways out, to be decided when the dynamic problems are reworked: take the environment version at the start of a firing and accept the approximation, declare that asynchronous updates do not support epoch-coordinated series at evaluator anchors, or reconsider the policy. This is a small decision and should not hold up the model.
+`UpdatePolicy.Asynchronous` is the real exception, because it resolves updates inside `Evaluate` and the environment can genuinely change mid-batch. Three ways out, to be decided when the dynamic problems are reworked: take the environment version at the start of a firing and accept the approximation, declare that asynchronous updates do not support epoch-clockd series at evaluator anchors, or reconsider the policy. This is a small decision and should not hold up the model.
 
 `DynamicProblem` is experimental, so changing it is preferable to distorting a contract the whole library depends on.
 
@@ -813,11 +852,12 @@ The rework is to record the environment version an evaluation was actually made 
 
 ### Phase 1: Lock the desired usage
 
-1. Settle the composition vocabulary. Confirm measurement, aggregation, stamp, firing, sample, series and recording policy as glossary terms, and confirm the default stamp coordinates.
+1. Settle the composition vocabulary. Confirm measurement, aggregation, clock, moment, firing, sample, series and recording policy as glossary terms. No clock is included by default.
 2. Settle which measurements, aggregations, recording policies and accumulators ship, and in which package each lives.
-3. Settle the supply taxonomy and how a measurement declares the supply it requires. The approach is fixed: classify anchors by supply, never by role, so that an unusable combination such as an objective value at a crossover is unrepresentable and a user-defined role participates without any analysis-side change. What is open is the exact set of supplies. This is the hardest ergonomic question in the design and the specs exist mainly to answer it.
-4. Decide whether the run owns the canonical evaluation and time counters. Stamps are only possible if it does, and it is what lets four current analyzers collapse into one.
-5. Add desired-state API usage specs beside the current analysis specs, covering at minimum a scalar reduction, a frequency map, a pairwise aggregation, a domain stamp and one hand-written analyzer that bypasses the composition layer.
+3. Pass each role's typed observation directly to its measurements. Add one role-specific `Trace` overload to establish
+   each anchor-to-observation mapping. Do not reintroduce a public supply hierarchy.
+4. Implement typed clocks over existing observers, with explicit source selection and typed `By(source)` reads.
+5. Add desired-state API usage specs beside the current analysis specs, covering at minimum a scalar reduction, a frequency map, a pairwise aggregation, a domain moment and one hand-written analyzer that bypasses the composition layer.
 6. Confirm the live reading API: cheap immutable properties, allocating snapshot and projection methods, and a locked mutable accumulator for the first implementation.
 7. Confirm that unresolved anchors fail loudly, and defer the point of failure to implementation.
 8. Decide whether `BestMedianWorstPerEvaluationAnalysis` and `BestQualityAlgorithmAnalysis` stay in the main package. The rest of the boundary is already executed: the main package now holds only those two and `BestMedianWorstAnalysis`.
@@ -842,19 +882,20 @@ The rework is to record the environment version an evaluation was actually made 
 
 ### Phase 4: Build the composition layer
 
-1. Introduce the stamp and the run-owned counters that populate it.
-2. Introduce the stateful run-bound series, its locked accumulator and its immutable snapshot and projection values.
-3. Introduce the measurement, aggregation and recording contracts used directly by `TrackSeries`.
+1. Introduce typed clocks, immutable boundary contexts and moments containing only selected clocks.
+2. Introduce the stateful run-bound trace, its locked accumulator and its immutable snapshot and projection values.
+3. Introduce the measurement, aggregation and recording contracts used directly by `Analyzer.Trace`.
 4. Support aggregation within a firing and across firings as separate choices.
 5. Ship the general measurement and aggregation catalog and the recording policies.
 6. Ship the encoding-specific measurements next to their encodings.
-7. Provide series views: reading against a chosen coordinate, and transposition for keyed values.
-8. Provide `TrackBestMedianWorst` as a convenience method over `TrackSeries`.
+7. Provide typed `By(source)` trace views and transposition for keyed values.
+8. Provide `Analyzer.TraceBestMedianWorst` as a convenience method over `Analyzer.Trace`.
+9. Add `CreateRun(..., params IAnalyzer[] analyzers)` as the only analyzer-binding boundary and keep attachment methods off `AlgorithmRun`.
 
 ### Phase 5: Migrate analyzers onto the model
 
-1. Replace the four overlapping quality analyzers with `TrackSeries` compositions and convenience methods.
-2. Rework `EvaluationTiming` so the epoch is an environment version and the redundant evaluation counter is dropped, then move dynamic per-epoch analysis onto a domain stamp as ordinary compositions with no disposal and no custom analyzer state.
+1. Replace the four overlapping quality analyzers with `Trace` compositions and convenience methods.
+2. Rework `EvaluationTiming` so the epoch is an environment version and the redundant evaluation counter is dropped, then move dynamic per-epoch analysis onto a domain moment as ordinary compositions with no disposal and no custom analyzer state.
 3. Express Pareto front and hypervolume as aggregations once the objective-system work allows.
 4. Migrate experiment trial integration.
 5. Remodel genealogy as a lineage accumulator with several bound anchors, keeping its current identity comparer until provenance is designed.
@@ -885,7 +926,7 @@ The rework is to record the environment version an evaluation was actually made 
 Cover:
 
 1. One fresh result per analyzer and run.
-2. Duplicate analyzer attachment behavior.
+2. Rejection when the same analysis is supplied twice or reused for another run.
 3. Result access before start, during execution, after completion, after cancellation and after failure.
 4. Cleanup when a stream is never enumerated.
 5. Cleanup after partial analyzer setup failure.
@@ -936,14 +977,14 @@ During implementation, run the narrowest relevant tests first. Before merging th
 
 The rework is complete when:
 
-1. The mainstream catalog is expressed as combinations of anchor, measurement, aggregation, stamp and recording policy, and adding a metric, an axis or a retention rule does not add an analyzer type.
-2. One series can be read against iteration, evaluations and elapsed time without reconfiguring or rerunning.
-3. A measurement that an anchor cannot supply is rejected before the run starts.
-4. Every `TrackSeries` composition produces a series, and a single value is the last sample of one rather than a second result shape.
+1. The mainstream catalog is expressed as combinations of anchor, measurement, aggregation, moment and recording policy, and adding a metric, an axis or a retention rule does not add an analyzer type.
+2. One series can be read against every clock selected when it was attached, without rerunning.
+3. A measurement and anchor combination without a matching `Trace` overload is rejected at compile time.
+4. Every `Trace` composition produces a trace, and a single value is the last entry of one rather than a second result shape.
 5. A keyed series such as a frequency map can be read transposed without a second accumulator.
 6. Recording policy is configurable, so an expensive aggregation can be sampled rather than labelled a memory hazard.
-7. Analysis that is not a series is a different accumulator over the same anchors, firings and stamps, demonstrated by genealogy remodelled onto the new system.
-8. Each `Track...` call returns an independent stateful analysis object bound to that run and its chosen anchors.
+7. Analysis that is not a series is a different accumulator over the same anchors, firings and moments, demonstrated by genealogy remodelled onto the new system.
+8. Each `Track...` call returns an independent stateful analysis object that `CreateRun` binds once to that run and its chosen anchors.
 9. The desired API usage specs are the normal documented path.
 10. Analyzer setup cannot leak registrations on any tested exit path.
 11. Observation merging no longer depends on compatible callers choosing identical closed generic types.
@@ -960,6 +1001,8 @@ The rework is complete when:
 22. Python interop no longer uses `Analyzer<object>` solely as a callback carrier.
 23. The analyzer architecture document describes the implementation rather than an earlier design.
 24. The rework preserves the accepted broad namespace layout and limits any further moves to analysis concepts that genuinely changed.
+25. `AlgorithmRun` exposes no way to attach analysis after creation.
+26. The analysis overload of `CreateRun` accepts `params IAnalyzer[]`, and the overload without analyzers remains available.
 
 ## Decisions and trade-offs
 
@@ -969,14 +1012,12 @@ Settled decisions, each with what was rejected and why. Reopen one only with new
 
 | Decision | Rejected alternative | Why |
 | --- | --- | --- |
-| Coordinates are recorded together on every sample; the axis is chosen at read time | One analyzer per axis | HeuristicLab shipped three types for one metric and HeuristicLib was reproducing it. A reading at the end of iteration 7 is simultaneously at evaluation 700 and 1.4 seconds; these are not alternatives |
-| The mainstream catalog is combinations of anchor, measurement, aggregation, stamp and recording | A hand-written type per metric | Adding a metric or an axis should not add a type |
-| A series is one accumulator; the accumulator is the extension point | A series system with a hand-written escape hatch beside it | Genealogy decomposes into the same anchors, firings and stamps and differs only in the fold. Framing it as a bypass would have duplicated the plumbing |
-| Anchors are classified by what they supply, never by role | A table of which roles admit which measurements | The role set is open and a user can extend it. The supply set is closed and small. One mechanism then settles compile-time rejection, role-free multi-anchor binding and user-defined roles. Verified by a compiling spike |
-| Supplies carry search space and problem, in a shared context | Omitting both so measurements never spell them | Problem-dependent measurements need the run's actual context rather than captured external state. Covariance keeps the catalog non-generic either way, so there is no inference cost |
-| A measurement declares the narrowest supply it needs | Declaring against the richest supply an anchor offers | Narrow declarations keep valid combinations wide and produce legible compile errors. The narrow supplies carry real members, so they are not bare markers |
-| Supplies may be optional, and absence has defined behavior | Required-anchor validation | Lineage without a state transition is a valid one-generation graph; without a creator it is a valid graph with unattributed roots. Absence is part of what the analysis means |
-| Generations are recovered by grouping stamps | A boundary signal from an interceptor | Grouping also works for algorithms with no interceptor and no clean generation boundary. Anchoring an interceptor to learn the time is a workaround for a missing channel |
+| Explicitly selected clocks are recorded together on every sample | One analyzer per axis; attaching every known clock automatically | One series can support several axes, but observing an unused source has a cost and nested algorithms or evaluators make automatic selection ambiguous |
+| The mainstream catalog is combinations of anchor, measurement, aggregation, moment and recording | A hand-written type per metric | Adding a metric or an axis should not add a type |
+| A series is one accumulator; the accumulator is the extension point | A series system with a hand-written escape hatch beside it | Genealogy decomposes into the same anchors, firings and moments and differs only in the fold. Framing it as a bypass would have duplicated the plumbing |
+| Measurements receive typed observations through role-specific overloads | A public supply-interface hierarchy or binding-selected intermediate collections | `ICandidateReadings`, `IObjectiveReadings`, `IEvaluatedPopulation` and `IDerivation` were type-system adapters rather than useful domain concepts. Binding-selected collections hid the actual anchor-to-observation relationship and made identity measurements appear necessary |
+| Crossover parent and offspring data stays on `CrossoverObservation` | A separate flattened derivation carrier | The observation already contains both values and preserves parent pairs. The extra carrier duplicated data and lost structure |
+| Generations are recovered by grouping moments with a selected iteration source | A boundary signal from an interceptor | The source identifies which algorithm's iterations define generations. Anchoring an interceptor to learn the time is a workaround for a missing observation |
 | Recording policy is a configured choice | Retention baked into which analyzer type was picked | It is what makes an n-squared aggregation affordable, and it is the same one-type-per-variation mistake as the axis problem |
 | Transposition is a read-time view | A second accumulator shape for keyed values | Same information, different reading. Storing both would double the state |
 
@@ -984,15 +1025,18 @@ Settled decisions, each with what was rejected and why. Reopen one only with new
 
 | Decision | Rejected alternative | Why |
 | --- | --- | --- |
-| `TrackSeries` composes and attaches in one call | A separate universal analysis configuration followed by `Track` and result lookup | The split made a simple analysis appear as a reusable definition, a run-specific handle and a result. Most users need one run-bound analysis, so the main API returns that object directly |
-| A `Track...` call returns a stateful run-bound analysis | An inert handle plus `run.GetResult(handle)` | The returned object already belongs to one run and can expose typed safe reads directly. Separate calls create independent analyses |
+| `Analyzer.Trace` creates the stateful analyzer and `CreateRun` binds it | Attaching through `AlgorithmRun`; a universal definition followed by result lookup | The caller declares anchors and clocks before execution and keeps the typed object used for live reads. `AlgorithmRun` cannot enter an unsupported late-attachment state |
+| `CreateRun` has a `params IAnalyzer[]` overload | `AlgorithmRunSetup`; storing analyzers on every algorithm configuration; an optional collection parameter | Run creation is already where configuration and runtime dependencies become one execution. An overload keeps analysis visible without adding another lifecycle type or polluting algorithm configurations |
+| An analyzer is used with one run by convention | Global ownership tracking and runtime reuse checks | The ordinary API does not need machinery for accidental cross-run sharing. Intentional shared accumulation can define its own semantics later |
+| A `Track...` call returns a stateful analysis with typed reads | An inert handle plus `run.GetResult(handle)` | The object can collect data after binding and expose safe reads directly. Separate calls create independent analyses |
 | One `Track...` call with several anchors feeds one analysis | A separate keyword for multi-anchor binding | Genealogy needs several derivation anchors folding into one graph. Separate calls remain the clear way to create separate analyses |
 | Live reads use cheap properties and allocating methods | Completed-only reads; exposing the live collection | Streaming users need current analysis data. `Latest` can return an immutable sample without allocation, while `Snapshot` and projections make publication cost explicit and never expose moving storage |
 | The initial store is a locked mutable collection copied on publication | An append-only lock-free log | The measured copy costs are acceptable, and ordinary locking has a much smaller correctness risk. Revisit only with profiling evidence |
 | No partial result type | A distinct type for cancelled or failed runs | The caller already knows it cancelled |
 | `ImmutableList<T>` is rejected as the series store | using it for free snapshots | Measured: 467 ms append and 1241 MB at a million samples, against 5.5 ms and 23 MB for an append-only log. It allocates on the operation a series performs most. Which store replaces it is still open |
-| `TrackSeries` is the common attachment and composition verb | Keeping `WithAnalyzer`; requiring `Analyze.Series` before attachment | It says what the run will retain and returns the object that holds that run's collected data. Common shortcuts such as `TrackBestMedianWorst` preconfigure it |
-| Coordinate reads are named methods | A coordinate enum | Each returns a different x type |
+| `Analyzer.Trace` is the common composition factory | Keeping `WithAnalyzer`; attaching through the runnable run | It returns the object that will hold one run's collected data. Common shortcuts such as `Analyzer.TraceBestMedianWorst` preconfigure it |
+| A typed clock-source object is also the `By(source)` read key | Dedicated methods; a clock enum | The source preserves the x type, distinguishes two sources of the same kind and makes unavailable clocks explicit |
+| Clock observers update before analysis observers capture moments | Depending on registration order | A source and an analysis may observe the same boundary. Correct moments cannot depend on which attachment happened first |
 
 ### Lifecycle
 
@@ -1002,7 +1046,7 @@ Settled decisions, each with what was rejected and why. Reopen one only with new
 | Dynamic evaluation batches become readable state on the problem | An event, or a dedicated observation source | The event exists only because the log is cleared immediately after firing. Readable state lets any number of analyzers read the same batch with no ordering dependence and no subscription |
 | Dynamic analyzers are expressed on the composition model, not merely detached from the event | Removing disposal but leaving them a parallel system | A tidier teardown around the same bespoke machinery is the same hack in better clothing. No dynamic analyzer may implement disposal or override analyzer state creation |
 | One firing yields at most one sample | Letting an aggregation partition readings and emit several | Nothing needs it. Keying within a sample is what frequency maps do, and transposed views read them back. Partitioning would be a second way to express keyed data with a second shape to store |
-| Rework `EvaluationTiming` rather than relax the model for it | Multi-sample firings to accommodate per-evaluation epochs | It conflates a free-running evaluation counter with the environment version. The counter is superseded by the run-owned `evaluations` coordinate, and the environment version is already stable within a firing for two of three update policies. `DynamicProblem` is experimental; the sample model is not |
+| Rework `EvaluationTiming` rather than relax the model for it | Multi-sample firings to accommodate per-evaluation epochs | It conflates a free-running evaluation counter with the environment version. An evaluator clock owns the count, and the environment version is already stable within a firing for two of three update policies. `DynamicProblem` is experimental; the sample model is not |
 | No run lifecycle state machine for reading analysis | An execution state enum | The same properties and snapshot methods work during and after execution. This avoids colliding with the separate run-lifecycle backlog item |
 | Unresolved anchors fail loudly; how early is an open implementation choice | Silent empty results; a queryable diagnostic | A silently empty curve reads as "the algorithm did not improve" rather than "your instrumentation is detached". Earlier is better, but `Track`-time detection needs a configuration graph walk that does not exist, so the point of failure is decided when its cost is known |
 
@@ -1020,7 +1064,7 @@ Both prerequisites are cleared. The mechanical namespace and folder restructurin
 
 The namespace work may have to move or rename some analysis files a second time if the replacement API changes their concepts. That cost is acceptable because the namespace work was bounded and release-facing, while the analysis redesign needs more time.
 
-Coordinate with these backlog items:
+Clock with these backlog items:
 
 - the `AlgorithmRun` and `ExperimentRun` lifecycle backlog item
 - the objective-system backlog item before finalizing Pareto and hypervolume analysis

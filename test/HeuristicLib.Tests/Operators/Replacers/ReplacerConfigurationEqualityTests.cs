@@ -65,19 +65,6 @@ public class ReplacerConfigurationEqualityTests
         measured.ShouldBe(measuredEqual);
     }
 
-    [Fact]
-    public void ObservableReplacer_SnapshotsObserversAndUsesTheirIdentityInEquality()
-    {
-        var observer = new ActionReplacerObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _, _, _) => { });
-        var observers = new List<IReplacerObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { observer };
-        var left = new ObservableReplacer<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new OffsetReplacer(1), observers);
-        var equal = new ObservableReplacer<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new OffsetReplacer(1), observer);
-
-        observers.Clear();
-
-        left.Observers.ShouldBe([observer]);
-        left.ShouldBe(equal);
-    }
 
     [Fact]
     public void ParetoCrowdingReplacer_WithReconfiguredSetting_IsNotEqual()

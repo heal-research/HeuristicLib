@@ -48,22 +48,13 @@ public class RefinerBatchSemanticsTests
     public void InstrumentationRefiners_ReportThePopulationTheRefinerActuallyReturned()
     {
         var counter = new ObservationCounter();
-        IReadOnlyList<Individual>? observedRefined = null;
-        IReadOnlyList<Individual>? observedCandidates = null;
         var instance = new DropLastRefiner()
             .CountRefinedCandidates(counter)
-            .ObserveWith((refined, candidates, _, _) =>
-            {
-                observedRefined = refined;
-                observedCandidates = candidates;
-            })
             .CreateExecutionInstance();
 
         Refine(instance, 1, 2, 3);
 
         counter.CurrentCount.ShouldBe(2);
-        observedRefined!.Count.ShouldBe(2);
-        observedCandidates!.Count.ShouldBe(3);
     }
 
     // This topology assigns each candidate to a child and restores input order, which needs one result per assigned
@@ -89,7 +80,6 @@ public class RefinerBatchSemanticsTests
         yield return ("rate limited", new AddOffsetRefiner(1).WithRate(0.0));
         yield return ("counting", noChange.CountRefinedCandidates(new ObservationCounter()));
         yield return ("duration measuring", noChange.MeasureRefinerDuration(new ObservationDuration()));
-        yield return ("observable", noChange.ObserveWith((IReadOnlyList<Individual> _) => { }));
         yield return ("improvement checking", noChange.WithImprovementCheck());
         yield return ("single candidate", new IdentityRefiner());
     }

@@ -9,19 +9,8 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators;
 
-public class ObservableOperatorCounterTests
+public class OperatorInstrumentationTests
 {
-    [Fact]
-    public void ObservableCreator_SnapshotsObservers()
-    {
-        var observer = new ActionCreatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var observers = new List<ICreatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>> { observer };
-        var observable = new ObservableCreator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new SequenceCreator(), observers);
-
-        observers.Clear();
-
-        observable.Observers.ShouldBe([observer]);
-    }
 
     [Fact]
     public void CountCreatorCalls_IncrementsOncePerCreateCall()
@@ -70,18 +59,6 @@ public class ObservableOperatorCounterTests
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
-    [Fact]
-    public void ObservableCreator_DoesNotInvokeObserversWhenCreationThrows()
-    {
-        var observed = 0;
-        var instance = new ThrowingCreator().ObserveWith((IReadOnlyList<int> _) => observed++).CreateExecutionInstance();
-        var problem = CreateProblem();
-
-        Should.Throw<InvalidOperationException>(() =>
-            instance.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
-
-        observed.ShouldBe(0);
-    }
 
     [Fact]
     public void CountCreatorCalls_DoesNotIncrementWhenCreationThrows()
@@ -110,57 +87,8 @@ public class ObservableOperatorCounterTests
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
-    [Fact]
-    public void ObservableMutator_SnapshotsObservers()
-    {
-        var observer = new ActionMutatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var observers = new List<IMutatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>> { observer };
-        var observable = new ObservableMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOneMutator(), observers);
 
-        observers.Clear();
 
-        observable.Observers.ShouldBe([observer]);
-    }
-
-    [Fact]
-    public void ObservableMutator_InvokesObserversInOrderWithOffspringAndParents()
-    {
-        var calls = new List<string>();
-        IReadOnlyList<int> observedOffspring = [];
-        IReadOnlyList<int> observedParents = [];
-        var problem = CreateProblem();
-
-        var mutator = new AddOneMutator().ObserveWith(
-            new ActionMutatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((offspring, parents, searchSpace, observedProblem) =>
-            {
-                calls.Add("first");
-                observedOffspring = offspring;
-                observedParents = parents;
-                searchSpace.ShouldBeSameAs(problem.SearchSpace);
-                observedProblem.ShouldBeSameAs(problem);
-            }),
-            new ActionMutatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((_, _, _, _) => calls.Add("second")));
-
-        var result = mutator.CreateExecutionInstance().Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-
-        calls.ShouldBe(["first", "second"]);
-        observedOffspring.ShouldBeSameAs(result);
-        observedOffspring.ShouldBe([2, 3, 4]);
-        observedParents.ShouldBe([1, 2, 3]);
-    }
-
-    [Fact]
-    public void ObservableMutator_DoesNotInvokeObserversWhenMutationThrows()
-    {
-        var observed = 0;
-        var instance = new ThrowingMutator().ObserveWith((IReadOnlyList<int> _) => observed++).CreateExecutionInstance();
-        var problem = CreateProblem();
-
-        Should.Throw<InvalidOperationException>(() =>
-            instance.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
-
-        observed.ShouldBe(0);
-    }
 
     [Fact]
     public void CountMutatorCalls_IncrementsOncePerMutateCall()
@@ -366,18 +294,6 @@ public class ObservableOperatorCounterTests
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
-    [Fact]
-    public void ObservableCrossover_DoesNotInvokeObserversWhenCrossoverThrows()
-    {
-        var observed = 0;
-        var instance = new ThrowingCrossover().ObserveWith((IReadOnlyList<int> _) => observed++).CreateExecutionInstance();
-        var problem = CreateProblem();
-
-        Should.Throw<InvalidOperationException>(() =>
-            instance.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
-
-        observed.ShouldBe(0);
-    }
 
     [Fact]
     public void CountCrossoverCalls_DoesNotIncrementWhenCrossoverThrows()
@@ -422,71 +338,9 @@ public class ObservableOperatorCounterTests
         counter.CurrentCount.ShouldBe(2);
     }
 
-    [Fact]
-    public void ObservableSelector_SnapshotsObservers()
-    {
-        var observer = new ActionSelectorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((_, _, _, _, _, _) => { });
-        var observers = new List<ISelectorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>> { observer };
-        var observable = new ObservableSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new FirstCandidatesSelector(), observers);
 
-        observers.Clear();
 
-        observable.Observers.ShouldBe([observer]);
-    }
 
-    [Fact]
-    public void ObservableSelector_NormalizesDefaultObserverArrayToEmpty()
-    {
-        ImmutableArray<ISelectorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>> observers = default;
-
-        var observable = new ObservableSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new FirstCandidatesSelector(), observers);
-
-        observable.Observers.IsEmpty.ShouldBeTrue();
-        observable.Observers.ShouldBeEmpty();
-    }
-
-    [Fact]
-    public void ObservableSelector_InvokesObserversInOrderWithSelectionAndPopulation()
-    {
-        var calls = new List<string>();
-        IReadOnlyList<EvaluatedCandidate<int>> observedSelection = [];
-        IReadOnlyList<EvaluatedCandidate<int>> observedPopulation = [];
-        var population = CreateEvaluatedCandidates([1, 2, 3]);
-        var problem = CreateProblem();
-
-        var selector = new FirstCandidatesSelector().ObserveWith(
-            new ActionSelectorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((selected, candidates, objective, count, searchSpace, observedProblem) =>
-            {
-                calls.Add("first");
-                observedSelection = selected;
-                observedPopulation = candidates;
-                objective.ShouldBe(problem.Objective);
-                count.ShouldBe(2);
-                searchSpace.ShouldBeSameAs(problem.SearchSpace);
-                observedProblem.ShouldBeSameAs(problem);
-            }),
-            new ActionSelectorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((_, _, _, _, _, _) => calls.Add("second")));
-
-        var result = selector.CreateExecutionInstance().Select(population, problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-
-        calls.ShouldBe(["first", "second"]);
-        observedSelection.ShouldBeSameAs(result);
-        observedSelection.ShouldBe([population[0], population[1]]);
-        observedPopulation.ShouldBeSameAs(population);
-    }
-
-    [Fact]
-    public void ObservableSelector_DoesNotInvokeObserversWhenSelectionThrows()
-    {
-        var observed = 0;
-        var instance = new ThrowingSelector().ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => observed++).CreateExecutionInstance();
-        var problem = CreateProblem();
-
-        Should.Throw<InvalidOperationException>(() =>
-            instance.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
-
-        observed.ShouldBe(0);
-    }
 
     [Fact]
     public void CountSelectedCandidates_IncrementsByReturnedCandidateCount()
@@ -605,24 +459,6 @@ public class ObservableOperatorCounterTests
         counter.CurrentCount.ShouldBe(3);
     }
 
-    [Fact]
-    public void ObservableReplacer_DoesNotInvokeObserversWhenReplacementThrows()
-    {
-        var observed = 0;
-        var instance = new ThrowingReplacer().ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => observed++).CreateExecutionInstance();
-        var problem = CreateProblem();
-
-        Should.Throw<InvalidOperationException>(() => instance.Replace(
-            CreateEvaluatedCandidates([1]),
-            CreateEvaluatedCandidates([2]),
-            problem.Objective,
-            1,
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem));
-
-        observed.ShouldBe(0);
-    }
 
     [Fact]
     public void CountReplacerCalls_DoesNotCountFailedCall()
@@ -725,17 +561,6 @@ public class ObservableOperatorCounterTests
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
-    [Fact]
-    public void ObservableInterceptor_DoesNotInvokeObserversWhenTransformThrows()
-    {
-        var observed = 0;
-        var instance = new ThrowingInterceptor().ObserveWith((CounterState _) => observed++).CreateExecutionInstance();
-        var problem = CreateProblem();
-
-        Should.Throw<InvalidOperationException>(() => instance.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
-
-        observed.ShouldBe(0);
-    }
 
     [Fact]
     public void CountInterceptorCalls_DoesNotCountFailedCall()
@@ -793,17 +618,6 @@ public class ObservableOperatorCounterTests
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
-    [Fact]
-    public void ObservableTerminator_DoesNotInvokeObserversWhenTerminalStateCheckThrows()
-    {
-        var observed = 0;
-        var instance = new ThrowingTerminator().ObserveWith((bool _) => observed++).CreateExecutionInstance();
-        var problem = CreateProblem();
-
-        Should.Throw<InvalidOperationException>(() => instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
-
-        observed.ShouldBe(0);
-    }
 
     [Fact]
     public void CountTerminatorCalls_DoesNotCountFailedCall()

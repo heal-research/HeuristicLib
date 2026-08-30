@@ -633,8 +633,7 @@ public class OperatorBudgetAlgorithmTests
                 RealVectorSearchSpace,
                 TestFunctionProblem,
                 PopulationState<RealVector>,
-                IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>,
-                IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>>
+                IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
@@ -660,8 +659,7 @@ public class OperatorBudgetAlgorithmTests
                 RealVectorSearchSpace,
                 TestFunctionProblem,
                 PopulationState<RealVector>,
-                IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>,
-                IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>>
+                IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
@@ -695,6 +693,23 @@ public class OperatorBudgetAlgorithmTests
         budgeted.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
     }
 
+    [Fact]
+    public void OperatorBudget_KeepsAnalysisObservationsOnTheCountedOperator()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 3
+        };
+        var analyzer = new EvaluationObservingAnalyzer(algorithm.Evaluator);
+
+        algorithm.WithMaxEvaluatedCandidates(algorithm.Evaluator, maximumCandidates: 1000)
+                 .CreateRun(problem, RandomNumberGenerator.Create(42), analyzer)
+                 .Complete(cancellationToken: TestContext.Current.CancellationToken);
+
+        analyzer.ObservedCandidates.ShouldBeGreaterThan(0);
+    }
+
     private static TestFunctionProblem CreateProblem()
     {
         return new TestFunctionProblem(new SphereFunction(dimension: 3));
@@ -713,6 +728,21 @@ public class OperatorBudgetAlgorithmTests
             Selector = RandomSelector.For(problem),
             Elites = 0
         };
+    }
+
+    /// <summary>
+    /// Counts the candidates evaluated by one evaluator, so that a run can assert the observation was installed even
+    /// when a budget algorithm decorates the same evaluator.
+    /// </summary>
+    private sealed class EvaluationObservingAnalyzer(IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> evaluator)
+        : IAnalyzer, IObservationRecorder<EvaluatorObservation<RealVector, RealVectorSearchSpace, TestFunctionProblem>>
+    {
+        public int ObservedCandidates { get; private set; }
+
+        public void Install(ExecutionInstanceRegistry registry) => registry.Observe(evaluator, this);
+
+        public void Record(EvaluatorObservation<RealVector, RealVectorSearchSpace, TestFunctionProblem> observation) =>
+            ObservedCandidates += observation.ObjectiveVectors.Count;
     }
 
     private sealed class AdvancingTimeProvider(TimeSpan step) : TimeProvider

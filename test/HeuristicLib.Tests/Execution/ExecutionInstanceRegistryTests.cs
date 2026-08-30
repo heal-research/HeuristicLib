@@ -3,123 +3,6 @@ namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 public class ExecutionInstanceRegistryTests
 {
     [Fact]
-    public void RegisterInstance_ReturnsRegisteredInstance()
-    {
-        var registry = new ExecutionInstanceRegistry();
-        var resolvable = new CountingResolvable("created");
-        var registeredInstance = new NamedInstance("registered");
-
-        registry.RegisterInstance(resolvable, registeredInstance);
-
-        registry.Resolve(resolvable).ShouldBeSameAs(registeredInstance);
-        resolvable.CreateCount.ShouldBe(0);
-    }
-
-    [Fact]
-    public void RegisterInstance_ThrowsWhenInstanceWasAlreadyRegistered()
-    {
-        var registry = new ExecutionInstanceRegistry();
-        var resolvable = new CountingResolvable("created");
-
-        registry.RegisterInstance(resolvable, new NamedInstance("first"));
-
-        var exception = Should.Throw<InvalidOperationException>(() =>
-            registry.RegisterInstance(resolvable, new NamedInstance("second")));
-
-        exception.Message.ShouldBe("Execution instance has already been registered for this resolvable.");
-    }
-
-    [Fact]
-    public void RegisterReplacement_StoresReplacementUnderOriginalIdentity()
-    {
-        var registry = new ExecutionInstanceRegistry();
-        var original = new CountingResolvable("original");
-        var replacement = new CountingResolvable("replacement");
-
-        registry.RegisterReplacement(original, replacement);
-
-        var resolved = registry.Resolve(original);
-
-        resolved.Name.ShouldBe("replacement");
-        original.CreateCount.ShouldBe(0);
-        replacement.CreateCount.ShouldBe(1);
-        registry.Resolve(original).ShouldBeSameAs(resolved);
-    }
-
-    [Fact]
-    public void RegisterReplacement_ThrowsWhenReplacementWasAlreadyRegistered()
-    {
-        var registry = new ExecutionInstanceRegistry();
-        var original = new CountingResolvable("original");
-
-        registry.RegisterReplacement(original, new CountingResolvable("first"));
-
-        var exception = Should.Throw<InvalidOperationException>(() =>
-            registry.RegisterReplacement(original, new CountingResolvable("second")));
-
-        exception.Message.ShouldBe("Replacement has already been registered for this resolvable.");
-    }
-
-    [Fact]
-    public void RegisterReplacement_AllowsReplacementToResolveOriginal()
-    {
-        var registry = new ExecutionInstanceRegistry();
-        var original = new CountingResolvable("original");
-        var replacement = new WrappingResolvable(original);
-
-        registry.RegisterReplacement(original, replacement);
-
-        var resolved = registry.Resolve(original);
-
-        var wrapped = resolved.ShouldBeOfType<WrappedInstance>();
-        wrapped.Inner.Name.ShouldBe("original");
-        original.CreateCount.ShouldBe(1);
-        replacement.CreateCount.ShouldBe(1);
-        registry.Resolve(original).ShouldBeSameAs(resolved);
-    }
-
-    [Fact]
-    public void RegisterReplacement_IsInheritedByChildRegistry()
-    {
-        var parentRegistry = new ExecutionInstanceRegistry();
-        var childRegistry = parentRegistry.CreateChildRegistry();
-        var original = new CountingResolvable("original");
-        var replacement = new CountingResolvable("replacement");
-
-        parentRegistry.RegisterReplacement(original, replacement);
-
-        var resolved = childRegistry.Resolve(original);
-
-        resolved.Name.ShouldBe("replacement");
-        original.CreateCount.ShouldBe(0);
-        replacement.CreateCount.ShouldBe(1);
-        parentRegistry.Resolve(original).ShouldNotBeSameAs(resolved);
-        childRegistry.Resolve(original).ShouldBeSameAs(resolved);
-    }
-
-    [Fact]
-    public void RegisterReplacement_InChildRegistryOverridesParentReplacement()
-    {
-        var parentRegistry = new ExecutionInstanceRegistry();
-        var childRegistry = parentRegistry.CreateChildRegistry();
-        var original = new CountingResolvable("original");
-        var parentReplacement = new CountingResolvable("parent replacement");
-        var childReplacement = new CountingResolvable("child replacement");
-
-        parentRegistry.RegisterReplacement(original, parentReplacement);
-        childRegistry.RegisterReplacement(original, childReplacement);
-
-        var childResolved = childRegistry.Resolve(original);
-        var parentResolved = parentRegistry.Resolve(original);
-
-        childResolved.Name.ShouldBe("child replacement");
-        parentResolved.Name.ShouldBe("parent replacement");
-        original.CreateCount.ShouldBe(0);
-        parentReplacement.CreateCount.ShouldBe(1);
-        childReplacement.CreateCount.ShouldBe(1);
-    }
-
-    [Fact]
     public void CreateChildRegistry_ReusesResolvedParentInstance()
     {
         var parentRegistry = new ExecutionInstanceRegistry();
@@ -132,6 +15,56 @@ public class ExecutionInstanceRegistryTests
         resolvable.CreateCount.ShouldBe(1);
     }
 
+    [Fact]
+    public void Decorate_AppliesTheFirstRegisteredDecorationInnermost()
+    {
+        var registry = new ExecutionInstanceRegistry();
+        IExecutionInstanceResolvable<INamedInstance> original = new CountingResolvable("original");
+
+        registry.Decorate(original, current => new LabelledResolvable("first", current));
+        registry.Decorate(original, current => new LabelledResolvable("second", current));
+
+        registry.Resolve(original).Name.ShouldBe("second(first(original))");
+    }
+
+    [Fact]
+    public void Decorate_InChildRegistryComposesWithParentDecoration()
+    {
+        var parentRegistry = new ExecutionInstanceRegistry();
+        var childRegistry = parentRegistry.CreateChildRegistry();
+        IExecutionInstanceResolvable<INamedInstance> original = new CountingResolvable("original");
+
+        parentRegistry.Decorate(original, current => new LabelledResolvable("parent", current));
+        childRegistry.Decorate(original, current => new LabelledResolvable("child", current));
+
+        childRegistry.Resolve(original).Name.ShouldBe("child(parent(original))");
+    }
+
+    [Fact]
+    public void Decorate_InChildRegistryLeavesParentResolutionUndecorated()
+    {
+        var parentRegistry = new ExecutionInstanceRegistry();
+        var childRegistry = parentRegistry.CreateChildRegistry();
+        IExecutionInstanceResolvable<INamedInstance> original = new CountingResolvable("original");
+
+        parentRegistry.Decorate(original, current => new LabelledResolvable("parent", current));
+        childRegistry.Decorate(original, current => new LabelledResolvable("child", current));
+
+        parentRegistry.Resolve(original).Name.ShouldBe("parent(original)");
+    }
+
+    [Fact]
+    public void Decorate_StacksTheSameDecorationWhenItIsRegisteredTwice()
+    {
+        var registry = new ExecutionInstanceRegistry();
+        IExecutionInstanceResolvable<INamedInstance> original = new CountingResolvable("original");
+
+        registry.Decorate(original, current => new LabelledResolvable("counted", current));
+        registry.Decorate(original, current => new LabelledResolvable("counted", current));
+
+        registry.Resolve(original).Name.ShouldBe("counted(counted(original))");
+    }
+
     private interface INamedInstance : IExecutionInstance
     {
         string Name { get; }
@@ -140,13 +73,6 @@ public class ExecutionInstanceRegistryTests
     private sealed class NamedInstance(string name) : INamedInstance
     {
         public string Name { get; } = name;
-    }
-
-    private sealed class WrappedInstance(INamedInstance inner) : INamedInstance
-    {
-        public string Name => $"wrapped {Inner.Name}";
-
-        public INamedInstance Inner { get; } = inner;
     }
 
     private sealed class CountingResolvable(string name) : IExecutionInstanceResolvable<INamedInstance>
@@ -160,15 +86,10 @@ public class ExecutionInstanceRegistryTests
         }
     }
 
-    private sealed class WrappingResolvable(IExecutionInstanceResolvable<INamedInstance> inner)
+    private sealed class LabelledResolvable(string label, IExecutionInstanceResolvable<INamedInstance> inner)
         : IExecutionInstanceResolvable<INamedInstance>
     {
-        public int CreateCount { get; private set; }
-
-        public INamedInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-        {
-            CreateCount++;
-            return new WrappedInstance(instanceRegistry.Resolve(inner));
-        }
+        public INamedInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+            new NamedInstance($"{label}({instanceRegistry.Resolve(inner).Name})");
     }
 }

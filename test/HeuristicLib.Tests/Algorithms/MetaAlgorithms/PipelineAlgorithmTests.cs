@@ -64,12 +64,12 @@ public class PipelineAlgorithmTests
         var evaluator = new ForwardingEvaluator();
         var pipeline = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Then(new AdditiveStepAlgorithm(10) { Evaluator = evaluator }, new AdditiveStepAlgorithm(100) { Evaluator = evaluator });
         var analysis = new EvaluationCountAnalysis(evaluator);
-        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analysis);
+        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0), analysis);
 
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 11, 111]);
-        run.GetResult(analysis).Count.ShouldBe(3);
+        analysis.AnalysisResult.Count.ShouldBe(3);
     }
 
     [Fact]
@@ -100,16 +100,15 @@ public class PipelineAlgorithmTests
         }
     }
 
-    private sealed record EvaluationCountAnalysis(
-        IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator)
-        : Analyzer<EvaluationCountAnalysis.Result>
+    private sealed class EvaluationCountAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator)
+        : IAnalyzer, IObservationRecorder<EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>>
     {
-        public override Result CreateInitialResult() => new();
+        public Result AnalysisResult { get; } = new();
 
-        public override void RegisterObservations(ObservationPlan observations, Result result)
-        {
-            observations.Observe(Evaluator, (_, objectiveVectors, _, _) => result.Count += objectiveVectors.Count);
-        }
+        public void Install(ExecutionInstanceRegistry registry) => registry.Observe(evaluator, this);
+
+        public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
+            AnalysisResult.Count += observation.Candidates.Count;
 
         public sealed class Result
         {

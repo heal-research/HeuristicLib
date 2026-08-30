@@ -8,17 +8,25 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance>
-    : Algorithm<OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance>, TCandidate, TSearchSpace, TProblem, TSearchState>
+public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>
+    : Algorithm<OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
-    where TOperator : IOperator<TObservedInstance>
-    where TObservedInstance : class, IOperatorInstance
+    where TOperator : class, IOperator, IExecutionInstanceResolvable<IExecutionInstance>
 {
     public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
     public required TOperator ObservedOperator { get; init; }
-    public required Func<TOperator, ObservationCounter, IOperator<TObservedInstance>> CountedOperatorFactory { get; init; }
+
+    /// <summary>
+    /// Gets the factory that wraps the observed operator in a counting operator.
+    /// </summary>
+    /// <remarks>
+    /// The factory receives whatever the surrounding execution already resolves for the observed operator, which may
+    /// itself be a wrapper installed by an analyzer or by an enclosing budget, so that the decorations compose. The
+    /// returned operator is expected to keep the observed operator's role, as every operator wrapper does.
+    /// </remarks>
+    public required Func<TOperator, ObservationCounter, TOperator> CountedOperatorFactory { get; init; }
 
     /// <summary>
     /// Gets the counted-operator budget. The expected value is positive.
@@ -29,9 +37,8 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearc
     public override OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         var counter = new ObservationCounter();
-        var countedOperator = CountedOperatorFactory(ObservedOperator, counter);
         var childRegistry = instanceRegistry.CreateChildRegistry();
-        childRegistry.RegisterReplacement(ObservedOperator, countedOperator);
+        childRegistry.Decorate(ObservedOperator, current => CountedOperatorFactory(current, counter));
 
         return new(childRegistry.Resolve(Algorithm), counter, MaximumCount);
     }

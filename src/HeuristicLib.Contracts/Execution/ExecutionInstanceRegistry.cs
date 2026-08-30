@@ -103,12 +103,6 @@ public class ExecutionInstanceRegistry
         where TExecutionInstance : class, IExecutionInstance =>
         resolvable is null ? null : Resolve(resolvable);
 
-    public void RegisterInstance<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable, TExecutionInstance instance)
-        where TExecutionInstance : class, IExecutionInstance
-    {
-        StoreInstance(resolvable, instance);
-    }
-
     private void StoreInstance(IExecutionInstanceResolvable<IExecutionInstance> resolvable, IExecutionInstance instance)
     {
         if (!registry.TryAdd(resolvable, instance))
@@ -117,12 +111,24 @@ public class ExecutionInstanceRegistry
         }
     }
 
-    public void RegisterReplacement<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable, IExecutionInstanceResolvable<TExecutionInstance> replacementResolvable)
-        where TExecutionInstance : class, IExecutionInstance
+    /// <summary>
+    /// Wraps whatever is currently registered for a resolvable, so that several decorations compose instead of
+    /// shadowing one another.
+    /// </summary>
+    /// <remarks>
+    /// The decoration is applied to the resolvable this registry currently resolves, which may be inherited from a
+    /// parent registry, and the result is stored in this registry. Decorations therefore stay scoped: one registered
+    /// in a child registry does not affect resolution in the parent. The first decoration registered for a resolvable
+    /// becomes the innermost wrapper and so observes an operation first. Registering the same decoration twice stacks
+    /// it twice rather than failing.
+    /// </remarks>
+    public void Decorate<TResolvable>(TResolvable resolvable, Func<TResolvable, TResolvable> decorate)
+        where TResolvable : class, IExecutionInstanceResolvable<IExecutionInstance>
     {
-        if (!replacementResolvables.TryAdd(resolvable, replacementResolvable))
-        {
-            throw new InvalidOperationException("Replacement has already been registered for this resolvable.");
-        }
+        var current = TryGetReplacementResolvable(resolvable, out var replacementResolvable)
+            ? (TResolvable)replacementResolvable
+            : resolvable;
+
+        replacementResolvables[resolvable] = decorate(current);
     }
 }

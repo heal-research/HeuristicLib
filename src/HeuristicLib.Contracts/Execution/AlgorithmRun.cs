@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
@@ -10,94 +9,40 @@ namespace HEAL.HeuristicLib.Execution;
 
 public abstract class AlgorithmRun
 {
-    private readonly List<IAnalyzer> analyzers = [];
-    private Dictionary<IAnalyzer, IAnalyzerRunState>? analyzerStates;
+    private readonly ImmutableArray<IExecutionHook> hooks;
+
+    protected AlgorithmRun(IReadOnlyList<IExecutionHook> hooks)
+    {
+        this.hooks = [.. hooks];
+    }
 
     public bool ExecutionStarted { get; private set; }
-
-    protected void AttachAnalyzer(IAnalyzer analyzer)
-    {
-        EnsureNotStarted();
-        analyzers.Add(analyzer);
-    }
-
-    protected void AttachAnalyzers(IReadOnlyList<IAnalyzer> analyzers)
-    {
-        EnsureNotStarted();
-        this.analyzers.AddRange(analyzers);
-    }
 
     protected ExecutionInstanceRegistry StartExecution()
     {
         EnsureNotStarted();
         ExecutionStarted = true;
 
-        var observationPlan = new ObservationPlan();
-        analyzerStates = new Dictionary<IAnalyzer, IAnalyzerRunState>(ReferenceEqualityComparer.Instance);
-
-        foreach (var analyzer in analyzers)
-        {
-            var analyzerState = analyzer.CreateAnalyzerState();
-            analyzerStates.Add(analyzer, analyzerState);
-            analyzerState.RegisterObservations(observationPlan);
-        }
-
         var registry = new ExecutionInstanceRegistry();
-        observationPlan.Install(registry);
+
+        // Installed in the order they were supplied, so the first installation at an anchor observes it first.
+        foreach (var hook in hooks)
+            hook.Install(registry);
+
         return registry;
     }
 
-    //TODO: Discuss whether we really want this. A disposable analyzer run state is a strange contract: it makes every
-    //      analyzer a potential resource owner and couples run teardown to analyzer internals. The only current need is
-    //      unsubscribing from problem events, which might be better solved by a dedicated subscription lifetime.
-    protected void DisposeAnalyzerStates()
+    /// <summary>
+    /// Completes everything installed that owns a resource or a completion state when the run ends.
+    /// </summary>
+    protected void DisposeHooks()
     {
-        if (analyzerStates is null)
-            return;
-
-        foreach (var state in analyzerStates.Values)
+        foreach (var hook in hooks)
         {
-            if (state is IDisposable disposable)
+            if (hook is IDisposable disposable)
                 disposable.Dispose();
         }
     }
-
-    public TResult GetResult<TResult>(IAnalyzer<TResult> analyzer) where TResult : class
-    {
-        var states = GetAnalyzerStates();
-        if (!states.TryGetValue(analyzer, out var state))
-        {
-            throw new KeyNotFoundException($"No analyzer found for analyzer {analyzer}");
-        }
-
-        if (state is IAnalyzerRunState<TResult> typedState)
-        {
-            return typedState.Result;
-        }
-
-        throw CreateResultTypeMismatchException(analyzer, state);
-    }
-
-    public bool TryGetResult<TResult>(IAnalyzer<TResult> analyzer, [MaybeNullWhen(false)] out TResult result) where TResult : class
-    {
-        var states = GetAnalyzerStates();
-        if (!states.TryGetValue(analyzer, out var state))
-        {
-            result = null;
-            return false;
-        }
-
-        if (state is IAnalyzerRunState<TResult> typedState)
-        {
-            result = typedState.Result;
-            return true;
-        }
-
-        throw CreateResultTypeMismatchException(analyzer, state);
-    }
-
-    private Dictionary<IAnalyzer, IAnalyzerRunState> GetAnalyzerStates() =>
-        analyzerStates ?? throw new InvalidOperationException("Analyzer results are not available before the run starts.");
 
     private void EnsureNotStarted()
     {
@@ -107,8 +52,6 @@ public abstract class AlgorithmRun
         }
     }
 
-    private static InvalidOperationException CreateResultTypeMismatchException<TResult>(IAnalyzer<TResult> analyzer, IAnalyzerRunState state) where TResult : class =>
-        new($"Analyzer {analyzer} created run state {state.GetType()} which does not implement {typeof(IAnalyzerRunState<TResult>)}.");
 }
 
 public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> : AlgorithmRun
@@ -123,30 +66,16 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     public IRandomNumberGenerator Random { get; }
 
     public AlgorithmRun(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random)
+        : this(algorithm, problem, random, [])
+    {
+    }
+
+    public AlgorithmRun(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random, IReadOnlyList<IExecutionHook> hooks)
+        : base(hooks)
     {
         Algorithm = algorithm;
         Problem = problem;
         Random = random;
-    }
-
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> WithAnalyzer(IAnalyzer analyzer)
-    {
-        AttachAnalyzer(analyzer);
-        return this;
-    }
-
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> WithAnalyzer<TAnalyzer>(TAnalyzer analyzer, out TAnalyzer attachedAnalyzer)
-        where TAnalyzer : IAnalyzer
-    {
-        attachedAnalyzer = analyzer;
-        AttachAnalyzer(analyzer);
-        return this;
-    }
-
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> WithAnalyzers(params IReadOnlyList<IAnalyzer> analyzers)
-    {
-        AttachAnalyzers(analyzers);
-        return this;
     }
 
     public ExecutionStream<TSearchState> Stream(TSearchState? initialState = null, CancellationToken cancellationToken = default)
@@ -172,7 +101,7 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         }
         finally
         {
-            DisposeAnalyzerStates();
+            DisposeHooks();
         }
     }
 }

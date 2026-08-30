@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Evaluators;
 
-public class ObservableEvaluatorTests
+public class EvaluatorInstrumentationTests
 {
     [Fact]
     public void CountEvaluatorCalls_IncrementsOncePerEvaluateCall()
@@ -53,18 +53,6 @@ public class ObservableEvaluatorTests
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
-    [Fact]
-    public void ObservableEvaluator_DoesNotInvokeObserversWhenEvaluationThrows()
-    {
-        var observed = 0;
-        var evaluator = new ThrowingEvaluator().ObserveWith((IReadOnlyList<ObjectiveVector> _, IReadOnlyList<int> _) => observed++);
-        var problem = CreateProblem();
-
-        Should.Throw<InvalidOperationException>(() =>
-            evaluator.CreateExecutionInstance().Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
-
-        observed.ShouldBe(0);
-    }
 
     [Fact]
     public void CountEvaluatorCalls_DoesNotCountFailedCall()

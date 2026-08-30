@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -15,6 +16,12 @@ public static class ExperimentExtensions
         where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
         public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> CreateRun(TProblem problem, IRandomNumberGenerator random) => new(experiment, problem, random);
+
+        /// <summary>
+        /// Creates the run and gives every trial its own analyzer from each trial analyzer.
+        /// </summary>
+        public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> CreateRun(TProblem problem, IRandomNumberGenerator random, params IReadOnlyList<TrialAnalyzer<TAlgorithm>> trialAnalyzers) =>
+            new(experiment, problem, random, trialAnalyzers);
 
         public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(TProblem problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
             experiment.CreateRun(problem, random).Stream(concurrency, initialState, cancellationToken);

@@ -7,12 +7,9 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-// ToDo: A DynamicProblem should be, foremost, a Problem. It "being" also an Observer, is an interesting way of implementing about it, but we have to think if this is really what we want.
 public abstract class DynamicProblem<TCandidate, TSearchSpace> :
     SingleSolutionProblem<TCandidate, TSearchSpace>,
     IDynamicProblem<TCandidate, TSearchSpace>,
-    IEvaluatorObserver<TCandidate, TSearchSpace, DynamicProblem<TCandidate, TSearchSpace>>,
-    IInterceptorObserver<TCandidate, TSearchSpace, DynamicProblem<TCandidate, TSearchSpace>, ISearchState>,
     IDisposable
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {

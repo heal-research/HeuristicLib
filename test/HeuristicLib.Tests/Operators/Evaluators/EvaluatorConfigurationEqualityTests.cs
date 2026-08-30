@@ -55,19 +55,6 @@ public class EvaluatorConfigurationEqualityTests
         measured.ShouldBe(measuredEqual);
     }
 
-    [Fact]
-    public void ObservableEvaluator_SnapshotsObserversAndUsesTheirIdentityInEquality()
-    {
-        var observer = new ActionEvaluatorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var observers = new List<IEvaluatorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { observer };
-        var left = new ObservableEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new OffsetEvaluator(1), observers);
-        var equal = new ObservableEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new OffsetEvaluator(1), observer);
-
-        observers.Clear();
-
-        left.Observers.ShouldBe([observer]);
-        left.ShouldBe(equal);
-    }
 
     [Fact]
     public void ConcreteEvaluatorSettings_ArePubliclyReconfigurable()

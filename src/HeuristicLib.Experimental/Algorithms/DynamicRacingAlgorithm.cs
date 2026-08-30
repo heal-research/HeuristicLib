@@ -356,17 +356,27 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
         private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct)
         {
-            var inheritedRegistry = ParentRegistry.CreateChildRegistry();
-            var inheritedEvaluator = inheritedRegistry.Resolve(evaluator);
-            var contenderRegistry = inheritedRegistry.CreateChildRegistry();
-            contenderRegistry.RegisterInstance(evaluator, new PerformanceTrackingEvaluatorInstance(inheritedEvaluator, performanceObserver));
+            var contenderRegistry = ParentRegistry.CreateChildRegistry();
+            contenderRegistry.Decorate(evaluator, current => new PerformanceTrackingEvaluator(current, performanceObserver));
             return contenderRegistry.Resolve(Algorithm).Stream(problem, random, initialState, ct).GetEnumerator();
         }
     }
 
+    /// <summary>
+    /// Reports one contender's evaluations to its own performance observer, without affecting sibling contenders.
+    /// </summary>
+    private sealed record PerformanceTrackingEvaluator(
+        IEvaluator<TCandidate, TSearchSpace, TProblem> ChildEvaluator,
+        PerformanceTrackingEvaluatorObserver Observer)
+        : IEvaluator<TCandidate, TSearchSpace, TProblem>
+    {
+        public IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+            new PerformanceTrackingEvaluatorInstance(instanceRegistry.Resolve(ChildEvaluator), Observer);
+    }
+
     private sealed class PerformanceTrackingEvaluatorInstance(
         IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator,
-        IEvaluatorObserver<TCandidate, TSearchSpace, TProblem> observer)
+        PerformanceTrackingEvaluatorObserver observer)
         : IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>
     {
         public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
@@ -377,7 +387,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         }
     }
 
-    private sealed class PerformanceTrackingEvaluatorObserver : IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>
+    private sealed class PerformanceTrackingEvaluatorObserver
     {
         private readonly int modelObservationInterval;
         private readonly Func<ObjectiveVector, double> objectiveValueSelector;

@@ -8,17 +8,25 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance>
-    : Algorithm<OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance>, TCandidate, TSearchSpace, TProblem, TSearchState>
+public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>
+    : Algorithm<OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
-    where TOperator : IOperator<TObservedInstance>
-    where TObservedInstance : class, IOperatorInstance
+    where TOperator : class, IOperator, IExecutionInstanceResolvable<IExecutionInstance>
 {
     public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
     public required TOperator ObservedOperator { get; init; }
-    public required Func<TOperator, ObservationDuration, TimeProvider, IOperator<TObservedInstance>> MeasuredOperatorFactory { get; init; }
+
+    /// <summary>
+    /// Gets the factory that wraps the observed operator in a duration-measuring operator.
+    /// </summary>
+    /// <remarks>
+    /// The factory receives whatever the surrounding execution already resolves for the observed operator, which may
+    /// itself be a wrapper installed by an analyzer or by an enclosing budget, so that the decorations compose. The
+    /// returned operator is expected to keep the observed operator's role, as every operator wrapper does.
+    /// </remarks>
+    public required Func<TOperator, ObservationDuration, TimeProvider, TOperator> MeasuredOperatorFactory { get; init; }
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
     /// <summary>
@@ -30,9 +38,8 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem
     public override OperatorDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         var duration = new ObservationDuration();
-        var measuredOperator = MeasuredOperatorFactory(ObservedOperator, duration, TimeProvider);
         var childRegistry = instanceRegistry.CreateChildRegistry();
-        childRegistry.RegisterReplacement(ObservedOperator, measuredOperator);
+        childRegistry.Decorate(ObservedOperator, current => MeasuredOperatorFactory(current, duration, TimeProvider));
 
         return new(childRegistry.Resolve(Algorithm), duration, MaximumDuration);
     }

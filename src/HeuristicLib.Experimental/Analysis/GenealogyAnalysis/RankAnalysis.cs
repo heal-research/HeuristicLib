@@ -1,38 +1,60 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 
-public record RankAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> : Analyzer<RankState<TCandidate>>
+/// <summary>
+/// Reads what this analysis collected, without naming its anchor types.
+/// </summary>
+public interface IRankAnalysis<TCandidate> : IAnalyzer
+    where TCandidate : notnull
+{
+    RankState<TCandidate> State { get; }
+}
+
+/// <summary>
+/// Records, per generation, the average rank of the descendants of each candidate in the generation before it.
+/// </summary>
+/// <remarks>
+/// This analyzer composes a genealogy analysis: it installs that analysis into a graph it owns and adds one observation
+/// of its own. That composition is the case a replacement authoring model still has to cover.
+/// </remarks>
+public sealed class RankAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> : IRankAnalysis<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : PopulationState<TCandidate>
     where TCandidate : notnull
 {
     private readonly GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> graphBuilder;
-    private readonly IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor;
+    private readonly ImmutableArray<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithms;
 
-    public RankAnalysis(ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
-                        IMutator<TCandidate, TSearchSpace, TProblem>? mutator = null,
-                        IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor = null,
+    /// <param name="algorithms">
+    /// Algorithms whose yielded populations close a generation, which is also where ranks are read. Without one the
+    /// graph is still built, but no ranks are recorded.
+    /// </param>
+    public RankAnalysis(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>>? crossovers = null,
+                        IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>>? mutators = null,
+                        IReadOnlyList<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>>? algorithms = null,
                         IEqualityComparer<TCandidate>? equality = null)
     {
-        graphBuilder =
-            new GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(crossover, mutator, interceptor,
-                equality);
-        this.interceptor = interceptor;
+        State = new RankState<TCandidate>(new GenealogyGraph<TCandidate>(equality ?? EqualityComparer<TCandidate>.Default));
+        graphBuilder = new GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(
+            State.Graph, crossovers, mutators, algorithms, saveSpace: false);
+        this.algorithms = [.. algorithms ?? []];
     }
 
-    public override RankState<TCandidate> CreateInitialResult() => new(graphBuilder.CreateInitialResult());
+    public RankState<TCandidate> State { get; }
 
-    public override void RegisterObservations(ObservationPlan observations, RankState<TCandidate> result)
+    public void Install(ExecutionInstanceRegistry registry)
     {
-        graphBuilder.RegisterObservations(observations,
-            result.Graph); //tells sub-analyzer to record its findings into outer result
-        if (interceptor is not null)
-            observations.Observe(interceptor, (_, _, _, _, _) => RecordRanks(result));
+        // Installed first, so the graph already contains this generation when the ranks over it are read.
+        graphBuilder.Install(registry);
+
+        foreach (var algorithm in algorithms)
+            registry.Observe(algorithm, _ => RecordRanks(State));
     }
 
     private static void RecordRanks(RankState<TCandidate> state)
@@ -52,6 +74,13 @@ public record RankAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> : A
             state.Ranks.Add(line);
         }
     }
+
+    private sealed class Recorder(RankState<TCandidate> state)
+        : IObservationRecorder<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>>
+    {
+        public void Record(InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>
+            RecordRanks(state);
+    }
 }
 
 public class RankState<TCandidate> where TCandidate : notnull
@@ -67,4 +96,28 @@ public class RankState<TCandidate> where TCandidate : notnull
 
     public RankAnalysisResult<TCandidate> Result() =>
         new(Graph, Ranks.Select(IReadOnlyList<double> (x) => x.ToArray()).ToArray());
+}
+
+public static class RankAnalysisTraces
+{
+    extension(Analyzer)
+    {
+        /// <summary>
+        /// Creates a rank analysis over the given anchors.
+        /// </summary>
+        public static RankAnalysis<T, TS, TP, TR> Rank<T, TS, TP, TR>(
+            ICrossover<T, TS, TP>? crossover = null,
+            IMutator<T, TS, TP>? mutator = null,
+            IAlgorithm<T, TS, TP, TR>? algorithm = null,
+            IEqualityComparer<T>? equality = null)
+            where T : notnull
+            where TS : class, ISearchSpace<T>
+            where TP : class, IProblem<T, TS>
+            where TR : PopulationState<T> =>
+            new(
+                crossover is null ? null : (IReadOnlyList<ICrossover<T, TS, TP>>)[crossover],
+                mutator is null ? null : (IReadOnlyList<IMutator<T, TS, TP>>)[mutator],
+                algorithm is null ? null : (IReadOnlyList<IAlgorithm<T, TS, TP, TR>>)[algorithm],
+                equality);
+    }
 }

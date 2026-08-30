@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -10,14 +11,26 @@ public interface IDynamicAnalysisResult<TCandidate>
     void AfterEvaluationLog(object? sender, IReadOnlyList<(TCandidate candidate, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog);
 }
 
-public abstract record DynamicAnalysis<TCandidate, TSearchSpace, TProblem, TResult>
-    : Analyzer<TResult>
+/// <summary>
+/// Reads the problem's evaluation log for one run.
+/// </summary>
+/// <remarks>
+/// The analysis subscribes to the problem's evaluation event while it is installed and unsubscribes when the run
+/// disposes it. It also observes the evaluators so that the problem resolves its pending updates before the log fires.
+/// This analyzer holds its own data and is used for one run.
+/// </remarks>
+public abstract class DynamicAnalysis<TCandidate, TSearchSpace, TProblem, TResult> : IAnalyzer, IDisposable
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TCandidate, TSearchSpace>
     where TResult : class, IDynamicAnalysisResult<TCandidate>
 {
+    private bool subscribed;
+
     protected DynamicAnalysis(TProblem problem, params IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators)
     {
+        if (evaluators.Count == 0)
+            throw new ArgumentException("An analysis needs at least one anchor to observe.", nameof(evaluators));
+
         Problem = problem;
         Evaluators = [.. evaluators];
     }
@@ -25,34 +38,36 @@ public abstract record DynamicAnalysis<TCandidate, TSearchSpace, TProblem, TResu
     public TProblem Problem { get; }
     public ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> Evaluators { get; }
 
-    public override IAnalyzerRunState<TResult> CreateAnalyzerState() => new RunState(this, CreateInitialResult());
+    /// <summary>
+    /// Gets the data this analysis collected. Created on first access so that a derived analysis can finish
+    /// construction before its result is built.
+    /// </summary>
+    public TResult Result => result ??= CreateInitialResult();
+    private TResult? result;
 
-    public override void RegisterObservations(ObservationPlan observations, TResult result)
+    protected abstract TResult CreateInitialResult();
+
+    public void Install(ExecutionInstanceRegistry registry)
     {
+        Problem.OnEvaluation += Result.AfterEvaluationLog;
+        subscribed = true;
+
         foreach (var evaluator in Evaluators)
-            observations.Observe(evaluator, Problem);
+            registry.Observe(evaluator, observation =>
+                Problem.AfterEvaluation(observation.ObjectiveVectors, observation.Candidates, observation.SearchSpace, observation.Problem));
     }
 
-    private sealed class RunState(DynamicAnalysis<TCandidate, TSearchSpace, TProblem, TResult> analyzer, TResult result)
-        : IAnalyzerRunState<TResult>, IDisposable
+    public void Dispose()
     {
-        private bool disposed;
+        if (!subscribed)
+            return;
 
-        public TResult Result { get; } = result;
-
-        public void RegisterObservations(ObservationPlan observations)
-        {
-            analyzer.Problem.OnEvaluation += Result.AfterEvaluationLog;
-            analyzer.RegisterObservations(observations, Result);
-        }
-
-        public void Dispose()
-        {
-            if (disposed)
-                return;
-
-            analyzer.Problem.OnEvaluation -= Result.AfterEvaluationLog;
-            disposed = true;
-        }
+        Problem.OnEvaluation -= Result.AfterEvaluationLog;
+        subscribed = false;
+        GC.SuppressFinalize(this);
     }
+
+    /// <summary>
+    /// Lets the problem resolve pending updates at the evaluator boundary, which is what fires its evaluation log.
+    /// </summary>
 }

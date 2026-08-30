@@ -21,11 +21,11 @@ public class DynamicAnalysisTests
                 problem,
                 algorithm.Evaluator);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), analysis);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        var result = run.GetResult(analysis);
+        var result = analysis.Result;
         result.BestPerEpoch.Select(x => (x.candidate, objective: x.objectiveVector[0], x.timing.Epoch))
               .ShouldBe([(5, 5.0, 0), (3, 3.0, 1), (10, 10.0, 1), (1, 1.0, 2), (4, 4.0, 2)]);
     }
@@ -45,11 +45,11 @@ public class DynamicAnalysisTests
                 [algorithm.Evaluator],
                 predictionEpochMultiplier: 2);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), analysis);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        var result = run.GetResult(analysis);
+        var result = analysis.Result;
         result.BestBeforeChange.Select(x => (x.Candidate, x.ObjectiveValue, x.Timing.Epoch))
               .ShouldBe([(5, 5.0, 0), (3, 3.0, 1)]);
         result.Performance.ShouldBe(4.0);

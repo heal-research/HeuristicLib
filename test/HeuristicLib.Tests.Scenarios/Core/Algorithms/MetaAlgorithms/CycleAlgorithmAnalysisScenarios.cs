@@ -49,14 +49,14 @@ public class CycleAlgorithmAnalysisScenarios
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = cycleAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzers(evaluationTrace1, evaluationTrace2, interceptionTrace);
+        var run = cycleAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(0), evaluationTrace1, evaluationTrace2, interceptionTrace);
         var finalState = run.Complete();
 
         return new CycleRunResult(
             finalState,
-            run.GetResult(evaluationTrace1),
-            run.GetResult(evaluationTrace2),
-            run.GetResult(interceptionTrace));
+            evaluationTrace1.Result,
+            evaluationTrace2.Result,
+            interceptionTrace.Result);
     }
 
     private sealed record CycleRunResult(PopulationState<int> FinalState, EvaluationTraceAnalysis.ExecutionState EvaluationTrace1, EvaluationTraceAnalysis.ExecutionState EvaluationTrace2, InterceptionTraceAnalysis.ExecutionState InterceptionTrace);
@@ -127,15 +127,15 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
-    private sealed record EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator)
-        : Analyzer<EvaluationTraceAnalysis.ExecutionState>
+    private sealed class EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator)
+        : IAnalyzer, IObservationRecorder<EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>>
     {
-        public override ExecutionState CreateInitialResult() => new();
+        public ExecutionState Result { get; } = new();
 
-        public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
-        {
-            observations.Observe(Evaluator, (objectiveVectors, _, _, _) => result.RecordObjectiveValues(objectiveVectors));
-        }
+        public void Install(ExecutionInstanceRegistry registry) => registry.Observe(evaluator, this);
+
+        public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
+            Result.RecordObjectiveValues(observation.ObjectiveVectors);
 
         public sealed class ExecutionState
         {
@@ -150,15 +150,15 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
-    private sealed record InterceptionTraceAnalysis(IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor)
-        : Analyzer<InterceptionTraceAnalysis.ExecutionState>
+    private sealed class InterceptionTraceAnalysis(IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor)
+        : IAnalyzer, IObservationRecorder<InterceptorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>>
     {
-        public override ExecutionState CreateInitialResult() => new();
+        public ExecutionState Result { get; } = new();
 
-        public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
-        {
-            observations.Observe(Interceptor, (_, currentState, _, _, _) => result.RecordObjectiveValue(currentState));
-        }
+        public void Install(ExecutionInstanceRegistry registry) => registry.Observe(interceptor, this);
+
+        public void Record(InterceptorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> observation) =>
+            Result.RecordObjectiveValue(observation.UntransformedState);
 
         public sealed class ExecutionState
         {

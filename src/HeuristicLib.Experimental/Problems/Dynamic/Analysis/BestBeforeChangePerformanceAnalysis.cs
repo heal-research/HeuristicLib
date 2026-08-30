@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public sealed record BestBeforeChangePerformanceAnalysis<TCandidate, TSearchSpace, TProblem>
+public sealed class BestBeforeChangePerformanceAnalysis<TCandidate, TSearchSpace, TProblem>
     : DynamicAnalysis<TCandidate, TSearchSpace, TProblem, BestBeforeChangePerformanceAnalysisResult<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TCandidate, TSearchSpace>
@@ -25,7 +25,7 @@ public sealed record BestBeforeChangePerformanceAnalysis<TCandidate, TSearchSpac
 
     public int PredictionEpochMultiplier { get; }
 
-    public override BestBeforeChangePerformanceAnalysisResult<TCandidate> CreateInitialResult() =>
+    protected override BestBeforeChangePerformanceAnalysisResult<TCandidate> CreateInitialResult() =>
         new(Problem.Objective, objectiveValueSelector, PredictionEpochMultiplier);
 }
 

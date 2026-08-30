@@ -15,7 +15,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     where TSearchState : class, ISearchState
     where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
-    private readonly Dictionary<TrialAnalyzer, ImmutableArray<IAnalyzer>> trialAnalyzers = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<TrialAnalyzer<TAlgorithm>, ImmutableArray<IExecutionHook>> trialAnalyzers = new(ReferenceEqualityComparer.Instance);
     private bool executionStarted;
 
     public IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Experiment { get; }
@@ -29,6 +29,15 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     public bool ExecutionStarted => executionStarted || Trials.Any(trial => trial.Run.ExecutionStarted);
 
     public ExperimentRun(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> experiment, TProblem problem, IRandomNumberGenerator random)
+        : this(experiment, problem, random, [])
+    {
+    }
+
+    /// <summary>
+    /// Creates the run and gives every trial its own analyzer from each trial analyzer, the way a single run is given
+    /// its analyzers.
+    /// </summary>
+    public ExperimentRun(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> experiment, TProblem problem, IRandomNumberGenerator random, IReadOnlyList<TrialAnalyzer<TAlgorithm>> trialAnalyzers)
     {
         Experiment = experiment;
         Problem = problem;
@@ -40,6 +49,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
         var keys = new HashSet<TKey>();
         var trials = new List<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>>(cases.Length);
+        var perTrialAnalyzers = new List<IExecutionHook[]>(cases.Length);
         for (var index = 0; index < cases.Length; index++)
         {
             var experimentCase = cases[index];
@@ -47,48 +57,32 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
                 throw new InvalidOperationException($"Experiment trial key {experimentCase.Key} is not unique.");
 
             var trialRandom = experimentCase.RandomForkPath.Aggregate(random, static (current, forkKey) => current.Fork(forkKey));
-            var algorithmRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState>(experimentCase.Algorithm, problem, trialRandom);
+            var trialHooks = trialAnalyzers.Select(trialAnalyzer => trialAnalyzer.CreateFor(experimentCase.Algorithm)).ToArray();
+            perTrialAnalyzers.Add(trialHooks);
+            var algorithmRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState>(experimentCase.Algorithm, problem, trialRandom, trialHooks);
             trials.Add(new ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>(index, experimentCase.Key, experimentCase.Algorithm, algorithmRun, experimentCase.RandomForkPath));
         }
 
         Trials = trials.ToImmutableArray();
-    }
 
-    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> WithAnalyzer<TOperator, TResult>(TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
-        where TResult : class
-    {
-        EnsureNotStarted();
-        if (trialAnalyzers.ContainsKey(trialAnalyzer))
-            throw new InvalidOperationException("The same trial analyzer cannot be attached more than once.");
-
-        var analyzers = Trials.Select(trial => (IAnalyzer)trialAnalyzer.AnalyzerFactory(trialAnalyzer.Selector(trial.Algorithm))).ToImmutableArray();
-        for (var index = 0; index < Trials.Length; index++)
+        for (var index = 0; index < trialAnalyzers.Count; index++)
         {
-            Trials[index].Run.WithAnalyzer(analyzers[index]);
+            if (this.trialAnalyzers.ContainsKey(trialAnalyzers[index]))
+                throw new InvalidOperationException("The same trial analyzer cannot be attached more than once.");
+
+            this.trialAnalyzers.Add(trialAnalyzers[index], [.. perTrialAnalyzers.Select(perTrial => perTrial[index])]);
         }
-
-        trialAnalyzers.Add(trialAnalyzer, analyzers);
-
-        return this;
     }
 
-    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> WithAnalyzer<TOperator, TResult>(Func<TAlgorithm, TOperator> selector, Func<TOperator, IAnalyzer<TResult>> analyzerFactory, out TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
-        where TResult : class
-    {
-        trialAnalyzer = TrialAnalyzer.Create(selector, analyzerFactory);
-        return WithAnalyzer(trialAnalyzer);
-    }
-
-    public ImmutableArray<TrialAnalysisResult<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TResult>> GetResults<TOperator, TResult>(TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
-        where TResult : class
+    /// <summary>
+    /// Gets each trial together with the analyzer that observed it. Read the collected data from the analyzer.
+    /// </summary>
+    public ImmutableArray<TrialAnalysis<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAnalyzer>> GetAnalyzers<TOperator, TAnalyzer>(TrialAnalyzer<TAlgorithm, TOperator, TAnalyzer> trialAnalyzer)
+        where TAnalyzer : IAnalyzer
     {
         var analyzers = trialAnalyzers[trialAnalyzer];
 
-        return Trials.Select((trial, index) =>
-        {
-            var analyzer = (IAnalyzer<TResult>)analyzers[index];
-            return TrialAnalysisResult.From(trial, analyzer, trial.Run.GetResult(analyzer));
-        }).ToImmutableArray();
+        return [.. Trials.Select((trial, index) => TrialAnalysis.From(trial, (TAnalyzer)analyzers[index]))];
     }
 
     public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)

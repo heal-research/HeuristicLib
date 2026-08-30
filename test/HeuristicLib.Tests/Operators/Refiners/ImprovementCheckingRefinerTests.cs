@@ -93,7 +93,7 @@ public class ImprovementCheckingRefinerTests
         var refiner = new AddOffsetRefiner(-5).WithImprovementCheck(sharedEvaluator);
 
         var budgetRegistry = new ExecutionInstanceRegistry().CreateChildRegistry();
-        budgetRegistry.RegisterReplacement(sharedEvaluator, sharedEvaluator.CountEvaluatedCandidates(counter));
+        budgetRegistry.Decorate(sharedEvaluator, current => current.CountEvaluatedCandidates(counter));
 
         Refine(budgetRegistry.Resolve(refiner), 10, 20);
 
@@ -109,7 +109,7 @@ public class ImprovementCheckingRefinerTests
         var refiner = new AddOffsetRefiner(-5).WithImprovementCheck();
 
         var budgetRegistry = new ExecutionInstanceRegistry().CreateChildRegistry();
-        budgetRegistry.RegisterReplacement(algorithmEvaluator, algorithmEvaluator.CountEvaluatedCandidates(counter));
+        budgetRegistry.Decorate(algorithmEvaluator, current => current.CountEvaluatedCandidates(counter));
 
         Refine(budgetRegistry.Resolve(refiner), 10, 20);
 

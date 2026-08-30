@@ -44,18 +44,6 @@ public class TerminatorConfigurationEqualityTests
         left.ShouldNotBe(different);
     }
 
-    [Fact]
-    public void WrappingConcerns_IncludeChildAndSettingsInEquality()
-    {
-        var counter = new ObservationCounter();
-        var duration = new ObservationDuration();
-        var observer = new ActionTerminatorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>((_, _, _, _) => { });
-
-        new ThresholdTerminator(1).CountTerminatorCalls(counter).ShouldBe(new ThresholdTerminator(1).CountTerminatorCalls(counter));
-        new ThresholdTerminator(1).MeasureTerminatorDuration(duration, TimeProvider.System).ShouldBe(new ThresholdTerminator(1).MeasureTerminatorDuration(duration, TimeProvider.System));
-        new ThresholdTerminator(1).ObserveWith(observer).ShouldBe(new ThresholdTerminator(1).ObserveWith(observer));
-        new ThresholdTerminator(1).CountTerminatorCalls(counter).ShouldNotBe(new ThresholdTerminator(2).CountTerminatorCalls(counter));
-    }
 
     [Fact]
     public void StagnationTerminator_SupportsWithReconfiguration()

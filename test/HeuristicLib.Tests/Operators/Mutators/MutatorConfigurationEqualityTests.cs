@@ -149,39 +149,12 @@ public class MutatorConfigurationEqualityTests
         left.ShouldNotBe(right);
     }
 
-    [Fact]
-    public void ObservableMutator_WithSameObserverInstance_IsEqual()
-    {
-        var observer = new ActionMutatorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var left = new AddOffsetMutator(1).ObserveWith(observer);
-        var right = new AddOffsetMutator(1).ObserveWith(observer);
 
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
-
-    [Fact]
-    public void ObservableMutator_WithDifferentChildMutator_IsNotEqual()
-    {
-        var observer = new ActionMutatorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var left = new AddOffsetMutator(1).ObserveWith(observer);
-        var right = new AddOffsetMutator(2).ObserveWith(observer);
-
-        left.ShouldNotBe(right);
-    }
 
     /// <summary>
     /// Documents that a freshly allocated action observer defeats structural equality, which is why concern types
     /// carrying only value-like settings must not be expressed as an observer wrapper.
     /// </summary>
-    [Fact]
-    public void ObservableMutator_WithSeparatelyConstructedActionObservers_IsNotEqual()
-    {
-        var left = new AddOffsetMutator(1).ObserveWith((IReadOnlyList<int> _) => { });
-        var right = new AddOffsetMutator(1).ObserveWith((IReadOnlyList<int> _) => { });
-
-        left.ShouldNotBe(right);
-    }
 
     [Fact]
     public void SingleCandidateMutator_WithDifferentConcurrency_IsNotEqual()

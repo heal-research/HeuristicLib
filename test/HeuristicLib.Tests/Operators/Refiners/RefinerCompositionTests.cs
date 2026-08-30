@@ -134,36 +134,6 @@ public class RefinerCompositionTests
     }
 
     [Fact]
-    public void ObservableRefiner_ReportsRefinedAndOriginalCandidates()
-    {
-        IReadOnlyList<int>? observedRefined = null;
-        IReadOnlyList<int>? observedCandidates = null;
-        var instance = AddOffset(1)
-            .ObserveWith((refined, candidates, _, _) =>
-            {
-                observedRefined = refined;
-                observedCandidates = candidates;
-            })
-            .CreateExecutionInstance();
-
-        Refine(instance, 3, 4);
-
-        observedRefined.ShouldBe([4, 5]);
-        observedCandidates.ShouldBe([3, 4]);
-    }
-
-    [Fact]
-    public void ObservableRefiner_DoesNotInvokeObserversWhenRefinementThrows()
-    {
-        var observed = 0;
-        var instance = new ThrowingRefiner().ObserveWith((IReadOnlyList<int> _) => observed++).CreateExecutionInstance();
-
-        Should.Throw<InvalidOperationException>(() => Refine(instance, 3));
-
-        observed.ShouldBe(0);
-    }
-
-    [Fact]
     public void IteratedRefiner_WithOneIteration_MatchesTheBareRefiner()
     {
         var iterated = AddOffset(1).AsIterated(1).CreateExecutionInstance();

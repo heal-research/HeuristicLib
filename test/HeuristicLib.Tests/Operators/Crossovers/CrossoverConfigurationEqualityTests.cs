@@ -211,35 +211,8 @@ public class CrossoverConfigurationEqualityTests
         left.ShouldNotBe(right);
     }
 
-    [Fact]
-    public void ObservableCrossover_WithSameObserverInstance_IsEqual()
-    {
-        var observer = new ActionCrossoverObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var left = new OffsetCrossover(1).ObserveWith(observer);
-        var right = new OffsetCrossover(1).ObserveWith(observer);
 
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
 
-    [Fact]
-    public void ObservableCrossover_WithDifferentChildCrossover_IsNotEqual()
-    {
-        var observer = new ActionCrossoverObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var left = new OffsetCrossover(1).ObserveWith(observer);
-        var right = new OffsetCrossover(2).ObserveWith(observer);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void ObservableCrossover_WithSeparatelyConstructedActionObservers_IsNotEqual()
-    {
-        var left = new OffsetCrossover(1).ObserveWith((IReadOnlyList<int> _) => { });
-        var right = new OffsetCrossover(1).ObserveWith((IReadOnlyList<int> _) => { });
-
-        left.ShouldNotBe(right);
-    }
 
     /// <summary>
     /// Required values are constructor parameters so a configuration cannot be created incomplete, but their
