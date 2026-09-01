@@ -23,7 +23,7 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
     public int NumberOfChildren { get; init; } = EvolutionStrategyDefaults.NumberOfChildren;
     public EvolutionStrategyType Strategy { get; init; } = EvolutionStrategyDefaults.Strategy;
     public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
-    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
+    public required IMutator<TCandidate> Mutator { get; init; }
     public ICrossover<TCandidate, TSearchSpace, TProblem>? Crossover { get; init; }
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = EvolutionStrategyDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>();
     public ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; } = EvolutionStrategyDefaults.Selector<TCandidate, TSearchSpace, TProblem>();
@@ -37,7 +37,7 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
 
     protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
-        var mutator = instanceRegistry.Resolve(Mutator);
+        var mutator = instanceRegistry.Resolve<TCandidate, TSearchSpace, TProblem>(Mutator);
         return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), mutator, instanceRegistry.Resolve(Selector), instanceRegistry.ResolveOptional(Crossover), instanceRegistry.ResolveOptional(Refiner), PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
     }
 
@@ -131,7 +131,7 @@ public static class EvolutionStrategy
     public static EvolutionStrategy<TCandidate, TSearchSpace, TProblem> For<TProblem, TCandidate, TSearchSpace>(
         IProblemDefaults<TProblem, TCandidate, TSearchSpace> problem,
         ICreator<TCandidate, TSearchSpace, TProblem>? creator = null,
-        IMutator<TCandidate, TSearchSpace, TProblem>? mutator = null,
+        IMutator<TCandidate>? mutator = null,
         ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
         ISelector<TCandidate, TSearchSpace, TProblem>? selector = null,
         IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,
@@ -174,7 +174,7 @@ public static class EvolutionStrategy
     public static EvolutionStrategy<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> For<TCandidate, TSearchSpace>(
         IEncodingDefaults<TCandidate, TSearchSpace> searchSpace,
         ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? creator = null,
-        IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? mutator = null,
+        IMutator<TCandidate>? mutator = null,
         ICrossover<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? crossover = null,
         ISelector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? selector = null,
         IEvaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? evaluator = null,
@@ -212,7 +212,7 @@ public static class EvolutionStrategy
     /// </summary>
     public static EvolutionStrategy<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
         ICreator<TCandidate, TSearchSpace, TProblem> creator,
-        IMutator<TCandidate, TSearchSpace, TProblem> mutator,
+        IMutator<TCandidate> mutator,
         ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
         ISelector<TCandidate, TSearchSpace, TProblem>? selector = null,
         IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,

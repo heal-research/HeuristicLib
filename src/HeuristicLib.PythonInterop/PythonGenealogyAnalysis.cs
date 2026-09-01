@@ -65,8 +65,7 @@ public class PythonGenealogyAnalysis
             Creator = parameters.Creator ?? new ProbabilisticTreeCreator(),
             Crossover = parameters.Crossover ?? new SubtreeCrossover { InternalNodeProbability = 0.9 },
             Mutator = parameters.Mutator ??
-                new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace,
-                    IProblem<ExpressionTree, ExpressionTreeSearchSpace>>([.. SymbolicExpressionMutators.Default])
+                new ChooseOneMutator<ExpressionTree>([.. SymbolicExpressionMutators.Default])
         };
         var problem = ProblemGeneration.CreateSymbolicRegressionProblem(file, parameters);
         var actionCallback = callback is null ? null : new Action<PopulationState<ExpressionTree>>(callback);
@@ -309,7 +308,7 @@ public class PythonGenealogyAnalysis
         parameters.Crossover ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Crossover));
 
     /// <inheritdoc cref="RequireCreator{TCandidate, TSearchSpace}"/>
-    private static IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> RequireMutator<TCandidate, TSearchSpace>(
+    private static IMutator<TCandidate> RequireMutator<TCandidate, TSearchSpace>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters)
         where TSearchSpace : class, ISearchSpace<TCandidate> =>
         parameters.Mutator ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Mutator));
@@ -338,7 +337,7 @@ public class PythonGenealogyAnalysis
         IIterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm,
         IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
         ICrossover<TCandidate, TSearchSpace, TProblem>? crossover,
-        IMutator<TCandidate, TSearchSpace, TProblem>? mutator,
+        IMutator<TCandidate>? mutator,
         Action<PopulationState<TCandidate>>? callback)
         where TCandidate : notnull
         where TSearchSpace : class, ISearchSpace<TCandidate>

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
@@ -5,6 +6,7 @@ using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators;
@@ -141,7 +143,7 @@ public class ObservableOperatorCounterTests
             }),
             new ActionMutatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((_, _, _, _) => calls.Add("second")));
 
-        var result = mutator.CreateExecutionInstance().Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var result = mutator.CreateMutatorInstance().Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         calls.ShouldBe(["first", "second"]);
         observedOffspring.ShouldBeSameAs(result);
@@ -153,7 +155,7 @@ public class ObservableOperatorCounterTests
     public void ObservableMutator_DoesNotInvokeObserversWhenMutationThrows()
     {
         var observed = 0;
-        var instance = new ThrowingMutator().ObserveWith((IReadOnlyList<int> _) => observed++).CreateExecutionInstance();
+        var instance = new ThrowingMutator().ObserveWith((IReadOnlyList<int> _) => observed++).CreateMutatorInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -169,7 +171,7 @@ public class ObservableOperatorCounterTests
         var mutator = new AddOneMutator().CountMutatorCalls(counter);
         mutator.Counter.ShouldBeSameAs(counter);
         mutator.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = mutator.CreateExecutionInstance();
+        var instance = mutator.CreateMutatorInstance();
         var problem = CreateProblem();
 
         instance.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -183,7 +185,7 @@ public class ObservableOperatorCounterTests
     {
         var counter = new ObservationCounter();
         var mutator = new AddOneMutator().CountMutatedCandidates(counter);
-        var instance = mutator.CreateExecutionInstance();
+        var instance = mutator.CreateMutatorInstance();
         var problem = CreateProblem();
 
         instance.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -196,7 +198,7 @@ public class ObservableOperatorCounterTests
     public void CountMutatorCalls_DoesNotIncrementWhenMutationThrows()
     {
         var counter = new ObservationCounter();
-        var instance = new ThrowingMutator().CountMutatorCalls(counter).CreateExecutionInstance();
+        var instance = new ThrowingMutator().CountMutatorCalls(counter).CreateMutatorInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -213,7 +215,7 @@ public class ObservableOperatorCounterTests
         var mutator = new AddOneMutator().MeasureMutatorDuration(duration, timeProvider);
         mutator.Duration.ShouldBeSameAs(duration);
         mutator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = mutator.CreateExecutionInstance();
+        var instance = mutator.CreateMutatorInstance();
         var problem = CreateProblem();
 
         instance.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -228,7 +230,7 @@ public class ObservableOperatorCounterTests
         var duration = new ObservationDuration();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var mutator = new ThrowingMutator().MeasureMutatorDuration(duration, timeProvider);
-        var instance = mutator.CreateExecutionInstance();
+        var instance = mutator.CreateMutatorInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -259,7 +261,7 @@ public class ObservableOperatorCounterTests
         var mutator = childMutator
             .MeasureMutatorDuration(innerDuration, timeProvider)
             .MeasureMutatorDuration(outerDuration, timeProvider);
-        var instance = mutator.CreateExecutionInstance();
+        var instance = mutator.CreateMutatorInstance();
 
         var result = instance.Mutate(parents, random, problem.SearchSpace, problem);
 
@@ -285,7 +287,7 @@ public class ObservableOperatorCounterTests
         var mutator = childMutator
             .MeasureMutatorDuration(innerDuration, timeProvider)
             .MeasureMutatorDuration(outerDuration, timeProvider);
-        var instance = mutator.CreateExecutionInstance();
+        var instance = mutator.CreateMutatorInstance();
 
         Should.Throw<InvalidOperationException>(() =>
             instance.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
@@ -888,9 +890,14 @@ public class ObservableOperatorCounterTests
         FuncProblem<int, DummySearchSpace<int>> problem);
 
     private sealed class CallbackMutator(MutateCallback callback)
-        : IMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+        : IMutator<int>
     {
-        public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        public IMutatorInstance<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ExecutionInstanceRegistry instanceRegistry)
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
+            => (IMutatorInstance<int, TSearchSpace, TProblem>)(object)CreateBoundInstance();
+
+        private IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateBoundInstance() =>
             new Instance(callback);
 
         private sealed class Instance(MutateCallback callback)
@@ -1055,5 +1062,25 @@ public class ObservableOperatorCounterTests
             timestamp += step.Ticks;
             return current;
         }
+    }
+}
+
+/// <summary>
+/// Names the run's triple once for this file. Every mutator exercised here is authored over
+/// <see cref="DummySearchSpace{T}"/>, so the triple is the same at every call site and repeating it per resolution
+/// would only obscure what each test is actually asserting.
+/// </summary>
+file static class MutatorResolution
+{
+    extension(ExecutionInstanceRegistry registry)
+    {
+        public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IMutator<int> mutator) =>
+            registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
+    }
+
+    extension(IMutator<int> mutator)
+    {
+        public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateMutatorInstance() =>
+            new ExecutionInstanceRegistry().ResolveMutator(mutator);
     }
 }

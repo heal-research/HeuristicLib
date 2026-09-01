@@ -8,17 +8,16 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance>
-    : Algorithm<OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance>, TCandidate, TSearchSpace, TProblem, TSearchState>
+public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>
+    : Algorithm<OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
-    where TOperator : IOperator<TObservedInstance>
-    where TObservedInstance : class, IOperatorInstance
+    where TOperator : class, IOperator
 {
     public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
     public required TOperator ObservedOperator { get; init; }
-    public required Func<TOperator, ObservationDuration, TimeProvider, IOperator<TObservedInstance>> MeasuredOperatorFactory { get; init; }
+    public required Func<TOperator, ObservationDuration, TimeProvider, TOperator> MeasuredOperatorFactory { get; init; }
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
     /// <summary>

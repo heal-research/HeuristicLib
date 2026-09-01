@@ -38,7 +38,7 @@ public static class ExperimentalAnalyzers
 
     public static GenealogyAnalysis<T, TS, TP, TR> Genealogy<T, TS, TP, TR>(
         ICrossover<T, TS, TP>? crossover = null,
-        IMutator<T, TS, TP>? mutator = null,
+        IMutator<T>? mutator = null,
         IInterceptor<T, TS, TP, TR>? interceptor = null,
         IEqualityComparer<T>? equality = null,
         bool saveSpace = false)
@@ -52,7 +52,7 @@ public static class ExperimentalAnalyzers
 
     public static RankAnalysis<T, TS, TP, TR> Rank<T, TS, TP, TR>(
         ICrossover<T, TS, TP>? crossover = null,
-        IMutator<T, TS, TP>? mutator = null,
+        IMutator<T>? mutator = null,
         IInterceptor<T, TS, TP, TR>? interceptor = null,
         IEqualityComparer<T>? equality = null)
         where T : notnull

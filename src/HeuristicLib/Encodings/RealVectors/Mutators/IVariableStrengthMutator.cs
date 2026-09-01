@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Encodings.RealVectors;
 
 public interface IVariableStrengthMutator<TCandidate, in TSearchSpace, in TProblem>
-    : IMutator<TCandidate, TSearchSpace, TProblem>, IOperator<IVariableStrengthMutatorInstance<TCandidate, TSearchSpace, TProblem>>
+    : IMutator<TCandidate>, IOperator<IVariableStrengthMutatorInstance<TCandidate, TSearchSpace, TProblem>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {

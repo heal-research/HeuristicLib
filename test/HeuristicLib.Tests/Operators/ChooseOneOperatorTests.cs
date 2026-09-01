@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
@@ -5,6 +6,7 @@ using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
@@ -17,9 +19,9 @@ public class ChooseOneOperatorTests
     {
         var first = new AddOffsetMutator(1);
         var second = new AddOffsetMutator(2);
-        var mutators = new List<IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var mutators = new List<IMutator<int>> { first, second };
         var weightValues = new[] { 1.0, 2.0 };
-        var configuration = new ChooseOneMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutators) { Weights = weightValues.ToValueArray() };
+        var configuration = new ChooseOneMutator<int>(mutators) { Weights = weightValues.ToValueArray() };
 
         mutators.Clear();
         weightValues[0] = 100.0;
@@ -95,7 +97,7 @@ public class ChooseOneOperatorTests
           encoding: DummySearchSpace<int>.Instance,
           objective: SingleObjective.Minimize);
         var rng = new SequenceRandomNumberGenerator(0.2, 0.8, 0.3);
-        var instance = new Execution.ExecutionInstanceRegistry().Resolve(mutator);
+        var instance = new Execution.ExecutionInstanceRegistry().ResolveMutator(mutator);
 
         var result = instance.Mutate([1, 2, 3], rng, DummySearchSpace<int>.Instance, problem);
 
@@ -136,7 +138,7 @@ public class ChooseOneOperatorTests
     {
         ImmutableArray<ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> creators = [new ConstantCreator(100), new ConstantCreator(200)];
         ImmutableArray<ICrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> crossovers = [new FirstParentCrossover(100), new SecondParentCrossover(200)];
-        ImmutableArray<IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> mutators = [new AddOffsetMutator(100), new AddOffsetMutator(200)];
+        ImmutableArray<IMutator<int>> mutators = [new AddOffsetMutator(100), new AddOffsetMutator(200)];
         ImmutableArray<ISelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> selectors = [new FirstCandidatesSelector(), new LastCandidatesSelector()];
         ImmutableArray<IReplacer<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> replacers = [new PreviousCandidatesReplacer(), new OffspringCandidatesReplacer()];
         var creatorFromFactory = ChooseOneCreator.Create(new ConstantCreator(100), new ConstantCreator(200));
@@ -149,7 +151,7 @@ public class ChooseOneOperatorTests
         creatorFromFactory.Weights.ShouldBeEmpty();
         new ChooseOneCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(crossovers).Weights.ShouldBeEmpty();
         crossoverFromFactory.Weights.ShouldBeEmpty();
-        new ChooseOneMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutators).Weights.ShouldBeEmpty();
+        new ChooseOneMutator<int>(mutators).Weights.ShouldBeEmpty();
         mutatorFromFactory.Weights.ShouldBeEmpty();
         new ChooseOneSelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(selectors).Weights.ShouldBeEmpty();
         selectorFromFactory.Weights.ShouldBeEmpty();
@@ -160,15 +162,15 @@ public class ChooseOneOperatorTests
     [Fact]
     public void ChooseOneMutator_EmptyWeights_AreRetainedAsUniformSelection()
     {
-        var mutators = new IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[]
+        var mutators = new IMutator<int>[]
         {
             new AddOffsetMutator(1),
             new AddOffsetMutator(2),
         };
 
         ImmutableArray<double> defaultWeights = default;
-        var emptyWeightsMutator = new ChooseOneMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutators) { Weights = [] };
-        var defaultWeightsMutator = new ChooseOneMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutators) { Weights = defaultWeights.ToValueArray() };
+        var emptyWeightsMutator = new ChooseOneMutator<int>(mutators) { Weights = [] };
+        var defaultWeightsMutator = new ChooseOneMutator<int>(mutators) { Weights = defaultWeights.ToValueArray() };
 
         emptyWeightsMutator.Weights.ShouldBeEmpty();
         defaultWeightsMutator.Weights.ShouldBeEmpty();
@@ -227,12 +229,12 @@ public class ChooseOneOperatorTests
         var tooManyWeights = ChooseOneMutator.Create([new AddOffsetMutator(100)], [1.0, 1.0]);
         var tooFewWeights = ChooseOneCreator.Create([new ConstantCreator(100), new ConstantCreator(200)], [1.0]);
 
-        Should.Throw<InvalidOperationException>(() => new Execution.ExecutionInstanceRegistry().Resolve(tooManyWeights));
+        Should.Throw<InvalidOperationException>(() => new Execution.ExecutionInstanceRegistry().ResolveMutator(tooManyWeights));
         Should.Throw<InvalidOperationException>(() => new Execution.ExecutionInstanceRegistry().Resolve(tooFewWeights));
 
         var emptyCreator = ChooseOneCreator.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
         var emptyCrossover = ChooseOneCrossover.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
-        var emptyMutator = ChooseOneMutator.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
+        var emptyMutator = ChooseOneMutator.Create<int>();
         var emptySelector = ChooseOneSelector.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
         var emptyReplacer = ChooseOneReplacer.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
         var registry = new Execution.ExecutionInstanceRegistry();
@@ -244,7 +246,7 @@ public class ChooseOneOperatorTests
         emptyReplacer.ChildReplacers.ShouldBeEmpty();
         Should.Throw<InvalidOperationException>(() => registry.Resolve(emptyCreator));
         Should.Throw<InvalidOperationException>(() => registry.Resolve(emptyCrossover));
-        Should.Throw<InvalidOperationException>(() => registry.Resolve(emptyMutator));
+        Should.Throw<InvalidOperationException>(() => registry.ResolveMutator(emptyMutator));
         Should.Throw<InvalidOperationException>(() => registry.Resolve(emptySelector));
         Should.Throw<InvalidOperationException>(() => registry.Resolve(emptyReplacer));
     }
@@ -261,7 +263,7 @@ public class ChooseOneOperatorTests
 
         Should.Throw<InvalidOperationException>(() => registry.Resolve(creator));
         Should.Throw<InvalidOperationException>(() => registry.Resolve(crossover));
-        Should.Throw<InvalidOperationException>(() => registry.Resolve(mutator));
+        Should.Throw<InvalidOperationException>(() => registry.ResolveMutator(mutator));
         Should.Throw<InvalidOperationException>(() => registry.Resolve(selector));
         Should.Throw<InvalidOperationException>(() => registry.Resolve(replacer));
     }
@@ -276,7 +278,7 @@ public class ChooseOneOperatorTests
     {
         var mutator = new AddOffsetMutator(100).WithRate(mutationRate);
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var instance = new Execution.ExecutionInstanceRegistry().Resolve(mutator);
+        var instance = new Execution.ExecutionInstanceRegistry().ResolveMutator(mutator);
 
         // A low draw selects the first entry under uniform fallback, so a rate that fails to make the
         // mutator unselectable is detected instead of being masked by an accidental fallback draw.
@@ -334,7 +336,7 @@ public class ChooseOneOperatorTests
           evaluateFunc: (int x) => x,
           encoding: DummySearchSpace<int>.Instance,
           objective: SingleObjective.Minimize);
-        var instance = new Execution.ExecutionInstanceRegistry().Resolve(mutator);
+        var instance = new Execution.ExecutionInstanceRegistry().ResolveMutator(mutator);
 
         var result = instance.Mutate([1, 2, 3], RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem);
 
@@ -366,7 +368,7 @@ public class ChooseOneOperatorTests
             stageOrder.Add(2);
             return actualParents;
         });
-        var instance = PipelineMutator.Create(first, second).CreateExecutionInstance(new Execution.ExecutionInstanceRegistry());
+        var instance = PipelineMutator.Create(first, second).CreateMutatorInstance();
 
         var result = instance.Mutate(parents, random, problem.SearchSpace, problem);
 
@@ -386,7 +388,7 @@ public class ChooseOneOperatorTests
             finalStageCalled = true;
             return parents;
         });
-        var instance = PipelineMutator.Create(first, throwing, final).CreateExecutionInstance(new Execution.ExecutionInstanceRegistry());
+        var instance = PipelineMutator.Create(first, throwing, final).CreateMutatorInstance();
 
         Should.Throw<InvalidOperationException>(() =>
             instance.Mutate([1], RandomNumberGenerator.Create(0), problem.SearchSpace, problem));
@@ -404,7 +406,7 @@ public class ChooseOneOperatorTests
           evaluateFunc: (int x) => x,
           encoding: DummySearchSpace<int>.Instance,
           objective: SingleObjective.Minimize);
-        var instance = new Execution.ExecutionInstanceRegistry().Resolve(mutator);
+        var instance = new Execution.ExecutionInstanceRegistry().ResolveMutator(mutator);
 
         var first = instance.Mutate([1], RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem);
         var second = instance.Mutate([1], RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, problem);
@@ -421,8 +423,8 @@ public class ChooseOneOperatorTests
         var firstWrapper = innerOperator.MeasureMutatorDuration(new ObservationDuration());
         var secondWrapper = innerOperator.MeasureMutatorDuration(new ObservationDuration());
         var registry = new Execution.ExecutionInstanceRegistry();
-        var firstInstance = registry.Resolve(firstWrapper);
-        var secondInstance = registry.Resolve(secondWrapper);
+        var firstInstance = registry.ResolveMutator(firstWrapper);
+        var secondInstance = registry.ResolveMutator(secondWrapper);
         var problem = FuncProblem.Create(
             evaluateFunc: (int x) => x,
             encoding: DummySearchSpace<int>.Instance,
@@ -442,7 +444,7 @@ public class ChooseOneOperatorTests
         var innerOperator = new CountingInstanceMutator();
         var chooseOne = ChooseOneMutator.Create(innerOperator, innerOperator);
 
-        _ = new Execution.ExecutionInstanceRegistry().Resolve(chooseOne);
+        _ = new Execution.ExecutionInstanceRegistry().ResolveMutator(chooseOne);
 
         innerOperator.ExecutionInstancesCreated.ShouldBe(1);
     }
@@ -450,8 +452,8 @@ public class ChooseOneOperatorTests
     [Fact]
     public void PipelineMutator_EmptyPipeline_IsIdentity()
     {
-        var pipeline = new PipelineMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>([]);
-        var instance = new Execution.ExecutionInstanceRegistry().Resolve(pipeline);
+        var pipeline = new PipelineMutator<int>([]);
+        var instance = new Execution.ExecutionInstanceRegistry().ResolveMutator(pipeline);
         var parents = new[] { 1, 2, 3 };
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
 
@@ -463,9 +465,9 @@ public class ChooseOneOperatorTests
     [Fact]
     public void PipelineMutator_DefaultImmutableArray_IsNormalizedToEmpty()
     {
-        ImmutableArray<IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childMutators = default;
+        ImmutableArray<IMutator<int>> childMutators = default;
 
-        var pipeline = new PipelineMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childMutators);
+        var pipeline = new PipelineMutator<int>(childMutators);
 
         pipeline.ChildMutators.ShouldBeEmpty();
     }
@@ -622,11 +624,16 @@ public class ChooseOneOperatorTests
         public required int Value { get; init; }
     }
 
-    private sealed class CountingInstanceMutator : IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+    private sealed class CountingInstanceMutator : IMutator<int>
     {
         public int ExecutionInstancesCreated { get; private set; }
 
-        public IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(Execution.ExecutionInstanceRegistry instanceRegistry)
+        public IMutatorInstance<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ExecutionInstanceRegistry instanceRegistry)
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
+            => (IMutatorInstance<int, TSearchSpace, TProblem>)(object)CreateBoundInstance();
+
+        private IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundInstance()
         {
             ExecutionInstancesCreated++;
             return new Instance();
@@ -651,9 +658,14 @@ public class ChooseOneOperatorTests
         IProblem<int, DummySearchSpace<int>> problem);
 
     private sealed record CallbackInstanceMutator(MutationCallback Callback)
-        : IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        : IMutator<int>
     {
-        public IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(Execution.ExecutionInstanceRegistry instanceRegistry) =>
+        public IMutatorInstance<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ExecutionInstanceRegistry instanceRegistry)
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
+            => (IMutatorInstance<int, TSearchSpace, TProblem>)(object)CreateBoundInstance();
+
+        private IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundInstance() =>
             new Instance(Callback);
 
         private sealed class Instance(MutationCallback callback)
@@ -666,5 +678,25 @@ public class ChooseOneOperatorTests
                 IProblem<int, DummySearchSpace<int>> problem) =>
                 callback(parents, random, searchSpace, problem);
         }
+    }
+}
+
+/// <summary>
+/// Names the run's triple once for this file. Every mutator exercised here is authored over
+/// <see cref="DummySearchSpace{T}"/>, so the triple is the same at every call site and repeating it per resolution
+/// would only obscure what each test is actually asserting.
+/// </summary>
+file static class MutatorResolution
+{
+    extension(ExecutionInstanceRegistry registry)
+    {
+        public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IMutator<int> mutator) =>
+            registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
+    }
+
+    extension(IMutator<int> mutator)
+    {
+        public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateMutatorInstance() =>
+            new ExecutionInstanceRegistry().ResolveMutator(mutator);
     }
 }

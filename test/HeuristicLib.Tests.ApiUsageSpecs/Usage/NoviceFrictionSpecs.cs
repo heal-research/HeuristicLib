@@ -139,37 +139,56 @@ public class NoviceFrictionSpecs
     }
 
     /// <summary>
-    /// The reduced arity records are not a shorthand for the common case. <c>GeneticAlgorithm&lt;RealVector&gt;</c>
-    /// means "over any search space for real vectors", which is a weaker algorithm, not a shorter spelling of the
-    /// same one.
+    /// The friction this suite was written to measure, on a role that has not migrated yet. The reduced arity
+    /// records are not a shorthand for the common case: <c>GeneticAlgorithm&lt;RealVector&gt;</c> means "over any
+    /// search space for real vectors", which is a weaker algorithm, not a shorter spelling of the same one.
     /// </summary>
     /// <remarks>
-    /// This is why the existing arity ladder does not by itself answer the entry barrier. An operator that reads the
-    /// search space cannot fill a slot declared against <see cref="ISearchSpace{TCandidate}"/>, because the role
-    /// interfaces declare <c>in TSearchSpace</c> and contravariance runs the other way.
+    /// This is why the arity ladder does not by itself answer the entry barrier. An operator that reads the search
+    /// space cannot fill a slot declared against <see cref="ISearchSpace{TCandidate}"/>, because the role interface
+    /// declares <c>in TSearchSpace</c> and contravariance runs the other way.
     /// </remarks>
     [Fact]
-    public void TheOneArgumentAlgorithm_CannotTakeAnOperatorThatReadsTheSearchSpace()
+    public void TheOneArgumentAlgorithm_CannotTakeAnUnmigratedOperatorThatReadsTheSearchSpace()
     {
-        IMutator<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> encodingBoundMutator =
-            new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1);
+        ICreator<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> encodingBoundCreator =
+            new UniformDistributedCreator();
 
-        // Does not compile. GaussianMutator reads BoundedRealVectorSearchSpace.Minimum and .Maximum, and
+        // Does not compile. UniformDistributedCreator reads BoundedRealVectorSearchSpace.Minimum and .Maximum, and
         // ISearchSpace<RealVector> cannot be converted to BoundedRealVectorSearchSpace:
         //
-        // IMutator<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> slot =
-        //     encodingBoundMutator;
+        // ICreator<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> slot =
+        //     encodingBoundCreator;
         //
         // CS0266: cannot implicitly convert type
-        //   'IMutator<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>' to
-        //   'IMutator<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>'
+        //   'ICreator<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>' to
+        //   'ICreator<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>'
+
+        var creatorSlot = typeof(GeneticAlgorithm<RealVector>)
+            .GetProperty(nameof(GeneticAlgorithm<RealVector>.Creator))!;
+
+        creatorSlot.PropertyType.ShouldBe(
+            typeof(ICreator<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>));
+        creatorSlot.PropertyType.IsInstanceOfType(encodingBoundCreator).ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// The same measurement on the migrated role, which is what the arity reduction buys. A mutator that reads
+    /// <see cref="BoundedRealVectorSearchSpace"/> fills the one argument algorithm's slot, because the slot no longer
+    /// names a search space at all: the run supplies it when the execution instance is created, and a mismatch is
+    /// reported by the pre-flight check rather than by a conversion the author has to talk the compiler out of.
+    /// </summary>
+    [Fact]
+    public void TheOneArgumentAlgorithm_TakesAMigratedOperatorThatReadsTheSearchSpace()
+    {
+        IMutator<RealVector> encodingBoundMutator =
+            new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1);
 
         var mutatorSlot = typeof(GeneticAlgorithm<RealVector>)
             .GetProperty(nameof(GeneticAlgorithm<RealVector>.Mutator))!;
 
-        mutatorSlot.PropertyType.ShouldBe(
-            typeof(IMutator<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>));
-        mutatorSlot.PropertyType.IsInstanceOfType(encodingBoundMutator).ShouldBeFalse();
+        mutatorSlot.PropertyType.ShouldBe(typeof(IMutator<RealVector>));
+        mutatorSlot.PropertyType.IsInstanceOfType(encodingBoundMutator).ShouldBeTrue();
     }
 
     /// <summary>
@@ -254,18 +273,17 @@ public class NoviceFrictionSpecs
 
         // Accepted, and should not be. The operator declares no search space, so contravariance lets it fill every
         // space slot, and a single flip takes the candidate straight out of the constrained space.
-        IMutator<BoolVector, FixedCardinalityBoolVectorSearchSpace,
-            IProblem<BoolVector, FixedCardinalityBoolVectorSearchSpace>> constrainedSlot = new FlipOneBitMutator();
+        IMutator<BoolVector> constrainedSlot = new FlipOneBitMutator();
 
         // Rejected, and should not be. BitSwapMutator preserves cardinality, which is stronger than the
         // unconstrained space requires, so it is valid there; but it names the narrower space and contravariance
         // runs the other way:
         //
-        // IMutator<BoolVector, BoolVectorSearchSpace, IProblem<BoolVector, BoolVectorSearchSpace>> wideSlot =
+        // IMutator<BoolVector> wideSlot =
         //     new BitSwapMutator();
         //
         // CS0266: cannot implicitly convert type 'BitSwapMutator' to
-        //   'IMutator<BoolVector, BoolVectorSearchSpace, IProblem<BoolVector, BoolVectorSearchSpace>>'
+        //   'IMutator<BoolVector>'
 
         var flipped = new FlipOneBitMutator().MutateCandidate(candidate, RandomNumberGenerator.Create(seed: 1));
 
@@ -284,7 +302,10 @@ public class NoviceFrictionSpecs
     /// </summary>
     /// <remarks>
     /// Naming the exceptions is the point. They are the cases any reduction of the problem argument has to keep
-    /// working, so this list is an acceptance criterion for such a change rather than a coverage assertion.
+    /// working, so this list is an acceptance criterion for such a change rather than a coverage assertion. Roles
+    /// that have already migrated are absent because they no longer carry a problem argument to constrain; a
+    /// problem bound operator in one of them names the problem on its own type instead and reconciles it with the
+    /// run's when the execution instance is created.
     /// </remarks>
     [Fact]
     public void AlmostNoOperatorConstrainsTheProblemTypeArgument()
@@ -293,7 +314,6 @@ public class NoviceFrictionSpecs
         [
             typeof(ICreator<,,>),
             typeof(ICrossover<,,>),
-            typeof(IMutator<,,>),
             typeof(ISelector<,,>),
             typeof(IEvaluator<,,>),
             typeof(IRefiner<,,>),

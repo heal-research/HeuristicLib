@@ -19,7 +19,7 @@ public class ExperimentParameters<TCandidate, TSearchSpace> where TSearchSpace :
     public int Elites { get; set; } = 1;
     public int Iterations { get; set; } = 30;
     public double MutationRate { get; set; } = 0.05;
-    public IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Mutator { get; set; }
+    public IMutator<TCandidate>? Mutator { get; set; }
     public int NoChildren { get; set; } = -1;
     public int PopulationSize { get; set; } = 10;
     public int Seed { get; set; }

@@ -52,5 +52,5 @@ public interface IProblemDefaultMutator<TSelf, TCandidate, TSearchSpace> : IProb
     where TSelf : class, IProblemDefaultMutator<TSelf, TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    static virtual IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? CreateDefaultMutator(TSelf problem) => null;
+    static virtual IMutator<TCandidate>? CreateDefaultMutator(TSelf problem) => null;
 }

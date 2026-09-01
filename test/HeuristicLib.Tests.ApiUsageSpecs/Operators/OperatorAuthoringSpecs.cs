@@ -13,9 +13,11 @@ using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Operators;
 
@@ -92,7 +94,7 @@ public class OperatorAuthoringSpecs
         // Wrapping and multi bases stay at the full arity so their child slot can hold a problem-specific mutator.
         // A reduced-arity topology base would fix the child to the widest role contract and reject this.
         var problem = CreateRastriginProblem(dimension: 3);
-        var pipeline = PipelineMutator.Create<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(
+        var pipeline = PipelineMutator.Create<RealVector>(
             new PullTowardZeroMutator(),
             NoChangeMutator<RealVector>.Instance);
 
@@ -108,7 +110,7 @@ public class OperatorAuthoringSpecs
     [Fact]
     public void MutatorCompositionFactories_InferRoleTypes()
     {
-        IMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> childMutator = new PullTowardZeroMutator();
+        IMutator<RealVector> childMutator = new PullTowardZeroMutator();
         IMutatorObserver<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> observer =
             new ActionMutatorObserver<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>((_, _, _, _) => { });
 
@@ -801,9 +803,9 @@ public class OperatorAuthoringSpecs
     private static IReadOnlyList<EvaluatedCandidate<RealVector>> CreatePopulation(params double[] values) =>
         values.Select(value => EvaluatedCandidate.From(RealVector.Repeat(value, 3), new ObjectiveVector(value))).ToArray();
 
-    private static IMutatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> ResolveMutator(IMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> mutator)
+    private static IMutatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> ResolveMutator(IMutator<RealVector> mutator)
     {
-        return new ExecutionInstanceRegistry().Resolve(mutator);
+        return new ExecutionInstanceRegistry().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(mutator);
     }
 
     private static IRefinerInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> ResolveRefiner(IRefiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> refiner)
@@ -1399,20 +1401,22 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record ApplyTwiceMutator
-        : WrappingMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        : WrappingMutator<RealVector>
     {
-        public ApplyTwiceMutator(IMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> childMutator)
+        public ApplyTwiceMutator(IMutator<RealVector> childMutator)
             : base(childMutator)
         {
         }
 
-        protected override WrappingMutatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(IMutatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> childMutator) =>
-            new Instance(childMutator);
+        protected override WrappingMutatorInstance<RealVector, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorInstance<RealVector, TRunSearchSpace, TRunProblem> childMutator) =>
+            new Instance<TRunSearchSpace, TRunProblem>(childMutator);
 
-        private sealed class Instance(IMutatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> childMutator)
-            : WrappingMutatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(childMutator)
+        private sealed class Instance<TSearchSpace, TProblem>(IMutatorInstance<RealVector, TSearchSpace, TProblem> childMutator)
+            : WrappingMutatorInstance<RealVector, TSearchSpace, TProblem>(childMutator)
+            where TSearchSpace : class, ISearchSpace<RealVector>
+            where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
-            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
             {
                 var first = ChildMutator.Mutate(parents, random, searchSpace, problem);
                 return ChildMutator.Mutate(first, random, searchSpace, problem);
@@ -1481,20 +1485,22 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record PreferFirstMultiMutator
-        : MultiMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        : MultiMutator<RealVector>
     {
-        public PreferFirstMultiMutator(ImmutableArray<IMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> childMutators)
+        public PreferFirstMultiMutator(ImmutableArray<IMutator<RealVector>> childMutators)
             : base(childMutators)
         {
         }
 
-        protected override MultiMutatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ImmutableArray<IMutatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> childMutators) =>
-            new Instance(childMutators);
+        protected override MultiMutatorInstance<RealVector, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorInstance<RealVector, TRunSearchSpace, TRunProblem>> childMutators) =>
+            new Instance<TRunSearchSpace, TRunProblem>(childMutators);
 
-        private sealed class Instance(ImmutableArray<IMutatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> childMutators)
-            : MultiMutatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(childMutators)
+        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IMutatorInstance<RealVector, TSearchSpace, TProblem>> childMutators)
+            : MultiMutatorInstance<RealVector, TSearchSpace, TProblem>(childMutators)
+            where TSearchSpace : class, ISearchSpace<RealVector>
+            where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
-            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildMutators[0].Mutate(parents, random, searchSpace, problem);
         }
     }

@@ -108,7 +108,7 @@ public class ExtendedSymbolicRegressionProblem(
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover { InternalNodeProbability = 0.9 },
-            Mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>(
+            Mutator = new ChooseOneMutator<ExpressionTree>(
                 [.. SymbolicExpressionMutators.Default]),
             MutationRate = 0.1,
             Selector = new TournamentSelector<ExpressionTree>(4),

@@ -92,7 +92,7 @@ public class PythonInterOptEquationScoring(
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover { InternalNodeProbability = 0.9 },
-            Mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>(
+            Mutator = new ChooseOneMutator<ExpressionTree>(
                 [.. SymbolicExpressionMutators.Default]),
             MutationRate = 0.1,
             Selector = new TournamentSelector<ExpressionTree>(4),

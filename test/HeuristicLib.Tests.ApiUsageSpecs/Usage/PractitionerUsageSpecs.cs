@@ -409,7 +409,7 @@ public class PractitionerUsageSpecs
         var counter = new ObservationCounter();
         var duration = new ObservationDuration();
 
-        var counted = new CountingMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(mutator, counter, OperatorCountMetric.Candidates);
+        var counted = new CountingMutator<RealVector>(mutator, counter, OperatorCountMetric.Candidates);
         var measured = mutator.MeasureMutatorDuration(duration);
 
         counted.ChildMutator.ShouldBeSameAs(mutator);

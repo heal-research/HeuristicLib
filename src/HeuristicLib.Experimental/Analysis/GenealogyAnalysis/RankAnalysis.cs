@@ -15,7 +15,7 @@ public record RankAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> : A
     private readonly IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor;
 
     public RankAnalysis(ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
-                        IMutator<TCandidate, TSearchSpace, TProblem>? mutator = null,
+                        IMutator<TCandidate>? mutator = null,
                         IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor = null,
                         IEqualityComparer<TCandidate>? equality = null)
     {

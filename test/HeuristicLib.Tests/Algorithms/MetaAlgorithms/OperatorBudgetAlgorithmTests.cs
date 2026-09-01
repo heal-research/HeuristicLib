@@ -628,13 +628,7 @@ public class OperatorBudgetAlgorithmTests
         var algorithm = CreateAlgorithm(problem);
 
         var budgeted =
-            new OperatorBudgetAlgorithm<
-                RealVector,
-                BoundedRealVectorSearchSpace,
-                TestFunctionProblem,
-                PopulationState<RealVector>,
-                IEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>,
-                IEvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>
+            new OperatorBudgetAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, IEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
@@ -655,13 +649,7 @@ public class OperatorBudgetAlgorithmTests
         var algorithm = CreateAlgorithm(problem);
 
         var budgeted =
-            new OperatorDurationBudgetAlgorithm<
-                RealVector,
-                BoundedRealVectorSearchSpace,
-                TestFunctionProblem,
-                PopulationState<RealVector>,
-                IEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>,
-                IEvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>
+            new OperatorDurationBudgetAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, IEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,

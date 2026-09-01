@@ -111,7 +111,7 @@ public static class InteractiveSymbolicRegression
         var data = CreateRegressionDataFromArrays(xValues, yValues);
         var searchSpace = BuildSearchSpace(parameters.AllowedSymbols, ["x"], parameters.UseLinearScaling, parameters.TreeLength, parameters.TreeDepth);
         var problem = new SymbolicRegressionProblem(data, Metrics.R2, searchSpace, parameters.UseLinearScaling);
-        var mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(
+        var mutator = new ChooseOneMutator<ExpressionTree>(
             [
                 new NodeReplacementMutator(),
                 new LocalPerturbationMutator(),

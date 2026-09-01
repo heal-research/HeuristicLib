@@ -16,7 +16,7 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
     private readonly bool saveSpace;
 
     public GenealogyAnalysis(ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
-                             IMutator<TCandidate, TSearchSpace, TProblem>? mutator = null,
+                             IMutator<TCandidate>? mutator = null,
                              IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor = null,
                              IEqualityComparer<TCandidate>? equality = null,
                              bool saveSpace = false)
@@ -29,7 +29,7 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
     }
 
     private ICrossover<TCandidate, TSearchSpace, TProblem>? Crossover { get; }
-    private IMutator<TCandidate, TSearchSpace, TProblem>? Mutator { get; }
+    private IMutator<TCandidate>? Mutator { get; }
     private IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; }
 
     public override void RegisterObservations(ObservationPlan observations, GenealogyGraph<TCandidate> graph)
@@ -41,7 +41,7 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
 
         if (Mutator is not null)
         {
-            observations.Observe(Mutator, ((offspring, parent, _, _) => AfterMutate(graph, offspring, parent)));
+            observations.Observe<TCandidate, TSearchSpace, TProblem>(Mutator, (offspring, parent, _, _) => AfterMutate(graph, offspring, parent));
         }
 
         if (Interceptor is not null)

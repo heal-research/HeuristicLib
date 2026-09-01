@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
@@ -16,17 +17,16 @@ namespace HEAL.HeuristicLib.Algorithms;
 
 public static class OperatorCountBudgetExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState, TObservedInstance>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
-        where TObservedInstance : class, IOperatorInstance
     {
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance> WithMaxCount<TOperator>(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator> WithMaxCount<TOperator>(
             TOperator observedOperator,
             int maximumCount,
-            Func<TOperator, ObservationCounter, IOperator<TObservedInstance>> countedOperatorFactory)
-            where TOperator : IOperator<TObservedInstance>
+            Func<TOperator, ObservationCounter, TOperator> countedOperatorFactory)
+            where TOperator : class, IOperator
         {
             return new()
             {
@@ -43,7 +43,7 @@ public static class OperatorCountBudgetExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IEvaluator<TCandidate, TSearchSpace, TProblem>, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxEvaluatorCalls(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IEvaluator<TCandidate, TSearchSpace, TProblem>> WithMaxEvaluatorCalls(
             IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
             int maximumCalls)
         {
@@ -53,7 +53,7 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountEvaluatorCalls(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IEvaluator<TCandidate, TSearchSpace, TProblem>, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxEvaluatedCandidates(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IEvaluator<TCandidate, TSearchSpace, TProblem>> WithMaxEvaluatedCandidates(
             IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
             int maximumCandidates)
         {
@@ -63,7 +63,7 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountEvaluatedCandidates(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ICreator<TCandidate, TSearchSpace, TProblem>, ICreatorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxCreatorCalls(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ICreator<TCandidate, TSearchSpace, TProblem>> WithMaxCreatorCalls(
             ICreator<TCandidate, TSearchSpace, TProblem> creator,
             int maximumCalls)
         {
@@ -73,7 +73,7 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountCreatorCalls(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ICreator<TCandidate, TSearchSpace, TProblem>, ICreatorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxCreatedCandidates(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ICreator<TCandidate, TSearchSpace, TProblem>> WithMaxCreatedCandidates(
             ICreator<TCandidate, TSearchSpace, TProblem> creator,
             int maximumCandidates)
         {
@@ -83,7 +83,7 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountCreatedCandidates(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ICrossover<TCandidate, TSearchSpace, TProblem>, ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> WithMaxCrossoverCalls(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ICrossover<TCandidate, TSearchSpace, TProblem>> WithMaxCrossoverCalls(
             ICrossover<TCandidate, TSearchSpace, TProblem> crossover,
             int maximumCalls)
         {
@@ -93,7 +93,7 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountCrossoverCalls(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ICrossover<TCandidate, TSearchSpace, TProblem>, ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> WithMaxCrossedCandidates(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ICrossover<TCandidate, TSearchSpace, TProblem>> WithMaxCrossedCandidates(
             ICrossover<TCandidate, TSearchSpace, TProblem> crossover,
             int maximumCandidates)
         {
@@ -103,8 +103,8 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountCrossedCandidates(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IMutator<TCandidate, TSearchSpace, TProblem>, IMutatorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxMutatorCalls(
-            IMutator<TCandidate, TSearchSpace, TProblem> mutator,
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IMutator<TCandidate>> WithMaxMutatorCalls(
+            IMutator<TCandidate> mutator,
             int maximumCalls)
         {
             return algorithm.WithMaxCount(
@@ -113,8 +113,8 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountMutatorCalls(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IMutator<TCandidate, TSearchSpace, TProblem>, IMutatorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxMutatedCandidates(
-            IMutator<TCandidate, TSearchSpace, TProblem> mutator,
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IMutator<TCandidate>> WithMaxMutatedCandidates(
+            IMutator<TCandidate> mutator,
             int maximumCandidates)
         {
             return algorithm.WithMaxCount(
@@ -123,7 +123,7 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountMutatedCandidates(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IRefiner<TCandidate, TSearchSpace, TProblem>, IRefinerInstance<TCandidate, TSearchSpace, TProblem>> WithMaxRefinerCalls(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IRefiner<TCandidate, TSearchSpace, TProblem>> WithMaxRefinerCalls(
             IRefiner<TCandidate, TSearchSpace, TProblem> refiner,
             int maximumCalls)
         {
@@ -133,7 +133,7 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountRefinerCalls(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IRefiner<TCandidate, TSearchSpace, TProblem>, IRefinerInstance<TCandidate, TSearchSpace, TProblem>> WithMaxRefinedCandidates(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IRefiner<TCandidate, TSearchSpace, TProblem>> WithMaxRefinedCandidates(
             IRefiner<TCandidate, TSearchSpace, TProblem> refiner,
             int maximumCandidates)
         {
@@ -143,7 +143,7 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountRefinedCandidates(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ISelector<TCandidate, TSearchSpace, TProblem>, ISelectorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxSelectorCalls(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ISelector<TCandidate, TSearchSpace, TProblem>> WithMaxSelectorCalls(
             ISelector<TCandidate, TSearchSpace, TProblem> selector,
             int maximumCalls)
         {
@@ -153,7 +153,7 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountSelectorCalls(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ISelector<TCandidate, TSearchSpace, TProblem>, ISelectorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxSelectedCandidates(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ISelector<TCandidate, TSearchSpace, TProblem>> WithMaxSelectedCandidates(
             ISelector<TCandidate, TSearchSpace, TProblem> selector,
             int maximumCandidates)
         {
@@ -163,7 +163,7 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountSelectedCandidates(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IReplacer<TCandidate, TSearchSpace, TProblem>, IReplacerInstance<TCandidate, TSearchSpace, TProblem>> WithMaxReplacerCalls(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IReplacer<TCandidate, TSearchSpace, TProblem>> WithMaxReplacerCalls(
             IReplacer<TCandidate, TSearchSpace, TProblem> replacer,
             int maximumCalls)
         {
@@ -173,7 +173,7 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountReplacerCalls(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IReplacer<TCandidate, TSearchSpace, TProblem>, IReplacerInstance<TCandidate, TSearchSpace, TProblem>> WithMaxReplacementCandidates(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IReplacer<TCandidate, TSearchSpace, TProblem>> WithMaxReplacementCandidates(
             IReplacer<TCandidate, TSearchSpace, TProblem> replacer,
             int maximumCandidates)
         {
@@ -183,7 +183,7 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountReplacementCandidates(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> WithMaxInterceptorCalls(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> WithMaxInterceptorCalls(
             IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor,
             int maximumCalls)
         {
@@ -193,7 +193,7 @@ public static class OperatorCountBudgetExtensions
                 static (observedOperator, counter) => observedOperator.CountInterceptorCalls(counter));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>, ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> WithMaxTerminatorCalls(
+        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> WithMaxTerminatorCalls(
             ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator,
             int maximumCalls)
         {

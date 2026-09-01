@@ -21,6 +21,29 @@ public class OperatorTopologyTests
         "HEAL.HeuristicLib.Operators.Terminators"
     ];
 
+    /// <summary>
+    /// A migrated configuration contract names the candidate alone. The search space and problem the run supplies
+    /// arrive as method type arguments when the execution instance is created, so they are not part of the type an
+    /// author stores in a field, passes as a parameter or reuses across problems.
+    /// </summary>
+    /// <remarks>
+    /// Roles that still carry the triple are listed in
+    /// <see cref="OperatorRoleContracts_PreserveCandidateAndUseContravariantContext"/> and move here as they migrate.
+    /// </remarks>
+    [Theory]
+    [InlineData(typeof(IMutator<>))]
+    public void MigratedOperatorConfigurationContracts_NameOnlyTheCandidate(Type roleContract)
+    {
+        var typeParameters = roleContract.GetGenericArguments();
+
+        typeParameters.Length.ShouldBe(1);
+        Variance(typeParameters[0]).ShouldBe(GenericParameterAttributes.None);
+    }
+
+    /// <summary>
+    /// An execution instance is created for one run and runs over that run's search space and problem, so it names
+    /// both and stays contravariant in them.
+    /// </summary>
     [Theory]
     [InlineData(typeof(ICreator<,,>))]
     [InlineData(typeof(ICreatorInstance<,,>))]
@@ -28,7 +51,6 @@ public class OperatorTopologyTests
     [InlineData(typeof(ICrossoverInstance<,,>))]
     [InlineData(typeof(IEvaluator<,,>))]
     [InlineData(typeof(IEvaluatorInstance<,,>))]
-    [InlineData(typeof(IMutator<,,>))]
     [InlineData(typeof(IMutatorInstance<,,>))]
     [InlineData(typeof(IReplacer<,,>))]
     [InlineData(typeof(IReplacerInstance<,,>))]

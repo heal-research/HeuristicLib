@@ -5,31 +5,30 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
-public sealed record DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem>
-    : WrappingMutator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record DurationMeasuringMutator<TCandidate> : WrappingMutator<TCandidate>
 {
     public ObservationDuration Duration { get; init; }
     public TimeProvider TimeProvider { get; init; }
 
-    public DurationMeasuringMutator(IMutator<TCandidate, TSearchSpace, TProblem> childMutator, ObservationDuration duration)
+    public DurationMeasuringMutator(IMutator<TCandidate> childMutator, ObservationDuration duration)
         : this(childMutator, duration, TimeProvider.System)
     {
     }
 
-    public DurationMeasuringMutator(IMutator<TCandidate, TSearchSpace, TProblem> childMutator, ObservationDuration duration, TimeProvider timeProvider)
+    public DurationMeasuringMutator(IMutator<TCandidate> childMutator, ObservationDuration duration, TimeProvider timeProvider)
         : base(childMutator)
     {
         Duration = duration;
         TimeProvider = timeProvider;
     }
 
-    protected override WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator) =>
-        new Instance(childMutator, Duration, TimeProvider);
+    protected override IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childMutator) =>
+        new Instance<TRunSearchSpace, TRunProblem>(childMutator, Duration, TimeProvider);
 
-    private sealed class Instance(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator, ObservationDuration duration, TimeProvider timeProvider)
+    private sealed class Instance<TSearchSpace, TProblem>(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator, ObservationDuration duration, TimeProvider timeProvider)
         : WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem>(childMutator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -48,36 +47,28 @@ public sealed record DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem
 
 public static class DurationMeasuringMutator
 {
-    public static DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate, TSearchSpace, TProblem> childMutator, ObservationDuration duration)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static DurationMeasuringMutator<TCandidate> Create<TCandidate>(IMutator<TCandidate> childMutator, ObservationDuration duration) =>
         new(childMutator, duration);
 
-    public static DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate, TSearchSpace, TProblem> childMutator, ObservationDuration duration, TimeProvider timeProvider)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static DurationMeasuringMutator<TCandidate> Create<TCandidate>(IMutator<TCandidate> childMutator, ObservationDuration duration, TimeProvider timeProvider) =>
         new(childMutator, duration, timeProvider);
 }
 
 public static class MutatorDurationExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate, TSearchSpace, TProblem> mutator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IMutator<TCandidate> mutator)
     {
-        public DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem> MeasureMutatorDuration(ObservationDuration duration) =>
-            new(mutator, duration);
+        public DurationMeasuringMutator<TCandidate> MeasureMutatorDuration(ObservationDuration duration) => new(mutator, duration);
 
-        public DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem> MeasureMutatorDuration(ObservationDuration duration, TimeProvider timeProvider) =>
-            new(mutator, duration, timeProvider);
+        public DurationMeasuringMutator<TCandidate> MeasureMutatorDuration(ObservationDuration duration, TimeProvider timeProvider) => new(mutator, duration, timeProvider);
 
-        public DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem> MeasureMutatorDuration(out ObservationDuration duration)
+        public DurationMeasuringMutator<TCandidate> MeasureMutatorDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return new(mutator, duration);
         }
 
-        public DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem> MeasureMutatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringMutator<TCandidate> MeasureMutatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return new(mutator, duration, timeProvider);

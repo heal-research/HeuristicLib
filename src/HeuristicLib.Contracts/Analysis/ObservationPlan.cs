@@ -13,12 +13,11 @@ public sealed class ObservationPlan
     /// The anchor is used as a reference-identity key, so observers registered at the same anchor are merged into a
     /// single observable replacement.
     /// </remarks>
-    public void Observe<TAnchor, TExecutionInstance, TObserver>(TAnchor anchor, TObserver observer, Func<TAnchor, IReadOnlyList<TObserver>, IExecutionInstanceResolvable<TExecutionInstance>> createObservable)
-        where TAnchor : class, IExecutionInstanceResolvable<TExecutionInstance>
-        where TExecutionInstance : class, IExecutionInstance
+    public void Observe<TAnchor, TObserver>(TAnchor anchor, TObserver observer, Func<TAnchor, IReadOnlyList<TObserver>, IExecutionInstanceResolvable> createObservable)
+        where TAnchor : class, IExecutionInstanceResolvable
         where TObserver : class
     {
-        var entry = new ObservationEntry<TAnchor, TExecutionInstance, TObserver>(anchor, observer, createObservable);
+        var entry = new ObservationEntry<TAnchor, TObserver>(anchor, observer, createObservable);
 
         if (entries.TryGetValue(anchor, out var existingEntry))
         {
@@ -48,10 +47,9 @@ public sealed class ObservationPlan
         public abstract void Install(ExecutionInstanceRegistry registry);
     }
 
-    private sealed class ObservationEntry<TAnchor, TExecutionInstance, TObserver>(TAnchor anchor, TObserver observer, Func<TAnchor, IReadOnlyList<TObserver>, IExecutionInstanceResolvable<TExecutionInstance>> createObservable)
+    private sealed class ObservationEntry<TAnchor, TObserver>(TAnchor anchor, TObserver observer, Func<TAnchor, IReadOnlyList<TObserver>, IExecutionInstanceResolvable> createObservable)
         : ObservationEntry
-        where TAnchor : class, IExecutionInstanceResolvable<TExecutionInstance>
-        where TExecutionInstance : class, IExecutionInstance
+        where TAnchor : class, IExecutionInstanceResolvable
         where TObserver : class
     {
         private readonly List<TObserver> observers = [observer];
@@ -59,7 +57,7 @@ public sealed class ObservationPlan
 
         public override bool TryMerge(ObservationEntry other)
         {
-            if (other is not ObservationEntry<TAnchor, TExecutionInstance, TObserver> typedOther || !ReferenceEquals(typedOther.Anchor, Anchor))
+            if (other is not ObservationEntry<TAnchor, TObserver> typedOther || !ReferenceEquals(typedOther.Anchor, Anchor))
             {
                 return false;
             }

@@ -1,4 +1,6 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.LocalSearch;
@@ -63,10 +65,15 @@ public class HillClimberTests
     }
 
     private sealed record OffsetMutator(int Offset)
-      : IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>,
+      : IMutator<int>,
         IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+        public IMutatorInstance<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ExecutionInstanceRegistry instanceRegistry)
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
+            => (IMutatorInstance<int, TSearchSpace, TProblem>)(object)CreateBoundInstance();
+
+        private IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundInstance() => this;
 
         public IReadOnlyList<int> Mutate(
           IReadOnlyList<int> parents,

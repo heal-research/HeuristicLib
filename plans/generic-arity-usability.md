@@ -8,7 +8,7 @@ The cost is arity in the user's face. A configured genetic algorithm is `Genetic
 
 This plan records what was measured, what is settled, and what is still open. The direction is to reduce the arity a **user** must name without moving compatibility checking out of the compiler, and to make the checking that cannot stay static fail early and explain itself.
 
-Related: [developer-backlog.md](developer-backlog.md#discussed-tried-and-rejected) holds the settled rejections that constrain this work. `test/HeuristicLib.Tests.ApiUsageSpecs/Usage/NoviceFrictionSpecs.cs` is the executable record of the friction and of the measurements below.
+Related: [configuration-arity-migration.md](configuration-arity-migration.md) is the migration plan that acts on this. [developer-backlog.md](developer-backlog.md#discussed-tried-and-rejected) holds the settled rejections that constrain this work. `test/HeuristicLib.Tests.ApiUsageSpecs/Usage/NoviceFrictionSpecs.cs` is the executable record of the friction and of the measurements below.
 
 ## What was measured
 
@@ -58,20 +58,19 @@ A pre-flight pass is wanted independently of the type model: `CycleAlgorithmInst
 
 If validation grows its own notion of what fits while resolution applies a cast, the two paths drift. Validation must therefore *be* resolution: build the whole execution graph at run start, aggregating per-node failures instead of stopping at the first. There is then only one compatibility rule, and it is the one execution actually uses.
 
-## Open: the reduction ladder
+## Decided: the reduction ladder
 
-Execution instances always carry every type argument. The open question is how many of them a **configuration** has to name, and it is not one question but a ladder of increasingly lossy steps. Each step is decided separately, and each is a bet about how much compile-time checking is worth how much ergonomics.
+Execution instances always carry every type argument. The question was how many of them a **configuration** has to name.
 
 | Step | Configuration type | Loses |
 | ---- | ------------------ | ----- |
-| today | `GeneticAlgorithm<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>` | — |
-| 1 | `GeneticAlgorithm<RealVector, RealVectorSearchSpace>` | assignment checking against a concrete problem type |
-| 2 | `GeneticAlgorithm<RealVector>` | assignment checking against a concrete search space type |
+| today | `GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>` | — |
+| 1 and 2, taken together | `GeneticAlgorithm<RealVector>` | assignment checking against concrete problem and search space types |
 | 3 — rejected | `GeneticAlgorithm` | all static compatibility checking, plus hot-path cost |
 
-**Step 1 has by far the best ratio and should be attempted first.** The argument it removes is the one that currently buys least — exactly one operator in the library binds a concrete problem — and it removes disproportionate visual noise, because the inferred problem argument is itself generic over the other two, so `RealVector` is named three times in a declaration that only concerns two ideas.
+**Steps 1 and 2 are taken as one change.** They cannot be reordered, because `TProblem` is `IProblem<TCandidate, TSearchSpace>`, so a configuration naming the problem also names the search space. And stopping between them is the worst of both: `in TSearchSpace` on the configuration interface is exactly what makes a typed registry, or the instantiation carrier as a parameter, a variance error — so step 1 alone forces transitional ceremony that step 2 removes again. The migration is planned in [configuration-arity-migration.md](configuration-arity-migration.md).
 
-**Step 2** gives up the distinction between `BoolVectorSearchSpace` and `FixedCardinalityBoolVectorSearchSpace`, which is a real difference now that both exist. But see the finding below on how little that check actually protects.
+The two give up different checks, and each has its own replacement. Dropping the search space gives up the distinction between `BoolVectorSearchSpace` and `FixedCardinalityBoolVectorSearchSpace`, which is a real difference now that both exist, and that is exactly what the invariant system covers. Dropping the problem gives up the check that a problem-bound operator lands in a compatible algorithm; invariants say nothing about problems, and what catches it is the cast when the execution graph is built, surfaced early by the pre-flight pass. See also the finding below on how little the search space argument protects even today.
 
 **Step 3 is rejected.** `TCandidate` distinguishes different *types*, which C# checks exactly, for free, at compile time. The declared invariant mechanism below distinguishes different *subsets of one type*, which C# cannot check at all. Those are complementary jobs, and only the second is beyond the type system, so erasing `TCandidate` replaces a working check with a weaker one and gains nothing the invariant mechanism does not already provide.
 
@@ -89,6 +88,29 @@ Both are pinned in `NoviceFrictionSpecs.TheSearchSpaceArgument_DoesNotProtectACo
 Making the constrained space derive from the unconstrained one does not fix this; contravariance would then accept the general mutator into the constrained slot even more directly. Two separate parameters, one for what is read and one for what is preserved, would express it and would add arity rather than remove it.
 
 The underlying reason: preserving an invariant is a **postcondition on the operator's output**, and a postcondition is not a type. So the check that actually matters for a constrained space cannot live in the type system at all — it belongs in validation, or in an explicit capability declaration on the operator. This bounds what step 2 would forfeit: not a working guarantee, but a partial one that already fails against the operators most likely to break a constrained space.
+
+### The mechanism is validated
+
+Both halves of the step 1 shape were compiled against the real library before committing to the migration.
+
+The configuration interface drops the problem while keeping the search space contravariant, and the creation method carries the problem instead:
+
+```csharp
+public interface IMutator<TCandidate, in TSearchSpace> : IOperator
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+{
+    IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance<TProblem>(ExecutionInstanceRegistry registry)
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>;
+}
+```
+
+This satisfies C# variance rules: `TSearchSpace` sits in a contravariant slot of the returned instance type, which is a contravariant use overall and therefore legal for `in`.
+
+**The bridge costs nothing for almost every operator.** An author who writes a problem-agnostic instance returns `IMutatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>`, and that converts to `IMutatorInstance<TCandidate, TSearchSpace, TProblem>` **implicitly**, by the contravariance the instance interface already declares. No cast, no runtime check, no failure mode. That covers every operator that passes the problem through, which is all but one in the library.
+
+Only an operator written against a concrete problem needs the checked cast, and only there can resolution fail. So the runtime failure this step introduces is confined to exactly the operators that were using the type argument for something, and the type system still does the work everywhere else.
+
+This also settles how validation checks problem compatibility: by resolving, not by a second declaration. The cast is the rule, the resolve site knows the configuration, the search space and the requested problem, and a declaration alongside it would be a parallel rule able to drift. The same generic method already carries `TSearchSpace`, so nothing new is needed when step 2 later removes it from the configuration.
 
 ### The mechanism
 
@@ -237,6 +259,8 @@ Status: the invariant mechanism and the pre-flight validation it drives are impl
 1. **Have the built-in problems declare their defaults.** Makes `For(problem, …)` real rather than a one-problem special case and removes the worst first-contact failure. Coordinate with the existing backlog item on choosing defaults per encoding and problem, which requires evidence per choice rather than mechanical rollout.
 2. **Extend the pre-flight pass to trial resolution.** The invariant half is done: `SearchConfigurationValidation` walks the configuration graph and aggregates every incompatibility. It does not yet resolve execution instances, so a failure that only resolution would surface still appears at run start rather than at validation. Resolving the graph in the same pass is the remaining half, and it is what makes validation and execution share one rule.
 3. **Attempt step 1 of the ladder**, removing `TProblem` from the configuration layer while execution instances keep it. Prototype the generic resolution mechanism on one role, most likely mutators. Measure the diff the way the evaluator return-type change was measured in the backlog: how much of it is mechanical, how much reaches behavior. Do not proceed to step 2 before step 1 has been judged on that measurement.
+
+   The migration has green intermediate states and does not have to land in one commit. Add the low-arity role interface, the registry overloads and an adapter that presents an existing full-arity operator through the new interface; move algorithm slots to the new interface one algorithm at a time, since old operators still fit through the adapter; move the authoring bases to implement the new interface natively; then delete the adapter and the old interface. The wrinkle to watch is registry identity: an adapter is a different reference from the operator it wraps, so observation anchoring needs the adapter to delegate identity or register a replacement while the transition lasts.
 4. **Fix the examples and specs**, which mostly show direct construction with full arity, and land the analyzer already on the backlog that rewrites explicit construction into the inferring factory.
 5. **Document closed generic aliases** as the practitioner-level mitigation. `using RealVectorGa = GeneticAlgorithm<…>;` and the project-wide `<Using Include="…" Alias="…"/>` form both work today, cost the library nothing and preserve every static guarantee. They help a codebase with repeated signatures; they do not help a newcomer reading documentation.
 6. **Decide step 2 of the ladder** only after 1–4, on the evidence step 1 produces and against the two search spaces over `BoolVector` that now exist. Step 3 is rejected.

@@ -18,7 +18,7 @@ public sealed class SymbolicRegressionVerticalSliceScenario(ITestOutputHelper ou
             variables: ["x0", "x1"],
             constants: [new EvolvableConstantSymbol(), new FixedConstantSymbol(2.0)]);
         var problem = new SymbolicRegressionProblem(data, Metrics.RMSE, searchSpace);
-        var mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(
+        var mutator = new ChooseOneMutator<ExpressionTree>(
             [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()])
         {
             Weights = [1.0, 1.0, 1.0]

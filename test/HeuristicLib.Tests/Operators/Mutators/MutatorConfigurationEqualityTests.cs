@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Mutators;
@@ -59,7 +60,7 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void ChooseOneMutator_WithDifferentWeights_IsNotEqual()
     {
-        var children = new IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[]
+        var children = new IMutator<int>[]
         {
             new AddOffsetMutator(1),
             new AddOffsetMutator(2),
@@ -238,7 +239,7 @@ public class MutatorConfigurationEqualityTests
     {
         var first = new AddOffsetMutator(1);
         var second = new AddOffsetMutator(2);
-        var childMutators = new List<IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var childMutators = new List<IMutator<int>> { first, second };
         var mutator = new FirstOfMutator(childMutators);
 
         childMutators.Clear();
@@ -256,20 +257,22 @@ public class MutatorConfigurationEqualityTests
     /// structural equality follows from <c>ChildMutators</c> being a value array.
     /// </summary>
     private sealed record FirstOfMutator
-        : MultiMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        : MultiMutator<int>
     {
-        public FirstOfMutator(IReadOnlyList<IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childMutators)
+        public FirstOfMutator(IReadOnlyList<IMutator<int>> childMutators)
             : base(childMutators)
         {
         }
 
-        protected override MultiMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childMutators) =>
-            new Instance(childMutators);
+        protected override IMutatorInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorInstance<int, TRunSearchSpace, TRunProblem>> childMutators) =>
+            new Instance<TRunSearchSpace, TRunProblem>(childMutators);
 
-        private sealed class Instance(ImmutableArray<IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childMutators)
-            : MultiMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childMutators)
+        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IMutatorInstance<int, TSearchSpace, TProblem>> childMutators)
+            : MultiMutatorInstance<int, TSearchSpace, TProblem>(childMutators)
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildMutators[0].Mutate(parents, random, searchSpace, problem);
         }
     }

@@ -4,38 +4,46 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
-public abstract record WrappingMutator<TCandidate, TSearchSpace, TProblem>
-    : Mutator<TCandidate, TSearchSpace, TProblem>, IInvariantContract<TCandidate>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+/// <remarks>
+/// A wrapping mutator owns a child, so it stays agnostic in the search space and problem and passes the run's triple
+/// through unchanged. Binding is a leaf concept: a composite that narrowed the triple would reject children the run
+/// supports.
+/// </remarks>
+public abstract record WrappingMutator<TCandidate>
+    : IMutator<TCandidate>, IInvariantContract<TCandidate>
 {
-    protected WrappingMutator(IMutator<TCandidate, TSearchSpace, TProblem> childMutator)
+    protected WrappingMutator(IMutator<TCandidate> childMutator)
     {
         ChildMutator = childMutator;
     }
 
-    public IMutator<TCandidate, TSearchSpace, TProblem> ChildMutator { get; init; }
-
-    public sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance(instanceRegistry.Resolve(ChildMutator));
-
-    protected abstract WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator);
+    public IMutator<TCandidate> ChildMutator { get; init; }
 
     /// <summary>
-    /// Answers from the wrapped mutator. A wrapper that only delegates, counts or measures cannot weaken what its child
-    /// ensures.
+    /// Resolves the child over the run's search space and problem and hands it to
+    /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>. Left visible, because unlike a leaf mutator
+    /// this base offers no other creation member and hiding it would leave an author with no view of the mechanism
+    /// their override plugs into.
     /// </summary>
-    /// <remarks>
-    /// Override in a wrapper that changes candidates itself rather than only delegating.
-    /// </remarks>
+    public IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
+        WrapExecutionInstance(instanceRegistry.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildMutator));
+
+    /// <summary>Wraps the child's execution instance in this operator's own.</summary>
+    protected abstract IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childMutator)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+
+    /// <summary>
+    /// Answers from the wrapped mutator. A wrapper that only delegates, counts or measures cannot weaken what its
+    /// child ensures.
+    /// </summary>
+    /// <remarks>Override in a wrapper that changes candidates itself rather than only delegating.</remarks>
     public virtual bool? Ensures(ISearchInvariant<TCandidate> invariant) => InvariantContractComposition.Ensures([ChildMutator], invariant);
 
-    /// <summary>
-    /// Requires whatever the wrapped mutator require, since any of them may be handed this operator's input.
-    /// </summary>
-    /// <remarks>
-    /// Override in a wrapper that changes candidates itself rather than only delegating.
-    /// </remarks>
+    /// <summary>Requires whatever the wrapped mutator requires, since it is handed this operator's input.</summary>
+    /// <remarks>Override in a wrapper that changes candidates itself rather than only delegating.</remarks>
     public virtual IReadOnlyList<ISearchInvariant<TCandidate>> RequiredInputInvariants =>
         InvariantContractComposition.RequiredInputInvariants<TCandidate>([ChildMutator]);
 }

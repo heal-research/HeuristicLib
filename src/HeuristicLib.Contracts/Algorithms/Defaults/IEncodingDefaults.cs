@@ -51,5 +51,5 @@ public interface IEncodingDefaultCrossover<TCandidate, TSearchSpace> : IEncoding
 public interface IEncodingDefaultMutator<TCandidate, TSearchSpace> : IEncodingDefaults<TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    static abstract IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateDefaultMutator(TSearchSpace searchSpace);
+    static abstract IMutator<TCandidate> CreateDefaultMutator(TSearchSpace searchSpace);
 }

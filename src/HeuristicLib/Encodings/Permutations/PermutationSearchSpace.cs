@@ -24,6 +24,6 @@ public record PermutationSearchSpace(int Length)
     public static ICrossover<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>> CreateDefaultCrossover(PermutationSearchSpace searchSpace) =>
         new EdgeRecombinationCrossover();
 
-    public static IMutator<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>> CreateDefaultMutator(PermutationSearchSpace searchSpace) =>
+    public static IMutator<Permutation> CreateDefaultMutator(PermutationSearchSpace searchSpace) =>
         new InversionMutator();
 }

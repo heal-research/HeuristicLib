@@ -15,7 +15,7 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     public int PopulationSize { get; init; } = GeneticAlgorithmDefaults.PopulationSize;
     public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
     public required ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; init; }
-    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
+    public required IMutator<TCandidate> Mutator { get; init; }
     public ITerminator<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? Terminator { get; init; }
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = GeneticAlgorithmDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>();
     public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
@@ -43,7 +43,7 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     {
         var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate);
         return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover),
-            instanceRegistry.Resolve(effectiveMutator), instanceRegistry.Resolve(Selector), instanceRegistry.ResolveOptional(Terminator),
+            instanceRegistry.Resolve<TCandidate, TSearchSpace, TProblem>(effectiveMutator), instanceRegistry.Resolve(Selector), instanceRegistry.ResolveOptional(Terminator),
             instanceRegistry.ResolveOptional(Refiner), PopulationSize, MaximumGenerations, Elites);
     }
 
@@ -121,7 +121,7 @@ public static class GeneticAlgorithm
         IProblemDefaults<TProblem, TCandidate, TSearchSpace> problem,
         ICreator<TCandidate, TSearchSpace, TProblem>? creator = null,
         ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
-        IMutator<TCandidate, TSearchSpace, TProblem>? mutator = null,
+        IMutator<TCandidate>? mutator = null,
         ISelector<TCandidate, TSearchSpace, TProblem>? selector = null,
         IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,
         IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null,
@@ -179,7 +179,7 @@ public static class GeneticAlgorithm
         IEncodingDefaults<TCandidate, TSearchSpace> searchSpace,
         ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? creator = null,
         ICrossover<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? crossover = null,
-        IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? mutator = null,
+        IMutator<TCandidate>? mutator = null,
         ISelector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? selector = null,
         IEvaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? evaluator = null,
         IRefiner<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? refiner = null,
@@ -225,7 +225,7 @@ public static class GeneticAlgorithm
     public static GeneticAlgorithm<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
         ICreator<TCandidate, TSearchSpace, TProblem> creator,
         ICrossover<TCandidate, TSearchSpace, TProblem> crossover,
-        IMutator<TCandidate, TSearchSpace, TProblem> mutator,
+        IMutator<TCandidate> mutator,
         ISelector<TCandidate, TSearchSpace, TProblem>? selector = null,
         IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,
         IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null,

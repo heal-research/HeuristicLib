@@ -10,8 +10,7 @@ namespace HEAL.HeuristicLib.Tests.Scenarios.GenealogyAnalysis;
 public class GenealogyGraphTests
 {
     private static
-        ChooseOneMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace,
-            IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
+        ChooseOneMutator<SymbolicExpressionTree> CreateSymRegAllMutator()
     {
         var symRegAllMutator = ChooseOneMutator.Create(
             new ChangeNodeTypeManipulation(),
