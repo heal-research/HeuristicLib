@@ -23,7 +23,7 @@ public class PractitionerUsageSpecs
     public void StatelessOperators_CanBeInvokedDirectly_WithoutInstantiation()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var realSearchSpace = new RealVectorSearchSpace(3, [-1.0], [1.0]);
+        var realSearchSpace = new BoundedRealVectorSearchSpace(3, [-1.0], [1.0]);
         var integerSearchSpace = new IntegerVectorSearchSpace(3, [-2], [2]);
 
         var randomIntegerVector = RandomNumberGenerator.Create(2025).NextIntegerVectorUniform([-2], [2], length: 4);
@@ -409,7 +409,7 @@ public class PractitionerUsageSpecs
         var counter = new ObservationCounter();
         var duration = new ObservationDuration();
 
-        var counted = new CountingMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>(mutator, counter, OperatorCountMetric.Candidates);
+        var counted = new CountingMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(mutator, counter, OperatorCountMetric.Candidates);
         var measured = mutator.MeasureMutatorDuration(duration);
 
         counted.ChildMutator.ShouldBeSameAs(mutator);
@@ -502,7 +502,7 @@ public class PractitionerUsageSpecs
     public async Task HillClimber_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        IAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> algorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -523,7 +523,7 @@ public class PractitionerUsageSpecs
     public void HillClimber_StructuralCompletion_DoesNotRequireExternalIterationCap()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = NoChangeMutator.For(problem),
@@ -545,7 +545,7 @@ public class PractitionerUsageSpecs
     public async Task RepeatedExecution_Example_RunsEachRepetition()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -569,7 +569,7 @@ public class PractitionerUsageSpecs
     public async Task EvolutionStrategy_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new EvolutionStrategy<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new EvolutionStrategy<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             PopulationSize = 8,
             NumberOfChildren = 8,
@@ -595,10 +595,10 @@ public class PractitionerUsageSpecs
         return new TestFunctionProblem(new RastriginFunction(dimension));
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSimpleGeneticAlgorithm(
+    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateSimpleGeneticAlgorithm(
       TestFunctionProblem problem)
     {
-        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        return new GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             PopulationSize = 16,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -611,14 +611,14 @@ public class PractitionerUsageSpecs
     }
 
     private sealed record RecordingPopulationTerminator(int StopOnCheckedStateCount)
-        : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
+        : StatelessTerminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
     {
         public int CheckedStateCount { get; private set; }
         public bool HasTerminated { get; private set; }
 
         public override bool IsTerminalState(
             PopulationState<RealVector> state,
-            RealVectorSearchSpace searchSpace,
+            BoundedRealVectorSearchSpace searchSpace,
             TestFunctionProblem problem)
         {
             CheckedStateCount++;

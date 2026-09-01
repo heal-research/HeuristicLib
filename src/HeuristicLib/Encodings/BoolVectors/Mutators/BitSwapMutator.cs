@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Encodings.BoolVectors;
 
@@ -14,8 +15,19 @@ namespace HEAL.HeuristicLib.Encodings.BoolVectors;
 /// operator is written against the concrete search space type: <see cref="BoolVectorSearchSpace"/> cannot state a
 /// cardinality, so the same code has nothing to read there.
 /// </remarks>
-public record BitSwapMutator : SingleCandidateMutator<BoolVector, FixedCardinalityBoolVectorSearchSpace>
+public record BitSwapMutator
+    : SingleCandidateMutator<BoolVector, FixedCardinalityBoolVectorSearchSpace>, IInvariantContract<BoolVector>
 {
+    /// <summary>
+    /// Length and cardinality both survive a swap, and no input invariant is needed, so this operator is usable over
+    /// constrained and unconstrained bool vector spaces alike.
+    /// </summary>
+    public bool? Ensures(ISearchInvariant<BoolVector> invariant) => invariant switch
+    {
+        BoolVectorLength or BoolVectorCardinality => true,
+        _ => null
+    };
+
     public override BoolVector MutateCandidate(
         BoolVector parent,
         IRandomNumberGenerator random,

@@ -630,11 +630,11 @@ public class OperatorBudgetAlgorithmTests
         var budgeted =
             new OperatorBudgetAlgorithm<
                 RealVector,
-                RealVectorSearchSpace,
+                BoundedRealVectorSearchSpace,
                 TestFunctionProblem,
                 PopulationState<RealVector>,
-                IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>,
-                IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>>
+                IEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>,
+                IEvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
@@ -657,11 +657,11 @@ public class OperatorBudgetAlgorithmTests
         var budgeted =
             new OperatorDurationBudgetAlgorithm<
                 RealVector,
-                RealVectorSearchSpace,
+                BoundedRealVectorSearchSpace,
                 TestFunctionProblem,
                 PopulationState<RealVector>,
-                IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>,
-                IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>>
+                IEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>,
+                IEvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
@@ -684,7 +684,7 @@ public class OperatorBudgetAlgorithmTests
         var budgeted =
             new AlgorithmDurationBudgetAlgorithm<
                 RealVector,
-                RealVectorSearchSpace,
+                BoundedRealVectorSearchSpace,
                 TestFunctionProblem,
                 PopulationState<RealVector>>
             {
@@ -700,10 +700,10 @@ public class OperatorBudgetAlgorithmTests
         return new TestFunctionProblem(new SphereFunction(dimension: 3));
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(
+    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(
         TestFunctionProblem problem)
     {
-        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        return new GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             PopulationSize = 5,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -730,14 +730,14 @@ public class OperatorBudgetAlgorithmTests
     }
 
     private sealed record RecordingPopulationTerminator(int StopOnCheckedStateCount)
-        : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
+        : StatelessTerminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
     {
         public int CheckedStateCount { get; private set; }
         public bool HasTerminated { get; private set; }
 
         public override bool IsTerminalState(
             PopulationState<RealVector> state,
-            RealVectorSearchSpace searchSpace,
+            BoundedRealVectorSearchSpace searchSpace,
             TestFunctionProblem problem)
         {
             CheckedStateCount++;

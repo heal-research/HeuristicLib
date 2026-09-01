@@ -98,8 +98,8 @@ public class AutoEcPaperScenarioTests
             new UniformOnePositionMutator());
         var evaluator = problem.CreateEvaluator();
 
-        var racing = new DynamicRacingAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem,
-            PopulationState<RealVector>, GeneticAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem>>(
+        var racing = new DynamicRacingAlgorithm<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem,
+            PopulationState<RealVector>, GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>>(
             metaSpace,
             metaCreator,
             metaMutator,
@@ -114,11 +114,11 @@ public class AutoEcPaperScenarioTests
             ModelObservationInterval = 10
         };
         var qualityCurve =
-            new QualityCurvePerEpochAnalysis<RealVector, RealVectorSearchSpace, MovingPeaksProblem>(
+            new QualityCurvePerEpochAnalysis<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
                 problem,
                 evaluator);
         var bbcp =
-            new BestBeforeChangePerformanceAnalysis<RealVector, RealVectorSearchSpace, MovingPeaksProblem>(
+            new BestBeforeChangePerformanceAnalysis<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
                 problem,
                 [evaluator]);
 
@@ -197,16 +197,16 @@ public class AutoEcPaperScenarioTests
             UpdatePolicy.AfterEvaluation,
             epochLength: 30);
 
-    private static CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
+    private static CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
         CreateHyperParameterSearchSpace() =>
-        new RealVectorSearchSpace(1, new RealVector(0.05), new RealVector(0.4))
-            .WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
+        new BoundedRealVectorSearchSpace(1, new RealVector(0.05), new RealVector(0.4))
+            .WithSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
                 new IntegerVectorSearchSpace(1, new IntegerVector(8), new IntegerVector(16)));
 
-    private static CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
+    private static CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
         CreateTspHyperParameterSearchSpace() =>
-        new RealVectorSearchSpace(1, new RealVector(0.01), new RealVector(0.2))
-            .WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
+        new BoundedRealVectorSearchSpace(1, new RealVector(0.01), new RealVector(0.2))
+            .WithSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
                 new IntegerVectorSearchSpace(1, new IntegerVector(20), new IntegerVector(60)));
 
     private static GeneticAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>
@@ -228,12 +228,12 @@ public class AutoEcPaperScenarioTests
         };
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem> CreateGa(
+    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem> CreateGa(
         MovingPeaksProblem problem,
-        IEvaluator<RealVector, RealVectorSearchSpace, MovingPeaksProblem> evaluator,
+        IEvaluator<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem> evaluator,
         CompositeGenotype<RealVector, IntegerVector> hyperParameters)
     {
-        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem>
+        return new GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new SimulatedBinaryCrossover(),

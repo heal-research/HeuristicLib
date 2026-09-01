@@ -307,6 +307,10 @@ Make intended use easy and misuse difficult.
 
 Put the ordinary contract and expected range in `<summary>`. Put unusual values and edge cases in `<remarks>`.
 
+An invariant contract states something narrower, and the two must not be conflated. The range in a contract is the range in which a **guarantee holds**, not the range that is a good choice. A blend crossover with an alpha above one is a legitimate setting that widens the search; what it stops doing is keeping candidates inside the bounds the search space states. A mutation rate of `0.9` is unusual advice and breaks no invariant, so it stays prose and never reaches a contract. Keep judgement about good values in `<summary>`, and keep guarantee ranges in the contract member, so a contract does not accumulate opinions.
+
+Where a parameter carries both, its documentation points at the member that defines the contract instead of restating the threshold. The condition is then written once, in the executable place, and prose cannot drift away from it.
+
 ### § 8.3 Use variance only when substitution is meaningful
 
 - `TCandidate` is invariant throughout the public API. It identifies the exact shared representation.

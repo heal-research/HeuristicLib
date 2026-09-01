@@ -94,12 +94,12 @@ public class NoviceFrictionSpecs
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
 
-        GeneticAlgorithm<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> declared =
+        GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> declared =
             CreateRastriginAlgorithm(problem);
 
         var widened = WidenPopulation(declared, populationSize: 40);
         var configured =
-            new List<GeneticAlgorithm<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>>
+            new List<GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>
             {
                 declared,
                 widened
@@ -113,9 +113,9 @@ public class NoviceFrictionSpecs
     /// The arity spreads. A helper that takes and returns an algorithm repeats every argument twice, so the cost is
     /// paid again in each calling layer rather than once at construction.
     /// </summary>
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>
+    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>
         WidenPopulation(
-            GeneticAlgorithm<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> algorithm,
+            GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> algorithm,
             int populationSize) =>
         algorithm with { PopulationSize = populationSize };
 
@@ -151,17 +151,17 @@ public class NoviceFrictionSpecs
     [Fact]
     public void TheOneArgumentAlgorithm_CannotTakeAnOperatorThatReadsTheSearchSpace()
     {
-        IMutator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> encodingBoundMutator =
+        IMutator<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> encodingBoundMutator =
             new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1);
 
-        // Does not compile. GaussianMutator reads RealVectorSearchSpace.Minimum and .Maximum, and
-        // ISearchSpace<RealVector> cannot be converted to RealVectorSearchSpace:
+        // Does not compile. GaussianMutator reads BoundedRealVectorSearchSpace.Minimum and .Maximum, and
+        // ISearchSpace<RealVector> cannot be converted to BoundedRealVectorSearchSpace:
         //
         // IMutator<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> slot =
         //     encodingBoundMutator;
         //
         // CS0266: cannot implicitly convert type
-        //   'IMutator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>' to
+        //   'IMutator<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>' to
         //   'IMutator<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>'
 
         var mutatorSlot = typeof(GeneticAlgorithm<RealVector>)
@@ -203,7 +203,7 @@ public class NoviceFrictionSpecs
 
         searchSpacesByCandidate[typeof(BoolVector)].Order(TypeNameComparer).ShouldBe(
             [typeof(BoolVectorSearchSpace), typeof(FixedCardinalityBoolVectorSearchSpace)]);
-        searchSpacesByCandidate[typeof(RealVector)].Single().ShouldBe(typeof(RealVectorSearchSpace));
+        searchSpacesByCandidate[typeof(RealVector)].Single().ShouldBe(typeof(BoundedRealVectorSearchSpace));
         searchSpacesByCandidate[typeof(Permutation)].Single().ShouldBe(typeof(PermutationSearchSpace));
     }
 
@@ -328,12 +328,12 @@ public class NoviceFrictionSpecs
     /// An operator that reads the search space pays for the second argument, and repeats the pair in its own
     /// declaration, in the base it derives from and in every slot that holds it.
     /// </summary>
-    private sealed record ClampingMutator : SingleCandidateMutator<RealVector, RealVectorSearchSpace>
+    private sealed record ClampingMutator : SingleCandidateMutator<RealVector, BoundedRealVectorSearchSpace>
     {
         public override RealVector MutateCandidate(
             RealVector parent,
             IRandomNumberGenerator random,
-            RealVectorSearchSpace searchSpace) =>
+            BoundedRealVectorSearchSpace searchSpace) =>
             RealVector.Clamp(parent, searchSpace.Minimum, searchSpace.Maximum);
     }
 
@@ -383,7 +383,7 @@ public class NoviceFrictionSpecs
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
 
-        var constructed = new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var constructed = new GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             PopulationSize = 20,
             MaximumGenerations = 5,
@@ -397,7 +397,7 @@ public class NoviceFrictionSpecs
 
         constructed.GetType().GetGenericArguments()[2].ShouldBe(typeof(TestFunctionProblem));
         inferred.GetType().GetGenericArguments()[2]
-            .ShouldBe(typeof(IProblem<RealVector, RealVectorSearchSpace>));
+            .ShouldBe(typeof(IProblem<RealVector, BoundedRealVectorSearchSpace>));
     }
 
     /// <summary>
@@ -405,7 +405,7 @@ public class NoviceFrictionSpecs
     /// The problem argument only reaches the search space, so the resulting algorithm is typed at the problem
     /// interface rather than at the problem.
     /// </summary>
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>
+    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>
         CreateRastriginAlgorithm(TestFunctionProblem problem) =>
         GeneticAlgorithm.Create(
             new UniformDistributedCreator(problem.SearchSpace),

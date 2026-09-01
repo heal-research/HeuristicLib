@@ -138,10 +138,10 @@ public class CycleAlgorithmTests
         evaluator.InstanceCount.ShouldBe(1);
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateStampedGeneticAlgorithm(
+    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateStampedGeneticAlgorithm(
       TestFunctionProblem problem)
     {
-        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        return new GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             PopulationSize = 4,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -179,7 +179,7 @@ public class CycleAlgorithmTests
     }
 
     private sealed record YieldedStateStampingInterceptor
-      : StatefulInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, YieldedStateStampingInterceptor.ExecutionState>
+      : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, YieldedStateStampingInterceptor.ExecutionState>
     {
         protected override ExecutionState CreateInitialState() => new();
 
@@ -188,7 +188,7 @@ public class CycleAlgorithmTests
           PopulationState<RealVector>? previousState,
           ExecutionState executionState,
           IRandomNumberGenerator random,
-          RealVectorSearchSpace searchSpace,
+          BoundedRealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)
         {
             executionState.YieldedStateCount++;

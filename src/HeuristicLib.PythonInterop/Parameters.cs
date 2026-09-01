@@ -78,7 +78,7 @@ public class TravelingSalesmanExperimentParameters : ExperimentParameters<Permut
     public TravelingSalesmanExperimentParameters(TravelingSalesmanExperimentParameters parameters) : base(parameters) { }
 }
 
-public class TestFunctionExperimentParameters : ExperimentParameters<RealVector, RealVectorSearchSpace>
+public class TestFunctionExperimentParameters : ExperimentParameters<RealVector, BoundedRealVectorSearchSpace>
 {
     public int Dimension { get; set; } = 10;
     public int Instance { get; set; } = 1;

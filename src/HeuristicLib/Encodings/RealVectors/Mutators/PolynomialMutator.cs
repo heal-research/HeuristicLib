@@ -2,18 +2,29 @@ using HEAL.HeuristicLib.Encodings.Vectors;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Random;
 
+using HEAL.HeuristicLib.SearchSpaces;
+
 namespace HEAL.HeuristicLib.Encodings.RealVectors;
 
-public record PolynomialMutator : SingleCandidateMutator<RealVector, RealVectorSearchSpace>
+public record PolynomialMutator : SingleCandidateMutator<RealVector, BoundedRealVectorSearchSpace>, IInvariantContract<RealVector>
 {
+    /// <summary>
+    /// The result is clamped to the search space bounds, so length and bounds both survive at any distribution index.
+    /// </summary>
+    public bool? Ensures(ISearchInvariant<RealVector> invariant) => invariant switch
+    {
+        RealVectorLength or RealVectorBounds => true,
+        _ => null
+    };
+
     public double Eta { get; init; } = 20;
 
     public bool AtLeastOnce { get; init; }
 
-    public override RealVector MutateCandidate(RealVector parent, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) =>
+    public override RealVector MutateCandidate(RealVector parent, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) =>
         Mutate(parent, random, searchSpace, Eta, AtLeastOnce);
 
-    public static RealVector Mutate(RealVector candidate, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, double eta, bool atLeastOnce)
+    public static RealVector Mutate(RealVector candidate, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, double eta, bool atLeastOnce)
     {
         return Mutate(candidate, random, searchSpace.Minimum, searchSpace.Maximum, eta, atLeastOnce);
     }

@@ -28,29 +28,29 @@ public sealed record SingleCreateAlgorithm
     : IterativeAlgorithm<
         SingleCreateAlgorithm,
         RealVector,
-        RealVectorSearchSpace,
+        BoundedRealVectorSearchSpace,
         TestFunctionProblem,
         SingleSolutionState<RealVector>>
 {
     public required ICreator<
         RealVector,
-        RealVectorSearchSpace,
+        BoundedRealVectorSearchSpace,
         TestFunctionProblem> Creator { get; init; }
 
     public IEvaluator<
         RealVector,
-        RealVectorSearchSpace,
+        BoundedRealVectorSearchSpace,
         TestFunctionProblem> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
     protected override IterativeAlgorithmInstance<
         RealVector,
-        RealVectorSearchSpace,
+        BoundedRealVectorSearchSpace,
         TestFunctionProblem,
         SingleSolutionState<RealVector>> CreateExecutionInstance(
             ExecutionInstanceRegistry registry,
             IInterceptorInstance<
                 RealVector,
-                RealVectorSearchSpace,
+                BoundedRealVectorSearchSpace,
                 TestFunctionProblem,
                 SingleSolutionState<RealVector>>? interceptor) =>
         new Instance(
@@ -61,14 +61,14 @@ public sealed record SingleCreateAlgorithm
     private sealed class Instance(
         IInterceptorInstance<
             RealVector,
-            RealVectorSearchSpace,
+            BoundedRealVectorSearchSpace,
             TestFunctionProblem,
             SingleSolutionState<RealVector>>? interceptor,
-        ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> creator,
-        IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> evaluator)
+        ICreatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> creator,
+        IEvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> evaluator)
         : IterativeAlgorithmInstance<
             RealVector,
-            RealVectorSearchSpace,
+            BoundedRealVectorSearchSpace,
             TestFunctionProblem,
             SingleSolutionState<RealVector>>(interceptor)
     {

@@ -17,5 +17,5 @@ public class TestFunctionProblem : RealVectorProblem
 
     public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) => TestFunction.Evaluate(solution);
 
-    private static RealVectorSearchSpace GetEncoding(ITestFunction testFunction) => new(testFunction.Dimension, testFunction.Min, testFunction.Max);
+    private static BoundedRealVectorSearchSpace GetEncoding(ITestFunction testFunction) => new(testFunction.Dimension, testFunction.Min, testFunction.Max);
 }

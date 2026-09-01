@@ -10,7 +10,7 @@ public sealed class MutatorParameterSemanticsTests
     private static readonly IntegerVector emptyIntegerVector = IntegerVector.Create();
     private static readonly RealVector emptyRealVector = RealVector.Create();
     private static readonly IntegerVectorSearchSpace emptyIntegerSearchSpace = new(0, IntegerVector.Create(0), IntegerVector.Create(1));
-    private static readonly RealVectorSearchSpace emptyRealSearchSpace = new(0, minimum: 0, maximum: 1);
+    private static readonly BoundedRealVectorSearchSpace emptyRealSearchSpace = new(0, minimum: 0, maximum: 1);
     private static readonly IRandomNumberGenerator random = RandomNumberGenerator.Create(42);
 
     [Theory]
@@ -54,7 +54,7 @@ public sealed class MutatorParameterSemanticsTests
     {
         var gaussian = new GaussianMutator(mutationRate: 1, mutationStrength: value);
         var polynomial = new PolynomialMutator { Eta = value };
-        var instance = new ExecutionInstanceRegistry().Resolve<IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>>(gaussian);
+        var instance = new ExecutionInstanceRegistry().Resolve<IVariableStrengthMutatorInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>(gaussian);
 
         instance.CurrentMutationStrength = value;
 

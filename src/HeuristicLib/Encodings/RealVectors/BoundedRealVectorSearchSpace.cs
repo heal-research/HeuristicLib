@@ -3,15 +3,15 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Encodings.RealVectors;
 
-public record RealVectorSearchSpace : SearchSpace<RealVector>
+public record BoundedRealVectorSearchSpace : SearchSpace<RealVector>
 {
     public int Length { get; }
     public RealVector Minimum { get; }
     public RealVector Maximum { get; }
 
-    public RealVectorSearchSpace(int length, double minimum, double maximum) : this(length, [minimum], [maximum]) { }
+    public BoundedRealVectorSearchSpace(int length, double minimum, double maximum) : this(length, [minimum], [maximum]) { }
 
-    public RealVectorSearchSpace(int length, RealVector minimum, RealVector maximum)
+    public BoundedRealVectorSearchSpace(int length, RealVector minimum, RealVector maximum)
     {
         if (!Vector.AreBroadcastableTo(length, minimum, maximum))
         {
@@ -29,6 +29,13 @@ public record RealVectorSearchSpace : SearchSpace<RealVector>
                && (candidate >= Minimum).All()
                && (candidate <= Maximum).All();
     }
+
+    /// <remarks>
+    /// Built on access rather than cached in a field, because a field would take part in this record's value equality.
+    /// Invariants are read during validation, never during a run.
+    /// </remarks>
+    public override IReadOnlyList<ISearchInvariant<RealVector>> Invariants =>
+        [new RealVectorLength(Length), new RealVectorBounds(Minimum, Maximum)];
 
     public double GetMinimum(int dim) => Minimum.Count == 1 ? Minimum[0] : Minimum[dim];
     public double GetMaximum(int dim) => Maximum.Count == 1 ? Maximum[0] : Maximum[dim];

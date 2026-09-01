@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public sealed class MovingPeaksProblem
-    : DynamicProblem<RealVector, RealVectorSearchSpace>
+    : DynamicProblem<RealVector, BoundedRealVectorSearchSpace>
 {
     private double[] peakHeights = null!;
 
@@ -17,7 +17,7 @@ public sealed class MovingPeaksProblem
                               IRandomNumberGenerator environmentRandom,
                               UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
                               int epochLength = int.MaxValue)
-        : base(SingleObjective.Maximize, new RealVectorSearchSpace(
+        : base(SingleObjective.Maximize, new BoundedRealVectorSearchSpace(
             parameters.Dimension,
             parameters.LowerBound,
             parameters.UpperBound
@@ -33,7 +33,7 @@ public sealed class MovingPeaksProblem
                               (double[] center, double height, double width)[] peaks,
                               UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
                               int epochLength = int.MaxValue)
-        : base(SingleObjective.Maximize, new RealVectorSearchSpace(
+        : base(SingleObjective.Maximize, new BoundedRealVectorSearchSpace(
             parameters.Dimension,
             parameters.LowerBound,
             parameters.UpperBound

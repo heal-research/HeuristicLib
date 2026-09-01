@@ -11,7 +11,7 @@ using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 
-var searchSpace = new RealVectorSearchSpace(
+var searchSpace = new BoundedRealVectorSearchSpace(
     length: 3,
     minimum: [-10.0],
     maximum: [10.0]);

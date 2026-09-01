@@ -3,4 +3,4 @@ using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Encodings.RealVectors;
 
-public abstract record RealVectorNeighborhood<TMove> : Neighborhood<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>, TMove>;
+public abstract record RealVectorNeighborhood<TMove> : Neighborhood<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>, TMove>;

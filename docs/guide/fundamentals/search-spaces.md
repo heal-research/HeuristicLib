@@ -6,7 +6,7 @@ A search space describes valid candidates. Algorithms use it as a shared contrac
 
 | Candidate       | Search space               | Good fit                                         |
 | --------------- | -------------------------- | ------------------------------------------------ |
-| `RealVector`    | `RealVectorSearchSpace`    | Continuous parameters and numerical optimization |
+| `RealVector`    | `BoundedRealVectorSearchSpace`    | Continuous parameters and numerical optimization |
 | `IntegerVector` | `IntegerVectorSearchSpace` | Counts, choices and bounded discrete parameters  |
 | `BoolVector`    | `BoolVectorSearchSpace`    | Feature selection and yes or no decisions        |
 | `Permutation`   | `PermutationSearchSpace`   | Orders, tours and assignments without duplicates |
@@ -18,7 +18,7 @@ Choose a representation that makes invalid candidates difficult to express. A pe
 ```csharp
 using HEAL.HeuristicLib.Encodings.RealVectors;
 
-var space = new RealVectorSearchSpace(
+var space = new BoundedRealVectorSearchSpace(
     length: 4,
     minimum: [-5.12],
     maximum: [5.12]);
@@ -27,7 +27,7 @@ var space = new RealVectorSearchSpace(
 A one element bound is broadcast across the vector. Use one bound per position when dimensions have different ranges.
 
 ```csharp
-var mixedSpace = new RealVectorSearchSpace(
+var mixedSpace = new BoundedRealVectorSearchSpace(
     length: 3,
     minimum: [0.0, -10.0, 1.0],
     maximum: [1.0, 10.0, 100.0]);

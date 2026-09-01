@@ -11,12 +11,12 @@ namespace HEAL.HeuristicLib.Problems.MetaOptimization;
 public static class MetaOptimizationProblem
 {
     public static MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, TSearchState> AsMetaProblem<TCandidate, TSearchSpace, TProblem, TSearchState>(this TProblem problem,
-                                                                                      CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace> searchSpace,
+                                                                                      CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace> searchSpace,
                                                                                       Func<CompositeGenotype<RealVector, IntegerVector>, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algBuilder) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> where TSearchState : PopulationState<TCandidate> => new MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, TSearchState>(problem, searchSpace, algBuilder);
 }
 
 public class MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, TSearchState> :
-  SingleSolutionProblem<CompositeGenotype<RealVector, IntegerVector>, CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>>
+  SingleSolutionProblem<CompositeGenotype<RealVector, IntegerVector>, CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>>
   where TCandidate : class
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -26,7 +26,7 @@ public class MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, TSearch
     private readonly Func<CompositeGenotype<RealVector, IntegerVector>, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algBuilder;
 
     public MetaOptimizationProblem(TProblem problem,
-                                   CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace> searchSpace,
+                                   CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace> searchSpace,
                                    Func<CompositeGenotype<RealVector, IntegerVector>, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algBuilder) : base(problem.Objective, searchSpace)
     {
         this.problem = problem;

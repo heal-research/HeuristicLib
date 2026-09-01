@@ -145,9 +145,9 @@ public class AlgorithmObservationTests
     {
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
 
-        var first = Analyzer.BestMedianWorst<RealVector, RealVectorSearchSpace, TestFunctionProblem,
+        var first = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem,
             PopulationState<RealVector>>(interceptor);
-        var second = Analyzer.BestMedianWorst<RealVector, RealVectorSearchSpace, TestFunctionProblem,
+        var second = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem,
             PopulationState<RealVector>>(interceptor);
 
         first.ShouldBe(second);
@@ -162,7 +162,7 @@ public class AlgorithmObservationTests
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
 
         var atAlgorithm = Analyzer.BestMedianWorst(algorithm);
-        var atInterceptor = Analyzer.BestMedianWorst<RealVector, RealVectorSearchSpace, TestFunctionProblem,
+        var atInterceptor = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem,
             PopulationState<RealVector>>(interceptor);
 
         atAlgorithm.ShouldNotBe(atInterceptor);
@@ -170,7 +170,7 @@ public class AlgorithmObservationTests
 
     private static TestFunctionProblem CreateProblem() => new(new RastriginFunction(dimension: 4));
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(
+    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(
         TestFunctionProblem problem, int maximumGenerations) =>
         new()
         {

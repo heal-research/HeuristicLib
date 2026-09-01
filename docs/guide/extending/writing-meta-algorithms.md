@@ -89,7 +89,7 @@ Use it by naming the two stages:
 var explore = geneticAlgorithm with { MutationRate = 0.5, MaximumGenerations = 200 };
 var exploit = geneticAlgorithm with { MutationRate = 0.05, MaximumGenerations = 300 };
 
-var staged = new TwoStageAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem,
+var staged = new TwoStageAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem,
     PopulationState<RealVector>> { First = explore, Second = exploit };
 
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))

@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Encodings.BoolVectors;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,8 +9,15 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Usage;
 /// <summary>
 /// Flips one position. Needs nothing of its input and promises only that the result has the same length.
 /// </summary>
-internal sealed record FlipOneBitMutator : SingleCandidateMutator<BoolVector>
+internal sealed record FlipOneBitMutator : SingleCandidateMutator<BoolVector>, IInvariantContract<BoolVector>
 {
+    public bool? Ensures(ISearchInvariant<BoolVector> invariant) => invariant switch
+    {
+        BoolVectorLength => true,
+        BoolVectorCardinality => false,
+        _ => null
+    };
+
     public override BoolVector MutateCandidate(BoolVector parent, IRandomNumberGenerator random)
     {
         if (parent.Count == 0)
@@ -33,8 +41,16 @@ internal sealed record FlipOneBitMutator : SingleCandidateMutator<BoolVector>
 /// <see cref="FlipOneBitMutator"/>: it always keeps a candidate inside a fixed cardinality space, and it cannot be
 /// used over unconstrained bool vectors, where a candidate may have fewer than two set elements.
 /// </remarks>
-internal sealed record SwapSecondTrueMutator : SingleCandidateMutator<BoolVector>
+internal sealed record SwapSecondTrueMutator : SingleCandidateMutator<BoolVector>, IInvariantContract<BoolVector>
 {
+    public IReadOnlyList<ISearchInvariant<BoolVector>> RequiredInputInvariants => [new BoolVectorMinimumSetElements(2)];
+
+    public bool? Ensures(ISearchInvariant<BoolVector> invariant) => invariant switch
+    {
+        BoolVectorLength or BoolVectorCardinality => true,
+        _ => null
+    };
+
     public override BoolVector MutateCandidate(BoolVector parent, IRandomNumberGenerator random)
     {
         var setPositions = Positions(parent, value: true);
@@ -201,6 +217,115 @@ public class SearchSpaceCompatibilitySpecs
         }
 
         return (accepts, staysInside);
+    }
+
+    /// <summary>
+    /// The same six cells again, decided from declarations alone. This is what the observed table above is the
+    /// acceptance criterion for: no operator is run, and the results match.
+    /// </summary>
+    [Fact]
+    public void DeclaredInvariants_ReproduceTheObservedTableWithoutRunningAnything()
+    {
+        var operators = new (string Name, IOperator Operator)[]
+        {
+            ("FlipOneBit", new FlipOneBitMutator()),
+            ("BitSwap", new BitSwapMutator()),
+            ("SwapSecondTrue", new SwapSecondTrueMutator())
+        };
+
+        var spaces = new (string Name, ISearchSpace<BoolVector> Space)[]
+        {
+            ("Unconstrained", Unconstrained),
+            ("Constrained", Constrained)
+        };
+
+        var predicted = operators
+            .SelectMany(op => spaces.Select(space =>
+                $"{op.Name} on {space.Name}: usable={SearchSpaceCompatibility.IsCompatible(op.Operator, space.Space)}"))
+            .ToArray();
+
+        predicted.ShouldBe([
+            "FlipOneBit on Unconstrained: usable=True",
+            "FlipOneBit on Constrained: usable=False",
+            "BitSwap on Unconstrained: usable=True",
+            "BitSwap on Constrained: usable=True",
+            "SwapSecondTrue on Unconstrained: usable=False",
+            "SwapSecondTrue on Constrained: usable=True"
+        ]);
+    }
+
+    /// <summary>
+    /// Each rejection names the check that decided it, so a diagnostic tells a user what to change rather than only
+    /// that something is wrong.
+    /// </summary>
+    [Fact]
+    public void EachRejection_NamesTheCheckAndTheInvariantThatDecidedIt()
+    {
+        var outputFailure = SearchSpaceCompatibility.Check(new FlipOneBitMutator(), Constrained).ShouldHaveSingleItem();
+        outputFailure.Reason.ShouldBe(IncompatibilityReason.OutputMayLeaveTheSearchSpace);
+        outputFailure.InvariantName.ShouldBe("Cardinality(2)");
+
+        var inputFailure = SearchSpaceCompatibility.Check(new SwapSecondTrueMutator(), Unconstrained).ShouldHaveSingleItem();
+        inputFailure.Reason.ShouldBe(IncompatibilityReason.InputMayNotBeAccepted);
+        inputFailure.InvariantName.ShouldBe("AtLeastSet(2)");
+    }
+
+    /// <summary>
+    /// The declarations are checked against behavior, so a compatibility result rests on a contract that has been
+    /// exercised rather than only asserted. Exhaustive here, because the spaces are small enough to enumerate.
+    /// </summary>
+    [Fact]
+    public void DeclaredContracts_AreVerifiedAgainstActualBehavior()
+    {
+        var constrained = Constrained;
+        var samples = AllBoolVectorsOfLength(Length).ToArray();
+        var random = RandomNumberGenerator.Create(seed: 17);
+
+        InvariantContractVerification
+            .Verify(new BitSwapMutator(), constrained, samples,
+                candidate => BitSwapOverFixedCardinality(constrained)(candidate, random))
+            .ShouldBeEmpty();
+
+        InvariantContractVerification
+            .Verify(new SwapSecondTrueMutator(), constrained, samples,
+                candidate => SwapSecondTrue()(candidate, random))
+            .ShouldBeEmpty();
+
+        InvariantContractVerification
+            .Verify(new FlipOneBitMutator(), Unconstrained, samples,
+                candidate => FlipOneBit()(candidate, random))
+            .ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// A wrong declaration is caught. Claiming to preserve cardinality while flipping one element is exactly the
+    /// mistake the verification exists to find.
+    /// </summary>
+    [Fact]
+    public void AnUntrueDeclaration_IsReported()
+    {
+        var random = RandomNumberGenerator.Create(seed: 17);
+
+        var violations = InvariantContractVerification.Verify(
+            new OverclaimingFlipMutator(),
+            Constrained,
+            AllBoolVectorsOfLength(Length),
+            candidate => new OverclaimingFlipMutator().MutateCandidate(candidate, random));
+
+        violations.ShouldNotBeEmpty();
+        violations[0].ShouldContain("Cardinality(2)");
+    }
+
+    private sealed record OverclaimingFlipMutator : SingleCandidateMutator<BoolVector>, IInvariantContract<BoolVector>
+    {
+        public bool? Ensures(ISearchInvariant<BoolVector> invariant) => invariant switch
+        {
+            BoolVectorLength or BoolVectorCardinality => true,
+            _ => null
+        };
+
+        public override BoolVector MutateCandidate(BoolVector parent, IRandomNumberGenerator random) =>
+            new FlipOneBitMutator().MutateCandidate(parent, random);
     }
 
     private static IEnumerable<BoolVector> AllBoolVectorsOfLength(int length) =>

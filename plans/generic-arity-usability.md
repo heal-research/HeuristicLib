@@ -187,12 +187,44 @@ Compatibility is then the two checks, as two subset tests: the space's requireme
 
 The property this buys: **a new search space works with existing operators without editing them.** A user space requiring `{Length, Cardinality}` is compatible with `BitSwapMutator` immediately, because neither type knows about the other and they meet at the invariant. A space introducing a genuinely new invariant is rejected by every existing operator, which is the correct conservative default.
 
-Open sub-questions, to settle before writing interfaces:
+### What implementation settled
 
-- **Identity of invariants must be extensible.** Marker interfaces or typed keys, not an enum, or users cannot add their own.
-- **Granularity is the main design risk.** Too fine and nothing matches; too coarse and incompatible pairs are declared compatible.
-- **Phrasing of the guarantee.** `BitSwapMutator` does not strictly preserve the input's cardinality: given an off-cardinality candidate it moves toward the space's target. So the honest guarantee is "produces a candidate the space contains", not "preserves the input's invariant". This changes what a declaration means and should be settled first.
-- **Declarations can lie.** A shared test helper that exercises an operator over a space and compares observed behavior against the declaration keeps them honest. That is a test-time tool, not a run-time cost; exhaustive where a space is small enough to enumerate, sampled otherwise.
+The mechanism is built. Three questions were open before writing it, and building it answered them.
+
+- **Requirements are concrete, guarantees are by kind.** This was the phrasing question, and it has a forced answer: a space states `Length(4)`, but a mutator written once cannot name the value 4. It can only state that length survives it. So `RequiredInputInvariants` holds invariant instances and is matched by entailment, while `PreservedInvariantKinds` holds invariant types and is matched by exact type. The asymmetry is not a compromise; it is what the two sides can honestly say.
+- **Identity is the invariant type itself.** Any type may declare a new invariant and nothing enumerates them, so users extend the vocabulary without touching the library. `Entails` carries strength between invariants, which is how a space fixing cardinality at two satisfies an operator needing at least two.
+- **Composed operators need composed contracts.** Not anticipated, and found by the first validation test: a `PipelineMutator` declaring nothing was reported as preserving nothing, which is a false positive that also buried the real diagnostic on its child. Compositions now derive their contract from their children — an invariant survives only if every child preserves it, and the composition requires whatever any child requires — and validation suppresses a composition's failure when a descendant already reported the same invariant, so the diagnostic names the operator a user has to change.
+- **Declaring is opt in, per operator.** An operator that declares nothing, or declares an empty contract, is not checked: the search space it is typed against already fixes which spaces it may be used over, and that answer stands until a declaration refines it. So an operator can be written without thinking about invariants, adding invariants to a search space never invalidates operators written before it, and declaring pays off exactly where the type system gives the wrong answer — an operator usable over more spaces than its type admits, or fewer.
+- **Nothing enumerates operator roles.** Checking keys on whether a contract is declared, not on which role an operator fills, so a role added by a package consumer participates on the same terms as a built-in one and a role whose output is not a candidate simply never declares.
+- **A contract may depend on the operator's own parameters.** It is an ordinary property, so an operator whose guarantee holds only over part of its parameter range states it inside that range and drops it outside. Producing a candidate outside the search space then becomes a declared consequence of a parameter choice rather than a defect, and validation reports it against the configuration that caused it.
+- **Declarations can lie**, so `InvariantContractVerification` runs an operator over a space and confirms every invariant it claims to preserve actually survives. A test-time tool, exhaustive where a space is small enough to enumerate.
+
+### What adopting a second encoding found
+
+Real vectors were the first encoding not designed alongside the mechanism, and adopting them changed it twice.
+
+- **The output half became a question, not a list.** It started as a list of invariant types, which was both untyped and reflection-flavoured, and it could not express a guarantee whose truth depends on values. `bool? Ensures(ISearchInvariant<TCandidate>)` replaced it: the search space hands the operator each invariant it states, and the operator answers for that one — `true`, `false`, or `null` for no opinion. An operator answers by pattern where it conforms to a family without knowing values, as a mutator preserving the length it was given, and by value where it makes a concrete claim, as a creator generating within bounds it was configured with. One method replaced three members, opt-in became per invariant rather than per operator, and no `Type` appears in the API.
+- **A creator forced that change.** `UniformDistributedCreator` can override the search space's bounds with its own, and whether that is legitimate depends on the space it will run over. It answers `true` for length, compares its configured bounds against the space's when both are overridden, and defers otherwise. This converts an override reaching outside the space from an exception on the first created candidate into a diagnostic at validation.
+- **`RealVectorSearchSpace` became `BoundedRealVectorSearchSpace`.** The old name occupied the general slot while meaning one specific constraint, an axis-aligned box, leaving no name for an unbounded or simplex-constrained sibling. The new name follows the shape already used for bool vectors, `<Qualifier><Representation>SearchSpace`, and keeps the representation name where it belongs.
+- **No bounds violation exists in the current real vector operators.** Every mutator and crossover clamps, including `AlphaBetaBlendCrossover` at an alpha outside `[0, 1]`, which extrapolates beyond the parents and is then pinned to the bounds. The hypothesis that extrapolation escapes the space was wrong, and the contracts now record that as verified rather than assumed. That operator carries a commented alternative showing the contract it would declare without the clamp, which is the worked example of a guarantee that holds only over part of a parameter range.
+- **One gap is accepted deliberately.** Overriding only one of the creator's bounds leaves the other taken from the space, and the pair cannot be named without knowing that space, so bounds stay a kind there. A one sided override reaching outside the space is not reported by validation and still fails at run time, as it did before. Rejecting it would mean rejecting legitimate configurations, and a missed check is the safer default for validation.
+
+Granularity remains the open risk and can only be judged as more spaces adopt invariants.
+
+### What is built
+
+| Type | Role |
+| --- | --- |
+| `ISearchInvariant<TCandidate>` | a named candidate property, with `IsSatisfiedBy` and `Entails` |
+| `IInvariantContract<TCandidate>` | `Ensures(invariant)` answering for one invariant, plus the operator's required input invariants |
+| `ISearchSpace<TCandidate>.Invariants` | what a space requires of its members; empty by default |
+| `SearchSpaceCompatibility` | the two checks, returning a reason and the invariant that decided it |
+| `InvariantContracts.Compose` | contract of a composed operator, derived from its children |
+| `SearchConfigurationValidation` | the pre-flight walk over a configuration graph, aggregating diagnostics |
+| `AlgorithmValidationExtensions` | `algorithm.Validate(problem)` and `ValidateAndThrow(problem)` |
+| `InvariantContractVerification` | checks a declaration against observed behavior, for tests |
+
+`SearchSpaceCompatibilitySpecs` asserts that declarations alone reproduce all six cells of the target table without running an operator.
 
 Keep `IsSubspaceOf` for the question it does answer: **candidate** movement between spaces. A candidate from a constrained space is usable wherever the wider space is expected, which matters for seeding, initial states and stage boundaries in meta-algorithms. It does not answer operator usability.
 
@@ -200,8 +232,10 @@ Keep `IsSubspaceOf` for the question it does answer: **candidate** movement betw
 
 Roughly in order; the items are independent.
 
+Status: the invariant mechanism and the pre-flight validation it drives are implemented. The arity reduction is not started.
+
 1. **Have the built-in problems declare their defaults.** Makes `For(problem, …)` real rather than a one-problem special case and removes the worst first-contact failure. Coordinate with the existing backlog item on choosing defaults per encoding and problem, which requires evidence per choice rather than mechanical rollout.
-2. **Add the pre-flight resolution pass**, implemented as trial resolution, with aggregated diagnostics, and extend it with sampled probing of operator outputs against the search space. Independent of the type model and worth doing regardless.
+2. **Extend the pre-flight pass to trial resolution.** The invariant half is done: `SearchConfigurationValidation` walks the configuration graph and aggregates every incompatibility. It does not yet resolve execution instances, so a failure that only resolution would surface still appears at run start rather than at validation. Resolving the graph in the same pass is the remaining half, and it is what makes validation and execution share one rule.
 3. **Attempt step 1 of the ladder**, removing `TProblem` from the configuration layer while execution instances keep it. Prototype the generic resolution mechanism on one role, most likely mutators. Measure the diff the way the evaluator return-type change was measured in the backlog: how much of it is mechanical, how much reaches behavior. Do not proceed to step 2 before step 1 has been judged on that measurement.
 4. **Fix the examples and specs**, which mostly show direct construction with full arity, and land the analyzer already on the backlog that rewrites explicit construction into the inferring factory.
 5. **Document closed generic aliases** as the practitioner-level mitigation. `using RealVectorGa = GeneticAlgorithm<…>;` and the project-wide `<Using Include="…" Alias="…"/>` form both work today, cost the library nothing and preserve every static guarantee. They help a codebase with repeated signatures; they do not help a newcomer reading documentation.

@@ -9,8 +9,8 @@ namespace HEAL.HeuristicLib.Problems.MetaOptimization;
 
 public static class MetaOptimizationProblemExamples
 {
-    public record HyperParameterSearchSpace(RealVectorSearchSpace SearchSpace, IntegerVectorSearchSpace SearchSpace2) :
-        CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(SearchSpace, SearchSpace2);
+    public record HyperParameterSearchSpace(BoundedRealVectorSearchSpace SearchSpace, IntegerVectorSearchSpace SearchSpace2) :
+        CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(SearchSpace, SearchSpace2);
 
     public class MetaOptimizationSearchSpaceBuilder
     {
@@ -20,7 +20,7 @@ public static class MetaOptimizationProblemExamples
         public readonly List<double> RealMaximum = [];
 
         public HyperParameterSearchSpace Build() => new HyperParameterSearchSpace(
-            new RealVectorSearchSpace(RealMinimum.Count, new RealVector(RealMinimum), new RealVector(RealMaximum)),
+            new BoundedRealVectorSearchSpace(RealMinimum.Count, new RealVector(RealMinimum), new RealVector(RealMaximum)),
             new IntegerVectorSearchSpace(IntegerMinimum.Count, new IntegerVector(IntegerMinimum), new IntegerVector(IntegerMaximum)));
 
         public Func<CompositeGenotype<RealVector, IntegerVector>, TCandidate> AddChoiceParameter<TCandidate>(IReadOnlyList<TCandidate> values)
@@ -122,8 +122,8 @@ public static class MetaOptimizationProblemExamples
             numberOfChildren.max
         ];
         var integerVectorSearchSpace = new IntegerVectorSearchSpace(integerMins.Count, integerMins, integerMaxs);
-        var realVectorSearchSpace = new RealVectorSearchSpace(1, mutationRate.min, mutationRate.max);
-        var combinedSearchSpace = realVectorSearchSpace.WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(integerVectorSearchSpace);
+        var realVectorSearchSpace = new BoundedRealVectorSearchSpace(1, mutationRate.min, mutationRate.max);
+        var combinedSearchSpace = realVectorSearchSpace.WithSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(integerVectorSearchSpace);
 
         return new MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(problem, combinedSearchSpace, AlgBuilder);
 

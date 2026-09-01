@@ -17,7 +17,7 @@ public class ResearcherAuthoringSpecs
     public async Task CustomMutator_AuthoringExample_RunsInHillClimber()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new PullTowardZeroMutator(),
@@ -38,7 +38,7 @@ public class ResearcherAuthoringSpecs
     public async Task CustomTerminator_AuthoringExample_CanStopAlgorithm()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var innerAlgorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var innerAlgorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -63,7 +63,7 @@ public class ResearcherAuthoringSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         using var stopAfterCurrentState = new CancellationTokenSource();
         stopAfterCurrentState.Cancel();
-        var innerAlgorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var innerAlgorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -88,7 +88,7 @@ public class ResearcherAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(2));
-        var innerAlgorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var innerAlgorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -112,7 +112,7 @@ public class ResearcherAuthoringSpecs
     public async Task ProblemSpecificOperator_AuthoringExample_CanUseProblemType()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             Creator = new TestFunctionOriginCreator(),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -135,12 +135,12 @@ public class ResearcherAuthoringSpecs
     }
 
     private sealed record PullTowardZeroMutator
-      : SingleCandidateMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+      : SingleCandidateMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         public override RealVector MutateCandidate(
           RealVector parent,
           IRandomNumberGenerator random,
-          RealVectorSearchSpace searchSpace,
+          BoundedRealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)
         {
             var moved = new RealVector(parent.Select(x => x * 0.5));
@@ -149,11 +149,11 @@ public class ResearcherAuthoringSpecs
     }
 
     private sealed record FirstEvaluatedStateTerminator
-      : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
+      : StatelessTerminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
         public override bool IsTerminalState(
           SingleSolutionState<RealVector> state,
-          RealVectorSearchSpace searchSpace,
+          BoundedRealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)
         {
             return state.EvaluatedCandidate.ObjectiveVector[0] >= 0.0;
@@ -161,11 +161,11 @@ public class ResearcherAuthoringSpecs
     }
 
     private sealed record TestFunctionOriginCreator
-      : SingleCandidateCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+      : SingleCandidateCreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         public override RealVector CreateCandidate(
           IRandomNumberGenerator random,
-          RealVectorSearchSpace searchSpace,
+          BoundedRealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)
         {
             return RealVector.Repeat(0.0, problem.TestFunction.Dimension);

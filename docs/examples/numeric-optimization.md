@@ -73,7 +73,7 @@ A heuristic search does not guarantee the optimum in one run. Across twenty seed
 
 ## Why these components fit
 
-`RealVectorSearchSpace` provides the bounds defined by `RastriginFunction`. `UniformDistributedCreator` samples the initial population inside those bounds. Blend crossover combines real valued parents while Gaussian mutation makes local numeric changes.
+`BoundedRealVectorSearchSpace` provides the bounds defined by `RastriginFunction`. `UniformDistributedCreator` samples the initial population inside those bounds. Blend crossover combines real valued parents while Gaussian mutation makes local numeric changes.
 
 Tournament selection adds selection pressure without requiring objective values to be transformed into probabilities. One elite preserves the best candidate found so far.
 

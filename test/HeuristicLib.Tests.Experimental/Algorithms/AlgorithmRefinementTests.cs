@@ -108,7 +108,7 @@ public class AlgorithmRefinementTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with
         {
-            Evaluator = new ProblemEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>().WithRefinement(new OriginShiftRefiner()),
+            Evaluator = new ProblemEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().WithRefinement(new OriginShiftRefiner()),
             MaximumGenerations = 1
         };
 
@@ -130,7 +130,7 @@ public class AlgorithmRefinementTests
         var strategyRefiner = new CountingRefiner();
         var nsga2Refiner = new CountingRefiner();
 
-        new EvolutionStrategy<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        new EvolutionStrategy<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             PopulationSize = PopulationSize,
             NumberOfChildren = PopulationSize,
@@ -143,7 +143,7 @@ public class AlgorithmRefinementTests
             Refiner = strategyRefiner
         }.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
-        new NSGA2<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        new NSGA2<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             PopulationSize = PopulationSize,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -204,7 +204,7 @@ public class AlgorithmRefinementTests
     {
         var problem = CreateProblem();
         var refiner = new CountingRefiner();
-        var algorithm = new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             PopulationSize = PopulationSize,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -214,7 +214,7 @@ public class AlgorithmRefinementTests
             Elites = 0,
             MaxEffort = PopulationSize,
             MaximumGenerations = Generations,
-            Refiner = PipelineRefiner.Create<RealVector, RealVectorSearchSpace, TestFunctionProblem>(new FarFromOriginRefiner(), refiner)
+            Refiner = PipelineRefiner.Create<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(new FarFromOriginRefiner(), refiner)
         };
 
         var populationSizes = new List<int>();
@@ -245,7 +245,7 @@ public class AlgorithmRefinementTests
         }
     }
 
-    private static IEnumerable<(string Name, Func<IRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>?, IReadOnlyList<ObjectiveVector>> Run)> AllAlgorithms(TestFunctionProblem problem)
+    private static IEnumerable<(string Name, Func<IRefiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>?, IReadOnlyList<ObjectiveVector>> Run)> AllAlgorithms(TestFunctionProblem problem)
     {
         yield return ("genetic algorithm", refiner => ObjectiveVectorsOf((CreateAlgorithm(problem) with { Refiner = refiner })
             .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
@@ -270,7 +270,7 @@ public class AlgorithmRefinementTests
 
     private static TestFunctionProblem CreateProblem() => new(new SphereFunction(dimension: 3));
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(TestFunctionProblem problem) =>
+    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = PopulationSize,
@@ -283,7 +283,7 @@ public class AlgorithmRefinementTests
             MaximumGenerations = Generations
         };
 
-    private static HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateHillClimber(TestFunctionProblem problem) =>
+    private static HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateHillClimber(TestFunctionProblem problem) =>
         new()
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -293,14 +293,14 @@ public class AlgorithmRefinementTests
             BatchSize = 2
         };
 
-    private sealed record CountingRefiner : Refiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private sealed record CountingRefiner : Refiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         private readonly Counter counter = new();
 
         public int BatchCount => counter.Batches;
         public int RefinedCount => counter.Candidates;
 
-        public override IRefinerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        public override IRefinerInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
             new Instance(counter);
 
         private sealed class Counter
@@ -309,9 +309,9 @@ public class AlgorithmRefinementTests
             public int Candidates;
         }
 
-        private sealed class Instance(Counter counter) : IRefinerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Instance(Counter counter) : IRefinerInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
-            public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+            public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
             {
                 counter.Batches++;
                 counter.Candidates += candidates.Count;
@@ -320,7 +320,7 @@ public class AlgorithmRefinementTests
         }
     }
 
-    private static EvolutionStrategy<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateEvolutionStrategy(TestFunctionProblem problem) =>
+    private static EvolutionStrategy<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateEvolutionStrategy(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = PopulationSize,
@@ -333,7 +333,7 @@ public class AlgorithmRefinementTests
             MaximumGenerations = Generations
         };
 
-    private static NSGA2<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateNsga2(TestFunctionProblem problem) =>
+    private static NSGA2<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateNsga2(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = PopulationSize,
@@ -345,7 +345,7 @@ public class AlgorithmRefinementTests
             MaximumGenerations = Generations
         };
 
-    private static AlpsGeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlps(TestFunctionProblem problem) =>
+    private static AlpsGeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateAlps(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = PopulationSize,
@@ -357,7 +357,7 @@ public class AlgorithmRefinementTests
             MaximumGenerations = Generations
         };
 
-    private static OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateOpenEnded(TestFunctionProblem problem) =>
+    private static OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateOpenEnded(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = PopulationSize,
@@ -370,21 +370,21 @@ public class AlgorithmRefinementTests
         };
 
     // Moves every candidate far away from the optimum, so no offspring can dominate the parents it came from.
-    private sealed record FarFromOriginRefiner : SingleCandidateRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private sealed record FarFromOriginRefiner : SingleCandidateRefiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override RealVector RefineCandidate(RealVector candidate, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+        public override RealVector RefineCandidate(RealVector candidate, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
             RealVector.Repeat(searchSpace.GetMaximum(0), candidate.Count);
     }
 
-    private sealed record DropLastRefiner : StatelessRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private sealed record DropLastRefiner : StatelessRefiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+        public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
             [.. candidates.Take(Math.Max(0, candidates.Count - 1))];
     }
 
-    private sealed record OriginShiftRefiner : SingleCandidateRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private sealed record OriginShiftRefiner : SingleCandidateRefiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override RealVector RefineCandidate(RealVector candidate, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+        public override RealVector RefineCandidate(RealVector candidate, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
             RealVector.Repeat(0.0, candidate.Count);
     }
 }

@@ -69,12 +69,12 @@ A stateless operator configuration also implements its operation logic. Its conf
 
 ```csharp
 private sealed record FirstValueEvaluator
-    : StatelessEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    : StatelessEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
 {
     public override IReadOnlyList<ObjectiveVector> Evaluate(
         IReadOnlyList<RealVector> candidates,
         IRandomNumberGenerator random,
-        RealVectorSearchSpace searchSpace,
+        BoundedRealVectorSearchSpace searchSpace,
         TestFunctionProblem problem) =>
         candidates.Select(candidate => new ObjectiveVector(candidate[0])).ToArray();
 }
@@ -88,7 +88,7 @@ A stateful operator receives one fresh `TState` for each execution instance. The
 
 ```csharp
 private sealed record CountingEvaluator
-    : StatefulEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CountingEvaluator.ExecutionState>
+    : StatefulEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingEvaluator.ExecutionState>
 {
     public sealed class ExecutionState
     {
@@ -101,7 +101,7 @@ private sealed record CountingEvaluator
         IReadOnlyList<RealVector> candidates,
         ExecutionState state,
         IRandomNumberGenerator random,
-        RealVectorSearchSpace searchSpace,
+        BoundedRealVectorSearchSpace searchSpace,
         TestFunctionProblem problem)
     {
         state.Calls++;
@@ -120,19 +120,19 @@ The configuration describes reusable parameters and graph structure. Its instanc
 
 ```csharp
 private sealed record ForwardingEvaluator(
-    IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)
-    : Evaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    IEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Inner)
+    : Evaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
 {
-    public override EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public override EvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         new Instance(instanceRegistry.Resolve(Inner));
 
-    private sealed class Instance(IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
-        : EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private sealed class Instance(IEvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> inner)
+        : EvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(
             IReadOnlyList<RealVector> candidates,
             IRandomNumberGenerator random,
-            RealVectorSearchSpace searchSpace,
+            BoundedRealVectorSearchSpace searchSpace,
             TestFunctionProblem problem) =>
             inner.Evaluate(candidates, random, searchSpace, problem);
     }

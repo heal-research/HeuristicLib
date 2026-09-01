@@ -2,7 +2,7 @@ using HEAL.HeuristicLib.Encodings.RealVectors;
 
 namespace HEAL.HeuristicLib.Tests.SearchSpaces.Vectors;
 
-public class RealVectorSearchSpaceTests
+public class BoundedRealVectorSearchSpaceTests
 {
     // ---------------------------
     // Constructor tests
@@ -11,7 +11,7 @@ public class RealVectorSearchSpaceTests
     [Fact]
     public void Constructor_WithScalars_SetsPropertiesCorrectly()
     {
-        var space = new RealVectorSearchSpace(3, 0.0, 10.0);
+        var space = new BoundedRealVectorSearchSpace(3, 0.0, 10.0);
 
         space.Length.ShouldBe(3);
         double[] values = [0.0];
@@ -25,7 +25,7 @@ public class RealVectorSearchSpaceTests
     {
         double[] values = [0.0, 1.0, 2.0];
         double[] values1 = [10.0, 11.0, 12.0];
-        var space = new RealVectorSearchSpace(
+        var space = new BoundedRealVectorSearchSpace(
           3,
           RealVector.Create(values),
           RealVector.Create(values1));
@@ -44,7 +44,7 @@ public class RealVectorSearchSpaceTests
         {
             double[] values = [0.0];
             double[] values1 = [10.0];
-            return new RealVectorSearchSpace(
+            return new BoundedRealVectorSearchSpace(
               4,
               RealVector.Create(values),
               RealVector.Create(values1));
@@ -60,7 +60,7 @@ public class RealVectorSearchSpaceTests
         {
             double[] values = [0.0, 1.0];
             double[] values1 = [10.0, 11.0, 12.0];
-            return new RealVectorSearchSpace(
+            return new BoundedRealVectorSearchSpace(
               3,
               RealVector.Create(values),
               RealVector.Create(values1));
@@ -74,7 +74,7 @@ public class RealVectorSearchSpaceTests
         {
             double[] values = [0.0, 1.0, 2.0];
             double[] values1 = [10.0, 11.0];
-            return new RealVectorSearchSpace(
+            return new BoundedRealVectorSearchSpace(
               3,
               RealVector.Create(values),
               RealVector.Create(values1));
@@ -90,7 +90,7 @@ public class RealVectorSearchSpaceTests
     {
         double[] values = [0.0, 1.0, 2.0];
         double[] values1 = [10.0, 11.0, 12.0];
-        var space = new RealVectorSearchSpace(
+        var space = new BoundedRealVectorSearchSpace(
           3,
           RealVector.Create(values),
           RealVector.Create(values1));
@@ -104,7 +104,7 @@ public class RealVectorSearchSpaceTests
     {
         double[] values = [0.0];
         double[] values1 = [10.0];
-        var space = new RealVectorSearchSpace(
+        var space = new BoundedRealVectorSearchSpace(
           3,
           RealVector.Create(values),
           RealVector.Create(values1));
@@ -118,7 +118,7 @@ public class RealVectorSearchSpaceTests
     {
         double[] values = [0.0, 1.0, 2.0];
         double[] values1 = [10.0, 11.0, 12.0];
-        var space = new RealVectorSearchSpace(
+        var space = new BoundedRealVectorSearchSpace(
           3,
           RealVector.Create(values),
           RealVector.Create(values1));
@@ -132,7 +132,7 @@ public class RealVectorSearchSpaceTests
     {
         double[] values = [0.0, 1.0, 2.0];
         double[] values1 = [10.0, 11.0, 12.0];
-        var space = new RealVectorSearchSpace(
+        var space = new BoundedRealVectorSearchSpace(
           3,
           RealVector.Create(values),
           RealVector.Create(values1));
@@ -144,7 +144,7 @@ public class RealVectorSearchSpaceTests
     [Fact]
     public void Contains_WorksWithScalarBounds()
     {
-        var space = new RealVectorSearchSpace(
+        var space = new BoundedRealVectorSearchSpace(
           3,
           0.0,
           10.0);
@@ -166,7 +166,7 @@ public class RealVectorSearchSpaceTests
     {
         double[] values = [0.0, 1.0];
         double[] values1 = [10.0, 11.0];
-        var space = new RealVectorSearchSpace(
+        var space = new BoundedRealVectorSearchSpace(
           2,
           RealVector.Create(values),
           RealVector.Create(values1));
@@ -180,7 +180,7 @@ public class RealVectorSearchSpaceTests
     [Fact]
     public void Contains_DoesNotThrow_WithScalarBounds()
     {
-        var space = new RealVectorSearchSpace(
+        var space = new BoundedRealVectorSearchSpace(
           3,
           0.0,
           10.0);

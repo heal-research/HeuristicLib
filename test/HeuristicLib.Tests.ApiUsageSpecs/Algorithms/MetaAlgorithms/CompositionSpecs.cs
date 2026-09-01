@@ -48,12 +48,12 @@ public class CompositionSpecs
         return new TestFunctionProblem(new RastriginFunction(dimension));
     }
 
-    private static HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSimpleHillClimber(
+    private static HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateSimpleHillClimber(
       TestFunctionProblem problem,
       int batchSize,
       int maxNeighbors)
     {
-        return new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        return new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),

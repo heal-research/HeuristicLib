@@ -84,7 +84,7 @@ public class IterationObservationSpecs
         qualityCurve.Count.ShouldBe(streamedStates.Count);
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateGeneticAlgorithm(
+    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateGeneticAlgorithm(
         TestFunctionProblem problem, int maximumGenerations) =>
         new()
         {

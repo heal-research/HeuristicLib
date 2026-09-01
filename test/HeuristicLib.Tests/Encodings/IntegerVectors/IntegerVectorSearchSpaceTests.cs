@@ -135,7 +135,7 @@ public class IntegerVectorSearchSpaceTests
     }
 
     [Fact]
-    public void ImplicitConversion_ToRealVectorSearchSpace_PreservesLengthAndBounds()
+    public void ImplicitConversion_ToBoundedRealVectorSearchSpace_PreservesLengthAndBounds()
     {
         int[] values = [0, 1, 2];
         int[] values1 = [10, 11, 12];
@@ -144,7 +144,7 @@ public class IntegerVectorSearchSpaceTests
           Minimum: IntegerVector.Create(values),
           Maximum: IntegerVector.Create(values1));
 
-        RealVectorSearchSpace realSpace = intSpace;
+        BoundedRealVectorSearchSpace realSpace = intSpace;
 
         realSpace.Length.ShouldBe(3);
         realSpace.Minimum.ShouldBe(intSpace.Minimum);

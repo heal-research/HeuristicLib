@@ -71,7 +71,7 @@ Seed `123` reproduces exactly these numbers. A heuristic search does not guarant
 | Part                    | Role in this example                              |
 | ----------------------- | ------------------------------------------------- |
 | `TestFunctionProblem`   | Evaluates each vector with the Rastrigin function |
-| `RealVectorSearchSpace` | Defines the dimension and valid numeric bounds    |
+| `BoundedRealVectorSearchSpace` | Defines the dimension and valid numeric bounds    |
 | `GeneticAlgorithm`      | Controls the population and generation loop       |
 | Creator                 | Produces the initial candidate vectors            |
 | Crossover and mutator   | Produce variation from selected candidates        |
@@ -131,7 +131,7 @@ using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 
-var space = new RealVectorSearchSpace(
+var space = new BoundedRealVectorSearchSpace(
     length: 2,
     minimum: [-5.0],
     maximum: [5.0]);

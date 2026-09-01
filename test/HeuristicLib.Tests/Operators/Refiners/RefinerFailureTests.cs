@@ -69,7 +69,7 @@ public class RefinerFailureTests
 
     private static TestFunctionProblem CreateProblem() => new(new SphereFunction(dimension: 3));
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(TestFunctionProblem problem) =>
+    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = 5,
@@ -88,17 +88,17 @@ public class RefinerFailureTests
             candidate == FailingValue ? throw new InvalidOperationException("Refinement failed.") : candidate;
     }
 
-    private sealed record FailingRefiner : StatelessRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private sealed record FailingRefiner : StatelessRefiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+        public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
             throw new InvalidOperationException("Refinement failed.");
     }
 
-    private sealed record FailingAfterBatchesRefiner(int SuccessfulBatches) : Refiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private sealed record FailingAfterBatchesRefiner(int SuccessfulBatches) : Refiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         private readonly Counter counter = new();
 
-        public override IRefinerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        public override IRefinerInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
             new Instance(counter, SuccessfulBatches);
 
         private sealed class Counter
@@ -106,9 +106,9 @@ public class RefinerFailureTests
             public int Batches;
         }
 
-        private sealed class Instance(Counter counter, int successfulBatches) : IRefinerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Instance(Counter counter, int successfulBatches) : IRefinerInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
-            public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
                 counter.Batches++ < successfulBatches ? candidates : throw new InvalidOperationException("Refinement failed.");
         }
     }

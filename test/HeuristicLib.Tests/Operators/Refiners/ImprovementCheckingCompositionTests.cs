@@ -58,7 +58,7 @@ public class ImprovementCheckingCompositionTests
     {
         var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
         var worsened = RealVector.Repeat(problem.SearchSpace.GetMaximum(0), problem.SearchSpace.Length);
-        var algorithm = new NSGA2<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
+        var algorithm = new NSGA2<RealVector, BoundedRealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
         {
             PopulationSize = 6,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -94,9 +94,9 @@ public class ImprovementCheckingCompositionTests
             candidate + Offset;
     }
 
-    private sealed record UpperBoundRefiner : SingleCandidateRefiner<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
+    private sealed record UpperBoundRefiner : SingleCandidateRefiner<RealVector, BoundedRealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
     {
-        public override RealVector RefineCandidate(RealVector candidate, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, MultiObjectiveTestFunctionProblem problem) =>
+        public override RealVector RefineCandidate(RealVector candidate, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, MultiObjectiveTestFunctionProblem problem) =>
             RealVector.Repeat(searchSpace.GetMaximum(0), candidate.Count);
     }
 }

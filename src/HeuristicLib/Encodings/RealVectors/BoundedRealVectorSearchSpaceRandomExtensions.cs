@@ -2,11 +2,11 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings.RealVectors;
 
-public static class RealVectorSearchSpaceRandomExtensions
+public static class BoundedRealVectorSearchSpaceRandomExtensions
 {
     extension(IRandomNumberGenerator random)
     {
-        public RealVector NextRealVectorUniform(RealVectorSearchSpace searchSpace, RealVector? minimum = null, RealVector? maximum = null)
+        public RealVector NextRealVectorUniform(BoundedRealVectorSearchSpace searchSpace, RealVector? minimum = null, RealVector? maximum = null)
         {
             if (minimum is not null && (minimum < searchSpace.Minimum).Any())
             {
@@ -21,7 +21,7 @@ public static class RealVectorSearchSpaceRandomExtensions
             return random.NextRealVectorUniform(minimum ?? searchSpace.Minimum, maximum ?? searchSpace.Maximum, searchSpace.Length);
         }
 
-        public RealVector NextRealVectorNormal(RealVectorSearchSpace searchSpace, RealVector means, RealVector sigmas)
+        public RealVector NextRealVectorNormal(BoundedRealVectorSearchSpace searchSpace, RealVector means, RealVector sigmas)
           => RealVector.Clamp(random.NextRealVectorNormal(means, sigmas, searchSpace.Length), searchSpace.Minimum, searchSpace.Maximum);
     }
 }
