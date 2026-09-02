@@ -4,22 +4,34 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public abstract record WrappingSelector<TCandidate, TSearchSpace, TProblem>
-    : Selector<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+/// <remarks>
+/// A wrapping selector owns a child, so it stays agnostic in the search space and problem and passes the run's
+/// triple through unchanged. Binding is a leaf concept: a composite that narrowed the triple would reject children the
+/// run supports.
+/// </remarks>
+public abstract record WrappingSelector<TCandidate>
+    : ISelector<TCandidate>
 {
-    protected WrappingSelector(ISelector<TCandidate, TSearchSpace, TProblem> childSelector)
+    protected WrappingSelector(ISelector<TCandidate> childSelector)
     {
         ChildSelector = childSelector;
     }
 
-    public ISelector<TCandidate, TSearchSpace, TProblem> ChildSelector { get; init; }
+    public ISelector<TCandidate> ChildSelector { get; init; }
 
-    public sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance(instanceRegistry.Resolve(ChildSelector));
+    /// <summary>
+    /// Resolves the child over the run's search space and problem and hands it to
+    /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
+    /// </summary>
+    public ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
+        WrapExecutionInstance(instanceRegistry.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildSelector));
 
-    protected abstract WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector);
+    /// <summary>Wraps the child's execution instance in this operator's own.</summary>
+    protected abstract ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> childSelector)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
 public abstract class WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector)

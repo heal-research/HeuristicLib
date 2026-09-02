@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
@@ -32,7 +31,7 @@ public class ObservableOperatorCounterTests
         var creator = new SequenceCreator().CountCreatorCalls(counter);
         creator.Counter.ShouldBeSameAs(counter);
         creator.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = creator.CreateExecutionInstance();
+        var instance = creator.CreateCreatorInstance();
         var problem = CreateProblem();
 
         instance.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -46,7 +45,7 @@ public class ObservableOperatorCounterTests
     {
         var counter = new ObservationCounter();
         var creator = new SequenceCreator().CountCreatedCandidates(counter);
-        var instance = creator.CreateExecutionInstance();
+        var instance = creator.CreateCreatorInstance();
         var problem = CreateProblem();
 
         instance.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -63,7 +62,7 @@ public class ObservableOperatorCounterTests
         var creator = new SequenceCreator().MeasureCreatorDuration(duration, timeProvider);
         creator.Duration.ShouldBeSameAs(duration);
         creator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = creator.CreateExecutionInstance();
+        var instance = creator.CreateCreatorInstance();
         var problem = CreateProblem();
 
         instance.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -76,7 +75,7 @@ public class ObservableOperatorCounterTests
     public void ObservableCreator_DoesNotInvokeObserversWhenCreationThrows()
     {
         var observed = 0;
-        var instance = new ThrowingCreator().ObserveWith((IReadOnlyList<int> _) => observed++).CreateExecutionInstance();
+        var instance = new ThrowingCreator().ObserveWith((IReadOnlyList<int> _) => observed++).CreateCreatorInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -89,7 +88,7 @@ public class ObservableOperatorCounterTests
     public void CountCreatorCalls_DoesNotIncrementWhenCreationThrows()
     {
         var counter = new ObservationCounter();
-        var instance = new ThrowingCreator().CountCreatorCalls(counter).CreateExecutionInstance();
+        var instance = new ThrowingCreator().CountCreatorCalls(counter).CreateCreatorInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -103,7 +102,7 @@ public class ObservableOperatorCounterTests
     {
         var duration = new ObservationDuration();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var instance = new ThrowingCreator().MeasureCreatorDuration(duration, timeProvider).CreateExecutionInstance();
+        var instance = new ThrowingCreator().MeasureCreatorDuration(duration, timeProvider).CreateCreatorInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -304,7 +303,7 @@ public class ObservableOperatorCounterTests
         var crossover = new SumParentsCrossover().CountCrossoverCalls(counter);
         crossover.Counter.ShouldBeSameAs(counter);
         crossover.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = crossover.CreateExecutionInstance();
+        var instance = crossover.CreateCrossoverInstance();
         var problem = CreateProblem();
 
         instance.Cross(
@@ -326,7 +325,7 @@ public class ObservableOperatorCounterTests
     {
         var counter = new ObservationCounter();
         var crossover = new SumParentsCrossover().CountCrossedCandidates(counter);
-        var instance = crossover.CreateExecutionInstance();
+        var instance = crossover.CreateCrossoverInstance();
         var problem = CreateProblem();
 
         instance.Cross(
@@ -351,7 +350,7 @@ public class ObservableOperatorCounterTests
         var crossover = new SumParentsCrossover().MeasureCrossoverDuration(duration, timeProvider);
         crossover.Duration.ShouldBeSameAs(duration);
         crossover.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = crossover.CreateExecutionInstance();
+        var instance = crossover.CreateCrossoverInstance();
         var problem = CreateProblem();
 
         instance.Cross(
@@ -372,7 +371,7 @@ public class ObservableOperatorCounterTests
     public void ObservableCrossover_DoesNotInvokeObserversWhenCrossoverThrows()
     {
         var observed = 0;
-        var instance = new ThrowingCrossover().ObserveWith((IReadOnlyList<int> _) => observed++).CreateExecutionInstance();
+        var instance = new ThrowingCrossover().ObserveWith((IReadOnlyList<int> _) => observed++).CreateCrossoverInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -385,7 +384,7 @@ public class ObservableOperatorCounterTests
     public void CountCrossoverCalls_DoesNotIncrementWhenCrossoverThrows()
     {
         var counter = new ObservationCounter();
-        var instance = new ThrowingCrossover().CountCrossoverCalls(counter).CreateExecutionInstance();
+        var instance = new ThrowingCrossover().CountCrossoverCalls(counter).CreateCrossoverInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -399,7 +398,7 @@ public class ObservableOperatorCounterTests
     {
         var duration = new ObservationDuration();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var instance = new ThrowingCrossover().MeasureCrossoverDuration(duration, timeProvider).CreateExecutionInstance();
+        var instance = new ThrowingCrossover().MeasureCrossoverDuration(duration, timeProvider).CreateCrossoverInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -415,7 +414,7 @@ public class ObservableOperatorCounterTests
         var selector = new FirstCandidatesSelector().CountSelectorCalls(counter);
         selector.Counter.ShouldBeSameAs(counter);
         selector.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = selector.CreateExecutionInstance();
+        var instance = selector.CreateSelectorInstance();
         var problem = CreateProblem();
 
         instance.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -469,7 +468,7 @@ public class ObservableOperatorCounterTests
             }),
             new ActionSelectorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((_, _, _, _, _, _) => calls.Add("second")));
 
-        var result = selector.CreateExecutionInstance().Select(population, problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var result = selector.CreateSelectorInstance().Select(population, problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         calls.ShouldBe(["first", "second"]);
         observedSelection.ShouldBeSameAs(result);
@@ -481,7 +480,7 @@ public class ObservableOperatorCounterTests
     public void ObservableSelector_DoesNotInvokeObserversWhenSelectionThrows()
     {
         var observed = 0;
-        var instance = new ThrowingSelector().ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => observed++).CreateExecutionInstance();
+        var instance = new ThrowingSelector().ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => observed++).CreateSelectorInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -495,7 +494,7 @@ public class ObservableOperatorCounterTests
     {
         var counter = new ObservationCounter();
         var selector = new FirstCandidatesSelector().CountSelectedCandidates(counter);
-        var instance = selector.CreateExecutionInstance();
+        var instance = selector.CreateSelectorInstance();
         var problem = CreateProblem();
 
         instance.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -508,7 +507,7 @@ public class ObservableOperatorCounterTests
     public void CountSelectorCalls_DoesNotIncrementWhenSelectionThrows()
     {
         var counter = new ObservationCounter();
-        var instance = new ThrowingSelector().CountSelectorCalls(counter).CreateExecutionInstance();
+        var instance = new ThrowingSelector().CountSelectorCalls(counter).CreateSelectorInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -525,7 +524,7 @@ public class ObservableOperatorCounterTests
         var selector = new FirstCandidatesSelector().MeasureSelectorDuration(duration, timeProvider);
         selector.Duration.ShouldBeSameAs(duration);
         selector.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = selector.CreateExecutionInstance();
+        var instance = selector.CreateSelectorInstance();
         var problem = CreateProblem();
 
         instance.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -540,7 +539,7 @@ public class ObservableOperatorCounterTests
         var duration = new ObservationDuration();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var selector = new ThrowingSelector().MeasureSelectorDuration(duration, timeProvider);
-        var instance = selector.CreateExecutionInstance();
+        var instance = selector.CreateSelectorInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -556,7 +555,7 @@ public class ObservableOperatorCounterTests
         var replacer = new FirstReplacementCandidatesReplacer().CountReplacerCalls(counter);
         replacer.Counter.ShouldBeSameAs(counter);
         replacer.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = replacer.CreateExecutionInstance();
+        var instance = replacer.CreateReplacerInstance();
         var problem = CreateProblem();
 
         instance.Replace(
@@ -584,7 +583,7 @@ public class ObservableOperatorCounterTests
     {
         var counter = new ObservationCounter();
         var replacer = new FirstReplacementCandidatesReplacer().CountReplacementCandidates(counter);
-        var instance = replacer.CreateExecutionInstance();
+        var instance = replacer.CreateReplacerInstance();
         var problem = CreateProblem();
 
         instance.Replace(
@@ -611,7 +610,7 @@ public class ObservableOperatorCounterTests
     public void ObservableReplacer_DoesNotInvokeObserversWhenReplacementThrows()
     {
         var observed = 0;
-        var instance = new ThrowingReplacer().ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => observed++).CreateExecutionInstance();
+        var instance = new ThrowingReplacer().ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => observed++).CreateReplacerInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.Replace(
@@ -630,7 +629,7 @@ public class ObservableOperatorCounterTests
     public void CountReplacerCalls_DoesNotCountFailedCall()
     {
         var counter = new ObservationCounter();
-        var instance = new ThrowingReplacer().CountReplacerCalls(counter).CreateExecutionInstance();
+        var instance = new ThrowingReplacer().CountReplacerCalls(counter).CreateReplacerInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.Replace(
@@ -653,7 +652,7 @@ public class ObservableOperatorCounterTests
         var replacer = new FirstReplacementCandidatesReplacer().MeasureReplacerDuration(duration, timeProvider);
         replacer.Duration.ShouldBeSameAs(duration);
         replacer.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = replacer.CreateExecutionInstance();
+        var instance = replacer.CreateReplacerInstance();
         var problem = CreateProblem();
 
         instance.Replace(
@@ -680,7 +679,7 @@ public class ObservableOperatorCounterTests
     public void MeasureReplacerDuration_RecordsFailedCall()
     {
         var duration = new ObservationDuration();
-        var instance = new ThrowingReplacer().MeasureReplacerDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance();
+        var instance = new ThrowingReplacer().MeasureReplacerDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateReplacerInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.Replace(
@@ -701,7 +700,7 @@ public class ObservableOperatorCounterTests
         var counter = new ObservationCounter();
         var interceptor = new AddOneInterceptor().CountInterceptorCalls(counter);
         interceptor.Counter.ShouldBeSameAs(counter);
-        var instance = interceptor.CreateExecutionInstance();
+        var instance = interceptor.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         instance.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -718,7 +717,7 @@ public class ObservableOperatorCounterTests
         var interceptor = new AddOneInterceptor().MeasureInterceptorDuration(duration, timeProvider);
         interceptor.Duration.ShouldBeSameAs(duration);
         interceptor.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = interceptor.CreateExecutionInstance();
+        var instance = interceptor.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         instance.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -731,7 +730,7 @@ public class ObservableOperatorCounterTests
     public void ObservableInterceptor_DoesNotInvokeObserversWhenTransformThrows()
     {
         var observed = 0;
-        var instance = new ThrowingInterceptor().ObserveWith((CounterState _) => observed++).CreateExecutionInstance();
+        var instance = new ThrowingInterceptor().ObserveWith((CounterState _) => observed++).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
@@ -743,7 +742,7 @@ public class ObservableOperatorCounterTests
     public void CountInterceptorCalls_DoesNotCountFailedCall()
     {
         var counter = new ObservationCounter();
-        var instance = new ThrowingInterceptor().CountInterceptorCalls(counter).CreateExecutionInstance();
+        var instance = new ThrowingInterceptor().CountInterceptorCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
@@ -755,7 +754,7 @@ public class ObservableOperatorCounterTests
     public void MeasureInterceptorDuration_RecordsFailedCall()
     {
         var duration = new ObservationDuration();
-        var instance = new ThrowingInterceptor().MeasureInterceptorDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance();
+        var instance = new ThrowingInterceptor().MeasureInterceptorDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
@@ -769,7 +768,7 @@ public class ObservableOperatorCounterTests
         var counter = new ObservationCounter();
         var terminator = new NeverTerminalStateTerminator().CountTerminatorCalls(counter);
         terminator.Counter.ShouldBeSameAs(counter);
-        var instance = terminator.CreateExecutionInstance();
+        var instance = terminator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
@@ -786,7 +785,7 @@ public class ObservableOperatorCounterTests
         var terminator = new NeverTerminalStateTerminator().MeasureTerminatorDuration(duration, timeProvider);
         terminator.Duration.ShouldBeSameAs(duration);
         terminator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = terminator.CreateExecutionInstance();
+        var instance = terminator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
@@ -799,7 +798,7 @@ public class ObservableOperatorCounterTests
     public void ObservableTerminator_DoesNotInvokeObserversWhenTerminalStateCheckThrows()
     {
         var observed = 0;
-        var instance = new ThrowingTerminator().ObserveWith((bool _) => observed++).CreateExecutionInstance();
+        var instance = new ThrowingTerminator().ObserveWith<int, CounterState>((bool _) => observed++).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
@@ -811,7 +810,7 @@ public class ObservableOperatorCounterTests
     public void CountTerminatorCalls_DoesNotCountFailedCall()
     {
         var counter = new ObservationCounter();
-        var instance = new ThrowingTerminator().CountTerminatorCalls(counter).CreateExecutionInstance();
+        var instance = new ThrowingTerminator().CountTerminatorCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
@@ -823,7 +822,7 @@ public class ObservableOperatorCounterTests
     public void MeasureTerminatorDuration_RecordsFailedCall()
     {
         var duration = new ObservationDuration();
-        var instance = new ThrowingTerminator().MeasureTerminatorDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance();
+        var instance = new ThrowingTerminator().MeasureTerminatorDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
@@ -1070,17 +1069,59 @@ public class ObservableOperatorCounterTests
 /// <see cref="DummySearchSpace{T}"/>, so the triple is the same at every call site and repeating it per resolution
 /// would only obscure what each test is actually asserting.
 /// </summary>
-file static class MutatorResolution
+
+/// <summary>
+/// Names the run's triple once for this file. Every operator exercised here is authored over
+/// <see cref="DummySearchSpace{T}"/>, so the triple is the same at every call site and repeating it per resolution
+/// would only obscure what each test is actually asserting.
+/// </summary>
+file static class OperatorResolution
 {
     extension(ExecutionInstanceRegistry registry)
     {
+        public ICreatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCreator(ICreator<int> creator) =>
+            registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator);
+
+        public ICrossoverInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCrossover(ICrossover<int> crossover) =>
+            registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover);
+
         public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IMutator<int> mutator) =>
             registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
+
+        public ISelectorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveSelector(ISelector<int> selector) =>
+            registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
+
+        public IReplacerInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveReplacer(IReplacer<int> replacer) =>
+            registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(replacer);
+    }
+
+    extension(ICreator<int> creator)
+    {
+        public ICreatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCreatorInstance() =>
+            new ExecutionInstanceRegistry().ResolveCreator(creator);
+    }
+
+    extension(ICrossover<int> crossover)
+    {
+        public ICrossoverInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCrossoverInstance() =>
+            new ExecutionInstanceRegistry().ResolveCrossover(crossover);
     }
 
     extension(IMutator<int> mutator)
     {
         public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateMutatorInstance() =>
             new ExecutionInstanceRegistry().ResolveMutator(mutator);
+    }
+
+    extension(ISelector<int> selector)
+    {
+        public ISelectorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateSelectorInstance() =>
+            new ExecutionInstanceRegistry().ResolveSelector(selector);
+    }
+
+    extension(IReplacer<int> replacer)
+    {
+        public IReplacerInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateReplacerInstance() =>
+            new ExecutionInstanceRegistry().ResolveReplacer(replacer);
     }
 }

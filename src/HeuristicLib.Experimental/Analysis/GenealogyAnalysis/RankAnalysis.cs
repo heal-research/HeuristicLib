@@ -12,11 +12,11 @@ public record RankAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> : A
     where TCandidate : notnull
 {
     private readonly GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> graphBuilder;
-    private readonly IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor;
+    private readonly IInterceptor<TCandidate>? interceptor;
 
-    public RankAnalysis(ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
+    public RankAnalysis(ICrossover<TCandidate>? crossover = null,
                         IMutator<TCandidate>? mutator = null,
-                        IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor = null,
+                        IInterceptor<TCandidate>? interceptor = null,
                         IEqualityComparer<TCandidate>? equality = null)
     {
         graphBuilder =
@@ -32,7 +32,7 @@ public record RankAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> : A
         graphBuilder.RegisterObservations(observations,
             result.Graph); //tells sub-analyzer to record its findings into outer result
         if (interceptor is not null)
-            observations.Observe(interceptor, (_, _, _, _, _) => RecordRanks(result));
+            observations.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, (_, _, _, _, _) => RecordRanks(result));
     }
 
     private static void RecordRanks(RankState<TCandidate> state)

@@ -46,7 +46,7 @@ public class NumericParameterFittingSpecs
     public void KeepingAFittedCandidateOnlyWhenItImprovesTheObjective()
     {
         var problem = CreateProblem();
-        var evaluator = new ProblemEvaluator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>();
+        var evaluator = new ProblemEvaluator<ExpressionTree>();
 
         var algorithm = CreateAlgorithm(problem) with
         {
@@ -134,9 +134,9 @@ public class NumericParameterFittingSpecs
     public void DecidingWhetherRefinementEffortCountsAgainstTheEvaluationBudget()
     {
         var problem = CreateProblem();
-        var sharedEvaluator = new ProblemEvaluator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>()
+        var sharedEvaluator = new ProblemEvaluator<ExpressionTree>()
             .CountEvaluatedCandidates(out var sharedCounter);
-        var algorithmEvaluator = new ProblemEvaluator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>()
+        var algorithmEvaluator = new ProblemEvaluator<ExpressionTree>()
             .CountEvaluatedCandidates(out var ownCounter);
 
         var sharing = CreateAlgorithm(problem) with

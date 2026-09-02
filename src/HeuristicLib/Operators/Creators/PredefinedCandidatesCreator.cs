@@ -9,29 +9,31 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>
 /// Emits predefined candidates across successive calls before delegating remaining requests to a fallback creator.
 /// </summary>
-public record PredefinedCandidatesCreator<TCandidate, TSearchSpace, TProblem>
-    : Creator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record PredefinedCandidatesCreator<TCandidate>
+    : ICreator<TCandidate>
 {
     /// <summary>
     /// Gets the creator asked for the candidates that remain once the predefined candidates are exhausted.
     /// </summary>
-    public ICreator<TCandidate, TSearchSpace, TProblem> CreatorForRemainingCandidates { get; init; }
+    public ICreator<TCandidate> CreatorForRemainingCandidates { get; init; }
 
     public ValueArray<TCandidate> PredefinedCandidates { get; init; }
 
-    public PredefinedCandidatesCreator(IReadOnlyList<TCandidate> predefinedCandidates, ICreator<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates)
+    public PredefinedCandidatesCreator(IReadOnlyList<TCandidate> predefinedCandidates, ICreator<TCandidate> creatorForRemainingCandidates)
     {
         PredefinedCandidates = predefinedCandidates.ToValueArray();
         CreatorForRemainingCandidates = creatorForRemainingCandidates;
     }
 
-    public override CreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(CreatorForRemainingCandidates), PredefinedCandidates);
+    public ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
+        new Instance<TRunSearchSpace, TRunProblem>(instanceRegistry.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(CreatorForRemainingCandidates), PredefinedCandidates);
 
-    private sealed class Instance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates)
+    private sealed class Instance<TSearchSpace, TProblem>(ICreatorInstance<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates)
         : CreatorInstance<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         private int currentCandidateIndex;
 
@@ -68,19 +70,15 @@ public record PredefinedCandidatesCreator<TCandidate, TSearchSpace, TProblem>
 
 public static class PredefinedCandidatesCreator
 {
-    public static PredefinedCandidatesCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<TCandidate> predefinedCandidates, ICreator<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static PredefinedCandidatesCreator<TCandidate> Create<TCandidate>(IReadOnlyList<TCandidate> predefinedCandidates, ICreator<TCandidate> creatorForRemainingCandidates) =>
         new(predefinedCandidates, creatorForRemainingCandidates);
 }
 
 public static class PredefinedCandidatesCreatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(ICreator<TCandidate> creator)
     {
-        public PredefinedCandidatesCreator<TCandidate, TSearchSpace, TProblem> WithPredefinedCandidates(IReadOnlyList<TCandidate> predefinedCandidates) =>
+        public PredefinedCandidatesCreator<TCandidate> WithPredefinedCandidates(IReadOnlyList<TCandidate> predefinedCandidates) =>
             PredefinedCandidatesCreator.Create(predefinedCandidates, creator);
     }
 }

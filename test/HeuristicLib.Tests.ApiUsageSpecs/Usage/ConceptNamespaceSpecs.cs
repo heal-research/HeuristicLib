@@ -53,7 +53,7 @@ public sealed class ConceptNamespaceSpecs
     public async Task Nsga2Flow_UsesTheAlgorithmNamespaceAndObjectivePolicy()
     {
         var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(4));
-        var algorithm = NSGA2.Create(
+        var algorithm = NSGA2.Create<RealVector, BoundedRealVectorSearchSpace, MultiObjectiveTestFunctionProblem>(
             new RealCreator(problem.SearchSpace),
             new SimulatedBinaryCrossover(),
             new PolynomialMutator(),

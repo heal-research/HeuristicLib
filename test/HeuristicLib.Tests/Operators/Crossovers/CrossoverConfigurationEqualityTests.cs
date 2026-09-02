@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Crossovers;
@@ -36,7 +37,7 @@ public class CrossoverConfigurationEqualityTests
     {
         var first = new OffsetCrossover(1);
         var second = new OffsetCrossover(2);
-        var childCrossovers = new List<ICrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var childCrossovers = new List<ICrossover<int>> { first, second };
         var crossover = new FirstOfCrossover(childCrossovers);
 
         childCrossovers.Clear();
@@ -84,9 +85,9 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void ChooseOneCrossover_WithDifferentWeights_IsNotEqual()
     {
-        ICrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[] childCrossovers = [new OffsetCrossover(1), new OffsetCrossover(2)];
-        var left = new ChooseOneCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCrossovers) { Weights = [1.0, 2.0] };
-        var right = new ChooseOneCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCrossovers) { Weights = [2.0, 1.0] };
+        ICrossover<int>[] childCrossovers = [new OffsetCrossover(1), new OffsetCrossover(2)];
+        var left = new ChooseOneCrossover<int>(childCrossovers) { Weights = [1.0, 2.0] };
+        var right = new ChooseOneCrossover<int>(childCrossovers) { Weights = [2.0, 1.0] };
 
         left.ShouldNotBe(right);
     }
@@ -98,9 +99,9 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void ChooseOneCrossover_WithOmittedWeights_IsNotEqualToExplicitUniformWeights()
     {
-        ICrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[] childCrossovers = [new OffsetCrossover(1), new OffsetCrossover(2)];
-        var omitted = new ChooseOneCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCrossovers);
-        var explicitUniform = new ChooseOneCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCrossovers) { Weights = [0.5, 0.5] };
+        ICrossover<int>[] childCrossovers = [new OffsetCrossover(1), new OffsetCrossover(2)];
+        var omitted = new ChooseOneCrossover<int>(childCrossovers);
+        var explicitUniform = new ChooseOneCrossover<int>(childCrossovers) { Weights = [0.5, 0.5] };
 
         omitted.Weights.ShouldBeEmpty();
         omitted.ShouldNotBe(explicitUniform);
@@ -313,20 +314,22 @@ public class CrossoverConfigurationEqualityTests
     }
 
     private sealed record FirstOfCrossover
-        : MultiCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        : MultiCrossover<int>
     {
-        public FirstOfCrossover(IReadOnlyList<ICrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCrossovers)
+        public FirstOfCrossover(IReadOnlyList<ICrossover<int>> childCrossovers)
             : base(childCrossovers)
         {
         }
 
-        protected override MultiCrossoverInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<ICrossoverInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCrossovers) =>
-            new Instance(childCrossovers);
+        protected override ICrossoverInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICrossoverInstance<int, TRunSearchSpace, TRunProblem>> childCrossovers) =>
+            new Instance<TRunSearchSpace, TRunProblem>(childCrossovers);
 
-        private sealed class Instance(ImmutableArray<ICrossoverInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCrossovers)
-            : MultiCrossoverInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCrossovers)
+        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ICrossoverInstance<int, TSearchSpace, TProblem>> childCrossovers)
+            : MultiCrossoverInstance<int, TSearchSpace, TProblem>(childCrossovers)
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+            public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildCrossovers[0].Cross(parents, random, searchSpace, problem);
         }
     }

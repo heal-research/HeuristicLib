@@ -5,25 +5,25 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public sealed record CountingTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : WrappingTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
+public sealed record CountingTerminator<TCandidate>
+    : WrappingTerminator<TCandidate>
 {
     public ObservationCounter Counter { get; init; }
 
-    public CountingTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, ObservationCounter counter)
+    public CountingTerminator(ITerminator<TCandidate> childTerminator, ObservationCounter counter)
         : base(childTerminator)
     {
         Counter = counter;
     }
 
-    protected override WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator) =>
-        new Instance(childTerminator, Counter);
+    protected override ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childTerminator) =>
+        new Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminator, Counter);
 
-    private sealed class Instance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, ObservationCounter counter)
+    private sealed class Instance<TSearchSpace, TProblem, TSearchState>(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, ObservationCounter counter)
         : WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
     {
         public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem)
         {
@@ -36,23 +36,17 @@ public sealed record CountingTerminator<TCandidate, TSearchSpace, TProblem, TSea
 
 public static class CountingTerminator
 {
-    public static CountingTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, ObservationCounter counter)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState =>
+    public static CountingTerminator<TCandidate> Create<TCandidate>(ITerminator<TCandidate> childTerminator, ObservationCounter counter) =>
         new(childTerminator, counter);
 }
 
 public static class TerminatorCounterExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState
+    extension<TCandidate>(ITerminator<TCandidate> terminator)
     {
-        public CountingTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> CountTerminatorCalls(ObservationCounter counter) => new(terminator, counter);
+        public CountingTerminator<TCandidate> CountTerminatorCalls(ObservationCounter counter) => new(terminator, counter);
 
-        public CountingTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> CountTerminatorCalls(out ObservationCounter counter)
+        public CountingTerminator<TCandidate> CountTerminatorCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return terminator.CountTerminatorCalls(counter);

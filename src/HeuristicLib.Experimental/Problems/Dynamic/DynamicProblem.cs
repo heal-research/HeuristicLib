@@ -8,12 +8,13 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 // ToDo: A DynamicProblem should be, foremost, a Problem. It "being" also an Observer, is an interesting way of implementing about it, but we have to think if this is really what we want.
-public abstract class DynamicProblem<TCandidate, TSearchSpace> :
-    SingleSolutionProblem<TCandidate, TSearchSpace>,
+public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
+    SingleSolutionProblem<TSelf, TCandidate, TSearchSpace>,
     IDynamicProblem<TCandidate, TSearchSpace>,
-    IEvaluatorObserver<TCandidate, TSearchSpace, DynamicProblem<TCandidate, TSearchSpace>>,
-    IInterceptorObserver<TCandidate, TSearchSpace, DynamicProblem<TCandidate, TSearchSpace>, ISearchState>,
+    IEvaluatorObserver<TCandidate, TSearchSpace, DynamicProblem<TSelf, TCandidate, TSearchSpace>>,
+    IInterceptorObserver<TCandidate, TSearchSpace, DynamicProblem<TSelf, TCandidate, TSearchSpace>, ISearchState>,
     IDisposable
+    where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     private readonly ConcurrentBag<(TCandidate candidate, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog = [];
@@ -61,7 +62,7 @@ public abstract class DynamicProblem<TCandidate, TSearchSpace> :
 
     public abstract ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, EvaluationTiming timing);
 
-    public void AfterEvaluation(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, TSearchSpace searchSpace, DynamicProblem<TCandidate, TSearchSpace> problem)
+    public void AfterEvaluation(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, TSearchSpace searchSpace, DynamicProblem<TSelf, TCandidate, TSearchSpace> problem)
     {
         OnEvaluation?.Invoke(this, evaluationLog.OrderBy(x => x.timing.EpochCount).ToArray());
         evaluationLog.Clear();
@@ -71,7 +72,7 @@ public abstract class DynamicProblem<TCandidate, TSearchSpace> :
         }
     }
 
-    public void AfterInterception(ISearchState newState, ISearchState currentState, ISearchState? previousState, TSearchSpace searchSpace, DynamicProblem<TCandidate, TSearchSpace> problem)
+    public void AfterInterception(ISearchState newState, ISearchState currentState, ISearchState? previousState, TSearchSpace searchSpace, DynamicProblem<TSelf, TCandidate, TSearchSpace> problem)
     {
         if (updatePolicy == UpdatePolicy.AfterInterception)
         {

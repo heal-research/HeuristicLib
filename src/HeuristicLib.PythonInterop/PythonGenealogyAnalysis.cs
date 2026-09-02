@@ -119,7 +119,7 @@ public class PythonGenealogyAnalysis
         TProblem problem,
         Action<PopulationState<TCandidate>>? callback,
         ExperimentParameters<TCandidate, TSearchSpace> parameters,
-        IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null) where TCandidate : notnull
+        IRefiner<TCandidate>? refiner = null) where TCandidate : notnull
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -133,7 +133,7 @@ public class PythonGenealogyAnalysis
         {
             case "ga":
                 {
-                    var gaAlgorithm = GeneticAlgorithm.Create(
+                    var gaAlgorithm = GeneticAlgorithm.Create<TCandidate, TSearchSpace, TProblem>(
                         RequireCreator(parameters),
                         RequireCrossover(parameters),
                         RequireMutator(parameters),
@@ -159,7 +159,7 @@ public class PythonGenealogyAnalysis
                 }
             case "es":
                 {
-                    var esAlgorithm = EvolutionStrategy.Create(
+                    var esAlgorithm = EvolutionStrategy.Create<TCandidate, TSearchSpace, TProblem>(
                         RequireCreator(parameters),
                         RequireMutator(parameters),
                         crossover: parameters.WithCrossover ? parameters.Crossover : null,
@@ -185,7 +185,7 @@ public class PythonGenealogyAnalysis
                     return analyzers.ToExperimentResult(esRun);
                 }
             case "ls":
-                var lsAlgorithm = HillClimber.Create(
+                var lsAlgorithm = HillClimber.Create<TCandidate, TSearchSpace, TProblem>(
                     RequireCreator(parameters),
                     RequireMutator(parameters),
                     refiner: refiner,
@@ -198,7 +198,7 @@ public class PythonGenealogyAnalysis
                     "Configured experiment result extraction is not implemented for local search in this analyzer pipeline.");
             case "nsga2":
                 {
-                    var nsga2Algorithm = NSGA2.Create(
+                    var nsga2Algorithm = NSGA2.Create<TCandidate, TSearchSpace, TProblem>(
                         RequireCreator(parameters),
                         RequireCrossover(parameters),
                         RequireMutator(parameters),
@@ -296,13 +296,13 @@ public class PythonGenealogyAnalysis
     /// The parameters arrive from Python, where every operator is optional and unset, so this is the boundary that has
     /// to establish the contract the rest of the library relies on.
     /// </remarks>
-    private static ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> RequireCreator<TCandidate, TSearchSpace>(
+    private static ICreator<TCandidate> RequireCreator<TCandidate, TSearchSpace>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters)
         where TSearchSpace : class, ISearchSpace<TCandidate> =>
         parameters.Creator ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Creator));
 
     /// <inheritdoc cref="RequireCreator{TCandidate, TSearchSpace}"/>
-    private static ICrossover<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> RequireCrossover<TCandidate, TSearchSpace>(
+    private static ICrossover<TCandidate> RequireCrossover<TCandidate, TSearchSpace>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters)
         where TSearchSpace : class, ISearchSpace<TCandidate> =>
         parameters.Crossover ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Crossover));
@@ -317,7 +317,7 @@ public class PythonGenealogyAnalysis
         new($"Algorithm '{algorithmName}' requires '{operatorName}' to be set on the experiment parameters.");
 
     private sealed record CallbackAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(
-        IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Interceptor,
+        IInterceptor<TCandidate> Interceptor,
         Action<PopulationState<TCandidate>> Callback)
         : Analyzer<object>
         where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -328,15 +328,15 @@ public class PythonGenealogyAnalysis
 
         public override void RegisterObservations(ObservationPlan observations, object result)
         {
-            observations.Observe(Interceptor, (algorithmState, _, _, _, _) => Callback(algorithmState));
+            observations.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(Interceptor, (algorithmState, _, _, _, _) => Callback(algorithmState));
         }
     }
 
     private static MyAnalyzers<TCandidate> CreateAnalyzers<TCandidate, TSearchSpace, TProblem, TSearchState>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters,
         IIterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm,
-        IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICrossover<TCandidate, TSearchSpace, TProblem>? crossover,
+        IEvaluator<TCandidate> evaluator,
+        ICrossover<TCandidate>? crossover,
         IMutator<TCandidate>? mutator,
         Action<PopulationState<TCandidate>>? callback)
         where TCandidate : notnull
@@ -346,12 +346,12 @@ public class PythonGenealogyAnalysis
     {
         var interceptor = algorithm.Interceptor ??
                           throw new InvalidOperationException("Population-based analysis requires an interceptor.");
-        var qualities = Analyzer.BestMedianWorst(interceptor);
+        var qualities = Analyzer.BestMedianWorst<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor);
         var rankAnalysis = parameters.TrackGenealogy
-            ? ExperimentalAnalyzers.Rank(crossover, mutator, interceptor)
+            ? ExperimentalAnalyzers.Rank<TCandidate, TSearchSpace, TProblem, TSearchState>(crossover, mutator, interceptor)
             : null;
-        var qc = ExperimentalAnalyzers.QualityCurve(evaluator);
-        var apt = parameters.TrackPopulations ? ExperimentalAnalyzers.AllPopulations(interceptor) : null;
+        var qc = ExperimentalAnalyzers.QualityCurve<TCandidate, TSearchSpace, TProblem>(evaluator);
+        var apt = parameters.TrackPopulations ? ExperimentalAnalyzers.AllPopulations<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor) : null;
         var c = callback != null
             ? new CallbackAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, callback)
             : null;

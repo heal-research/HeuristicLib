@@ -11,10 +11,8 @@ namespace HEAL.HeuristicLib.Operators;
 /// <remarks>
 /// Each selected refiner must return exactly one result for every candidate assigned to it.
 /// </remarks>
-public sealed record ChooseOneRefiner<TCandidate, TSearchSpace, TProblem>
-    : MultiRefiner<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record ChooseOneRefiner<TCandidate>
+    : MultiRefiner<TCandidate>
 {
     /// <summary>
     /// Relative selection weight of each child refiner, in child order. An empty collection selects every child
@@ -26,23 +24,25 @@ public sealed record ChooseOneRefiner<TCandidate, TSearchSpace, TProblem>
     /// </remarks>
     public ValueArray<double> Weights { get; init; }
 
-    public ChooseOneRefiner(IReadOnlyList<IRefiner<TCandidate, TSearchSpace, TProblem>> childRefiners)
+    public ChooseOneRefiner(IReadOnlyList<IRefiner<TCandidate>> childRefiners)
         : base(childRefiners)
     {
     }
 
-    protected override MultiRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners)
+    protected override IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem>> childRefiners)
     {
         if (ChildRefiners.Count == 0)
             throw new InvalidOperationException("At least one refiner must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildRefiners.Count)
             throw new InvalidOperationException("Weights must have the same length as refiners.");
 
-        return new Instance(childRefiners, new WeightedBatchDispatcher(childRefiners.Length, Weights));
+        return new Instance<TRunSearchSpace, TRunProblem>(childRefiners, new WeightedBatchDispatcher(childRefiners.Length, Weights));
     }
 
-    private sealed class Instance(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners, WeightedBatchDispatcher dispatcher)
+    private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners, WeightedBatchDispatcher dispatcher)
         : MultiRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiners)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             dispatcher.Dispatch(
@@ -56,24 +56,18 @@ public sealed record ChooseOneRefiner<TCandidate, TSearchSpace, TProblem>
 
 public static class ChooseOneRefiner
 {
-    public static ChooseOneRefiner<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<IRefiner<TCandidate, TSearchSpace, TProblem>> childRefiners)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static ChooseOneRefiner<TCandidate> Create<TCandidate>(params IReadOnlyList<IRefiner<TCandidate>> childRefiners) =>
         new(childRefiners);
 
-    public static ChooseOneRefiner<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<IRefiner<TCandidate, TSearchSpace, TProblem>> childRefiners, IReadOnlyList<double> weights)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static ChooseOneRefiner<TCandidate> Create<TCandidate>(IReadOnlyList<IRefiner<TCandidate>> childRefiners, IReadOnlyList<double> weights) =>
         new(childRefiners) { Weights = weights.ToValueArray() };
 }
 
 public static class ChooseOneRefinerExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IRefiner<TCandidate> refiner)
     {
-        public ChooseOneRefiner<TCandidate, TSearchSpace, TProblem> WithRate(double refinementRate) =>
+        public ChooseOneRefiner<TCandidate> WithRate(double refinementRate) =>
             ChooseOneRefiner.Create(
                 [refiner, NoChangeRefiner<TCandidate>.Instance],
                 [refinementRate, double.IsNaN(refinementRate) ? double.PositiveInfinity : 1 - refinementRate]);

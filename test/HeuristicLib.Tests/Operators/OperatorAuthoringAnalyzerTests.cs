@@ -161,7 +161,7 @@ public class OperatorAuthoringAnalyzerTests
     public async Task StatefulOperatorRule_UsesAuthoringShapeWithoutKnownBase()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
-          file abstract record CustomStatefulOperator<TState> : IOperator<CustomOperatorInstance>
+          file abstract record CustomStatefulOperator<TState> : IOperator
               where TState : class
           {
               protected abstract TState CreateInitialState();
@@ -281,7 +281,7 @@ public class OperatorAuthoringAnalyzerTests
     public async Task StatelessOperatorRule_UsesAuthoringShapeWithoutKnownBase()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record InvalidOperator : IOperator<InvalidOperator>, IOperatorInstance
+          file sealed record InvalidOperator : IOperator, IOperatorInstance
           {
               private int calls;
 

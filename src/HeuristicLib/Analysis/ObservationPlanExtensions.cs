@@ -22,47 +22,47 @@ public static class ObservationPlanExtensions
           where TSearchState : class, ISearchState
           => observations.Observe(algorithm, new ActionAlgorithmObserver<TCandidate, TSearchSpace, TProblem, TSearchState>(afterIteration));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator, ICreatorObserver<TCandidate, TSearchSpace, TProblem> observer)
+        public void Observe<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate> creator, ICreatorObserver<TCandidate, TSearchSpace, TProblem> observer)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
-          => observations.Observe<ICreator<TCandidate, TSearchSpace, TProblem>, ICreatorObserver<TCandidate, TSearchSpace, TProblem>>(creator, observer, static (c, o) => c.ObserveWith(o));
+          => observations.Observe<ICreator<TCandidate>, ICreatorObserver<TCandidate, TSearchSpace, TProblem>>(creator, observer, static (c, o) => c.ObserveWith(o));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator, Action<IReadOnlyList<TCandidate>, int, TSearchSpace, TProblem> afterCreation)
+        public void Observe<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate> creator, Action<IReadOnlyList<TCandidate>, int, TSearchSpace, TProblem> afterCreation)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
           => observations.Observe(creator, new ActionCreatorObserver<TCandidate, TSearchSpace, TProblem>(afterCreation));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, ICrossoverObserver<TCandidate, TSearchSpace, TProblem> observer)
+        public void Observe<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate> crossover, ICrossoverObserver<TCandidate, TSearchSpace, TProblem> observer)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
-          => observations.Observe<ICrossover<TCandidate, TSearchSpace, TProblem>, ICrossoverObserver<TCandidate, TSearchSpace, TProblem>>(crossover, observer, static (c, o) => c.ObserveWith(o));
+          => observations.Observe<ICrossover<TCandidate>, ICrossoverObserver<TCandidate, TSearchSpace, TProblem>>(crossover, observer, static (c, o) => c.ObserveWith(o));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, Action<IReadOnlyList<TCandidate>, IReadOnlyList<Parents<TCandidate>>, TSearchSpace, TProblem> afterCross)
+        public void Observe<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate> crossover, Action<IReadOnlyList<TCandidate>, IReadOnlyList<Parents<TCandidate>>, TSearchSpace, TProblem> afterCross)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
           => observations.Observe(crossover, new ActionCrossoverObserver<TCandidate, TSearchSpace, TProblem>(afterCross));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, IEvaluatorObserver<TCandidate, TSearchSpace, TProblem> observer)
+        public void Observe<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate> evaluator, IEvaluatorObserver<TCandidate, TSearchSpace, TProblem> observer)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
-          => observations.Observe<IEvaluator<TCandidate, TSearchSpace, TProblem>, IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>>(evaluator, observer, static (e, o) => e.ObserveWith(o));
+          => observations.Observe<IEvaluator<TCandidate>, IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>>(evaluator, observer, static (e, o) => e.ObserveWith(o));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, Action<IReadOnlyList<ObjectiveVector>, IReadOnlyList<TCandidate>, TSearchSpace, TProblem> afterEvaluation)
+        public void Observe<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate> evaluator, Action<IReadOnlyList<ObjectiveVector>, IReadOnlyList<TCandidate>, TSearchSpace, TProblem> afterEvaluation)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
-          => observations.Observe(evaluator, new ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>(afterEvaluation));
+          => observations.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, new ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>(afterEvaluation));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor, IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState> observer)
+        public void Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate> interceptor, IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState> observer)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
           where TSearchState : class, ISearchState
-          => observations.Observe<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>, IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>>(interceptor, observer, static (i, o) => i.ObserveWith(o));
+          => observations.Observe<IInterceptor<TCandidate>, IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>>(interceptor, observer, static (i, o) => i.ObserveWith(o));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor, Action<TSearchState, TSearchState, TSearchState?, TSearchSpace, TProblem> afterInterception)
+        public void Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate> interceptor, Action<TSearchState, TSearchState, TSearchState?, TSearchSpace, TProblem> afterInterception)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
           where TSearchState : class, ISearchState
-          => observations.Observe(interceptor, new ActionInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>(afterInterception));
+          => observations.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, new ActionInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>(afterInterception));
 
         public void Observe<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate> mutator, IMutatorObserver<TCandidate, TSearchSpace, TProblem> observer)
           where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -74,43 +74,43 @@ public static class ObservationPlanExtensions
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
           => observations.Observe(mutator, new ActionMutatorObserver<TCandidate, TSearchSpace, TProblem>(afterMutate));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner, IRefinerObserver<TCandidate, TSearchSpace, TProblem> observer)
+        public void Observe<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate> refiner, IRefinerObserver<TCandidate, TSearchSpace, TProblem> observer)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
-          => observations.Observe<IRefiner<TCandidate, TSearchSpace, TProblem>, IRefinerObserver<TCandidate, TSearchSpace, TProblem>>(refiner, observer, static (r, o) => r.ObserveWith(o));
+          => observations.Observe<IRefiner<TCandidate>, IRefinerObserver<TCandidate, TSearchSpace, TProblem>>(refiner, observer, static (r, o) => r.ObserveWith(o));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner, Action<IReadOnlyList<TCandidate>, IReadOnlyList<TCandidate>, TSearchSpace, TProblem> afterRefine)
+        public void Observe<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate> refiner, Action<IReadOnlyList<TCandidate>, IReadOnlyList<TCandidate>, TSearchSpace, TProblem> afterRefine)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
           => observations.Observe(refiner, new ActionRefinerObserver<TCandidate, TSearchSpace, TProblem>(afterRefine));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, IReplacerObserver<TCandidate, TSearchSpace, TProblem> observer)
+        public void Observe<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate> replacer, IReplacerObserver<TCandidate, TSearchSpace, TProblem> observer)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
-          => observations.Observe<IReplacer<TCandidate, TSearchSpace, TProblem>, IReplacerObserver<TCandidate, TSearchSpace, TProblem>>(replacer, observer, static (r, o) => r.ObserveWith(o));
+          => observations.Observe<IReplacer<TCandidate>, IReplacerObserver<TCandidate, TSearchSpace, TProblem>>(replacer, observer, static (r, o) => r.ObserveWith(o));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, ObjectiveDirections, TSearchSpace, TProblem> afterReplacement)
+        public void Observe<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate> replacer, Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, ObjectiveDirections, TSearchSpace, TProblem> afterReplacement)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
           => observations.Observe(replacer, new ActionReplacerObserver<TCandidate, TSearchSpace, TProblem>(afterReplacement));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector, ISelectorObserver<TCandidate, TSearchSpace, TProblem> observer)
+        public void Observe<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate> selector, ISelectorObserver<TCandidate, TSearchSpace, TProblem> observer)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
-          => observations.Observe<ISelector<TCandidate, TSearchSpace, TProblem>, ISelectorObserver<TCandidate, TSearchSpace, TProblem>>(selector, observer, static (s, o) => s.ObserveWith(o));
+          => observations.Observe<ISelector<TCandidate>, ISelectorObserver<TCandidate, TSearchSpace, TProblem>>(selector, observer, static (s, o) => s.ObserveWith(o));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector, Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, ObjectiveDirections, int, TSearchSpace, TProblem> afterSelection)
+        public void Observe<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate> selector, Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, ObjectiveDirections, int, TSearchSpace, TProblem> afterSelection)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
           => observations.Observe(selector, new ActionSelectorObserver<TCandidate, TSearchSpace, TProblem>(afterSelection));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator, ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState> observer)
+        public void Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate> terminator, ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState> observer)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
           where TSearchState : class, ISearchState
-          => observations.Observe<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>, ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>>(terminator, observer, static (t, o) => t.ObserveWith(o));
+          => observations.Observe<ITerminator<TCandidate>, ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>>(terminator, observer, static (t, o) => t.ObserveWith(o));
 
-        public void Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator, Action<bool, TSearchState, TSearchSpace, TProblem> afterTerminalStateCheck)
+        public void Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate> terminator, Action<bool, TSearchState, TSearchSpace, TProblem> afterTerminalStateCheck)
           where TSearchSpace : class, ISearchSpace<TCandidate>
           where TProblem : class, IProblem<TCandidate, TSearchSpace>
           where TSearchState : class, ISearchState

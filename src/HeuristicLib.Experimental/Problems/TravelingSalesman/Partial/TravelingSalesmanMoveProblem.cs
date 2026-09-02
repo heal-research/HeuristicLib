@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 public sealed class TravelingSalesmanMoveProblem
-    : SingleSolutionPartialBoundedProblem<Permutation, PermutationSearchSpace>
+    : SingleSolutionPartialBoundedProblem<TravelingSalesmanMoveProblem, Permutation, PermutationSearchSpace>
 {
     private readonly ITravelingSalesmanProblemData data;
 

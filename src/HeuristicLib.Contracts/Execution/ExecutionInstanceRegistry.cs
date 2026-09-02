@@ -100,7 +100,7 @@ public class ExecutionInstanceRegistry
     {
         if (registry.TryGetValue(resolvable, out var localInstance))
         {
-            return (TExecutionInstance)localInstance;
+            return RequireInstanceOf<TExecutionInstance>(resolvable, localInstance);
         }
 
         if (TryGetReplacementResolvable(resolvable, out var replacementResolvable))
@@ -130,7 +130,7 @@ public class ExecutionInstanceRegistry
 
         if (parentRegistry is not null && parentRegistry.TryResolve(resolvable, out var parentInstance))
         {
-            return (TExecutionInstance)parentInstance;
+            return RequireInstanceOf<TExecutionInstance>(resolvable, parentInstance);
         }
 
         var instance = create(resolvable, this);
@@ -150,10 +150,38 @@ public class ExecutionInstanceRegistry
         where TExecutionInstance : class, IExecutionInstance =>
         resolvable is null ? null : Resolve(resolvable);
 
-    public void RegisterInstance<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable, TExecutionInstance instance)
-        where TExecutionInstance : class, IExecutionInstance
+    /// <summary>
+    /// Registers a ready-made instance for a resolvable, so resolution returns it instead of creating one.
+    /// </summary>
+    /// <remarks>
+    /// Not generic in the execution instance type, for the reason given on <see cref="RegisterReplacement"/>: a
+    /// configuration whose instance type depends on the search space and problem does not name one.
+    /// </remarks>
+    public void RegisterInstance(IExecutionInstanceResolvable resolvable, IExecutionInstance instance)
     {
         StoreInstance(resolvable, instance);
+    }
+
+    /// <summary>
+    /// Returns an instance already held here as the type the caller asked for, or explains why it is not that type.
+    /// </summary>
+    /// <remarks>
+    /// Instances are keyed by reference identity, and a registry serves one run — one candidate, search space and
+    /// problem. Asking the same registry for an operator at a second triple therefore finds an instance built for the
+    /// first, which is a misuse rather than an incompatible operator, and is reported as such instead of surfacing as
+    /// a cast failure from inside resolution.
+    /// </remarks>
+    private static TExecutionInstance RequireInstanceOf<TExecutionInstance>(IExecutionInstanceResolvable resolvable, IExecutionInstance instance)
+        where TExecutionInstance : class, IExecutionInstance
+    {
+        if (instance is not TExecutionInstance cached)
+        {
+            throw new InvalidOperationException(
+                $"This registry already holds a {instance.GetType().Name} for {resolvable.GetType().Name}, which is not a {typeof(TExecutionInstance).Name}. " +
+                "A registry serves one run, so resolve over a second search space or problem in its own registry.");
+        }
+
+        return cached;
     }
 
     private void StoreInstance(IExecutionInstanceResolvable resolvable, IExecutionInstance instance)

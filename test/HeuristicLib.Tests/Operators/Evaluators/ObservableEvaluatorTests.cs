@@ -13,7 +13,7 @@ public class ObservableEvaluatorTests
         var evaluator = CreateEvaluator().CountEvaluatorCalls(counter);
         evaluator.Counter.ShouldBeSameAs(counter);
         evaluator.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -27,7 +27,7 @@ public class ObservableEvaluatorTests
     {
         var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountEvaluatedCandidates(counter);
-        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -44,7 +44,7 @@ public class ObservableEvaluatorTests
         var evaluator = CreateEvaluator().MeasureEvaluatorDuration(duration, timeProvider);
         evaluator.Duration.ShouldBeSameAs(duration);
         evaluator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -61,7 +61,7 @@ public class ObservableEvaluatorTests
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            evaluator.CreateExecutionInstance().Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            evaluator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry()).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         observed.ShouldBe(0);
     }
@@ -74,7 +74,7 @@ public class ObservableEvaluatorTests
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            evaluator.CreateExecutionInstance().Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            evaluator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry()).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -87,7 +87,7 @@ public class ObservableEvaluatorTests
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            evaluator.CreateExecutionInstance().Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            evaluator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry()).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -103,7 +103,7 @@ public class ObservableEvaluatorTests
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
-    private static IEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateEvaluator()
+    private static IEvaluator<int> CreateEvaluator()
     {
         return new DummyEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
     }

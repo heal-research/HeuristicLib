@@ -7,12 +7,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public record EliteSelector<TCandidate, TSearchSpace, TProblem>
-    : Selector<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record EliteSelector<TCandidate>
+    : ISelector<TCandidate>
 {
-    public EliteSelector(ISelector<TCandidate, TSearchSpace, TProblem> selectorForRemaining)
+    public EliteSelector(ISelector<TCandidate> selectorForRemaining)
     {
         SelectorForRemaining = selectorForRemaining;
     }
@@ -25,7 +23,7 @@ public record EliteSelector<TCandidate, TSearchSpace, TProblem>
     /// It is not called at all when the elites already fill the requested count, so it consumes no random draws in
     /// that case.
     /// </remarks>
-    public ISelector<TCandidate, TSearchSpace, TProblem> SelectorForRemaining { get; init; }
+    public ISelector<TCandidate> SelectorForRemaining { get; init; }
 
     /// <summary>
     /// Gets the number of best candidates taken before the remaining places are filled. The expected value is
@@ -37,11 +35,15 @@ public record EliteSelector<TCandidate, TSearchSpace, TProblem>
     /// </remarks>
     public int Elites { get; init; } = 1;
 
-    public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(SelectorForRemaining), Elites);
+    public ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
+        new Instance<TRunSearchSpace, TRunProblem>(instanceRegistry.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(SelectorForRemaining), Elites);
 
-    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> selectorForRemaining, int elites)
+    private sealed class Instance<TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> selectorForRemaining, int elites)
         : SelectorInstance<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -59,17 +61,13 @@ public record EliteSelector<TCandidate, TSearchSpace, TProblem>
 
 public static class EliteSelector
 {
-    public static EliteSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector, int elites = 1)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(selector) { Elites = elites };
+    public static EliteSelector<TCandidate> Create<TCandidate>(ISelector<TCandidate> selector, int elites = 1) => new(selector) { Elites = elites };
 }
 
 public static class EliteSelectorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(ISelector<TCandidate> selector)
     {
-        public EliteSelector<TCandidate, TSearchSpace, TProblem> WithElites(int elites = 1) => EliteSelector.Create(selector, elites);
+        public EliteSelector<TCandidate> WithElites(int elites = 1) => EliteSelector.Create(selector, elites);
     }
 }

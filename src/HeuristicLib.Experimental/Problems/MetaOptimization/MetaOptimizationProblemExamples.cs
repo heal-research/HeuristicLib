@@ -56,13 +56,13 @@ public static class MetaOptimizationProblemExamples
 
     public static MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> GeneticAlgorithmMetaOptimizationProblem<TCandidate, TSearchSpace, TProblem>(
       this TProblem problem,
-      ICreator<TCandidate, TSearchSpace, TProblem>[] creators,
-      ICrossover<TCandidate, TSearchSpace, TProblem>[] crossovers,
-      IEvaluator<TCandidate, TSearchSpace, TProblem>[] evaluators,
-      IInterceptor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>[] interceptors,
+      ICreator<TCandidate>[] creators,
+      ICrossover<TCandidate>[] crossovers,
+      IEvaluator<TCandidate>[] evaluators,
+      IInterceptor<TCandidate>[] interceptors,
       IMutator<TCandidate>[] mutators,
       (int min, int max) elites,
-      ISelector<TCandidate, TSearchSpace, TProblem>[] selectors,
+      ISelector<TCandidate>[] selectors,
       (int min, int max) populationSize,
       (double min, double max) mutationRate)
       where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> where TCandidate : class
@@ -94,14 +94,14 @@ public static class MetaOptimizationProblemExamples
 
     public static MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> EvolutionStrategyMetaOptimizationProblem<TCandidate, TSearchSpace, TProblem>(
       this TProblem problem,
-      ICreator<TCandidate, TSearchSpace, TProblem>[] creators,
-      ICrossover<TCandidate, TSearchSpace, TProblem>[] crossovers,
-      IEvaluator<TCandidate, TSearchSpace, TProblem>[] evaluators,
-      IInterceptor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>[] interceptors,
+      ICreator<TCandidate>[] creators,
+      ICrossover<TCandidate>[] crossovers,
+      IEvaluator<TCandidate>[] evaluators,
+      IInterceptor<TCandidate>[] interceptors,
       IMutator<TCandidate>[] mutators,
       EvolutionStrategyType[] strategies,
-      IReplacer<TCandidate, TSearchSpace, TProblem>[] replacers,
-      ISelector<TCandidate, TSearchSpace, TProblem>[] selectors,
+      IReplacer<TCandidate>[] replacers,
+      ISelector<TCandidate>[] selectors,
       (int min, int max) populationSize,
       (int min, int max) numberOfChildren,
       (double min, double max) mutationRate)

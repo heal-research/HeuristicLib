@@ -6,26 +6,26 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public sealed record CountingEvaluator<TCandidate, TSearchSpace, TProblem>
-    : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record CountingEvaluator<TCandidate>
+    : WrappingEvaluator<TCandidate>
 {
     public ObservationCounter Counter { get; init; }
     public OperatorCountMetric Metric { get; init; }
 
-    public CountingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationCounter counter, OperatorCountMetric metric)
+    public CountingEvaluator(IEvaluator<TCandidate> childEvaluator, ObservationCounter counter, OperatorCountMetric metric)
         : base(childEvaluator)
     {
         Counter = counter;
         Metric = metric;
     }
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
-        new Instance(childEvaluator, Counter, Metric);
+    protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
+        new Instance<TRunSearchSpace, TRunProblem>(childEvaluator, Counter, Metric);
 
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationCounter counter, OperatorCountMetric metric)
+    private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationCounter counter, OperatorCountMetric metric)
         : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -38,30 +38,26 @@ public sealed record CountingEvaluator<TCandidate, TSearchSpace, TProblem>
 
 public static class CountingEvaluator
 {
-    public static CountingEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationCounter counter, OperatorCountMetric metric)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static CountingEvaluator<TCandidate> Create<TCandidate>(IEvaluator<TCandidate> childEvaluator, ObservationCounter counter, OperatorCountMetric metric) =>
         new(childEvaluator, counter, metric);
 }
 
 public static class EvaluatorCounterExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
     {
-        public CountingEvaluator<TCandidate, TSearchSpace, TProblem> CountEvaluatorCalls(ObservationCounter counter) => new(evaluator, counter, OperatorCountMetric.Calls);
+        public CountingEvaluator<TCandidate> CountEvaluatorCalls(ObservationCounter counter) => new(evaluator, counter, OperatorCountMetric.Calls);
 
-        public CountingEvaluator<TCandidate, TSearchSpace, TProblem> CountEvaluatorCalls(out ObservationCounter counter)
+        public CountingEvaluator<TCandidate> CountEvaluatorCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return evaluator.CountEvaluatorCalls(counter);
         }
 
-        public CountingEvaluator<TCandidate, TSearchSpace, TProblem> CountEvaluatedCandidates(ObservationCounter counter) =>
+        public CountingEvaluator<TCandidate> CountEvaluatedCandidates(ObservationCounter counter) =>
             new(evaluator, counter, OperatorCountMetric.Candidates);
 
-        public CountingEvaluator<TCandidate, TSearchSpace, TProblem> CountEvaluatedCandidates(out ObservationCounter counter)
+        public CountingEvaluator<TCandidate> CountEvaluatedCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return evaluator.CountEvaluatedCandidates(counter);

@@ -6,10 +6,10 @@ namespace HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 public sealed record AdditiveStepAlgorithm(int Increment)
     : Algorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
 {
-    public IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator { get; init; } = new ProblemEvaluator<int>();
+    public IEvaluator<int> Evaluator { get; init; } = new ProblemEvaluator<int>();
 
     public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(Evaluator), Increment);
+        new Instance(instanceRegistry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Evaluator), Increment);
 
     private sealed class Instance(IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, int increment)
         : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>

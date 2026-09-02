@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
-    : PermutationProblem(SingleObjective.Minimize, GetEncoding(problemData)),
+    : PermutationProblem<TravelingSalesmanProblem>(SingleObjective.Minimize, GetEncoding(problemData)),
       IProblemDefaultCreator<TravelingSalesmanProblem, Permutation, PermutationSearchSpace>,
       IProblemDefaultCrossover<TravelingSalesmanProblem, Permutation, PermutationSearchSpace>,
       IProblemDefaultMutator<TravelingSalesmanProblem, Permutation, PermutationSearchSpace> /*, IDeterministicProblem<Permutation>*/
@@ -16,7 +16,7 @@ public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
     public TravelingSalesmanProblem() : this(new TravelingSalesmanCoordinatesData(DefaultProblemCoordinates)) { }
     public ITravelingSalesmanProblemData ProblemData { get; } = problemData;
 
-    public static ICrossover<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>>? CreateDefaultCrossover(TravelingSalesmanProblem problem) =>
+    public static ICrossover<Permutation>? CreateDefaultCrossover(TravelingSalesmanProblem problem) =>
         new OrderCrossover();
 
     public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random)

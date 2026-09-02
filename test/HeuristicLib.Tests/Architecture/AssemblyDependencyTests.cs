@@ -35,10 +35,14 @@ public sealed class AssemblyDependencyTests
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Random", "RandomEngines"), "HEAL.HeuristicLib.Random", mismatches);
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Analysis", "Quality"), "HEAL.HeuristicLib.Analysis", mismatches);
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Encodings", "SymbolicExpressions"), "HEAL.HeuristicLib.Encodings.SymbolicExpressions", mismatches);
-        CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts", "Algorithms", "Defaults"), "HEAL.HeuristicLib.Algorithms", mismatches);
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts", "Algorithms", "SearchStates"), "HEAL.HeuristicLib.Algorithms", mismatches);
 
-        typeof(ICrossover<,,>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
+        // Operator defaults sit with what declares them rather than with the factories that read them, so a search
+        // space or problem states its defaults without importing the algorithms namespace to describe itself.
+        CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts", "SearchSpaces"), "HEAL.HeuristicLib.SearchSpaces", mismatches);
+        CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts", "Problems"), "HEAL.HeuristicLib.Problems", mismatches);
+
+        typeof(ICrossover<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
         typeof(Parents<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
 
         var encodingsRoot = Path.Combine(repositoryRoot, "src", "HeuristicLib", "Encodings");

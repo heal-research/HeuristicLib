@@ -8,12 +8,12 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 public sealed record BestBeforeChangePerformanceAnalysis<TCandidate, TSearchSpace, TProblem>
     : DynamicAnalysis<TCandidate, TSearchSpace, TProblem, BestBeforeChangePerformanceAnalysisResult<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
 {
     private readonly Func<ObjectiveVector, double> objectiveValueSelector;
 
     public BestBeforeChangePerformanceAnalysis(TProblem problem,
-                                               IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators,
+                                               IReadOnlyList<IEvaluator<TCandidate>> evaluators,
                                                Func<ObjectiveVector, double>? objectiveValueSelector = null,
                                                int predictionEpochMultiplier = 10)
         : base(problem, evaluators)

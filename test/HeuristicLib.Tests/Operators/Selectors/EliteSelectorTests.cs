@@ -60,8 +60,8 @@ public class EliteSelectorTests
             EvaluatedCandidate.From("worst", new ObjectiveVector(2))
         };
 
-        var selector = new EliteSelector<string, ISearchSpace<string>, IProblem<string, ISearchSpace<string>>>(childSelector) { Elites = elites };
-        var instance = selector.CreateExecutionInstance(new ExecutionInstanceRegistry());
+        var selector = new EliteSelector<string>(childSelector) { Elites = elites };
+        var instance = selector.CreateExecutionInstance<ISearchSpace<string>, IProblem<string, ISearchSpace<string>>>(new ExecutionInstanceRegistry());
 
         return instance.Select(population, SingleObjective.Minimize, count, new SequenceRandomNumberGenerator(0.5), null!, null!);
     }

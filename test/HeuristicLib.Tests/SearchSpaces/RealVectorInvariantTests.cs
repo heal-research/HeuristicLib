@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.SearchSpaces;

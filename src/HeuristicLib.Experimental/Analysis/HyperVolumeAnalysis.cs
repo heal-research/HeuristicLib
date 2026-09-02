@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Analysis;
 public record HyperVolumeAnalysis<T, TS, TP>(
     ObjectiveDirections ProblemObjective,
     ObjectiveVector ReferencePoint,
-    params IEvaluator<T, TS, TP>[] Evaluator)
+    params IEvaluator<T>[] Evaluator)
     : Analyzer<HyperVolumeState<T>>
     where TS : class, ISearchSpace<T>
     where TP : class, IProblem<T, TS>
@@ -18,7 +18,7 @@ public record HyperVolumeAnalysis<T, TS, TP>(
     public override void RegisterObservations(ObservationPlan observations, HyperVolumeState<T> result)
     {
         foreach (var evaluator in Evaluator)
-            observations.Observe(evaluator, (objectiveVectors, candidates, _, _) => AfterEvaluation(result, candidates.ToEvaluated(objectiveVectors)));
+            observations.Observe<T, TS, TP>(evaluator, (objectiveVectors, candidates, _, _) => AfterEvaluation(result, candidates.ToEvaluated(objectiveVectors)));
     }
 
     public void AfterEvaluation(HyperVolumeState<T> result, IReadOnlyList<EvaluatedCandidate<T>> evaluatedCandidates)

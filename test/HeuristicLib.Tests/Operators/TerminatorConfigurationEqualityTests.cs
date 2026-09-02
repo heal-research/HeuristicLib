@@ -19,8 +19,8 @@ public class TerminatorConfigurationEqualityTests
     {
         var first = new ThresholdTerminator(1);
         var second = new ThresholdTerminator(2);
-        var children = new List<ITerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>> { first, second };
-        var left = new AnyTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>(children);
+        var children = new List<ITerminator<int>> { first, second };
+        var left = new AnyTerminator<int>(children);
 
         children.Clear();
         var equal = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(2));

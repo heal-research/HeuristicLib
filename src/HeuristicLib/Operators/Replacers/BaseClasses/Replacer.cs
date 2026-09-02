@@ -12,11 +12,22 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 /// Use <see cref="StatefulReplacer{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
 /// </remarks>
 public abstract record Replacer<TCandidate, TSearchSpace, TProblem>
-    : IReplacer<TCandidate, TSearchSpace, TProblem>
+    : IReplacer<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public abstract IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+
+    IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> IReplacer<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        if (CreateExecutionInstance(instanceRegistry) is not IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> instance)
+        {
+            throw new InvalidOperationException(
+                $"{GetType().Name} is written for {typeof(TSearchSpace).Name} and {typeof(TProblem).Name}, and cannot run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name}.");
+        }
+
+        return instance;
+    }
 }
 
 public abstract record Replacer<TCandidate, TSearchSpace>

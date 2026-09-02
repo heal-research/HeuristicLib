@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public class DynamicTestFunctionProblem : DynamicProblem<RealVector, BoundedRealVectorSearchSpace>
+public class DynamicTestFunctionProblem : DynamicProblem<DynamicTestFunctionProblem, RealVector, BoundedRealVectorSearchSpace>
 {
     private readonly TestFunctionProblem problem;
 

@@ -6,26 +6,26 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public sealed record CountingReplacer<TCandidate, TSearchSpace, TProblem>
-    : WrappingReplacer<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record CountingReplacer<TCandidate>
+    : WrappingReplacer<TCandidate>
 {
     public ObservationCounter Counter { get; init; }
     public OperatorCountMetric Metric { get; init; }
 
-    public CountingReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationCounter counter, OperatorCountMetric metric)
+    public CountingReplacer(IReplacer<TCandidate> childReplacer, ObservationCounter counter, OperatorCountMetric metric)
         : base(childReplacer)
     {
         Counter = counter;
         Metric = metric;
     }
 
-    protected override WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer) =>
-        new Instance(childReplacer, Counter, Metric);
+    protected override IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> childReplacer) =>
+        new Instance<TRunSearchSpace, TRunProblem>(childReplacer, Counter, Metric);
 
-    private sealed class Instance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationCounter counter, OperatorCountMetric metric)
+    private sealed class Instance<TSearchSpace, TProblem>(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationCounter counter, OperatorCountMetric metric)
         : WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem>(childReplacer)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -38,30 +38,26 @@ public sealed record CountingReplacer<TCandidate, TSearchSpace, TProblem>
 
 public static class CountingReplacer
 {
-    public static CountingReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationCounter counter, OperatorCountMetric metric)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static CountingReplacer<TCandidate> Create<TCandidate>(IReplacer<TCandidate> childReplacer, ObservationCounter counter, OperatorCountMetric metric) =>
         new(childReplacer, counter, metric);
 }
 
 public static class ReplacerCounterExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> replacer)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IReplacer<TCandidate> replacer)
     {
-        public CountingReplacer<TCandidate, TSearchSpace, TProblem> CountReplacerCalls(ObservationCounter counter) => new(replacer, counter, OperatorCountMetric.Calls);
+        public CountingReplacer<TCandidate> CountReplacerCalls(ObservationCounter counter) => new(replacer, counter, OperatorCountMetric.Calls);
 
-        public CountingReplacer<TCandidate, TSearchSpace, TProblem> CountReplacerCalls(out ObservationCounter counter)
+        public CountingReplacer<TCandidate> CountReplacerCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return replacer.CountReplacerCalls(counter);
         }
 
-        public CountingReplacer<TCandidate, TSearchSpace, TProblem> CountReplacementCandidates(ObservationCounter counter) =>
+        public CountingReplacer<TCandidate> CountReplacementCandidates(ObservationCounter counter) =>
             new(replacer, counter, OperatorCountMetric.Candidates);
 
-        public CountingReplacer<TCandidate, TSearchSpace, TProblem> CountReplacementCandidates(out ObservationCounter counter)
+        public CountingReplacer<TCandidate> CountReplacementCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return replacer.CountReplacementCandidates(counter);

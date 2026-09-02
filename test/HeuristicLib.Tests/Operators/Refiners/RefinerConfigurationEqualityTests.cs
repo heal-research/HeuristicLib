@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Refiners;
@@ -55,7 +56,7 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void ChooseOneRefiner_WithDifferentWeights_IsNotEqual()
     {
-        var children = new IRefiner<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[]
+        var children = new IRefiner<int>[]
         {
             new AddOffsetRefiner(1),
             new AddOffsetRefiner(2),
@@ -260,7 +261,7 @@ public class RefinerConfigurationEqualityTests
     {
         var first = new AddOffsetRefiner(1);
         var second = new AddOffsetRefiner(2);
-        var childRefiners = new List<IRefiner<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var childRefiners = new List<IRefiner<int>> { first, second };
         var refiner = new FirstOfRefiner(childRefiners);
 
         childRefiners.Clear();
@@ -276,20 +277,22 @@ public class RefinerConfigurationEqualityTests
     // An externally authored topology with no equality attribute, generator or hand-written comparison: its structural
     // equality follows from ChildRefiners being a value array.
     private sealed record FirstOfRefiner
-        : MultiRefiner<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        : MultiRefiner<int>
     {
-        public FirstOfRefiner(IReadOnlyList<IRefiner<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childRefiners)
+        public FirstOfRefiner(IReadOnlyList<IRefiner<int>> childRefiners)
             : base(childRefiners)
         {
         }
 
-        protected override MultiRefinerInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<IRefinerInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childRefiners) =>
-            new Instance(childRefiners);
+        protected override IRefinerInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerInstance<int, TRunSearchSpace, TRunProblem>> childRefiners) =>
+            new Instance<TRunSearchSpace, TRunProblem>(childRefiners);
 
-        private sealed class Instance(ImmutableArray<IRefinerInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childRefiners)
-            : MultiRefinerInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childRefiners)
+        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IRefinerInstance<int, TSearchSpace, TProblem>> childRefiners)
+            : MultiRefinerInstance<int, TSearchSpace, TProblem>(childRefiners)
+              where TSearchSpace : class, ISearchSpace<int>
+              where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+            public override IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildRefiners[0].Refine(candidates, random, searchSpace, problem);
         }
     }

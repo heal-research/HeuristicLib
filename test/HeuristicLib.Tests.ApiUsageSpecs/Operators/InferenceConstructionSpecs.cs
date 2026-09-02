@@ -6,8 +6,10 @@ using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Terminators;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
+using HEAL.HeuristicLib.SearchSpaces;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Operators;
@@ -77,7 +79,7 @@ public class InferenceConstructionSpecs
         var fluentAnyTerminator = firstTerminator.Or(secondTerminator);
         var allTerminator = AllTerminator.Create(firstTerminator, secondTerminator);
         var fluentAllTerminator = firstTerminator.And(secondTerminator);
-        var observableTerminator = ObservableTerminator.Create(firstTerminator, (bool _) => { });
+        var observableTerminator = ObservableTerminator.Create<RealVector, PopulationState<RealVector>>(firstTerminator, (bool _) => { });
         var countingTerminator = CountingTerminator.Create(firstTerminator, new ObservationCounter());
         var measuredTerminator = DurationMeasuringTerminator.Create(firstTerminator, new ObservationDuration());
         var terminatedAlgorithm = StateTerminatedAlgorithm.Create(algorithm, firstTerminator);
@@ -200,4 +202,37 @@ public class InferenceConstructionSpecs
             Selector = TournamentSelector.For(problem, tournamentSize: 2)
         };
     }
+
+    /// <summary>
+    /// One problem argument yields the problem, the candidate and the search space, all inferred.
+    /// </summary>
+    /// <remarks>
+    /// This is the mechanism the algorithm arity reduction stands on. Once an algorithm names only its candidate,
+    /// nothing on the receiver says what search space a run uses, and a plain <c>TProblem problem</c> parameter
+    /// cannot supply it: the search space sits in constraint position, where C# inference does not reach. Naming the
+    /// problem's own type on <see cref="Problem{TSelf, TCandidate, TSearchSpace}"/> is what makes all three
+    /// inferable from the single argument a user already passes.
+    /// <para>
+    /// Every problem declares it, so this holds for problems that state no operator defaults at all — which is what
+    /// the anchor being a problem contract rather than a defaults one is about.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void OneProblemArgument_InfersTheProblemTheCandidateAndTheSearchSpace()
+    {
+        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
+
+        var (problemType, candidate, searchSpace) = DescribeRun(problem);
+
+        problemType.ShouldBe(typeof(TestFunctionProblem));
+        candidate.ShouldBe(typeof(RealVector));
+        searchSpace.ShouldBe(typeof(BoundedRealVectorSearchSpace));
+    }
+
+    /// <summary>Shaped like the run methods the algorithm package will declare, and nothing is named at the call.</summary>
+    private static (Type Problem, Type Candidate, Type SearchSpace) DescribeRun<TProblem, TCandidate, TSearchSpace>(
+        Problem<TProblem, TCandidate, TSearchSpace> problem)
+        where TProblem : Problem<TProblem, TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate> =>
+        (typeof(TProblem), typeof(TCandidate), typeof(TSearchSpace));
 }

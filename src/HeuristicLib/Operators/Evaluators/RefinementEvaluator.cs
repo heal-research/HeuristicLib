@@ -34,12 +34,10 @@ namespace HEAL.HeuristicLib.Operators;
 /// and therefore to one counter and one cache.
 /// </para>
 /// </remarks>
-public sealed record RefinementEvaluator<TCandidate, TSearchSpace, TProblem>
-    : Evaluator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record RefinementEvaluator<TCandidate>
+    : IEvaluator<TCandidate>
 {
-    public RefinementEvaluator(IRefiner<TCandidate, TSearchSpace, TProblem> refiner)
+    public RefinementEvaluator(IRefiner<TCandidate> refiner)
     {
         Refiner = refiner;
     }
@@ -47,7 +45,7 @@ public sealed record RefinementEvaluator<TCandidate, TSearchSpace, TProblem>
     /// <summary>
     /// Gets the refiner that produces the transient candidates being measured.
     /// </summary>
-    public IRefiner<TCandidate, TSearchSpace, TProblem> Refiner { get; init; }
+    public IRefiner<TCandidate> Refiner { get; init; }
 
     /// <summary>
     /// Gets the evaluator that measures the refined candidates.
@@ -58,13 +56,20 @@ public sealed record RefinementEvaluator<TCandidate, TSearchSpace, TProblem>
     /// unwrapped and therefore invisible to budgets and analysis. Supply the same evaluator instance the algorithm uses
     /// to have these evaluations counted, limited or served from one shared cache.
     /// </remarks>
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+    public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
-    public override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Refiner));
+    public IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    {
+        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        return new Instance<TRunSearchSpace, TRunProblem>(resolver.Resolve(Evaluator), resolver.Resolve(Refiner));
+    }
 
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IRefinerInstance<TCandidate, TSearchSpace, TProblem> refiner)
+    private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IRefinerInstance<TCandidate, TSearchSpace, TProblem> refiner)
         : EvaluatorInstance<TCandidate, TSearchSpace, TProblem>
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -84,24 +89,18 @@ public sealed record RefinementEvaluator<TCandidate, TSearchSpace, TProblem>
 
 public static class RefinementEvaluator
 {
-    public static RefinementEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner) =>
         new(refiner);
 
-    public static RefinementEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner, IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IEvaluator<TCandidate> evaluator) =>
         new(refiner) { Evaluator = evaluator };
 }
 
 public static class RefinementEvaluatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
     {
-        public RefinementEvaluator<TCandidate, TSearchSpace, TProblem> WithRefinement(IRefiner<TCandidate, TSearchSpace, TProblem> refiner) =>
-            new RefinementEvaluator<TCandidate, TSearchSpace, TProblem>(refiner) { Evaluator = evaluator };
+        public RefinementEvaluator<TCandidate> WithRefinement(IRefiner<TCandidate> refiner) =>
+            new RefinementEvaluator<TCandidate>(refiner) { Evaluator = evaluator };
     }
 }

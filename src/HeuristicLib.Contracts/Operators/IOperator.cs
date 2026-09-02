@@ -9,7 +9,4 @@ namespace HEAL.HeuristicLib.Operators;
 /// </summary>
 public interface IOperator : IExecutionInstanceResolvable;
 
-public interface IOperator<out TExecutionInstance> : IOperator, IExecutionInstanceResolvable<TExecutionInstance>
-    where TExecutionInstance : IOperatorInstance;
-
 public interface IOperatorInstance : IExecutionInstance;

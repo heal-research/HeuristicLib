@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Analysis;
 public static class ExperimentalAnalyzers
 {
     public static BestPerEvaluationAnalysis<T, TS, TP> QualityCurve<T, TS, TP>(
-        params IEvaluator<T, TS, TP>[] evaluators)
+        params IEvaluator<T>[] evaluators)
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
     {
@@ -18,7 +18,7 @@ public static class ExperimentalAnalyzers
     }
 
     public static AllPopulationsAnalysis<T, TS, TP, TR> AllPopulations<T, TS, TP, TR>(
-        IInterceptor<T, TS, TP, TR> interceptor)
+        IInterceptor<T> interceptor)
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
         where TR : PopulationState<T>
@@ -29,7 +29,7 @@ public static class ExperimentalAnalyzers
     public static HyperVolumeAnalysis<T, TS, TP> HyperVolume<T, TS, TP>(
         ObjectiveDirections objective,
         ObjectiveVector referencePoint,
-        params IEvaluator<T, TS, TP>[] evaluators)
+        params IEvaluator<T>[] evaluators)
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
     {
@@ -37,9 +37,9 @@ public static class ExperimentalAnalyzers
     }
 
     public static GenealogyAnalysis<T, TS, TP, TR> Genealogy<T, TS, TP, TR>(
-        ICrossover<T, TS, TP>? crossover = null,
+        ICrossover<T>? crossover = null,
         IMutator<T>? mutator = null,
-        IInterceptor<T, TS, TP, TR>? interceptor = null,
+        IInterceptor<T>? interceptor = null,
         IEqualityComparer<T>? equality = null,
         bool saveSpace = false)
         where T : notnull
@@ -51,9 +51,9 @@ public static class ExperimentalAnalyzers
     }
 
     public static RankAnalysis<T, TS, TP, TR> Rank<T, TS, TP, TR>(
-        ICrossover<T, TS, TP>? crossover = null,
+        ICrossover<T>? crossover = null,
         IMutator<T>? mutator = null,
-        IInterceptor<T, TS, TP, TR>? interceptor = null,
+        IInterceptor<T>? interceptor = null,
         IEqualityComparer<T>? equality = null)
         where T : notnull
         where TS : class, ISearchSpace<T>

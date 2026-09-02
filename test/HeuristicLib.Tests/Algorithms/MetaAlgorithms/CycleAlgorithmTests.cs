@@ -128,7 +128,7 @@ public class CycleAlgorithmTests
             NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
         };
         var registry = new ExecutionInstanceRegistry();
-        _ = registry.Resolve(evaluator);
+        _ = registry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
         var cycleInstance = registry.Resolve(cycle);
 
         var states = cycleInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();

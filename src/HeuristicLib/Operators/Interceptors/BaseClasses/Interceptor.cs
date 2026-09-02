@@ -12,12 +12,23 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 /// Use <see cref="StatefulInterceptor{TCandidate,TSearchSpace,TProblem,TSearchState,TState}"/> when only ordinary execution data is needed.
 /// </remarks>
 public abstract record Interceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : IInterceptor<TCandidate>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public abstract IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+
+    IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> IInterceptor<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        if (CreateExecutionInstance(instanceRegistry) is not IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> instance)
+        {
+            throw new InvalidOperationException(
+                $"{GetType().Name} is written for {typeof(TSearchSpace).Name}, {typeof(TProblem).Name} and {typeof(TSearchState).Name}, and cannot run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name} and {typeof(TRunSearchState).Name}.");
+        }
+
+        return instance;
+    }
 }
 
 public abstract record Interceptor<TCandidate, TSearchSpace, TSearchState>

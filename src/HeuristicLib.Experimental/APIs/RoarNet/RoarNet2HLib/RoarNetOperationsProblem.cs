@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.APIs.RoarNet;
 
-public sealed class RoarNetOperationsProblem(Operations operations, Problem roarNetProblemInstance) : SingleSolutionProblem<Solution, RoarNetOperationsSearchSpace>(SingleObjective.Minimize, RoarNetOperationsSearchSpace.Instance)
+public sealed class RoarNetOperationsProblem(Operations operations, Problem roarNetProblemInstance) : SingleSolutionProblem<RoarNetOperationsProblem, Solution, RoarNetOperationsSearchSpace>(SingleObjective.Minimize, RoarNetOperationsSearchSpace.Instance)
 {
     public Operations Operations { get; } = operations;
     public Problem RoarNetProblemInstance { get; } = roarNetProblemInstance;

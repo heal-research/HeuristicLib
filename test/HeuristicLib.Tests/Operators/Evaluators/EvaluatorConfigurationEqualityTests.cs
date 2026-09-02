@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Evaluators;
@@ -19,7 +20,7 @@ public class EvaluatorConfigurationEqualityTests
     {
         var first = new OffsetEvaluator(1);
         var second = new OffsetEvaluator(2);
-        var children = new List<IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var children = new List<IEvaluator<int>> { first, second };
         var evaluator = new FirstOfEvaluator(children);
 
         children.Clear();
@@ -73,13 +74,13 @@ public class EvaluatorConfigurationEqualityTests
     public void ConcreteEvaluatorSettings_ArePubliclyReconfigurable()
     {
         var keySelector = new RemainderCacheKeySelector(3);
-        var cache = new CachingEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, int>(new OffsetEvaluator(1), keySelector) { SizeLimit = 10 };
-        var limit = new LimitEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new OffsetEvaluator(1), 5) { EnforceLimitWithinBatch = true };
-        var repeating = new RepeatingEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new OffsetEvaluator(1), 2);
+        var cache = new CachingEvaluator<int, int>(new OffsetEvaluator(1), keySelector) { SizeLimit = 10 };
+        var limit = new LimitEvaluator<int>(new OffsetEvaluator(1), 5) { EnforceLimitWithinBatch = true };
+        var repeating = new RepeatingEvaluator<int>(new OffsetEvaluator(1), 2);
 
         cache.KeySelector.ShouldBe(keySelector);
-        cache.ShouldBe(new CachingEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, int>(new OffsetEvaluator(1), new RemainderCacheKeySelector(3)) { SizeLimit = 10 });
-        new CachingEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new OffsetEvaluator(1)).KeySelector
+        cache.ShouldBe(new CachingEvaluator<int, int>(new OffsetEvaluator(1), new RemainderCacheKeySelector(3)) { SizeLimit = 10 });
+        new CachingEvaluator<int>(new OffsetEvaluator(1)).KeySelector
             .ShouldBeSameAs(CacheKeySelection<int>.Identity);
         cache.SizeLimit.ShouldBe(10);
         (limit with { MaxEvaluations = 7 }).ShouldNotBe(limit);
@@ -108,20 +109,22 @@ public class EvaluatorConfigurationEqualityTests
     }
 
     private sealed record FirstOfEvaluator
-        : MultiEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        : MultiEvaluator<int>
     {
-        public FirstOfEvaluator(IReadOnlyList<IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childEvaluators)
+        public FirstOfEvaluator(IReadOnlyList<IEvaluator<int>> childEvaluators)
             : base(childEvaluators)
         {
         }
 
-        protected override MultiEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childEvaluators) =>
-            new Instance(childEvaluators);
+        protected override IEvaluatorInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IEvaluatorInstance<int, TRunSearchSpace, TRunProblem>> childEvaluators) =>
+            new Instance<TRunSearchSpace, TRunProblem>(childEvaluators);
 
-        private sealed class Instance(ImmutableArray<IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childEvaluators)
-            : MultiEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childEvaluators)
+        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IEvaluatorInstance<int, TSearchSpace, TProblem>> childEvaluators)
+            : MultiEvaluatorInstance<int, TSearchSpace, TProblem>(childEvaluators)
+              where TSearchSpace : class, ISearchSpace<int>
+              where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildEvaluators[0].Evaluate(candidates, random, searchSpace, problem);
         }
     }

@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public interface IBestKnownObjectiveProvider<TCandidate, TSearchSpace, in TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
 {
     ObjectiveVector GetBestKnown(TProblem problem);
 }
@@ -16,7 +16,7 @@ public interface IBestKnownObjectiveProvider<TCandidate, TSearchSpace, in TProbl
 public sealed class FuncBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>(Func<TProblem, ObjectiveVector> getBestKnown)
     : IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
 {
     public ObjectiveVector GetBestKnown(TProblem problem) => getBestKnown(problem);
 }
@@ -25,10 +25,14 @@ public sealed class FuncBestKnownObjectiveProvider<TCandidate, TSearchSpace, TPr
 /// Normalizes the objective vectors produced by the child evaluator against the best-known objective vector of a
 /// dynamic problem, refreshing that reference whenever the problem's epoch changes.
 /// </summary>
+/// <remarks>
+/// This wrapper reads its problem, which <see cref="WrappingEvaluator{TCandidate}"/> cannot express, so it implements
+/// the role directly and reconciles the run's types with a type test.
+/// </remarks>
 public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem>
-    : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
+    : WrappingEvaluator<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
 {
     /// <summary>
     /// Gets the dynamic problem this evaluator is bound to. Execution instances observe its epoch clock and can only evaluate this problem.
@@ -45,15 +49,29 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
     /// </summary>
     public RelativeQualityZeroBestKnownPolicy ZeroBestKnownPolicy { get; init; } = RelativeQualityZeroBestKnownPolicy.SignedInfinity;
 
-    public DynamicRelativeQualityEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider)
+    public DynamicRelativeQualityEvaluator(IEvaluator<TCandidate> childEvaluator, TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider)
         : base(childEvaluator)
     {
         SourceProblem = problem;
         BestKnownProvider = bestKnownProvider;
     }
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
-        new Instance(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy);
+    /// <remarks>
+    /// This wrapper reads its problem, so it binds it on its own type and reconciles with the run's here — the same
+    /// shape <c>ObservableEvaluator</c> uses for its observers. The base stays agnostic, and this override is where
+    /// the two meet.
+    /// </remarks>
+    protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator)
+    {
+        if (childEvaluator is not IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> boundChild
+            || new Instance(boundChild, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy) is not IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> typed)
+        {
+            throw new InvalidOperationException(
+                $"{GetType().Name} reads {typeof(TProblem).Name} and cannot run over {typeof(TRunProblem).Name}.");
+        }
+
+        return typed;
+    }
 
     private sealed class Instance : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>, IDisposable
     {
@@ -94,17 +112,17 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
 
 public static class DynamicRelativeQualityEvaluator
 {
-    public static DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider)
+    public static DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate> childEvaluator, TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : DynamicProblem<TCandidate, TSearchSpace> =>
+        where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace> =>
         new(childEvaluator, problem, bestKnownProvider);
 }
 
 public static class DynamicRelativeQualityEvaluatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
+    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate> evaluator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+        where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
     {
         public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> WithDynamicRelativeQuality(TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider) =>
             new(evaluator, problem, bestKnownProvider);

@@ -9,7 +9,7 @@ public class RepeatingEvaluatorTests
     [Fact]
     public void Aggregator_DefaultsToMean()
     {
-        var evaluator = new RepeatingEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new CandidateEvaluator(), 3);
+        var evaluator = new RepeatingEvaluator<int>(new CandidateEvaluator(), 3);
 
         evaluator.Aggregator.ShouldBe(ObjectiveVectorAggregation.Mean);
     }
@@ -21,7 +21,7 @@ public class RepeatingEvaluatorTests
         var problem = CreateProblem();
         var evaluator = new CandidateEvaluator().CountEvaluatorCalls(counter).AsRepeated(3);
 
-        evaluator.CreateExecutionInstance(new ExecutionInstanceRegistry())
+        evaluator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry())
             .Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(3);
@@ -32,7 +32,7 @@ public class RepeatingEvaluatorTests
     {
         var problem = CreateProblem();
         var evaluator = new RandomEvaluator().AsRepeated(5);
-        var instance = evaluator.CreateExecutionInstance(new ExecutionInstanceRegistry());
+        var instance = evaluator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
 
         var actual = instance.Evaluate([1, 2], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
         var rootRandom = RandomNumberGenerator.Create(42);
@@ -55,9 +55,9 @@ public class RepeatingEvaluatorTests
         var sequential = new RandomEvaluator().AsRepeated(32);
         var concurrent = sequential with { Concurrency = ExecutionConcurrency.Concurrent(4) };
 
-        var sequentialResult = sequential.CreateExecutionInstance(new ExecutionInstanceRegistry())
+        var sequentialResult = sequential.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry())
             .Evaluate([1, 2], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
-        var concurrentResult = concurrent.CreateExecutionInstance(new ExecutionInstanceRegistry())
+        var concurrentResult = concurrent.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry())
             .Evaluate([1, 2], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
         concurrentResult.ShouldBe(sequentialResult);
@@ -68,16 +68,16 @@ public class RepeatingEvaluatorTests
     [InlineData(-1)]
     public void ExecutionInstanceCreation_RejectsNonPositiveRepetitions(int repetitions)
     {
-        var constructed = new RepeatingEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new CandidateEvaluator(), repetitions);
-        var reconfigured = new RepeatingEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new CandidateEvaluator(), 1) with
+        var constructed = new RepeatingEvaluator<int>(new CandidateEvaluator(), repetitions);
+        var reconfigured = new RepeatingEvaluator<int>(new CandidateEvaluator(), 1) with
         {
             Repetitions = repetitions
         };
 
         constructed.Repetitions.ShouldBe(repetitions);
         reconfigured.Repetitions.ShouldBe(repetitions);
-        Should.Throw<InvalidOperationException>(() => constructed.CreateExecutionInstance(new ExecutionInstanceRegistry()));
-        Should.Throw<InvalidOperationException>(() => reconfigured.CreateExecutionInstance(new ExecutionInstanceRegistry()));
+        Should.Throw<InvalidOperationException>(() => constructed.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry()));
+        Should.Throw<InvalidOperationException>(() => reconfigured.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry()));
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>

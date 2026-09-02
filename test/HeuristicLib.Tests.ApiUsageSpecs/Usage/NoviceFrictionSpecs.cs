@@ -3,6 +3,7 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.BoolVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
@@ -75,7 +76,7 @@ public class NoviceFrictionSpecs
         // var algorithm = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
         //
         // CS0411: the type arguments for method
-        //   'GeneticAlgorithm.For<TProblem, TCandidate, TSearchSpace>(IProblemDefaults<TProblem, TCandidate,
+        //   'GeneticAlgorithm.For<TProblem, TCandidate, TSearchSpace>(IProblem<TProblem, TCandidate,
         //   TSearchSpace>, ICreator<...>?, ICrossover<...>?, IMutator<...>?, ISelector<...>?, IEvaluator<...>?,
         //   IRefiner<...>?, ITerminator<...>?, IInterceptor<...>?, int, int?, double, int)'
         //   cannot be inferred from the usage. Try specifying the type arguments explicitly.
@@ -94,12 +95,12 @@ public class NoviceFrictionSpecs
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
 
-        GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> declared =
+        GeneticAlgorithm<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> declared =
             CreateRastriginAlgorithm(problem);
 
         var widened = WidenPopulation(declared, populationSize: 40);
         var configured =
-            new List<GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>
+            new List<GeneticAlgorithm<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>>
             {
                 declared,
                 widened
@@ -113,9 +114,9 @@ public class NoviceFrictionSpecs
     /// The arity spreads. A helper that takes and returns an algorithm repeats every argument twice, so the cost is
     /// paid again in each calling layer rather than once at construction.
     /// </summary>
-    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>
+    private static GeneticAlgorithm<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
         WidenPopulation(
-            GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> algorithm,
+            GeneticAlgorithm<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> algorithm,
             int populationSize) =>
         algorithm with { PopulationSize = populationSize };
 
@@ -139,37 +140,31 @@ public class NoviceFrictionSpecs
     }
 
     /// <summary>
-    /// The friction this suite was written to measure, on a role that has not migrated yet. The reduced arity
-    /// records are not a shorthand for the common case: <c>GeneticAlgorithm&lt;RealVector&gt;</c> means "over any
-    /// search space for real vectors", which is a weaker algorithm, not a shorter spelling of the same one.
+    /// The friction this suite was written to measure, and its result: there is no operator slot left that shows it.
     /// </summary>
     /// <remarks>
-    /// This is why the arity ladder does not by itself answer the entry barrier. An operator that reads the search
-    /// space cannot fill a slot declared against <see cref="ISearchSpace{TCandidate}"/>, because the role interface
-    /// declares <c>in TSearchSpace</c> and contravariance runs the other way.
+    /// The measurement used to be stated over whichever role had not migrated yet — creator, then selector, then
+    /// terminator, then interceptor. All nine have migrated, so every operator slot on the one argument algorithm now
+    /// names the candidate, and the search space and problem are supplied by the run rather than by the slot. What
+    /// remains typed at the triple are the algorithm's own type arguments, which the algorithm package addresses.
     /// </remarks>
     [Fact]
-    public void TheOneArgumentAlgorithm_CannotTakeAnUnmigratedOperatorThatReadsTheSearchSpace()
+    public void EveryOperatorSlot_NamesOnlyWhatTheOperatorIsWrittenAbout()
     {
-        ICreator<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> encodingBoundCreator =
-            new UniformDistributedCreator();
+        var algorithm = typeof(GeneticAlgorithm<RealVector>);
 
-        // Does not compile. UniformDistributedCreator reads BoundedRealVectorSearchSpace.Minimum and .Maximum, and
-        // ISearchSpace<RealVector> cannot be converted to BoundedRealVectorSearchSpace:
-        //
-        // ICreator<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> slot =
-        //     encodingBoundCreator;
-        //
-        // CS0266: cannot implicitly convert type
-        //   'ICreator<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>' to
-        //   'ICreator<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>'
+        // Every slot, terminators and interceptors included, names the candidate and nothing else.
+        string[] slots =
+        [
+            nameof(GeneticAlgorithm<RealVector>.Creator), nameof(GeneticAlgorithm<RealVector>.Crossover),
+            nameof(GeneticAlgorithm<RealVector>.Mutator), nameof(GeneticAlgorithm<RealVector>.Selector),
+            nameof(GeneticAlgorithm<RealVector>.Terminator), nameof(GeneticAlgorithm<RealVector>.Interceptor)
+        ];
 
-        var creatorSlot = typeof(GeneticAlgorithm<RealVector>)
-            .GetProperty(nameof(GeneticAlgorithm<RealVector>.Creator))!;
-
-        creatorSlot.PropertyType.ShouldBe(
-            typeof(ICreator<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>));
-        creatorSlot.PropertyType.IsInstanceOfType(encodingBoundCreator).ShouldBeFalse();
+        foreach (var slot in slots)
+        {
+            algorithm.GetProperty(slot)!.PropertyType.GetGenericArguments().ShouldHaveSingleItem();
+        }
     }
 
     /// <summary>
@@ -179,7 +174,7 @@ public class NoviceFrictionSpecs
     /// reported by the pre-flight check rather than by a conversion the author has to talk the compiler out of.
     /// </summary>
     [Fact]
-    public void TheOneArgumentAlgorithm_TakesAMigratedOperatorThatReadsTheSearchSpace()
+    public void TheOneArgumentAlgorithm_TakesAnOperatorThatReadsTheSearchSpace()
     {
         IMutator<RealVector> encodingBoundMutator =
             new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1);
@@ -296,42 +291,39 @@ public class NoviceFrictionSpecs
         Comparer<Type>.Create((left, right) => string.CompareOrdinal(left.Name, right.Name));
 
     /// <summary>
-    /// Measures what the problem type argument buys on operators. Almost every operator passes it through without
-    /// constraining it, so the third argument is spelled out library wide to serve a very small set of problem bound
-    /// operators.
+    /// A problem bound operator still works, and still reports a mismatch, after the roles stopped naming the problem.
     /// </summary>
     /// <remarks>
-    /// Naming the exceptions is the point. They are the cases any reduction of the problem argument has to keep
-    /// working, so this list is an acceptance criterion for such a change rather than a coverage assertion. Roles
-    /// that have already migrated are absent because they no longer carry a problem argument to constrain; a
-    /// problem bound operator in one of them names the problem on its own type instead and reconciles it with the
-    /// run's when the execution instance is created.
+    /// The measurement this replaces counted how many operators constrained the role's problem argument; the roles no
+    /// longer have one, so the count is not the question any more. The capability is: an operator that must read a
+    /// specific problem states it on its own type, runs when the run supplies that problem, and is refused otherwise.
+    /// The operator below is declared here rather than in the library, so it also stands for one a consumer writes.
     /// </remarks>
     [Fact]
-    public void AlmostNoOperatorConstrainsTheProblemTypeArgument()
+    public void AnOperatorThatReadsItsProblem_RunsOverThatProblemAndIsRefusedOverAnother()
     {
-        Type[] operatorRoles =
-        [
-            typeof(ICreator<,,>),
-            typeof(ICrossover<,,>),
-            typeof(ISelector<,,>),
-            typeof(IEvaluator<,,>),
-            typeof(IRefiner<,,>),
-            typeof(IReplacer<,,>)
-        ];
+        var problemBound = new DimensionCountingMutator();
 
-        var problemBoundOperators = CoreAssembly.GetTypes()
-            .Where(type => type is { IsAbstract: false, IsGenericTypeDefinition: false })
-            .SelectMany(type => type.GetInterfaces()
-                .Where(role => role.IsGenericType && operatorRoles.Contains(role.GetGenericTypeDefinition()))
-                .Select(role => (Operator: type, Problem: role.GetGenericArguments()[2])))
-            .Where(entry => entry.Problem.IsClass)
-            .Select(entry => entry.Operator.Name)
-            .Distinct()
-            .Order()
-            .ToArray();
+        // A registry serves one run, so each triple is asked in its own.
+        new ExecutionInstanceRegistry()
+            .TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problemBound, out var instance, out var reason)
+            .ShouldBeTrue();
+        instance.ShouldNotBeNull();
+        reason.ShouldBeNull();
 
-        problemBoundOperators.ShouldBe(["NumericParameterFittingRefiner"]);
+        new ExecutionInstanceRegistry()
+            .TryResolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(problemBound, out var wrong, out var refusal)
+            .ShouldBeFalse();
+        wrong.ShouldBeNull();
+        refusal.ShouldNotBeNull();
+        refusal.ShouldContain(nameof(TestFunctionProblem));
+    }
+
+    /// <summary>An operator that genuinely needs its problem, of the kind the library keeps working for.</summary>
+    private sealed record DimensionCountingMutator : SingleCandidateMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+    {
+        public override RealVector MutateCandidate(RealVector parent, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            RealVector.Repeat(problem.TestFunction.Dimension, parent.Count);
     }
 
     /// <summary>
@@ -417,17 +409,23 @@ public class NoviceFrictionSpecs
 
         constructed.GetType().GetGenericArguments()[2].ShouldBe(typeof(TestFunctionProblem));
         inferred.GetType().GetGenericArguments()[2]
-            .ShouldBe(typeof(IProblem<RealVector, BoundedRealVectorSearchSpace>));
+            .ShouldBe(typeof(IProblem<RealVector, ISearchSpace<RealVector>>));
     }
 
     /// <summary>
     /// The route a real vector problem has to take today: supply the operators so the factory can infer from them.
     /// The problem argument only reaches the search space, so the resulting algorithm is typed at the problem
     /// interface rather than at the problem.
+    /// <para>
+    /// Since the creator, crossover and mutator migrated, none of them carries a search space, so the factory infers
+    /// the widest one it can rather than <see cref="BoundedRealVectorSearchSpace"/>. The algorithm this produces is
+    /// weaker than the one the same call produced before, which is the cost recorded in
+    /// <see cref="CreateFactories_NoLongerInferTheSearchSpaceFromTheirOperators"/>.
+    /// </para>
     /// </summary>
-    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>
+    private static GeneticAlgorithm<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
         CreateRastriginAlgorithm(TestFunctionProblem problem) =>
-        GeneticAlgorithm.Create(
+        GeneticAlgorithm.Create<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(
             new UniformDistributedCreator(problem.SearchSpace),
             new AlphaBetaBlendCrossover(),
             new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1),

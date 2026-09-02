@@ -13,11 +13,11 @@ public record
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : PopulationState<TCandidate>
 {
-    private ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> Evaluators { get; }
-    private ImmutableArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> Interceptors { get; }
+    private ImmutableArray<IEvaluator<TCandidate>> Evaluators { get; }
+    private ImmutableArray<IInterceptor<TCandidate>> Interceptors { get; }
 
-    public BestMedianWorstPerEvaluationAnalysis(IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators,
-                                                IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> interceptors)
+    public BestMedianWorstPerEvaluationAnalysis(IReadOnlyList<IEvaluator<TCandidate>> evaluators,
+                                                IReadOnlyList<IInterceptor<TCandidate>> interceptors)
     {
         Evaluators = evaluators.ToImmutableArray();
         Interceptors = interceptors.ToImmutableArray();
@@ -30,11 +30,11 @@ public record
     {
         foreach (var evaluator in Evaluators)
         {
-            observations.Observe(evaluator, (_, candidates, _, _) => result.AfterEvaluation(candidates));
+            observations.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, (_, candidates, _, _) => result.AfterEvaluation(candidates));
         }
 
         foreach (var interceptor in Interceptors)
-            observations.Observe(interceptor,
+            observations.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor,
                 ((populationState, _, _, _, problem) => result.AfterInterception(populationState, problem.Objective)));
     }
 }

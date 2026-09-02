@@ -10,7 +10,7 @@ public class RefinementEvaluatorTests
     [Fact]
     public void Evaluate_MeasuresTheRefinedCandidatesRatherThanTheSuppliedOnes()
     {
-        var instance = CreateEvaluator().WithRefinement(new AddOffsetRefiner(10)).CreateExecutionInstance();
+        var instance = CreateEvaluator().WithRefinement(new AddOffsetRefiner(10)).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         var objectiveVectors = instance.Evaluate([1, 2], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -21,7 +21,7 @@ public class RefinementEvaluatorTests
     [Fact]
     public void Evaluate_ReturnsOneObjectiveVectorPerSuppliedCandidateInInputOrder()
     {
-        var instance = CreateEvaluator().WithRefinement(new AddOffsetRefiner(10)).CreateExecutionInstance();
+        var instance = CreateEvaluator().WithRefinement(new AddOffsetRefiner(10)).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
         var candidates = new[] { 5, 1, 3 };
 
@@ -36,7 +36,7 @@ public class RefinementEvaluatorTests
     [Fact]
     public void Evaluate_LeavesTheSuppliedCandidatesUntouched()
     {
-        var instance = CreateEvaluator().WithRefinement(new AddOffsetRefiner(10)).CreateExecutionInstance();
+        var instance = CreateEvaluator().WithRefinement(new AddOffsetRefiner(10)).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
         var candidates = new[] { 1, 2 };
 
@@ -49,7 +49,7 @@ public class RefinementEvaluatorTests
     public void Evaluate_IssuesItsEvaluationsThroughTheChildEvaluator()
     {
         var counter = new ObservationCounter();
-        var instance = CreateEvaluator().CountEvaluatedCandidates(counter).WithRefinement(new AddOffsetRefiner(10)).CreateExecutionInstance();
+        var instance = CreateEvaluator().CountEvaluatedCandidates(counter).WithRefinement(new AddOffsetRefiner(10)).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -64,8 +64,8 @@ public class RefinementEvaluatorTests
         var counter = new ObservationCounter();
         var sharedEvaluator = CreateEvaluator().CountEvaluatedCandidates(counter);
         var registry = new ExecutionInstanceRegistry();
-        var refining = registry.Resolve(sharedEvaluator.WithRefinement(new AddOffsetRefiner(10)));
-        var direct = registry.Resolve(sharedEvaluator);
+        var refining = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator.WithRefinement(new AddOffsetRefiner(10)));
+        var direct = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
         var problem = CreateProblem();
 
         refining.Evaluate([1, 2], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -79,7 +79,7 @@ public class RefinementEvaluatorTests
     [Fact]
     public void Evaluate_WithARefinerThatResizesThePopulation_Throws()
     {
-        var instance = CreateEvaluator().WithRefinement(new DropLastRefiner()).CreateExecutionInstance();
+        var instance = CreateEvaluator().WithRefinement(new DropLastRefiner()).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
@@ -101,12 +101,12 @@ public class RefinementEvaluatorTests
     [Fact]
     public void RefinementEvaluator_WithoutAConfiguredEvaluator_MeasuresThroughTheProblem()
     {
-        var evaluator = RefinementEvaluator.Create<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(10));
+        var evaluator = RefinementEvaluator.Create<int>(new AddOffsetRefiner(10));
         var problem = CreateProblem();
 
-        evaluator.Evaluator.ShouldBe(new ProblemEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>());
+        evaluator.Evaluator.ShouldBe(new ProblemEvaluator<int>());
 
-        var objectiveVectors = new ExecutionInstanceRegistry().Resolve(evaluator).Evaluate(
+        var objectiveVectors = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator).Evaluate(
             [1, 2],
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
@@ -119,8 +119,8 @@ public class RefinementEvaluatorTests
     [Fact]
     public void RefinementEvaluator_WithInheritedDefaultEvaluators_IsEqual()
     {
-        var left = RefinementEvaluator.Create<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(10));
-        var right = RefinementEvaluator.Create<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(10));
+        var left = RefinementEvaluator.Create<int>(new AddOffsetRefiner(10));
+        var right = RefinementEvaluator.Create<int>(new AddOffsetRefiner(10));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -136,10 +136,10 @@ public class RefinementEvaluatorTests
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
         left.ShouldNotBe(childEvaluator.WithRefinement(new AddOffsetRefiner(20)));
-        left.ShouldNotBe(RefinementEvaluator.Create<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(10)));
+        left.ShouldNotBe(RefinementEvaluator.Create<int>(new AddOffsetRefiner(10)));
     }
 
-    private static IEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateEvaluator() =>
+    private static IEvaluator<int> CreateEvaluator() =>
         new CandidateValueEvaluator();
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>

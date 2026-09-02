@@ -11,7 +11,7 @@ public class RepeatedEvaluatorTests
     {
         var problem = CreateProblem();
         var evaluator = new StatefulObjectiveEvaluator().AsRepeated(repetitions: 3);
-        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
 
         var objectiveVectors = instance.Evaluate([7], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
@@ -22,9 +22,9 @@ public class RepeatedEvaluatorTests
     public void RepeatedEvaluator_AggregatesEachCandidatePositionally()
     {
         var problem = CreateProblem();
-        var evaluator = new ProblemEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
+        var evaluator = new ProblemEvaluator<int>()
             .AsRepeated(repetitions: 2);
-        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
 
         var objectiveVectors = instance.Evaluate([3, 5, 8], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 

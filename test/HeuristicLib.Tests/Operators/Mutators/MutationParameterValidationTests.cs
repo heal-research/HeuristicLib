@@ -54,7 +54,10 @@ public sealed class MutatorParameterSemanticsTests
     {
         var gaussian = new GaussianMutator(mutationRate: 1, mutationStrength: value);
         var polynomial = new PolynomialMutator { Eta = value };
-        var instance = new ExecutionInstanceRegistry().Resolve<IVariableStrengthMutatorInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>(gaussian);
+        var instance = new ExecutionInstanceRegistry()
+            .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>()
+            .Resolve(gaussian)
+            .ShouldBeAssignableTo<IAdaptableMutationStrengthInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>()!;
 
         instance.CurrentMutationStrength = value;
 

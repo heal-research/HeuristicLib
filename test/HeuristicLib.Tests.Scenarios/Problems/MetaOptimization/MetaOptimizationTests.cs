@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Encodings.Composite;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Operators.Mutators;
@@ -15,7 +16,7 @@ public class MetaOptimizationTests
     {
         //setup
         var problem = new TestFunctionProblem(new AckleyFunction(20));
-        var ga = GeneticAlgorithm.Create(
+        var ga = GeneticAlgorithm.Create<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(
           new UniformDistributedCreator(),
           new SimulatedBinaryCrossover(),
           new GaussianMutator(0.5, 0.5),
@@ -41,7 +42,14 @@ public class MetaOptimizationTests
         });
 
         //build meta alg
-        var hc = HillClimber.Create(
+        // The creator and mutator name only their candidate now, and no other argument is supplied, so nothing is
+        // left for the compiler to infer the run's search space and problem from. The inner genetic algorithm lost
+        // its search space the same way, which is why the meta problem below is typed at ISearchSpace<RealVector>
+        // rather than at BoundedRealVectorSearchSpace: the widening propagates through everything built on it.
+        var hc = HillClimber.Create<
+          CompositeGenotype<RealVector, IntegerVector>,
+          CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>,
+          MetaOptimizationProblem<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>>(
           creator: metaSpace.CombineCreators(
             new UniformDistributedCreator(),
             new Encodings.IntegerVectors.UniformDistributedCreator()), //operator name clash ...

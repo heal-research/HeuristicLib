@@ -1,8 +1,6 @@
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Algorithms;
+namespace HEAL.HeuristicLib.SearchSpaces;
 
 /// <summary>
 /// Marks a search space that states operator defaults, and carries both its own type and its candidate type so a
@@ -14,6 +12,10 @@ namespace HEAL.HeuristicLib.Algorithms;
 /// in constraint position, where inference cannot reach it.
 /// <para>
 /// Search spaces do not declare this directly. Each role interface derives from it, so declaring any role supplies it.
+/// </para>
+/// <para>
+/// It lives beside <see cref="ISearchSpace{TCandidate}"/> rather than with the algorithms that read it, because a
+/// default is what the encoding says about itself: it holds whether or not any algorithm ever asks.
 /// </para>
 /// </remarks>
 public interface IEncodingDefaults<TCandidate, TSearchSpace>
@@ -37,14 +39,14 @@ public interface IEncodingDefaults<TCandidate, TSearchSpace>
 public interface IEncodingDefaultCreator<TCandidate, TSearchSpace> : IEncodingDefaults<TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    static abstract ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateDefaultCreator(TSearchSpace searchSpace);
+    static abstract ICreator<TCandidate> CreateDefaultCreator(TSearchSpace searchSpace);
 }
 
 /// <inheritdoc cref="IEncodingDefaultCreator{TCandidate, TSearchSpace}"/>
 public interface IEncodingDefaultCrossover<TCandidate, TSearchSpace> : IEncodingDefaults<TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    static abstract ICrossover<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateDefaultCrossover(TSearchSpace searchSpace);
+    static abstract ICrossover<TCandidate> CreateDefaultCrossover(TSearchSpace searchSpace);
 }
 
 /// <inheritdoc cref="IEncodingDefaultCreator{TCandidate, TSearchSpace}"/>

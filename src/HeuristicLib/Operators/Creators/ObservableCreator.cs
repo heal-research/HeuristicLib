@@ -5,24 +5,49 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public sealed record ObservableCreator<TCandidate, TSearchSpace, TProblem>
-    : WrappingCreator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+/// <summary>
+/// Reports every creation to its observers and otherwise delegates to the wrapped creator.
+/// </summary>
+/// <remarks>
+/// The observers are typed at the search space and problem they were written for, while the creator itself stays
+/// agnostic so it can be used over any run for its candidate type. The two meet when the execution instance is
+/// created: observers written for a wider search space or problem accept the run's, and a set written for a narrower
+/// one is reported there rather than silently ignored.
+/// </remarks>
+public sealed record ObservableCreator<TCandidate, TObserverSearchSpace, TObserverProblem>
+    : WrappingCreator<TCandidate>
+    where TObserverSearchSpace : class, ISearchSpace<TCandidate>
+    where TObserverProblem : class, IProblem<TCandidate, TObserverSearchSpace>
 {
-    public ValueArray<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; init; }
+    public ValueArray<ICreatorObserver<TCandidate, TObserverSearchSpace, TObserverProblem>> Observers { get; init; }
 
-    public ObservableCreator(ICreator<TCandidate, TSearchSpace, TProblem> childCreator, params IReadOnlyList<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+    public ObservableCreator(ICreator<TCandidate> childCreator, params IReadOnlyList<ICreatorObserver<TCandidate, TObserverSearchSpace, TObserverProblem>> observers)
         : base(childCreator)
     {
         Observers = observers.ToValueArray();
     }
 
-    protected override WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator) =>
-        new Instance(childCreator, Observers);
+    protected override ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childCreator)
+    {
+        var observers = new ICreatorObserver<TCandidate, TRunSearchSpace, TRunProblem>[Observers.Count];
+        for (var i = 0; i < observers.Length; i++)
+        {
+            if (Observers[i] is not ICreatorObserver<TCandidate, TRunSearchSpace, TRunProblem> observer)
+            {
+                throw new InvalidOperationException(
+                    $"{GetType().Name} observes {typeof(TObserverSearchSpace).Name} with {typeof(TObserverProblem).Name}, and cannot observe a run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name}.");
+            }
 
-    private sealed class Instance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator, ValueArray<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+            observers[i] = observer;
+        }
+
+        return new Instance<TRunSearchSpace, TRunProblem>(childCreator, observers);
+    }
+
+    private sealed class Instance<TSearchSpace, TProblem>(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator, ICreatorObserver<TCandidate, TSearchSpace, TProblem>[] observers)
         : WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem>(childCreator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -55,25 +80,24 @@ public sealed class ActionCreatorObserver<TCandidate, TSearchSpace, TProblem>(Ac
 
 public static class ObservableCreator
 {
-    public static ObservableCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> childCreator, params IReadOnlyList<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+    public static ObservableCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate> childCreator, params IReadOnlyList<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(childCreator, observers);
 
-    public static ObservableCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> childCreator, Action<IReadOnlyList<TCandidate>, int, TSearchSpace, TProblem> afterCreation)
+    public static ObservableCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate> childCreator, Action<IReadOnlyList<TCandidate>, int, TSearchSpace, TProblem> afterCreation)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(childCreator, new ActionCreatorObserver<TCandidate, TSearchSpace, TProblem>(afterCreation));
 
-    public static ObservableCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> childCreator, Action<IReadOnlyList<TCandidate>> afterCreation)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new(childCreator, new ActionCreatorObserver<TCandidate, TSearchSpace, TProblem>((candidates, _, _, _) => afterCreation(candidates)));
+    /// <summary>Observes candidates only, so the observer is written at the widest search space and problem.</summary>
+    public static ObservableCreator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> Create<TCandidate>(ICreator<TCandidate> childCreator, Action<IReadOnlyList<TCandidate>> afterCreation) =>
+        new(childCreator, new ActionCreatorObserver<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>((candidates, _, _, _) => afterCreation(candidates)));
 }
 
 public static class ObservableCreatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator)
+    extension<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate> creator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -83,7 +107,11 @@ public static class ObservableCreatorExtensions
             new ObservableCreator<TCandidate, TSearchSpace, TProblem>(creator, observers);
         public ObservableCreator<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>, int, TSearchSpace, TProblem> afterCreation) =>
             creator.ObserveWith(new ActionCreatorObserver<TCandidate, TSearchSpace, TProblem>(afterCreation));
-        public ObservableCreator<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>> afterCreation) =>
-            creator.ObserveWith(new ActionCreatorObserver<TCandidate, TSearchSpace, TProblem>((candidates, _, _, _) => afterCreation(candidates)));
+    }
+
+    extension<TCandidate>(ICreator<TCandidate> creator)
+    {
+        public ObservableCreator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> ObserveWith(Action<IReadOnlyList<TCandidate>> afterCreation) =>
+            ObservableCreator.Create(creator, afterCreation);
     }
 }

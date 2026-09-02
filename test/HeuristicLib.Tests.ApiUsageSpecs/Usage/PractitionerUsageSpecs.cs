@@ -191,7 +191,7 @@ public class PractitionerUsageSpecs
     public async Task GeneticAlgorithm_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = GeneticAlgorithm.Create(
+        var algorithm = GeneticAlgorithm.Create<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(
             new UniformDistributedCreator(problem.SearchSpace),
             new AlphaBetaBlendCrossover { Alpha = 0.7 },
             new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),

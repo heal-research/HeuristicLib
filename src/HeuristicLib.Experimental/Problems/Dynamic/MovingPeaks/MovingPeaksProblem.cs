@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public sealed class MovingPeaksProblem
-    : DynamicProblem<RealVector, BoundedRealVectorSearchSpace>
+    : DynamicProblem<MovingPeaksProblem, RealVector, BoundedRealVectorSearchSpace>
 {
     private double[] peakHeights = null!;
 

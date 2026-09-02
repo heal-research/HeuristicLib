@@ -5,18 +5,41 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.MoveCreators;
 
-public abstract record MoveCreator<TGenotype, TSearchSpace, TProblem, TMove, TState>
-    : IMoveCreator<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+/// <remarks>
+/// Derive directly from this base when the move creator needs mutable execution data. Use
+/// <see cref="StatelessMoveCreator{TCandidate,TSearchSpace,TProblem,TMove}"/> when it does not.
+/// <para>
+/// The type arguments are the search space and problem this move creator is written for. The base bridges to whatever a
+/// run requests, and a request the move creator was not written for is reported when the execution graph is built.
+/// </para>
+/// </remarks>
+public abstract record MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TState>
+    : IMoveCreator<TCandidate, TMove>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    private sealed record Instance(MoveCreator<TGenotype, TSearchSpace, TProblem, TMove, TState> MoveCreator, TState State) : IMoveCreatorInstance<TGenotype, TSearchSpace, TProblem, TMove>
+    private sealed record Instance(MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TState> MoveCreator, TState State)
+        : IMoveCreatorInstance<TCandidate, TSearchSpace, TProblem, TMove>
     {
-        public IEnumerable<TMove> Moves(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => MoveCreator.Moves(genotype, State, searchSpace, problem, random);
+        public IEnumerable<TMove> Moves(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            MoveCreator.Moves(candidate, State, searchSpace, problem, random);
     }
 
-    protected abstract IEnumerable<TMove> Moves(TGenotype genotype, TState state, TSearchSpace searchSpace, TProblem problem, IRandomNumberGenerator random);
+    protected abstract IEnumerable<TMove> Moves(TCandidate candidate, TState state, TSearchSpace searchSpace, TProblem problem, IRandomNumberGenerator random);
 
-    public virtual IMoveCreatorInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new Instance(this, InitialState());
     protected abstract TState InitialState();
+
+    public virtual IMoveCreatorInstance<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new Instance(this, InitialState());
+
+    IMoveCreatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove> IMoveCreator<TCandidate, TMove>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        if (CreateExecutionInstance(instanceRegistry) is not IMoveCreatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove> instance)
+        {
+            throw new InvalidOperationException(
+                $"{GetType().Name} is written for {typeof(TSearchSpace).Name} and {typeof(TProblem).Name}, and cannot run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name}.");
+        }
+
+        return instance;
+    }
 }

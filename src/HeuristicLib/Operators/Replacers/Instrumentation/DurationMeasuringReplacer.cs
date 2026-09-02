@@ -6,31 +6,31 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public sealed record DurationMeasuringReplacer<TCandidate, TSearchSpace, TProblem>
-    : WrappingReplacer<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record DurationMeasuringReplacer<TCandidate>
+    : WrappingReplacer<TCandidate>
 {
     public ObservationDuration Duration { get; init; }
     public TimeProvider TimeProvider { get; init; }
 
-    public DurationMeasuringReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationDuration duration)
+    public DurationMeasuringReplacer(IReplacer<TCandidate> childReplacer, ObservationDuration duration)
         : this(childReplacer, duration, TimeProvider.System)
     {
     }
 
-    public DurationMeasuringReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationDuration duration, TimeProvider timeProvider)
+    public DurationMeasuringReplacer(IReplacer<TCandidate> childReplacer, ObservationDuration duration, TimeProvider timeProvider)
         : base(childReplacer)
     {
         Duration = duration;
         TimeProvider = timeProvider;
     }
 
-    protected override WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer) =>
-        new Instance(childReplacer, Duration, TimeProvider);
+    protected override IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> childReplacer) =>
+        new Instance<TRunSearchSpace, TRunProblem>(childReplacer, Duration, TimeProvider);
 
-    private sealed class Instance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationDuration duration, TimeProvider timeProvider)
+    private sealed class Instance<TSearchSpace, TProblem>(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationDuration duration, TimeProvider timeProvider)
         : WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem>(childReplacer)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(
             IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
@@ -51,35 +51,29 @@ public sealed record DurationMeasuringReplacer<TCandidate, TSearchSpace, TProble
 
 public static class DurationMeasuringReplacer
 {
-    public static DurationMeasuringReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationDuration duration)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static DurationMeasuringReplacer<TCandidate> Create<TCandidate>(IReplacer<TCandidate> childReplacer, ObservationDuration duration) =>
         new(childReplacer, duration);
 
-    public static DurationMeasuringReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationDuration duration, TimeProvider timeProvider)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static DurationMeasuringReplacer<TCandidate> Create<TCandidate>(IReplacer<TCandidate> childReplacer, ObservationDuration duration, TimeProvider timeProvider) =>
         new(childReplacer, duration, timeProvider);
 }
 
 public static class ReplacerDurationExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> replacer)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IReplacer<TCandidate> replacer)
     {
-        public DurationMeasuringReplacer<TCandidate, TSearchSpace, TProblem> MeasureReplacerDuration(ObservationDuration duration) => new(replacer, duration);
+        public DurationMeasuringReplacer<TCandidate> MeasureReplacerDuration(ObservationDuration duration) => new(replacer, duration);
 
-        public DurationMeasuringReplacer<TCandidate, TSearchSpace, TProblem> MeasureReplacerDuration(ObservationDuration duration, TimeProvider timeProvider) =>
+        public DurationMeasuringReplacer<TCandidate> MeasureReplacerDuration(ObservationDuration duration, TimeProvider timeProvider) =>
             new(replacer, duration, timeProvider);
 
-        public DurationMeasuringReplacer<TCandidate, TSearchSpace, TProblem> MeasureReplacerDuration(out ObservationDuration duration)
+        public DurationMeasuringReplacer<TCandidate> MeasureReplacerDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return new(replacer, duration);
         }
 
-        public DurationMeasuringReplacer<TCandidate, TSearchSpace, TProblem> MeasureReplacerDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringReplacer<TCandidate> MeasureReplacerDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return new(replacer, duration, timeProvider);

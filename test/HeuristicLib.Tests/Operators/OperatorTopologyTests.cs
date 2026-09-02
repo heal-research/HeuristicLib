@@ -27,11 +27,20 @@ public class OperatorTopologyTests
     /// author stores in a field, passes as a parameter or reuses across problems.
     /// </summary>
     /// <remarks>
-    /// Roles that still carry the triple are listed in
-    /// <see cref="OperatorRoleContracts_PreserveCandidateAndUseContravariantContext"/> and move here as they migrate.
+    /// All nine roles are listed, terminators and interceptors included. They were the last to keep a second type
+    /// argument, and they lost it for the same reason as the other seven: an operator does not originate the search
+    /// state either, so the algorithm that resolves it supplies one.
     /// </remarks>
     [Theory]
+    [InlineData(typeof(ICreator<>))]
+    [InlineData(typeof(ICrossover<>))]
+    [InlineData(typeof(IEvaluator<>))]
     [InlineData(typeof(IMutator<>))]
+    [InlineData(typeof(IRefiner<>))]
+    [InlineData(typeof(IReplacer<>))]
+    [InlineData(typeof(ISelector<>))]
+    [InlineData(typeof(ITerminator<>))]
+    [InlineData(typeof(IInterceptor<>))]
     public void MigratedOperatorConfigurationContracts_NameOnlyTheCandidate(Type roleContract)
     {
         var typeParameters = roleContract.GetGenericArguments();
@@ -42,23 +51,17 @@ public class OperatorTopologyTests
 
     /// <summary>
     /// An execution instance is created for one run and runs over that run's search space and problem, so it names
-    /// both and stays contravariant in them.
+    /// both and stays contravariant in them. Every configuration contract has migrated, so only instance contracts
+    /// remain here.
     /// </summary>
     [Theory]
-    [InlineData(typeof(ICreator<,,>))]
     [InlineData(typeof(ICreatorInstance<,,>))]
-    [InlineData(typeof(ICrossover<,,>))]
     [InlineData(typeof(ICrossoverInstance<,,>))]
-    [InlineData(typeof(IEvaluator<,,>))]
     [InlineData(typeof(IEvaluatorInstance<,,>))]
     [InlineData(typeof(IMutatorInstance<,,>))]
-    [InlineData(typeof(IReplacer<,,>))]
     [InlineData(typeof(IReplacerInstance<,,>))]
-    [InlineData(typeof(ISelector<,,>))]
     [InlineData(typeof(ISelectorInstance<,,>))]
-    [InlineData(typeof(IInterceptor<,,,>))]
     [InlineData(typeof(IInterceptorInstance<,,,>))]
-    [InlineData(typeof(ITerminator<,,,>))]
     [InlineData(typeof(ITerminatorInstance<,,,>))]
     public void OperatorRoleContracts_PreserveCandidateAndUseContravariantContext(Type roleContract)
     {
@@ -74,9 +77,7 @@ public class OperatorTopologyTests
     /// an interceptor returns it and therefore cannot be contravariant in it.
     /// </summary>
     [Theory]
-    [InlineData(typeof(IInterceptor<,,,>), GenericParameterAttributes.None)]
     [InlineData(typeof(IInterceptorInstance<,,,>), GenericParameterAttributes.None)]
-    [InlineData(typeof(ITerminator<,,,>), GenericParameterAttributes.Contravariant)]
     [InlineData(typeof(ITerminatorInstance<,,,>), GenericParameterAttributes.Contravariant)]
     public void SearchStateAwareRoleContracts_DeclareExpectedSearchStateVariance(Type roleContract, GenericParameterAttributes expectedVariance)
     {

@@ -15,11 +15,12 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProb
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; init; }
+    public IInterceptor<TCandidate>? Interceptor { get; init; }
 
     public sealed override AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
-        var resolvedInterceptor = instanceRegistry.ResolveOptional(Interceptor);
+        var resolver = instanceRegistry.For<TCandidate, TSearchSpace, TProblem, TSearchState>();
+        var resolvedInterceptor = resolver.ResolveOptional(Interceptor);
         return CreateExecutionInstance(instanceRegistry, resolvedInterceptor);
     }
 

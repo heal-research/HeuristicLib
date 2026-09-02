@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Problems.QuadraticAssignment;
 
 public sealed class QuadraticAssignmentProblem(IQuadraticAssignmentProblemData problemData)
-  : PermutationProblem(SingleObjective.Minimize, new PermutationSearchSpace(problemData.Size))
+  : PermutationProblem<QuadraticAssignmentProblem>(SingleObjective.Minimize, new PermutationSearchSpace(problemData.Size))
 {
     public IQuadraticAssignmentProblemData ProblemData { get; } = problemData;
 

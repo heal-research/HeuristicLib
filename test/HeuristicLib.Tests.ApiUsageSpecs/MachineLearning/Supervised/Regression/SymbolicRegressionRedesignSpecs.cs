@@ -189,7 +189,9 @@ public class SymbolicRegressionRedesignSpecs
         var data = CreateLinearRegressionData();
         var searchSpace = CreateSearchSpace();
         var problem = new SymbolicRegressionProblem(data, Metrics.RMSE, searchSpace);
-        var algorithm = GeneticAlgorithm.Create(
+        // Nothing in this call carries a search space any more, so the triple is named here. See
+        // CreateFactories_NoLongerInferTheSearchSpaceFromTheirOperators for the measurement.
+        var algorithm = GeneticAlgorithm.Create<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(
             new RampedHalfAndHalfTreeCreator(),
             new SubtreeCrossover(),
             ChooseOneMutator.Create(

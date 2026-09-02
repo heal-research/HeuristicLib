@@ -12,7 +12,7 @@ public class SelectorCompositionTests
         var counter = new ObservationCounter();
         var problem = CreateProblem();
         var selector = BestSelector.For(problem).CountSelectorCalls(counter).AvoidSameMates(maximumAttempts: 3);
-        var instance = new ExecutionInstanceRegistry().Resolve(selector);
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
         var population = new[]
         {
             EvaluatedCandidate.From(1, new ObjectiveVector(1.0)),
@@ -31,7 +31,7 @@ public class SelectorCompositionTests
         var femaleSelector = new RangeSelector(0);
         var maleSelector = new RangeSelector(2);
         var selector = GenderSpecificSelector.Create(femaleSelector, maleSelector);
-        var instance = new ExecutionInstanceRegistry().Resolve(selector);
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
         var problem = CreateProblem();
         var population = CreatePopulation(1, 2, 3, 4);
 
@@ -46,7 +46,7 @@ public class SelectorCompositionTests
     public void GenderSpecificSelector_UsesFemaleSelectorForUnpairedFinalCandidate()
     {
         var selector = new RangeSelector(0).PairWith(new RangeSelector(2));
-        var instance = new ExecutionInstanceRegistry().Resolve(selector);
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
         var problem = CreateProblem();
 
         var selected = instance.Select(CreatePopulation(1, 2, 3, 4), problem.Objective, 3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

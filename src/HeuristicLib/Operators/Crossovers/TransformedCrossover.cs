@@ -12,16 +12,21 @@ namespace HEAL.HeuristicLib.Operators;
 /// <remarks>
 /// The mutator is invoked for every crossover result batch. A rate controlled mutator may be supplied when conditional mutation is explicitly desired.
 /// </remarks>
-public record TransformedCrossover<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> SourceCrossover, IMutator<TCandidate> TransformationMutator)
-    : Crossover<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record TransformedCrossover<TCandidate>(ICrossover<TCandidate> SourceCrossover, IMutator<TCandidate> TransformationMutator)
+    : ICrossover<TCandidate>
 {
-    public override CrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(SourceCrossover), instanceRegistry.Resolve<TCandidate, TSearchSpace, TProblem>(TransformationMutator));
+    public ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    {
+        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        return new Instance<TRunSearchSpace, TRunProblem>(resolver.Resolve(SourceCrossover), resolver.Resolve(TransformationMutator));
+    }
 
-    private sealed class Instance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> crossover, IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator)
+    private sealed class Instance<TSearchSpace, TProblem>(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> crossover, IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator)
         : CrossoverInstance<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -33,18 +38,15 @@ public record TransformedCrossover<TCandidate, TSearchSpace, TProblem>(ICrossove
 
 public static class TransformedCrossover
 {
-    public static TransformedCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, IMutator<TCandidate> mutator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(crossover, mutator);
+    public static TransformedCrossover<TCandidate> Create<TCandidate>(ICrossover<TCandidate> crossover, IMutator<TCandidate> mutator) =>
+        new(crossover, mutator);
 }
 
 public static class TransformedCrossoverExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(ICrossover<TCandidate> crossover)
     {
-        public TransformedCrossover<TCandidate, TSearchSpace, TProblem> TransformWith(IMutator<TCandidate> mutator) =>
+        public TransformedCrossover<TCandidate> TransformWith(IMutator<TCandidate> mutator) =>
             TransformedCrossover.Create(crossover, mutator);
     }
 }

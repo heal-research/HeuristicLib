@@ -6,18 +6,18 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
 
-public sealed record NeighborhoodEvaluator<TGenotype, TSearchSpace, TProblem, TMove>(
-    Neighborhood<TGenotype, TSearchSpace, TProblem, TMove> neighborhood)
-    : StatelessMoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public sealed record NeighborhoodEvaluator<TCandidate, TSearchSpace, TProblem, TMove>(
+    Neighborhood<TCandidate, TSearchSpace, TProblem, TMove> neighborhood)
+    : StatelessMoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public override ObjectiveVector Evaluate(
         ObjectiveVector oldQuality,
-        TGenotype genotype,
+        TCandidate candidate,
         TMove move,
         IRandomNumberGenerator random,
         TSearchSpace searchSpace,
         TProblem problem)
-        => neighborhood.Evaluate(genotype, move, random, searchSpace, problem);
+        => neighborhood.Evaluate(candidate, move, random, searchSpace, problem);
 }

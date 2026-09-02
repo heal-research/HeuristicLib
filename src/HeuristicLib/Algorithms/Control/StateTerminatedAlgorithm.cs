@@ -15,12 +15,13 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSear
     where TSearchState : class, ISearchState
 {
     public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
-    public required ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Terminator { get; init; }
+    public required ITerminator<TCandidate> Terminator { get; init; }
 
     public override StateTerminatedAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
+        var resolver = instanceRegistry.For<TCandidate, TSearchSpace, TProblem, TSearchState>();
         // Resolve the terminator before the wrapped algorithm so elapsed-time terminators start at the earliest point this wrapper controls, including wrapped algorithm instancing.
-        var terminator = instanceRegistry.Resolve(Terminator);
+        var terminator = resolver.Resolve(Terminator);
         return new(instanceRegistry.Resolve(Algorithm), terminator);
     }
 }
@@ -28,7 +29,7 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSear
 public static class StateTerminatedAlgorithm
 {
     public static StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(
-        IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
+        IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, ITerminator<TCandidate> terminator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState => new()
@@ -73,7 +74,7 @@ public static class StateTerminatedAlgorithmExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> WithTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
+        public StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> WithTerminator(ITerminator<TCandidate> terminator)
         {
             return StateTerminatedAlgorithm.Create(algorithm, terminator);
         }

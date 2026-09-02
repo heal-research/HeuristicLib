@@ -105,7 +105,7 @@ public class ExperimentAnalysisTests
     }
 
     private sealed record OrderedEvaluationAnalyzer(
-        IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator,
+        IEvaluator<int> Evaluator,
         int Marker,
         List<int> InvocationOrder) : Analyzer<EvaluationResult>
     {
@@ -113,7 +113,7 @@ public class ExperimentAnalysisTests
 
         public override void RegisterObservations(ObservationPlan observations, EvaluationResult result)
         {
-            observations.Observe(Evaluator, (_, objectiveVectors, _, _) =>
+            observations.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Evaluator, (_, objectiveVectors, _, _) =>
             {
                 InvocationOrder.Add(Marker);
                 result.Count += objectiveVectors.Count;

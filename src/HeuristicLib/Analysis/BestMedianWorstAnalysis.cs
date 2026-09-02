@@ -15,14 +15,14 @@ public record BestMedianWorstAnalysis<TCandidate, TSearchSpace, TProblem, TSearc
     /// <summary>
     /// Gets the interceptors observed after each interception.
     /// </summary>
-    public ValueArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> Interceptors { get; init; }
+    public ValueArray<IInterceptor<TCandidate>> Interceptors { get; init; }
 
     /// <summary>
     /// Gets the algorithms observed at the end of every iteration they yield.
     /// </summary>
     public ValueArray<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> Algorithms { get; init; }
 
-    public BestMedianWorstAnalysis(params IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> interceptors)
+    public BestMedianWorstAnalysis(params IReadOnlyList<IInterceptor<TCandidate>> interceptors)
     {
         Interceptors = interceptors.ToValueArray();
     }
@@ -34,7 +34,7 @@ public record BestMedianWorstAnalysis<TCandidate, TSearchSpace, TProblem, TSearc
     {
         foreach (var interceptor in Interceptors)
         {
-            observations.Observe(interceptor, (populationState, _, _, _, problem) => RecordEntry(result, populationState, problem));
+            observations.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, (populationState, _, _, _, problem) => RecordEntry(result, populationState, problem));
         }
 
         foreach (var algorithm in Algorithms)

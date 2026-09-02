@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 // This is an example problem that fully uses the standard search space of real vectors and only the standard operators.
-public class TestFunctionProblem : RealVectorProblem
+public class TestFunctionProblem : RealVectorProblem<TestFunctionProblem>
 {
     public readonly ITestFunction TestFunction;
     public TestFunctionProblem() : this(null!) { }

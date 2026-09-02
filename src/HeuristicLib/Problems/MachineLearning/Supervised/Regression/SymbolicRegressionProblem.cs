@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Problems.MachineLearning;
 
 public sealed class SymbolicRegressionProblem
-    : SingleSolutionProblem<ExpressionTree, ExpressionTreeSearchSpace>
+    : SingleSolutionProblem<SymbolicRegressionProblem, ExpressionTree, ExpressionTreeSearchSpace>
 {
     public SymbolicRegressionProblem(RegressionData trainingData, ExpressionTreeSearchSpace searchSpace, bool useLinearScaling = false)
         : this(trainingData, [Metrics.MSE], [], searchSpace, useLinearScaling)

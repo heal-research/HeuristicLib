@@ -14,8 +14,8 @@ public static class HillClimberDefaults
 
     public const LocalSearchDirection Direction = LocalSearchDirection.FirstImprovement;
 
-    public static IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator<TCandidate, TSearchSpace, TProblem>()
+    public static IEvaluator<TCandidate> Evaluator<TCandidate, TSearchSpace, TProblem>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+        new ProblemEvaluator<TCandidate>();
 }

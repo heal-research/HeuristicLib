@@ -8,21 +8,26 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 
-public abstract record Neighborhood<TGenotype, TSearchSpace, TProblem, TMove> :
-    INeighborhood<TGenotype, TSearchSpace, TProblem, TMove>, IDirectNeighborhood<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+/// <remarks>
+/// The type arguments are the search space and problem this neighborhood is written for. The three move operators it
+/// exposes are bound to them and satisfy the agnostic <see cref="INeighborhood{TCandidate,TMove}"/>, so a run the
+/// neighborhood was not written for is reported when the execution graph is built rather than at this declaration.
+/// </remarks>
+public abstract record Neighborhood<TCandidate, TSearchSpace, TProblem, TMove> :
+    INeighborhood<TCandidate, TMove>, IDirectNeighborhood<TCandidate, TSearchSpace, TProblem, TMove>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public IMoveCreator<TGenotype, TSearchSpace, TProblem, TMove> MoveCreator => new NeighborhoodCreator<TGenotype, TSearchSpace, TProblem, TMove>(this);
-    public IMoveApplier<TGenotype, TSearchSpace, TProblem, TMove> MoveApplier => new NeighborhoodApplier<TGenotype, TSearchSpace, TProblem, TMove>(this);
-    public IMoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove> MoveEvaluator => new NeighborhoodEvaluator<TGenotype, TSearchSpace, TProblem, TMove>(this);
+    public IMoveCreator<TCandidate, TMove> MoveCreator => new NeighborhoodCreator<TCandidate, TSearchSpace, TProblem, TMove>(this);
+    public IMoveApplier<TCandidate, TMove> MoveApplier => new NeighborhoodApplier<TCandidate, TSearchSpace, TProblem, TMove>(this);
+    public IMoveEvaluator<TCandidate, TMove> MoveEvaluator => new NeighborhoodEvaluator<TCandidate, TSearchSpace, TProblem, TMove>(this);
 
-    public abstract IEnumerable<TMove> Moves(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-    public abstract TGenotype Apply(TGenotype genotype, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    public abstract IEnumerable<TMove> Moves(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    public abstract TCandidate Apply(TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     // this is a trivial implementation that applies and evaluates,
     // override this if you support partial evaluation (which may not require creating a new solution)
-    public virtual ObjectiveVector Evaluate(TGenotype before, TMove? move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    public virtual ObjectiveVector Evaluate(TCandidate before, TMove? move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
         var d = move is null ? before : Apply(before, move, random, searchSpace, problem);
         return problem.Evaluate([d], random)[0];

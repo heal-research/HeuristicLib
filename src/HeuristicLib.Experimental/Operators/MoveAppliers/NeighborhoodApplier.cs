@@ -5,17 +5,17 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.MoveAppliers;
 
-public sealed record NeighborhoodApplier<TGenotype, TSearchSpace, TProblem, TMove>(
-    IDirectNeighborhood<TGenotype, TSearchSpace, TProblem, TMove> neighborhood)
-    : StatelessMoveApplier<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public sealed record NeighborhoodApplier<TCandidate, TSearchSpace, TProblem, TMove>(
+    IDirectNeighborhood<TCandidate, TSearchSpace, TProblem, TMove> neighborhood)
+    : StatelessMoveApplier<TCandidate, TSearchSpace, TProblem, TMove>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public override TGenotype Apply(
-        TGenotype genotype,
+    public override TCandidate Apply(
+        TCandidate candidate,
         TMove move,
         IRandomNumberGenerator random,
         TSearchSpace searchSpace,
         TProblem problem)
-        => neighborhood.Apply(genotype, move, random, searchSpace, problem);
+        => neighborhood.Apply(candidate, move, random, searchSpace, problem);
 }

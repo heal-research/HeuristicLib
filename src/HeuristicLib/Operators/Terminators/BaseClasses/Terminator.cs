@@ -11,12 +11,23 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 /// Use <see cref="StatefulTerminator{TCandidate,TSearchSpace,TProblem,TSearchState,TState}"/> when only ordinary execution data is needed.
 /// </remarks>
 public abstract record Terminator<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : ITerminator<TCandidate>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public abstract ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+
+    ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> ITerminator<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        if (CreateExecutionInstance(instanceRegistry) is not ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> instance)
+        {
+            throw new InvalidOperationException(
+                $"{GetType().Name} is written for {typeof(TSearchSpace).Name}, {typeof(TProblem).Name} and {typeof(TSearchState).Name}, and cannot run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name} and {typeof(TRunSearchState).Name}.");
+        }
+
+        return instance;
+    }
 }
 
 public abstract record Terminator<TCandidate, TSearchSpace, TSearchState>

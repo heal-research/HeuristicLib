@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, PermutationSearchSpace>
+public class ActivatedTravelingSalesmanProblem : DynamicProblem<ActivatedTravelingSalesmanProblem, Permutation, PermutationSearchSpace>
 {
     public ActivatedTravelingSalesmanProblem(ITravelingSalesmanProblemData tspData,
                                              IRandomNumberGenerator environmentRandom,

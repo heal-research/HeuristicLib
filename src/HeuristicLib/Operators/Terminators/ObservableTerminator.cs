@@ -5,27 +5,51 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public sealed record ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : WrappingTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchState : class, ISearchState
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+/// <summary>
+/// Reports every terminal state check to its observers and otherwise delegates to the wrapped terminator.
+/// </summary>
+/// <remarks>
+/// The observers are typed at the search space and problem they were written for, while the terminator itself stays
+/// agnostic so it can be used over any run for its candidate and search state.
+/// </remarks>
+public sealed record ObservableTerminator<TCandidate, TObserverSearchSpace, TObserverProblem, TObserverSearchState>
+    : WrappingTerminator<TCandidate>
+    where TObserverSearchState : class, ISearchState
+    where TObserverSearchSpace : class, ISearchSpace<TCandidate>
+    where TObserverProblem : class, IProblem<TCandidate, TObserverSearchSpace>
 {
-    public ValueArray<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> Observers { get; init; }
+    public ValueArray<ITerminatorObserver<TCandidate, TObserverSearchSpace, TObserverProblem, TObserverSearchState>> Observers { get; init; }
 
-    public ObservableTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, params IReadOnlyList<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
+    public ObservableTerminator(ITerminator<TCandidate> childTerminator, params IReadOnlyList<ITerminatorObserver<TCandidate, TObserverSearchSpace, TObserverProblem, TObserverSearchState>> observers)
         : base(childTerminator)
     {
         Observers = observers.ToValueArray();
     }
 
-    protected override WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator) =>
-        new Instance(childTerminator, Observers);
-
-    private sealed class Instance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, ValueArray<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
-        : WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminator)
+    protected override ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childTerminator)
     {
-        public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem)
+        var observers = new ITerminatorObserver<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>[Observers.Count];
+        for (var i = 0; i < observers.Length; i++)
+        {
+            if (Observers[i] is not ITerminatorObserver<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> observer)
+            {
+                throw new InvalidOperationException(
+                    $"{GetType().Name} observes {typeof(TObserverSearchSpace).Name} with {typeof(TObserverProblem).Name}, and cannot observe a run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name}.");
+            }
+
+            observers[i] = observer;
+        }
+
+        return new Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminator, observers);
+    }
+
+    private sealed class Instance<TSearchSpace, TProblem, TObserverSearchState>(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TObserverSearchState> childTerminator, ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TObserverSearchState>[] observers)
+        : WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TObserverSearchState>(childTerminator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TObserverSearchState : class, ISearchState
+    {
+        public override bool IsTerminalState(TObserverSearchState state, TSearchSpace searchSpace, TProblem problem)
         {
             var result = ChildTerminator.IsTerminalState(state, searchSpace, problem);
             foreach (var observer in observers)
@@ -39,59 +63,63 @@ public sealed record ObservableTerminator<TCandidate, TSearchSpace, TProblem, TS
 
 public static class ObservableTerminator
 {
-    public static ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, params IReadOnlyList<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
-        where TSearchState : class, ISearchState
+    public static ObservableTerminator<TCandidate, TSearchSpace, TProblem, TObserverSearchState> Create<TCandidate, TSearchSpace, TProblem, TObserverSearchState>(ITerminator<TCandidate> childTerminator, params IReadOnlyList<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TObserverSearchState>> observers)
+        where TObserverSearchState : class, ISearchState
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(childTerminator, observers);
 
-    public static ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, Action<bool, TSearchState, TSearchSpace, TProblem> afterTerminalStateCheck)
-        where TSearchState : class, ISearchState
+    public static ObservableTerminator<TCandidate, TSearchSpace, TProblem, TObserverSearchState> Create<TCandidate, TSearchSpace, TProblem, TObserverSearchState>(ITerminator<TCandidate> childTerminator, Action<bool, TObserverSearchState, TSearchSpace, TProblem> afterTerminalStateCheck)
+        where TObserverSearchState : class, ISearchState
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new(childTerminator, new ActionTerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>(afterTerminalStateCheck));
+        new(childTerminator, new ActionTerminatorObserver<TCandidate, TSearchSpace, TProblem, TObserverSearchState>(afterTerminalStateCheck));
 
-    public static ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, Action<bool> afterTerminalStateCheck)
-        where TSearchState : class, ISearchState
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new(childTerminator, new ActionTerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>((isTerminalState, _, _, _) => afterTerminalStateCheck(isTerminalState)));
+    /// <summary>Observes the outcome only, so the observer is written at the widest search space and problem.</summary>
+    public static ObservableTerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TObserverSearchState> Create<TCandidate, TObserverSearchState>(ITerminator<TCandidate> childTerminator, Action<bool> afterTerminalStateCheck)
+        where TObserverSearchState : class, ISearchState =>
+        new(childTerminator, new ActionTerminatorObserver<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TObserverSearchState>((isTerminalState, _, _, _) => afterTerminalStateCheck(isTerminalState)));
 }
 
 
-public interface ITerminatorObserver<TCandidate, in TSearchSpace, in TProblem, in TSearchState>
+public interface ITerminatorObserver<TCandidate, in TSearchSpace, in TProblem, in TObserverSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
+    where TObserverSearchState : class, ISearchState
 {
-    void AfterTerminalStateCheck(bool isTerminalState, TSearchState state, TSearchSpace searchSpace, TProblem problem);
+    void AfterTerminalStateCheck(bool isTerminalState, TObserverSearchState state, TSearchSpace searchSpace, TProblem problem);
 }
 
-public sealed class ActionTerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>(
-    Action<bool, TSearchState, TSearchSpace, TProblem> afterTerminalStateCheck)
-    : ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>
+public sealed class ActionTerminatorObserver<TCandidate, TSearchSpace, TProblem, TObserverSearchState>(
+    Action<bool, TObserverSearchState, TSearchSpace, TProblem> afterTerminalStateCheck)
+    : ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TObserverSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
+    where TObserverSearchState : class, ISearchState
 {
-    public void AfterTerminalStateCheck(bool isTerminalState, TSearchState state, TSearchSpace searchSpace, TProblem problem) =>
+    public void AfterTerminalStateCheck(bool isTerminalState, TObserverSearchState state, TSearchSpace searchSpace, TProblem problem) =>
         afterTerminalStateCheck(isTerminalState, state, searchSpace, problem);
 }
 
 public static class ObservableTerminatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
-        where TSearchState : class, ISearchState
+    extension<TCandidate, TSearchSpace, TProblem, TObserverSearchState>(ITerminator<TCandidate> terminator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TObserverSearchState : class, ISearchState
     {
-        public ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState> observer) =>
-            new ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator, observer);
-        public ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(params IReadOnlyList<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers) =>
-            new ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator, observers);
-        public ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(Action<bool, TSearchState, TSearchSpace, TProblem> afterTerminalStateCheck) =>
-            terminator.ObserveWith(new ActionTerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>(afterTerminalStateCheck));
-        public ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(Action<bool> afterTerminalStateCheck) =>
-            terminator.ObserveWith(new ActionTerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>((isTerminalState, _, _, _) => afterTerminalStateCheck(isTerminalState)));
+        public ObservableTerminator<TCandidate, TSearchSpace, TProblem, TObserverSearchState> ObserveWith(ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TObserverSearchState> observer) =>
+            new ObservableTerminator<TCandidate, TSearchSpace, TProblem, TObserverSearchState>(terminator, observer);
+        public ObservableTerminator<TCandidate, TSearchSpace, TProblem, TObserverSearchState> ObserveWith(params IReadOnlyList<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TObserverSearchState>> observers) =>
+            new ObservableTerminator<TCandidate, TSearchSpace, TProblem, TObserverSearchState>(terminator, observers);
+        public ObservableTerminator<TCandidate, TSearchSpace, TProblem, TObserverSearchState> ObserveWith(Action<bool, TObserverSearchState, TSearchSpace, TProblem> afterTerminalStateCheck) =>
+            terminator.ObserveWith(new ActionTerminatorObserver<TCandidate, TSearchSpace, TProblem, TObserverSearchState>(afterTerminalStateCheck));
+    }
+
+    extension<TCandidate, TObserverSearchState>(ITerminator<TCandidate> terminator)
+        where TObserverSearchState : class, ISearchState
+    {
+        public ObservableTerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TObserverSearchState> ObserveWith(Action<bool> afterTerminalStateCheck) =>
+            ObservableTerminator.Create<TCandidate, TObserverSearchState>(terminator, afterTerminalStateCheck);
     }
 }

@@ -100,7 +100,7 @@ public class AlgorithmObservationTests
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3) with { Interceptor = interceptor };
         var atIterationEnd = Analyzer.BestMedianWorst(algorithm);
-        var atInterceptor = Analyzer.BestMedianWorst(interceptor);
+        var atInterceptor = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(interceptor);
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
                            .WithAnalyzers(atIterationEnd, atInterceptor);

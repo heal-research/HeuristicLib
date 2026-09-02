@@ -80,7 +80,7 @@ public class PipelineAlgorithmTests
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
         var pipeline = algorithm.Then(algorithm);
         var registry = new ExecutionInstanceRegistry();
-        _ = registry.Resolve(evaluator);
+        _ = registry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
         var pipelineInstance = registry.Resolve(pipeline);
 
         var states = pipelineInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
@@ -101,14 +101,14 @@ public class PipelineAlgorithmTests
     }
 
     private sealed record EvaluationCountAnalysis(
-        IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator)
+        IEvaluator<int> Evaluator)
         : Analyzer<EvaluationCountAnalysis.Result>
     {
         public override Result CreateInitialResult() => new();
 
         public override void RegisterObservations(ObservationPlan observations, Result result)
         {
-            observations.Observe(Evaluator, (_, objectiveVectors, _, _) => result.Count += objectiveVectors.Count);
+            observations.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Evaluator, (_, objectiveVectors, _, _) => result.Count += objectiveVectors.Count);
         }
 
         public sealed class Result

@@ -19,8 +19,8 @@ public class InterceptorConfigurationEqualityTests
     {
         var first = new OffsetInterceptor(1);
         var second = new OffsetInterceptor(2);
-        var children = new List<IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>> { first, second };
-        var left = new PipelineInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>(children);
+        var children = new List<IInterceptor<int>> { first, second };
+        var left = new PipelineInterceptor<int>(children);
 
         children.Clear();
         var equal = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2));

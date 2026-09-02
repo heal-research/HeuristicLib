@@ -5,24 +5,47 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public sealed record ObservableRefiner<TCandidate, TSearchSpace, TProblem>
-    : WrappingRefiner<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+/// <summary>
+/// Reports every refinement to its observers and otherwise delegates to the wrapped refiner.
+/// </summary>
+/// <remarks>
+/// The observers are typed at the search space and problem they were written for, while the refiner itself stays
+/// agnostic so it can be used over any run for its candidate type.
+/// </remarks>
+public sealed record ObservableRefiner<TCandidate, TObserverSearchSpace, TObserverProblem>
+    : WrappingRefiner<TCandidate>
+    where TObserverSearchSpace : class, ISearchSpace<TCandidate>
+    where TObserverProblem : class, IProblem<TCandidate, TObserverSearchSpace>
 {
-    public ValueArray<IRefinerObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; init; }
+    public ValueArray<IRefinerObserver<TCandidate, TObserverSearchSpace, TObserverProblem>> Observers { get; init; }
 
-    public ObservableRefiner(IRefiner<TCandidate, TSearchSpace, TProblem> childRefiner, params IReadOnlyList<IRefinerObserver<TCandidate, TSearchSpace, TProblem>> observers)
+    public ObservableRefiner(IRefiner<TCandidate> childRefiner, params IReadOnlyList<IRefinerObserver<TCandidate, TObserverSearchSpace, TObserverProblem>> observers)
         : base(childRefiner)
     {
         Observers = observers.ToValueArray();
     }
 
-    protected override WrappingRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner) =>
-        new Instance(childRefiner, Observers);
+    protected override IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> childRefiner)
+    {
+        var observers = new IRefinerObserver<TCandidate, TRunSearchSpace, TRunProblem>[Observers.Count];
+        for (var i = 0; i < observers.Length; i++)
+        {
+            if (Observers[i] is not IRefinerObserver<TCandidate, TRunSearchSpace, TRunProblem> observer)
+            {
+                throw new InvalidOperationException(
+                    $"{GetType().Name} observes {typeof(TObserverSearchSpace).Name} with {typeof(TObserverProblem).Name}, and cannot observe a run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name}.");
+            }
 
-    private sealed class Instance(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner, ValueArray<IRefinerObserver<TCandidate, TSearchSpace, TProblem>> observers)
+            observers[i] = observer;
+        }
+
+        return new Instance<TRunSearchSpace, TRunProblem>(childRefiner, observers);
+    }
+
+    private sealed class Instance<TSearchSpace, TProblem>(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner, IRefinerObserver<TCandidate, TSearchSpace, TProblem>[] observers)
         : WrappingRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiner)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -55,29 +78,28 @@ public sealed class ActionRefinerObserver<TCandidate, TSearchSpace, TProblem>(Ac
 
 public static class ObservableRefiner
 {
-    public static ObservableRefiner<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> childRefiner, params IReadOnlyList<IRefinerObserver<TCandidate, TSearchSpace, TProblem>> observers)
+    public static ObservableRefiner<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate> childRefiner, params IReadOnlyList<IRefinerObserver<TCandidate, TSearchSpace, TProblem>> observers)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(childRefiner, observers);
 
     public static ObservableRefiner<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
-        IRefiner<TCandidate, TSearchSpace, TProblem> childRefiner,
+        IRefiner<TCandidate> childRefiner,
         Action<IReadOnlyList<TCandidate>, IReadOnlyList<TCandidate>, TSearchSpace, TProblem> afterRefine)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(childRefiner, new ActionRefinerObserver<TCandidate, TSearchSpace, TProblem>(afterRefine));
 
-    public static ObservableRefiner<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
-        IRefiner<TCandidate, TSearchSpace, TProblem> childRefiner,
-        Action<IReadOnlyList<TCandidate>> afterRefine)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new(childRefiner, new ActionRefinerObserver<TCandidate, TSearchSpace, TProblem>((refined, _, _, _) => afterRefine(refined)));
+    /// <summary>Observes refined candidates only, so the observer is written at the widest search space and problem.</summary>
+    public static ObservableRefiner<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> Create<TCandidate>(
+        IRefiner<TCandidate> childRefiner,
+        Action<IReadOnlyList<TCandidate>> afterRefine) =>
+        new(childRefiner, new ActionRefinerObserver<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>((refined, _, _, _) => afterRefine(refined)));
 }
 
 public static class ObservableRefinerExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner)
+    extension<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate> refiner)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -87,7 +109,11 @@ public static class ObservableRefinerExtensions
             new ObservableRefiner<TCandidate, TSearchSpace, TProblem>(refiner, observers);
         public ObservableRefiner<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>, IReadOnlyList<TCandidate>, TSearchSpace, TProblem> afterRefine) =>
             refiner.ObserveWith(new ActionRefinerObserver<TCandidate, TSearchSpace, TProblem>(afterRefine));
-        public ObservableRefiner<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>> afterRefine) =>
-            refiner.ObserveWith(new ActionRefinerObserver<TCandidate, TSearchSpace, TProblem>((refined, _, _, _) => afterRefine(refined)));
+    }
+
+    extension<TCandidate>(IRefiner<TCandidate> refiner)
+    {
+        public ObservableRefiner<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> ObserveWith(Action<IReadOnlyList<TCandidate>> afterRefine) =>
+            ObservableRefiner.Create(refiner, afterRefine);
     }
 }

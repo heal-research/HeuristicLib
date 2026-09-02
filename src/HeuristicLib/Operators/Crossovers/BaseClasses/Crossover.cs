@@ -9,13 +9,30 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 /// Derive directly from this base when the crossover owns child execution instances or needs direct control over its execution structure.
 /// Use <see cref="StatelessCrossover{TCandidate,TSearchSpace,TProblem}"/> when no mutable execution data is needed.
 /// Use <see cref="StatefulCrossover{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
+/// <para>
+/// The type arguments are the search space and problem this crossover is written for. The base bridges to whatever a
+/// run requests, and a request the crossover was not written for is reported when the execution graph is built. A
+/// crossover that owns children stays agnostic and derives from <see cref="WrappingCrossover{TCandidate}"/> or
+/// <see cref="MultiCrossover{TCandidate}"/> instead.
+/// </para>
 /// </remarks>
 public abstract record Crossover<TCandidate, TSearchSpace, TProblem>
-    : ICrossover<TCandidate, TSearchSpace, TProblem>
+    : ICrossover<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public abstract ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+
+    ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> ICrossover<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        if (CreateExecutionInstance(instanceRegistry) is not ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> instance)
+        {
+            throw new InvalidOperationException(
+                $"{GetType().Name} is written for {typeof(TSearchSpace).Name} and {typeof(TProblem).Name}, and cannot run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name}.");
+        }
+
+        return instance;
+    }
 }
 
 public abstract record Crossover<TCandidate, TSearchSpace>

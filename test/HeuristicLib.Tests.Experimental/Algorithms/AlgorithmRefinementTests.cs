@@ -108,7 +108,7 @@ public class AlgorithmRefinementTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with
         {
-            Evaluator = new ProblemEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().WithRefinement(new OriginShiftRefiner()),
+            Evaluator = new ProblemEvaluator<RealVector>().WithRefinement(new OriginShiftRefiner()),
             MaximumGenerations = 1
         };
 
@@ -214,7 +214,7 @@ public class AlgorithmRefinementTests
             Elites = 0,
             MaxEffort = PopulationSize,
             MaximumGenerations = Generations,
-            Refiner = PipelineRefiner.Create<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(new FarFromOriginRefiner(), refiner)
+            Refiner = PipelineRefiner.Create<RealVector>(new FarFromOriginRefiner(), refiner)
         };
 
         var populationSizes = new List<int>();
@@ -245,7 +245,7 @@ public class AlgorithmRefinementTests
         }
     }
 
-    private static IEnumerable<(string Name, Func<IRefiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>?, IReadOnlyList<ObjectiveVector>> Run)> AllAlgorithms(TestFunctionProblem problem)
+    private static IEnumerable<(string Name, Func<IRefiner<RealVector>?, IReadOnlyList<ObjectiveVector>> Run)> AllAlgorithms(TestFunctionProblem problem)
     {
         yield return ("genetic algorithm", refiner => ObjectiveVectorsOf((CreateAlgorithm(problem) with { Refiner = refiner })
             .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));

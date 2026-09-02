@@ -12,7 +12,7 @@ namespace HEAL.HeuristicLib.PythonInterop;
 
 public static class PythonCorrelationAnalysis
 {
-    public delegate void GenerationCallback(PopulationState<RealVector> current, RealVectorProblem problem);
+    public delegate void GenerationCallback(PopulationState<RealVector> current, IProblem<RealVector, BoundedRealVectorSearchSpace> problem);
 
     public static double[] GetPseudoCorrelations(IReadOnlyList<RealVector> candidates, MultiObjectiveTestFunctionProblem problem)
     {
@@ -27,7 +27,7 @@ public static class PythonCorrelationAnalysis
         return res;
     }
 
-    public static double[] GetCorrelations(IReadOnlyList<RealVector> candidates, RealVectorProblem problem, double[] delta, int count, int seed = 0)
+    public static double[] GetCorrelations(IReadOnlyList<RealVector> candidates, IProblem<RealVector, BoundedRealVectorSearchSpace> problem, double[] delta, int count, int seed = 0)
     {
         var random = RandomNumberGenerator.Create(seed);
         var evaluator = new ProblemEvaluator<RealVector>();
@@ -60,7 +60,7 @@ public static class PythonCorrelationAnalysis
         return d;
     }
 
-    public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> candidates, RealVectorProblem problem)
+    public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> candidates, IProblem<RealVector, BoundedRealVectorSearchSpace> problem)
     {
         var random = RandomNumberGenerator.Create(42);
         var evaluator = new ProblemEvaluator<RealVector>();
@@ -68,7 +68,7 @@ public static class PythonCorrelationAnalysis
         return evaluator.Evaluate(candidates, random, problem.SearchSpace, problem).ToArray();
     }
 
-    public static ExperimentResult<RealVector> RunCorrelationNsga2(GenerationCallback? callback, int generations, int populationSize, RealVectorProblem problem, int seed = 0)
+    public static ExperimentResult<RealVector> RunCorrelationNsga2(GenerationCallback? callback, int generations, int populationSize, IProblem<RealVector, BoundedRealVectorSearchSpace> problem, int seed = 0)
     {
         var res = PythonGenealogyAnalysis.RunAlgorithmConfigurable(problem, callback is null ? null : r => callback(r, problem),
           new TestFunctionExperimentParameters

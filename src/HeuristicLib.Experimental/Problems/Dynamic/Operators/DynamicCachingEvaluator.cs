@@ -8,9 +8,9 @@ using Microsoft.Extensions.Caching.Memory;
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
-    : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
+    : WrappingEvaluator<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
     where TCandidate : notnull
     where TKey : notnull
 {
@@ -40,7 +40,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem,
     /// </summary>
     public long? SizeLimit { get; init; }
 
-    public DynamicCachingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, TProblem problem, ICacheKeySelector<TCandidate, TKey> keySelector)
+    public DynamicCachingEvaluator(IEvaluator<TCandidate> childEvaluator, TProblem problem, ICacheKeySelector<TCandidate, TKey> keySelector)
         : base(childEvaluator)
     {
         SourceProblem = problem;
@@ -53,8 +53,22 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem,
     /// </summary>
     public long GraceCount { get; init; } = long.MaxValue;
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
-        new Instance(childEvaluator, SourceProblem, KeySelector, SizeLimit, GraceCount);
+    /// <remarks>
+    /// This wrapper reads its problem, so it binds it on its own type and reconciles with the run's here — the same
+    /// shape <c>ObservableEvaluator</c> uses for its observers. The base stays agnostic, and this override is where
+    /// the two meet.
+    /// </remarks>
+    protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator)
+    {
+        if (childEvaluator is not IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> boundChild
+            || new Instance(boundChild, SourceProblem, KeySelector, SizeLimit, GraceCount) is not IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> typed)
+        {
+            throw new InvalidOperationException(
+                $"{GetType().Name} reads {typeof(TProblem).Name} and cannot run over {typeof(TRunProblem).Name}.");
+        }
+
+        return typed;
+    }
 
     private sealed class Instance : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>
     {
@@ -163,7 +177,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem,
 
 public static class DynamicCachedEvaluatorExtension
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate> evaluator) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
     {
         public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache<TKey>(TProblem problem, ICacheKeySelector<TCandidate, TKey> keySelector) where TKey : notnull
         {
@@ -176,13 +190,13 @@ public static class DynamicCachedEvaluatorExtension
         }
     }
 
-    extension<TCandidate, TSearchSpace, TProblem, TKey>(TProblem problem) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TCandidate, TSearchSpace> where TKey : notnull
+    extension<TCandidate, TSearchSpace, TProblem, TKey>(TProblem problem) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace> where TKey : notnull
     {
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache(ICacheKeySelector<TCandidate, TKey> keySelector) => new(new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>(), problem, keySelector);
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache(ICacheKeySelector<TCandidate, TKey> keySelector) => new(new ProblemEvaluator<TCandidate>(), problem, keySelector);
     }
 
-    extension<TCandidate, TSearchSpace, TProblem>(TProblem problem) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    extension<TCandidate, TSearchSpace, TProblem>(TProblem problem) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
     {
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate> WithCache() => new(new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>(), problem, CacheKeySelection<TCandidate>.Identity);
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate> WithCache() => new(new ProblemEvaluator<TCandidate>(), problem, CacheKeySelection<TCandidate>.Identity);
     }
 }

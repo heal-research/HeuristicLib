@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Encodings.RealVectors;
 
 public record GaussianMutator
-    : Mutator<RealVector, BoundedRealVectorSearchSpace>, IVariableStrengthMutator<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>, IInvariantContract<RealVector>
+    : Mutator<RealVector, BoundedRealVectorSearchSpace>, IInvariantContract<RealVector>
 {
     /// <summary>
     /// The result is clamped to the search space bounds, so length and bounds both survive at any mutation rate or
@@ -32,17 +32,16 @@ public record GaussianMutator
 
     public double MutationStrength { get; init; }
 
+    /// <summary>
+    /// The instance offers an adaptable strength, which an algorithm reaches by testing for
+    /// <see cref="IAdaptableMutationStrengthInstance{TCandidate,TSearchSpace,TProblem}"/>. Nothing on the configuration
+    /// announces this, because adaptation only ever happens to an instance.
+    /// </summary>
     public override IMutatorInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateVariableStrengthMutatorInstance();
-
-    IVariableStrengthMutatorInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> IExecutionInstanceResolvable<IVariableStrengthMutatorInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateVariableStrengthMutatorInstance();
-
-    private IVariableStrengthMutatorInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> CreateVariableStrengthMutatorInstance() =>
         new Instance(MutationRate, MutationStrength);
 
     private sealed class Instance(double mutationRate, double mutationStrength)
-        : MutatorInstance<RealVector, BoundedRealVectorSearchSpace>, IVariableStrengthMutatorInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>
+        : MutatorInstance<RealVector, BoundedRealVectorSearchSpace>, IAdaptableMutationStrengthInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>
     {
         public double CurrentMutationStrength { get; set; } = mutationStrength;
 

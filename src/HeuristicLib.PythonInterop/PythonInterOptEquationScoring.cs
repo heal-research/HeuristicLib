@@ -17,7 +17,7 @@ public class PythonInterOptEquationScoring(
     ObjectiveDirections objective,
     ExpressionTreeSearchSpace searchSpace,
     Func<ExpressionTree, ObjectiveVector, double[]> score)
-    : SingleSolutionProblem<ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
+    : SingleSolutionProblem<PythonInterOptEquationScoring, ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
 {
     private sealed record InnerProblemParameterFittingRefiner(NumericParameterFittingRefiner ChildRefiner)
         : SingleCandidateRefiner<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>

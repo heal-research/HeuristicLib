@@ -9,16 +9,21 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>
 /// Creates a candidate batch and then always applies one mutator to the created batch.
 /// </summary>
-public record TransformedCreator<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> SourceCreator, IMutator<TCandidate> TransformationMutator)
-    : Creator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record TransformedCreator<TCandidate>(ICreator<TCandidate> SourceCreator, IMutator<TCandidate> TransformationMutator)
+    : ICreator<TCandidate>
 {
-    public override CreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(SourceCreator), instanceRegistry.Resolve<TCandidate, TSearchSpace, TProblem>(TransformationMutator));
+    public ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    {
+        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        return new Instance<TRunSearchSpace, TRunProblem>(resolver.Resolve(SourceCreator), resolver.Resolve(TransformationMutator));
+    }
 
-    private sealed class Instance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator, IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator)
+    private sealed class Instance<TSearchSpace, TProblem>(ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator, IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator)
         : CreatorInstance<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -30,18 +35,15 @@ public record TransformedCreator<TCandidate, TSearchSpace, TProblem>(ICreator<TC
 
 public static class TransformedCreator
 {
-    public static TransformedCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator, IMutator<TCandidate> mutator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(creator, mutator);
+    public static TransformedCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> creator, IMutator<TCandidate> mutator) =>
+        new(creator, mutator);
 }
 
 public static class TransformedCreatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(ICreator<TCandidate> creator)
     {
-        public TransformedCreator<TCandidate, TSearchSpace, TProblem> TransformWith(IMutator<TCandidate> mutator) =>
+        public TransformedCreator<TCandidate> TransformWith(IMutator<TCandidate> mutator) =>
             TransformedCreator.Create(creator, mutator);
     }
 }

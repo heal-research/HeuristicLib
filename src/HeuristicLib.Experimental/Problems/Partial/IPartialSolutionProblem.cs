@@ -39,8 +39,9 @@ public static class BoundedProblemExtensions
         => problem.Bound([candidate], random)[0];
 }
 
-public abstract class SingleSolutionBoundedProblem<TCandidate, TSearchSpace>
-    : SingleSolutionProblem<TCandidate, TSearchSpace>, IBoundedProblem<TCandidate, TSearchSpace>
+public abstract class SingleSolutionBoundedProblem<TSelf, TCandidate, TSearchSpace>
+    : SingleSolutionProblem<TSelf, TCandidate, TSearchSpace>, IBoundedProblem<TCandidate, TSearchSpace>
+    where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     protected SingleSolutionBoundedProblem(ObjectiveDirections objective, TSearchSpace searchSpace)
@@ -53,8 +54,9 @@ public abstract class SingleSolutionBoundedProblem<TCandidate, TSearchSpace>
     public abstract ObjectiveVector Bound(TCandidate candidate, IRandomNumberGenerator random);
 }
 
-public abstract class SingleSolutionPartialProblem<TCandidate, TSearchSpace>
-    : SingleSolutionProblem<TCandidate, TSearchSpace>, IPartialSolutionProblem<TCandidate, TSearchSpace>
+public abstract class SingleSolutionPartialProblem<TSelf, TCandidate, TSearchSpace>
+    : SingleSolutionProblem<TSelf, TCandidate, TSearchSpace>, IPartialSolutionProblem<TCandidate, TSearchSpace>
+    where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     protected SingleSolutionPartialProblem(ObjectiveDirections objective, TSearchSpace searchSpace)
@@ -72,8 +74,9 @@ public abstract class SingleSolutionPartialProblem<TCandidate, TSearchSpace>
     public abstract ObjectiveVector? EvaluatePartial(TCandidate candidate, IRandomNumberGenerator random);
 }
 
-public abstract class SingleSolutionPartialBoundedProblem<TCandidate, TSearchSpace>
-    : SingleSolutionPartialProblem<TCandidate, TSearchSpace>, IBoundedProblem<TCandidate, TSearchSpace>
+public abstract class SingleSolutionPartialBoundedProblem<TSelf, TCandidate, TSearchSpace>
+    : SingleSolutionPartialProblem<TSelf, TCandidate, TSearchSpace>, IBoundedProblem<TCandidate, TSearchSpace>
+    where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     protected SingleSolutionPartialBoundedProblem(ObjectiveDirections objective, TSearchSpace searchSpace)

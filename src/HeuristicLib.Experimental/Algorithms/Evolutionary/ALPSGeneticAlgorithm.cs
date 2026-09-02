@@ -19,14 +19,14 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public required int PopulationSize { get; init; }
-    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
-    public required ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; init; }
+    public required ICreator<TCandidate> Creator { get; init; }
+    public required ICrossover<TCandidate> Crossover { get; init; }
     public required IMutator<TCandidate> Mutator { get; init; }
-    public required ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+    public required ISelector<TCandidate> Selector { get; init; }
+    public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
     public int Elites { get; init; }
-    public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
+    public IRefiner<TCandidate>? Refiner { get; init; }
 
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
@@ -45,9 +45,10 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
 
     protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>? resolvedInterceptor)
     {
+        var resolver = instanceRegistry.For<TCandidate, TSearchSpace, TProblem>();
         var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate);
-        return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover),
-            instanceRegistry.Resolve<TCandidate, TSearchSpace, TProblem>(effectiveMutator), instanceRegistry.Resolve(Selector), instanceRegistry.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations);
+        return new Instance(resolvedInterceptor, resolver.Resolve(Evaluator), resolver.Resolve(Creator), resolver.Resolve(Crossover),
+            resolver.Resolve(effectiveMutator), resolver.Resolve(Selector), resolver.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations);
     }
 
     private sealed class Instance(

@@ -8,7 +8,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Problems.Dynamic.SlidingWindowRegression;
 
 public class SlidingWindowSymbolicRegressionProblem
-    : DynamicProblem<ExpressionTree, ExpressionTreeSearchSpace>
+    : DynamicProblem<SlidingWindowSymbolicRegressionProblem, ExpressionTree, ExpressionTreeSearchSpace>
 {
     private readonly SymbolicRegressionProblem innerProblem;
     private SymbolicRegressionProblem windowProblem;

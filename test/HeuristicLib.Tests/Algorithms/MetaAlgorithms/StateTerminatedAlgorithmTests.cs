@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
@@ -111,7 +112,7 @@ public class StateTerminatedAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var timeProvider = new ManualTimeProvider();
         var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5)) { TimeProvider = timeProvider };
-        var instance = new ExecutionInstanceRegistry().Resolve(terminator);
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator);
 
         instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeFalse();
 
@@ -124,7 +125,7 @@ public class StateTerminatedAlgorithmTests
     public void AfterElapsedTimeTerminator_StopsOnFirstCheck_WhenMaximumElapsedTimeIsNotPositive()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var instance = new ExecutionInstanceRegistry().Resolve(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
 
         instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeTrue();
     }
@@ -140,7 +141,7 @@ public class StateTerminatedAlgorithmTests
         events.ShouldBe(["terminator", "algorithm"]);
     }
 
-    private static StateTerminatedAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateStateTerminatedAlgorithm(ITerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> terminator)
+    private static StateTerminatedAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateStateTerminatedAlgorithm(ITerminator<int> terminator)
     {
         return new AdditiveStepAlgorithm(1).WithTerminator(terminator);
     }
@@ -201,12 +202,15 @@ public class StateTerminatedAlgorithmTests
     }
 
     private sealed record RecordingResolveTerminator(List<string> Events)
-        : ITerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        : ITerminator<int>
     {
-        public ITerminatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+        public ITerminatorInstance<int, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
+            where TRunSearchSpace : class, ISearchSpace<int>
+            where TRunProblem : class, IProblem<int, TRunSearchSpace>
+            where TRunSearchState : class, ISearchState
         {
             Events.Add("terminator");
-            return new Instance();
+            return (ITerminatorInstance<int, TRunSearchSpace, TRunProblem, TRunSearchState>)(object)new Instance();
         }
 
         private sealed class Instance : ITerminatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>

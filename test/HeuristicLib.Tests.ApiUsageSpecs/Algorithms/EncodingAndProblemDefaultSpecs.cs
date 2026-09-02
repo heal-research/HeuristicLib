@@ -147,15 +147,29 @@ public class EncodingAndProblemDefaultSpecs
         hillClimber.Mutator.ShouldBeOfType<InversionMutator>();
     }
 
+    /// <summary>
+    /// Records what the operator arity reduction costs at the algorithm factories. A creator, crossover or mutator
+    /// used to name its search space, and <c>Create</c> inferred the algorithm's from it. They now name only their
+    /// candidate, so nothing in these calls carries a search space and the type arguments have to be written out.
+    /// </summary>
+    /// <remarks>
+    /// This is not a spelling that can be recovered: the information the factory used to infer from no longer exists
+    /// in the argument types. The alternatives are an overload returning the widest search space, a factory that
+    /// takes the search space or problem to pin it, or naming the arguments as below. That decision belongs to the
+    /// algorithm package; until then this spec is the measurement.
+    /// </remarks>
     [Fact]
-    public void RemainingCreateFactories_InferEveryTypeFromTheirRequiredOperators()
+    public void CreateFactories_NoLongerInferTheSearchSpaceFromTheirOperators()
     {
         EvolutionStrategy<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>> evolutionStrategy =
-            EvolutionStrategy.Create(new RandomPermutationCreator(), new InversionMutator());
+            EvolutionStrategy.Create<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>>(
+                new RandomPermutationCreator(), new InversionMutator());
         NSGA2<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>> nsga2 =
-            NSGA2.Create(new RandomPermutationCreator(), new EdgeRecombinationCrossover(), new InversionMutator());
+            NSGA2.Create<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>>(
+                new RandomPermutationCreator(), new EdgeRecombinationCrossover(), new InversionMutator());
         HillClimber<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>> hillClimber =
-            HillClimber.Create(new RandomPermutationCreator(), new InversionMutator());
+            HillClimber.Create<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>>(
+                new RandomPermutationCreator(), new InversionMutator());
 
         evolutionStrategy.ShouldNotBeNull();
         nsga2.ShouldNotBeNull();

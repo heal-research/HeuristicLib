@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Analysis;
 
 public record AllPopulationsAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(
-    IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Interceptor)
+    IInterceptor<TCandidate> Interceptor)
     : Analyzer<List<EvaluatedCandidate<TCandidate>[]>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -18,7 +18,7 @@ public record AllPopulationsAnalysis<TCandidate, TSearchSpace, TProblem, TSearch
     public override void RegisterObservations(ObservationPlan observations,
                                               List<EvaluatedCandidate<TCandidate>[]> result)
     {
-        observations.Observe(Interceptor, (populationState, _, _, _, _) => AfterInterception(result, populationState));
+        observations.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(Interceptor, (populationState, _, _, _, _) => AfterInterception(result, populationState));
     }
 
     public void AfterInterception(List<EvaluatedCandidate<TCandidate>[]> state,

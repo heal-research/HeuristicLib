@@ -6,39 +6,43 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
 
-public abstract record MoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove, TState>
-    : IMoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+/// <remarks>
+/// Derive directly from this base when the move evaluator needs mutable execution data. Use
+/// <see cref="StatelessMoveEvaluator{TCandidate,TSearchSpace,TProblem,TMove}"/> when it does not.
+/// <para>
+/// The type arguments are the search space and problem this move evaluator is written for. The base bridges to whatever a
+/// run requests, and a request the move evaluator was not written for is reported when the execution graph is built.
+/// </para>
+/// </remarks>
+public abstract record MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, TState>
+    : IMoveEvaluator<TCandidate, TMove>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    private sealed record Instance(
-        MoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove, TState> MoveEvaluator,
-        TState State)
-        : IMoveEvaluatorInstance<TGenotype, TSearchSpace, TProblem, TMove>
+    private sealed record Instance(MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, TState> MoveEvaluator, TState State)
+        : IMoveEvaluatorInstance<TCandidate, TSearchSpace, TProblem, TMove>
     {
-        public ObjectiveVector Evaluate(
-            ObjectiveVector oldQuality,
-            TGenotype genotype,
-            TMove move,
-            IRandomNumberGenerator random,
-            TSearchSpace searchSpace,
-            TProblem problem)
-            => MoveEvaluator.Apply(genotype, move, State, searchSpace, problem, random);
+        public ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            MoveEvaluator.Apply(candidate, move, State, searchSpace, problem, random);
 
-        public ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
+        public ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
     }
 
-    protected abstract ObjectiveVector Apply(
-        TGenotype genotype,
-        TMove move,
-        TState state,
-        TSearchSpace searchSpace,
-        TProblem problem,
-        IRandomNumberGenerator random);
-
-    public virtual IMoveEvaluatorInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(
-        ExecutionInstanceRegistry instanceRegistry)
-        => new Instance(this, InitialState());
+    protected abstract ObjectiveVector Apply(TCandidate candidate, TMove move, TState state, TSearchSpace searchSpace, TProblem problem, IRandomNumberGenerator random);
 
     protected abstract TState InitialState();
+
+    public virtual IMoveEvaluatorInstance<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new Instance(this, InitialState());
+
+    IMoveEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove> IMoveEvaluator<TCandidate, TMove>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        if (CreateExecutionInstance(instanceRegistry) is not IMoveEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove> instance)
+        {
+            throw new InvalidOperationException(
+                $"{GetType().Name} is written for {typeof(TSearchSpace).Name} and {typeof(TProblem).Name}, and cannot run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name}.");
+        }
+
+        return instance;
+    }
 }

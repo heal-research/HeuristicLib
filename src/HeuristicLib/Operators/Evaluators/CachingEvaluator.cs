@@ -7,10 +7,8 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
-    : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record CachingEvaluator<TCandidate, TKey>
+    : WrappingEvaluator<TCandidate>
     where TCandidate : notnull
     where TKey : notnull
 {
@@ -26,17 +24,19 @@ public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
     /// </summary>
     public long? SizeLimit { get; init; }
 
-    public CachingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector)
+    public CachingEvaluator(IEvaluator<TCandidate> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector)
         : base(childEvaluator)
     {
         KeySelector = keySelector;
     }
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
-        new Instance(childEvaluator, KeySelector, SizeLimit);
+    protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
+        new Instance<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, SizeLimit);
 
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit)
+    private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit)
         : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         private readonly MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
 
@@ -98,13 +98,11 @@ public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
     }
 }
 
-public sealed record CachingEvaluator<TCandidate, TSearchSpace, TProblem>
-    : CachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate>
+public sealed record CachingEvaluator<TCandidate>
+    : CachingEvaluator<TCandidate, TCandidate>
     where TCandidate : notnull
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public CachingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator)
+    public CachingEvaluator(IEvaluator<TCandidate> childEvaluator)
         : base(childEvaluator, CacheKeySelection<TCandidate>.Identity)
     {
     }
@@ -139,15 +137,13 @@ public static class CacheKeySelection<TCandidate>
 
 public static class CachingEvaluatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
+    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
         where TCandidate : notnull
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit = null) where TKey : notnull =>
+        public CachingEvaluator<TCandidate, TKey> WithCache<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit = null) where TKey : notnull =>
             new(evaluator, keySelector) { SizeLimit = sizeLimit };
 
-        public CachingEvaluator<TCandidate, TSearchSpace, TProblem> WithCache(long? sizeLimit = null) =>
+        public CachingEvaluator<TCandidate> WithCache(long? sizeLimit = null) =>
             new(evaluator) { SizeLimit = sizeLimit };
     }
 }

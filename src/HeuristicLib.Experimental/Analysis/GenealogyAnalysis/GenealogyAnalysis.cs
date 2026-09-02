@@ -15,9 +15,9 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
     private readonly IEqualityComparer<TCandidate>? equality;
     private readonly bool saveSpace;
 
-    public GenealogyAnalysis(ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
+    public GenealogyAnalysis(ICrossover<TCandidate>? crossover = null,
                              IMutator<TCandidate>? mutator = null,
-                             IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor = null,
+                             IInterceptor<TCandidate>? interceptor = null,
                              IEqualityComparer<TCandidate>? equality = null,
                              bool saveSpace = false)
     {
@@ -28,15 +28,15 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
         Interceptor = interceptor;
     }
 
-    private ICrossover<TCandidate, TSearchSpace, TProblem>? Crossover { get; }
+    private ICrossover<TCandidate>? Crossover { get; }
     private IMutator<TCandidate>? Mutator { get; }
-    private IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; }
+    private IInterceptor<TCandidate>? Interceptor { get; }
 
     public override void RegisterObservations(ObservationPlan observations, GenealogyGraph<TCandidate> graph)
     {
         if (Crossover is not null)
         {
-            observations.Observe(Crossover, ((offspring, parents, _, _) => AfterCross(graph, offspring, parents)));
+            observations.Observe<TCandidate, TSearchSpace, TProblem>(Crossover, (offspring, parents, _, _) => AfterCross(graph, offspring, parents));
         }
 
         if (Mutator is not null)
@@ -46,7 +46,7 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
 
         if (Interceptor is not null)
         {
-            observations.Observe(Interceptor,
+            observations.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(Interceptor,
                 ((currentState, _, _, _, problem) => AfterInterception(graph, currentState, problem)));
         }
     }

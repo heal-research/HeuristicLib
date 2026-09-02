@@ -58,6 +58,32 @@ A pre-flight pass is wanted independently of the type model: `CycleAlgorithmInst
 
 If validation grows its own notion of what fits while resolution applies a cast, the two paths drift. Validation must therefore *be* resolution: build the whole execution graph at run start, aggregating per-node failures instead of stopping at the first. There is then only one compatibility rule, and it is the one execution actually uses.
 
+### What can leave the configuration layer: context, not subject
+
+A type parameter moves to the execution layer when it is **context the run supplies and most operators ignore**. It stays on the configuration when it is **what the operator is written about**.
+
+By that rule `TSearchSpace` and `TProblem` move, and `TCandidate` and `TSearchState` stay. Every role ends at one of two shapes:
+
+```csharp
+IMutator<TCandidate>                  // and creator, crossover, evaluator, selector, replacer, refiner
+ITerminator<TCandidate, TSearchState> // and interceptor
+```
+
+**Not** the earlier "consumed only may move, produced must stay". That rule was read off the variance annotations, and variance is not what makes the erasure work: the mutator erasure runs through a generic creation method and a type test, not through assignability. Contravariance only decides whether that test also accepts an operator written for a *wider* type — useful, but a separate question from whether the configuration should name the parameter at all.
+
+**Why `TCandidate` stays.**
+
+1. **It is the wiring.** `MultiMutator<TCandidate>` holds `ValueArray<IMutator<TCandidate>>`, and `GeneticAlgorithm<TCandidate>` holds a creator, crossover, mutator and selector that must agree. Erasing `TSearchSpace` kept `TCandidate` as the tie, with declared invariants covering the residue. Erasing `TCandidate` leaves nothing to tie: a permutation mutator would drop into a real vector pipeline with no compile error, moving the most common mistake from build time to run time.
+2. **The erasure ratio inverts.** The search space and problem were worth removing because most operators never read them — `AlmostNoOperatorConstrainsTheProblemTypeArgument` measures exactly that. Every operator reads and returns candidates; `NoChangeMutator<TCandidate>` is generic in the candidate, not agnostic to it.
+3. **There is no execution-time hand-off to move it to.** A search space and a problem arrive as method arguments at execution. Candidate values do not arrive from the run: the creator produces them and they flow between operators.
+4. **The barrier was never the first argument.** `GeneticAlgorithm<RealVector>` reads fine; `GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>` was the friction.
+
+**Why `TSearchState` stays, for both roles.** It is the terminator's and the interceptor's subject, not context they ignore, so reason 2 above applies with full force. An operator that genuinely does not read the state already says so by *not naming* it, through the existing arity ladder — `AfterIterationsTerminator<TCandidate>` derives from `StatefulTerminator<TCandidate, TState>` and reaches `ITerminatorInstance<…, ISearchState>`. That mechanism already solves "I ignore the state" without erasure.
+
+Erasing it from interceptors would be a pure loss: `IInterceptorInstance` is invariant in `TSearchState` because `Transform` returns it, so a run-time type test could only succeed on an exact match — precisely the case the compiler already checks. The algorithm would stop verifying that its interceptor matches its state, and gain nothing.
+
+**On the asymmetry.** Keeping the parameter on both roles makes the two contracts the same shape. What remains different is a capability, not a treatment: `ITerminator` declares `in TSearchState` and so a terminator written for a wider state fits a narrower run, while `IInterceptor` cannot, because it returns the state. That difference is in the shipped library today — the interceptor ladder bottoms out at `Interceptor<TCandidate, TSearchState>` while the terminator ladder reaches `Terminator<TCandidate>` — and it follows from what the two operators do. This migration neither creates it nor can remove it.
+
 ## Decided: the reduction ladder
 
 Execution instances always carry every type argument. The question was how many of them a **configuration** has to name.

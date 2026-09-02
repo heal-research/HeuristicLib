@@ -4,7 +4,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.MachineLearning.Legacy;
 
-public abstract class RegressionProblem<TProblemData, TCandidate, TSearchSpace> : DataAnalysisProblem<TProblemData, TCandidate, TSearchSpace>
+public abstract class RegressionProblem<TSelf, TProblemData, TCandidate, TSearchSpace> : DataAnalysisProblem<TSelf, TProblemData, TCandidate, TSearchSpace>
+  where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
   where TProblemData : RegressionProblemData
   where TSearchSpace : class, ISearchSpace<TCandidate>
 {

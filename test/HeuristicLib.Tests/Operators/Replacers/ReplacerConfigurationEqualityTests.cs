@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Replacers;
@@ -19,7 +20,7 @@ public class ReplacerConfigurationEqualityTests
     {
         var first = new OffsetReplacer(1);
         var second = new OffsetReplacer(2);
-        var children = new List<IReplacer<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var children = new List<IReplacer<int>> { first, second };
         var replacer = new FirstOfReplacer(children);
 
         children.Clear();
@@ -42,8 +43,8 @@ public class ReplacerConfigurationEqualityTests
     [Fact]
     public void ChooseOneReplacer_WithDifferentWeights_IsNotEqual()
     {
-        IReplacer<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[] children = [new OffsetReplacer(1), new OffsetReplacer(2)];
-        var left = new ChooseOneReplacer<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(children) { Weights = [1.0, 2.0] };
+        IReplacer<int>[] children = [new OffsetReplacer(1), new OffsetReplacer(2)];
+        var left = new ChooseOneReplacer<int>(children) { Weights = [1.0, 2.0] };
         var right = left with { Weights = [2.0, 1.0] };
 
         left.ShouldNotBe(right);
@@ -96,20 +97,22 @@ public class ReplacerConfigurationEqualityTests
     }
 
     private sealed record FirstOfReplacer
-        : MultiReplacer<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        : MultiReplacer<int>
     {
-        public FirstOfReplacer(IReadOnlyList<IReplacer<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childReplacers)
+        public FirstOfReplacer(IReadOnlyList<IReplacer<int>> childReplacers)
             : base(childReplacers)
         {
         }
 
-        protected override MultiReplacerInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<IReplacerInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childReplacers) =>
-            new Instance(childReplacers);
+        protected override IReplacerInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IReplacerInstance<int, TRunSearchSpace, TRunProblem>> childReplacers) =>
+            new Instance<TRunSearchSpace, TRunProblem>(childReplacers);
 
-        private sealed class Instance(ImmutableArray<IReplacerInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childReplacers)
-            : MultiReplacerInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childReplacers)
+        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IReplacerInstance<int, TSearchSpace, TProblem>> childReplacers)
+            : MultiReplacerInstance<int, TSearchSpace, TProblem>(childReplacers)
+              where TSearchSpace : class, ISearchSpace<int>
+              where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+            public override IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildReplacers[0].Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
         }
     }

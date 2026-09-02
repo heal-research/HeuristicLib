@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
-public class MultiObjectiveTestFunctionProblem : RealVectorProblem
+public class MultiObjectiveTestFunctionProblem : RealVectorProblem<MultiObjectiveTestFunctionProblem>
 {
     public readonly IMultiObjectiveTestFunction TestFunction;
 

@@ -13,12 +13,12 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public int PopulationSize { get; init; } = GeneticAlgorithmDefaults.PopulationSize;
-    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
-    public required ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; init; }
+    public required ICreator<TCandidate> Creator { get; init; }
+    public required ICrossover<TCandidate> Crossover { get; init; }
     public required IMutator<TCandidate> Mutator { get; init; }
-    public ITerminator<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? Terminator { get; init; }
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = GeneticAlgorithmDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>();
-    public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
+    public ITerminator<TCandidate>? Terminator { get; init; }
+    public IEvaluator<TCandidate> Evaluator { get; init; } = GeneticAlgorithmDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>();
+    public IRefiner<TCandidate>? Refiner { get; init; }
 
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
@@ -37,14 +37,15 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     /// </remarks>
     public double MutationRate { get; init; } = GeneticAlgorithmDefaults.MutationRate;
 
-    public ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; } = GeneticAlgorithmDefaults.Selector<TCandidate, TSearchSpace, TProblem>();
+    public ISelector<TCandidate> Selector { get; init; } = GeneticAlgorithmDefaults.Selector<TCandidate, TSearchSpace, TProblem>();
 
     protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
+        var resolver = instanceRegistry.For<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>();
         var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate);
-        return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover),
-            instanceRegistry.Resolve<TCandidate, TSearchSpace, TProblem>(effectiveMutator), instanceRegistry.Resolve(Selector), instanceRegistry.ResolveOptional(Terminator),
-            instanceRegistry.ResolveOptional(Refiner), PopulationSize, MaximumGenerations, Elites);
+        return new Instance(resolvedInterceptor, resolver.Resolve(Evaluator), resolver.Resolve(Creator), resolver.Resolve(Crossover),
+            resolver.Resolve(effectiveMutator), resolver.Resolve(Selector), resolver.ResolveOptional(Terminator),
+            resolver.ResolveOptional(Refiner), PopulationSize, MaximumGenerations, Elites);
     }
 
     private sealed class Instance(
@@ -110,7 +111,7 @@ public static class GeneticAlgorithm
     /// and falling back to the search space's encoding defaults for every role the problem declines.
     /// </summary>
     /// <remarks>
-    /// The self type on <see cref="IProblemDefaults{TSelf, TCandidate, TSearchSpace}"/> is what lets the concrete
+    /// The self type on <see cref="Problem{TSelf, TCandidate, TSearchSpace}"/> is what lets the concrete
     /// problem type be inferred here, so the result is typed at that problem rather than at <see cref="IProblem{T, TS}"/>.
     /// <para>
     /// Every operator is optional and overrides whatever the defaults would have supplied for that role. Supplying one
@@ -118,20 +119,20 @@ public static class GeneticAlgorithm
     /// </para>
     /// </remarks>
     public static GeneticAlgorithm<TCandidate, TSearchSpace, TProblem> For<TProblem, TCandidate, TSearchSpace>(
-        IProblemDefaults<TProblem, TCandidate, TSearchSpace> problem,
-        ICreator<TCandidate, TSearchSpace, TProblem>? creator = null,
-        ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
+        Problem<TProblem, TCandidate, TSearchSpace> problem,
+        ICreator<TCandidate>? creator = null,
+        ICrossover<TCandidate>? crossover = null,
         IMutator<TCandidate>? mutator = null,
-        ISelector<TCandidate, TSearchSpace, TProblem>? selector = null,
-        IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,
-        IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null,
-        ITerminator<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? terminator = null,
-        IInterceptor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor = null,
+        ISelector<TCandidate>? selector = null,
+        IEvaluator<TCandidate>? evaluator = null,
+        IRefiner<TCandidate>? refiner = null,
+        ITerminator<TCandidate>? terminator = null,
+        IInterceptor<TCandidate>? interceptor = null,
         int populationSize = GeneticAlgorithmDefaults.PopulationSize,
         int? maximumGenerations = null,
         double mutationRate = GeneticAlgorithmDefaults.MutationRate,
         int elites = GeneticAlgorithmDefaults.Elites)
-        where TProblem : class,
+        where TProblem : Problem<TProblem, TCandidate, TSearchSpace>,
                          IProblemDefaultCreator<TProblem, TCandidate, TSearchSpace>,
                          IProblemDefaultCrossover<TProblem, TCandidate, TSearchSpace>,
                          IProblemDefaultMutator<TProblem, TCandidate, TSearchSpace>
@@ -177,14 +178,14 @@ public static class GeneticAlgorithm
     /// </remarks>
     public static GeneticAlgorithm<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> For<TCandidate, TSearchSpace>(
         IEncodingDefaults<TCandidate, TSearchSpace> searchSpace,
-        ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? creator = null,
-        ICrossover<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? crossover = null,
+        ICreator<TCandidate>? creator = null,
+        ICrossover<TCandidate>? crossover = null,
         IMutator<TCandidate>? mutator = null,
-        ISelector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? selector = null,
-        IEvaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? evaluator = null,
-        IRefiner<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? refiner = null,
-        ITerminator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, PopulationState<TCandidate>>? terminator = null,
-        IInterceptor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, PopulationState<TCandidate>>? interceptor = null,
+        ISelector<TCandidate>? selector = null,
+        IEvaluator<TCandidate>? evaluator = null,
+        IRefiner<TCandidate>? refiner = null,
+        ITerminator<TCandidate>? terminator = null,
+        IInterceptor<TCandidate>? interceptor = null,
         int populationSize = GeneticAlgorithmDefaults.PopulationSize,
         int? maximumGenerations = null,
         double mutationRate = GeneticAlgorithmDefaults.MutationRate,
@@ -223,14 +224,14 @@ public static class GeneticAlgorithm
     /// search space should supply the operators.
     /// </remarks>
     public static GeneticAlgorithm<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
-        ICreator<TCandidate, TSearchSpace, TProblem> creator,
-        ICrossover<TCandidate, TSearchSpace, TProblem> crossover,
+        ICreator<TCandidate> creator,
+        ICrossover<TCandidate> crossover,
         IMutator<TCandidate> mutator,
-        ISelector<TCandidate, TSearchSpace, TProblem>? selector = null,
-        IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,
-        IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null,
-        ITerminator<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? terminator = null,
-        IInterceptor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor = null,
+        ISelector<TCandidate>? selector = null,
+        IEvaluator<TCandidate>? evaluator = null,
+        IRefiner<TCandidate>? refiner = null,
+        ITerminator<TCandidate>? terminator = null,
+        IInterceptor<TCandidate>? interceptor = null,
         int populationSize = GeneticAlgorithmDefaults.PopulationSize,
         int? maximumGenerations = null,
         double mutationRate = GeneticAlgorithmDefaults.MutationRate,

@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Mutators;
 
-public class VariableStrengthMutatorTests
+public class AdaptableMutationStrengthTests
 {
     [Fact]
     public void GaussianMutator_KeepsConfiguredStrengthOnConfigurationAndCurrentStrengthOnInstance()
@@ -68,11 +68,16 @@ public class VariableStrengthMutatorTests
         gaussian.MutationStrength.ShouldBe(3.0);
     }
 
-    private static IVariableStrengthMutatorInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> Resolve(GaussianMutator mutator)
-    {
-        var registry = new ExecutionInstanceRegistry();
-        return registry.Resolve<IVariableStrengthMutatorInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>(mutator);
-    }
+    /// <summary>
+    /// Resolved as an ordinary mutator and then tested for the adaptable strength, which is exactly what
+    /// <c>EvolutionStrategy</c> does: the configuration says nothing about adaptation, so the instance is where it is
+    /// discovered.
+    /// </summary>
+    private static IAdaptableMutationStrengthInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> Resolve(GaussianMutator mutator) =>
+        new ExecutionInstanceRegistry()
+            .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>()
+            .Resolve(mutator)
+            .ShouldBeAssignableTo<IAdaptableMutationStrengthInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>()!;
 
     private static FuncProblem<RealVector, BoundedRealVectorSearchSpace> CreateProblem(BoundedRealVectorSearchSpace searchSpace) =>
         FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);

@@ -1,17 +1,21 @@
 using HEAL.HeuristicLib.Operators.MoveAppliers;
 using HEAL.HeuristicLib.Operators.MoveCreators;
 using HEAL.HeuristicLib.Operators.MoveEvaluators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 #region neighborhoods
-public interface INeighborhood<TGenotype, in TSearchSpace, in TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+/// <summary>
+/// The three move operators that make up a neighborhood.
+/// </summary>
+/// <remarks>
+/// It names only the candidate representation and the kind of move, because each of the three operators it exposes
+/// now names only those as well. What the neighborhood was written for is stated on
+/// <see cref="Neighborhood{TCandidate,TSearchSpace,TProblem,TMove}"/>, which is where it is authored.
+/// </remarks>
+public interface INeighborhood<TCandidate, TMove>
 {
-    IMoveCreator<TGenotype, TSearchSpace, TProblem, TMove> MoveCreator { get; }
-    IMoveApplier<TGenotype, TSearchSpace, TProblem, TMove> MoveApplier { get; }
-    IMoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove> MoveEvaluator { get; }
+    IMoveCreator<TCandidate, TMove> MoveCreator { get; }
+    IMoveApplier<TCandidate, TMove> MoveApplier { get; }
+    IMoveEvaluator<TCandidate, TMove> MoveEvaluator { get; }
 }
 #endregion

@@ -5,31 +5,31 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Creators;
 
-public sealed record DurationMeasuringCreator<TCandidate, TSearchSpace, TProblem>
-    : WrappingCreator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record DurationMeasuringCreator<TCandidate>
+    : WrappingCreator<TCandidate>
 {
     public ObservationDuration Duration { get; init; }
     public TimeProvider TimeProvider { get; init; }
 
-    public DurationMeasuringCreator(ICreator<TCandidate, TSearchSpace, TProblem> childCreator, ObservationDuration duration)
+    public DurationMeasuringCreator(ICreator<TCandidate> childCreator, ObservationDuration duration)
         : this(childCreator, duration, TimeProvider.System)
     {
     }
 
-    public DurationMeasuringCreator(ICreator<TCandidate, TSearchSpace, TProblem> childCreator, ObservationDuration duration, TimeProvider timeProvider)
+    public DurationMeasuringCreator(ICreator<TCandidate> childCreator, ObservationDuration duration, TimeProvider timeProvider)
         : base(childCreator)
     {
         Duration = duration;
         TimeProvider = timeProvider;
     }
 
-    protected override WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator) =>
-        new Instance(childCreator, Duration, TimeProvider);
+    protected override ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childCreator) =>
+        new Instance<TRunSearchSpace, TRunProblem>(childCreator, Duration, TimeProvider);
 
-    private sealed class Instance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator, ObservationDuration duration, TimeProvider timeProvider)
+    private sealed class Instance<TSearchSpace, TProblem>(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator, ObservationDuration duration, TimeProvider timeProvider)
         : WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem>(childCreator)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -48,35 +48,31 @@ public sealed record DurationMeasuringCreator<TCandidate, TSearchSpace, TProblem
 
 public static class DurationMeasuringCreator
 {
-    public static DurationMeasuringCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> childCreator, ObservationDuration duration)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static DurationMeasuringCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> childCreator, ObservationDuration duration)
+ =>
         new(childCreator, duration);
 
-    public static DurationMeasuringCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> childCreator, ObservationDuration duration, TimeProvider timeProvider)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static DurationMeasuringCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> childCreator, ObservationDuration duration, TimeProvider timeProvider)
+ =>
         new(childCreator, duration, timeProvider);
 }
 
 public static class CreatorDurationExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(ICreator<TCandidate> creator)
     {
-        public DurationMeasuringCreator<TCandidate, TSearchSpace, TProblem> MeasureCreatorDuration(ObservationDuration duration) => new(creator, duration);
+        public DurationMeasuringCreator<TCandidate> MeasureCreatorDuration(ObservationDuration duration) => new(creator, duration);
 
-        public DurationMeasuringCreator<TCandidate, TSearchSpace, TProblem> MeasureCreatorDuration(ObservationDuration duration, TimeProvider timeProvider) =>
+        public DurationMeasuringCreator<TCandidate> MeasureCreatorDuration(ObservationDuration duration, TimeProvider timeProvider) =>
             new(creator, duration, timeProvider);
 
-        public DurationMeasuringCreator<TCandidate, TSearchSpace, TProblem> MeasureCreatorDuration(out ObservationDuration duration)
+        public DurationMeasuringCreator<TCandidate> MeasureCreatorDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return new(creator, duration);
         }
 
-        public DurationMeasuringCreator<TCandidate, TSearchSpace, TProblem> MeasureCreatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringCreator<TCandidate> MeasureCreatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return new(creator, duration, timeProvider);

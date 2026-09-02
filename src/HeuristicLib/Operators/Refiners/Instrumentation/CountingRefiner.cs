@@ -5,26 +5,26 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Refiners;
 
-public sealed record CountingRefiner<TCandidate, TSearchSpace, TProblem>
-    : WrappingRefiner<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record CountingRefiner<TCandidate>
+    : WrappingRefiner<TCandidate>
 {
     public ObservationCounter Counter { get; init; }
     public OperatorCountMetric Metric { get; init; }
 
-    public CountingRefiner(IRefiner<TCandidate, TSearchSpace, TProblem> childRefiner, ObservationCounter counter, OperatorCountMetric metric)
+    public CountingRefiner(IRefiner<TCandidate> childRefiner, ObservationCounter counter, OperatorCountMetric metric)
         : base(childRefiner)
     {
         Counter = counter;
         Metric = metric;
     }
 
-    protected override WrappingRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner) =>
-        new Instance(childRefiner, Counter, Metric);
+    protected override IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> childRefiner) =>
+        new Instance<TRunSearchSpace, TRunProblem>(childRefiner, Counter, Metric);
 
-    private sealed class Instance(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner, ObservationCounter counter, OperatorCountMetric metric)
+    private sealed class Instance<TSearchSpace, TProblem>(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner, ObservationCounter counter, OperatorCountMetric metric)
         : WrappingRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiner)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -37,29 +37,25 @@ public sealed record CountingRefiner<TCandidate, TSearchSpace, TProblem>
 
 public static class CountingRefiner
 {
-    public static CountingRefiner<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> childRefiner, ObservationCounter counter, OperatorCountMetric metric)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static CountingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> childRefiner, ObservationCounter counter, OperatorCountMetric metric) =>
         new(childRefiner, counter, metric);
 }
 
 public static class RefinerCounterExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IRefiner<TCandidate> refiner)
     {
-        public CountingRefiner<TCandidate, TSearchSpace, TProblem> CountRefinerCalls(ObservationCounter counter) => new(refiner, counter, OperatorCountMetric.Calls);
+        public CountingRefiner<TCandidate> CountRefinerCalls(ObservationCounter counter) => new(refiner, counter, OperatorCountMetric.Calls);
 
-        public CountingRefiner<TCandidate, TSearchSpace, TProblem> CountRefinerCalls(out ObservationCounter counter)
+        public CountingRefiner<TCandidate> CountRefinerCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return refiner.CountRefinerCalls(counter);
         }
 
-        public CountingRefiner<TCandidate, TSearchSpace, TProblem> CountRefinedCandidates(ObservationCounter counter) => new(refiner, counter, OperatorCountMetric.Candidates);
+        public CountingRefiner<TCandidate> CountRefinedCandidates(ObservationCounter counter) => new(refiner, counter, OperatorCountMetric.Candidates);
 
-        public CountingRefiner<TCandidate, TSearchSpace, TProblem> CountRefinedCandidates(out ObservationCounter counter)
+        public CountingRefiner<TCandidate> CountRefinedCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return refiner.CountRefinedCandidates(counter);

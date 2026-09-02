@@ -7,10 +7,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public sealed record LimitEvaluator<TCandidate, TSearchSpace, TProblem>
-    : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record LimitEvaluator<TCandidate>
+    : WrappingEvaluator<TCandidate>
 {
     public int MaxEvaluations { get; init; }
 
@@ -26,17 +24,19 @@ public sealed record LimitEvaluator<TCandidate, TSearchSpace, TProblem>
     /// </summary>
     public bool EnforceLimitWithinBatch { get; init; }
 
-    public LimitEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations)
+    public LimitEvaluator(IEvaluator<TCandidate> childEvaluator, int maxEvaluations)
         : base(childEvaluator)
     {
         MaxEvaluations = maxEvaluations;
     }
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
-        new Instance(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch);
+    protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
+        new Instance<TRunSearchSpace, TRunProblem>(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch);
 
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch)
+    private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch)
         : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         private readonly ObservationCounter counter = new();
 
@@ -70,11 +70,9 @@ public sealed record LimitEvaluator<TCandidate, TSearchSpace, TProblem>
 
 public static class LimitEvaluatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
     {
-        public LimitEvaluator<TCandidate, TSearchSpace, TProblem> LimitEvaluations(int maxEvaluations, ObjectiveVector? fallbackObjectiveVector = null, bool enforceLimitWithinBatch = false)
+        public LimitEvaluator<TCandidate> LimitEvaluations(int maxEvaluations, ObjectiveVector? fallbackObjectiveVector = null, bool enforceLimitWithinBatch = false)
         {
             return new(evaluator, maxEvaluations) { FallbackObjectiveVector = fallbackObjectiveVector, EnforceLimitWithinBatch = enforceLimitWithinBatch };
         }

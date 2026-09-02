@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -51,10 +50,13 @@ public class HillClimberTests
     private static int StateCandidate(SingleSolutionState<int> state) => state.EvaluatedCandidate.Candidate;
 
     private sealed record ConstantCreator(int Value)
-      : ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>,
+      : ICreator<int>,
         ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+        public ICreatorInstance<int, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+            where TRunSearchSpace : class, ISearchSpace<int>
+            where TRunProblem : class, IProblem<int, TRunSearchSpace> =>
+            (ICreatorInstance<int, TRunSearchSpace, TRunProblem>)(object)this;
 
         public IReadOnlyList<int> Create(
           int count,

@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Creators;
@@ -37,7 +38,7 @@ public class CreatorConfigurationEqualityTests
     {
         var first = new ConstantCreator(1);
         var second = new ConstantCreator(2);
-        var childCreators = new List<ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var childCreators = new List<ICreator<int>> { first, second };
         var creator = new FirstOfCreator(childCreators);
 
         childCreators.Clear();
@@ -85,9 +86,9 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void ChooseOneCreator_WithDifferentWeights_IsNotEqual()
     {
-        ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[] childCreators = [new ConstantCreator(1), new ConstantCreator(2)];
-        var left = new ChooseOneCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCreators) { Weights = [1.0, 2.0] };
-        var right = new ChooseOneCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCreators) { Weights = [2.0, 1.0] };
+        ICreator<int>[] childCreators = [new ConstantCreator(1), new ConstantCreator(2)];
+        var left = new ChooseOneCreator<int>(childCreators) { Weights = [1.0, 2.0] };
+        var right = new ChooseOneCreator<int>(childCreators) { Weights = [2.0, 1.0] };
 
         left.ShouldNotBe(right);
     }
@@ -99,9 +100,9 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void ChooseOneCreator_WithOmittedWeights_IsNotEqualToExplicitUniformWeights()
     {
-        ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[] childCreators = [new ConstantCreator(1), new ConstantCreator(2)];
-        var omitted = new ChooseOneCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCreators);
-        var explicitUniform = new ChooseOneCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCreators) { Weights = [0.5, 0.5] };
+        ICreator<int>[] childCreators = [new ConstantCreator(1), new ConstantCreator(2)];
+        var omitted = new ChooseOneCreator<int>(childCreators);
+        var explicitUniform = new ChooseOneCreator<int>(childCreators) { Weights = [0.5, 0.5] };
 
         omitted.Weights.ShouldBeEmpty();
         omitted.ShouldNotBe(explicitUniform);
@@ -312,20 +313,22 @@ public class CreatorConfigurationEqualityTests
     }
 
     private sealed record FirstOfCreator
-        : MultiCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        : MultiCreator<int>
     {
-        public FirstOfCreator(IReadOnlyList<ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCreators)
+        public FirstOfCreator(IReadOnlyList<ICreator<int>> childCreators)
             : base(childCreators)
         {
         }
 
-        protected override MultiCreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCreators) =>
-            new Instance(childCreators);
+        protected override ICreatorInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICreatorInstance<int, TRunSearchSpace, TRunProblem>> childCreators) =>
+            new Instance<TRunSearchSpace, TRunProblem>(childCreators);
 
-        private sealed class Instance(ImmutableArray<ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCreators)
-            : MultiCreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCreators)
+        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ICreatorInstance<int, TSearchSpace, TProblem>> childCreators)
+            : MultiCreatorInstance<int, TSearchSpace, TProblem>(childCreators)
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<int> Create(int count, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+            public override IReadOnlyList<int> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildCreators[0].Create(count, random, searchSpace, problem);
         }
     }

@@ -141,11 +141,12 @@ public class AutoEcPaperScenarioTests
         double.IsFinite(bbcpResult.Performance).ShouldBeTrue();
     }
 
-    private static async Task<TSearchState> RunUntilEpochChanges<TCandidate, TSearchSpace, TSearchState>(
+    private static async Task<TSearchState> RunUntilEpochChanges<TProblem, TCandidate, TSearchSpace, TSearchState>(
         IAsyncEnumerable<TSearchState> stream,
-        DynamicProblem<TCandidate, TSearchSpace> problem,
+        DynamicProblem<TProblem, TCandidate, TSearchSpace> problem,
         int epochChanges,
         CancellationToken cancellationToken)
+        where TProblem : HEAL.HeuristicLib.Problems.Problem<TProblem, TCandidate, TSearchSpace>
         where TSearchSpace : class, HEAL.HeuristicLib.SearchSpaces.ISearchSpace<TCandidate>
         where TSearchState : class
     {
@@ -212,7 +213,7 @@ public class AutoEcPaperScenarioTests
     private static GeneticAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>
         CreatePermutationGa(
             ActivatedTravelingSalesmanProblem problem,
-            IEvaluator<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem> evaluator,
+            IEvaluator<Permutation> evaluator,
             CompositeGenotype<RealVector, IntegerVector> hyperParameters)
     {
         return new GeneticAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>
@@ -230,7 +231,7 @@ public class AutoEcPaperScenarioTests
 
     private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem> CreateGa(
         MovingPeaksProblem problem,
-        IEvaluator<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem> evaluator,
+        IEvaluator<RealVector> evaluator,
         CompositeGenotype<RealVector, IntegerVector> hyperParameters)
     {
         return new GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>

@@ -5,21 +5,21 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public sealed record PipelineRefiner<TCandidate, TSearchSpace, TProblem>
-    : MultiRefiner<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record PipelineRefiner<TCandidate>
+    : MultiRefiner<TCandidate>
 {
-    public PipelineRefiner(IReadOnlyList<IRefiner<TCandidate, TSearchSpace, TProblem>> childRefiners)
+    public PipelineRefiner(IReadOnlyList<IRefiner<TCandidate>> childRefiners)
         : base(childRefiners)
     {
     }
 
-    protected override MultiRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners) =>
-        new Instance(childRefiners);
+    protected override IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem>> childRefiners) =>
+        new Instance<TRunSearchSpace, TRunProblem>(childRefiners);
 
-    private sealed class Instance(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners)
+    private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners)
         : MultiRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiners)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -36,18 +36,14 @@ public sealed record PipelineRefiner<TCandidate, TSearchSpace, TProblem>
 
 public static class PipelineRefiner
 {
-    public static PipelineRefiner<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<IRefiner<TCandidate, TSearchSpace, TProblem>> childRefiners)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(childRefiners);
+    public static PipelineRefiner<TCandidate> Create<TCandidate>(params IReadOnlyList<IRefiner<TCandidate>> childRefiners) => new(childRefiners);
 }
 
 public static class PipelineRefinerExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IRefiner<TCandidate> refiner)
     {
-        public PipelineRefiner<TCandidate, TSearchSpace, TProblem> Then(params IReadOnlyList<IRefiner<TCandidate, TSearchSpace, TProblem>> followingRefiners) =>
+        public PipelineRefiner<TCandidate> Then(params IReadOnlyList<IRefiner<TCandidate>> followingRefiners) =>
             PipelineRefiner.Create([refiner, .. followingRefiners]);
     }
 }

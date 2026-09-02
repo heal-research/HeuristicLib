@@ -6,25 +6,25 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-public sealed record CountingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : WrappingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
+public sealed record CountingInterceptor<TCandidate>
+    : WrappingInterceptor<TCandidate>
 {
     public ObservationCounter Counter { get; init; }
 
-    public CountingInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, ObservationCounter counter)
+    public CountingInterceptor(IInterceptor<TCandidate> childInterceptor, ObservationCounter counter)
         : base(childInterceptor)
     {
         Counter = counter;
     }
 
-    protected override WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor) =>
-        new Instance(childInterceptor, Counter);
+    protected override IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childInterceptor) =>
+        new Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor, Counter);
 
-    private sealed class Instance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, ObservationCounter counter)
+    private sealed class Instance<TSearchSpace, TProblem, TSearchState>(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, ObservationCounter counter)
         : WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptor)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
     {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -37,23 +37,17 @@ public sealed record CountingInterceptor<TCandidate, TSearchSpace, TProblem, TSe
 
 public static class CountingInterceptor
 {
-    public static CountingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, ObservationCounter counter)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState =>
+    public static CountingInterceptor<TCandidate> Create<TCandidate>(IInterceptor<TCandidate> childInterceptor, ObservationCounter counter) =>
         new(childInterceptor, counter);
 }
 
 public static class InterceptorCounterExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState
+    extension<TCandidate>(IInterceptor<TCandidate> interceptor)
     {
-        public CountingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> CountInterceptorCalls(ObservationCounter counter) => new(interceptor, counter);
+        public CountingInterceptor<TCandidate> CountInterceptorCalls(ObservationCounter counter) => new(interceptor, counter);
 
-        public CountingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> CountInterceptorCalls(out ObservationCounter counter)
+        public CountingInterceptor<TCandidate> CountInterceptorCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return interceptor.CountInterceptorCalls(counter);

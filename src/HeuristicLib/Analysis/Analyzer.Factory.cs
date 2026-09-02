@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Analysis;
 
 public static class Analyzer
 {
-    public static BestMedianWorstAnalysis<T, TS, TP, TR> BestMedianWorst<T, TS, TP, TR>(params IReadOnlyList<IInterceptor<T, TS, TP, TR>> interceptors)
+    public static BestMedianWorstAnalysis<T, TS, TP, TR> BestMedianWorst<T, TS, TP, TR>(params IReadOnlyList<IInterceptor<T>> interceptors)
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
         where TR : PopulationState<T>
@@ -30,7 +30,7 @@ public static class Analyzer
         return new() { Algorithms = algorithms.ToValueArray() };
     }
 
-    public static BestMedianWorstPerEvaluationAnalysis<T, TS, TP, TR> BestMedianWorstPerEvaluation<T, TS, TP, TR>(IEvaluator<T, TS, TP>[] evaluators, IInterceptor<T, TS, TP, TR>[] interceptors)
+    public static BestMedianWorstPerEvaluationAnalysis<T, TS, TP, TR> BestMedianWorstPerEvaluation<T, TS, TP, TR>(IEvaluator<T>[] evaluators, IInterceptor<T>[] interceptors)
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
         where TR : PopulationState<T>
@@ -38,7 +38,7 @@ public static class Analyzer
         return new(evaluators, interceptors);
     }
 
-    public static BestQualityAlgorithmAnalysis<T, TS, TP> BestQuality<T, TS, TP>(params IEvaluator<T, TS, TP>[] evaluators)
+    public static BestQualityAlgorithmAnalysis<T, TS, TP> BestQuality<T, TS, TP>(params IEvaluator<T>[] evaluators)
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
     {

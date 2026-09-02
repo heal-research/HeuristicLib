@@ -31,7 +31,7 @@ public class ExtendedSymbolicRegressionProblem(
     ObjectiveDirections objective,
     ExpressionTreeSearchSpace searchSpace,
     Func<ExpressionTree, ObjectiveVector, double[]> individualPythonCallback)
-    : SingleSolutionProblem<ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
+    : SingleSolutionProblem<ExtendedSymbolicRegressionProblem, ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
 {
     private sealed record InnerProblemParameterFittingRefiner(NumericParameterFittingRefiner ChildRefiner)
         : SingleCandidateRefiner<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>

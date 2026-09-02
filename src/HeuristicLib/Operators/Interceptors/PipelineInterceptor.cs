@@ -6,22 +6,22 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public sealed record PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : MultiInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchState : class, ISearchState
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record PipelineInterceptor<TCandidate>
+    : MultiInterceptor<TCandidate>
 {
-    public PipelineInterceptor(IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
+    public PipelineInterceptor(IReadOnlyList<IInterceptor<TCandidate>> childInterceptors)
         : base(childInterceptors)
     {
     }
 
-    protected override MultiInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ImmutableArray<IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors) =>
-        new Instance(childInterceptors);
+    protected override IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CombineExecutionInstances<TRunSearchSpace, TRunProblem, TRunSearchState>(ImmutableArray<IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> childInterceptors) =>
+        new Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptors);
 
-    private sealed class Instance(ImmutableArray<IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
+    private sealed class Instance<TSearchSpace, TProblem, TSearchState>(ImmutableArray<IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
         : MultiInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptors)
+          where TSearchSpace : class, ISearchSpace<TCandidate>
+          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
     {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -38,20 +38,15 @@ public sealed record PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSe
 
 public static class PipelineInterceptor
 {
-    public static PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(params IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
-        where TSearchState : class, ISearchState
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(childInterceptors);
+    public static PipelineInterceptor<TCandidate> Create<TCandidate>(params IReadOnlyList<IInterceptor<TCandidate>> childInterceptors) =>
+        new(childInterceptors);
 }
 
 public static class PipelineInterceptorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor)
-        where TSearchState : class, ISearchState
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IInterceptor<TCandidate> interceptor)
     {
-        public PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Then(params IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> followingInterceptors) =>
+        public PipelineInterceptor<TCandidate> Then(params IReadOnlyList<IInterceptor<TCandidate>> followingInterceptors) =>
             PipelineInterceptor.Create([interceptor, .. followingInterceptors]);
     }
 }

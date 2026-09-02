@@ -12,11 +12,22 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 /// Use <see cref="StatefulSelector{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
 /// </remarks>
 public abstract record Selector<TCandidate, TSearchSpace, TProblem>
-    : ISelector<TCandidate, TSearchSpace, TProblem>
+    : ISelector<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public abstract ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+
+    ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> ISelector<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        if (CreateExecutionInstance(instanceRegistry) is not ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> instance)
+        {
+            throw new InvalidOperationException(
+                $"{GetType().Name} is written for {typeof(TSearchSpace).Name} and {typeof(TProblem).Name}, and cannot run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name}.");
+        }
+
+        return instance;
+    }
 }
 
 public abstract record Selector<TCandidate, TSearchSpace>

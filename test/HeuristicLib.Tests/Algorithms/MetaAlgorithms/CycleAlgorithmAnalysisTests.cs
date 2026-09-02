@@ -108,11 +108,11 @@ public class CycleAlgorithmAnalysisTests
     {
         public int Candidate { get; }
 
-        public IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator { get; }
+        public IEvaluator<int> Evaluator { get; }
 
-        public IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; }
+        public IInterceptor<int> Interceptor { get; }
 
-        public SingleStepAlgorithm(int candidate, IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor)
+        public SingleStepAlgorithm(int candidate, IEvaluator<int> evaluator, IInterceptor<int> interceptor)
         {
             Candidate = candidate;
             Interceptor = interceptor;
@@ -120,7 +120,7 @@ public class CycleAlgorithmAnalysisTests
         }
 
         public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-            new Instance(instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Interceptor), Candidate);
+            new Instance(instanceRegistry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Evaluator), instanceRegistry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(Interceptor), Candidate);
 
         private sealed class Instance(IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor, int candidate)
             : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
@@ -144,14 +144,14 @@ public class CycleAlgorithmAnalysisTests
         }
     }
 
-    private sealed record EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator)
+    private sealed record EvaluationTraceAnalysis(IEvaluator<int> Evaluator)
         : Analyzer<EvaluationTraceAnalysis.ExecutionState>
     {
         public override ExecutionState CreateInitialResult() => new();
 
         public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
         {
-            observations.Observe(Evaluator, (objectiveVectors, _, _, _) => result.RecordObjectiveValues(objectiveVectors));
+            observations.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Evaluator, (objectiveVectors, _, _, _) => result.RecordObjectiveValues(objectiveVectors));
         }
 
         public sealed class ExecutionState

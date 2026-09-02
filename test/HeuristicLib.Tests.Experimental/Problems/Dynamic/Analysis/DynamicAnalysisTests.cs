@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -60,7 +61,7 @@ public class DynamicAnalysisTests
         public bool Contains(int candidate) => true;
     }
 
-    private sealed class IntegerDynamicProblem : DynamicProblem<int, IntegerSearchSpace>
+    private sealed class IntegerDynamicProblem : DynamicProblem<IntegerDynamicProblem, int, IntegerSearchSpace>
     {
         public IntegerDynamicProblem(int epochLength)
             : base(SingleObjective.Minimize, new IntegerSearchSpace(), RandomNumberGenerator.Create(0),
@@ -86,11 +87,11 @@ public class DynamicAnalysisTests
     private sealed record BatchEvaluationAlgorithm(IReadOnlyList<IReadOnlyList<int>> Batches)
         : Algorithm<BatchEvaluationAlgorithm, int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
     {
-        public IEvaluator<int, IntegerSearchSpace, IntegerDynamicProblem> Evaluator { get; } = new ProblemEvaluator();
+        public IEvaluator<int> Evaluator { get; } = new ProblemEvaluator();
 
         public override AlgorithmInstance<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
             CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-            new Instance(instanceRegistry.Resolve(Evaluator), Batches);
+            new Instance(instanceRegistry.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(Evaluator), Batches);
 
         private sealed class Instance(
             IEvaluatorInstance<int, IntegerSearchSpace, IntegerDynamicProblem> evaluator,

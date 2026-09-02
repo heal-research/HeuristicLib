@@ -22,13 +22,13 @@ public static class GeneticAlgorithmDefaults
 
     public const int TournamentSize = 2;
 
-    public static ISelector<TCandidate, TSearchSpace, TProblem> Selector<TCandidate, TSearchSpace, TProblem>()
+    public static ISelector<TCandidate> Selector<TCandidate, TSearchSpace, TProblem>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new TournamentSelector<TCandidate>(TournamentSize);
 
-    public static IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator<TCandidate, TSearchSpace, TProblem>()
+    public static IEvaluator<TCandidate> Evaluator<TCandidate, TSearchSpace, TProblem>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+        new ProblemEvaluator<TCandidate>();
 }

@@ -12,11 +12,22 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 /// Use <see cref="StatefulEvaluator{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
 /// </remarks>
 public abstract record Evaluator<TCandidate, TSearchSpace, TProblem>
-    : IEvaluator<TCandidate, TSearchSpace, TProblem>
+    : IEvaluator<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public abstract IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+
+    IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> IEvaluator<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        if (CreateExecutionInstance(instanceRegistry) is not IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> instance)
+        {
+            throw new InvalidOperationException(
+                $"{GetType().Name} is written for {typeof(TSearchSpace).Name} and {typeof(TProblem).Name}, and cannot run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name}.");
+        }
+
+        return instance;
+    }
 }
 
 public abstract record Evaluator<TCandidate, TSearchSpace>
