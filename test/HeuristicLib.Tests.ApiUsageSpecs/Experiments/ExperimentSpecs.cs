@@ -104,7 +104,7 @@ public class ExperimentSpecs
 
     private static TestFunctionProblem CreateRastriginProblem(int dimension) => new(new RastriginFunction(dimension));
 
-    private static HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateSimpleHillClimber(TestFunctionProblem problem) => new()
+    private static HillClimber<RealVector> CreateSimpleHillClimber(TestFunctionProblem problem) => new()
     {
         Creator = new UniformDistributedCreator(problem.SearchSpace),
         Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),

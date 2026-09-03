@@ -13,10 +13,8 @@ public record AlpsState<TCandidate> : SearchState
     public required ImmutableArray<ImmutableArray<int>> Ages { get; init; }
 }
 
-public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
-    : IterativeAlgorithm<AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record AlpsGeneticAlgorithm<TCandidate>
+    : IterativeAlgorithm<AlpsGeneticAlgorithm<TCandidate>, TCandidate, AlpsState<TCandidate>>
 {
     public required int PopulationSize { get; init; }
     public required ICreator<TCandidate> Creator { get; init; }
@@ -43,15 +41,15 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     /// </remarks>
     public double MutationRate { get; init; } = 0.1;
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>? resolvedInterceptor)
+    protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>>? resolvedInterceptor)
     {
-        var resolver = instanceRegistry.For<TCandidate, TSearchSpace, TProblem>();
+        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem>();
         var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate);
-        return new Instance(resolvedInterceptor, resolver.Resolve(Evaluator), resolver.Resolve(Creator), resolver.Resolve(Crossover),
+        return new Instance<TRunSearchSpace, TRunProblem>(resolvedInterceptor, resolver.Resolve(Evaluator), resolver.Resolve(Creator), resolver.Resolve(Crossover),
             resolver.Resolve(effectiveMutator), resolver.Resolve(Selector), resolver.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations);
     }
 
-    private sealed class Instance(
+    private sealed class Instance<TSearchSpace, TProblem>(
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>? interceptor,
         IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
         ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
@@ -63,6 +61,8 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
         int elites,
         int? maximumGenerations)
         : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>(interceptor)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         protected override bool HasCompleted(int yieldedStateCount, AlpsState<TCandidate>? previousState, TProblem problem) =>
             maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;

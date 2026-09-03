@@ -10,7 +10,7 @@ public sealed class SymbolicRegressionProblemTests
     {
         var inputs = DataFrame.FromMatrix(
             ["x0"],
-            new double[,]
+            new[,]
             {
                 { 1.0 },
                 { 2.0 }
@@ -45,7 +45,7 @@ public sealed class SymbolicRegressionProblemTests
     public void Constructor_RejectsMissingSearchSpaceVariable()
     {
         var data = new RegressionData(
-            DataFrame.FromMatrix(["x0"], new double[,] { { 1.0 } }),
+            DataFrame.FromMatrix(["x0"], new[,] { { 1.0 } }),
             new Series<double>("y", [1.0]));
 
         Should.Throw<ArgumentException>(() =>
@@ -131,7 +131,7 @@ public sealed class SymbolicRegressionProblemTests
         var data = new RegressionData(
             DataFrame.FromMatrix(
                 ["x0"],
-                new double[,]
+                new[,]
                 {
                     { 1.0 },
                     { 2.0 },
@@ -160,7 +160,7 @@ public sealed class SymbolicRegressionProblemTests
         var data = new RegressionData(
             DataFrame.FromMatrix(
                 ["x0"],
-                new double[,]
+                new[,]
                 {
                     { 1.0 },
                     { 2.0 },
@@ -206,7 +206,7 @@ public sealed class SymbolicRegressionProblemTests
         var symbol = new CountingConstantSymbol();
         var expression = new ExpressionTree(new PayloadlessTerminalExpressionNode(symbol));
         var data = new RegressionData(
-            DataFrame.FromMatrix(["x0"], new double[,] { { 1.0 }, { 2.0 } }),
+            DataFrame.FromMatrix(["x0"], new[,] { { 1.0 }, { 2.0 } }),
             new Series<double>("y", [1.0, 1.0]));
         var problem = new SymbolicRegressionProblem(
             data,
@@ -247,13 +247,13 @@ public sealed class SymbolicRegressionProblemTests
     public void ValidationPrediction_IsPerformedThroughPredictorAndMetric()
     {
         var predictor = new BoundedRegressor(
-            new SymbolicRegressor(CreateLinearExpression(), "prediction"),
+            new SymbolicRegressor(CreateLinearExpression()),
             double.NegativeInfinity,
             double.PositiveInfinity);
         var validation = new RegressionData(
             DataFrame.FromMatrix(
                 ["x0", "x1"],
-                new double[,]
+                new[,]
                 {
                     { 4.0, 6.0 },
                     { 5.0, 7.0 }
@@ -290,7 +290,7 @@ public sealed class SymbolicRegressionProblemTests
         new(
             DataFrame.FromMatrix(
                 ["x0", "x1"],
-                new double[,]
+                new[,]
                 {
                     { 1.0, 3.0 },
                     { 2.0, 4.0 },

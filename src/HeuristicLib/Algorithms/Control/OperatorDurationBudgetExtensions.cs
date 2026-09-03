@@ -9,19 +9,15 @@ using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
 public static class OperatorDurationBudgetExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator> WithMaxOperatorDuration<TOperator>(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperator> WithMaxOperatorDuration<TOperator>(
             TOperator observedOperator,
             TimeSpan maximumDuration,
             Func<TOperator, ObservationDuration, TimeProvider, TOperator> measuredOperatorFactory)
@@ -34,7 +30,7 @@ public static class OperatorDurationBudgetExtensions
                 measuredOperatorFactory);
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator> WithMaxOperatorDuration<TOperator>(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperator> WithMaxOperatorDuration<TOperator>(
             TOperator observedOperator,
             TimeSpan maximumDuration,
             TimeProvider timeProvider,
@@ -52,19 +48,17 @@ public static class OperatorDurationBudgetExtensions
         }
     }
 
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IEvaluator<TCandidate>> WithMaxEvaluatorDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IEvaluator<TCandidate>> WithMaxEvaluatorDuration(
             IEvaluator<TCandidate> evaluator,
             TimeSpan maximumDuration)
         {
             return algorithm.WithMaxEvaluatorDuration(evaluator, maximumDuration, TimeProvider.System);
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IEvaluator<TCandidate>> WithMaxEvaluatorDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IEvaluator<TCandidate>> WithMaxEvaluatorDuration(
             IEvaluator<TCandidate> evaluator,
             TimeSpan maximumDuration,
             TimeProvider timeProvider)
@@ -77,14 +71,14 @@ public static class OperatorDurationBudgetExtensions
                     observedOperator.MeasureEvaluatorDuration(duration, timeProvider));
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ICreator<TCandidate>> WithMaxCreatorDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ICreator<TCandidate>> WithMaxCreatorDuration(
             ICreator<TCandidate> creator,
             TimeSpan maximumDuration)
         {
             return algorithm.WithMaxCreatorDuration(creator, maximumDuration, TimeProvider.System);
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ICreator<TCandidate>> WithMaxCreatorDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ICreator<TCandidate>> WithMaxCreatorDuration(
             ICreator<TCandidate> creator,
             TimeSpan maximumDuration,
             TimeProvider timeProvider)
@@ -97,14 +91,14 @@ public static class OperatorDurationBudgetExtensions
                     observedOperator.MeasureCreatorDuration(duration, timeProvider));
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ICrossover<TCandidate>> WithMaxCrossoverDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ICrossover<TCandidate>> WithMaxCrossoverDuration(
             ICrossover<TCandidate> crossover,
             TimeSpan maximumDuration)
         {
             return algorithm.WithMaxCrossoverDuration(crossover, maximumDuration, TimeProvider.System);
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ICrossover<TCandidate>> WithMaxCrossoverDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ICrossover<TCandidate>> WithMaxCrossoverDuration(
             ICrossover<TCandidate> crossover,
             TimeSpan maximumDuration,
             TimeProvider timeProvider)
@@ -117,14 +111,14 @@ public static class OperatorDurationBudgetExtensions
                     observedOperator.MeasureCrossoverDuration(duration, timeProvider));
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IMutator<TCandidate>> WithMaxMutatorDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IMutator<TCandidate>> WithMaxMutatorDuration(
             IMutator<TCandidate> mutator,
             TimeSpan maximumDuration)
         {
             return algorithm.WithMaxMutatorDuration(mutator, maximumDuration, TimeProvider.System);
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IMutator<TCandidate>> WithMaxMutatorDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IMutator<TCandidate>> WithMaxMutatorDuration(
             IMutator<TCandidate> mutator,
             TimeSpan maximumDuration,
             TimeProvider timeProvider)
@@ -137,14 +131,14 @@ public static class OperatorDurationBudgetExtensions
                     observedOperator.MeasureMutatorDuration(duration, timeProvider));
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IRefiner<TCandidate>> WithMaxRefinerDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IRefiner<TCandidate>> WithMaxRefinerDuration(
             IRefiner<TCandidate> refiner,
             TimeSpan maximumDuration)
         {
             return algorithm.WithMaxRefinerDuration(refiner, maximumDuration, TimeProvider.System);
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IRefiner<TCandidate>> WithMaxRefinerDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IRefiner<TCandidate>> WithMaxRefinerDuration(
             IRefiner<TCandidate> refiner,
             TimeSpan maximumDuration,
             TimeProvider timeProvider)
@@ -157,14 +151,14 @@ public static class OperatorDurationBudgetExtensions
                     observedOperator.MeasureRefinerDuration(duration, timeProvider));
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ISelector<TCandidate>> WithMaxSelectorDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ISelector<TCandidate>> WithMaxSelectorDuration(
             ISelector<TCandidate> selector,
             TimeSpan maximumDuration)
         {
             return algorithm.WithMaxSelectorDuration(selector, maximumDuration, TimeProvider.System);
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ISelector<TCandidate>> WithMaxSelectorDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ISelector<TCandidate>> WithMaxSelectorDuration(
             ISelector<TCandidate> selector,
             TimeSpan maximumDuration,
             TimeProvider timeProvider)
@@ -177,14 +171,14 @@ public static class OperatorDurationBudgetExtensions
                     observedOperator.MeasureSelectorDuration(duration, timeProvider));
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IReplacer<TCandidate>> WithMaxReplacerDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IReplacer<TCandidate>> WithMaxReplacerDuration(
             IReplacer<TCandidate> replacer,
             TimeSpan maximumDuration)
         {
             return algorithm.WithMaxReplacerDuration(replacer, maximumDuration, TimeProvider.System);
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IReplacer<TCandidate>> WithMaxReplacerDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IReplacer<TCandidate>> WithMaxReplacerDuration(
             IReplacer<TCandidate> replacer,
             TimeSpan maximumDuration,
             TimeProvider timeProvider)
@@ -197,14 +191,14 @@ public static class OperatorDurationBudgetExtensions
                     observedOperator.MeasureReplacerDuration(duration, timeProvider));
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IInterceptor<TCandidate>> WithMaxInterceptorDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IInterceptor<TCandidate>> WithMaxInterceptorDuration(
             IInterceptor<TCandidate> interceptor,
             TimeSpan maximumDuration)
         {
             return algorithm.WithMaxInterceptorDuration(interceptor, maximumDuration, TimeProvider.System);
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IInterceptor<TCandidate>> WithMaxInterceptorDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IInterceptor<TCandidate>> WithMaxInterceptorDuration(
             IInterceptor<TCandidate> interceptor,
             TimeSpan maximumDuration,
             TimeProvider timeProvider)
@@ -217,14 +211,14 @@ public static class OperatorDurationBudgetExtensions
                     observedOperator.MeasureInterceptorDuration(duration, timeProvider));
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ITerminator<TCandidate>> WithMaxTerminatorDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ITerminator<TCandidate>> WithMaxTerminatorDuration(
             ITerminator<TCandidate> terminator,
             TimeSpan maximumDuration)
         {
             return algorithm.WithMaxTerminatorDuration(terminator, maximumDuration, TimeProvider.System);
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ITerminator<TCandidate>> WithMaxTerminatorDuration(
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ITerminator<TCandidate>> WithMaxTerminatorDuration(
             ITerminator<TCandidate> terminator,
             TimeSpan maximumDuration,
             TimeProvider timeProvider)

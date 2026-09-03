@@ -126,7 +126,7 @@ public class SearchSpaceCompatibilityTests
     [Fact]
     public void InvariantsDescribeTheCandidatesTheyName()
     {
-        var twoOfFour = BoolVector.Create([true, false, true, false]);
+        var twoOfFour = BoolVector.Create(true, false, true, false);
 
         new BoolVectorLength(4).IsSatisfiedBy(twoOfFour).ShouldBeTrue();
         new BoolVectorLength(3).IsSatisfiedBy(twoOfFour).ShouldBeFalse();
@@ -145,8 +145,8 @@ public class SearchSpaceCompatibilityTests
         var ensuresBoth = new Declared([typeof(BoolVectorLength), typeof(BoolVectorCardinality)], []);
         var ensuresLengthOnly = new Declared([typeof(BoolVectorLength)], [new BoolVectorMinimumSetElements(2)]);
 
-        InvariantContractComposition.Ensures<BoolVector>([ensuresBoth, ensuresLengthOnly], new BoolVectorLength(4)).ShouldBe(true);
-        InvariantContractComposition.Ensures<BoolVector>([ensuresBoth, ensuresLengthOnly], new BoolVectorCardinality(2)).ShouldBe(false);
+        InvariantContractComposition.Ensures([ensuresBoth, ensuresLengthOnly], new BoolVectorLength(4)).ShouldBe(true);
+        InvariantContractComposition.Ensures([ensuresBoth, ensuresLengthOnly], new BoolVectorCardinality(2)).ShouldBe(false);
         InvariantContractComposition.RequiredInputInvariants<BoolVector>([ensuresBoth, ensuresLengthOnly]).ShouldBe([new BoolVectorMinimumSetElements(2)]);
     }
 
@@ -160,9 +160,9 @@ public class SearchSpaceCompatibilityTests
         var silent = new Declared([], [], opinionated: false);
         var ensuresLength = new Declared([typeof(BoolVectorLength)], []);
 
-        InvariantContractComposition.Ensures<BoolVector>([silent, silent], new BoolVectorLength(4)).ShouldBeNull();
-        InvariantContractComposition.Ensures<BoolVector>([silent, ensuresLength], new BoolVectorLength(4)).ShouldBeNull();
-        InvariantContractComposition.Ensures<BoolVector>([ensuresLength, ensuresLength], new BoolVectorLength(4)).ShouldBe(true);
+        InvariantContractComposition.Ensures([silent, silent], new BoolVectorLength(4)).ShouldBeNull();
+        InvariantContractComposition.Ensures([silent, ensuresLength], new BoolVectorLength(4)).ShouldBeNull();
+        InvariantContractComposition.Ensures([ensuresLength, ensuresLength], new BoolVectorLength(4)).ShouldBe(true);
     }
 
     private sealed record NoInvariantSpace : SearchSpace<BoolVector>

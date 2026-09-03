@@ -156,7 +156,7 @@ public class RefinerCompositionTests
     public void ObservableRefiner_DoesNotInvokeObserversWhenRefinementThrows()
     {
         var observed = 0;
-        var instance = new ThrowingRefiner().ObserveWith((IReadOnlyList<int> _) => observed++).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
+        var instance = new ThrowingRefiner().ObserveWith(_ => observed++).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
 
         Should.Throw<InvalidOperationException>(() => Refine(instance, 3));
 

@@ -98,7 +98,7 @@ public class AlgorithmAuthoringSpecs
 
         var registry = new ExecutionInstanceRegistry();
 
-        _ = registry.Resolve(algorithm);
+        _ = registry.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(algorithm);
 
         creator.ExecutionInstancesCreated.ShouldBe(1);
         evaluator.ExecutionInstancesCreated.ShouldBe(1);
@@ -118,7 +118,7 @@ public class AlgorithmAuthoringSpecs
     {
         var algorithm = new SingleCreateAlgorithm { Creator = new CountingCreator() };
 
-        var instance = algorithm.CreateExecutionInstance(new ExecutionInstanceRegistry());
+        var instance = algorithm.CreateExecutionInstance<BoundedRealVectorSearchSpace, TestFunctionProblem>(new ExecutionInstanceRegistry());
 
         instance.ShouldBeAssignableTo<IterativeAlgorithmInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>();
         typeof(SingleCreateAlgorithm).GetMethod("CreateExecutionInstance", [typeof(ExecutionInstanceRegistry)]).ShouldNotBeNull();

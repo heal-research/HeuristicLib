@@ -178,8 +178,8 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void ObservableMutator_WithSeparatelyConstructedActionObservers_IsNotEqual()
     {
-        var left = new AddOffsetMutator(1).ObserveWith((IReadOnlyList<int> _) => { });
-        var right = new AddOffsetMutator(1).ObserveWith((IReadOnlyList<int> _) => { });
+        var left = new AddOffsetMutator(1).ObserveWith(_ => { });
+        var right = new AddOffsetMutator(1).ObserveWith(_ => { });
 
         left.ShouldNotBe(right);
     }

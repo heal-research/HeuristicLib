@@ -288,20 +288,24 @@ The one cost is that `ExecutionInstanceResolver` became a class: structs cannot 
 
 ### Cost: one more inference loss, recorded
 
-`ObservableTerminator.Create(terminator, (bool _) => { })` and the matching `ObserveWith` overload took their state from the terminator's own type. With that gone, an `Action<bool>` observer carries nothing to infer from, so both now name the candidate and state explicitly. This is the same class of loss as the `Create` factories, and it is recorded where it happens, in `InferenceConstructionSpecs` and `ObservableOperatorCounterTests`.
+`ObservableTerminator.Create(terminator, (bool _) => { })` and the matching `ObserveWith` overload took their state from the terminator's own type. With that gone, an `Action<bool>` observer carries nothing to infer from, so both now name the candidate and state explicitly. This one is a genuine loss — the information left the argument types — unlike the algorithm factories, where the type parameters turned out to be supplying nothing. It is recorded where it happens, in `InferenceConstructionSpecs` and `ObservableOperatorCounterTests`.
 
 **Result.** Solution builds; all four suites pass at 2510 tests; whitespace, style and analyzer verification clean.
 
-### Still to decide for the algorithms
+### The algorithms: settled
 
-`TSearchState` on `IAlgorithm` is a different question, because an algorithm *does* originate its state. Settled so far:
+`TSearchState` on `IAlgorithm` was a different question, because an algorithm *does* originate its state.
 
 - `TSearchSpace` and `TProblem` leave the configuration, as for the operators.
 - `TCandidate` stays.
 - `TSelf` stays on the authoring base. It never appears on `IAlgorithm`, so it costs a user nothing.
 - The concrete algorithms already fix their state — `GeneticAlgorithm` at `PopulationState<TCandidate>`, `HillClimber` at `SingleSolutionState<TCandidate>` — so after the migration `GeneticAlgorithm<Permutation>` is one type argument and `Complete` still returns a fully typed state.
 
-Open: whether `IAlgorithm` keeps the state. Dropping it buys `List<IAlgorithm<Permutation>>`, a heterogeneous collection of algorithms over one encoding, which is a real use. It costs the typed `Stream`/`Complete` on anything held through the interface, since the state type has no external source at that point — it originates in the algorithm and flows outward. The likely shape is that typed run methods move to the authoring base, where the state is known, leaving the erased interface for holding and composing; that needs `IProblemDefaults` extended to every problem so `Complete(problem)` can infer the search space, which is already on this package's list.
+**Answered: it keeps the state, on a second interface.** Dropping it outright was tried first, and moved the typed run methods to the authoring base. That worked and was wrong: it made every execution-shaped call unreachable for anyone holding an algorithm they had not constructed, which is the ordinary case for a factory return or a stored configuration. A compile probe held one genetic algorithm both ways and confirmed the size of the loss — on `IAlgorithm<RealVector>` all of `Complete`, `WithMaxIterations`, `ObserveWith`, `AsGrid`, `Repeat` and `Validate` fail; on the concrete type all six compile.
+
+So `IAlgorithm<TCandidate, TSearchState> : IAlgorithm<TCandidate>` exists, and membership is decided by **produced versus consumed**. `Complete` returns `TSearchState`, so its signature cannot be written on a type that does not name it — forced. The erased form keeps everything that does not need it: heterogeneous collections, composite children, and the whole `Resolve` / `ResolveOptional` / `TryResolve` family, which names all four run types at the call site regardless.
+
+**Terminators and interceptors do not follow it back.** Their state is a parameter of an *instance* method, and nothing on that side has a return type mentioning it — `terminator.And(other)` yields `AllTerminator<TCandidate>`, `CountTerminatorCalls` yields `CountingTerminator<TCandidate>`. Restoring it would buy only an earlier report of a mismatch that pre-flight already catches, at the price of making two of the twelve roles state what they are written for while the other ten do not. Revisit only if the pre-flight message proves to be a common stumble in practice.
 
 **Package 3 stragglers: complete, and green.** Four types held `IOperator<TExecutionInstance>` after the nine roles landed, and each was a different kind of leftover.
 
@@ -338,13 +342,9 @@ This is not a typing nuisance. It is working user code that now throws at pre-fl
 
 One prerequisite, already solved in the tree for a different reason. A parameter typed `TProblem problem` leaves the candidate and search space in constraint position, where C# inference cannot reach them — the XML doc on `IProblemDefaults<TSelf, TCandidate, TSearchSpace>` states exactly this, which is why that interface exists and why `GeneticAlgorithm.For` takes it rather than a bare problem. `Complete` needs the same shape. Today only problems declaring a role default reach `IProblemDefaults` (`TravelingSalesmanProblem` does, `TestFunctionProblem` does not), so extending it to every problem is part of the algorithm package.
 
-**Options, for decision:**
+**Resolved by package 4, and the resolution was subtraction.** The algorithm configurations migrated, so the run's triple is established at `Complete(problem, …)` and a bound creator meets the problem's own search space there. That left `Create`'s `TSearchSpace` and `TProblem` naming nothing the method uses — not a parameter, not the return type, not the body, only their own `where` clauses. A type parameter in that position cannot be inferred at all, which is why the interim spelling had to name all three; it was never a widening to be pinned. Deleting them leaves `Create<TCandidate>(creator, …)`, inferred from the operators, at `GeneticAlgorithm`, `EvolutionStrategy`, `NSGA2` and `HillClimber`.
 
-1. **Migrate the algorithm configurations now** (package 4 brought forward). Algorithms stop naming the search space and problem too; the run supplies them at `Complete(problem, …)`, resolution happens at the problem's concrete types, and bound operators work again. Coherent end state, largest change.
-2. **Pin the triple at the factory.** `Create` takes the search space or problem as its first argument — `GeneticAlgorithm.Create(problem.SearchSpace, creator, crossover, mutator, …)`. Small and arguably more honest than inferring an algorithm's search space from one of its operators, but it changes every `Create` signature.
-3. **Direct the novice to `For(problem)`** and accept that `Create` yields the widest algorithm. Cheapest, but it makes the operator-only factory a trap: it compiles and throws at run time.
-
-Option 2 unblocks immediately and is compatible with option 1 later; option 1 is the end state and makes option 2 unnecessary. Option 3 is not recommended: a compile-time-clean call that always throws is worse than the arity it replaced.
+No anchor parameter was added. The considered alternative — `Create(problem.SearchSpace, creator, …)` — would have reintroduced at the factory exactly what the run now supplies.
 
 ### Compatibility is now measured twice
 
@@ -364,7 +364,7 @@ Still open, for the documentation package: validation appears in no user-facing 
 
 ### What the later roles added
 
-- **The inference loss is total at the algorithm factories.** The selector was the last argument to `GeneticAlgorithm.Create` that carried a search space; with it migrated, nothing does, and every `Create` call names its triple. Recorded in `CreateFactories_NoLongerInferTheSearchSpaceFromTheirOperators` and paid at roughly a dozen call sites across specs, scenarios and the Python interop.
+- **The algorithm factories name only the candidate.** Once no argument carried a search space, `Create`'s `TSearchSpace` and `TProblem` appeared in nothing but its own constraint clauses — a type parameter nothing can supply, so every call site had to spell all three. They are gone; `Create<TCandidate>(creator, …)` infers from the operators and the dozen call sites across specs, scenarios and the Python interop write no type arguments at all. `CreateFactories_InferEverythingTheyNameFromTheirOperators` records the shape.
 - **A composite can read a search space or problem, and keeps its base while doing it.** Staying agnostic in the base and binding on the operator are not alternatives: the operator names what it needs on its own type and reconciles it with the run's inside the override. `ObservableMutator` has always done this with its observers, and `DynamicCachingEvaluator`, `DynamicRelativeQualityEvaluator` and the `PrefixingWrappingCreator` spec now do it with their problem. An earlier draft had them implement the role directly instead, which lost the base for nothing.
 - **A composite with a shape of its own implements the role interface directly, and that is right.** `Wrapping` covers one child and `Multi` a uniform list, because in both the base can do the resolving and hand the author instances. A composite with its own shape — a named child plus settings, two children, a child plus an evaluator — has to resolve its own children, so a base could only re-declare the interface method. A `Composing<Role>` base was tried and removed for exactly that: with the registry as its parameter, which the settled rule requires, it added nothing. `EliteSelector`, `GenderSpecificSelector`, `PredefinedCandidatesCreator`, `TransformedCreator`, `TransformedCrossover`, `RefinementEvaluator` and `ImprovementCheckingRefiner` implement the role interface.
 
@@ -376,9 +376,13 @@ Still open, for the documentation package: validation appears in no user-facing 
 - **A state aware role names nothing at all through the resolver.** Its resolver overloads are generic in the search state only, so `resolver.ResolveOptional(Terminator)` takes the triple from the resolver and the state from the operator. The registry form still needs all four, because C# cannot infer type arguments partially; that is exactly the repetition the resolver exists to remove, and every algorithm now uses it.
 - **Problem bound operators keep their own spec.** `AlmostNoOperatorConstrainsTheProblemTypeArgument` counted operators constraining the role's problem argument; the roles no longer have one, so the count stopped being the question. `AnOperatorThatReadsItsProblem_RunsOverThatProblemAndIsRefusedOverAnother` replaces it with the capability — an operator declared in the spec itself, standing for one a consumer writes, runs over the problem it names and is refused over another.
 
-### Open: inference ergonomics
+### Settled: inference ergonomics
 
-The reduced arity moved type arguments from declarations to call sites, and the tests show where. `Resolve` is not the concern — a user of an algorithm never resolves. What matters is anything a user writes: the algorithm factories, the operator combinators, the run entry point. After the algorithm package lands, walk the diff for call sites that gained type arguments and ask, per site, whether a parameter could carry the information instead — `IProblemDefaults<TSelf, TCandidate, TSearchSpace>` is the shape that already solves this for `For(problem)`, and the same trick applies wherever a value in hand mentions all three.
+The reduced arity moved type arguments from declarations to call sites, and the tests showed where. `Resolve` was never the concern — a user of an algorithm never resolves. What mattered was anything a user writes: the algorithm factories, the operator combinators, the run entry point.
+
+Walking those call sites found one pattern behind all of them, and it is not a trade-off: a type parameter that appears only in a `where` clause. Nothing can supply it, so it is not merely hard to infer but impossible, and the compiler's only recourse is to demand the whole list. It hit `GeneticAlgorithm.Create` and its three siblings, and — with the same symptom of a call site naming types no argument mentions — `Repeat`, `CycleWith`, `Then` and `AsGrid`, where the extension block's own parameters were the uninferable ones. The fix in both places was deletion, not an anchor parameter: the information was not being carried badly, it was not needed.
+
+`IProblemDefaults<TSelf, TCandidate, TSearchSpace>` remains the shape for the genuine case, where a value in hand does mention all three and `For(problem)` reads it off that value.
 
 ### The two state aware roles
 
@@ -394,7 +398,7 @@ Blast radius matched the seven that preceded them: the mechanical 4→2 collapse
 - `OperatorTopologyTests` is now three theories with no "not yet migrated" bucket: six stateless configurations at one type argument, two state aware ones at two, and the instance contracts still at the full triple.
 - `NoviceFrictionSpecs` lost its subject. The friction was always stated over whichever role had not migrated — creator, then selector, then terminator, then interceptor — and there is no such role left. `EveryOperatorSlot_NamesOnlyWhatTheOperatorIsWrittenAbout` replaces it: every operator slot on `GeneticAlgorithm<RealVector>` names the candidate, and the two state aware slots add the state and nothing else.
 
-**Not yet started:** algorithm configurations, experiments, factories, analyzers and documentation. The algorithm's own three type arguments are what remains typed at the triple, and they carry the open `Create` inference question with them.
+**Not yet started:** factories, analyzers and documentation. Algorithm configurations and experiments are done; see *Package 4* and *Package 5* below.
 
 **Settled before starting them:** only `TSearchSpace` and `TProblem` move. `TCandidate` and `TSearchState` stay on configurations, so every role lands on one of two shapes — `IMutator<TCandidate>` for the seven stateless roles, `ITerminator<TCandidate, TSearchState>` for the two state aware ones. See *What can leave the configuration layer* in [generic-arity-usability.md](generic-arity-usability.md).
 
@@ -419,6 +423,42 @@ The algorithm arity reduction cannot start without this, which the plan predicte
 One harness fix fell out: `OperatorCompatibilityTests.GetCompilableName` rendered generic type arguments by `FullName`, which emits backtick metadata names. It is recursive now, so a generic argument compiles as C# source.
 
 Solution builds; all four suites pass at 2513 tests; whitespace, style and analyzer verification clean.
+
+## Package 4 (algorithms and experiments): done, and green
+
+`GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>` is now `GeneticAlgorithm<RealVector>`, and the reduced-arity records that existed to hide the old arity collapsed away with it. `IExperiment` fell from six type arguments to four.
+
+**Inference had to be restored structurally, not by naming types.** The first pass left call sites spelling type arguments that used to be inferred, which trades one entry barrier for another. Four devices fixed it, and each is reusable:
+
+- **Anchor on the value that mentions everything.** `Complete`/`Stream`/`CreateRun` take `Problem<TProblem, TCandidate, TSearchSpace>` rather than a bare `TProblem`, so the candidate and search space sit in *parameter* position where inference reaches them, with a second overload on `IProblem<TCandidate, TSearchSpace>` for a problem held behind its interface.
+- **Declare the block on the type that knows the most.** Builders moved to the authoring base, where `TSelf` is available.
+- **Delete what cannot bind.** An extension block declaring a type parameter nothing supplies is not merely awkward to call — it is never a candidate for overload resolution, so it silently loses to something else. The experiment-level `Repeat` declared unused `TSearchSpace`/`TProblem` and `.Repeat(2)` was quietly binding to LINQ's `Enumerable.Repeat`. Three further blocks — `CycleWith`, `Then`, `AsGrid` on `IAlgorithm<TCandidate>` — were dead the same way, and the second interface revived rather than removed them: with the receiver at `IAlgorithm<TCandidate, TSearchState>` both arguments come from the receiver.
+- **Bridge with a type test, never a type comparison.** A bound rung comparing `typeof(TRunProblem) != typeof(TProblem)` broke contravariance — an algorithm written for `IProblem<…>` genuinely does serve a run over a concrete problem — and refused seven legitimate runs.
+
+**Wrapper and composite algorithm slots name the state.** `StateTerminatedAlgorithm<TCandidate, TSearchState>` held its child as `IAlgorithm<TCandidate>` and then resolved it at `TSearchState` three lines later, so the requirement was known at configuration time and discarded anyway. The slot is now `IAlgorithm<TCandidate, TSearchState>` across the four control wrappers, both composites, `ObservableAlgorithm`, `AlgorithmRun`, the experiment types and `DynamicRacingAlgorithm`.
+
+This is *not* the operator rule reversed. The test is whether the holder already knows the constraint: a search space arrives with the run, so an operator must defer; a wrapper names its own state, so deferring throws information away. And because `IAlgorithmInstance` is invariant in `TSearchState`, the compile-time constraint is exactly as strict as the runtime check it replaces — nothing expressible was lost, the identical rejection just moved earlier. Two latent defects fell out: `IExperiment` and `Experiment` had **no constraint at all** on `TSearchState`, which could therefore have been instantiated with `int`.
+
+**The capability split is pinned by tests, both halves.** `AlgorithmInterfaceCapabilitySpecs` shows the usage; `AlgorithmInterfaceCapabilityTests` drives a Roslyn compilation over thirteen expressions, asserting each compiles on the two-argument form and fails on the one-argument form. Asserting both directions is what makes it a measurement — the positive half proves the probe is well formed, so the negative half cannot pass because of a typo. It caught one immediately.
+
+**`IExecutionInstanceResolvable<TExecutionInstance>` is deleted.** Package 5 planned to rework its constraint; it turned out to have no implementers in `src` at all, which made its two `ExecutionInstanceRegistry` overloads and `ExecutionInstanceResolvableExtensions` unreachable from production. Everything real goes through the factory form `Resolve<TResolvable, TExecutionInstance>(resolvable, create)`. Only two test doubles used it, and they now resolve through the factory form like the library does.
+
+**One pre-existing test-runner defect fixed in passing.** `dotnet test` exited 5 despite zero failures: xUnit reflects over every public class, and `GetParameters()` on an *open* generic fixture throws `TypeLoadException` because a method type parameter cannot be validated against a constraint mentioning a still-free class type parameter. Seven fixtures are now `internal`, with `[assembly: InternalsVisibleTo("TestCompilation")]` so the Roslyn harness in `OperatorCompatibilityTests` — which consumes them as an external API — still sees them.
+
+Solution builds; all four suites pass at 2176 / 173 / 159 / 23 = 2531 tests; whitespace, style and analyzer verification clean.
+
+### Bound algorithm rungs: kept, but they are the exception
+
+`Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>` and its iterative sibling name the two type arguments everything else shed, which looks like a contradiction. It is not, for a reason worth stating plainly: **the rung adds no arity to any configuration.** `DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>` declared all five while sitting on the *unbound* base; it named them because it reads `problem.EpochClock`, which exists on `DynamicProblem` and not on `IProblem`. There is no way to write that algorithm with fewer. The rung's only job is to own the bridge, and moving it there deleted eighteen lines of hand-written bridge including a wrong variance check and two unchecked casts. Without the rung, every bound algorithm re-writes that bridge and can get it wrong the same way.
+
+Same rule as the operators, and the operator ladder has more real users of its bound rung than the algorithm ladder does: three symbolic-regression refiners that genuinely need `SymbolicRegressionProblem`. The migration's thesis was never that nothing names a problem, but that a configuration names only what it is *about* — and this algorithm is about dynamic problems.
+
+What was wrong was the **presentation**, and that is fixed:
+
+- `Algorithm<…5…>` had zero users in `src` and seven test doubles that all named `IProblem<int, DummySearchSpace<int>>` — the widest problem, so binding to nothing while paying full arity. `AdditiveStepAlgorithm` spelled the pair five times in a thirty-two-line file to use only `problem.SearchSpace`. All seven moved to the three-argument base with a generic nested instance, the shape `GeneticAlgorithm` already used.
+- Both bound rungs now carry the selection rule in their own remarks. Only the unbound `Algorithm` had it, which is the one place it is not needed.
+
+Deliberately left bound: `BatchEvaluationAlgorithm` (reads `IntegerDynamicProblem`), the five `OperatorCompatibilityTests` fixtures (the matrix exists to prove bound operators get refused by incompatible runs), and `AlgorithmAuthoringSpecs`' `SingleCreateAlgorithm`/`DoubleCreateAlgorithm` — those two read no concrete problem member, but their specs are *about* the bound rung's surface, including a reflection assertion for the non-generic single-parameter `CreateExecutionInstance` overload that exists only there.
 
 ## Work packages
 
@@ -449,18 +489,40 @@ Abandon the migration and revert the branch if any of these turns out true, rath
 
 **3. The remaining eight roles**, one per commit, in ascending order of coupling: replacers, selectors, creators, crossovers, evaluators, refiners, terminators, interceptors. Then the stragglers: the three experimental move roles and `IVariableStrengthMutator`, which are what let `IOperator<TExecutionInstance>` be deleted.
 
-**4. Algorithms.**
+**4. Algorithms. Done** — see *Package 4* above.
 `Algorithm` and `IterativeAlgorithm` bases first, then the concrete algorithms, then the composition and control algorithms. Drop the now-redundant reduced-arity records (`GeneticAlgorithm<TCandidate, TSearchSpace>` and `GeneticAlgorithm<TCandidate>` collapse into one type).
 
-**5. Observation and experiments.**
-`ObservationPlan.Observe` is constrained on `IExecutionInstanceResolvable<TExecutionInstance>`, which the new configurations do not implement; its entry dictionary is already keyed non-generically. Rework the constraint and `RegisterReplacement` to pair same-typed resolvables. Then `IExperiment` and the experiment machinery.
+**5. Observation and experiments. Done** — see *Package 4* above, which absorbed it.
+The constraint rework this package anticipated did not happen: `IExecutionInstanceResolvable<TExecutionInstance>` was deleted instead, having turned out to have no production implementers. `RegisterReplacement` had already become non-generic in package 1.
 
-**6. Factories, analyzers, documentation.**
+**6. Factories, analyzers, documentation. Factories done; documentation deliberately deferred.**
 (The defaults namespace move that was parked here is done; see above.)
-`For(...)` and `Create(...)` companions simplify, since fewer arguments need inferring. Update both analyzers and the code fix. Update the seven documentation pages and the examples.
+`For(...)` and `Create(...)` companions simplify, since fewer arguments need inferring — done, see *The algorithm factories name only the candidate* above. Update both analyzers and the code fix. Update the seven documentation pages and the examples.
 
-**7. Cleanup and exit.**
+Documentation is held until the reworked API is judged stable, so it is not a gap to close yet — but two pages are known to be wrong now, and both mislead in the same direction, toward more type arguments rather than fewer:
+
+- [writing-algorithms.md](../docs/guide/extending/writing-algorithms.md) teaches the *bound* five-argument `IterativeAlgorithm` as the way to write an algorithm, with `ICreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>` operator slots. Its example reads no concrete problem member, so it should be on the three-argument base. As the first page an algorithm author reads, it currently presents maximum arity as normal.
+- [writing-meta-algorithms.md](../docs/guide/extending/writing-meta-algorithms.md) still shows the pre-migration `IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>`, which no longer exists.
+
+The bound rungs themselves stay — see *Bound algorithm rungs* below.
+
+**7. Cleanup and exit. Partly done.**
 Delete every transitional overload and adapter. Verify no `Resolve` overload survives beyond the per-role ones on `ExecutionInstanceResolver`. Update `NoviceFrictionSpecs`, whose whole point is to show a visible diff when this lands.
+
+Done: `IOperator<TExecutionInstance>` and `IExecutionInstanceResolvable<TExecutionInstance>` are gone, `NoviceFrictionSpecs` records the new shape, and the three uncallable extension blocks are re-anchored. `CreateExecutionInstanceAnalyzer` is narrowed to require exactly one `ExecutionInstanceRegistry` parameter, dropping the zero-argument spelling that no longer exists.
+
+### HLib0001 had no tests, and writing them found two defects
+
+The rule is `DiagnosticSeverity.Error` and is the only mechanical enforcement of resolution going through the registry, yet it identified what it guards by two literal names with no test holding it in place. The asymmetry is the argument for testing it: a false positive fails a build loudly, while the analyzer quietly ceasing to fire looks exactly like success. `CreateExecutionInstanceAnalyzerTests` now covers five cases — the generic interface shape every migrated role actually has, the non-generic bound shape, the correct `registry.Resolve` spelling, a caller that is not itself a creation method, and a call to the type's own overload.
+
+Two defects the five cases did not cover, found by probing and since fixed:
+
+- **The analyzer was blind inside explicit interface implementations.** `containingMethodSymbol.Name` is the *qualified* name there (`HEAL.HeuristicLib.Operators.IMutator<int>.CreateExecutionInstance`), so the name comparison failed and analysis returned before looking at anything. Every role base writes its bridge as exactly such a method, so a consumer writing a composite the same way had no guard at all. `IsCreationMethod` now matches `ExplicitInterfaceImplementations` as well as `Name`.
+- **A `base.CreateExecutionInstance(registry)` call was reported**, though the code comment claimed base calls were ignored. The exclusion compared containing types, and for a base call the target's containing type is the base, not the caller. A derived operator wanting its base's instance has no other spelling, since `registry.Resolve(this)` would resolve back to itself.
+
+**The receiver, not the containing type, is what identifies a self call.** Replacing the type comparison with a check for a `this`, `base` or implicit receiver fixed the base call and closed a third hole in the same line: a child that happens to share its holder's type was waved through as if it were a self call, when it is owned and must be resolved. All three cases are covered; eight specs in total.
+
+Both fixes shipped together because the risky direction turned out not to be risky: the widened rule reaches every role base's bridge, and those bridges call their own overload on an implicit receiver, so nothing in `src` newly fails.
 
 ## Risks
 

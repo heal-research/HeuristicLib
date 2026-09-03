@@ -118,10 +118,10 @@ public class EvolutionaryGenerationBudgetTests
         return new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
     }
 
-    private static EvolutionStrategy<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateEvolutionStrategy(
+    private static EvolutionStrategy<RealVector> CreateEvolutionStrategy(
       TestFunctionProblem problem)
     {
-        return new EvolutionStrategy<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        return new EvolutionStrategy<RealVector>
         {
             PopulationSize = 6,
             NumberOfChildren = 6,
@@ -133,10 +133,10 @@ public class EvolutionaryGenerationBudgetTests
         };
     }
 
-    private static NSGA2<RealVector, BoundedRealVectorSearchSpace, MultiObjectiveTestFunctionProblem> CreateNSGA2(
+    private static NSGA2<RealVector> CreateNSGA2(
       MultiObjectiveTestFunctionProblem problem)
     {
-        return new NSGA2<RealVector, BoundedRealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
+        return new NSGA2<RealVector>
         {
             PopulationSize = 6,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -147,10 +147,10 @@ public class EvolutionaryGenerationBudgetTests
         };
     }
 
-    private static AlpsGeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateAlpsGeneticAlgorithm(
+    private static AlpsGeneticAlgorithm<RealVector> CreateAlpsGeneticAlgorithm(
       TestFunctionProblem problem)
     {
-        return new AlpsGeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        return new AlpsGeneticAlgorithm<RealVector>
         {
             PopulationSize = 6,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -162,10 +162,10 @@ public class EvolutionaryGenerationBudgetTests
         };
     }
 
-    private static OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateOpenEndedRelevantAllelesPreservingGeneticAlgorithm(
+    private static OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector> CreateOpenEndedRelevantAllelesPreservingGeneticAlgorithm(
       TestFunctionProblem problem)
     {
-        return new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        return new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector>
         {
             PopulationSize = 6,
             Creator = new UniformDistributedCreator(problem.SearchSpace),

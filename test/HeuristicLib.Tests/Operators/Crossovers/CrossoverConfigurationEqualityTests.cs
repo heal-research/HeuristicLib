@@ -236,8 +236,8 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void ObservableCrossover_WithSeparatelyConstructedActionObservers_IsNotEqual()
     {
-        var left = new OffsetCrossover(1).ObserveWith((IReadOnlyList<int> _) => { });
-        var right = new OffsetCrossover(1).ObserveWith((IReadOnlyList<int> _) => { });
+        var left = new OffsetCrossover(1).ObserveWith(_ => { });
+        var right = new OffsetCrossover(1).ObserveWith(_ => { });
 
         left.ShouldNotBe(right);
     }

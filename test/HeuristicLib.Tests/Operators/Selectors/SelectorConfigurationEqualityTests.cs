@@ -246,8 +246,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void ObservableSelector_WithSeparatelyConstructedActionObservers_IsNotEqual()
     {
-        var left = new RangeSelector(1).ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => { });
-        var right = new RangeSelector(1).ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => { });
+        var left = new RangeSelector(1).ObserveWith(_ => { });
+        var right = new RangeSelector(1).ObserveWith(_ => { });
 
         left.ShouldNotBe(right);
     }

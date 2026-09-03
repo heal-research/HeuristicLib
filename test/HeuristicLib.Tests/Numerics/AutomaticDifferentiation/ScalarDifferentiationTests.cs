@@ -37,7 +37,7 @@ public sealed class ScalarDifferentiationTests
         var parameter = builder.Parameter();
         var root = builder.Add(builder.Multiply(parameter, input), builder.Sin(parameter));
         var program = builder.Build(root);
-        using var execution = program.CreateExecution([new double[] { 3.0 }], 1);
+        using var execution = program.CreateExecution([new[] { 3.0 }], 1);
         var output = new double[1];
         var jacobian = new double[1];
 
@@ -104,8 +104,8 @@ public sealed class ScalarDifferentiationTests
         var input = builder.Input();
         var parameter = builder.Parameter();
         var program = builder.Build(builder.Multiply(parameter, input));
-        using var scalarExecution = program.CreateExecution([new double[] { 2.0 }], 1);
-        using var batchedExecution = program.CreateExecution([new double[] { 2.0, 3.0 }], 2);
+        using var scalarExecution = program.CreateExecution([new[] { 2.0 }], 1);
+        using var batchedExecution = program.CreateExecution([new[] { 2.0, 3.0 }], 2);
 
         Should.Throw<ArgumentException>(() => scalarExecution.EvaluateWithJacobian([1.0], new double[1], [])).ParamName.ShouldBe("jacobian");
         Should.Throw<ArgumentException>(() => batchedExecution.EvaluateWithJacobian([1.0], new double[2], new double[1])).ParamName.ShouldBe("jacobian");

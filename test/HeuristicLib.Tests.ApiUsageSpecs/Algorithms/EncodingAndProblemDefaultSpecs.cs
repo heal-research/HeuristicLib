@@ -1,7 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.Permutations;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
@@ -19,7 +18,7 @@ public class EncodingAndProblemDefaultSpecs
     {
         var problem = new TravelingSalesmanProblem();
 
-        GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> algorithm =
+        GeneticAlgorithm<Permutation> algorithm =
             GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
 
         algorithm.Crossover.ShouldBeOfType<OrderCrossover>();
@@ -105,10 +104,10 @@ public class EncodingAndProblemDefaultSpecs
     {
         var problem = new TravelingSalesmanProblem();
 
-        EvolutionStrategy<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> evolutionStrategy =
+        EvolutionStrategy<Permutation> evolutionStrategy =
             EvolutionStrategy.For(problem);
-        NSGA2<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> nsga2 = NSGA2.For(problem);
-        HillClimber<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> hillClimber =
+        NSGA2<Permutation> nsga2 = NSGA2.For(problem);
+        HillClimber<Permutation> hillClimber =
             HillClimber.For(problem);
 
         evolutionStrategy.Creator.ShouldBeOfType<RandomPermutationCreator>();
@@ -128,11 +127,11 @@ public class EncodingAndProblemDefaultSpecs
     {
         var searchSpace = new PermutationSearchSpace(5);
 
-        EvolutionStrategy<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>> evolutionStrategy =
+        EvolutionStrategy<Permutation> evolutionStrategy =
             EvolutionStrategy.For(searchSpace);
-        NSGA2<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>> nsga2 =
+        NSGA2<Permutation> nsga2 =
             NSGA2.For(searchSpace);
-        HillClimber<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>> hillClimber =
+        HillClimber<Permutation> hillClimber =
             HillClimber.For(searchSpace);
 
         evolutionStrategy.Creator.ShouldBeOfType<RandomPermutationCreator>();
@@ -148,32 +147,22 @@ public class EncodingAndProblemDefaultSpecs
     }
 
     /// <summary>
-    /// Records what the operator arity reduction costs at the algorithm factories. A creator, crossover or mutator
-    /// used to name its search space, and <c>Create</c> inferred the algorithm's from it. They now name only their
-    /// candidate, so nothing in these calls carries a search space and the type arguments have to be written out.
+    /// The <c>Create</c> factories name only the candidate type, and the operators supply it, so a call site writes no
+    /// type arguments at all. The declared result types are the assertion: each is the one argument form.
     /// </summary>
-    /// <remarks>
-    /// This is not a spelling that can be recovered: the information the factory used to infer from no longer exists
-    /// in the argument types. The alternatives are an overload returning the widest search space, a factory that
-    /// takes the search space or problem to pin it, or naming the arguments as below. That decision belongs to the
-    /// algorithm package; until then this spec is the measurement.
-    /// </remarks>
     [Fact]
-    public void CreateFactories_NoLongerInferTheSearchSpaceFromTheirOperators()
+    public void CreateFactories_InferEverythingTheyNameFromTheirOperators()
     {
-        EvolutionStrategy<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>> evolutionStrategy =
-            EvolutionStrategy.Create<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>>(
-                new RandomPermutationCreator(), new InversionMutator());
-        NSGA2<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>> nsga2 =
-            NSGA2.Create<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>>(
-                new RandomPermutationCreator(), new EdgeRecombinationCrossover(), new InversionMutator());
-        HillClimber<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>> hillClimber =
-            HillClimber.Create<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>>(
-                new RandomPermutationCreator(), new InversionMutator());
+        EvolutionStrategy<Permutation> evolutionStrategy =
+            EvolutionStrategy.Create(new RandomPermutationCreator(), new InversionMutator());
+        NSGA2<Permutation> nsga2 =
+            NSGA2.Create(new RandomPermutationCreator(), new EdgeRecombinationCrossover(), new InversionMutator());
+        HillClimber<Permutation> hillClimber =
+            HillClimber.Create(new RandomPermutationCreator(), new InversionMutator());
 
-        evolutionStrategy.ShouldNotBeNull();
-        nsga2.ShouldNotBeNull();
-        hillClimber.ShouldNotBeNull();
+        evolutionStrategy.Creator.ShouldBeOfType<RandomPermutationCreator>();
+        nsga2.Crossover.ShouldBeOfType<EdgeRecombinationCrossover>();
+        hillClimber.Mutator.ShouldBeOfType<InversionMutator>();
     }
 
     private static double[,] SymmetricMatrix() => new double[,]

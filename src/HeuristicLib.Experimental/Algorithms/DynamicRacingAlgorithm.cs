@@ -18,7 +18,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
     where TSearchState : PopulationState<TCandidate>
-    where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TAlgorithm : IAlgorithm<TCandidate, TSearchState>
 {
     public DynamicRacingAlgorithm(MetaOptimizationSearchSpace metaSpace,
                                   ICreator<MetaOptimizationGenotype> creator,
@@ -82,7 +82,14 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         }
     }
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor) =>
+    /// <remarks>
+    /// A bound algorithm: unlike the general-purpose ones it reads the problem itself, requiring a
+    /// <see cref="DynamicProblem{TSelf, TCandidate, TSearchSpace}"/>, so it names the search space and problem it is
+    /// written for and the base reconciles them with the run's.
+    /// </remarks>
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(
+        ExecutionInstanceRegistry instanceRegistry,
+        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor) =>
         new Instance(instanceRegistry, resolvedInterceptor, instanceRegistry.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Creator), instanceRegistry.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Mutator), MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
             EvaluatorSelector, NoRacers, HallOfFameStrength, EarlyTerminationStrength, BurnInEpochs, MinimumModelObservationCount, ModelObservationInterval, ObjectiveValueSelector);
 
@@ -360,7 +367,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             var inheritedEvaluator = inheritedRegistry.Resolve<TCandidate, TSearchSpace, TProblem>(evaluator);
             var contenderRegistry = inheritedRegistry.CreateChildRegistry();
             contenderRegistry.RegisterInstance(evaluator, new PerformanceTrackingEvaluatorInstance(inheritedEvaluator, performanceObserver));
-            return contenderRegistry.Resolve(Algorithm).Stream(problem, random, initialState, ct).GetEnumerator();
+            return contenderRegistry.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm).Stream(problem, random, initialState, ct).GetEnumerator();
         }
     }
 

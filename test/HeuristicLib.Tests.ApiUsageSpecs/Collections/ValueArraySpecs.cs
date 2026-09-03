@@ -22,8 +22,8 @@ public class ValueArraySpecs
     public void ConfigurationAcceptsAnyReadOnlyListAndComparesItsElements()
     {
         var fromParameters = new Workflow(new Stage("normalize"), new Stage("optimize"));
-        var fromCollectionExpression = new Workflow([new Stage("normalize"), new Stage("optimize")]);
-        var fromMutableList = new Workflow(new List<Stage> { new("normalize"), new("optimize") });
+        var fromCollectionExpression = new Workflow(new Stage("normalize"), new Stage("optimize"));
+        var fromMutableList = new Workflow(new("normalize"), new("optimize"));
 
         fromParameters.ShouldBe(fromCollectionExpression);
         fromParameters.ShouldBe(fromMutableList);

@@ -1,3 +1,4 @@
+using System.Globalization;
 using HEAL.HeuristicLib.Numerics;
 using HEAL.HeuristicLib.Random;
 
@@ -34,7 +35,7 @@ public abstract record TerminalSymbol(string Name) : Symbol(Name, 0);
 public abstract record ConstantSymbol(string Name) : TerminalSymbol(Name);
 
 public sealed record FixedConstantSymbol(double Value, string? DisplayName = null)
-    : ConstantSymbol(DisplayName ?? Value.ToString("G", System.Globalization.CultureInfo.InvariantCulture))
+    : ConstantSymbol(DisplayName ?? Value.ToString("G", CultureInfo.InvariantCulture))
 {
     public override ExpressionNode CreateNode(IRandomNumberGenerator random, params ImmutableArray<ExpressionNode> children)
     {

@@ -1,14 +1,9 @@
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public interface IIterativeAlgorithm<TCandidate, in TSearchSpace, in TProblem, TSearchState>
-  : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
-  where TSearchState : class, ISearchState
+public interface IIterativeAlgorithm<TCandidate>
+  : IAlgorithm<TCandidate>
 {
     IInterceptor<TCandidate>? Interceptor { get; }
 }

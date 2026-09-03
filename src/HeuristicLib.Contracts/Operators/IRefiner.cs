@@ -30,14 +30,6 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public interface IRefiner<TCandidate> : IOperator
 {
-    /// <summary>
-    /// Creates an execution instance for the search space and problem a run supplies.
-    /// </summary>
-    /// <remarks>
-    /// The type arguments are named for the run because an operator's own search space and problem, where it has
-    /// them, are its type arguments and mean something different: what it was written for, rather than what it is
-    /// being asked to run over.
-    /// </remarks>
     IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
@@ -51,29 +43,20 @@ public interface IRefinerInstance<TCandidate, in TSearchSpace, in TProblem>
     IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-/// <summary>
-/// Resolution for the refiner role, declared next to the role because the registry cannot name a role generically.
-/// </summary>
 public static class RefinerResolverExtensions
 {
     extension(ExecutionInstanceRegistry registry)
     {
-        /// <summary>Resolves a refiner over a triple named at this call site.</summary>
         public IRefinerInstance<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate> refiner)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             registry.Resolve(refiner, static (creationTarget, childRegistry) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childRegistry));
 
-        /// <summary>Resolves a refiner that may be absent, returning <see langword="null"/> when it is.</summary>
         public IRefinerInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate>? refiner)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             refiner is null ? null : registry.Resolve<TCandidate, TSearchSpace, TProblem>(refiner);
 
-        /// <summary>
-        /// Resolves a refiner, reporting rather than throwing when it cannot run over this search space and problem.
-        /// </summary>
-        /// <remarks>See <see cref="CrossoverResolverExtensions"/> for why this is the binding check.</remarks>
         public bool TryResolve<TCandidate, TSearchSpace, TProblem>(
             IRefiner<TCandidate> refiner,
             [NotNullWhen(true)] out IRefinerInstance<TCandidate, TSearchSpace, TProblem>? instance,
@@ -100,22 +83,16 @@ public static class RefinerResolverExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        /// <summary>Resolves a refiner over the triple this resolver already carries.</summary>
         public IRefinerInstance<TCandidate, TSearchSpace, TProblem> Resolve(IRefiner<TCandidate> refiner) =>
             resolver.Registry.Resolve<TCandidate, TSearchSpace, TProblem>(refiner);
 
-        /// <summary>Resolves a refiner that may be absent, returning <see langword="null"/> when it is.</summary>
         public IRefinerInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IRefiner<TCandidate>? refiner) =>
             refiner is null ? null : resolver.Resolve(refiner);
 
-        /// <summary>
-        /// Resolves a refiner, reporting rather than throwing when it cannot run over this resolver's search space
-        /// and problem.
-        /// </summary>
         public bool TryResolve(
             IRefiner<TCandidate> refiner,
             [NotNullWhen(true)] out IRefinerInstance<TCandidate, TSearchSpace, TProblem>? instance,
             [NotNullWhen(false)] out string? reason) =>
-            resolver.Registry.TryResolve<TCandidate, TSearchSpace, TProblem>(refiner, out instance, out reason);
+            resolver.Registry.TryResolve(refiner, out instance, out reason);
     }
 }

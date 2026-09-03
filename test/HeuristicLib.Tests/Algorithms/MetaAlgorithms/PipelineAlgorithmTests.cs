@@ -12,7 +12,7 @@ public class PipelineAlgorithmTests
         var first = new AdditiveStepAlgorithm(1);
         var second = new AdditiveStepAlgorithm(2);
         var algorithms = new List<AdditiveStepAlgorithm> { first, second };
-        var pipeline = new PipelineAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithms);
+        var pipeline = new PipelineAlgorithm<AdditiveStepAlgorithm, int, PopulationState<int>>(algorithms);
 
         algorithms.Clear();
 
@@ -23,7 +23,7 @@ public class PipelineAlgorithmTests
     public void PipelineAlgorithm_RequiresAtLeastOneAlgorithm()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new PipelineAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([]));
+            new PipelineAlgorithm<AdditiveStepAlgorithm, int, PopulationState<int>>([]));
 
         exception.ParamName.ShouldBe("algorithms");
     }
@@ -81,7 +81,7 @@ public class PipelineAlgorithmTests
         var pipeline = algorithm.Then(algorithm);
         var registry = new ExecutionInstanceRegistry();
         _ = registry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
-        var pipelineInstance = registry.Resolve(pipeline);
+        var pipelineInstance = registry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(pipeline);
 
         var states = pipelineInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 

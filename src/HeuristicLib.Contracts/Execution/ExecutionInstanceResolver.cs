@@ -4,22 +4,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Execution;
 
-/// <summary>
-/// Names a candidate, search space and problem once, so a call site resolving several operators does not repeat the
-/// triple on each of them.
-/// </summary>
 /// <remarks>
-/// Convenience only, and never part of a contract: creation methods are handed the registry, and every resolver
-/// overload forwards straight to the registry overload of the same name. Use it where it saves repetition and the
-/// registry directly everywhere else.
-/// <para>
-/// It is a class rather than a struct so that
-/// <see cref="ExecutionInstanceResolver{TCandidate, TSearchSpace, TProblem, TSearchState}"/> can derive from it. That
-/// inheritance is what lets one resolver serve every role: extension members declared for this type apply to the
-/// derived one too, so an algorithm that knows its search state resolves its state-aware operators and its other
-/// seven through the same object. One small allocation per creation method is the price, and a creation method runs
-/// once per run rather than once per iteration.
-/// </para>
+/// Convenience only: every overload forwards to the registry overload of the same name. It is a class, not a struct,
+/// so that <see cref="ExecutionInstanceResolver{TCandidate, TSearchSpace, TProblem, TSearchState}"/> can derive from
+/// it and inherit its extension members.
 /// </remarks>
 public class ExecutionInstanceResolver<TCandidate, TSearchSpace, TProblem>(ExecutionInstanceRegistry registry)
     where TSearchSpace : class, ISearchSpace<TCandidate>

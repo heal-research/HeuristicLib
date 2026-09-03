@@ -12,7 +12,7 @@ public class NSGA2Tests
     public void Complete_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
     {
         var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
-        var algorithm = new NSGA2<RealVector, BoundedRealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
+        var algorithm = new NSGA2<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new SinglePointCrossover(),

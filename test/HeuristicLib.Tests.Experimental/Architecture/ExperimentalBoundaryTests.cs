@@ -9,9 +9,9 @@ public sealed class ExperimentalBoundaryTests
     [Fact]
     public void ResearchFeatures_AreOwnedByExperimentalAssembly()
     {
-        var experimental = typeof(AlpsGeneticAlgorithm<,,>).Assembly;
+        var experimental = typeof(AlpsGeneticAlgorithm<>).Assembly;
 
-        typeof(OpenEndedRelevantAllelesPreservingGeneticAlgorithm<,,>).Assembly.ShouldBe(experimental);
+        typeof(OpenEndedRelevantAllelesPreservingGeneticAlgorithm<>).Assembly.ShouldBe(experimental);
         typeof(IslandPopulation<>).Assembly.ShouldBe(experimental);
         experimental.GetType("HEAL.HeuristicLib.Analysis.PopulationSimilarityAnalyzer`4").ShouldNotBeNull();
         experimental.GetType("HEAL.HeuristicLib.Analysis.HyperVolumeAnalysis`3").ShouldNotBeNull();
@@ -20,13 +20,13 @@ public sealed class ExperimentalBoundaryTests
     [Fact]
     public void StaticQuadraticAssignment_IsOwnedByTheMainAssembly()
     {
-        typeof(QuadraticAssignmentProblem).Assembly.ShouldBe(typeof(GeneticAlgorithm<,,>).Assembly);
+        typeof(QuadraticAssignmentProblem).Assembly.ShouldBe(typeof(GeneticAlgorithm<>).Assembly);
     }
 
     [Fact]
     public void ReorganizedExperimentalTypes_UseCurrentConceptNamespaces()
     {
-        var experimental = typeof(AlpsGeneticAlgorithm<,,>).Assembly;
+        var experimental = typeof(AlpsGeneticAlgorithm<>).Assembly;
 
         typeof(ZeroObjective).Namespace.ShouldBe("HEAL.HeuristicLib.Objectives");
         typeof(CompositeGenotype<,>).Namespace.ShouldBe("HEAL.HeuristicLib.Encodings.Composite");
@@ -53,7 +53,7 @@ public sealed class ExperimentalBoundaryTests
             "HEAL.HeuristicLib.SearchSpaces.Trees"
         ];
 
-        var obsoleteTypes = typeof(AlpsGeneticAlgorithm<,,>).Assembly
+        var obsoleteTypes = typeof(AlpsGeneticAlgorithm<>).Assembly
             .GetExportedTypes()
             .Where(type => obsoletePrefixes.Any(prefix => type.Namespace?.StartsWith(prefix, StringComparison.Ordinal) == true))
             .Select(type => type.FullName)

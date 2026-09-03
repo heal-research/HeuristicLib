@@ -24,7 +24,7 @@ public static class AlgorithmRunAnalysisExtensions
         public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> TrackBestMedianWorst(
             out BestMedianWorstAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> analyzer)
         {
-            analyzer = Analyzer.BestMedianWorst(run.Algorithm);
+            analyzer = Analyzer.BestMedianWorst<TCandidate, TSearchSpace, TProblem, TSearchState>(run.Algorithm);
             return run.WithAnalyzer(analyzer);
         }
     }

@@ -96,7 +96,7 @@ public class NumericParameterFittingSpecs
     }
 
     private static double BestMeanSquaredError(
-        GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem> algorithm,
+        GeneticAlgorithm<ExpressionTree> algorithm,
         SymbolicRegressionProblem problem) =>
         algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .Population.EvaluatedCandidates
@@ -158,7 +158,7 @@ public class NumericParameterFittingSpecs
         sharedCounter.CurrentCount.ShouldBeGreaterThan(ownCounter.CurrentCount);
     }
 
-    private static GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem> CreateAlgorithm(
+    private static GeneticAlgorithm<ExpressionTree> CreateAlgorithm(
         SymbolicRegressionProblem problem) =>
         new()
         {

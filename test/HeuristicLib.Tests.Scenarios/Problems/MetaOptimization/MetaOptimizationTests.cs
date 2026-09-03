@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Encodings.Composite;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Operators.Mutators;
@@ -16,7 +15,7 @@ public class MetaOptimizationTests
     {
         //setup
         var problem = new TestFunctionProblem(new AckleyFunction(20));
-        var ga = GeneticAlgorithm.Create<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(
+        var ga = GeneticAlgorithm.Create(
           new UniformDistributedCreator(),
           new SimulatedBinaryCrossover(),
           new GaussianMutator(0.5, 0.5),
@@ -35,21 +34,14 @@ public class MetaOptimizationTests
                 new PolynomialMutator { AtLeastOnce = true }
             });
         var metaSpace = b.Build();
-        var metaProblem = problem.AsMetaProblem(metaSpace, x =>
+        var metaProblem = problem.AsMetaProblem<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(metaSpace, x =>
         {
             var alg = ga with { Mutator = mutatorExtractor(x) };
             return alg with { MaximumGenerations = 1000 / alg.PopulationSize }; // now with fancy cross dependent parameters
         });
 
         //build meta alg
-        // The creator and mutator name only their candidate now, and no other argument is supplied, so nothing is
-        // left for the compiler to infer the run's search space and problem from. The inner genetic algorithm lost
-        // its search space the same way, which is why the meta problem below is typed at ISearchSpace<RealVector>
-        // rather than at BoundedRealVectorSearchSpace: the widening propagates through everything built on it.
-        var hc = HillClimber.Create<
-          CompositeGenotype<RealVector, IntegerVector>,
-          CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>,
-          MetaOptimizationProblem<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>>(
+        var hc = HillClimber.Create(
           creator: metaSpace.CombineCreators(
             new UniformDistributedCreator(),
             new Encodings.IntegerVectors.UniformDistributedCreator()), //operator name clash ...

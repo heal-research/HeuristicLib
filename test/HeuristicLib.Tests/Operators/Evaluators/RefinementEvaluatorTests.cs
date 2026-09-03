@@ -101,7 +101,7 @@ public class RefinementEvaluatorTests
     [Fact]
     public void RefinementEvaluator_WithoutAConfiguredEvaluator_MeasuresThroughTheProblem()
     {
-        var evaluator = RefinementEvaluator.Create<int>(new AddOffsetRefiner(10));
+        var evaluator = RefinementEvaluator.Create(new AddOffsetRefiner(10));
         var problem = CreateProblem();
 
         evaluator.Evaluator.ShouldBe(new ProblemEvaluator<int>());
@@ -119,8 +119,8 @@ public class RefinementEvaluatorTests
     [Fact]
     public void RefinementEvaluator_WithInheritedDefaultEvaluators_IsEqual()
     {
-        var left = RefinementEvaluator.Create<int>(new AddOffsetRefiner(10));
-        var right = RefinementEvaluator.Create<int>(new AddOffsetRefiner(10));
+        var left = RefinementEvaluator.Create(new AddOffsetRefiner(10));
+        var right = RefinementEvaluator.Create(new AddOffsetRefiner(10));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -136,7 +136,7 @@ public class RefinementEvaluatorTests
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
         left.ShouldNotBe(childEvaluator.WithRefinement(new AddOffsetRefiner(20)));
-        left.ShouldNotBe(RefinementEvaluator.Create<int>(new AddOffsetRefiner(10)));
+        left.ShouldNotBe(RefinementEvaluator.Create(new AddOffsetRefiner(10)));
     }
 
     private static IEvaluator<int> CreateEvaluator() =>

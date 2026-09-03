@@ -1,15 +1,11 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Experiments;
 
-public sealed record GridExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
-    : Experiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TAlgorithm>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record GridExperiment<TCandidate, TAlgorithm, TSearchState>
+    : Experiment<TCandidate, TAlgorithm, TSearchState, TAlgorithm>
+    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
-    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     public Grid<TAlgorithm> ParameterGrid { get; }
 
@@ -23,7 +19,7 @@ public sealed record GridExperiment<TCandidate, TSearchSpace, TProblem, TSearchS
         ParameterGrid = parameterGrid;
     }
 
-    public GridExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> VaryBy<TValue>(IReadOnlyList<TValue> values, Func<TAlgorithm, TValue, TAlgorithm> configurator) =>
+    public GridExperiment<TCandidate, TAlgorithm, TSearchState> VaryBy<TValue>(IReadOnlyList<TValue> values, Func<TAlgorithm, TValue, TAlgorithm> configurator) =>
         new(ParameterGrid.VaryBy(values, configurator));
 
     public override ImmutableArray<ExperimentCase<TAlgorithm, TAlgorithm>> MaterializeCases()
@@ -40,20 +36,16 @@ public sealed record GridExperiment<TCandidate, TSearchSpace, TProblem, TSearchS
 
 public static class GridExperimentExtensions
 {
-    extension<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TSelf, TCandidate, TSearchState>(Algorithm<TSelf, TCandidate, TSearchState> algorithm)
+        where TSelf : Algorithm<TSelf, TCandidate, TSearchState>
         where TSearchState : class, ISearchState
     {
-        public GridExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> AsGrid() => new(algorithm.Self);
+        public GridExperiment<TCandidate, TSelf, TSearchState> AsGrid() => new(algorithm.Self);
     }
 
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public GridExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> AsGrid() => new(algorithm);
+        public GridExperiment<TCandidate, IAlgorithm<TCandidate, TSearchState>, TSearchState> AsGrid() => new(algorithm);
     }
 }

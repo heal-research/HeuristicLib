@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;

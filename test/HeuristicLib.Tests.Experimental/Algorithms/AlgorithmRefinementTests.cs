@@ -130,7 +130,7 @@ public class AlgorithmRefinementTests
         var strategyRefiner = new CountingRefiner();
         var nsga2Refiner = new CountingRefiner();
 
-        new EvolutionStrategy<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        new EvolutionStrategy<RealVector>
         {
             PopulationSize = PopulationSize,
             NumberOfChildren = PopulationSize,
@@ -143,7 +143,7 @@ public class AlgorithmRefinementTests
             Refiner = strategyRefiner
         }.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
-        new NSGA2<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        new NSGA2<RealVector>
         {
             PopulationSize = PopulationSize,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -204,7 +204,7 @@ public class AlgorithmRefinementTests
     {
         var problem = CreateProblem();
         var refiner = new CountingRefiner();
-        var algorithm = new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector>
         {
             PopulationSize = PopulationSize,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -214,7 +214,7 @@ public class AlgorithmRefinementTests
             Elites = 0,
             MaxEffort = PopulationSize,
             MaximumGenerations = Generations,
-            Refiner = PipelineRefiner.Create<RealVector>(new FarFromOriginRefiner(), refiner)
+            Refiner = PipelineRefiner.Create(new FarFromOriginRefiner(), refiner)
         };
 
         var populationSizes = new List<int>();
@@ -270,7 +270,7 @@ public class AlgorithmRefinementTests
 
     private static TestFunctionProblem CreateProblem() => new(new SphereFunction(dimension: 3));
 
-    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(TestFunctionProblem problem) =>
+    private static GeneticAlgorithm<RealVector> CreateAlgorithm(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = PopulationSize,
@@ -283,7 +283,7 @@ public class AlgorithmRefinementTests
             MaximumGenerations = Generations
         };
 
-    private static HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateHillClimber(TestFunctionProblem problem) =>
+    private static HillClimber<RealVector> CreateHillClimber(TestFunctionProblem problem) =>
         new()
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -320,7 +320,7 @@ public class AlgorithmRefinementTests
         }
     }
 
-    private static EvolutionStrategy<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateEvolutionStrategy(TestFunctionProblem problem) =>
+    private static EvolutionStrategy<RealVector> CreateEvolutionStrategy(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = PopulationSize,
@@ -333,7 +333,7 @@ public class AlgorithmRefinementTests
             MaximumGenerations = Generations
         };
 
-    private static NSGA2<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateNsga2(TestFunctionProblem problem) =>
+    private static NSGA2<RealVector> CreateNsga2(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = PopulationSize,
@@ -345,7 +345,7 @@ public class AlgorithmRefinementTests
             MaximumGenerations = Generations
         };
 
-    private static AlpsGeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateAlps(TestFunctionProblem problem) =>
+    private static AlpsGeneticAlgorithm<RealVector> CreateAlps(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = PopulationSize,
@@ -357,7 +357,7 @@ public class AlgorithmRefinementTests
             MaximumGenerations = Generations
         };
 
-    private static OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateOpenEnded(TestFunctionProblem problem) =>
+    private static OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector> CreateOpenEnded(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = PopulationSize,

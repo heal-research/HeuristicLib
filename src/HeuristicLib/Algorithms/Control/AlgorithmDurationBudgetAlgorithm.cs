@@ -6,13 +6,11 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : Algorithm<AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>
+    : Algorithm<AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
-    public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
+    public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
     /// <summary>
@@ -21,8 +19,8 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProble
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override AlgorithmDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new(instanceRegistry.Resolve(Algorithm), MaximumDuration, TimeProvider);
+    public override AlgorithmDurationBudgetAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry) =>
+        new(instanceRegistry.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), MaximumDuration, TimeProvider);
 }
 
 public sealed class AlgorithmDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>

@@ -30,7 +30,7 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void PipelineRefiner_PassesAResizedPopulationToTheNextStage()
     {
-        var instance = PipelineRefiner.Create<Individual>(new DropLastRefiner(), new AddOffsetRefiner(1))
+        var instance = PipelineRefiner.Create(new DropLastRefiner(), new AddOffsetRefiner(1))
             .CreateExecutionInstance<DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(new ExecutionInstanceRegistry());
 
         Refine(instance, 1, 2, 3).Select(individual => individual.Value).ShouldBe([2, 3]);
@@ -71,7 +71,7 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void ChooseOneRefiner_RequiresOneResultPerCandidateAssignedToAChild()
     {
-        var instance = ChooseOneRefiner.Create<Individual>(new DropLastRefiner())
+        var instance = ChooseOneRefiner.Create(new DropLastRefiner())
             .CreateExecutionInstance<DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(new ExecutionInstanceRegistry());
 
         Should.Throw<InvalidOperationException>(() => Refine(instance, 1, 2, 3));
@@ -82,14 +82,14 @@ public class RefinerBatchSemanticsTests
         var noChange = NoChangeRefiner<Individual>.Instance;
 
         yield return ("no change", noChange);
-        yield return ("pipeline", PipelineRefiner.Create<Individual>(noChange, noChange));
+        yield return ("pipeline", PipelineRefiner.Create(noChange, noChange));
         yield return ("empty pipeline", PipelineRefiner.Create<Individual>());
         yield return ("iterated", noChange.AsIterated(3));
-        yield return ("choose one", ChooseOneRefiner.Create<Individual>(noChange));
+        yield return ("choose one", ChooseOneRefiner.Create(noChange));
         yield return ("rate limited", new AddOffsetRefiner(1).WithRate(0.0));
         yield return ("counting", noChange.CountRefinedCandidates(new ObservationCounter()));
         yield return ("duration measuring", noChange.MeasureRefinerDuration(new ObservationDuration()));
-        yield return ("observable", noChange.ObserveWith((IReadOnlyList<Individual> _) => { }));
+        yield return ("observable", noChange.ObserveWith(_ => { }));
         yield return ("improvement checking", noChange.WithImprovementCheck());
         yield return ("single candidate", new IdentityRefiner());
     }
@@ -98,7 +98,7 @@ public class RefinerBatchSemanticsTests
         instance.Refine([.. values.Select(value => new Individual(value))], RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
 
     private static readonly FuncProblem<Individual, DummySearchSpace<Individual>> Problem =
-        FuncProblem.Create(static (Individual individual) => (double)individual.Value, DummySearchSpace<Individual>.Instance, SingleObjective.Minimize);
+        FuncProblem.Create(static (Individual individual) => individual.Value, DummySearchSpace<Individual>.Instance, SingleObjective.Minimize);
 
     private sealed record Individual(int Value);
 

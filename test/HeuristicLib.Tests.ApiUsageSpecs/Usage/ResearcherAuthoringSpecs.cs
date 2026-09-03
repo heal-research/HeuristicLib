@@ -17,7 +17,7 @@ public class ResearcherAuthoringSpecs
     public async Task CustomMutator_AuthoringExample_RunsInHillClimber()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new PullTowardZeroMutator(),
@@ -38,7 +38,7 @@ public class ResearcherAuthoringSpecs
     public async Task CustomTerminator_AuthoringExample_CanStopAlgorithm()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var innerAlgorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var innerAlgorithm = new HillClimber<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -63,7 +63,7 @@ public class ResearcherAuthoringSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         using var stopAfterCurrentState = new CancellationTokenSource();
         stopAfterCurrentState.Cancel();
-        var innerAlgorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var innerAlgorithm = new HillClimber<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -88,7 +88,7 @@ public class ResearcherAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(2));
-        var innerAlgorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var innerAlgorithm = new HillClimber<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -112,7 +112,7 @@ public class ResearcherAuthoringSpecs
     public async Task ProblemSpecificOperator_AuthoringExample_CanUseProblemType()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector>
         {
             Creator = new TestFunctionOriginCreator(),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),

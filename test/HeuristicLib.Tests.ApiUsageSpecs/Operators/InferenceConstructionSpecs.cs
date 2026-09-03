@@ -23,9 +23,9 @@ public class InferenceConstructionSpecs
         var algorithm = CreateAlgorithm(problem);
 
         var problemDirectEvaluator = ProblemEvaluator.For(problem);
-        var directEvaluator = ProblemEvaluator.For(algorithm);
+        var directEvaluator = ProblemEvaluator.For(problem);
         var problemTournamentSelector = TournamentSelector.For(problem, tournamentSize: 3);
-        var tournamentSelector = TournamentSelector.For(algorithm, tournamentSize: 4);
+        var tournamentSelector = TournamentSelector.For(problem, tournamentSize: 4);
         var randomSelector = RandomSelector.For(problem);
         var bestSelector = BestSelector.For(problem);
         var worstSelector = WorstSelector.For(problem);
@@ -38,7 +38,7 @@ public class InferenceConstructionSpecs
         var elitismReplacer = ElitismReplacer.For(problem, elites: 2);
         var paretoReplacer = ParetoCrowdingReplacer.For(problem, dominateOnEqualities: true);
         var randomCrossover = RandomCrossover.For(problem, bias: 0.75);
-        var identityInterceptor = IdentityInterceptor.For(algorithm);
+        var identityInterceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var reconfiguredAlgorithm = algorithm with
         {
             Evaluator = directEvaluator,
@@ -79,7 +79,7 @@ public class InferenceConstructionSpecs
         var fluentAnyTerminator = firstTerminator.Or(secondTerminator);
         var allTerminator = AllTerminator.Create(firstTerminator, secondTerminator);
         var fluentAllTerminator = firstTerminator.And(secondTerminator);
-        var observableTerminator = ObservableTerminator.Create<RealVector, PopulationState<RealVector>>(firstTerminator, (bool _) => { });
+        var observableTerminator = ObservableTerminator.Create<RealVector, PopulationState<RealVector>>(firstTerminator, _ => { });
         var countingTerminator = CountingTerminator.Create(firstTerminator, new ObservationCounter());
         var measuredTerminator = DurationMeasuringTerminator.Create(firstTerminator, new ObservationDuration());
         var terminatedAlgorithm = StateTerminatedAlgorithm.Create(algorithm, firstTerminator);
@@ -190,9 +190,9 @@ public class InferenceConstructionSpecs
         streamEntry.Trial.ShouldBeSameAs(experimentCase);
     }
 
-    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(TestFunctionProblem problem)
+    private static GeneticAlgorithm<RealVector> CreateAlgorithm(TestFunctionProblem problem)
     {
-        return new GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        return new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 10,
             MaximumGenerations = 2,
@@ -210,7 +210,7 @@ public class InferenceConstructionSpecs
     /// This is the mechanism the algorithm arity reduction stands on. Once an algorithm names only its candidate,
     /// nothing on the receiver says what search space a run uses, and a plain <c>TProblem problem</c> parameter
     /// cannot supply it: the search space sits in constraint position, where C# inference does not reach. Naming the
-    /// problem's own type on <see cref="Problem{TSelf, TCandidate, TSearchSpace}"/> is what makes all three
+    /// problem's own type on <see cref="Problem{TSelf,TCandidate,TSearchSpace}"/> is what makes all three
     /// inferable from the single argument a user already passes.
     /// <para>
     /// Every problem declares it, so this holds for problems that state no operator defaults at all — which is what

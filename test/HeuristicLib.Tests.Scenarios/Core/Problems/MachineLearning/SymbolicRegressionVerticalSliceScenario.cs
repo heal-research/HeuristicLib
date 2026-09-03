@@ -23,7 +23,7 @@ public sealed class SymbolicRegressionVerticalSliceScenario(ITestOutputHelper ou
         {
             Weights = [1.0, 1.0, 1.0]
         };
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
+        var algorithm = new GeneticAlgorithm<ExpressionTree>
         {
             PopulationSize = 80,
             MaximumGenerations = 30,

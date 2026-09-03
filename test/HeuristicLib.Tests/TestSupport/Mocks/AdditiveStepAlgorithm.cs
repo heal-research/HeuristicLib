@@ -1,22 +1,25 @@
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 public sealed record AdditiveStepAlgorithm(int Increment)
-    : Algorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    : Algorithm<AdditiveStepAlgorithm, int, PopulationState<int>>
 {
     public IEvaluator<int> Evaluator { get; init; } = new ProblemEvaluator<int>();
 
-    public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Evaluator), Increment);
+    public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry) =>
+        new Instance<TRunSearchSpace, TRunProblem>(instanceRegistry.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator), Increment);
 
-    private sealed class Instance(IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, int increment)
-        : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator, int increment)
+        : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+        where TSearchSpace : class, ISearchSpace<int>
+        where TProblem : class, IProblem<int, TSearchSpace>
     {
-        private readonly IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator = evaluator;
+        private readonly IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator = evaluator;
 
-        public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
 

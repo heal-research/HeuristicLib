@@ -17,7 +17,7 @@ public sealed class RegressionProblemTests
                 { 0.0, 3.0 },
                 { 0.0, 5.0 }
             });
-        var problemData = new RegressionProblemData(dataset, "y", trainingRange: 0..3);
+        var problemData = new RegressionProblemData(dataset, "y", trainingRange: ..3);
         IRegressionEvaluator<SymbolicExpressionTree>[] evaluators = [new MeanSquaredErrorCalculator()];
 
         var problem = new LegacySymbolicRegressionProblem(problemData, evaluators);

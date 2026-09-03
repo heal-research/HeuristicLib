@@ -2,9 +2,9 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.BoolVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Crossovers;
-using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
@@ -134,8 +134,12 @@ public class PreflightValidationSpecs
     [Fact]
     public void Validating_AlsoReportsAnOperatorThatCannotBeBuiltForTheProblem()
     {
-        var problem = new TravelingSalesmanProblem();
-        var algorithm = new GeneticAlgorithm<Permutation, PermutationSearchSpace, IProblem<Permutation, PermutationSearchSpace>>
+        // A permutation problem the crossover was not written for. Over a TravelingSalesmanProblem it would bind.
+        var problem = FuncProblem.Create(
+            (Permutation candidate) => candidate[0],
+            new PermutationSearchSpace(5),
+            SingleObjective.Minimize);
+        var algorithm = new GeneticAlgorithm<Permutation>
         {
             Creator = new RandomPermutationCreator(),
             Crossover = new TravellingSalesmanSpecificCrossover(),

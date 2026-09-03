@@ -51,7 +51,7 @@ public class OperatorCompatibilityTests
 
     private static bool DoesCompile(string code, params Type[] usedTypes)
     {
-        var references = usedTypes.Concat([typeof(object), typeof(IAlgorithm<,,,>), typeof(Algorithm<,,,,>)])
+        var references = usedTypes.Concat([typeof(object), typeof(IAlgorithm<>), typeof(Algorithm<,,,,>)])
                                   .Select(t => t.Assembly)
                                   .Concat([Assembly.Load("System.Runtime")])
                                   .Distinct()
@@ -268,7 +268,7 @@ public class OperatorCompatibilityTests
             }
         }
 
-        throw new InvalidOperationException($"{algorithmType.Name} does not derive from Algorithm<,,,,>.");
+        throw new InvalidOperationException($"{algorithmType.Name} does not derive from Algorithm<, , , , >.");
     }
 
     /// <summary>
@@ -292,7 +292,7 @@ public class OperatorCompatibilityTests
                               && method.GetParameters() is [{ ParameterType.Name: nameof(ExecutionInstanceRegistry) }, _, _, _])
             .MakeGenericMethod(candidate, searchSpace, problem);
 
-        var arguments = new object?[] { new ExecutionInstanceRegistry(), @operator, null, null };
+        var arguments = new[] { new ExecutionInstanceRegistry(), @operator, null, null };
         var validates = (bool)tryResolve.Invoke(null, arguments)!;
 
         // The contract the check carries: a true result hands back the instance the run will use, and a false result
@@ -313,7 +313,7 @@ public class OperatorCompatibilityTests
 
 }
 
-public record IndependentAlgorithm<TCandidate, TSearchSpace, TProblem> : Algorithm<IndependentAlgorithm<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, SearchState>
+internal record IndependentAlgorithm<TCandidate, TSearchSpace, TProblem> : Algorithm<IndependentAlgorithm<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, SearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -322,12 +322,12 @@ public record IndependentAlgorithm<TCandidate, TSearchSpace, TProblem> : Algorit
     public override AlgorithmInstance<TCandidate, TSearchSpace, TProblem, SearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotSupportedException();
 }
 
-public record IndependentAlgorithm<TCandidate, TSearchSpace> : IndependentAlgorithm<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+internal record IndependentAlgorithm<TCandidate, TSearchSpace> : IndependentAlgorithm<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     where TSearchSpace : class, ISearchSpace<TCandidate>;
 
-public record IndependentAlgorithm<TCandidate> : IndependentAlgorithm<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
+internal record IndependentAlgorithm<TCandidate> : IndependentAlgorithm<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
-public record PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<PermutationEncodingSpecificAlgorithm<TProblem>, Permutation, PermutationSearchSpace, TProblem, SearchState>
+internal record PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<PermutationEncodingSpecificAlgorithm<TProblem>, Permutation, PermutationSearchSpace, TProblem, SearchState>
     where TProblem : class, IProblem<Permutation, PermutationSearchSpace>
 {
     public ICrossover<Permutation> Crossover { get; set; } = new PermutationSpecificCrossover();
@@ -335,7 +335,7 @@ public record PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permuta
     public override AlgorithmInstance<Permutation, PermutationSearchSpace, TProblem, SearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotSupportedException();
 }
 
-public record PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationSearchSpace>>;
+internal record PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationSearchSpace>>;
 
 public record TravelingSalesmanProblemSpecificAlgorithm : Algorithm<TravelingSalesmanProblemSpecificAlgorithm, Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState>
 {
@@ -344,7 +344,7 @@ public record TravelingSalesmanProblemSpecificAlgorithm : Algorithm<TravelingSal
     public override AlgorithmInstance<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotSupportedException();
 }
 
-public record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVectorEncodingSpecificAlgorithm<TProblem>, RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState>
+internal record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVectorEncodingSpecificAlgorithm<TProblem>, RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState>
     where TProblem : class, IProblem<RealVector, BoundedRealVectorSearchSpace>
 {
     public ICrossover<RealVector> Crossover { get; set; } = new RealVectorSpecificCrossover();
@@ -352,7 +352,7 @@ public record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVect
     public override AlgorithmInstance<RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotSupportedException();
 }
 
-public record RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, BoundedRealVectorSearchSpace>>;
+internal record RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, BoundedRealVectorSearchSpace>>;
 
 public record TestFunctionProblemSpecificAlgorithm : Algorithm<TestFunctionProblemSpecificAlgorithm, RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SearchState>
 {
@@ -361,7 +361,7 @@ public record TestFunctionProblemSpecificAlgorithm : Algorithm<TestFunctionProbl
     public override AlgorithmInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotSupportedException();
 }
 
-public record IndependentCrossover<TCandidate> : SingleCandidateCrossover<TCandidate>
+internal record IndependentCrossover<TCandidate> : SingleCandidateCrossover<TCandidate>
 {
     public override TCandidate CrossParents(Parents<TCandidate> parents, IRandomNumberGenerator random) => throw new NotSupportedException();
 }

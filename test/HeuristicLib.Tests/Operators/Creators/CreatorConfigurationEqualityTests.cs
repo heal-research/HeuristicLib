@@ -268,8 +268,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void ObservableCreator_WithSeparatelyConstructedActionObservers_IsNotEqual()
     {
-        var left = new ConstantCreator(1).ObserveWith((IReadOnlyList<int> _) => { });
-        var right = new ConstantCreator(1).ObserveWith((IReadOnlyList<int> _) => { });
+        var left = new ConstantCreator(1).ObserveWith(_ => { });
+        var right = new ConstantCreator(1).ObserveWith(_ => { });
 
         left.ShouldNotBe(right);
     }

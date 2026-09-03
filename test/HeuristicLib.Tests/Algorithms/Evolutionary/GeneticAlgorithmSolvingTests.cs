@@ -255,7 +255,7 @@ public class GeneticAlgorithmSolvingTests
         return new TestFunctionProblem(new SphereFunction(dimension: 3));
     }
 
-    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(
+    private static GeneticAlgorithm<RealVector> CreateAlgorithm(
       TestFunctionProblem problem)
     {
         return CreateUnwrappedAlgorithm(problem) with
@@ -264,10 +264,10 @@ public class GeneticAlgorithmSolvingTests
         };
     }
 
-    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateUnwrappedAlgorithm(
+    private static GeneticAlgorithm<RealVector> CreateUnwrappedAlgorithm(
       TestFunctionProblem problem)
     {
-        return new GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        return new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 5,
             Creator = new UniformDistributedCreator(problem.SearchSpace),

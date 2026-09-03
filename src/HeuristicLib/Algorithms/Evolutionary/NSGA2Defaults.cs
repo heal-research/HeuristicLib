@@ -1,6 +1,4 @@
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
@@ -20,18 +18,12 @@ public static class NSGA2Defaults
     /// </summary>
     public const bool DominateOnEquals = true;
 
-    public static ISelector<TCandidate> Selector<TCandidate, TSearchSpace, TProblem>()
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static ISelector<TCandidate> Selector<TCandidate>() =>
         new ParetoCrowdingTournamentSelector<TCandidate>(DominateOnEquals);
 
-    public static IReplacer<TCandidate> Replacer<TCandidate, TSearchSpace, TProblem>()
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static IReplacer<TCandidate> Replacer<TCandidate>() =>
         new ParetoCrowdingReplacer<TCandidate>(DominateOnEquals);
 
-    public static IEvaluator<TCandidate> Evaluator<TCandidate, TSearchSpace, TProblem>()
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static IEvaluator<TCandidate> Evaluator<TCandidate>() =>
         new ProblemEvaluator<TCandidate>();
 }

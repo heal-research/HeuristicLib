@@ -75,7 +75,7 @@ public class ObservableOperatorCounterTests
     public void ObservableCreator_DoesNotInvokeObserversWhenCreationThrows()
     {
         var observed = 0;
-        var instance = new ThrowingCreator().ObserveWith((IReadOnlyList<int> _) => observed++).CreateCreatorInstance();
+        var instance = new ThrowingCreator().ObserveWith(_ => observed++).CreateCreatorInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -154,7 +154,7 @@ public class ObservableOperatorCounterTests
     public void ObservableMutator_DoesNotInvokeObserversWhenMutationThrows()
     {
         var observed = 0;
-        var instance = new ThrowingMutator().ObserveWith((IReadOnlyList<int> _) => observed++).CreateMutatorInstance();
+        var instance = new ThrowingMutator().ObserveWith(_ => observed++).CreateMutatorInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -371,7 +371,7 @@ public class ObservableOperatorCounterTests
     public void ObservableCrossover_DoesNotInvokeObserversWhenCrossoverThrows()
     {
         var observed = 0;
-        var instance = new ThrowingCrossover().ObserveWith((IReadOnlyList<int> _) => observed++).CreateCrossoverInstance();
+        var instance = new ThrowingCrossover().ObserveWith(_ => observed++).CreateCrossoverInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -480,7 +480,7 @@ public class ObservableOperatorCounterTests
     public void ObservableSelector_DoesNotInvokeObserversWhenSelectionThrows()
     {
         var observed = 0;
-        var instance = new ThrowingSelector().ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => observed++).CreateSelectorInstance();
+        var instance = new ThrowingSelector().ObserveWith(_ => observed++).CreateSelectorInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -610,7 +610,7 @@ public class ObservableOperatorCounterTests
     public void ObservableReplacer_DoesNotInvokeObserversWhenReplacementThrows()
     {
         var observed = 0;
-        var instance = new ThrowingReplacer().ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => observed++).CreateReplacerInstance();
+        var instance = new ThrowingReplacer().ObserveWith(_ => observed++).CreateReplacerInstance();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.Replace(
@@ -798,7 +798,7 @@ public class ObservableOperatorCounterTests
     public void ObservableTerminator_DoesNotInvokeObserversWhenTerminalStateCheckThrows()
     {
         var observed = 0;
-        var instance = new ThrowingTerminator().ObserveWith<int, CounterState>((bool _) => observed++).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
+        var instance = new ThrowingTerminator().ObserveWith<int, CounterState>(_ => observed++).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
@@ -894,7 +894,7 @@ public class ObservableOperatorCounterTests
         public IMutatorInstance<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ExecutionInstanceRegistry instanceRegistry)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
-            => (IMutatorInstance<int, TSearchSpace, TProblem>)(object)CreateBoundInstance();
+            => (IMutatorInstance<int, TSearchSpace, TProblem>)CreateBoundInstance();
 
         private IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateBoundInstance() =>
             new Instance(callback);

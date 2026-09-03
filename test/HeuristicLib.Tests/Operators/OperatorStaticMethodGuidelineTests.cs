@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
@@ -89,7 +90,7 @@ public class OperatorStaticMethodGuidelineTests
     [Fact]
     public void ChangedOperatorRecords_ExposeOnlyImmutableConfigurationProperties()
     {
-        AssertImmutableDeclaredProperties(typeof(Encodings.RealVectors.NormalDistributedCreator));
+        AssertImmutableDeclaredProperties(typeof(NormalDistributedCreator));
         AssertImmutableDeclaredProperties(typeof(Encodings.IntegerVectors.NormalDistributedCreator));
         AssertImmutableDeclaredProperties(typeof(BalancedTreeCreator));
         AssertImmutableDeclaredProperties(typeof(SelfAdaptiveSimulatedBinaryCrossover));
@@ -147,7 +148,7 @@ public class OperatorStaticMethodGuidelineTests
     private static void AssertImmutableDeclaredProperties(Type type)
     {
         var mutableProperties = type
-                                .GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly)
+                                .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
                                 .Where(property => property.SetMethod is not null && !IsInitOnly(property))
                                 .Select(property => property.Name)
                                 .ToArray();
@@ -155,7 +156,7 @@ public class OperatorStaticMethodGuidelineTests
         mutableProperties.ShouldBeEmpty();
     }
 
-    private static bool IsInitOnly(System.Reflection.PropertyInfo property)
+    private static bool IsInitOnly(PropertyInfo property)
     {
         return property.SetMethod?.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)) == true;
     }

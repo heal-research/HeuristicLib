@@ -8,14 +8,12 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>
-    : Algorithm<OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>, TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record OperatorBudgetAlgorithm<TCandidate, TSearchState, TOperator>
+    : Algorithm<OperatorBudgetAlgorithm<TCandidate, TSearchState, TOperator>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
     where TOperator : class, IOperator
 {
-    public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
+    public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
     public required TOperator ObservedOperator { get; init; }
     public required Func<TOperator, ObservationCounter, TOperator> CountedOperatorFactory { get; init; }
 
@@ -25,14 +23,14 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearc
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public int MaximumCount { get; init; }
 
-    public override OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public override OperatorBudgetAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
     {
         var counter = new ObservationCounter();
         var countedOperator = CountedOperatorFactory(ObservedOperator, counter);
         var childRegistry = instanceRegistry.CreateChildRegistry();
         childRegistry.RegisterReplacement(ObservedOperator, countedOperator);
 
-        return new(childRegistry.Resolve(Algorithm), counter, MaximumCount);
+        return new(childRegistry.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
     }
 }
 

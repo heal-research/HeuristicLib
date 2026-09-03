@@ -57,7 +57,7 @@ public sealed class MutatorParameterSemanticsTests
         var instance = new ExecutionInstanceRegistry()
             .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>()
             .Resolve(gaussian)
-            .ShouldBeAssignableTo<IAdaptableMutationStrengthInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>()!;
+            .ShouldBeAssignableTo<IAdaptableMutationStrengthInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>();
 
         instance.CurrentMutationStrength = value;
 

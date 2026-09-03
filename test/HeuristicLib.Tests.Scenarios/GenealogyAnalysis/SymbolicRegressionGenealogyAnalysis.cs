@@ -30,7 +30,7 @@ public class GenealogyGraphTests
         var problem = CreateTestSymbolicRegressionProblem();
 
         //ga.RandomSeed = AlgorithmRandomSeed;
-        var ga = new GeneticAlgorithm<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>
+        var ga = new GeneticAlgorithm<SymbolicExpressionTree>
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover(),
@@ -40,7 +40,7 @@ public class GenealogyGraphTests
             MutationRate = 0.05,
             Elites = 1
         };
-        var interceptor = ga.Interceptor ?? IdentityInterceptor.For(ga);
+        var interceptor = ga.Interceptor ?? new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
         ga = ga with
         {
             Interceptor = interceptor,
@@ -68,7 +68,7 @@ public class GenealogyGraphTests
 
         const int gens = 6;
         const int popsize = 6;
-        var algorithm = new GeneticAlgorithm<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>
+        var algorithm = new GeneticAlgorithm<SymbolicExpressionTree>
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover(),
@@ -78,7 +78,7 @@ public class GenealogyGraphTests
             MutationRate = 0.05,
             Elites = 1
         };
-        var interceptor = algorithm.Interceptor ?? IdentityInterceptor.For(algorithm);
+        var interceptor = algorithm.Interceptor ?? new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
         algorithm = algorithm with
         {
             Interceptor = interceptor,
@@ -112,12 +112,12 @@ public class GenealogyGraphTests
     public void GenealogyGraphOnLocalSearch()
     {
         var problem = CreateTestSymbolicRegressionProblem();
-        var algorithm = new HillClimber<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>
+        var algorithm = new HillClimber<SymbolicExpressionTree>
         {
             Creator = new ProbabilisticTreeCreator(),
             Mutator = CreateSymRegAllMutator()
         };
-        var interceptor = algorithm.Interceptor ?? IdentityInterceptor.For(algorithm);
+        var interceptor = algorithm.Interceptor ?? new IdentityInterceptor<SymbolicExpressionTree, SingleSolutionState<SymbolicExpressionTree>>();
         algorithm = algorithm with { Interceptor = interceptor };
         var genealogy =
             new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace,
@@ -143,7 +143,7 @@ public class GenealogyGraphTests
         const int populationSize = 6;
         const int maximumIterations = 4;
         const double mutationRate = 0.05;
-        var algorithm = new NSGA2<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>
+        var algorithm = new NSGA2<SymbolicExpressionTree>
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover(),
@@ -151,7 +151,7 @@ public class GenealogyGraphTests
             PopulationSize = populationSize,
             MutationRate = mutationRate
         };
-        var interceptor = algorithm.Interceptor ?? IdentityInterceptor.For(algorithm);
+        var interceptor = algorithm.Interceptor ?? new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
         algorithm = algorithm with
         {
             Interceptor = interceptor,

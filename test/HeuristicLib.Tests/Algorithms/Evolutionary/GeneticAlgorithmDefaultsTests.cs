@@ -17,7 +17,7 @@ public class GeneticAlgorithmDefaultsTests
         algorithm.Evaluator.ShouldNotBeNull();
     }
 
-    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace> CreateMinimallyConfiguredAlgorithm() =>
+    private static GeneticAlgorithm<RealVector> CreateMinimallyConfiguredAlgorithm() =>
         new()
         {
             Creator = new UniformDistributedCreator { Maximum = 3.0 },

@@ -476,7 +476,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void ReplaceMany_RebuildsAnNaryNodeOnceAndSharesUnaffectedChildren()
     {
-        var expression = ExpressionDraft.Apply(new SumThreeSymbol(), Variable("x0"), Variable("x1"), Variable("x2")).Build();
+        var expression = Apply(new SumThreeSymbol(), Variable("x0"), Variable("x1"), Variable("x2")).Build();
         var original = expression.Root.ShouldBeOfType<NaryExpressionNode>();
 
         var edited = expression.ReplaceMany([
@@ -570,7 +570,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Create_SupportsSymbolsWithMoreThanTwoChildren()
     {
-        var expression = ExpressionDraft.Apply(
+        var expression = Apply(
             new SumThreeSymbol(),
             Variable("x0"),
             Variable("x1"),
@@ -607,7 +607,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_UsesColumnOrderAndCallerProvidedBuffers()
     {
-        var data = DataFrame.FromMatrix(["x0", "x1"], new double[,] { { 1.0, 3.0 }, { 2.0, 4.0 }, { 3.0, 5.0 } });
+        var data = DataFrame.FromMatrix(["x0", "x1"], new[,] { { 1.0, 3.0 }, { 2.0, 4.0 }, { 3.0, 5.0 } });
         var destination = new[] { double.NaN, double.NaN, double.NaN, 42.0 };
         var compiled = CreateLinearExpression().Compile();
         var workspace = new double[ExpressionInterpreter.GetWorkspaceLength(compiled, data)];
@@ -620,7 +620,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_UsesTheDataFrameColumnOrder()
     {
-        var data = DataFrame.FromMatrix(["x0", "x1"], new double[,] { { 1.0, 3.0 }, { 2.0, 4.0 }, { 3.0, 5.0 } });
+        var data = DataFrame.FromMatrix(["x0", "x1"], new[,] { { 1.0, 3.0 }, { 2.0, 4.0 }, { 3.0, 5.0 } });
 
         CreateLinearExpression().Evaluate(data).ShouldBe([7.0, 10.0, 13.0]);
     }

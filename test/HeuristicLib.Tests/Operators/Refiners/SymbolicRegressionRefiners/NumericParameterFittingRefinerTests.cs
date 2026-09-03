@@ -223,7 +223,7 @@ public sealed class NumericParameterFittingRefinerTests
         var fittingData = new RegressionData(
             new DataFrame([Series<double>.FromOwnedArray("other", [.. Inputs])]),
             Series<double>.FromOwnedArray("y", [.. Targets]));
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
+        var algorithm = new GeneticAlgorithm<ExpressionTree>
         {
             PopulationSize = 4,
             Creator = new GrowTreeCreator(),

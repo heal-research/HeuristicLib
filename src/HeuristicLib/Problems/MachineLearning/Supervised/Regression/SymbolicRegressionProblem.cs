@@ -69,7 +69,7 @@ public sealed class SymbolicRegressionProblem
                 }
 
                 for (var i = 0; i < PredictionMetrics.Length; i++)
-                    values[i] = ((IPredictionMetric<double>)PredictionMetrics[i]).Evaluate(predictions, targets);
+                    values[i] = PredictionMetrics[i].Evaluate(predictions, targets);
             }
             finally
             {

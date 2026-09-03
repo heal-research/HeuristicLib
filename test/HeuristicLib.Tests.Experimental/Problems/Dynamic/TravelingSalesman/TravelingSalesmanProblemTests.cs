@@ -130,7 +130,7 @@ public class TravelingSalesmanProblemTests
         var data = new TravelingSalesmanDistanceMatrixProblemData(distances);
         var env = RandomNumberGenerator.Create(0);
         var problem = new ActivatedTravelingSalesmanProblem(data, env, [true, true, true, false], 1.0);
-        var evaluator = new ProblemEvaluator<Permutation>().WithDynamicRelativeQuality<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(problem,
+        var evaluator = new ProblemEvaluator<Permutation>().WithDynamicRelativeQuality(problem,
             new ActivatedTravelingSalesmanExactBestKnownProvider(new HeldKarpTravelingSalesmanExactSolver()));
         var instance = new ExecutionInstanceRegistry().Resolve<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(evaluator);
 

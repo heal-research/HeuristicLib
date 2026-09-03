@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
@@ -28,10 +27,6 @@ public static class ProblemEvaluator
     public static ProblemEvaluator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
         where TSearchSpace : class, ISearchSpace<TCandidate> => new();
 
-    public static ProblemEvaluator<TCandidate> For<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState => new();
 
     public static IReadOnlyList<ObjectiveVector> Evaluate<TCandidate, TSearchSpace>(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, IProblem<TCandidate, TSearchSpace> problem)
         where TSearchSpace : class, ISearchSpace<TCandidate> =>

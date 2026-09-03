@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -136,12 +137,12 @@ public class StateTerminatedAlgorithmTests
         var events = new List<string>();
         var algorithm = new RecordingAlgorithm(events).WithTerminator(new RecordingResolveTerminator(events));
 
-        _ = algorithm.CreateExecutionInstance();
+        _ = algorithm.CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
 
         events.ShouldBe(["terminator", "algorithm"]);
     }
 
-    private static StateTerminatedAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateStateTerminatedAlgorithm(ITerminator<int> terminator)
+    private static StateTerminatedAlgorithm<int, PopulationState<int>> CreateStateTerminatedAlgorithm(ITerminator<int> terminator)
     {
         return new AdditiveStepAlgorithm(1).WithTerminator(terminator);
     }
@@ -182,18 +183,20 @@ public class StateTerminatedAlgorithmTests
     }
 
     private sealed record RecordingAlgorithm(List<string> Events)
-        : Algorithm<RecordingAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        : Algorithm<RecordingAlgorithm, int, PopulationState<int>>
     {
-        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
         {
             Events.Add("algorithm");
-            return new Instance();
+            return new Instance<TRunSearchSpace, TRunProblem>();
         }
 
-        private sealed class Instance
-            : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        private sealed class Instance<TSearchSpace, TProblem>
+            : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 await Task.CompletedTask;
                 yield break;

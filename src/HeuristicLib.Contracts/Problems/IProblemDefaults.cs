@@ -11,7 +11,7 @@ namespace HEAL.HeuristicLib.Problems;
 /// requires this role from expresses that it has no opinion — either at all, or for this particular instance.
 /// <para>
 /// Every call must return a new operator, for the reason given on
-/// <see cref="IEncodingDefaultCreator{TCandidate, TSearchSpace}"/>.
+/// <see cref="IEncodingDefaultCreator{TCandidate,TSearchSpace}"/>.
 /// </para>
 /// </remarks>
 public interface IProblemDefaultCreator<TSelf, TCandidate, TSearchSpace> : IProblem<TCandidate, TSearchSpace>

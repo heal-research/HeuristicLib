@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text;
+
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpressions;
 
 public sealed class LatexExpressionFormatter : ExpressionFormatter
@@ -19,7 +22,7 @@ public sealed class LatexExpressionFormatter : ExpressionFormatter
             return formatted;
 
         var mantissa = formatted[..exponentSeparator];
-        var exponent = int.Parse(formatted[(exponentSeparator + 1)..], System.Globalization.CultureInfo.InvariantCulture);
+        var exponent = int.Parse(formatted[(exponentSeparator + 1)..], CultureInfo.InvariantCulture);
         return $"{mantissa} \\times 10^{{{exponent}}}";
     }
 
@@ -58,7 +61,7 @@ public sealed class LatexExpressionFormatter : ExpressionFormatter
 
     private static string Escape(string value)
     {
-        var builder = new System.Text.StringBuilder(value.Length);
+        var builder = new StringBuilder(value.Length);
         foreach (var character in value)
         {
             builder.Append(character switch

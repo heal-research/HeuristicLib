@@ -1,7 +1,6 @@
 using HEAL.HeuristicLib.Encodings.Vectors;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Random;
-
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Encodings.RealVectors;

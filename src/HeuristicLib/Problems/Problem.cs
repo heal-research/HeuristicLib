@@ -1,15 +1,13 @@
-﻿using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems;
 
 /// <remarks>
-/// <typeparamref name="TSelf"/> is the problem's own type, named so that a single problem argument yields the problem,
-/// the candidate and the search space by inference. A plain <c>TProblem problem</c> parameter leaves the latter two in
-/// constraint position, where C# inference does not reach, so the run and factory methods anchor on this base instead.
-/// It is the same device <see cref="HEAL.HeuristicLib.Algorithms.IAlgorithm{TCandidate}"/> keeps off its contract and
-/// on its authoring base: an aid to authors, not something the interface has to carry.
+/// <typeparamref name="TSelf"/> lets a single problem argument yield the problem, the candidate and the search space
+/// by inference, which run and factory methods rely on. Name the deriving type, as
+/// <c>TestFunctionProblem : RealVectorProblem&lt;TestFunctionProblem&gt;</c> does.
 /// </remarks>
 public abstract class Problem<TSelf, TCandidate, TSearchSpace> : IProblem<TCandidate, TSearchSpace>
     where TSelf : Problem<TSelf, TCandidate, TSearchSpace>

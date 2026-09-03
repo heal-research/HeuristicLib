@@ -50,7 +50,7 @@ public class AlgorithmObservationTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var previousStates = new List<PopulationState<RealVector>?>();
 
-        algorithm.ObserveWith((_, previousState, searchSpace, observedProblem) =>
+        algorithm.ObserveWith((PopulationState<RealVector> _, PopulationState<RealVector>? previousState, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem observedProblem) =>
                  {
                      previousStates.Add(previousState);
                      searchSpace.ShouldBeSameAs(problem.SearchSpace);
@@ -165,12 +165,12 @@ public class AlgorithmObservationTests
         var atInterceptor = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem,
             PopulationState<RealVector>>(interceptor);
 
-        atAlgorithm.ShouldNotBe(atInterceptor);
+        atAlgorithm.ShouldNotBe<object>(atInterceptor);
     }
 
     private static TestFunctionProblem CreateProblem() => new(new RastriginFunction(dimension: 4));
 
-    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(
+    private static GeneticAlgorithm<RealVector> CreateAlgorithm(
         TestFunctionProblem problem, int maximumGenerations) =>
         new()
         {

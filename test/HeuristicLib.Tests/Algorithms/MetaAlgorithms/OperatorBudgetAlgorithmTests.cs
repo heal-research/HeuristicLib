@@ -628,7 +628,7 @@ public class OperatorBudgetAlgorithmTests
         var algorithm = CreateAlgorithm(problem);
 
         var budgeted =
-            new OperatorBudgetAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, IEvaluator<RealVector>>
+            new OperatorBudgetAlgorithm<RealVector, PopulationState<RealVector>, IEvaluator<RealVector>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
@@ -649,7 +649,7 @@ public class OperatorBudgetAlgorithmTests
         var algorithm = CreateAlgorithm(problem);
 
         var budgeted =
-            new OperatorDurationBudgetAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, IEvaluator<RealVector>>
+            new OperatorDurationBudgetAlgorithm<RealVector, PopulationState<RealVector>, IEvaluator<RealVector>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
@@ -670,11 +670,7 @@ public class OperatorBudgetAlgorithmTests
         var algorithm = CreateAlgorithm(problem);
 
         var budgeted =
-            new AlgorithmDurationBudgetAlgorithm<
-                RealVector,
-                BoundedRealVectorSearchSpace,
-                TestFunctionProblem,
-                PopulationState<RealVector>>
+            new AlgorithmDurationBudgetAlgorithm<RealVector, PopulationState<RealVector>>
             {
                 Algorithm = algorithm,
                 MaximumDuration = TimeSpan.FromTicks(ticks)
@@ -688,10 +684,10 @@ public class OperatorBudgetAlgorithmTests
         return new TestFunctionProblem(new SphereFunction(dimension: 3));
     }
 
-    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(
+    private static GeneticAlgorithm<RealVector> CreateAlgorithm(
         TestFunctionProblem problem)
     {
-        return new GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        return new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 5,
             Creator = new UniformDistributedCreator(problem.SearchSpace),

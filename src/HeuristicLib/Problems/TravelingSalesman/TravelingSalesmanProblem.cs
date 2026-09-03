@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
@@ -16,7 +15,7 @@ public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
     public TravelingSalesmanProblem() : this(new TravelingSalesmanCoordinatesData(DefaultProblemCoordinates)) { }
     public ITravelingSalesmanProblemData ProblemData { get; } = problemData;
 
-    public static ICrossover<Permutation>? CreateDefaultCrossover(TravelingSalesmanProblem problem) =>
+    public static ICrossover<Permutation> CreateDefaultCrossover(TravelingSalesmanProblem problem) =>
         new OrderCrossover();
 
     public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random)

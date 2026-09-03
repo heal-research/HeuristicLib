@@ -13,12 +13,12 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
-    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
 {
     private readonly Dictionary<TrialAnalyzer, ImmutableArray<IAnalyzer>> trialAnalyzers = new(ReferenceEqualityComparer.Instance);
     private bool executionStarted;
 
-    public IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Experiment { get; }
+    public IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> Experiment { get; }
 
     public TProblem Problem { get; }
 
@@ -28,7 +28,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
     public bool ExecutionStarted => executionStarted || Trials.Any(trial => trial.Run.ExecutionStarted);
 
-    public ExperimentRun(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> experiment, TProblem problem, IRandomNumberGenerator random)
+    public ExperimentRun(IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> experiment, TProblem problem, IRandomNumberGenerator random)
     {
         Experiment = experiment;
         Problem = problem;
@@ -302,7 +302,7 @@ public sealed class ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchS
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
-    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
 {
     internal int Index { get; }
 

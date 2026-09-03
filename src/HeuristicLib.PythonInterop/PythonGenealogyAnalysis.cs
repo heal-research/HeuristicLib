@@ -133,7 +133,7 @@ public class PythonGenealogyAnalysis
         {
             case "ga":
                 {
-                    var gaAlgorithm = GeneticAlgorithm.Create<TCandidate, TSearchSpace, TProblem>(
+                    var gaAlgorithm = GeneticAlgorithm.Create(
                         RequireCreator(parameters),
                         RequireCrossover(parameters),
                         RequireMutator(parameters),
@@ -146,20 +146,21 @@ public class PythonGenealogyAnalysis
                     {
                         gaAlgorithm = gaAlgorithm with
                         {
-                            Interceptor = IdentityInterceptor.For(gaAlgorithm)
+                            Interceptor = new IdentityInterceptor<TCandidate, PopulationState<TCandidate>>()
                         };
                     }
 
-                    var analyzers = CreateAnalyzers(parameters, gaAlgorithm, gaAlgorithm.Evaluator, gaAlgorithm.Crossover, gaAlgorithm.Mutator, callback);
-                    var gaRun = gaAlgorithm.WithMaxIterations(parameters.Iterations)
-                                           .CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed))
+                    var analyzers = CreateAnalyzers<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(parameters, gaAlgorithm, gaAlgorithm.Evaluator, gaAlgorithm.Crossover, gaAlgorithm.Mutator, callback);
+                    var gaRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(
+                                               gaAlgorithm.WithMaxIterations(parameters.Iterations),
+                                               problem, RandomNumberGenerator.Create(parameters.Seed))
                                            .WithAnalyzers(analyzers.GetAll());
                     gaRun.Complete();
                     return analyzers.ToExperimentResult(gaRun);
                 }
             case "es":
                 {
-                    var esAlgorithm = EvolutionStrategy.Create<TCandidate, TSearchSpace, TProblem>(
+                    var esAlgorithm = EvolutionStrategy.Create(
                         RequireCreator(parameters),
                         RequireMutator(parameters),
                         crossover: parameters.WithCrossover ? parameters.Crossover : null,
@@ -172,33 +173,36 @@ public class PythonGenealogyAnalysis
                     {
                         esAlgorithm = esAlgorithm with
                         {
-                            Interceptor = IdentityInterceptor.For(esAlgorithm)
+                            Interceptor = new IdentityInterceptor<TCandidate, PopulationState<TCandidate>>()
                         };
                     }
 
-                    var analyzers = CreateAnalyzers(parameters, esAlgorithm, esAlgorithm.Evaluator, esAlgorithm.Crossover, esAlgorithm.Mutator, callback);
+                    var analyzers = CreateAnalyzers<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(parameters, esAlgorithm, esAlgorithm.Evaluator, esAlgorithm.Crossover, esAlgorithm.Mutator, callback);
 
-                    var esRun = esAlgorithm.WithMaxIterations(parameters.Iterations)
-                                           .CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed))
+                    var esRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(
+                                               esAlgorithm.WithMaxIterations(parameters.Iterations),
+                                               problem, RandomNumberGenerator.Create(parameters.Seed))
                                            .WithAnalyzers(analyzers.GetAll());
                     esRun.Complete();
                     return analyzers.ToExperimentResult(esRun);
                 }
             case "ls":
-                var lsAlgorithm = HillClimber.Create<TCandidate, TSearchSpace, TProblem>(
+                var lsAlgorithm = HillClimber.Create(
                     RequireCreator(parameters),
                     RequireMutator(parameters),
                     refiner: refiner,
                     maxNeighbors: parameters.NoChildren,
                     batchSize: parameters.NoChildren);
 
-                var lsRun = lsAlgorithm.WithMaxIterations(parameters.Iterations).CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed));
+                var lsRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>(
+                    lsAlgorithm.WithMaxIterations(parameters.Iterations),
+                    problem, RandomNumberGenerator.Create(parameters.Seed));
                 lsRun.Complete();
                 throw new NotSupportedException(
                     "Configured experiment result extraction is not implemented for local search in this analyzer pipeline.");
             case "nsga2":
                 {
-                    var nsga2Algorithm = NSGA2.Create<TCandidate, TSearchSpace, TProblem>(
+                    var nsga2Algorithm = NSGA2.Create(
                         RequireCreator(parameters),
                         RequireCrossover(parameters),
                         RequireMutator(parameters),
@@ -210,13 +214,14 @@ public class PythonGenealogyAnalysis
                     {
                         nsga2Algorithm = nsga2Algorithm with
                         {
-                            Interceptor = IdentityInterceptor.For(nsga2Algorithm)
+                            Interceptor = new IdentityInterceptor<TCandidate, PopulationState<TCandidate>>()
                         };
                     }
 
-                    var analyzers = CreateAnalyzers(parameters, nsga2Algorithm, nsga2Algorithm.Evaluator, nsga2Algorithm.Crossover, nsga2Algorithm.Mutator, callback);
-                    var nsga2Run = nsga2Algorithm.WithMaxIterations(parameters.Iterations)
-                                                 .CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed))
+                    var analyzers = CreateAnalyzers<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(parameters, nsga2Algorithm, nsga2Algorithm.Evaluator, nsga2Algorithm.Crossover, nsga2Algorithm.Mutator, callback);
+                    var nsga2Run = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(
+                                                     nsga2Algorithm.WithMaxIterations(parameters.Iterations),
+                                                     problem, RandomNumberGenerator.Create(parameters.Seed))
                                                  .WithAnalyzers(analyzers.GetAll());
                     _ = nsga2Run.Complete();
                     return analyzers.ToExperimentResult(nsga2Run);
@@ -334,7 +339,7 @@ public class PythonGenealogyAnalysis
 
     private static MyAnalyzers<TCandidate> CreateAnalyzers<TCandidate, TSearchSpace, TProblem, TSearchState>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters,
-        IIterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm,
+        IIterativeAlgorithm<TCandidate> algorithm,
         IEvaluator<TCandidate> evaluator,
         ICrossover<TCandidate>? crossover,
         IMutator<TCandidate>? mutator,

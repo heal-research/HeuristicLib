@@ -67,7 +67,7 @@ public class PythonInterOptEquationScoring(
             Metrics.PearsonR2.ToFinite(),
             searchSpace,
             useLinearScaling);
-        var directions = new ObjectiveDirection[]
+        var directions = new[]
         {
             ObjectiveDirection.Maximize, // combined score, overridden by score
             ObjectiveDirection.Maximize, // Pearson R2
@@ -88,7 +88,7 @@ public class PythonInterOptEquationScoring(
 
     public static Population<ExpressionTree> RunDefault(PythonInterOptEquationScoring problem, int seed = 42)
     {
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>
+        var algorithm = new GeneticAlgorithm<ExpressionTree>
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover { InternalNodeProbability = 0.9 },

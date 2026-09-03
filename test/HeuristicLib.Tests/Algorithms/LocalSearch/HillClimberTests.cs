@@ -33,11 +33,11 @@ public class HillClimberTests
         states.ShouldBeEmpty();
     }
 
-    private static HillClimber<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateHillClimber(
+    private static HillClimber<int> CreateHillClimber(
       int initialValue,
       int mutationOffset)
     {
-        return new HillClimber<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        return new HillClimber<int>
         {
             Creator = new ConstantCreator(initialValue),
             Mutator = new OffsetMutator(mutationOffset),
@@ -73,7 +73,7 @@ public class HillClimberTests
         public IMutatorInstance<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ExecutionInstanceRegistry instanceRegistry)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
-            => (IMutatorInstance<int, TSearchSpace, TProblem>)(object)CreateBoundInstance();
+            => (IMutatorInstance<int, TSearchSpace, TProblem>)CreateBoundInstance();
 
         private IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundInstance() => this;
 

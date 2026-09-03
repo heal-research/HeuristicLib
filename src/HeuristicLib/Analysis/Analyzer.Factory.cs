@@ -22,7 +22,16 @@ public static class Analyzer
     /// The algorithm is used as a reference-identity anchor, so a copy produced by <c>with</c> is a different anchor
     /// and is not observed. Prefer <c>TrackBestMedianWorst</c> on the run, which resolves the anchor at attach time.
     /// </remarks>
-    public static BestMedianWorstAnalysis<T, TS, TP, TR> BestMedianWorst<T, TS, TP, TR>(params IReadOnlyList<IAlgorithm<T, TS, TP, TR>> algorithms)
+    /// <remarks>
+    /// The observer is written at the widest search space and problem, which serves any run because observers are
+    /// contravariant in both.
+    /// </remarks>
+    public static BestMedianWorstAnalysis<T, ISearchSpace<T>, IProblem<T, ISearchSpace<T>>, TR> BestMedianWorst<TSelf, T, TR>(Algorithm<TSelf, T, TR> algorithm)
+        where TSelf : Algorithm<TSelf, T, TR>
+        where TR : PopulationState<T> =>
+        BestMedianWorst<T, ISearchSpace<T>, IProblem<T, ISearchSpace<T>>, TR>(algorithm);
+
+    public static BestMedianWorstAnalysis<T, TS, TP, TR> BestMedianWorst<T, TS, TP, TR>(params IReadOnlyList<IAlgorithm<T, TR>> algorithms)
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
         where TR : PopulationState<T>

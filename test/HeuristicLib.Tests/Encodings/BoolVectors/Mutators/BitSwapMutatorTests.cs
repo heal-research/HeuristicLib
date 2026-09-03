@@ -9,7 +9,7 @@ public class BitSwapMutatorTests
     {
         var space = new FixedCardinalityBoolVectorSearchSpace(length: 6, cardinality: 3);
         var mutator = new BitSwapMutator();
-        var parent = BoolVector.Create([true, true, true, false, false, false]);
+        var parent = BoolVector.Create(true, true, true, false, false, false);
 
         for (var seed = 0; seed < 25; seed++)
         {
@@ -24,7 +24,7 @@ public class BitSwapMutatorTests
     {
         var space = new FixedCardinalityBoolVectorSearchSpace(length: 6, cardinality: 3);
         var mutator = new BitSwapMutator();
-        var parent = BoolVector.Create([true, true, true, false, false, false]);
+        var parent = BoolVector.Create(true, true, true, false, false, false);
 
         var child = mutator.MutateCandidate(parent, RandomNumberGenerator.Create(42), space);
 
@@ -36,11 +36,11 @@ public class BitSwapMutatorTests
     {
         var space = new FixedCardinalityBoolVectorSearchSpace(length: 4, cardinality: 2);
         var mutator = new BitSwapMutator();
-        var parent = BoolVector.Create([true, true, false, false]);
+        var parent = BoolVector.Create(true, true, false, false);
 
         mutator.MutateCandidate(parent, RandomNumberGenerator.Create(7), space);
 
-        parent.ShouldBe(BoolVector.Create([true, true, false, false]));
+        parent.ShouldBe(BoolVector.Create(true, true, false, false));
     }
 
     [Theory]

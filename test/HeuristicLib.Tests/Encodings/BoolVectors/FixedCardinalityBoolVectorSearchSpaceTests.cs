@@ -28,8 +28,8 @@ public class FixedCardinalityBoolVectorSearchSpaceTests
     {
         var space = new FixedCardinalityBoolVectorSearchSpace(length: 4, cardinality: 2);
 
-        space.Contains(BoolVector.Create([true, false, true, false])).ShouldBeTrue();
-        space.Contains(BoolVector.Create([false, true, false, true])).ShouldBeTrue();
+        space.Contains(BoolVector.Create(true, false, true, false)).ShouldBeTrue();
+        space.Contains(BoolVector.Create(false, true, false, true)).ShouldBeTrue();
     }
 
     [Fact]
@@ -37,8 +37,8 @@ public class FixedCardinalityBoolVectorSearchSpaceTests
     {
         var space = new FixedCardinalityBoolVectorSearchSpace(length: 4, cardinality: 2);
 
-        space.Contains(BoolVector.Create([true, true, true, false])).ShouldBeFalse();
-        space.Contains(BoolVector.Create([true, false, false, false])).ShouldBeFalse();
+        space.Contains(BoolVector.Create(true, true, true, false)).ShouldBeFalse();
+        space.Contains(BoolVector.Create(true, false, false, false)).ShouldBeFalse();
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class FixedCardinalityBoolVectorSearchSpaceTests
     {
         var space = new FixedCardinalityBoolVectorSearchSpace(length: 4, cardinality: 2);
 
-        space.Contains(BoolVector.Create([true, true])).ShouldBeFalse();
+        space.Contains(BoolVector.Create(true, true)).ShouldBeFalse();
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public class FixedCardinalityBoolVectorSearchSpaceTests
         var constrained = new FixedCardinalityBoolVectorSearchSpace(length: 4, cardinality: 2);
         var unconstrained = constrained.ToUnconstrained();
 
-        var offCardinality = BoolVector.Create([true, true, true, false]);
+        var offCardinality = BoolVector.Create(true, true, true, false);
 
         unconstrained.Length.ShouldBe(constrained.Length);
         unconstrained.Contains(offCardinality).ShouldBeTrue();

@@ -25,7 +25,7 @@ public sealed class ExperimentalUsageSpecs
     public void ResearchAlgorithm_IsConfiguredFromExperimental()
     {
         var problem = new TestFunctionProblem(new RastriginFunction(4));
-        var algorithm = new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector>
         {
             PopulationSize = 20,
             Creator = new UniformDistributedCreator(problem.SearchSpace),

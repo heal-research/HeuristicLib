@@ -95,12 +95,12 @@ public class NoviceFrictionSpecs
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
 
-        GeneticAlgorithm<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> declared =
+        GeneticAlgorithm<RealVector> declared =
             CreateRastriginAlgorithm(problem);
 
         var widened = WidenPopulation(declared, populationSize: 40);
         var configured =
-            new List<GeneticAlgorithm<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>>
+            new List<GeneticAlgorithm<RealVector>>
             {
                 declared,
                 widened
@@ -114,9 +114,9 @@ public class NoviceFrictionSpecs
     /// The arity spreads. A helper that takes and returns an algorithm repeats every argument twice, so the cost is
     /// paid again in each calling layer rather than once at construction.
     /// </summary>
-    private static GeneticAlgorithm<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
+    private static GeneticAlgorithm<RealVector>
         WidenPopulation(
-            GeneticAlgorithm<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> algorithm,
+            GeneticAlgorithm<RealVector> algorithm,
             int populationSize) =>
         algorithm with { PopulationSize = populationSize };
 
@@ -133,7 +133,7 @@ public class NoviceFrictionSpecs
         var encodingAnchored = GeneticAlgorithm.For(problem.SearchSpace, populationSize: 20, maximumGenerations: 5);
 
         // The two locals differ in their third type argument, so the common type has to be spelled out in full.
-        List<IAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, PopulationState<Permutation>>>
+        List<IAlgorithm<Permutation>>
             both = [problemAnchored, encodingAnchored];
 
         both.Count.ShouldBe(2);
@@ -143,10 +143,7 @@ public class NoviceFrictionSpecs
     /// The friction this suite was written to measure, and its result: there is no operator slot left that shows it.
     /// </summary>
     /// <remarks>
-    /// The measurement used to be stated over whichever role had not migrated yet — creator, then selector, then
-    /// terminator, then interceptor. All nine have migrated, so every operator slot on the one argument algorithm now
-    /// names the candidate, and the search space and problem are supplied by the run rather than by the slot. What
-    /// remains typed at the triple are the algorithm's own type arguments, which the algorithm package addresses.
+    /// Every operator slot names the candidate; the search space, problem and search state are supplied by the run.
     /// </remarks>
     [Fact]
     public void EveryOperatorSlot_NamesOnlyWhatTheOperatorIsWrittenAbout()
@@ -374,28 +371,29 @@ public class NoviceFrictionSpecs
     /// Recorded for later; the simple cases come first.
     /// </summary>
     [Fact]
-    public void ComposingAlgorithms_AddsTwoFurtherTypeArguments()
+    public void ComposingAlgorithms_AddsOneFurtherTypeArgument()
     {
         var problem = new TravelingSalesmanProblem();
         var stage = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
 
         var cycled = stage.CycleWith(stage with { PopulationSize = 40 }, maximumCycles: 2);
 
-        cycled.GetType().GetGenericArguments().Length.ShouldBe(5);
+        // The composed algorithm, the candidate, and the state threaded between stages.
+        cycled.GetType().GetGenericArguments().Length.ShouldBe(3);
         cycled.Algorithms.Count.ShouldBe(2);
     }
 
     /// <summary>
-    /// Direct construction is the only way to reach an algorithm typed at a concrete problem that does not declare
-    /// its defaults, and it is the spelling that requires every argument. It is also what most existing examples in
-    /// this repository show, so a newcomer copying one meets the full arity before meeting a factory.
+    /// Direct construction used to be the only way to reach an algorithm typed at a concrete problem, and it was the
+    /// spelling that required every argument. Both are now the same one-argument type, so a newcomer copying an
+    /// example from this repository no longer meets a wider arity than a factory would have given them.
     /// </summary>
     [Fact]
-    public void DirectConstruction_IsTheOnlyRouteToAProblemBoundAlgorithmWithoutDeclaredDefaults()
+    public void DirectConstructionAndTheFactory_NowProduceTheSameType()
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
 
-        var constructed = new GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var constructed = new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 20,
             MaximumGenerations = 5,
@@ -407,25 +405,18 @@ public class NoviceFrictionSpecs
 
         var inferred = CreateRastriginAlgorithm(problem);
 
-        constructed.GetType().GetGenericArguments()[2].ShouldBe(typeof(TestFunctionProblem));
-        inferred.GetType().GetGenericArguments()[2]
-            .ShouldBe(typeof(IProblem<RealVector, ISearchSpace<RealVector>>));
+        // Both spellings produce the same one-argument type, and the run supplies the problem either way.
+        constructed.GetType().GetGenericArguments().ShouldHaveSingleItem().ShouldBe(typeof(RealVector));
+        inferred.GetType().ShouldBe(constructed.GetType());
     }
 
     /// <summary>
-    /// The route a real vector problem has to take today: supply the operators so the factory can infer from them.
-    /// The problem argument only reaches the search space, so the resulting algorithm is typed at the problem
-    /// interface rather than at the problem.
-    /// <para>
-    /// Since the creator, crossover and mutator migrated, none of them carries a search space, so the factory infers
-    /// the widest one it can rather than <see cref="BoundedRealVectorSearchSpace"/>. The algorithm this produces is
-    /// weaker than the one the same call produced before, which is the cost recorded in
-    /// <see cref="CreateFactories_NoLongerInferTheSearchSpaceFromTheirOperators"/>.
-    /// </para>
+    /// The operator route: supply the creator, crossover and mutator, and the factory infers the only type it names.
+    /// The problem argument reaches the operators that need it; the run supplies the search space and problem.
     /// </summary>
-    private static GeneticAlgorithm<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
+    private static GeneticAlgorithm<RealVector>
         CreateRastriginAlgorithm(TestFunctionProblem problem) =>
-        GeneticAlgorithm.Create<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(
+        GeneticAlgorithm.Create(
             new UniformDistributedCreator(problem.SearchSpace),
             new AlphaBetaBlendCrossover(),
             new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1),
@@ -433,5 +424,5 @@ public class NoviceFrictionSpecs
             populationSize: 20,
             maximumGenerations: 5);
 
-    private static Assembly CoreAssembly => typeof(GeneticAlgorithm<,,>).Assembly;
+    private static Assembly CoreAssembly => typeof(GeneticAlgorithm<>).Assembly;
 }

@@ -14,7 +14,7 @@ public class ImprovementCheckingCompositionTests
     [Fact]
     public void OnAMaximizedObjective_TheHigherObjectiveVectorIsKept()
     {
-        var problem = new FuncProblem<int, DummySearchSpace<int>>(static (int candidate) => (double)candidate, DummySearchSpace<int>.Instance, SingleObjective.Maximize);
+        var problem = new FuncProblem<int, DummySearchSpace<int>>(static candidate => candidate, DummySearchSpace<int>.Instance, SingleObjective.Maximize);
 
         Refine(new AddOffsetRefiner(5).WithImprovementCheck(), problem, 10).ShouldBe([15]);
         Refine(new AddOffsetRefiner(-5).WithImprovementCheck(), problem, 10).ShouldBe([10]);
@@ -58,7 +58,7 @@ public class ImprovementCheckingCompositionTests
     {
         var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
         var worsened = RealVector.Repeat(problem.SearchSpace.GetMaximum(0), problem.SearchSpace.Length);
-        var algorithm = new NSGA2<RealVector, BoundedRealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
+        var algorithm = new NSGA2<RealVector>
         {
             PopulationSize = 6,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -82,11 +82,11 @@ public class ImprovementCheckingCompositionTests
         refiner.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry()).Refine(candidates, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>
-        FuncProblem.Create(static (int candidate) => (double)candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+        FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
 
     // Every change improves one objective exactly as much as it worsens the other, so only the declared order can decide.
     private static FuncProblem<int, DummySearchSpace<int>> CreateTradeOffProblem(ObjectiveDirections objective) =>
-        new(static (int candidate) => new double[] { candidate, -candidate }, DummySearchSpace<int>.Instance, objective);
+        new(static candidate => new double[] { candidate, -candidate }, DummySearchSpace<int>.Instance, objective);
 
     private sealed record AddOffsetRefiner(int Offset) : SingleCandidateRefiner<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {

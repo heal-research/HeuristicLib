@@ -191,7 +191,7 @@ public class PractitionerUsageSpecs
     public async Task GeneticAlgorithm_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = GeneticAlgorithm.Create<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(
+        var algorithm = GeneticAlgorithm.Create(
             new UniformDistributedCreator(problem.SearchSpace),
             new AlphaBetaBlendCrossover { Alpha = 0.7 },
             new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -502,7 +502,7 @@ public class PractitionerUsageSpecs
     public async Task HillClimber_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        IAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> algorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -523,7 +523,7 @@ public class PractitionerUsageSpecs
     public void HillClimber_StructuralCompletion_DoesNotRequireExternalIterationCap()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = NoChangeMutator.For(problem),
@@ -545,7 +545,7 @@ public class PractitionerUsageSpecs
     public async Task RepeatedExecution_Example_RunsEachRepetition()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -569,7 +569,7 @@ public class PractitionerUsageSpecs
     public async Task EvolutionStrategy_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new EvolutionStrategy<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new EvolutionStrategy<RealVector>
         {
             PopulationSize = 8,
             NumberOfChildren = 8,
@@ -595,10 +595,10 @@ public class PractitionerUsageSpecs
         return new TestFunctionProblem(new RastriginFunction(dimension));
     }
 
-    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateSimpleGeneticAlgorithm(
+    private static GeneticAlgorithm<RealVector> CreateSimpleGeneticAlgorithm(
       TestFunctionProblem problem)
     {
-        return new GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        return new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 16,
             Creator = new UniformDistributedCreator(problem.SearchSpace),

@@ -1,6 +1,4 @@
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
@@ -22,13 +20,9 @@ public static class GeneticAlgorithmDefaults
 
     public const int TournamentSize = 2;
 
-    public static ISelector<TCandidate> Selector<TCandidate, TSearchSpace, TProblem>()
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static ISelector<TCandidate> Selector<TCandidate>() =>
         new TournamentSelector<TCandidate>(TournamentSize);
 
-    public static IEvaluator<TCandidate> Evaluator<TCandidate, TSearchSpace, TProblem>()
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static IEvaluator<TCandidate> Evaluator<TCandidate>() =>
         new ProblemEvaluator<TCandidate>();
 }

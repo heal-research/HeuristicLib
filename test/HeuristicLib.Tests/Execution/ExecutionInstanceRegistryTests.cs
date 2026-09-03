@@ -11,7 +11,7 @@ public class ExecutionInstanceRegistryTests
 
         registry.RegisterInstance(resolvable, registeredInstance);
 
-        registry.Resolve(resolvable).ShouldBeSameAs(registeredInstance);
+        Resolve(registry, resolvable).ShouldBeSameAs(registeredInstance);
         resolvable.CreateCount.ShouldBe(0);
     }
 
@@ -38,12 +38,12 @@ public class ExecutionInstanceRegistryTests
 
         registry.RegisterReplacement(original, replacement);
 
-        var resolved = registry.Resolve(original);
+        var resolved = Resolve(registry, original);
 
         resolved.Name.ShouldBe("replacement");
         original.CreateCount.ShouldBe(0);
         replacement.CreateCount.ShouldBe(1);
-        registry.Resolve(original).ShouldBeSameAs(resolved);
+        Resolve(registry, original).ShouldBeSameAs(resolved);
     }
 
     [Fact]
@@ -69,13 +69,13 @@ public class ExecutionInstanceRegistryTests
 
         registry.RegisterReplacement(original, replacement);
 
-        var resolved = registry.Resolve(original);
+        var resolved = Resolve(registry, original);
 
         var wrapped = resolved.ShouldBeOfType<WrappedInstance>();
         wrapped.Inner.Name.ShouldBe("original");
         original.CreateCount.ShouldBe(1);
         replacement.CreateCount.ShouldBe(1);
-        registry.Resolve(original).ShouldBeSameAs(resolved);
+        Resolve(registry, original).ShouldBeSameAs(resolved);
     }
 
     [Fact]
@@ -88,13 +88,13 @@ public class ExecutionInstanceRegistryTests
 
         parentRegistry.RegisterReplacement(original, replacement);
 
-        var resolved = childRegistry.Resolve(original);
+        var resolved = Resolve(childRegistry, original);
 
         resolved.Name.ShouldBe("replacement");
         original.CreateCount.ShouldBe(0);
         replacement.CreateCount.ShouldBe(1);
-        parentRegistry.Resolve(original).ShouldNotBeSameAs(resolved);
-        childRegistry.Resolve(original).ShouldBeSameAs(resolved);
+        Resolve(parentRegistry, original).ShouldNotBeSameAs(resolved);
+        Resolve(childRegistry, original).ShouldBeSameAs(resolved);
     }
 
     [Fact]
@@ -109,8 +109,8 @@ public class ExecutionInstanceRegistryTests
         parentRegistry.RegisterReplacement(original, parentReplacement);
         childRegistry.RegisterReplacement(original, childReplacement);
 
-        var childResolved = childRegistry.Resolve(original);
-        var parentResolved = parentRegistry.Resolve(original);
+        var childResolved = Resolve(childRegistry, original);
+        var parentResolved = Resolve(parentRegistry, original);
 
         childResolved.Name.ShouldBe("child replacement");
         parentResolved.Name.ShouldBe("parent replacement");
@@ -124,9 +124,9 @@ public class ExecutionInstanceRegistryTests
     {
         var parentRegistry = new ExecutionInstanceRegistry();
         var resolvable = new CountingResolvable("instance");
-        var parentInstance = parentRegistry.Resolve(resolvable);
+        var parentInstance = Resolve(parentRegistry, resolvable);
 
-        var childInstance = parentRegistry.CreateChildRegistry().Resolve(resolvable);
+        var childInstance = Resolve(parentRegistry.CreateChildRegistry(), resolvable);
 
         childInstance.ShouldBeSameAs(parentInstance);
         resolvable.CreateCount.ShouldBe(1);
@@ -149,7 +149,15 @@ public class ExecutionInstanceRegistryTests
         public INamedInstance Inner { get; } = inner;
     }
 
-    private sealed class CountingResolvable(string name) : IExecutionInstanceResolvable<INamedInstance>
+    private interface INamedResolvable : IExecutionInstanceResolvable
+    {
+        INamedInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+    }
+
+    private static INamedInstance Resolve(ExecutionInstanceRegistry registry, INamedResolvable resolvable) =>
+        registry.Resolve(resolvable, static (target, childRegistry) => target.CreateExecutionInstance(childRegistry));
+
+    private sealed class CountingResolvable(string name) : INamedResolvable
     {
         public int CreateCount { get; private set; }
 
@@ -160,15 +168,14 @@ public class ExecutionInstanceRegistryTests
         }
     }
 
-    private sealed class WrappingResolvable(IExecutionInstanceResolvable<INamedInstance> inner)
-        : IExecutionInstanceResolvable<INamedInstance>
+    private sealed class WrappingResolvable(INamedResolvable inner) : INamedResolvable
     {
         public int CreateCount { get; private set; }
 
         public INamedInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
         {
             CreateCount++;
-            return new WrappedInstance(instanceRegistry.Resolve(inner));
+            return new WrappedInstance(Resolve(instanceRegistry, inner));
         }
     }
 }

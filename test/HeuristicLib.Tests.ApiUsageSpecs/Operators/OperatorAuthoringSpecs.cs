@@ -94,7 +94,7 @@ public class OperatorAuthoringSpecs
         // Wrapping and multi bases stay at the full arity so their child slot can hold a problem-specific mutator.
         // A reduced-arity topology base would fix the child to the widest role contract and reject this.
         var problem = CreateRastriginProblem(dimension: 3);
-        var pipeline = PipelineMutator.Create<RealVector>(
+        var pipeline = PipelineMutator.Create(
             new PullTowardZeroMutator(),
             NoChangeMutator<RealVector>.Instance);
 
@@ -195,7 +195,7 @@ public class OperatorAuthoringSpecs
         // Refinement is composed through operator topologies rather than through repeated lifecycle placement, so an
         // ordered pipeline such as repair, simplification and constant optimization is an ordinary configuration.
         var problem = CreateRastriginProblem(dimension: 3);
-        var pipeline = PipelineRefiner.Create<RealVector>(
+        var pipeline = PipelineRefiner.Create(
             new HalveRefiner(),
             NoChangeRefiner<RealVector>.Instance);
 
@@ -268,7 +268,7 @@ public class OperatorAuthoringSpecs
     public async Task WrappingCreator_AuthoringExample_RunsInsideHillClimber()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var algorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector>
         {
             Creator = new PrefixingWrappingCreator(new ConstantOriginCreator()),
             Mutator = new NoChangeMutator(),
@@ -434,7 +434,7 @@ public class OperatorAuthoringSpecs
         IEvaluatorObserver<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> observer =
             new ActionEvaluatorObserver<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>((_, _, _, _) => { });
 
-        var observable = ObservableEvaluator.Create<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(child, observer);
+        var observable = ObservableEvaluator.Create(child, observer);
         var callbackObservable = ObservableEvaluator.Create<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(child, (_, _, _, _) => { });
         var counting = CountingEvaluator.Create(child, new ObservationCounter(), OperatorCountMetric.Calls);
         var duration = DurationMeasuringEvaluator.Create(child, new ObservationDuration());
@@ -535,7 +535,7 @@ public class OperatorAuthoringSpecs
             new ActionSelectorObserver<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>((_, _, _, _, _, _) => { });
 
         var observable = childSelector.ObserveWith(observer);
-        var staticObservable = ObservableSelector.Create<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(childSelector, observer);
+        var staticObservable = ObservableSelector.Create(childSelector, observer);
         var callbackObservable = ObservableSelector.Create(childSelector, _ => { });
         var counting = childSelector.CountSelectorCalls(new ObservationCounter());
         var chooseOne = ChooseOneSelector.Create(childSelector, new LastSelector());
@@ -624,7 +624,7 @@ public class OperatorAuthoringSpecs
         IReplacerObserver<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> observer =
             new ActionReplacerObserver<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>((_, _, _, _, _, _) => { });
 
-        var observable = ObservableReplacer.Create<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(child, observer);
+        var observable = ObservableReplacer.Create(child, observer);
         var callbackObservable = ObservableReplacer.Create(child, _ => { });
         var counting = CountingReplacer.Create(child, new ObservationCounter(), OperatorCountMetric.Calls);
         var duration = DurationMeasuringReplacer.Create(child, new ObservationDuration());
@@ -774,7 +774,7 @@ public class OperatorAuthoringSpecs
     public async Task MultiMutator_AuthoringExample_CanBeUsedInsideHillClimber()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var algorithm = new HillClimber<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector>
         {
             Creator = new ConstantOneCreator(),
             Mutator = new PreferFirstMultiMutator(

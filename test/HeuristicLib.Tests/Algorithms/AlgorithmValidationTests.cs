@@ -1,13 +1,7 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.RealVectors;
-using HEAL.HeuristicLib.Objectives;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
-using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms;
 
@@ -18,13 +12,17 @@ namespace HEAL.HeuristicLib.Tests.Algorithms;
 public class AlgorithmValidationTests
 {
     /// <summary>
-    /// An operator written for one problem, in an algorithm declared over the problem interface, is refused. The
-    /// invariant walk cannot see this — it is handed only the search space — so it is the binding half that catches it.
+    /// An operator written for one problem, run over a different one, is refused. The invariant walk cannot see this —
+    /// it is handed only the search space — so it is the binding half that catches it.
     /// </summary>
+    /// <remarks>
+    /// The mismatch is a genuinely different problem: the same operator over a <see cref="TestFunctionProblem"/>
+    /// binds, because the run supplies the problem the operator was written for.
+    /// </remarks>
     [Fact]
     public void Validate_ReportsAnOperatorThatCannotBeBuiltForThisRunsProblem()
     {
-        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
+        var problem = CreateDifferentProblem();
         var algorithm = CreateAlgorithm(new TestFunctionProblemSpecificCrossover());
 
         var report = algorithm.Validate(problem);
@@ -45,18 +43,19 @@ public class AlgorithmValidationTests
     [Fact]
     public void ValidateAndThrow_NamesTheOperatorThatCannotBeBuilt()
     {
-        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
+        var problem = CreateDifferentProblem();
         var algorithm = CreateAlgorithm(new TestFunctionProblemSpecificCrossover());
 
         Should.Throw<InvalidOperationException>(() => algorithm.ValidateAndThrow(problem))
             .Message.ShouldContain(nameof(TestFunctionProblemSpecificCrossover));
     }
 
-    /// <summary>
-    /// Declared over the problem <em>interface</em>, so an operator bound to a concrete problem does not fit the run
-    /// even though the problem passed in happens to be that concrete one.
-    /// </summary>
-    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>
+    /// <summary>A problem the crossover above was not written for.</summary>
+    private static FuncProblem<RealVector, BoundedRealVectorSearchSpace> CreateDifferentProblem() =>
+        FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0],
+            new BoundedRealVectorSearchSpace(3, -5.0, 5.0), SingleObjective.Minimize);
+
+    private static GeneticAlgorithm<RealVector>
         CreateAlgorithm(ICrossover<RealVector> crossover) =>
         new()
         {

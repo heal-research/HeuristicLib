@@ -80,7 +80,7 @@ public class RefinerEvaluatorAccountingTests
     public void InAPipeline_OnlyTheStageWithAnEvaluatorEvaluates()
     {
         var counter = new ObservationCounter();
-        var instance = PipelineRefiner.Create<int>(
+        var instance = PipelineRefiner.Create(
                 new AddOffsetRefiner(-1),
                 new AddOffsetRefiner(-5).WithImprovementCheck(CreateEvaluator().CountEvaluatedCandidates(counter)))
             .CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());

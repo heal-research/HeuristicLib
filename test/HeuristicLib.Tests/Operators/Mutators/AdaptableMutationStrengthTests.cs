@@ -50,7 +50,7 @@ public class AdaptableMutationStrengthTests
         var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
         var problem = CreateProblem(searchSpace);
         var gaussian = new GaussianMutator(1.0, 3.0);
-        var algorithm = new EvolutionStrategy<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>
+        var algorithm = new EvolutionStrategy<RealVector>
         {
             PopulationSize = 1,
             NumberOfChildren = 1,
@@ -77,7 +77,7 @@ public class AdaptableMutationStrengthTests
         new ExecutionInstanceRegistry()
             .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>()
             .Resolve(mutator)
-            .ShouldBeAssignableTo<IAdaptableMutationStrengthInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>()!;
+            .ShouldBeAssignableTo<IAdaptableMutationStrengthInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>();
 
     private static FuncProblem<RealVector, BoundedRealVectorSearchSpace> CreateProblem(BoundedRealVectorSearchSpace searchSpace) =>
         FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);

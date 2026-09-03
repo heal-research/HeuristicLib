@@ -44,7 +44,7 @@ public class MultiObjectiveTests
         var objective = MinimizeAll(2);
 
         // Act
-        var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank, true);
+        var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank);
 
         // Assert
         var ids = FrontIds(fronts);
@@ -90,7 +90,7 @@ public class MultiObjectiveTests
         var objective = MinimizeAll(2);
 
         // Act
-        var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank, true);
+        var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank);
 
         // Assert
         fronts.Count.ShouldBe(3);

@@ -62,11 +62,10 @@ If validation grows its own notion of what fits while resolution applies a cast,
 
 A type parameter moves to the execution layer when it is **context the run supplies and most operators ignore**. It stays on the configuration when it is **what the operator is written about**.
 
-By that rule `TSearchSpace` and `TProblem` move, and `TCandidate` and `TSearchState` stay. Every role ends at one of two shapes:
+By that rule `TSearchSpace` and `TProblem` move and `TCandidate` stays. `TSearchState` was expected to stay too; implementation showed otherwise, and every role ends at one shape:
 
 ```csharp
-IMutator<TCandidate>                  // and creator, crossover, evaluator, selector, replacer, refiner
-ITerminator<TCandidate, TSearchState> // and interceptor
+IMutator<TCandidate>   // and creator, crossover, evaluator, selector, replacer, refiner, terminator, interceptor
 ```
 
 **Not** the earlier "consumed only may move, produced must stay". That rule was read off the variance annotations, and variance is not what makes the erasure work: the mutator erasure runs through a generic creation method and a type test, not through assignability. Contravariance only decides whether that test also accepts an operator written for a *wider* type — useful, but a separate question from whether the configuration should name the parameter at all.
@@ -78,11 +77,11 @@ ITerminator<TCandidate, TSearchState> // and interceptor
 3. **There is no execution-time hand-off to move it to.** A search space and a problem arrive as method arguments at execution. Candidate values do not arrive from the run: the creator produces them and they flow between operators.
 4. **The barrier was never the first argument.** `GeneticAlgorithm<RealVector>` reads fine; `GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>` was the friction.
 
-**Why `TSearchState` stays, for both roles.** It is the terminator's and the interceptor's subject, not context they ignore, so reason 2 above applies with full force. An operator that genuinely does not read the state already says so by *not naming* it, through the existing arity ladder — `AfterIterationsTerminator<TCandidate>` derives from `StatefulTerminator<TCandidate, TState>` and reaches `ITerminatorInstance<…, ISearchState>`. That mechanism already solves "I ignore the state" without erasure.
+**Why `TSearchState` was expected to stay, and why it left.** The argument was that it is the terminator's and the interceptor's subject rather than context they ignore, so reason 2 above applies with full force. That was the wrong test. The right one is **whether there is a source to bind against at resolution time** — and there is: an operator never originates a search state, the algorithm it runs in does, and that algorithm is what resolves it. So both roles name only the candidate, the state arrives beside the search space and problem as a third method type argument, and a mismatch is reported when the execution graph is built.
 
-Erasing it from interceptors would be a pure loss: `IInterceptorInstance` is invariant in `TSearchState` because `Transform` returns it, so a run-time type test could only succeed on an exact match — precisely the case the compiler already checks. The algorithm would stop verifying that its interceptor matches its state, and gain nothing.
+The reasoning above about interceptor invariance still holds and simply costs less than it looked: `IInterceptorInstance` is invariant in `TSearchState`, so the run-time type test succeeds only on an exact match — the same answer the compiler used to give, one step later. What the erasure bought was inference. `terminator.And(other)` could not previously infer its state, because the state sat in an extension block's type parameters with nothing to infer it from; the same held for `Or`, `CountTerminatorCalls` and `MeasureTerminatorDuration`. None of them names a type argument now.
 
-**On the asymmetry.** Keeping the parameter on both roles makes the two contracts the same shape. What remains different is a capability, not a treatment: `ITerminator` declares `in TSearchState` and so a terminator written for a wider state fits a narrower run, while `IInterceptor` cannot, because it returns the state. That difference is in the shipped library today — the interceptor ladder bottoms out at `Interceptor<TCandidate, TSearchState>` while the terminator ladder reaches `Terminator<TCandidate>` — and it follows from what the two operators do. This migration neither creates it nor can remove it.
+**Where the state did stay: the algorithm.** `IAlgorithm<TCandidate, TSearchState>` exists alongside `IAlgorithm<TCandidate>`, and the line between them is **produced versus consumed**. An algorithm *returns* its state — `Complete` and `Stream` mention it in their return type — so a form that does not name it cannot declare them. A terminator is *asked about* a state through an instance method parameter, and nothing on that side has a return type mentioning it, so a terminator can be written without naming it. Both facts are pinned by `AlgorithmInterfaceCapabilityTests`, which compiles thirteen expressions against each interface form.
 
 ## Decided: the reduction ladder
 
@@ -280,7 +279,7 @@ Keep `IsSubspaceOf` for the question it does answer: **candidate** movement betw
 
 Roughly in order; the items are independent.
 
-Status: the invariant mechanism and the pre-flight validation it drives are implemented. The arity reduction is not started.
+Status: the invariant mechanism and the pre-flight validation it drives are implemented. The arity reduction is largely done — all twelve operator roles, the algorithms and the experiments have landed; see [configuration-arity-migration.md](configuration-arity-migration.md). Factories, analyzers and documentation remain, and steps 1, 4 and 5 below are the parts still open.
 
 1. **Have the built-in problems declare their defaults.** Makes `For(problem, …)` real rather than a one-problem special case and removes the worst first-contact failure. Coordinate with the existing backlog item on choosing defaults per encoding and problem, which requires evidence per choice rather than mechanical rollout.
 2. **Extend the pre-flight pass to trial resolution.** The invariant half is done: `SearchConfigurationValidation` walks the configuration graph and aggregates every incompatibility. It does not yet resolve execution instances, so a failure that only resolution would surface still appears at run start rather than at validation. Resolving the graph in the same pass is the remaining half, and it is what makes validation and execution share one rule.

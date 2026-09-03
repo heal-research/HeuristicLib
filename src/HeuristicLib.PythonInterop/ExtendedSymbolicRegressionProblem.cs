@@ -85,7 +85,7 @@ public class ExtendedSymbolicRegressionProblem(
 
         // The number of objectives, these directions, and the objective vectors returned by
         // the Python callbacks must remain in sync.
-        var directions = new ObjectiveDirection[]
+        var directions = new[]
         {
             ObjectiveDirection.Maximize, // combined score supplied by Python
             ObjectiveDirection.Maximize, // Pearson R2, retained for final comparison
@@ -104,7 +104,7 @@ public class ExtendedSymbolicRegressionProblem(
         {
             InnerProblem = innerProblem
         };
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>
+        var algorithm = new GeneticAlgorithm<ExpressionTree>
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover { InternalNodeProbability = 0.9 },

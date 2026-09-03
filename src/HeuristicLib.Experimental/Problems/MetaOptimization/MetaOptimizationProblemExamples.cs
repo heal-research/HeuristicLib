@@ -78,7 +78,7 @@ public static class MetaOptimizationProblemExamples
         var popSizeExtractor = b.AddIntegerParameter(populationSize);
         var rateExtractor = b.AddRealParameter(mutationRate);
         var combinedSearchSpace = b.Build();
-        return new MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(problem, combinedSearchSpace, x => new GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
+        return new MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(problem, combinedSearchSpace, x => new GeneticAlgorithm<TCandidate>
         {
             Creator = creatorExtractor(x),
             Crossover = crossoversExtractor(x),
@@ -127,10 +127,10 @@ public static class MetaOptimizationProblemExamples
 
         return new MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(problem, combinedSearchSpace, AlgBuilder);
 
-        IAlgorithm<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> AlgBuilder(CompositeGenotype<RealVector, IntegerVector> x)
+        IAlgorithm<TCandidate> AlgBuilder(CompositeGenotype<RealVector, IntegerVector> x)
         {
             var ints = x.Part2;
-            return new EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
+            return new EvolutionStrategy<TCandidate>
             {
                 Creator = creators[ints[0]],
                 Crossover = crossovers[ints[1]],

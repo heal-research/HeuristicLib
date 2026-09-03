@@ -8,24 +8,24 @@ namespace HEAL.HeuristicLib.Experiments;
 
 public static class ExperimentExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> experiment)
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>(IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> experiment)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TProblem : Problem<TProblem, TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
-        where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+        where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
     {
-        public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> CreateRun(TProblem problem, IRandomNumberGenerator random) => new(experiment, problem, random);
+        public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> CreateRun(Problem<TProblem, TCandidate, TSearchSpace> problem, IRandomNumberGenerator random) => new(experiment, (TProblem)problem, random);
 
-        public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(TProblem problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
+        public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(Problem<TProblem, TCandidate, TSearchSpace> problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
             experiment.CreateRun(problem, random).Stream(concurrency, initialState, cancellationToken);
 
-        public ImmutableArray<Task<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)>> StartTrials(TProblem problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
+        public ImmutableArray<Task<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)>> StartTrials(Problem<TProblem, TCandidate, TSearchSpace> problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
             experiment.CreateRun(problem, random).StartTrials(concurrency, initialState, cancellationToken);
 
-        public Task<ImmutableArray<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)>> CompleteAsync(TProblem problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
+        public Task<ImmutableArray<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)>> CompleteAsync(Problem<TProblem, TCandidate, TSearchSpace> problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
             experiment.CreateRun(problem, random).CompleteAsync(concurrency, initialState, cancellationToken);
 
-        public ImmutableArray<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)> Complete(TProblem problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
+        public ImmutableArray<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)> Complete(Problem<TProblem, TCandidate, TSearchSpace> problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
             experiment.CreateRun(problem, random).Complete(concurrency, initialState, cancellationToken);
     }
 
@@ -33,7 +33,7 @@ public static class ExperimentExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
-        where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+        where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
     {
         public async Task<ImmutableArray<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)>> CompleteAsync(
             ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
@@ -58,5 +58,35 @@ public static class ExperimentExtensions
         public ImmutableArray<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)> Complete(
             ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
             run.CompleteAsync(concurrency, initialState, cancellationToken).GetAwaiter().GetResult();
+
+    }
+
+    /// <remarks>
+    /// For a problem held behind its interface. The run is then typed at the interface rather than at the concrete
+    /// problem.
+    /// </remarks>
+    extension<TCandidate, TSearchSpace, TSearchState, TAlgorithm, TKey>(IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> experiment)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TSearchState : class, ISearchState
+        where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
+    {
+        public ExperimentRun<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState, TAlgorithm, TKey> CreateRun(
+            IProblem<TCandidate, TSearchSpace> problem, IRandomNumberGenerator random) => new(experiment, problem, random);
+
+        public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(
+            IProblem<TCandidate, TSearchSpace> problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
+            experiment.CreateRun(problem, random).Stream(concurrency, initialState, cancellationToken);
+
+        public ImmutableArray<Task<(ExperimentTrial<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)>> StartTrials(
+            IProblem<TCandidate, TSearchSpace> problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
+            experiment.CreateRun(problem, random).StartTrials(concurrency, initialState, cancellationToken);
+
+        public Task<ImmutableArray<(ExperimentTrial<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)>> CompleteAsync(
+            IProblem<TCandidate, TSearchSpace> problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
+            experiment.CreateRun(problem, random).CompleteAsync(concurrency, initialState, cancellationToken);
+
+        public ImmutableArray<(ExperimentTrial<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)> Complete(
+            IProblem<TCandidate, TSearchSpace> problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
+            experiment.CreateRun(problem, random).Complete(concurrency, initialState, cancellationToken);
     }
 }

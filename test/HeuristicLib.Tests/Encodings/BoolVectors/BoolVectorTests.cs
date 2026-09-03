@@ -177,7 +177,7 @@ public sealed class BoolVectorTests
     public void BroadcastLength_VectorAndEnumerable_ReturnsCommonLengthOrThrows()
     {
         BoolVector scalar = true;
-        var compatible = new[] { BoolVector.Create(true, false, true), (BoolVector)false };
+        var compatible = new[] { BoolVector.Create(true, false, true), false };
         var incompatible = new[] { BoolVector.Create(true, false), BoolVector.Create(true, false, true) };
 
         Vector.BroadcastLength(scalar, compatible).ShouldBe(3);

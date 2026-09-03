@@ -119,7 +119,7 @@ public static class InteractiveSymbolicRegression
                 new ShrinkSubtreeMutator(),
                 new SubtreeMutator()
             ]);
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
+        var algorithm = new GeneticAlgorithm<ExpressionTree>
         {
             Creator = new RampedHalfAndHalfTreeCreator(),
             Crossover = new SubtreeCrossover(),

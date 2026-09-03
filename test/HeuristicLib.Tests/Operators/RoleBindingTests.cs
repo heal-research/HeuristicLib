@@ -103,7 +103,7 @@ public class RoleBindingTests
             .Single(method => method.Name == "TryResolve"
                               && method.GetParameters()[0].ParameterType.Name.StartsWith(viaResolver ? "ExecutionInstanceResolver" : nameof(ExecutionInstanceRegistry), StringComparison.Ordinal))
             .MakeGenericMethod(typeArguments);
-        var arguments = new object?[] { receiver, BoundOperators[role], null, null };
+        var arguments = new[] { receiver, BoundOperators[role], null, null };
         tryResolve.Invoke(null, arguments);
         return (arguments[2], (string?)arguments[3]);
     }

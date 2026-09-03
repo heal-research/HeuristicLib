@@ -8,14 +8,12 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>
-    : Algorithm<OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>, TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperator>
+    : Algorithm<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperator>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
     where TOperator : class, IOperator
 {
-    public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
+    public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
     public required TOperator ObservedOperator { get; init; }
     public required Func<TOperator, ObservationDuration, TimeProvider, TOperator> MeasuredOperatorFactory { get; init; }
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
@@ -26,14 +24,14 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override OperatorDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public override OperatorDurationBudgetAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
     {
         var duration = new ObservationDuration();
         var measuredOperator = MeasuredOperatorFactory(ObservedOperator, duration, TimeProvider);
         var childRegistry = instanceRegistry.CreateChildRegistry();
         childRegistry.RegisterReplacement(ObservedOperator, measuredOperator);
 
-        return new(childRegistry.Resolve(Algorithm), duration, MaximumDuration);
+        return new(childRegistry.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
     }
 }
 

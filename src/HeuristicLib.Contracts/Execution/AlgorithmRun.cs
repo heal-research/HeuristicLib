@@ -116,13 +116,13 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; }
+    public IAlgorithm<TCandidate, TSearchState> Algorithm { get; }
 
     public TProblem Problem { get; }
 
     public IRandomNumberGenerator Random { get; }
 
-    public AlgorithmRun(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random)
+    public AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random)
     {
         Algorithm = algorithm;
         Problem = problem;
@@ -151,7 +151,7 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
 
     public ExecutionStream<TSearchState> Stream(TSearchState? initialState = null, CancellationToken cancellationToken = default)
     {
-        var algorithmInstance = StartExecution().Resolve(Algorithm);
+        var algorithmInstance = StartExecution().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
         return new(StreamStates(algorithmInstance, initialState, cancellationToken), cancellationToken);
     }
 

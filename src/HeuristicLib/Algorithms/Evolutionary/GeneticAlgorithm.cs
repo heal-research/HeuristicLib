@@ -7,17 +7,15 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
-    : IterativeAlgorithm<GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record GeneticAlgorithm<TCandidate>
+    : IterativeAlgorithm<GeneticAlgorithm<TCandidate>, TCandidate, PopulationState<TCandidate>>
 {
     public int PopulationSize { get; init; } = GeneticAlgorithmDefaults.PopulationSize;
     public required ICreator<TCandidate> Creator { get; init; }
     public required ICrossover<TCandidate> Crossover { get; init; }
     public required IMutator<TCandidate> Mutator { get; init; }
     public ITerminator<TCandidate>? Terminator { get; init; }
-    public IEvaluator<TCandidate> Evaluator { get; init; } = GeneticAlgorithmDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>();
+    public IEvaluator<TCandidate> Evaluator { get; init; } = GeneticAlgorithmDefaults.Evaluator<TCandidate>();
     public IRefiner<TCandidate>? Refiner { get; init; }
 
     /// <summary>
@@ -37,18 +35,18 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     /// </remarks>
     public double MutationRate { get; init; } = GeneticAlgorithmDefaults.MutationRate;
 
-    public ISelector<TCandidate> Selector { get; init; } = GeneticAlgorithmDefaults.Selector<TCandidate, TSearchSpace, TProblem>();
+    public ISelector<TCandidate> Selector { get; init; } = GeneticAlgorithmDefaults.Selector<TCandidate>();
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor)
+    protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
-        var resolver = instanceRegistry.For<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>();
+        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>();
         var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate);
-        return new Instance(resolvedInterceptor, resolver.Resolve(Evaluator), resolver.Resolve(Creator), resolver.Resolve(Crossover),
+        return new Instance<TRunSearchSpace, TRunProblem>(resolvedInterceptor, resolver.Resolve(Evaluator), resolver.Resolve(Creator), resolver.Resolve(Crossover),
             resolver.Resolve(effectiveMutator), resolver.Resolve(Selector), resolver.ResolveOptional(Terminator),
             resolver.ResolveOptional(Refiner), PopulationSize, MaximumGenerations, Elites);
     }
 
-    private sealed class Instance(
+    private sealed class Instance<TSearchSpace, TProblem>(
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
         IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
         ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
@@ -61,6 +59,8 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
         int? maximumGenerations,
         int elites)
         : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState, TProblem problem) =>
             maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;
@@ -99,11 +99,6 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     }
 }
 
-public record GeneticAlgorithm<TCandidate, TSearchSpace> : GeneticAlgorithm<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
-    where TSearchSpace : class, ISearchSpace<TCandidate>;
-
-public record GeneticAlgorithm<TCandidate> : GeneticAlgorithm<TCandidate, ISearchSpace<TCandidate>>;
-
 public static class GeneticAlgorithm
 {
     /// <summary>
@@ -111,14 +106,13 @@ public static class GeneticAlgorithm
     /// and falling back to the search space's encoding defaults for every role the problem declines.
     /// </summary>
     /// <remarks>
-    /// The self type on <see cref="Problem{TSelf, TCandidate, TSearchSpace}"/> is what lets the concrete
-    /// problem type be inferred here, so the result is typed at that problem rather than at <see cref="IProblem{T, TS}"/>.
+    /// The self type on <see cref="Problem{TSelf, TCandidate, TSearchSpace}"/> is what lets the concrete problem type
+    /// be inferred here, which is what puts that problem's own defaults within reach.
     /// <para>
-    /// Every operator is optional and overrides whatever the defaults would have supplied for that role. Supplying one
-    /// does not widen the inferred search space, because the anchor argument fixes it exactly.
+    /// Every operator is optional and overrides whatever the defaults would have supplied for that role.
     /// </para>
     /// </remarks>
-    public static GeneticAlgorithm<TCandidate, TSearchSpace, TProblem> For<TProblem, TCandidate, TSearchSpace>(
+    public static GeneticAlgorithm<TCandidate> For<TProblem, TCandidate, TSearchSpace>(
         Problem<TProblem, TCandidate, TSearchSpace> problem,
         ICreator<TCandidate>? creator = null,
         ICrossover<TCandidate>? crossover = null,
@@ -153,8 +147,8 @@ public static class GeneticAlgorithm
             Creator = creator ?? (self is null ? null : TProblem.CreateDefaultCreator(self)) ?? TSearchSpace.CreateDefaultCreator(searchSpace),
             Crossover = crossover ?? (self is null ? null : TProblem.CreateDefaultCrossover(self)) ?? TSearchSpace.CreateDefaultCrossover(searchSpace),
             Mutator = mutator ?? (self is null ? null : TProblem.CreateDefaultMutator(self)) ?? TSearchSpace.CreateDefaultMutator(searchSpace),
-            Selector = selector ?? GeneticAlgorithmDefaults.Selector<TCandidate, TSearchSpace, TProblem>(),
-            Evaluator = evaluator ?? GeneticAlgorithmDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>(),
+            Selector = selector ?? GeneticAlgorithmDefaults.Selector<TCandidate>(),
+            Evaluator = evaluator ?? GeneticAlgorithmDefaults.Evaluator<TCandidate>(),
             Refiner = refiner,
             Terminator = terminator,
             Interceptor = interceptor,
@@ -172,11 +166,10 @@ public static class GeneticAlgorithm
     /// The result runs against any problem over that search space, which is what makes it a reusable configuration.
     /// Pass the problem instead when that problem's own preferences should be consulted.
     /// <para>
-    /// Every operator is optional and overrides whatever the defaults would have supplied for that role. Supplying one
-    /// does not widen the inferred search space, because the anchor argument fixes it exactly.
+    /// Every operator is optional and overrides whatever the defaults would have supplied for that role.
     /// </para>
     /// </remarks>
-    public static GeneticAlgorithm<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> For<TCandidate, TSearchSpace>(
+    public static GeneticAlgorithm<TCandidate> For<TCandidate, TSearchSpace>(
         IEncodingDefaults<TCandidate, TSearchSpace> searchSpace,
         ICreator<TCandidate>? creator = null,
         ICrossover<TCandidate>? crossover = null,
@@ -202,8 +195,8 @@ public static class GeneticAlgorithm
             Creator = creator ?? TSearchSpace.CreateDefaultCreator(typedSearchSpace),
             Crossover = crossover ?? TSearchSpace.CreateDefaultCrossover(typedSearchSpace),
             Mutator = mutator ?? TSearchSpace.CreateDefaultMutator(typedSearchSpace),
-            Selector = selector ?? GeneticAlgorithmDefaults.Selector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>(),
-            Evaluator = evaluator ?? GeneticAlgorithmDefaults.Evaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>(),
+            Selector = selector ?? GeneticAlgorithmDefaults.Selector<TCandidate>(),
+            Evaluator = evaluator ?? GeneticAlgorithmDefaults.Evaluator<TCandidate>(),
             Refiner = refiner,
             Terminator = terminator,
             Interceptor = interceptor,
@@ -215,15 +208,14 @@ public static class GeneticAlgorithm
     }
 
     /// <summary>
-    /// Creates a genetic algorithm from the operators it requires, inferring the candidate, search space and problem
-    /// types from them. Every remaining member is optional and falls back to <see cref="GeneticAlgorithmDefaults"/>.
+    /// Creates a genetic algorithm from the operators it requires, inferring the candidate type from them. Every
+    /// remaining member is optional and falls back to <see cref="GeneticAlgorithmDefaults"/>.
     /// </summary>
     /// <remarks>
-    /// An omitted operator contributes no bound, so leaving one out widens the inferred problem type and supplying a
-    /// problem-bound one pins it. Use <see cref="For{TProblem, TCandidate, TSearchSpace}"/> instead when a problem or
-    /// search space should supply the operators.
+    /// Use <see cref="For{TProblem, TCandidate, TSearchSpace}"/> instead when a problem or search space should supply
+    /// the operators.
     /// </remarks>
-    public static GeneticAlgorithm<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
+    public static GeneticAlgorithm<TCandidate> Create<TCandidate>(
         ICreator<TCandidate> creator,
         ICrossover<TCandidate> crossover,
         IMutator<TCandidate> mutator,
@@ -235,16 +227,14 @@ public static class GeneticAlgorithm
         int populationSize = GeneticAlgorithmDefaults.PopulationSize,
         int? maximumGenerations = null,
         double mutationRate = GeneticAlgorithmDefaults.MutationRate,
-        int elites = GeneticAlgorithmDefaults.Elites)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        int elites = GeneticAlgorithmDefaults.Elites) =>
         new()
         {
             Creator = creator,
             Crossover = crossover,
             Mutator = mutator,
-            Selector = selector ?? GeneticAlgorithmDefaults.Selector<TCandidate, TSearchSpace, TProblem>(),
-            Evaluator = evaluator ?? GeneticAlgorithmDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>(),
+            Selector = selector ?? GeneticAlgorithmDefaults.Selector<TCandidate>(),
+            Evaluator = evaluator ?? GeneticAlgorithmDefaults.Evaluator<TCandidate>(),
             Refiner = refiner,
             Terminator = terminator,
             Interceptor = interceptor,

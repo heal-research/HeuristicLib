@@ -9,8 +9,8 @@ public sealed class AssemblyDependencyTests
     {
         var assemblies = new[]
         {
-            typeof(Algorithm<,,,,>).Assembly,
-            typeof(IAlgorithm<,,,>).Assembly
+            typeof(Algorithm<, , , , >).Assembly,
+            typeof(IAlgorithm<>).Assembly
         };
 
         foreach (var assembly in assemblies)
@@ -73,12 +73,12 @@ public sealed class AssemblyDependencyTests
     [Fact]
     public void MainAssembly_OwnsStableBoundaryTypesOnly()
     {
-        var main = typeof(GeneticAlgorithm<,,>).Assembly;
+        var main = typeof(GeneticAlgorithm<>).Assembly;
 
         main.GetType("HEAL.HeuristicLib.Problems.MachineLearning.SymbolicRegressionProblem").ShouldNotBeNull();
-        main.GetType("HEAL.HeuristicLib.Algorithms.NSGA2`3").ShouldNotBeNull();
+        main.GetType("HEAL.HeuristicLib.Algorithms.NSGA2`1").ShouldNotBeNull();
         main.GetType("HEAL.HeuristicLib.Problems.QuadraticAssignment.QuadraticAssignmentProblem").ShouldNotBeNull();
-        main.GetType("HEAL.HeuristicLib.Algorithms.AlpsGeneticAlgorithm`3").ShouldBeNull();
+        main.GetType("HEAL.HeuristicLib.Algorithms.AlpsGeneticAlgorithm`1").ShouldBeNull();
         main.GetType("HEAL.HeuristicLib.Analysis.PopulationSimilarityAnalyzer`4").ShouldBeNull();
         main.GetType("HEAL.HeuristicLib.SearchSpaces.ISubencodingComparable`1").ShouldBeNull();
         main.GetType("HEAL.HeuristicLib.Algorithms.ISolutionLayout`1").ShouldBeNull();

@@ -172,8 +172,8 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void ObservableRefiner_WithSeparatelyConstructedActionObservers_IsNotEqual()
     {
-        var left = new AddOffsetRefiner(1).ObserveWith((IReadOnlyList<int> _) => { });
-        var right = new AddOffsetRefiner(1).ObserveWith((IReadOnlyList<int> _) => { });
+        var left = new AddOffsetRefiner(1).ObserveWith(_ => { });
+        var right = new AddOffsetRefiner(1).ObserveWith(_ => { });
 
         left.ShouldNotBe(right);
     }

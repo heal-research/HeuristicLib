@@ -55,14 +55,6 @@ public class ExecutionInstanceRegistry
     }
 
     /// <summary>
-    /// Resolves a configuration that names the one execution instance type it creates, so the creation call is the
-    /// obvious one.
-    /// </summary>
-    public TExecutionInstance Resolve<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable)
-        where TExecutionInstance : class, IExecutionInstance =>
-        Resolve(resolvable, static (creationTarget, registry) => creationTarget.CreateExecutionInstance(registry));
-
-    /// <summary>
     /// Resolves a configuration whose creation call this registry cannot write itself, applying the same policy as the
     /// other overload — cached instance, registered replacement, parent registry, otherwise create — and calling
     /// <paramref name="create"/> for the creation step.
@@ -137,18 +129,6 @@ public class ExecutionInstanceRegistry
         StoreInstance(resolvable, instance);
         return instance;
     }
-
-    /// <summary>
-    /// Resolves an operator that may be absent, returning <see langword="null"/> when it is.
-    /// </summary>
-    /// <remarks>
-    /// Use this for optional slots such as a terminator or a refiner. <see cref="Resolve"/> stays strict, so passing a
-    /// possibly-null operator to it is a compile-time error rather than a null instance discovered later.
-    /// </remarks>
-    [return: NotNullIfNotNull(nameof(resolvable))]
-    public TExecutionInstance? ResolveOptional<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance>? resolvable)
-        where TExecutionInstance : class, IExecutionInstance =>
-        resolvable is null ? null : Resolve(resolvable);
 
     /// <summary>
     /// Registers a ready-made instance for a resolvable, so resolution returns it instead of creating one.

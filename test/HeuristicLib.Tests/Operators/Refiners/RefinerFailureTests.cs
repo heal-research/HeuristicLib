@@ -69,7 +69,7 @@ public class RefinerFailureTests
 
     private static TestFunctionProblem CreateProblem() => new(new SphereFunction(dimension: 3));
 
-    private static GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(TestFunctionProblem problem) =>
+    private static GeneticAlgorithm<RealVector> CreateAlgorithm(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = 5,

@@ -2,13 +2,14 @@ using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Experiments.TestSupport;
 
 internal sealed record FixedExperiment<TAlgorithm>(ImmutableArray<ExperimentCase<TAlgorithm, int>> Cases)
-    : Experiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, TAlgorithm, int>
-    where TAlgorithm : class, IAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    : Experiment<int, TAlgorithm, PopulationState<int>, int>
+    where TAlgorithm : class, IAlgorithm<int, PopulationState<int>>
 {
     public override ImmutableArray<ExperimentCase<TAlgorithm, int>> MaterializeCases() => Cases;
 }
@@ -22,9 +23,9 @@ internal sealed record ProbeAlgorithm(
     bool FailDuringExecution = false,
     bool YieldState = true,
     int HoldAfterYieldMilliseconds = 0)
-    : Algorithm<ProbeAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    : Algorithm<ProbeAlgorithm, int, PopulationState<int>>
 {
-    public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
     {
         Probe?.RecordSetup();
         if (FailDuringSetup)
@@ -32,14 +33,16 @@ internal sealed record ProbeAlgorithm(
             throw new InvalidOperationException($"Setup failed for {Value}.");
         }
 
-        return new Instance(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState, HoldAfterYieldMilliseconds);
+        return new Instance<TRunSearchSpace, TRunProblem>(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState, HoldAfterYieldMilliseconds);
     }
 
-    private sealed class Instance(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState, int holdAfterYieldMilliseconds)
-        : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    private sealed class Instance<TSearchSpace, TProblem>(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState, int holdAfterYieldMilliseconds)
+        : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+        where TSearchSpace : class, ISearchSpace<int>
+        where TProblem : class, IProblem<int, TSearchSpace>
     {
         public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
-            IProblem<int, DummySearchSpace<int>> problem,
+            TProblem problem,
             IRandomNumberGenerator random,
             PopulationState<int>? initialState = null,
             [EnumeratorCancellation] CancellationToken ct = default)
@@ -122,9 +125,9 @@ internal sealed class ExecutionProbe
 internal static class ExperimentTestSupport
 {
     public static ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, TAlgorithm, int> CreateRun<TAlgorithm>(
-        IExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, TAlgorithm, int> experiment,
+        IExperiment<int, TAlgorithm, PopulationState<int>, int> experiment,
         int seed = 42)
-        where TAlgorithm : class, IAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> =>
+        where TAlgorithm : class, IAlgorithm<int, PopulationState<int>> =>
         experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(seed));
 
     public static PopulationState<int> CreateState(int candidate) => new()

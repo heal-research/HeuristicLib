@@ -54,12 +54,12 @@ public sealed class ValueArrayTests
     [Fact]
     public void Equals_WithNullElements_ComparesThem()
     {
-        var left = ValueArray.Create<Element?>(null, new Element(1));
-        var right = ValueArray.Create<Element?>(null, new Element(1));
+        var left = ValueArray.Create(null, new Element(1));
+        var right = ValueArray.Create(null, new Element(1));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
-        left.ShouldNotBe(ValueArray.Create<Element?>(new Element(1), null));
+        left.ShouldNotBe(ValueArray.Create(new Element(1), null));
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public sealed class ValueArrayTests
     public void Create_BindsArraysAndSpansAsElements()
     {
         // An array or span binds to the ReadOnlySpan<T> parameter directly and supplies the elements.
-        var fromArray = ValueArray.Create(new[] { 1, 2, 3 });
+        var fromArray = ValueArray.Create(1, 2, 3);
         var fromSpan = ValueArray.Create(new[] { 1, 2, 3 }.AsSpan());
 
         fromArray.ShouldBe(ValueArray.Create(1, 2, 3));
@@ -161,11 +161,11 @@ public sealed class ValueArrayTests
         var fromImmutableArray = ValueArray.Create(ImmutableArray.Create(1, 2, 3));
         var fromString = ValueArray.Create("abc");
 
-        ((object)fromList).GetType().ShouldBe(typeof(ValueArray<List<int>>));
+        fromList.GetType().ShouldBe(typeof(ValueArray<List<int>>));
         fromList.Count.ShouldBe(1);
-        ((object)fromImmutableArray).GetType().ShouldBe(typeof(ValueArray<ImmutableArray<int>>));
+        fromImmutableArray.GetType().ShouldBe(typeof(ValueArray<ImmutableArray<int>>));
         fromImmutableArray.Count.ShouldBe(1);
-        ((object)fromString).GetType().ShouldBe(typeof(ValueArray<string>));
+        fromString.GetType().ShouldBe(typeof(ValueArray<string>));
         fromString.Count.ShouldBe(1);
     }
 

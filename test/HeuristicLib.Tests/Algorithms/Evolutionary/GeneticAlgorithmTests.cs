@@ -17,7 +17,7 @@ public class GeneticAlgorithmTests
         var evaluator = new DummyEvaluator<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
         var selector = new RandomSelector<RealVector>();
 
-        var algorithm = new GeneticAlgorithm<RealVector, BoundedRealVectorSearchSpace>
+        var algorithm = new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 250,
             Creator = creator,
