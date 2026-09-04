@@ -704,7 +704,7 @@ public class OperatorInstrumentationTests
     private sealed class CallbackMutator(MutateCallback callback)
         : IMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
             new Instance(callback);
 
         private sealed class Instance(MutateCallback callback)

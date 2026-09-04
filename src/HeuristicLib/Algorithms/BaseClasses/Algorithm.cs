@@ -14,7 +14,7 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
 {
     internal TSelf Self => (TSelf)this;
 
-    public abstract IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+    public abstract IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver);
 }
 
 public abstract class AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>

@@ -12,7 +12,7 @@ public class RefinerEvaluatorAccountingTests
     [Fact]
     public void EvaluationAccounting_FollowsConfigurationInstanceIdentityRatherThanEquality()
     {
-        var registry = new ExecutionInstanceRegistry();
+        var registry = ExecutionInstanceResolver.Create();
         var shared = CreateEvaluator().LimitEvaluations(1);
         var separateButEqual = CreateEvaluator().LimitEvaluations(1);
 
@@ -27,7 +27,7 @@ public class RefinerEvaluatorAccountingTests
     {
         var problem = CreateProblem();
         var sharedEvaluator = CreateEvaluator().LimitEvaluations(2);
-        var registry = new ExecutionInstanceRegistry();
+        var registry = ExecutionInstanceResolver.Create();
         var refiner = registry.Resolve(new AddOffsetRefiner(-5).WithImprovementCheck(sharedEvaluator));
         var algorithmEvaluator = registry.Resolve(sharedEvaluator);
 
@@ -44,7 +44,7 @@ public class RefinerEvaluatorAccountingTests
     {
         var problem = CreateProblem();
         var algorithmEvaluator = CreateEvaluator().LimitEvaluations(2);
-        var registry = new ExecutionInstanceRegistry();
+        var registry = ExecutionInstanceResolver.Create();
         var refiner = registry.Resolve(new AddOffsetRefiner(-5).WithImprovementCheck(CreateEvaluator().LimitEvaluations(2)));
         var evaluatorInstance = registry.Resolve(algorithmEvaluator);
 
@@ -60,8 +60,8 @@ public class RefinerEvaluatorAccountingTests
     public void WrapperOrder_DecidesWhetherCacheHitsConsumeTheBudget()
     {
         var problem = CreateProblem();
-        var limitOutside = new ExecutionInstanceRegistry().Resolve(CreateEvaluator().WithCache().LimitEvaluations(2));
-        var cacheOutside = new ExecutionInstanceRegistry().Resolve(CreateEvaluator().LimitEvaluations(2).WithCache());
+        var limitOutside = ExecutionInstanceResolver.Create().Resolve(CreateEvaluator().WithCache().LimitEvaluations(2));
+        var cacheOutside = ExecutionInstanceResolver.Create().Resolve(CreateEvaluator().LimitEvaluations(2).WithCache());
 
         for (var request = 0; request < 2; request++)
         {

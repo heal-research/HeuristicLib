@@ -61,7 +61,7 @@ public class EliteSelectorTests
         };
 
         var selector = new EliteSelector<string, ISearchSpace<string>, IProblem<string, ISearchSpace<string>>>(childSelector) { Elites = elites };
-        var instance = selector.CreateExecutionInstance(new ExecutionInstanceRegistry());
+        var instance = selector.CreateExecutionInstance(ExecutionInstanceResolver.Create());
 
         return instance.Select(population, SingleObjective.Minimize, count, new SequenceRandomNumberGenerator(0.5), null!, null!);
     }

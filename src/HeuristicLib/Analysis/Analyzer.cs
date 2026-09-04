@@ -20,7 +20,7 @@ public static class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : PopulationState<TCandidate> =>
-        new((registry, trace) => registry.Observe(at, observation =>
+        new((builder, trace) => builder.Observe(at, observation =>
             Sample(observation, observation.Problem.Objective, measurement, aggregation, trace)), Retain.Always<TResult>(), clocks);
 
     /// <summary>
@@ -47,7 +47,7 @@ public static class Analyzer
         params IReadOnlyList<Clock> clocks)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new((registry, trace) => registry.Observe(at, observation =>
+        new((builder, trace) => builder.Observe(at, observation =>
             Sample(observation, observation.Problem.Objective, measurement, aggregation, trace)), Retain.Always<TResult>(), clocks);
 
     /// <summary>
@@ -73,7 +73,7 @@ public static class Analyzer
         params IReadOnlyList<Clock> clocks)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new((registry, trace) => registry.Observe(at, observation =>
+        new((builder, trace) => builder.Observe(at, observation =>
             Sample(observation, observation.Problem.Objective, measurement, aggregation, trace)), Retain.Always<TResult>(), clocks);
 
     /// <summary>
@@ -99,7 +99,7 @@ public static class Analyzer
         params IReadOnlyList<Clock> clocks)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new((registry, trace) => registry.Observe(at, observation =>
+        new((builder, trace) => builder.Observe(at, observation =>
             Sample(observation, observation.Problem.Objective, measurement, aggregation, trace)), Retain.Always<TResult>(), clocks);
 
     /// <summary>
@@ -126,7 +126,7 @@ public static class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : PopulationState<TCandidate> =>
-        new((registry, trace) => registry.Observe(at, observation =>
+        new((builder, trace) => builder.Observe(at, observation =>
             Sample(observation, observation.Problem.Objective, measurement, aggregation, trace)), Retain.Always<TResult>(), clocks);
 
     /// <summary>
@@ -155,7 +155,7 @@ public static class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : PopulationState<TCandidate> =>
-        new((registry, trace) => registry.Observe(at, observation =>
+        new((builder, trace) => builder.Observe(at, observation =>
             Sample(observation, observation.Problem.Objective, measurement, aggregation, trace)), retention, clocks);
 
     /// <summary>
@@ -169,7 +169,7 @@ public static class Analyzer
         params IReadOnlyList<Clock> clocks)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new((registry, trace) => registry.Observe(at, observation =>
+        new((builder, trace) => builder.Observe(at, observation =>
             Sample(observation, observation.Problem.Objective, measurement, aggregation, trace)), retention, clocks);
 
     /// <summary>
@@ -183,7 +183,7 @@ public static class Analyzer
         params IReadOnlyList<Clock> clocks)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new((registry, trace) => registry.Observe(at, observation =>
+        new((builder, trace) => builder.Observe(at, observation =>
             Sample(observation, observation.Problem.Objective, measurement, aggregation, trace)), retention, clocks);
 
     /// <summary>
@@ -197,7 +197,7 @@ public static class Analyzer
         params IReadOnlyList<Clock> clocks)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new((registry, trace) => registry.Observe(at, observation =>
+        new((builder, trace) => builder.Observe(at, observation =>
             Sample(observation, observation.Problem.Objective, measurement, aggregation, trace)), retention, clocks);
 
     /// <summary>
@@ -212,7 +212,7 @@ public static class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : PopulationState<TCandidate> =>
-        new((registry, trace) => registry.Observe(at, observation =>
+        new((builder, trace) => builder.Observe(at, observation =>
             Sample(observation, observation.Problem.Objective, measurement, aggregation, trace)), retention, clocks);
 
     /// <summary>

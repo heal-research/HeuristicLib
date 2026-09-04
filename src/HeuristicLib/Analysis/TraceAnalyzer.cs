@@ -16,11 +16,11 @@ public sealed class TraceAnalyzer<TResult> : IAnalyzer, IDisposable
     private readonly Lock sync = new();
     private readonly List<TraceEntry<TResult>> entries = [];
     private readonly ImmutableArray<Clock> clocks;
-    private readonly Action<ExecutionInstanceRegistry, TraceAnalyzer<TResult>> install;
+    private readonly Action<ExecutionInstanceResolverBuilder, TraceAnalyzer<TResult>> install;
     private readonly IRetention<TResult> retention;
     private bool isCompleted;
 
-    internal TraceAnalyzer(Action<ExecutionInstanceRegistry, TraceAnalyzer<TResult>> install, IRetention<TResult> retention, IReadOnlyList<Clock> clocks)
+    internal TraceAnalyzer(Action<ExecutionInstanceResolverBuilder, TraceAnalyzer<TResult>> install, IRetention<TResult> retention, IReadOnlyList<Clock> clocks)
     {
         this.install = install;
         this.retention = retention;
@@ -67,12 +67,12 @@ public sealed class TraceAnalyzer<TResult> : IAnalyzer, IDisposable
     /// <summary>
     /// Installs the clocks before the recorder, so that every clock has advanced by the time a moment is captured.
     /// </summary>
-    public void Install(ExecutionInstanceRegistry registry)
+    public void Install(ExecutionInstanceResolverBuilder builder)
     {
         foreach (var clock in clocks)
-            clock.Install(registry);
+            clock.Install(builder);
 
-        install(registry, this);
+        install(builder, this);
     }
 
     public void Dispose()

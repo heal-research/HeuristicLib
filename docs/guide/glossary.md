@@ -542,7 +542,7 @@ A run may contain more than one execution graph over time, for example when meta
 
 See also: Configuration graph, Execution instance, Run.
 
-### Execution instance registry
+### Execution instance resolver
 
 Status: `Canonical`
 
@@ -570,7 +570,7 @@ A value array is an immutable ordered collection that compares by its elements r
 
 Configurations use a value array for every retained ordered collection, such as child operators, pipeline stages or weights, so that structurally identical configurations compare equal without an equality attribute or a hand-written comparison. An `ImmutableArray<T>` compares by underlying array reference and must not be used for collection state that participates in equality. Execution instances keep `ImmutableArray<T>`, because they are resolved by reference identity and never compared structurally.
 
-See also: Child operator, Configuration, Execution instance, Execution instance registry.
+See also: Child operator, Configuration, Execution instance, Execution instance resolver.
 
 ### Execution concurrency
 

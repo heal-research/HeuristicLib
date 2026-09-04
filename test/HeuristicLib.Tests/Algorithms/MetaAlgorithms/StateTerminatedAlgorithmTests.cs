@@ -111,7 +111,7 @@ public class StateTerminatedAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var timeProvider = new ManualTimeProvider();
         var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5)) { TimeProvider = timeProvider };
-        var instance = new ExecutionInstanceRegistry().Resolve(terminator);
+        var instance = ExecutionInstanceResolver.Create().Resolve(terminator);
 
         instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeFalse();
 
@@ -124,7 +124,7 @@ public class StateTerminatedAlgorithmTests
     public void AfterElapsedTimeTerminator_StopsOnFirstCheck_WhenMaximumElapsedTimeIsNotPositive()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var instance = new ExecutionInstanceRegistry().Resolve(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
+        var instance = ExecutionInstanceResolver.Create().Resolve(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
 
         instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeTrue();
     }
@@ -183,7 +183,7 @@ public class StateTerminatedAlgorithmTests
     private sealed record RecordingAlgorithm(List<string> Events)
         : Algorithm<RecordingAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceResolver resolver)
         {
             Events.Add("algorithm");
             return new Instance();
@@ -203,7 +203,7 @@ public class StateTerminatedAlgorithmTests
     private sealed record RecordingResolveTerminator(List<string> Events)
         : ITerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        public ITerminatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+        public ITerminatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceResolver resolver)
         {
             Events.Add("terminator");
             return new Instance();

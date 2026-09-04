@@ -11,7 +11,7 @@ public abstract record StatelessTerminator<TCandidate, TSearchSpace, TProblem, T
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => this;
 
     public abstract bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem);
 }
@@ -21,7 +21,7 @@ public abstract record StatelessTerminator<TCandidate, TSearchSpace, TSearchStat
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => this;
 
     public abstract bool IsTerminalState(TSearchState state, TSearchSpace searchSpace);
 
@@ -33,7 +33,7 @@ public abstract record StatelessTerminator<TCandidate, TSearchState>
     : Terminator<TCandidate, TSearchState>, ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
     where TSearchState : class, ISearchState
 {
-    public sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    public sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => this;
 
     public abstract bool IsTerminalState(TSearchState state);
 
@@ -44,7 +44,7 @@ public abstract record StatelessTerminator<TCandidate, TSearchState>
 public abstract record StatelessTerminator<TCandidate>
     : Terminator<TCandidate>, ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>
 {
-    public sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    public sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => this;
 
     public abstract bool IsTerminalState();
 

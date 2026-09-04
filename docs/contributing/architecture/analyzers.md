@@ -15,7 +15,7 @@ Analyzer data has a different lifetime from normal operator or algorithm configu
   - They must stay safe to reuse across multiple runs.
 - **Execution instances** are stateful execution objects.
   - They may hold temporary state while something executes.
-  - Their lifetime is controlled by `ExecutionInstanceRegistry` and by meta-algorithms such as `CycleAlgorithm`.
+  - Their lifetime is controlled by `ExecutionInstanceResolver` and by meta-algorithms such as `CycleAlgorithm`.
 - **Analyzer state** is usually meaningful at the **run** level.
   - quality curves
   - genealogy graphs
@@ -168,7 +168,7 @@ var result = run.GetResult(analyzer);
 This makes analyzer retrieval:
 
 - independent of individual operator instances
-- independent of `ExecutionInstanceRegistry` reuse details
+- independent of `ExecutionInstanceResolver` reuse details
 - available through a stable run-level API
 
 ## Execution flow
@@ -199,13 +199,13 @@ Those entries:
 
 - identify the original anchor they belong to, by reference
 - merge multiple analyzer subscriptions for the same anchor
-- register one observable replacement into an `ExecutionInstanceRegistry`
+- register one observable replacement into an `ExecutionInstanceResolver`
 
 This keeps analyzer registration declarative while avoiding deep wrapper chains when several analyzers observe the same anchor.
 
 Because an anchor is matched by reference, a copy produced by `with` is a different anchor. An analyzer registered against a configuration that is then copied observes nothing, which is why the run-level `TrackBestMedianWorst(out var analyzer)` form resolves its anchor from the run instead.
 
-Replacements only take effect where children are obtained through `ExecutionInstanceRegistry.Resolve`. A meta-algorithm that calls `CreateExecutionInstance` on a child algorithm itself bypasses the registry, and every analyzer anchored inside that child silently records nothing. See [Write a meta-algorithm](/guide/extending/writing-meta-algorithms).
+Replacements only take effect where children are obtained through `ExecutionInstanceResolver.Resolve`. A meta-algorithm that calls `CreateExecutionInstance` on a child algorithm itself bypasses the registry, and every analyzer anchored inside that child silently records nothing. See [Write a meta-algorithm](/guide/extending/writing-meta-algorithms).
 
 ### During execution
 
@@ -218,7 +218,7 @@ There is currently **no separate publish step**. The analyzer run state exposes 
 
 ## Why the run is the right scope
 
-`ExecutionInstanceRegistry` still matters, but it is not the right place to _own_ analysis data.
+`ExecutionInstanceResolver` still matters, but it is not the right place to _own_ analysis data.
 
 A registry controls the lifetime of operator and algorithm execution instances.
 This is useful for:

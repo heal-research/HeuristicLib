@@ -16,8 +16,8 @@ public abstract record WrappingRefiner<TCandidate, TSearchSpace, TProblem>
 
     public IRefiner<TCandidate, TSearchSpace, TProblem> ChildRefiner { get; init; }
 
-    public sealed override IRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance(instanceRegistry.Resolve(ChildRefiner));
+    public sealed override IRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance(resolver.Resolve(ChildRefiner));
 
     protected abstract WrappingRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner);
 }

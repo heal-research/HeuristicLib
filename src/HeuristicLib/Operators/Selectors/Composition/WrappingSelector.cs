@@ -16,8 +16,8 @@ public abstract record WrappingSelector<TCandidate, TSearchSpace, TProblem>
 
     public ISelector<TCandidate, TSearchSpace, TProblem> ChildSelector { get; init; }
 
-    public sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance(instanceRegistry.Resolve(ChildSelector));
+    public sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance(resolver.Resolve(ChildSelector));
 
     protected abstract WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector);
 }

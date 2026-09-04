@@ -16,7 +16,7 @@ namespace HEAL.HeuristicLib.Analysis;
 /// </remarks>
 public static class Anchors
 {
-    extension(ExecutionInstanceRegistry registry)
+    extension(ExecutionInstanceResolverBuilder builder)
     {
         public void Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(
             IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> anchor,
@@ -24,28 +24,28 @@ public static class Anchors
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            registry.Decorate(anchor, current => new ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>(anchor, current, [recorder]));
+            builder.Decorate(anchor, current => new ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>(anchor, current, [recorder]));
 
         public void Observe<TCandidate, TSearchSpace, TProblem>(
             IEvaluator<TCandidate, TSearchSpace, TProblem> anchor,
             IObservationRecorder<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> recorder)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            registry.Decorate(anchor, current => new ObservingEvaluator<TCandidate, TSearchSpace, TProblem>(anchor, current, [recorder]));
+            builder.Decorate(anchor, current => new ObservingEvaluator<TCandidate, TSearchSpace, TProblem>(anchor, current, [recorder]));
 
         public void Observe<TCandidate, TSearchSpace, TProblem>(
             ICrossover<TCandidate, TSearchSpace, TProblem> anchor,
             IObservationRecorder<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> recorder)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            registry.Decorate(anchor, current => new ObservingCrossover<TCandidate, TSearchSpace, TProblem>(anchor, current, [recorder]));
+            builder.Decorate(anchor, current => new ObservingCrossover<TCandidate, TSearchSpace, TProblem>(anchor, current, [recorder]));
 
         public void Observe<TCandidate, TSearchSpace, TProblem>(
             IMutator<TCandidate, TSearchSpace, TProblem> anchor,
             IObservationRecorder<MutatorObservation<TCandidate, TSearchSpace, TProblem>> recorder)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            registry.Decorate(anchor, current => new ObservingMutator<TCandidate, TSearchSpace, TProblem>(anchor, current, [recorder]));
+            builder.Decorate(anchor, current => new ObservingMutator<TCandidate, TSearchSpace, TProblem>(anchor, current, [recorder]));
 
         public void Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(
             IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> anchor,
@@ -53,7 +53,7 @@ public static class Anchors
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            registry.Decorate(anchor, current => new ObservingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(anchor, current, [recorder]));
+            builder.Decorate(anchor, current => new ObservingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(anchor, current, [recorder]));
 
         /// <summary>
         /// Installs a callback at the anchor, for an analysis that does not need a recorder type of its own.
@@ -64,7 +64,7 @@ public static class Anchors
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            registry.Observe(anchor, new DelegateObservationRecorder<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>>(record));
+            builder.Observe(anchor, new DelegateObservationRecorder<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>>(record));
 
         /// <summary>
         /// Installs a callback at the anchor, for an analysis that does not need a recorder type of its own.
@@ -74,7 +74,7 @@ public static class Anchors
             Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> record)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            registry.Observe(anchor, new DelegateObservationRecorder<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>>(record));
+            builder.Observe(anchor, new DelegateObservationRecorder<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>>(record));
 
         /// <summary>
         /// Installs a callback at the anchor, for an analysis that does not need a recorder type of its own.
@@ -84,7 +84,7 @@ public static class Anchors
             Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> record)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            registry.Observe(anchor, new DelegateObservationRecorder<CrossoverObservation<TCandidate, TSearchSpace, TProblem>>(record));
+            builder.Observe(anchor, new DelegateObservationRecorder<CrossoverObservation<TCandidate, TSearchSpace, TProblem>>(record));
 
         /// <summary>
         /// Installs a callback at the anchor, for an analysis that does not need a recorder type of its own.
@@ -94,7 +94,7 @@ public static class Anchors
             Action<MutatorObservation<TCandidate, TSearchSpace, TProblem>> record)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            registry.Observe(anchor, new DelegateObservationRecorder<MutatorObservation<TCandidate, TSearchSpace, TProblem>>(record));
+            builder.Observe(anchor, new DelegateObservationRecorder<MutatorObservation<TCandidate, TSearchSpace, TProblem>>(record));
 
         /// <summary>
         /// Installs a callback at the anchor, for an analysis that does not need a recorder type of its own.
@@ -105,7 +105,7 @@ public static class Anchors
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            registry.Observe(anchor, new DelegateObservationRecorder<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>>(record));
+            builder.Observe(anchor, new DelegateObservationRecorder<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>>(record));
     }
 }
 

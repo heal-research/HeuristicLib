@@ -132,7 +132,7 @@ public class TravelingSalesmanProblemTests
         var problem = new ActivatedTravelingSalesmanProblem(data, env, [true, true, true, false], 1.0);
         var evaluator = new ProblemEvaluator<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>().WithDynamicRelativeQuality(problem,
             new ActivatedTravelingSalesmanExactBestKnownProvider(new HeldKarpTravelingSalesmanExactSolver()));
-        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var instance = ExecutionInstanceResolver.Create().Resolve(evaluator);
 
         var before = instance.Evaluate([[0, 1, 2, 3]], TestRandoms.NoRandom, problem.SearchSpace, problem)[0];
         problem.UpdateOnce();
@@ -204,7 +204,7 @@ public class TravelingSalesmanProblemTests
         var env = RandomNumberGenerator.Create(0);
         var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], 1.0, epochLength: 200);
         Permutation tour = [0, 1, 2, 3];
-        var cachedEval = new ExecutionInstanceRegistry().Resolve(new ProblemEvaluator<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>().WithCache(p));
+        var cachedEval = ExecutionInstanceResolver.Create().Resolve(new ProblemEvaluator<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>().WithCache(p));
         p.EpochClock.CurrentEpoch.ShouldBe(0);
 
         var r1 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];

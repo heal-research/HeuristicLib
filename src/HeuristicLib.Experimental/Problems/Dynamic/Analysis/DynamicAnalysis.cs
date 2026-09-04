@@ -47,13 +47,13 @@ public abstract class DynamicAnalysis<TCandidate, TSearchSpace, TProblem, TResul
 
     protected abstract TResult CreateInitialResult();
 
-    public void Install(ExecutionInstanceRegistry registry)
+    public void Install(ExecutionInstanceResolverBuilder builder)
     {
         Problem.OnEvaluation += Result.AfterEvaluationLog;
         subscribed = true;
 
         foreach (var evaluator in Evaluators)
-            registry.Observe(evaluator, observation =>
+            builder.Observe(evaluator, observation =>
                 Problem.AfterEvaluation(observation.ObjectiveVectors, observation.Candidates, observation.SearchSpace, observation.Problem));
     }
 

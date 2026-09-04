@@ -81,5 +81,5 @@
 //        return after - before;
 //    }
 
-//    IIncrementalObjectiveNeighborhoodInstance<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Move> IIncrementalObjectiveNeighborhood<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Move>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+//    IIncrementalObjectiveNeighborhoodInstance<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Move> IIncrementalObjectiveNeighborhood<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Move>.CreateExecutionInstance(ExecutionInstanceResolver resolver) => this;
 //}

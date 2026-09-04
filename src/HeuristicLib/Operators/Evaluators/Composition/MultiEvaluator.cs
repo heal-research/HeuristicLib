@@ -16,8 +16,8 @@ public abstract record MultiEvaluator<TCandidate, TSearchSpace, TProblem>
 
     public ValueArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> ChildEvaluators { get; init; }
 
-    public sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance([.. ChildEvaluators.Select(instanceRegistry.Resolve)]);
+    public sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance([.. ChildEvaluators.Select(resolver.Resolve)]);
 
     protected abstract MultiEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> childEvaluators);
 }

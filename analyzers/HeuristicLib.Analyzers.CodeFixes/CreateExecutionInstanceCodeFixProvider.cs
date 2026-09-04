@@ -13,7 +13,7 @@ namespace HEAL.HeuristicLib.Analyzers.CodeFixes;
 public sealed class CreateExecutionInstanceCodeFixProvider : CodeFixProvider
 {
     private const string EquivalenceKey = nameof(CreateExecutionInstanceCodeFixProvider);
-    private const string ExecutionInstanceRegistryTypeName = "ExecutionInstanceRegistry";
+    private const string ExecutionInstanceResolverTypeName = "ExecutionInstanceResolver";
 
     public override ImmutableArray<string> FixableDiagnosticIds
       => [CreateExecutionInstanceAnalyzer.DiagnosticId];
@@ -71,7 +71,7 @@ public sealed class CreateExecutionInstanceCodeFixProvider : CodeFixProvider
             return document;
 
         var registryParamName = containingMethodSymbol.Parameters
-          .FirstOrDefault(p => string.Equals(p.Type.Name, ExecutionInstanceRegistryTypeName, StringComparison.Ordinal))
+          .FirstOrDefault(p => string.Equals(p.Type.Name, ExecutionInstanceResolverTypeName, StringComparison.Ordinal))
           ?.Name;
 
         if (string.IsNullOrWhiteSpace(registryParamName))

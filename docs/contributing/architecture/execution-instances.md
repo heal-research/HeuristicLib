@@ -24,31 +24,36 @@ That separation is still useful internally for:
 - sharing the same execution instance when the same configuration object is reused in one run
 - giving meta-algorithms control over whether execution state resets or persists
 
-## `ExecutionInstanceRegistry`
+## `ExecutionInstanceResolver`
 
-`ExecutionInstanceRegistry` builds an execution graph from the configuration graph.
+`ExecutionInstanceResolver` builds an execution graph from the configuration graph.
 
 Important properties:
 
 - resolution is by configuration object reference
-- the same configuration object resolves to the same execution instance within one registry
-- different runs can use different registries and therefore different execution graphs
+- the same configuration object resolves to the same execution instance within one resolver
+- different runs can use different resolvers and therefore different execution graphs
 
-Explicit operator and algorithm instance creation methods receive the registry. Ordinary creation methods should resolve their declared children eagerly. Meta algorithms, budget wrappers and other execution graph compositions may additionally create child registries, register replacements or control execution instance reuse.
+Explicit operator and algorithm instance creation methods receive the resolver. Ordinary creation methods should resolve their declared children eagerly. Meta algorithms, budget wrappers and other execution graph compositions may additionally create child resolvers, declare decorations or control execution instance reuse.
 
 Obtain every child, operator or algorithm, through `Resolve(...)`. Calling `CreateExecutionInstance(...)` on a child configuration bypasses the replacement lookup that observation depends on, and does so silently: the search states are still correct, but analyzers anchored on that child, or on any operator inside it, record nothing.
 
-## Registry replacements
+## Decorations
 
-Advanced execution plumbing can register explicit registry entries before resolving a configuration.
+Advanced execution plumbing can declare that a configuration is wrapped before it is ever resolved. A budget wraps the operator it limits, and an analyzer wraps the operator it observes.
 
-`RegisterInstance(...)` stores an already created execution instance for a configuration identity. This is useful when infrastructure code already owns the instance that should be reused by later resolution.
+Declaring and resolving are separate types. `ExecutionInstanceResolverBuilder` declares decorations and cannot resolve; the `ExecutionInstanceResolver` it produces resolves and cannot declare. A resolver opens a declaration phase for a child with `CreateChildResolver(...)`:
 
-`RegisterReplacement(...)` stores a replacement configuration for a configuration identity. When the original configuration is resolved, the registry creates the execution instance from the replacement configuration and stores it under the original identity.
+```csharp
+var childResolver = resolver.CreateChildResolver(child =>
+    child.Decorate(ObservedOperator, current => CountedOperatorFactory(current, counter)));
 
-Replacement configurations may resolve the original configuration while they are being created. This supports wrapper scenarios such as observable operators, counted operators and measured operators. The registry detects that the original is already being replaced and creates the original execution instance directly for the wrapper.
+return new(childResolver.Resolve(Algorithm), counter, MaximumCount);
+```
 
-Most users should not call these methods directly. They are intended for meta-algorithms, observation installation and other advanced execution infrastructure.
+Decorations compose rather than replace one another, and a child resolver's decorations apply on top of its ancestors'. Which one ends up innermost, and when two resolvers share one instance, follow rules worth understanding before writing meta-algorithms or observation plumbing: see [execution instance resolver](/contributing/architecture/execution-resolver).
+
+Most users should not declare decorations directly. They are intended for meta-algorithms, observation installation and other advanced execution infrastructure.
 
 ## Eager local resolution
 
@@ -65,9 +70,9 @@ This gives one-time resolution cost per execution instance and avoids per-call d
 
 A role specific stateful operator base creates one state object whenever it creates an execution instance. `CreateInitialState()` must return a fresh object for every invocation.
 
-Registry identity determines state sharing. Resolving the same configuration object repeatedly through one registry returns the same execution instance and state. Independent registries create independent instances and state objects. A child registry may reuse an instance from its parent registry, so it also reuses that instance's state.
+Resolver identity determines state sharing. Resolving the same configuration object repeatedly through one resolver returns the same execution instance and state. Independent resolvers create independent instances and state objects. A child resolver may reuse an instance from its parent, so it also reuses that instance's state.
 
-A child registry inherits replacement policy and may reuse instances already resolved by its parent. Runtime composing meta algorithms resolve each child algorithm through a freshly created child registry rather than through the parent. This gives each requested stage or cycle a new algorithm instance without preventing intentional sharing of operator configurations from the parent execution graph, and because the child registry inherits its parent's replacements, observation keeps working. Resolve through the child registry; do not call `CreateExecutionInstance(...)` on the child configuration.
+A child resolver inherits its ancestors' decorations and may reuse instances already resolved by its parent — it does so exactly when it adds no decoration of its own, so that the parent's instance is what the child would have built anyway. Sibling resolvers never share. Runtime composing meta algorithms resolve each child algorithm through a freshly created child resolver rather than through the parent. This gives each requested stage or cycle a new algorithm instance without preventing intentional sharing of operator configurations from the parent execution graph, and because the child resolver inherits its parent's decorations, observation keeps working. Resolve through the child resolver; do not call `CreateExecutionInstance(...)` on the child configuration.
 
 Stateful operator calls are not inherently thread safe. An operator may use ordinary mutable state, but concurrent use is valid only when the owning execution path provides suitable synchronization or the state implementation is itself safe for concurrent access.
 
@@ -86,5 +91,6 @@ Every algorithm uses an authored execution instance. Ordinary operators can inst
 ## Related pages
 
 - [Algorithms](/guide/fundamentals/algorithms)
+- [Execution instance resolver](/contributing/architecture/execution-resolver)
 - [Operator implementation](/contributing/architecture/operator-implementation)
 - [Running algorithms](/guide/execution/running-algorithms)

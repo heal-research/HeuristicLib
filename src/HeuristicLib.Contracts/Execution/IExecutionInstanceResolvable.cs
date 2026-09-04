@@ -5,7 +5,7 @@ public interface IExecutionInstanceResolvable;
 public interface IExecutionInstanceResolvable<out TExecutionInstance> : IExecutionInstanceResolvable
   where TExecutionInstance : IExecutionInstance
 {
-    TExecutionInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+    TExecutionInstance CreateExecutionInstance(ExecutionInstanceResolver resolver);
 }
 
 public interface IExecutionInstance;

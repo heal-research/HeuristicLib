@@ -16,8 +16,8 @@ public abstract record MultiCrossover<TCandidate, TSearchSpace, TProblem>
 
     public ValueArray<ICrossover<TCandidate, TSearchSpace, TProblem>> ChildCrossovers { get; init; }
 
-    public sealed override ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance([.. ChildCrossovers.Select(instanceRegistry.Resolve)]);
+    public sealed override ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance([.. ChildCrossovers.Select(resolver.Resolve)]);
 
     protected abstract MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> childCrossovers);
 }

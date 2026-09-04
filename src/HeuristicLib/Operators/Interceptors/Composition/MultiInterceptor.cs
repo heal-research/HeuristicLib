@@ -18,8 +18,8 @@ public abstract record MultiInterceptor<TCandidate, TSearchSpace, TProblem, TSea
 
     public ValueArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> ChildInterceptors { get; init; }
 
-    public sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance([.. ChildInterceptors.Select(instanceRegistry.Resolve)]);
+    public sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance([.. ChildInterceptors.Select(resolver.Resolve)]);
 
     protected abstract MultiInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ImmutableArray<IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors);
 }

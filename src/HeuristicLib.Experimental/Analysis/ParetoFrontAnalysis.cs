@@ -30,10 +30,10 @@ public sealed class ParetoFrontAnalysis<T, TS, TP> : IAnalyzer
 
     public ParetoState<T> Front { get; }
 
-    public void Install(ExecutionInstanceRegistry registry)
+    public void Install(ExecutionInstanceResolverBuilder builder)
     {
         foreach (var evaluator in evaluators)
-            registry.Observe(evaluator, new ParetoRecorder<T, TS, TP>(Front));
+            builder.Observe(evaluator, new ParetoRecorder<T, TS, TP>(Front));
     }
 }
 

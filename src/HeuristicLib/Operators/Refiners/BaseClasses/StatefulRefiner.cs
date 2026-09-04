@@ -21,7 +21,7 @@ public abstract record StatefulRefiner<TCandidate, TSearchSpace, TProblem, TStat
 
     protected abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override IRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public sealed override IRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
         new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulRefiner<TCandidate, TSearchSpace, TProblem, TState> refiner, TState state)
@@ -41,7 +41,7 @@ public abstract record StatefulRefiner<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override IRefinerInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public sealed override IRefinerInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
         new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulRefiner<TCandidate, TSearchSpace, TState> refiner, TState state)
@@ -60,7 +60,7 @@ public abstract record StatefulRefiner<TCandidate, TState>
 
     protected abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random);
 
-    public sealed override IRefinerInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public sealed override IRefinerInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
         new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulRefiner<TCandidate, TState> refiner, TState state)

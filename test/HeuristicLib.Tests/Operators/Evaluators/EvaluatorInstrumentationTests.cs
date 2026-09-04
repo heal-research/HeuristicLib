@@ -13,7 +13,7 @@ public class EvaluatorInstrumentationTests
         var evaluator = CreateEvaluator().CountEvaluatorCalls(counter);
         evaluator.Counter.ShouldBeSameAs(counter);
         evaluator.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var instance = ExecutionInstanceResolver.Create().Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -27,7 +27,7 @@ public class EvaluatorInstrumentationTests
     {
         var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountEvaluatedCandidates(counter);
-        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var instance = ExecutionInstanceResolver.Create().Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -44,7 +44,7 @@ public class EvaluatorInstrumentationTests
         var evaluator = CreateEvaluator().MeasureEvaluatorDuration(duration, timeProvider);
         evaluator.Duration.ShouldBeSameAs(duration);
         evaluator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var instance = ExecutionInstanceResolver.Create().Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

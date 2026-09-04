@@ -34,13 +34,13 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearc
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public int MaximumCount { get; init; }
 
-    public override OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public override OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver)
     {
         var counter = new ObservationCounter();
-        var childRegistry = instanceRegistry.CreateChildRegistry();
-        childRegistry.Decorate(ObservedOperator, current => CountedOperatorFactory(current, counter));
+        var childResolver = resolver.CreateChildResolver(child =>
+            child.Decorate(ObservedOperator, current => CountedOperatorFactory(current, counter)));
 
-        return new(childRegistry.Resolve(Algorithm), counter, MaximumCount);
+        return new(childResolver.Resolve(Algorithm), counter, MaximumCount);
     }
 }
 

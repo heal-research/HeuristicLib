@@ -18,8 +18,8 @@ public abstract record MultiTerminator<TCandidate, TSearchSpace, TProblem, TSear
 
     public ValueArray<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> ChildTerminators { get; init; }
 
-    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance([.. ChildTerminators.Select(instanceRegistry.Resolve)]);
+    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance([.. ChildTerminators.Select(resolver.Resolve)]);
 
     protected abstract MultiTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ImmutableArray<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators);
 }

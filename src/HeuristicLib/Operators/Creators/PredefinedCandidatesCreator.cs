@@ -27,8 +27,8 @@ public record PredefinedCandidatesCreator<TCandidate, TSearchSpace, TProblem>
         CreatorForRemainingCandidates = creatorForRemainingCandidates;
     }
 
-    public override CreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(CreatorForRemainingCandidates), PredefinedCandidates);
+    public override CreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        new Instance(resolver.Resolve(CreatorForRemainingCandidates), PredefinedCandidates);
 
     private sealed class Instance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates)
         : CreatorInstance<TCandidate, TSearchSpace, TProblem>

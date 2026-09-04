@@ -102,7 +102,7 @@ public class ExperimentAnalysisTests
     {
         public EvaluationResult Result { get; } = new();
 
-        public void Install(ExecutionInstanceRegistry registry) => registry.Observe(evaluator, this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, this);
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation)
         {

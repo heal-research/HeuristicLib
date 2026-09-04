@@ -82,12 +82,12 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         }
     }
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor) =>
-        new Instance(instanceRegistry, resolvedInterceptor, instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Mutator), MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor) =>
+        new Instance(resolver, resolvedInterceptor, resolver.Resolve(Creator), resolver.Resolve(Mutator), MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
             EvaluatorSelector, NoRacers, HallOfFameStrength, EarlyTerminationStrength, BurnInEpochs, MinimumModelObservationCount, ModelObservationInterval, ObjectiveValueSelector);
 
     private sealed class Instance(
-        ExecutionInstanceRegistry registry,
+        ExecutionInstanceResolver resolver,
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor,
         ICreatorInstance<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> creator,
         IMutatorInstance<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> mutator,
@@ -249,7 +249,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         private Entry CreateEntry(MetaOptimizationGenotype candidate, TAlgorithm? sourceAlgorithm, TSearchState? initialState, TProblem problem, IRandomNumberGenerator random)
         {
             var algorithm = algorithmBuilder(candidate, sourceAlgorithm);
-            return new Entry(algorithm, evaluatorSelector(algorithm), candidate, problem, random, initialState, CancellationToken.None, registry, modelObservationInterval, objectiveValueSelector);
+            return new Entry(algorithm, evaluatorSelector(algorithm), candidate, problem, random, initialState, CancellationToken.None, resolver, modelObservationInterval, objectiveValueSelector);
         }
 
         private MetaOptimizationGenotype CreateChallenger(MetaOptimizationGenotype currentIncumbent, IRandomNumberGenerator random) =>
@@ -316,7 +316,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         private IEnumerator<TSearchState> running;
 
         public Entry(TAlgorithm algorithm, IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, MetaOptimizationGenotype candidate, TProblem problem, IRandomNumberGenerator random,
-                     TSearchState? initialState, CancellationToken ct, ExecutionInstanceRegistry parentRegistry, int modelObservationInterval, Func<ObjectiveVector, double> objectiveValueSelector)
+                     TSearchState? initialState, CancellationToken ct, ExecutionInstanceResolver parentRegistry, int modelObservationInterval, Func<ObjectiveVector, double> objectiveValueSelector)
         {
             Algorithm = algorithm;
             this.evaluator = evaluator;
@@ -329,7 +329,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
         public MetaOptimizationGenotype Candidate { get; }
         public TAlgorithm Algorithm { get; }
-        private ExecutionInstanceRegistry ParentRegistry { get; }
+        private ExecutionInstanceResolver ParentRegistry { get; }
         public TSearchState? LastState { get; private set; }
         public int UsedCount => performanceObserver.EvaluatedCandidateCount;
         public ObjectiveVector? CurrentBestObjectiveVector => performanceObserver.CurrentBestObjectiveVector;
@@ -356,9 +356,9 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
         private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct)
         {
-            var contenderRegistry = ParentRegistry.CreateChildRegistry();
-            contenderRegistry.Decorate(evaluator, current => new PerformanceTrackingEvaluator(current, performanceObserver));
-            return contenderRegistry.Resolve(Algorithm).Stream(problem, random, initialState, ct).GetEnumerator();
+            var contenderResolver = ParentRegistry.CreateChildResolver(contender =>
+                contender.Decorate(evaluator, current => new PerformanceTrackingEvaluator(current, performanceObserver)));
+            return contenderResolver.Resolve(Algorithm).Stream(problem, random, initialState, ct).GetEnumerator();
         }
     }
 
@@ -370,8 +370,8 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         PerformanceTrackingEvaluatorObserver Observer)
         : IEvaluator<TCandidate, TSearchSpace, TProblem>
     {
-        public IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-            new PerformanceTrackingEvaluatorInstance(instanceRegistry.Resolve(ChildEvaluator), Observer);
+        public IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+            new PerformanceTrackingEvaluatorInstance(resolver.Resolve(ChildEvaluator), Observer);
     }
 
     private sealed class PerformanceTrackingEvaluatorInstance(

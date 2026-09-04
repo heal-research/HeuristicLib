@@ -89,8 +89,8 @@ public class DynamicAnalysisTests
         public IEvaluator<int, IntegerSearchSpace, IntegerDynamicProblem> Evaluator { get; } = new ProblemEvaluator();
 
         public override AlgorithmInstance<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
-            CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-            new Instance(instanceRegistry.Resolve(Evaluator), Batches);
+            CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+            new Instance(resolver.Resolve(Evaluator), Batches);
 
         private sealed class Instance(
             IEvaluatorInstance<int, IntegerSearchSpace, IntegerDynamicProblem> evaluator,

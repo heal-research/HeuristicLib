@@ -10,6 +10,6 @@ public abstract record StatelessMoveCreator<TGenotype, TSearchSpace, TProblem, T
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-    public virtual IMoveCreatorInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    public virtual IMoveCreatorInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceResolver resolver) => this;
     public abstract IEnumerable<TMove> Moves(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

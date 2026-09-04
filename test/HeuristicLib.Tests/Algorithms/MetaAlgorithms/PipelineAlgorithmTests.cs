@@ -79,9 +79,9 @@ public class PipelineAlgorithmTests
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
         var pipeline = algorithm.Then(algorithm);
-        var registry = new ExecutionInstanceRegistry();
-        _ = registry.Resolve(evaluator);
-        var pipelineInstance = registry.Resolve(pipeline);
+        var resolver = ExecutionInstanceResolver.Create();
+        _ = resolver.Resolve(evaluator);
+        var pipelineInstance = resolver.Resolve(pipeline);
 
         var states = pipelineInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -105,7 +105,7 @@ public class PipelineAlgorithmTests
     {
         public Result AnalysisResult { get; } = new();
 
-        public void Install(ExecutionInstanceRegistry registry) => registry.Observe(evaluator, this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, this);
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             AnalysisResult.Count += observation.Candidates.Count;

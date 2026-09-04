@@ -13,7 +13,7 @@ public abstract record StatelessMoveEvaluator<TGenotype, TSearchSpace, TProblem,
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
     public virtual IMoveEvaluatorInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(
-        ExecutionInstanceRegistry instanceRegistry)
+        ExecutionInstanceResolver resolver)
         => this;
 
     public abstract ObjectiveVector Evaluate(

@@ -123,8 +123,8 @@ private sealed record ForwardingEvaluator(
     IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)
     : Evaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
 {
-    public override EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(Inner));
+    public override EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        new Instance(resolver.Resolve(Inner));
 
     private sealed class Instance(IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
         : EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
@@ -177,8 +177,8 @@ public record EliteSelector<TCandidate, TSearchSpace, TProblem>
     public ISelector<TCandidate, TSearchSpace, TProblem> SelectorForRemaining { get; }
     public int Elites { get; }
 
-    public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(SelectorForRemaining), Elites);
+    public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        new Instance(resolver.Resolve(SelectorForRemaining), Elites);
     // ...
 }
 ```

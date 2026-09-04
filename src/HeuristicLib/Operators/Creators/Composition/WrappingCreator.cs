@@ -16,8 +16,8 @@ public abstract record WrappingCreator<TCandidate, TSearchSpace, TProblem>
 
     public ICreator<TCandidate, TSearchSpace, TProblem> ChildCreator { get; init; }
 
-    public sealed override ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance(instanceRegistry.Resolve(ChildCreator));
+    public sealed override ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance(resolver.Resolve(ChildCreator));
 
     protected abstract WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator);
 }

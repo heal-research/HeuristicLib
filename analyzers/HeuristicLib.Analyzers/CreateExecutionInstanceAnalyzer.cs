@@ -12,12 +12,12 @@ public sealed class CreateExecutionInstanceAnalyzer : DiagnosticAnalyzer
     public const string DiagnosticId = "HLib0001";
 
     private const string CreateExecutionInstanceMethodName = "CreateExecutionInstance";
-    private const string ExecutionInstanceRegistryTypeName = "ExecutionInstanceRegistry";
+    private const string ExecutionInstanceResolverTypeName = "ExecutionInstanceResolver";
 
     private static readonly DiagnosticDescriptor Rule = new(
       id: DiagnosticId,
       title: "Do not call CreateExecutionInstance directly",
-      messageFormat: "Do not call CreateExecutionInstance directly inside CreateExecutionInstance. Use ExecutionInstanceRegistry.Resolve(...) instead.",
+      messageFormat: "Do not call CreateExecutionInstance directly inside CreateExecutionInstance. Use ExecutionInstanceResolver.Resolve(...) instead.",
       category: "Architecture",
       defaultSeverity: DiagnosticSeverity.Error,
       isEnabledByDefault: true
@@ -48,8 +48,8 @@ public sealed class CreateExecutionInstanceAnalyzer : DiagnosticAnalyzer
         if (!string.Equals(containingMethodSymbol.Name, CreateExecutionInstanceMethodName, StringComparison.Ordinal))
             return;
 
-        // Only if this CreateExecutionInstance has an ExecutionInstanceRegistry parameter (name doesn't matter).
-        if (!containingMethodSymbol.Parameters.Any(IsExecutionInstanceRegistryParameter))
+        // Only if this CreateExecutionInstance has an ExecutionInstanceResolver parameter (name doesn't matter).
+        if (!containingMethodSymbol.Parameters.Any(IsExecutionInstanceResolverParameter))
             return;
 
         var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken);
@@ -63,9 +63,9 @@ public sealed class CreateExecutionInstanceAnalyzer : DiagnosticAnalyzer
         if (!string.Equals(targetMethod.Name, CreateExecutionInstanceMethodName, StringComparison.Ordinal))
             return;
 
-        // Must be calling either CreateExecutionInstance() or CreateExecutionInstance(ExecutionInstanceRegistry)
+        // Must be calling either CreateExecutionInstance() or CreateExecutionInstance(ExecutionInstanceResolver)
         if (!(targetMethod.Parameters.Length == 0
-            || (targetMethod.Parameters.Length == 1 && IsExecutionInstanceRegistryParameter(targetMethod.Parameters[0]))))
+            || (targetMethod.Parameters.Length == 1 && IsExecutionInstanceResolverParameter(targetMethod.Parameters[0]))))
             return;
 
         // Ignore self calls (including base/this)
@@ -75,8 +75,8 @@ public sealed class CreateExecutionInstanceAnalyzer : DiagnosticAnalyzer
         context.ReportDiagnostic(Diagnostic.Create(Rule, invocation.GetLocation()));
     }
 
-    private static bool IsExecutionInstanceRegistryParameter(IParameterSymbol parameter)
+    private static bool IsExecutionInstanceResolverParameter(IParameterSymbol parameter)
     {
-        return string.Equals(parameter.Type.Name, ExecutionInstanceRegistryTypeName, StringComparison.Ordinal);
+        return string.Equals(parameter.Type.Name, ExecutionInstanceResolverTypeName, StringComparison.Ordinal);
     }
 }

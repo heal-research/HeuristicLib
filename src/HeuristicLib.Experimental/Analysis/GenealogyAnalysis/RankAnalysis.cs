@@ -48,13 +48,13 @@ public sealed class RankAnalysis<TCandidate, TSearchSpace, TProblem, TSearchStat
 
     public RankState<TCandidate> State { get; }
 
-    public void Install(ExecutionInstanceRegistry registry)
+    public void Install(ExecutionInstanceResolverBuilder builder)
     {
         // Installed first, so the graph already contains this generation when the ranks over it are read.
-        graphBuilder.Install(registry);
+        graphBuilder.Install(builder);
 
         foreach (var algorithm in algorithms)
-            registry.Observe(algorithm, _ => RecordRanks(State));
+            builder.Observe(algorithm, _ => RecordRanks(State));
     }
 
     private static void RecordRanks(RankState<TCandidate> state)

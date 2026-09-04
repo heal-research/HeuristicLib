@@ -37,7 +37,7 @@ public abstract record MoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove, T
         IRandomNumberGenerator random);
 
     public virtual IMoveEvaluatorInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(
-        ExecutionInstanceRegistry instanceRegistry)
+        ExecutionInstanceResolver resolver)
         => new Instance(this, InitialState());
 
     protected abstract TState InitialState();

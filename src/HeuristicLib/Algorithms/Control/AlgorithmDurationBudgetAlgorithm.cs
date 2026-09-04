@@ -21,8 +21,8 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProble
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override AlgorithmDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new(instanceRegistry.Resolve(Algorithm), MaximumDuration, TimeProvider);
+    public override AlgorithmDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        new(resolver.Resolve(Algorithm), MaximumDuration, TimeProvider);
 }
 
 public sealed class AlgorithmDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>

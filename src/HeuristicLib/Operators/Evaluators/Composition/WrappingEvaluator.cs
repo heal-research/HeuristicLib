@@ -16,8 +16,8 @@ public abstract record WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
 
     public IEvaluator<TCandidate, TSearchSpace, TProblem> ChildEvaluator { get; init; }
 
-    public sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance(instanceRegistry.Resolve(ChildEvaluator));
+    public sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance(resolver.Resolve(ChildEvaluator));
 
     protected abstract WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator);
 }

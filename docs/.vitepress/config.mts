@@ -130,6 +130,10 @@ export default defineConfig({
                             link: "/contributing/architecture/execution-instances",
                         },
                         {
+                            text: "Execution instance resolver",
+                            link: "/contributing/architecture/execution-resolver",
+                        },
+                        {
                             text: "Operator implementation",
                             link: "/contributing/architecture/operator-implementation",
                         },

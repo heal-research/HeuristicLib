@@ -79,7 +79,7 @@ Search states are public progress values. Do not use them to carry private count
 
 ### § 4.3 Resolve declared children through the execution instance registry
 
-Creation methods receive the full `ExecutionInstanceRegistry`. Resolve declared children during instance creation. Retain the registry only for child registries, replacements or delayed child algorithm creation. Do not add another resolver abstraction.
+Creation methods receive the full `ExecutionInstanceResolver`. Resolve declared children during instance creation. Retain the registry only for child registries, replacements or delayed child algorithm creation. Do not add another resolver abstraction.
 
 ### § 4.4 Expose one execution instance factory
 

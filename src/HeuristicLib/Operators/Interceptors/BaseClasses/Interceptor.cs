@@ -17,7 +17,7 @@ public abstract record Interceptor<TCandidate, TSearchSpace, TProblem, TSearchSt
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+    public abstract IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver);
 }
 
 public abstract record Interceptor<TCandidate, TSearchSpace, TSearchState>

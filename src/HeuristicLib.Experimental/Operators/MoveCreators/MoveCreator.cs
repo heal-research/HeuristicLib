@@ -17,6 +17,6 @@ public abstract record MoveCreator<TGenotype, TSearchSpace, TProblem, TMove, TSt
 
     protected abstract IEnumerable<TMove> Moves(TGenotype genotype, TState state, TSearchSpace searchSpace, TProblem problem, IRandomNumberGenerator random);
 
-    public virtual IMoveCreatorInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new Instance(this, InitialState());
+    public virtual IMoveCreatorInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new Instance(this, InitialState());
     protected abstract TState InitialState();
 }

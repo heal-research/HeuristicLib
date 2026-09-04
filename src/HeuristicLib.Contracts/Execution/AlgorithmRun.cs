@@ -18,18 +18,17 @@ public abstract class AlgorithmRun
 
     public bool ExecutionStarted { get; private set; }
 
-    protected ExecutionInstanceRegistry StartExecution()
+    protected ExecutionInstanceResolver StartExecution()
     {
         EnsureNotStarted();
         ExecutionStarted = true;
 
-        var registry = new ExecutionInstanceRegistry();
-
         // Installed in the order they were supplied, so the first installation at an anchor observes it first.
-        foreach (var hook in hooks)
-            hook.Install(registry);
-
-        return registry;
+        return ExecutionInstanceResolver.Create(builder =>
+        {
+            foreach (var hook in hooks)
+                builder.Install(hook);
+        });
     }
 
     /// <summary>

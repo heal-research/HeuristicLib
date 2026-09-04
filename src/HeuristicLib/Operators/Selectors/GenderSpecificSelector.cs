@@ -29,8 +29,8 @@ public record GenderSpecificSelector<TCandidate, TSearchSpace, TProblem>
 
     public ISelector<TCandidate, TSearchSpace, TProblem> MaleSelector { get; init; }
 
-    public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(FemaleSelector), instanceRegistry.Resolve(MaleSelector));
+    public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        new Instance(resolver.Resolve(FemaleSelector), resolver.Resolve(MaleSelector));
 
     private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> femaleSelector, ISelectorInstance<TCandidate, TSearchSpace, TProblem> maleSelector)
         : SelectorInstance<TCandidate, TSearchSpace, TProblem>

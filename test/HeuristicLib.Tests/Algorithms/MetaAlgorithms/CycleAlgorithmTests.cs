@@ -127,9 +127,9 @@ public class CycleAlgorithmTests
             MaximumCycles = 2,
             NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
         };
-        var registry = new ExecutionInstanceRegistry();
-        _ = registry.Resolve(evaluator);
-        var cycleInstance = registry.Resolve(cycle);
+        var resolver = ExecutionInstanceResolver.Create();
+        _ = resolver.Resolve(evaluator);
+        var cycleInstance = resolver.Resolve(cycle);
 
         var states = cycleInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -162,7 +162,7 @@ public class CycleAlgorithmTests
     {
         public int InstanceCount { get; private set; }
 
-        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceResolver resolver)
         {
             InstanceCount++;
             return new Instance();

@@ -21,7 +21,7 @@ public class RepeatingEvaluatorTests
         var problem = CreateProblem();
         var evaluator = new CandidateEvaluator().CountEvaluatorCalls(counter).AsRepeated(3);
 
-        evaluator.CreateExecutionInstance(new ExecutionInstanceRegistry())
+        evaluator.CreateExecutionInstance(ExecutionInstanceResolver.Create())
             .Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(3);
@@ -32,7 +32,7 @@ public class RepeatingEvaluatorTests
     {
         var problem = CreateProblem();
         var evaluator = new RandomEvaluator().AsRepeated(5);
-        var instance = evaluator.CreateExecutionInstance(new ExecutionInstanceRegistry());
+        var instance = evaluator.CreateExecutionInstance(ExecutionInstanceResolver.Create());
 
         var actual = instance.Evaluate([1, 2], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
         var rootRandom = RandomNumberGenerator.Create(42);
@@ -55,9 +55,9 @@ public class RepeatingEvaluatorTests
         var sequential = new RandomEvaluator().AsRepeated(32);
         var concurrent = sequential with { Concurrency = ExecutionConcurrency.Concurrent(4) };
 
-        var sequentialResult = sequential.CreateExecutionInstance(new ExecutionInstanceRegistry())
+        var sequentialResult = sequential.CreateExecutionInstance(ExecutionInstanceResolver.Create())
             .Evaluate([1, 2], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
-        var concurrentResult = concurrent.CreateExecutionInstance(new ExecutionInstanceRegistry())
+        var concurrentResult = concurrent.CreateExecutionInstance(ExecutionInstanceResolver.Create())
             .Evaluate([1, 2], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
         concurrentResult.ShouldBe(sequentialResult);
@@ -76,8 +76,8 @@ public class RepeatingEvaluatorTests
 
         constructed.Repetitions.ShouldBe(repetitions);
         reconfigured.Repetitions.ShouldBe(repetitions);
-        Should.Throw<InvalidOperationException>(() => constructed.CreateExecutionInstance(new ExecutionInstanceRegistry()));
-        Should.Throw<InvalidOperationException>(() => reconfigured.CreateExecutionInstance(new ExecutionInstanceRegistry()));
+        Should.Throw<InvalidOperationException>(() => constructed.CreateExecutionInstance(ExecutionInstanceResolver.Create()));
+        Should.Throw<InvalidOperationException>(() => reconfigured.CreateExecutionInstance(ExecutionInstanceResolver.Create()));
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>

@@ -113,7 +113,7 @@ public class OperatorAuthoringAnalyzerTests
 
               public sealed class Helper
               {
-                  public ExecutionInstanceRegistry? Registry { get; set; }
+                  public ExecutionInstanceResolver? Registry { get; set; }
               }
 
               protected override State CreateInitialState() => new();
@@ -166,7 +166,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               protected abstract TState CreateInitialState();
 
-              public CustomOperatorInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new();
+              public CustomOperatorInstance CreateExecutionInstance(ExecutionInstanceResolver resolver) => new();
           }
 
           file sealed class CustomOperatorInstance : IOperatorInstance;
@@ -175,7 +175,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               public sealed class State
               {
-                  public ExecutionInstanceRegistry? Registry { get; set; }
+                  public ExecutionInstanceResolver? Registry { get; set; }
               }
 
               protected override State CreateInitialState() => new();
@@ -285,7 +285,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               private int calls;
 
-              public InvalidOperator CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+              public InvalidOperator CreateExecutionInstance(ExecutionInstanceResolver resolver) => this;
 
               public void Execute()
               {

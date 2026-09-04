@@ -18,8 +18,8 @@ public abstract record WrappingInterceptor<TCandidate, TSearchSpace, TProblem, T
 
     public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> ChildInterceptor { get; init; }
 
-    public sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance(instanceRegistry.Resolve(ChildInterceptor));
+    public sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance(resolver.Resolve(ChildInterceptor));
 
     protected abstract WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor);
 }

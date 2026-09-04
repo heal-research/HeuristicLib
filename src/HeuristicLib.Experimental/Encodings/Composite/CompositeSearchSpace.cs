@@ -40,8 +40,8 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     public record Creator(ICreator<T1, TS1, IProblem<T1, TS1>> Operator1, ICreator<T2, TS2, IProblem<T2, TS2>> Operator2)
         : ICreator<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>
     {
-        public ICreatorInstance<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-            => new Instance(instanceRegistry.Resolve(Operator1), instanceRegistry.Resolve(Operator2));
+        public ICreatorInstance<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>> CreateExecutionInstance(ExecutionInstanceResolver resolver)
+            => new Instance(resolver.Resolve(Operator1), resolver.Resolve(Operator2));
 
         private sealed class Instance(ICreatorInstance<T1, TS1, IProblem<T1, TS1>> operatorInstance1, ICreatorInstance<T2, TS2, IProblem<T2, TS2>> operatorInstance2)
             : ICreatorInstance<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>
@@ -64,8 +64,8 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     public record Crossover(ICrossover<T1, TS1, IProblem<T1, TS1>> Operator1, ICrossover<T2, TS2, IProblem<T2, TS2>> Operator2)
         : ICrossover<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>
     {
-        public ICrossoverInstance<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-            => new Instance(instanceRegistry.Resolve(Operator1), instanceRegistry.Resolve(Operator2));
+        public ICrossoverInstance<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>> CreateExecutionInstance(ExecutionInstanceResolver resolver)
+            => new Instance(resolver.Resolve(Operator1), resolver.Resolve(Operator2));
 
         private sealed class Instance(ICrossoverInstance<T1, TS1, IProblem<T1, TS1>> operatorInstance1, ICrossoverInstance<T2, TS2, IProblem<T2, TS2>> operatorInstance2)
             : ICrossoverInstance<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>
@@ -93,8 +93,8 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     {
         public bool All { get; init; } = true;
 
-        public IMutatorInstance<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-            => new Instance(instanceRegistry.Resolve(Operator1), instanceRegistry.Resolve(Operator2), All);
+        public IMutatorInstance<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>> CreateExecutionInstance(ExecutionInstanceResolver resolver)
+            => new Instance(resolver.Resolve(Operator1), resolver.Resolve(Operator2), All);
 
         private sealed class Instance(IMutatorInstance<T1, TS1, IProblem<T1, TS1>> operatorInstance1, IMutatorInstance<T2, TS2, IProblem<T2, TS2>> operatorInstance2, bool all)
             : IMutatorInstance<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>

@@ -47,7 +47,7 @@ public sealed record SingleCreateAlgorithm
         RealVectorSearchSpace,
         TestFunctionProblem,
         SingleSolutionState<RealVector>> CreateExecutionInstance(
-            ExecutionInstanceRegistry registry,
+            ExecutionInstanceResolver registry,
             IInterceptorInstance<
                 RealVector,
                 RealVectorSearchSpace,
@@ -94,7 +94,7 @@ Use `.WithMaxIterations(count)` or another terminator when the algorithm does no
 
 ## Resolve operators once
 
-Resolve every configured child operator through `ExecutionInstanceRegistry` while creating the algorithm instance. Do not call operator configurations directly from `ExecuteStep` and do not create new child instances for every iteration.
+Resolve every configured child operator through `ExecutionInstanceResolver` while creating the algorithm instance. Do not call operator configurations directly from `ExecuteStep` and do not create new child instances for every iteration.
 
 Store counters and other changing values on the nested execution instance. Never mutate the configuration record.
 

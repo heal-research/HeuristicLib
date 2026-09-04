@@ -15,7 +15,7 @@ A meta-algorithm splits into a configuration record and an execution instance, e
 ::: warning Never call CreateExecutionInstance on a child algorithm
 Always obtain a child algorithm's execution instance with `registry.Resolve(childAlgorithm)`. Calling `childAlgorithm.CreateExecutionInstance(registry)` yourself compiles, runs, and produces correct search states — and silently breaks observation.
 
-`ExecutionInstanceRegistry.Resolve` is what consults the replacements an [analyzer](/guide/execution/observability-and-analysis) installed for the run. Bypassing it means any analyzer anchored on that child algorithm, or on an operator inside it, records nothing at all. There is no error and no warning; the result list is simply empty.
+`ExecutionInstanceResolver.Resolve` is what consults the replacements an [analyzer](/guide/execution/observability-and-analysis) installed for the run. Bypassing it means any analyzer anchored on that child algorithm, or on an operator inside it, records nothing at all. There is no error and no warning; the result list is simply empty.
 
 The `HLib0001` analyzer does **not** catch this. It only inspects calls made inside a `CreateExecutionInstance` method, and a meta-algorithm that stores the registry and resolves its children lazily during the run is outside that window.
 :::
@@ -46,8 +46,8 @@ public sealed record TwoStageAlgorithm<TCandidate, TSearchSpace, TProblem, TSear
     public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Second { get; init; }
 
     public override IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(
-        ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(First), instanceRegistry.Resolve(Second));
+        ExecutionInstanceResolver resolver) =>
+        new Instance(resolver.Resolve(First), resolver.Resolve(Second));
 
     private sealed class Instance(
         IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> first,
@@ -113,8 +113,8 @@ var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
 Resolve a child once per instance when the child should keep its state for the whole run. When a child needs a fresh execution instance per pass — as `CycleAlgorithm` does for each cycle — create a child registry and resolve against that:
 
 ```csharp
-var childRegistry = registry.CreateChildRegistry();
-var instance = childRegistry.Resolve(childAlgorithm);
+var childResolver = registry.CreateChildResolver();
+var instance = childResolver.Resolve(childAlgorithm);
 ```
 
 A child registry inherits replacements from its parent, so observation still works. Calling `CreateExecutionInstance` on the child registry does not, for the reason in the warning above.

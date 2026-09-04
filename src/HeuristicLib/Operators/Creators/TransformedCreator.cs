@@ -14,8 +14,8 @@ public record TransformedCreator<TCandidate, TSearchSpace, TProblem>(ICreator<TC
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public override CreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(SourceCreator), instanceRegistry.Resolve(TransformationMutator));
+    public override CreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        new Instance(resolver.Resolve(SourceCreator), resolver.Resolve(TransformationMutator));
 
     private sealed class Instance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator, IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator)
         : CreatorInstance<TCandidate, TSearchSpace, TProblem>

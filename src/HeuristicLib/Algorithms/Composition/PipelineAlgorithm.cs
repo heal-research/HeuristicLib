@@ -23,8 +23,8 @@ public record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, 
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new(instanceRegistry, Algorithms);
+    public override PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        new(resolver, Algorithms);
 }
 
 public static class PipelineAlgorithm
@@ -72,12 +72,12 @@ public class PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TPr
     where TSearchState : class, ISearchState
     where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
-    private readonly ExecutionInstanceRegistry registry;
+    private readonly ExecutionInstanceResolver resolver;
     protected readonly ImmutableArray<TAlgorithm> Algorithms;
 
-    public PipelineAlgorithmInstance(ExecutionInstanceRegistry registry, IReadOnlyList<TAlgorithm> algorithms)
+    public PipelineAlgorithmInstance(ExecutionInstanceResolver resolver, IReadOnlyList<TAlgorithm> algorithms)
     {
-        this.registry = registry;
+        this.resolver = resolver;
         Algorithms = algorithms.ToImmutableArray();
     }
 
@@ -89,8 +89,8 @@ public class PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TPr
         {
             ct.ThrowIfCancellationRequested();
             var algRng = random.Fork(index);
-            var childRegistry = registry.CreateChildRegistry();
-            var algorithmInstance = childRegistry.Resolve(algorithm);
+            var childResolver = resolver.CreateChildResolver();
+            var algorithmInstance = childResolver.Resolve(algorithm);
 
             await foreach (var newState in algorithmInstance.RunStreamingAsync(problem, algRng, state, ct))
             {

@@ -12,7 +12,7 @@ public abstract class Clock
     private protected Clock() { }
 
     internal abstract object Read();
-    internal abstract void Install(ExecutionInstanceRegistry registry);
+    internal abstract void Install(ExecutionInstanceResolverBuilder builder);
 
     public static Clock<long> FromIterations<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
         where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -71,7 +71,7 @@ file sealed class IterationClock<TCandidate, TSearchSpace, TProblem, TSearchStat
 
     internal override long ReadTime() => Interlocked.Read(ref latest);
 
-    internal override void Install(ExecutionInstanceRegistry registry) => registry.Observe(algorithm, this);
+    internal override void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(algorithm, this);
 
     public void Record(AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>
         Interlocked.Exchange(ref latest, observation.Iteration);
@@ -86,7 +86,7 @@ file sealed class EvaluationClock<TCandidate, TSearchSpace, TProblem>(IEvaluator
 
     internal override long ReadTime() => Interlocked.Read(ref evaluations);
 
-    internal override void Install(ExecutionInstanceRegistry registry) => registry.Observe(evaluator, this);
+    internal override void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, this);
 
     public void Record(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation) =>
         Interlocked.Add(ref evaluations, observation.ObjectiveVectors.Count);
@@ -98,6 +98,6 @@ file sealed class ElapsedTimeClock(TimeProvider timeProvider) : Clock<TimeSpan>
 
     internal override TimeSpan ReadTime() => timeProvider.GetElapsedTime(Interlocked.Read(ref startedAt));
 
-    internal override void Install(ExecutionInstanceRegistry registry) =>
+    internal override void Install(ExecutionInstanceResolverBuilder builder) =>
         Interlocked.CompareExchange(ref startedAt, timeProvider.GetTimestamp(), 0);
 }

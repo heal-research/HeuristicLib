@@ -67,8 +67,8 @@ public sealed record ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProbl
     /// </remarks>
     public IImprovementCriterion Criterion { get; init; } = ImprovementChecking.Default;
 
-    public override IRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(Refiner), instanceRegistry.Resolve(Evaluator), Criterion);
+    public override IRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        new Instance(resolver.Resolve(Refiner), resolver.Resolve(Evaluator), Criterion);
 
     private sealed class Instance(IRefinerInstance<TCandidate, TSearchSpace, TProblem> refiner, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
         : RefinerInstance<TCandidate, TSearchSpace, TProblem>

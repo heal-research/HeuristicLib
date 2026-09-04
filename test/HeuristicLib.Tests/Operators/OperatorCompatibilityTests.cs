@@ -220,7 +220,7 @@ public record IndependentAlgorithm<TCandidate, TSearchSpace, TProblem> : Algorit
 {
     public ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; set; } = new IndependentCrossover<TCandidate>();
 
-    public override AlgorithmInstance<TCandidate, TSearchSpace, TProblem, SearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotSupportedException();
+    public override AlgorithmInstance<TCandidate, TSearchSpace, TProblem, SearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => throw new NotSupportedException();
 }
 
 public record IndependentAlgorithm<TCandidate, TSearchSpace> : IndependentAlgorithm<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
@@ -233,7 +233,7 @@ public record PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permuta
 {
     public ICrossover<Permutation, PermutationSearchSpace, TProblem> Crossover { get; set; } = new PermutationSpecificCrossover();
 
-    public override AlgorithmInstance<Permutation, PermutationSearchSpace, TProblem, SearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotSupportedException();
+    public override AlgorithmInstance<Permutation, PermutationSearchSpace, TProblem, SearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => throw new NotSupportedException();
 }
 
 public record PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationSearchSpace>>;
@@ -242,7 +242,7 @@ public record TravelingSalesmanProblemSpecificAlgorithm : Algorithm<TravelingSal
 {
     public ICrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> Crossover { get; set; } = new TspSpecificCrossover();
 
-    public override AlgorithmInstance<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotSupportedException();
+    public override AlgorithmInstance<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => throw new NotSupportedException();
 }
 
 public record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVectorEncodingSpecificAlgorithm<TProblem>, RealVector, RealVectorSearchSpace, TProblem, SearchState>
@@ -250,7 +250,7 @@ public record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVect
 {
     public ICrossover<RealVector, RealVectorSearchSpace, TProblem> Crossover { get; set; } = new RealVectorSpecificCrossover();
 
-    public override AlgorithmInstance<RealVector, RealVectorSearchSpace, TProblem, SearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotSupportedException();
+    public override AlgorithmInstance<RealVector, RealVectorSearchSpace, TProblem, SearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => throw new NotSupportedException();
 }
 
 public record RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, RealVectorSearchSpace>>;
@@ -259,7 +259,7 @@ public record TestFunctionProblemSpecificAlgorithm : Algorithm<TestFunctionProbl
 {
     public ICrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem> Crossover { get; set; } = new TestFunctionProblemSpecificCrossover();
 
-    public override AlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotSupportedException();
+    public override AlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => throw new NotSupportedException();
 }
 
 public record IndependentCrossover<TCandidate> : SingleCandidateCrossover<TCandidate>

@@ -298,7 +298,7 @@ public class PythonGenealogyAnalysis
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : PopulationState<TCandidate>, ISearchState
     {
-        public void Install(ExecutionInstanceRegistry registry) => registry.Observe(algorithm, this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(algorithm, this);
 
         public void Record(AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>
             callback(observation.State);

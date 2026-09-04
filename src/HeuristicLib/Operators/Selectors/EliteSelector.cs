@@ -37,8 +37,8 @@ public record EliteSelector<TCandidate, TSearchSpace, TProblem>
     /// </remarks>
     public int Elites { get; init; } = 1;
 
-    public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(SelectorForRemaining), Elites);
+    public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        new Instance(resolver.Resolve(SelectorForRemaining), Elites);
 
     private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> selectorForRemaining, int elites)
         : SelectorInstance<TCandidate, TSearchSpace, TProblem>

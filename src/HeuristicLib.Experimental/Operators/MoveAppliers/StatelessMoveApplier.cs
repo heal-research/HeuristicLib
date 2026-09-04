@@ -12,7 +12,7 @@ public abstract record StatelessMoveApplier<TGenotype, TSearchSpace, TProblem, T
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
     public virtual IMoveApplierInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(
-        ExecutionInstanceRegistry instanceRegistry)
+        ExecutionInstanceResolver resolver)
         => this;
 
     public abstract TGenotype Apply(

@@ -60,8 +60,8 @@ public sealed record RefinementEvaluator<TCandidate, TSearchSpace, TProblem>
     /// </remarks>
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
 
-    public override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Refiner));
+    public override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        new Instance(resolver.Resolve(Evaluator), resolver.Resolve(Refiner));
 
     private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IRefinerInstance<TCandidate, TSearchSpace, TProblem> refiner)
         : EvaluatorInstance<TCandidate, TSearchSpace, TProblem>

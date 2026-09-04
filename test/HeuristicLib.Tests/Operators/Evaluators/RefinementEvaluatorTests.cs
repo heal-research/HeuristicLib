@@ -63,7 +63,7 @@ public class RefinementEvaluatorTests
     {
         var counter = new ObservationCounter();
         var sharedEvaluator = CreateEvaluator().CountEvaluatedCandidates(counter);
-        var registry = new ExecutionInstanceRegistry();
+        var registry = ExecutionInstanceResolver.Create();
         var refining = registry.Resolve(sharedEvaluator.WithRefinement(new AddOffsetRefiner(10)));
         var direct = registry.Resolve(sharedEvaluator);
         var problem = CreateProblem();
@@ -106,7 +106,7 @@ public class RefinementEvaluatorTests
 
         evaluator.Evaluator.ShouldBe(new ProblemEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>());
 
-        var objectiveVectors = new ExecutionInstanceRegistry().Resolve(evaluator).Evaluate(
+        var objectiveVectors = ExecutionInstanceResolver.Create().Resolve(evaluator).Evaluate(
             [1, 2],
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,

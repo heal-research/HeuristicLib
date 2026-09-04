@@ -16,8 +16,8 @@ public abstract record MultiCreator<TCandidate, TSearchSpace, TProblem>
 
     public ValueArray<ICreator<TCandidate, TSearchSpace, TProblem>> ChildCreators { get; init; }
 
-    public sealed override ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance([.. ChildCreators.Select(instanceRegistry.Resolve)]);
+    public sealed override ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance([.. ChildCreators.Select(resolver.Resolve)]);
 
     protected abstract MultiCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<ICreatorInstance<TCandidate, TSearchSpace, TProblem>> childCreators);
 }

@@ -61,16 +61,16 @@ public sealed class GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearc
 
     public GenealogyGraph<TCandidate> Graph { get; }
 
-    public void Install(ExecutionInstanceRegistry registry)
+    public void Install(ExecutionInstanceResolverBuilder builder)
     {
         foreach (var crossover in crossovers)
-            registry.Observe(crossover, observation => AfterCross(observation.Offspring, observation.Parents));
+            builder.Observe(crossover, observation => AfterCross(observation.Offspring, observation.Parents));
 
         foreach (var mutator in mutators)
-            registry.Observe(mutator, observation => AfterMutate(observation.Offspring, observation.Parents));
+            builder.Observe(mutator, observation => AfterMutate(observation.Offspring, observation.Parents));
 
         foreach (var algorithm in algorithms)
-            registry.Observe(algorithm, observation => CloseGeneration(observation.State, observation.Problem));
+            builder.Observe(algorithm, observation => CloseGeneration(observation.State, observation.Problem));
     }
 
     private void AfterCross(IReadOnlyList<TCandidate> offspring, IReadOnlyList<Parents<TCandidate>> parents)

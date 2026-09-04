@@ -33,7 +33,7 @@ public abstract record MoveApplier<TGenotype, TSearchSpace, TProblem, TMove, TSt
         IRandomNumberGenerator random);
 
     public virtual IMoveApplierInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(
-        ExecutionInstanceRegistry instanceRegistry)
+        ExecutionInstanceResolver resolver)
         => new Instance(this, InitialState());
 
     protected abstract TState InitialState();

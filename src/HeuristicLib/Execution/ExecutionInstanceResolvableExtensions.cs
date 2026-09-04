@@ -7,14 +7,14 @@ public static class ExecutionInstanceResolvableExtensions
     {
         public TExecutionInstance CreateExecutionInstance()
         {
-            var registry = new ExecutionInstanceRegistry();
-            return registry.Resolve(resolvable);
+            var resolver = ExecutionInstanceResolver.Create();
+            return resolver.Resolve(resolvable);
         }
 
-        public TExecutionInstance CreateExecutionInstance(out ExecutionInstanceRegistry registry)
+        public TExecutionInstance CreateExecutionInstance(out ExecutionInstanceResolver resolver)
         {
-            registry = new ExecutionInstanceRegistry();
-            return registry.Resolve(resolvable);
+            resolver = ExecutionInstanceResolver.Create();
+            return resolver.Resolve(resolvable);
         }
     }
 }

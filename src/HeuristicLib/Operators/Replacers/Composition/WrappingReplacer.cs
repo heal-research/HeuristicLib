@@ -16,8 +16,8 @@ public abstract record WrappingReplacer<TCandidate, TSearchSpace, TProblem>
 
     public IReplacer<TCandidate, TSearchSpace, TProblem> ChildReplacer { get; init; }
 
-    public sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance(instanceRegistry.Resolve(ChildReplacer));
+    public sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance(resolver.Resolve(ChildReplacer));
 
     protected abstract WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer);
 }

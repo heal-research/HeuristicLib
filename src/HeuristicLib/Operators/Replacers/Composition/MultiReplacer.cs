@@ -16,8 +16,8 @@ public abstract record MultiReplacer<TCandidate, TSearchSpace, TProblem>
 
     public ValueArray<IReplacer<TCandidate, TSearchSpace, TProblem>> ChildReplacers { get; init; }
 
-    public sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance([.. ChildReplacers.Select(instanceRegistry.Resolve)]);
+    public sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance([.. ChildReplacers.Select(resolver.Resolve)]);
 
     protected abstract MultiReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> childReplacers);
 }

@@ -253,6 +253,33 @@ public class AlgorithmObservationTests
         second.SampleCount.ShouldBe(0);
     }
 
+    /// <summary>
+    /// A cycle that recreates its execution instances restarts the observed algorithm, so its iteration count restarts
+    /// with it. Reusing the instances continues one algorithm, so the count continues.
+    /// </summary>
+    [Theory]
+    [InlineData(true, new long[] { 1, 2, 3, 1, 2, 3 })]
+    [InlineData(false, new long[] { 1, 2, 3, 4, 5, 6 })]
+    public async Task IterationClock_FollowsWhetherTheCycleRecreatesItsInstances(
+        bool newExecutionInstancesPerCycle, long[] expectedIterations)
+    {
+        var problem = CreateProblem();
+        var inner = CreateAlgorithm(problem, maximumGenerations: 3);
+        var cycle = CycleAlgorithm.Create(inner) with
+        {
+            MaximumCycles = 2,
+            NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
+        };
+
+        var iterations = Clock.FromIterations(inner);
+        var quality = Analyzer.TraceBestMedianWorst(inner, iterations);
+        var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), quality);
+
+        await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        quality.By(iterations).Select(point => point.Time).ShouldBe(expectedIterations);
+    }
+
     private static TestFunctionProblem CreateProblem() => new(new RastriginFunction(dimension: 4));
 
     private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(

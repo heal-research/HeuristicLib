@@ -70,7 +70,7 @@ public class VariableStrengthMutatorTests
 
     private static IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> Resolve(GaussianMutator mutator)
     {
-        var registry = new ExecutionInstanceRegistry();
+        var registry = ExecutionInstanceResolver.Create();
         return registry.Resolve<IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>>(mutator);
     }
 

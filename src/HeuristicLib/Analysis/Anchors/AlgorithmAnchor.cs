@@ -35,8 +35,8 @@ internal sealed record ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TS
 
     public IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> ChildAlgorithm { get; init; }
 
-    public IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(anchor, instanceRegistry.Resolve(ChildAlgorithm), recorders);
+    public IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        new Instance(anchor, resolver.Resolve(ChildAlgorithm), recorders);
 
     private sealed class Instance(
         IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> anchor,
@@ -44,10 +44,11 @@ internal sealed record ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TS
         ValueArray<IObservationRecorder<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>>> recorders)
         : IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
+        private long iteration;
+
         public async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             var previousState = initialState;
-            long iteration = 0;
             await foreach (var state in childAlgorithm.RunStreamingAsync(problem, random, initialState, ct))
             {
                 var observation = new AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>(

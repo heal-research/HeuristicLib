@@ -31,8 +31,8 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSe
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new(instanceRegistry, Algorithms, MaximumCycles, NewExecutionInstancesPerCycle);
+    public override CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        new(resolver, Algorithms, MaximumCycles, NewExecutionInstancesPerCycle);
 }
 
 public static class CycleAlgorithm
@@ -88,16 +88,16 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
     where TSearchState : class, ISearchState
     where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
-    private readonly ExecutionInstanceRegistry registry;
+    private readonly ExecutionInstanceResolver resolver;
     protected readonly ImmutableArray<TAlgorithm> Algorithms;
     protected readonly int? MaximumCycles;
     protected readonly bool NewExecutionInstancesPerCycle;
 
     private readonly Dictionary<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithmInstances;
 
-    public CycleAlgorithmInstance(ExecutionInstanceRegistry registry, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle)
+    public CycleAlgorithmInstance(ExecutionInstanceResolver resolver, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle)
     {
-        this.registry = registry;
+        this.resolver = resolver;
         Algorithms = algorithms.ToImmutableArray();
         MaximumCycles = maximumCycles;
         NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle;
@@ -157,5 +157,5 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
     }
 
     private IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateChildAlgorithmInstance(TAlgorithm algorithm) =>
-        registry.CreateChildRegistry().Resolve(algorithm);
+        resolver.CreateChildResolver().Resolve(algorithm);
 }

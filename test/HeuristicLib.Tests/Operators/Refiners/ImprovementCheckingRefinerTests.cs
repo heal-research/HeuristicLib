@@ -71,7 +71,7 @@ public class ImprovementCheckingRefinerTests
         var counter = new ObservationCounter();
         var sharedEvaluator = CreateEvaluator().CountEvaluatedCandidates(counter).WithCache();
         var refiner = new AddOffsetRefiner(-5).WithImprovementCheck(sharedEvaluator);
-        var registry = new ExecutionInstanceRegistry();
+        var registry = ExecutionInstanceResolver.Create();
         var refinerInstance = registry.Resolve(refiner);
         var algorithmEvaluator = registry.Resolve(sharedEvaluator);
         var problem = CreateProblem();
@@ -92,10 +92,10 @@ public class ImprovementCheckingRefinerTests
         var sharedEvaluator = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).WithImprovementCheck(sharedEvaluator);
 
-        var budgetRegistry = new ExecutionInstanceRegistry().CreateChildRegistry();
-        budgetRegistry.Decorate(sharedEvaluator, current => current.CountEvaluatedCandidates(counter));
+        var budgetResolver = ExecutionInstanceResolver.Create().CreateChildResolver(budget =>
+            budget.Decorate(sharedEvaluator, current => current.CountEvaluatedCandidates(counter)));
 
-        Refine(budgetRegistry.Resolve(refiner), 10, 20);
+        Refine(budgetResolver.Resolve(refiner), 10, 20);
 
         counter.CurrentCount.ShouldBe(4);
     }
@@ -108,10 +108,10 @@ public class ImprovementCheckingRefinerTests
         var algorithmEvaluator = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).WithImprovementCheck();
 
-        var budgetRegistry = new ExecutionInstanceRegistry().CreateChildRegistry();
-        budgetRegistry.Decorate(algorithmEvaluator, current => current.CountEvaluatedCandidates(counter));
+        var budgetResolver = ExecutionInstanceResolver.Create().CreateChildResolver(budget =>
+            budget.Decorate(algorithmEvaluator, current => current.CountEvaluatedCandidates(counter)));
 
-        Refine(budgetRegistry.Resolve(refiner), 10, 20);
+        Refine(budgetResolver.Resolve(refiner), 10, 20);
 
         counter.CurrentCount.ShouldBe(0);
     }

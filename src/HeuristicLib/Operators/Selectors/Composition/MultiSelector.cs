@@ -16,8 +16,8 @@ public abstract record MultiSelector<TCandidate, TSearchSpace, TProblem>
 
     public ValueArray<ISelector<TCandidate, TSearchSpace, TProblem>> ChildSelectors { get; init; }
 
-    public sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance([.. ChildSelectors.Select(instanceRegistry.Resolve)]);
+    public sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance([.. ChildSelectors.Select(resolver.Resolve)]);
 
     protected abstract MultiSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> childSelectors);
 }

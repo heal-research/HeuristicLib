@@ -16,8 +16,8 @@ public abstract record MultiRefiner<TCandidate, TSearchSpace, TProblem>
 
     public ValueArray<IRefiner<TCandidate, TSearchSpace, TProblem>> ChildRefiners { get; init; }
 
-    public sealed override IRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance([.. ChildRefiners.Select(instanceRegistry.Resolve)]);
+    public sealed override IRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        CreateExecutionInstance([.. ChildRefiners.Select(resolver.Resolve)]);
 
     protected abstract MultiRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners);
 }

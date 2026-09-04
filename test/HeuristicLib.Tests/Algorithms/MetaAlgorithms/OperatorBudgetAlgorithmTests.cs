@@ -710,6 +710,59 @@ public class OperatorBudgetAlgorithmTests
         analyzer.ObservedCandidates.ShouldBeGreaterThan(0);
     }
 
+    /// <summary>
+    /// A budget measures the operator it limits, never the analyzer watching that operator. Were it the other way
+    /// round, the recording work would be charged to the budget and attaching an analyzer would shorten the run.
+    /// </summary>
+    [Fact]
+    public async Task ADurationBudget_WrapsTheOperatorRatherThanTheAnalyzerObservingIt()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 3 };
+        var quality = Analyzer.TraceBestQuality(algorithm.Evaluator);
+        var measuredOperators = new List<Type>();
+
+        var budgeted = algorithm.WithMaxOperatorDuration(
+            algorithm.Evaluator,
+            TimeSpan.FromSeconds(30),
+            new AdvancingTimeProvider(TimeSpan.FromMilliseconds(1)),
+            (observedOperator, duration, timeProvider) =>
+            {
+                measuredOperators.Add(observedOperator.GetType());
+                return observedOperator.MeasureEvaluatorDuration(duration, timeProvider);
+            });
+
+        await budgeted.CreateRun(problem, RandomNumberGenerator.Create(42), quality)
+                      .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        measuredOperators.ShouldHaveSingleItem();
+        measuredOperators[0].ShouldBe(algorithm.Evaluator.GetType());
+        quality.SampleCount.ShouldBeGreaterThan(0);
+    }
+
+    /// <summary>
+    /// The counterpart: the analyzer still observes everything the budget's wrapper passes through, so ordering them
+    /// does not cost the observation.
+    /// </summary>
+    [Fact]
+    public async Task ADurationBudget_DoesNotHideTheOperatorFromAnAnalyzer()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 3 };
+        var withoutBudget = Analyzer.TraceBestQuality(algorithm.Evaluator);
+        var withBudget = Analyzer.TraceBestQuality(algorithm.Evaluator);
+
+        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42), withoutBudget)
+                       .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        await algorithm
+            .WithMaxEvaluatorDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), new AdvancingTimeProvider(TimeSpan.FromMilliseconds(1)))
+            .CreateRun(problem, RandomNumberGenerator.Create(42), withBudget)
+            .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        withBudget.SampleCount.ShouldBe(withoutBudget.SampleCount);
+    }
+
     private static TestFunctionProblem CreateProblem()
     {
         return new TestFunctionProblem(new SphereFunction(dimension: 3));
@@ -739,7 +792,7 @@ public class OperatorBudgetAlgorithmTests
     {
         public int ObservedCandidates { get; private set; }
 
-        public void Install(ExecutionInstanceRegistry registry) => registry.Observe(evaluator, this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, this);
 
         public void Record(EvaluatorObservation<RealVector, RealVectorSearchSpace, TestFunctionProblem> observation) =>
             ObservedCandidates += observation.ObjectiveVectors.Count;

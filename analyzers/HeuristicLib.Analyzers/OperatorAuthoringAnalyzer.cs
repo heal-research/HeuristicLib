@@ -86,7 +86,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         {
             "HEAL.HeuristicLib.Execution.IExecutionInstance",
             "HEAL.HeuristicLib.Execution.IExecutionInstanceResolvable",
-            "HEAL.HeuristicLib.Execution.ExecutionInstanceRegistry",
+            "HEAL.HeuristicLib.Execution.ExecutionInstanceResolver",
             "HEAL.HeuristicLib.Operators.IOperator"
         };
 
