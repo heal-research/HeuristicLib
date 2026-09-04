@@ -539,6 +539,97 @@ Both fixes shipped together because the risky direction turned out not to be ris
 - `NoviceFrictionSpecs` is updated last and its diff is the user-visible result: the specs that exist to record the arity should get materially shorter.
 - Invariant coverage is unchanged and must stay green throughout, since it is the safety net for search-space compatibility once the configuration stops naming the space.
 
+### Tested and false: block versus method placement of extension type parameters
+
+`ObservableMutator` declares `TSearchSpace`/`TProblem` on the member and only `TCandidate` on the extension block,
+while the other nine observable roles declare all of them on the block. That looked like an inference win worth
+copying — one fewer argument at a call site that has to name any of them.
+
+It is not. A C# extension block's type parameters **merge** into the emitted static method, so an explicit
+type-argument list must supply the whole merged set regardless of where each one is written. Moving the refiner's two
+onto the member and updating its call sites to the shorter list fails to compile: the merged arity is still three.
+Placement is a source-organisation choice, not an inference one.
+
+Worse, the failure is confusing. Explicit lists on `ObserveWith` are matched by arity across all ten roles, so a
+two-argument list on an `IRefiner` receiver reports a constraint violation against
+`ObservableAlgorithmExtensions.extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState>)` — an
+unrelated role. Only the count is wrong, and the diagnostic names the wrong type entirely.
+
+What did help was the same widest-instantiation move used for the analyzers. `ObservableTerminator`'s `Action<bool>`
+overload reads nothing but the terminal flag, so it is written at the widest state as well as the widest search space
+and problem, and `terminator.ObserveWith(_ => …)` now names nothing. That brought it in line with the five roles whose
+equivalent overload already inferred everything; the terminator had been the only one requiring two arguments.
+
+Of 67 `ObserveWith` calls in the tree, 61 already infer fully. The rest pass a lambda, which carries no types to infer
+from — the floor for those, and not something placement can lower.
+
+### The analysis layer, and the two blocks that look like it but are not
+
+The analyzer factories were the last place a caller wrote a type-argument list the compiler could have supplied. Nine
+of ten forced three or four, because `TS`, `TP` and `TR` appeared only in the return type. No analyzer reads a search
+space at all, and those reading the problem use `problem.Objective` or `problem.Evaluate` — both on the widest
+`IProblem`. Every observer contract is contravariant in the search space, the problem *and* the search state, so an
+analysis written at the widest of all three serves any run.
+
+Each factory now has a form naming only the candidate, delegating to the bound form that stays for an analysis that
+genuinely reads a concrete problem. Twenty call sites dropped their lists, including
+`Analyzer.BestMedianWorst<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<…>, PopulationState<…>>`.
+The `PythonInterop` helper that existed only to forward those arguments lost two of its four type parameters as a
+result. One call site in `AlgorithmObservationTests` keeps the bound spelling on purpose: it is the only place a
+narrowed analysis is shown running.
+
+**Two nearby blocks look like the same defect and are not.** Both were surveyed as mechanical wins; neither is.
+
+- `DynamicCachedEvaluatorExtension.WithCache` — **resolved by putting `EpochClock` on `IDynamicProblem`.** `TSearchSpace` had appeared only in the `where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>` clause, so all four arguments had to be written. With the clock reachable through the interface, the evaluator holds `IDynamicProblem<TCandidate, TSearchSpace>` instead of a concrete `TProblem`, drops that parameter, and takes its search space from a parameter's type rather than a constraint. Eight call sites went from four type arguments to none.
+
+  `EvaluationClock` is exposed rather than `IEpochClock`, deliberately: `AdvanceEpoch`, `PendingEpochs` and `ResolvePendingEpochs` are on the class and not the interface, so narrowing the property would have pulled three more members onto a contract that dynamic problems may still reshape. The smaller change is the right one while this area is experimental.
+
+  Two neighbours keep their arity for good reasons. `DynamicRelativeQualityEvaluator` hands the problem to a user supplied `IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>`, whose `GetBestKnown` may read concrete members. `ReevaluationInterceptor` sits on the bound interceptor rung, so its `Transform` signature names the problem.
+- **Encoding defaults for the remaining search spaces are postponed by decision**, not by oversight. `For(problem)` and `For(searchSpace)` work only where a search space declares `IEncodingDefault*` and a problem declares `IProblemDefault*` — today `PermutationSearchSpace` and `TravelingSalesmanProblem`. Adding them for the other encodings is a couple of static methods each, but it is a product decision to be taken once the architecture and API settle, and before the documentation is rewritten. Until then the restriction is a documentation entry, not a code gap.
+- `CompositeSearchSpace.WithSearchSpace` — `T1` and `T2` are likewise constraint-only, but the suggested fix of re-parameterising on the candidate pair would erase `TS1`/`TS2` to `ISearchSpace<T1>`. The composite resolves its child operators at those types, and the meta-optimization search space is built from creators bound to `BoundedRealVectorSearchSpace`, which would then be refused. The arity is holding a real capability.
+
+## Documentation backlog
+
+Deferred until the API settles, recorded here so nothing is rediscovered. Four of six guide pages that were compiled
+against the library had a snippet that does not build, so the entries below are grouped by whether they are broken or
+merely stale.
+
+### Snippets that do not compile
+
+| Page | Line | Failure |
+| --- | --- | --- |
+| `docs/guide/execution/observability-and-analysis.md` | 57 | `Analyzer.BestMedianWorst(interceptor)` — CS0411, no inferring overload for the interceptor anchor |
+| `docs/contributing/architecture/analyzers.md` | 302 | `Analyzer.BestQuality(algorithm.Evaluator)` — CS0411; this factory has never had a compiling form |
+| `docs/examples/custom-problem.md` | 68, 72 | `SingleSolutionProblem<TCandidate, TSearchSpace>` — CS0305, the base takes a self type first |
+| `docs/examples/multi-objective.md` | 26, 31 | `RealVectorSearchSpace` — CS0246, the type is `BoundedRealVectorSearchSpace` |
+| `docs/guide/extending/operator-composition.md` | 176, 177, 185, 186, 196, 197, 213, 214, 238 | Nine assignments to `init`-only properties; needs `with`. Also `CountEvaluatedCandidates` lives in `HEAL.HeuristicLib.Operators.Evaluators` while every sibling helper is in `HEAL.HeuristicLib.Operators`, and the page shows no `using` block |
+
+The first two stop compiling for the reason the analysis layer still carries `TSearchSpace`/`TProblem`; they are written
+against the shape that layer should have, so they start compiling on their own once it is fixed rather than needing an
+edit.
+
+### Stale against the current shape
+
+- `docs/guide/extending/writing-algorithms.md:28` teaches the bound five argument `IterativeAlgorithm` as the default. The unbound rung is the default; the bound one is for an algorithm that reads its problem.
+- `docs/guide/extending/writing-meta-algorithms.md:38, 44, 46` still shows the pre-migration four argument `IAlgorithm`.
+- `docs/guide/fundamentals/algorithms.md:26, 49, 62` presents `For(problem)` as one of three peer construction forms without saying it requires a search space declaring `IEncodingDefault*` and a problem declaring `IProblemDefault*` — today only permutations and the traveling salesman problem.
+- `docs/guide/getting-started.md:38` passes `selector: TournamentSelector.For(problem, tournamentSize: 2)`, which reconstructs `GeneticAlgorithmDefaults.Selector<T>()` exactly. It is the only line mentioning the problem before the run and teaches a coupling that does not exist.
+- `docs/guide/execution/running-algorithms.md:54` describes `MaximumGenerations` without stating its default, which is now `GeneticAlgorithmDefaults.MaximumGenerations` rather than unbounded.
+- `docs/guide/fundamentals/problems.md` never shows a problem base class signature, so the self type — which `custom-problem.md` gets wrong — is documented nowhere a reader would look.
+- `README.md:36`, `docs/guide/fundamentals/search-spaces.md:11` and `docs/guide/fundamentals/operators.md:37` advertise boolean vectors. A creator, crossover and bit flip mutator now exist for `BoolVectorSearchSpace`, so these can name them.
+- Eight operator `For(problem, …)` factory mentions across nine pages now take one type argument rather than two. The call sites are unchanged, so this is a check rather than an edit.
+
+### Absent rather than wrong
+
+- `Validate` and `ValidateAndThrow` appear in no user facing page. They are the pre-flight answer to an operator written for another search space, which otherwise fails once the run starts.
+- The invariant system (`IInvariantContract`, `ISearchInvariant`, `RealVectorBounds`, `BoolVectorCardinality`) is unmentioned, while `search-spaces.md:49` warns in prose to preserve validity.
+
+### Structural
+
+- `GenerateDocumentationFile` is not set in `Directory.Build.props`, so CS1574 never fires and a `<see cref>` naming a deleted type rots silently. Five already have: `IRefiner.cs:23`, `ImprovementCheckingRefiner.cs:19, 28`, `NumericParameterFittingRefiner.cs:21, 56`. Turning it on converts this whole class into a build error.
+- `SymbolicRegressionRedesignSpecs.cs:215-244` and `:252-287` are green tests whose bodies are comment blocks followed by `typeof(T).ShouldNotBeNull()`. They claim coverage of numeric optimization authoring that does not exist.
+- Doc snippets are not compiled by anything. `HeuristicLib.Tests.ApiUsageSpecs` is the mechanism that would catch every entry in the first table.
+
 ## Exit criteria
 
 1. No configuration type in `src` names `TSearchSpace` or `TProblem`.

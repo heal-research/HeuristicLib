@@ -24,8 +24,7 @@ public record ProblemEvaluator<TCandidate>
 
 public static class ProblemEvaluator
 {
-    public static ProblemEvaluator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new();
+    public static ProblemEvaluator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => new();
 
 
     public static IReadOnlyList<ObjectiveVector> Evaluate<TCandidate, TSearchSpace>(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, IProblem<TCandidate, TSearchSpace> problem)

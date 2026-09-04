@@ -96,7 +96,8 @@ public sealed class AssemblyDependencyTests
             Path.Combine(repositoryRoot, "test", "HeuristicLib.Tests.ApiUsageSpecs"),
             Path.Combine(repositoryRoot, "docs", "guide"),
             Path.Combine(repositoryRoot, "docs", "examples"),
-            Path.Combine(repositoryRoot, "examples")
+            Path.Combine(repositoryRoot, "samples"),
+            Path.Combine(repositoryRoot, "python-samples")
         };
 
         var files = roots.SelectMany(root => Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
@@ -139,7 +140,7 @@ public sealed class AssemblyDependencyTests
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "HEAL.HeuristicLib.sln")))
+            if (File.Exists(Path.Combine(directory.FullName, "HEAL.HeuristicLib.slnx")))
                 return directory.FullName;
         }
 

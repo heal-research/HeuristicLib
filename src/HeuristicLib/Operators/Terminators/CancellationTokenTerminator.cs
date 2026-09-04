@@ -12,6 +12,5 @@ public sealed record CancellationTokenTerminator<TCandidate>(CancellationToken C
 
 public static class CancellationTokenTerminator
 {
-    public static CancellationTokenTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, CancellationToken cancellationToken)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(cancellationToken);
+    public static CancellationTokenTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, CancellationToken cancellationToken) => new(cancellationToken);
 }

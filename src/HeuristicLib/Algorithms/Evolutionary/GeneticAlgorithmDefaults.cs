@@ -14,6 +14,12 @@ public static class GeneticAlgorithmDefaults
 {
     public const int PopulationSize = 100;
 
+    /// <summary>
+    /// The generation limit an algorithm takes when the caller sets none. A run that should end on a terminator
+    /// alone states that by setting the limit to <see langword="null"/>.
+    /// </summary>
+    public const int MaximumGenerations = 1000;
+
     public const double MutationRate = 0.1;
 
     public const int Elites = 1;

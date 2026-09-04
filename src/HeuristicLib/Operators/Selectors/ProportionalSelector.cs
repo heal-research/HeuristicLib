@@ -17,8 +17,7 @@ public record ProportionalSelector<TCandidate>
 
 public static class ProportionalSelector
 {
-    public static ProportionalSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, bool windowing = true)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new() { Windowing = windowing };
+    public static ProportionalSelector<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, bool windowing = true) => new() { Windowing = windowing };
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, bool windowing = true)
     {

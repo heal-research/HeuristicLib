@@ -22,7 +22,7 @@ public record GeneticAlgorithm<TCandidate>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
     /// </summary>
     /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
-    public int? MaximumGenerations { get; init; }
+    public int? MaximumGenerations { get; init; } = GeneticAlgorithmDefaults.MaximumGenerations;
 
     public int Elites { get; init; } = GeneticAlgorithmDefaults.Elites;
 
@@ -123,7 +123,7 @@ public static class GeneticAlgorithm
         ITerminator<TCandidate>? terminator = null,
         IInterceptor<TCandidate>? interceptor = null,
         int populationSize = GeneticAlgorithmDefaults.PopulationSize,
-        int? maximumGenerations = null,
+        int? maximumGenerations = GeneticAlgorithmDefaults.MaximumGenerations,
         double mutationRate = GeneticAlgorithmDefaults.MutationRate,
         int elites = GeneticAlgorithmDefaults.Elites)
         where TProblem : Problem<TProblem, TCandidate, TSearchSpace>,
@@ -180,7 +180,7 @@ public static class GeneticAlgorithm
         ITerminator<TCandidate>? terminator = null,
         IInterceptor<TCandidate>? interceptor = null,
         int populationSize = GeneticAlgorithmDefaults.PopulationSize,
-        int? maximumGenerations = null,
+        int? maximumGenerations = GeneticAlgorithmDefaults.MaximumGenerations,
         double mutationRate = GeneticAlgorithmDefaults.MutationRate,
         int elites = GeneticAlgorithmDefaults.Elites)
         where TSearchSpace : class, ISearchSpace<TCandidate>,
@@ -225,7 +225,7 @@ public static class GeneticAlgorithm
         ITerminator<TCandidate>? terminator = null,
         IInterceptor<TCandidate>? interceptor = null,
         int populationSize = GeneticAlgorithmDefaults.PopulationSize,
-        int? maximumGenerations = null,
+        int? maximumGenerations = GeneticAlgorithmDefaults.MaximumGenerations,
         double mutationRate = GeneticAlgorithmDefaults.MutationRate,
         int elites = GeneticAlgorithmDefaults.Elites) =>
         new()

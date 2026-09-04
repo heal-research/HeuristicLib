@@ -34,6 +34,5 @@ public sealed record AfterIterationsTerminator<TCandidate>
 
 public static class AfterIterationsTerminator
 {
-    public static AfterIterationsTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, int maximumIterations)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(maximumIterations);
+    public static AfterIterationsTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, int maximumIterations) => new(maximumIterations);
 }

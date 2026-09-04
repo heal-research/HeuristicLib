@@ -26,8 +26,8 @@ public sealed class FuncBestKnownObjectiveProvider<TCandidate, TSearchSpace, TPr
 /// dynamic problem, refreshing that reference whenever the problem's epoch changes.
 /// </summary>
 /// <remarks>
-/// This wrapper reads its problem, which <see cref="WrappingEvaluator{TCandidate}"/> cannot express, so it implements
-/// the role directly and reconciles the run's types with a type test.
+/// The normalization reference belongs to one problem instance, so this evaluator is bound to that instance rather
+/// than to a problem type, and a run over any other problem is refused when it evaluates.
 /// </remarks>
 public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem>
     : WrappingEvaluator<TCandidate>
@@ -57,30 +57,22 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
     }
 
     /// <remarks>
-    /// This wrapper reads its problem, so it binds it on its own type and reconciles with the run's here — the same
-    /// shape <c>ObservableEvaluator</c> uses for its observers. The base stays agnostic, and this override is where
-    /// the two meet.
+    /// The instance stays generic in the run's types and holds the problem it is bound to as a value, so a run is
+    /// accepted on the identity of that problem rather than on its static type.
     /// </remarks>
-    protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator)
-    {
-        if (childEvaluator is not IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> boundChild
-            || new Instance(boundChild, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy) is not IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> typed)
-        {
-            throw new InvalidOperationException(
-                $"{GetType().Name} reads {typeof(TProblem).Name} and cannot run over {typeof(TRunProblem).Name}.");
-        }
+    protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
+        new Instance<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy);
 
-        return typed;
-    }
-
-    private sealed class Instance : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>, IDisposable
+    private sealed class Instance<TRunSearchSpace, TRunProblem> : WrappingEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem>, IDisposable
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         private readonly TProblem sourceProblem;
         private readonly IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider;
         private readonly RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy;
         private ObjectiveVector? bestKnown;
 
-        public Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
+        public Instance(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
             : base(childEvaluator)
         {
             this.sourceProblem = sourceProblem;
@@ -90,7 +82,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
             sourceProblem.EpochClock.OnEpochChange += OnEpochChange;
         }
 
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TRunSearchSpace searchSpace, TRunProblem problem)
         {
             if (!ReferenceEquals(problem, sourceProblem))
                 throw new InvalidOperationException("Dynamic relative quality evaluator instances can only evaluate the dynamic problem they were created for.");

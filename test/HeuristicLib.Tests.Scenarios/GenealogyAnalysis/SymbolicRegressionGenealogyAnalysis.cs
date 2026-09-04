@@ -47,7 +47,7 @@ public class GenealogyGraphTests
             MaximumGenerations = 6
         };
 
-        var analysis = Analyzer.BestMedianWorst<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(ga.Interceptor!);
+        var analysis = Analyzer.BestMedianWorst(ga.Interceptor!);
 
         var run = ga.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzer(analysis);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
@@ -85,10 +85,10 @@ public class GenealogyGraphTests
             MaximumGenerations = gens
         };
 
-        var evalQualities = ExperimentalAnalyzers.QualityCurve<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>(algorithm.Evaluator);
-        var qualities = Analyzer.BestMedianWorst<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm.Interceptor!);
+        var evalQualities = ExperimentalAnalyzers.QualityCurve(algorithm.Evaluator);
+        var qualities = Analyzer.BestMedianWorst(algorithm.Interceptor!);
         var genealogyAnalysis =
-            ExperimentalAnalyzers.Genealogy<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
+            ExperimentalAnalyzers.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzers(evalQualities, qualities, genealogyAnalysis);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
@@ -158,8 +158,8 @@ public class GenealogyGraphTests
             MaximumGenerations = maximumIterations
         };
 
-        var genealogy = ExperimentalAnalyzers.Genealogy<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
-        var qualities = Analyzer.BestMedianWorst<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm.Interceptor!);
+        var genealogy = ExperimentalAnalyzers.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
+        var qualities = Analyzer.BestMedianWorst(algorithm.Interceptor!);
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzers(genealogy, qualities);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);

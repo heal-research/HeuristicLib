@@ -38,7 +38,7 @@ public class IterationObservationSpecs
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 5);
 
-        var qualityAnalyzer = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(algorithm);
+        var qualityAnalyzer = Analyzer.BestMedianWorst(algorithm);
         var run = algorithm
             .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
             .WithAnalyzer(qualityAnalyzer);
@@ -55,7 +55,7 @@ public class IterationObservationSpecs
         var innerAlgorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 3);
         var cycle = CycleAlgorithm.Create(innerAlgorithm) with { MaximumCycles = 2, NewExecutionInstancesPerCycle = false };
 
-        var innerQuality = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(innerAlgorithm);
+        var innerQuality = Analyzer.BestMedianWorst(innerAlgorithm);
         var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).WithAnalyzer(innerQuality);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);

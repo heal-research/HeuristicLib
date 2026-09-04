@@ -116,10 +116,14 @@ public static class ObservableTerminatorExtensions
             terminator.ObserveWith(new ActionTerminatorObserver<TCandidate, TSearchSpace, TProblem, TObserverSearchState>(afterTerminalStateCheck));
     }
 
-    extension<TCandidate, TObserverSearchState>(ITerminator<TCandidate> terminator)
-        where TObserverSearchState : class, ISearchState
+    /// <remarks>
+    /// The observer reads only whether the state was terminal, so it is written at the widest state as well as the
+    /// widest search space and problem. Observers are contravariant in all three, so this one serves any run — and
+    /// every argument comes from the receiver, leaving nothing for a call site to name.
+    /// </remarks>
+    extension<TCandidate>(ITerminator<TCandidate> terminator)
     {
-        public ObservableTerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TObserverSearchState> ObserveWith(Action<bool> afterTerminalStateCheck) =>
-            ObservableTerminator.Create<TCandidate, TObserverSearchState>(terminator, afterTerminalStateCheck);
+        public ObservableTerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> ObserveWith(Action<bool> afterTerminalStateCheck) =>
+            ObservableTerminator.Create<TCandidate, ISearchState>(terminator, afterTerminalStateCheck);
     }
 }

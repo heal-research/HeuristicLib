@@ -22,7 +22,7 @@ This example is part of the [HeuristicLib](../../README.md) project. It uses the
 
 - uses _.NET 10.0 SDK_, _Python 3.12_ and installs `requirements.txt`
 - proceed with `dotnet publish`
-- and `python examples/PythonInteractiveDemonstrator/app.py`
+- and `python python-samples/PythonInteractiveDemonstrator/app.py`
 
 **Manual way**:
 
@@ -42,7 +42,7 @@ This produces the assemblies in `src/HeuristicLib.PythonInterop/bin/Release/net1
 ### Usage
 
 ```bash
-cd examples/PythonInteractiveDemonstrator
+cd python-samples/PythonInteractiveDemonstrator
 pip install -r requirements.txt
 python app.py
 ```

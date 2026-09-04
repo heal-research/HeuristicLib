@@ -38,7 +38,7 @@ public class GeneticAlgorithmTests
         algorithm.Selector.ShouldBeSameAs(selector);
         algorithm.Elites.ShouldBe(1);
         algorithm.Terminator.ShouldBeNull();
-        algorithm.MaximumGenerations.ShouldBeNull();
+        algorithm.MaximumGenerations.ShouldBe(GeneticAlgorithmDefaults.MaximumGenerations);
         algorithm.Interceptor.ShouldBeNull();
     }
 }

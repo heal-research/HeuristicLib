@@ -10,6 +10,9 @@ public static class NSGA2Defaults
 {
     public const int PopulationSize = 100;
 
+    /// <inheritdoc cref="GeneticAlgorithmDefaults.MaximumGenerations"/>
+    public const int MaximumGenerations = GeneticAlgorithmDefaults.MaximumGenerations;
+
     public const double MutationRate = GeneticAlgorithmDefaults.MutationRate;
 
     /// <summary>

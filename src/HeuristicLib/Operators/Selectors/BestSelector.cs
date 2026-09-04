@@ -15,7 +15,7 @@ public record BestSelector<TCandidate>
 
 public static class BestSelector
 {
-    public static BestSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem) where TSearchSpace : class, ISearchSpace<TCandidate> => new();
+    public static BestSelector<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => new();
 
     public static IReadOnlyList<int> Select(IReadOnlyList<ObjectiveVector> population, ObjectiveDirections objective, int count = 1) =>
         population.Select((solution, index) => (solution, index)).OrderBy(x => x.solution, objective.TotalOrderComparer).Take(count).Select(x => x.index).ToList();

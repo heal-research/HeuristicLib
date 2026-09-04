@@ -164,10 +164,10 @@ The trained candidate is an expression tree. Inspect it, format it as infix, C#,
 Draw a target curve in the Python demonstrator and watch HeuristicLib evolve candidate expressions. The browser displays each generation and the final tradeoff between fit and expression complexity.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/heal-research/HeuristicLib/main/examples/PythonInteractiveDemonstrator/documentation/demo.gif" alt="Interactive symbolic regression demonstrator" width="480">
+  <img src="https://raw.githubusercontent.com/heal-research/HeuristicLib/main/python-samples/PythonInteractiveDemonstrator/documentation/demo.gif" alt="Interactive symbolic regression demonstrator" width="480">
 </p>
 
-The complete application is in [`examples/PythonInteractiveDemonstrator`](https://github.com/heal-research/HeuristicLib/tree/main/examples/PythonInteractiveDemonstrator). It uses pythonnet to host HeuristicLib from a FastAPI application.
+The complete application is in [`python-samples/PythonInteractiveDemonstrator`](https://github.com/heal-research/HeuristicLib/tree/main/python-samples/PythonInteractiveDemonstrator). It uses pythonnet to host HeuristicLib from a FastAPI application.
 
 ## What is included
 

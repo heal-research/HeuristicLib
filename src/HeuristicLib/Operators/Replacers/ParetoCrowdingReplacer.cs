@@ -22,8 +22,7 @@ public sealed record ParetoCrowdingReplacer<TCandidate>
 
 public static class ParetoCrowdingReplacer
 {
-    public static ParetoCrowdingReplacer<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, bool dominateOnEqualities)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(dominateOnEqualities);
+    public static ParetoCrowdingReplacer<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, bool dominateOnEqualities) => new(dominateOnEqualities);
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace<TCandidate>(
         IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,

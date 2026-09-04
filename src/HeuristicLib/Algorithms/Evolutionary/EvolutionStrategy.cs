@@ -31,7 +31,7 @@ public record EvolutionStrategy<TCandidate>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
     /// </summary>
     /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
-    public int? MaximumGenerations { get; init; }
+    public int? MaximumGenerations { get; init; } = EvolutionStrategyDefaults.MaximumGenerations;
 
     protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
@@ -99,9 +99,13 @@ public record EvolutionStrategy<TCandidate>
 
             if (mutator is IAdaptableMutationStrengthInstance<TCandidate, TSearchSpace, TProblem> adaptableMutator)
             {
-                var successes = parentQualities.Zip(evaluatedChildren).Count(
+                // The rate is over the parent/child pairs actually compared, which is the number of children rather
+                // than the population size; the two differ whenever the strategy is configured with more or fewer
+                // children than parents.
+                var comparisons = parentQualities.Zip(evaluatedChildren).ToArray();
+                var successes = comparisons.Count(
                     pair => pair.Second.ObjectiveVector.CompareTo(pair.First, problem.Objective) == DominanceRelation.Dominates);
-                var successRate = successes / (double)populationSize;
+                var successRate = comparisons.Length == 0 ? 0.0 : successes / (double)comparisons.Length;
                 adaptableMutator.CurrentMutationStrength *= successRate switch
                 {
                     > 0.2 => 1.5,
@@ -141,7 +145,7 @@ public static class EvolutionStrategy
         int populationSize = EvolutionStrategyDefaults.PopulationSize,
         int numberOfChildren = EvolutionStrategyDefaults.NumberOfChildren,
         EvolutionStrategyType strategy = EvolutionStrategyDefaults.Strategy,
-        int? maximumGenerations = null)
+        int? maximumGenerations = EvolutionStrategyDefaults.MaximumGenerations)
         where TProblem : Problem<TProblem, TCandidate, TSearchSpace>,
                          IProblemDefaultCreator<TProblem, TCandidate, TSearchSpace>,
                          IProblemDefaultMutator<TProblem, TCandidate, TSearchSpace>
@@ -184,7 +188,7 @@ public static class EvolutionStrategy
         int populationSize = EvolutionStrategyDefaults.PopulationSize,
         int numberOfChildren = EvolutionStrategyDefaults.NumberOfChildren,
         EvolutionStrategyType strategy = EvolutionStrategyDefaults.Strategy,
-        int? maximumGenerations = null)
+        int? maximumGenerations = EvolutionStrategyDefaults.MaximumGenerations)
         where TSearchSpace : class, ISearchSpace<TCandidate>,
                              IEncodingDefaultCreator<TCandidate, TSearchSpace>,
                              IEncodingDefaultMutator<TCandidate, TSearchSpace>
@@ -222,7 +226,7 @@ public static class EvolutionStrategy
         int populationSize = EvolutionStrategyDefaults.PopulationSize,
         int numberOfChildren = EvolutionStrategyDefaults.NumberOfChildren,
         EvolutionStrategyType strategy = EvolutionStrategyDefaults.Strategy,
-        int? maximumGenerations = null) =>
+        int? maximumGenerations = EvolutionStrategyDefaults.MaximumGenerations) =>
         new()
         {
             Creator = creator,

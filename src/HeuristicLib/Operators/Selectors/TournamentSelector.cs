@@ -22,8 +22,7 @@ public record TournamentSelector<TCandidate>
 
 public static class TournamentSelector
 {
-    public static TournamentSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, int tournamentSize)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(tournamentSize);
+    public static TournamentSelector<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, int tournamentSize) => new(tournamentSize);
 
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, int tournamentSize)

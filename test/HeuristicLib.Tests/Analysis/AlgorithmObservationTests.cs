@@ -100,6 +100,9 @@ public class AlgorithmObservationTests
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3) with { Interceptor = interceptor };
         var atIterationEnd = Analyzer.BestMedianWorst(algorithm);
+
+        // Named rather than inferred on purpose: this is where an analysis narrowed to a concrete search space and
+        // problem is shown running, which the inferred spelling elsewhere no longer covers.
         var atInterceptor = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(interceptor);
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
@@ -145,10 +148,8 @@ public class AlgorithmObservationTests
     {
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
 
-        var first = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem,
-            PopulationState<RealVector>>(interceptor);
-        var second = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem,
-            PopulationState<RealVector>>(interceptor);
+        var first = Analyzer.BestMedianWorst(interceptor);
+        var second = Analyzer.BestMedianWorst(interceptor);
 
         first.ShouldBe(second);
         first.GetHashCode().ShouldBe(second.GetHashCode());
@@ -162,8 +163,7 @@ public class AlgorithmObservationTests
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
 
         var atAlgorithm = Analyzer.BestMedianWorst(algorithm);
-        var atInterceptor = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem,
-            PopulationState<RealVector>>(interceptor);
+        var atInterceptor = Analyzer.BestMedianWorst(interceptor);
 
         atAlgorithm.ShouldNotBe<object>(atInterceptor);
     }

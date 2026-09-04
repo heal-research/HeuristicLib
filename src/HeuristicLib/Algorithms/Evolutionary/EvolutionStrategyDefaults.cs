@@ -8,6 +8,9 @@ public static class EvolutionStrategyDefaults
 {
     public const int PopulationSize = 100;
 
+    /// <inheritdoc cref="GeneticAlgorithmDefaults.MaximumGenerations"/>
+    public const int MaximumGenerations = GeneticAlgorithmDefaults.MaximumGenerations;
+
     public const int NumberOfChildren = 100;
 
     public const EvolutionStrategyType Strategy = EvolutionStrategyType.Plus;

@@ -17,7 +17,7 @@ public class AnalysisSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
-        var analysis = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(interceptor);
+        var analysis = Analyzer.BestMedianWorst(interceptor);
 
         var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(777)).WithAnalyzer(analysis);
 
@@ -36,7 +36,7 @@ public class AnalysisSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 3);
-        var analysis = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(interceptor);
+        var analysis = Analyzer.BestMedianWorst(interceptor);
 
         var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(888)).WithAnalyzer(analysis);
 
@@ -63,7 +63,7 @@ public class AnalysisSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 3);
-        var analysis = Analyzer.BestMedianWorstPerEvaluation<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
+        var analysis = Analyzer.BestMedianWorstPerEvaluation(
             [baseAlgorithm.Evaluator],
             [interceptor]);
 
@@ -86,7 +86,7 @@ public class AnalysisSpecs
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
 
         var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(333))
-            .WithAnalyzer(Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(interceptor), out var analysis);
+            .WithAnalyzer(Analyzer.BestMedianWorst(interceptor), out var analysis);
         var finalState = await run.CompleteAsync(
             cancellationToken: TestContext.Current.CancellationToken);
 

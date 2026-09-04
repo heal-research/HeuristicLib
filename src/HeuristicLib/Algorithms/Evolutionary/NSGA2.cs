@@ -34,7 +34,7 @@ public record NSGA2<TCandidate>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
     /// </summary>
     /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
-    public int? MaximumGenerations { get; init; }
+    public int? MaximumGenerations { get; init; } = NSGA2Defaults.MaximumGenerations;
 
     protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
@@ -111,7 +111,7 @@ public static class NSGA2
         IRefiner<TCandidate>? refiner = null,
         IInterceptor<TCandidate>? interceptor = null,
         int populationSize = NSGA2Defaults.PopulationSize,
-        int? maximumGenerations = null,
+        int? maximumGenerations = NSGA2Defaults.MaximumGenerations,
         double mutationRate = NSGA2Defaults.MutationRate)
         where TProblem : Problem<TProblem, TCandidate, TSearchSpace>,
                          IProblemDefaultCreator<TProblem, TCandidate, TSearchSpace>,
@@ -155,7 +155,7 @@ public static class NSGA2
         IRefiner<TCandidate>? refiner = null,
         IInterceptor<TCandidate>? interceptor = null,
         int populationSize = NSGA2Defaults.PopulationSize,
-        int? maximumGenerations = null,
+        int? maximumGenerations = NSGA2Defaults.MaximumGenerations,
         double mutationRate = NSGA2Defaults.MutationRate)
         where TSearchSpace : class, ISearchSpace<TCandidate>,
                              IEncodingDefaultCreator<TCandidate, TSearchSpace>,
@@ -194,7 +194,7 @@ public static class NSGA2
         IRefiner<TCandidate>? refiner = null,
         IInterceptor<TCandidate>? interceptor = null,
         int populationSize = NSGA2Defaults.PopulationSize,
-        int? maximumGenerations = null,
+        int? maximumGenerations = NSGA2Defaults.MaximumGenerations,
         double mutationRate = NSGA2Defaults.MutationRate) =>
         new()
         {

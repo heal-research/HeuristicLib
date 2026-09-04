@@ -798,7 +798,7 @@ public class ObservableOperatorCounterTests
     public void ObservableTerminator_DoesNotInvokeObserversWhenTerminalStateCheckThrows()
     {
         var observed = 0;
-        var instance = new ThrowingTerminator().ObserveWith<int, CounterState>(_ => observed++).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
+        var instance = new ThrowingTerminator().ObserveWith(_ => observed++).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));

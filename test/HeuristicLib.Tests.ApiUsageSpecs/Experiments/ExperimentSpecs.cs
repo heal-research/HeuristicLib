@@ -56,7 +56,7 @@ public class ExperimentSpecs
         var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456))
             .WithAnalyzer(
                 algorithm => algorithm.Evaluator,
-                evaluator => Analyzer.BestQuality<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator),
+                evaluator => Analyzer.BestQuality(evaluator),
                 out var bestQuality);
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);

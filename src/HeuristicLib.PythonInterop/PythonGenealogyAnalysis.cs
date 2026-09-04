@@ -150,7 +150,7 @@ public class PythonGenealogyAnalysis
                         };
                     }
 
-                    var analyzers = CreateAnalyzers<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(parameters, gaAlgorithm, gaAlgorithm.Evaluator, gaAlgorithm.Crossover, gaAlgorithm.Mutator, callback);
+                    var analyzers = CreateAnalyzers(parameters, gaAlgorithm, gaAlgorithm.Evaluator, gaAlgorithm.Crossover, gaAlgorithm.Mutator, callback);
                     var gaRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(
                                                gaAlgorithm.WithMaxIterations(parameters.Iterations),
                                                problem, RandomNumberGenerator.Create(parameters.Seed))
@@ -177,7 +177,7 @@ public class PythonGenealogyAnalysis
                         };
                     }
 
-                    var analyzers = CreateAnalyzers<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(parameters, esAlgorithm, esAlgorithm.Evaluator, esAlgorithm.Crossover, esAlgorithm.Mutator, callback);
+                    var analyzers = CreateAnalyzers(parameters, esAlgorithm, esAlgorithm.Evaluator, esAlgorithm.Crossover, esAlgorithm.Mutator, callback);
 
                     var esRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(
                                                esAlgorithm.WithMaxIterations(parameters.Iterations),
@@ -218,7 +218,7 @@ public class PythonGenealogyAnalysis
                         };
                     }
 
-                    var analyzers = CreateAnalyzers<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(parameters, nsga2Algorithm, nsga2Algorithm.Evaluator, nsga2Algorithm.Crossover, nsga2Algorithm.Mutator, callback);
+                    var analyzers = CreateAnalyzers(parameters, nsga2Algorithm, nsga2Algorithm.Evaluator, nsga2Algorithm.Crossover, nsga2Algorithm.Mutator, callback);
                     var nsga2Run = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(
                                                      nsga2Algorithm.WithMaxIterations(parameters.Iterations),
                                                      problem, RandomNumberGenerator.Create(parameters.Seed))
@@ -321,23 +321,20 @@ public class PythonGenealogyAnalysis
     private static ArgumentException MissingOperator(string algorithmName, string operatorName) =>
         new($"Algorithm '{algorithmName}' requires '{operatorName}' to be set on the experiment parameters.");
 
-    private sealed record CallbackAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(
+    private sealed record CallbackAnalysis<TCandidate>(
         IInterceptor<TCandidate> Interceptor,
         Action<PopulationState<TCandidate>> Callback)
         : Analyzer<object>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : PopulationState<TCandidate>, ISearchState
     {
         public override object CreateInitialResult() => new();
 
         public override void RegisterObservations(ObservationPlan observations, object result)
         {
-            observations.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(Interceptor, (algorithmState, _, _, _, _) => Callback(algorithmState));
+            observations.Observe<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>>(Interceptor, (algorithmState, _, _, _, _) => Callback(algorithmState));
         }
     }
 
-    private static MyAnalyzers<TCandidate> CreateAnalyzers<TCandidate, TSearchSpace, TProblem, TSearchState>(
+    private static MyAnalyzers<TCandidate> CreateAnalyzers<TCandidate, TSearchSpace>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters,
         IIterativeAlgorithm<TCandidate> algorithm,
         IEvaluator<TCandidate> evaluator,
@@ -346,19 +343,17 @@ public class PythonGenealogyAnalysis
         Action<PopulationState<TCandidate>>? callback)
         where TCandidate : notnull
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : PopulationState<TCandidate>
     {
         var interceptor = algorithm.Interceptor ??
                           throw new InvalidOperationException("Population-based analysis requires an interceptor.");
-        var qualities = Analyzer.BestMedianWorst<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor);
+        var qualities = Analyzer.BestMedianWorst(interceptor);
         var rankAnalysis = parameters.TrackGenealogy
-            ? ExperimentalAnalyzers.Rank<TCandidate, TSearchSpace, TProblem, TSearchState>(crossover, mutator, interceptor)
+            ? ExperimentalAnalyzers.Rank(crossover, mutator, interceptor)
             : null;
-        var qc = ExperimentalAnalyzers.QualityCurve<TCandidate, TSearchSpace, TProblem>(evaluator);
-        var apt = parameters.TrackPopulations ? ExperimentalAnalyzers.AllPopulations<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor) : null;
+        var qc = ExperimentalAnalyzers.QualityCurve(evaluator);
+        var apt = parameters.TrackPopulations ? ExperimentalAnalyzers.AllPopulations(interceptor) : null;
         var c = callback != null
-            ? new CallbackAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, callback)
+            ? new CallbackAnalysis<TCandidate>(interceptor, callback)
             : null;
         return new MyAnalyzers<TCandidate>(qualities, rankAnalysis, qc, apt, c);
     }
