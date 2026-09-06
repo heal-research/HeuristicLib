@@ -54,7 +54,7 @@ public class SlidingWindowRegressionTests
         var inner = new SymbolicRegressionProblem(data, spy, CreateSearchSpace());
         var p = new SlidingWindowSymbolicRegressionProblem(inner, 2, 4, 1);
         var tree = MakeVariableTree(p.SearchSpace, "x1");
-        _ = p.Evaluate(tree, TestRandoms.NoRandom)[0];
+        _ = p.Evaluate([tree], TestRandoms.NoRandom)[0][0];
         spy.LastPredictions[0].ShouldBe([7.0, 10, 13.0, 16.0]);
         spy.LastTargets[0].ShouldBe([9.0, 12.0, 15.0, 18.0]);
     }
@@ -67,7 +67,7 @@ public class SlidingWindowRegressionTests
         var inner = new SymbolicRegressionProblem(data, spy, CreateSearchSpace());
         var p = new SlidingWindowSymbolicRegressionProblem(inner, 8, 5, 1);
         var tree = MakeVariableTree(p.SearchSpace, "x1");
-        _ = p.Evaluate(tree, TestRandoms.NoRandom)[0];
+        _ = p.Evaluate([tree], TestRandoms.NoRandom)[0][0];
         spy.LastPredictions[0].ShouldBe([25.0, 28.0, 1.0, 4.0, 7.0]);
         spy.LastTargets[0].ShouldBe([27.0, 30.0, 3.0, 6.0, 9.0]);
     }
@@ -80,10 +80,10 @@ public class SlidingWindowRegressionTests
         var inner = new SymbolicRegressionProblem(data, spy, CreateSearchSpace());
         var p = new SlidingWindowSymbolicRegressionProblem(inner, 1, 4, 3);
         var tree = MakeVariableTree(p.SearchSpace, "x1");
-        _ = p.Evaluate(tree, TestRandoms.NoRandom)[0];
+        _ = p.Evaluate([tree], TestRandoms.NoRandom)[0][0];
         spy.LastPredictions[0].ShouldBe([4.0, 7.0, 10.0, 13.0]);
         p.UpdateOnce();
-        _ = p.Evaluate(tree, TestRandoms.NoRandom)[0];
+        _ = p.Evaluate([tree], TestRandoms.NoRandom)[0][0];
         spy.LastPredictions[1].ShouldBe([13.0, 16.0, 19.0, 22.0]);
     }
 
@@ -95,7 +95,7 @@ public class SlidingWindowRegressionTests
         var inner = new SymbolicRegressionProblem(data, spy, CreateSearchSpace());
         var p = new SlidingWindowSymbolicRegressionProblem(inner, 9, 7, 1);
         var tree = MakeVariableTree(p.SearchSpace, "x1");
-        _ = p.Evaluate(tree, TestRandoms.NoRandom)[0];
+        _ = p.Evaluate([tree], TestRandoms.NoRandom)[0][0];
         spy.LastPredictions[0].Length.ShouldBe(7);
     }
 
@@ -113,7 +113,7 @@ public class SlidingWindowRegressionTests
         var problem = new SlidingWindowSymbolicRegressionProblem(inner, 2, 4, 1);
         var tree = MakeVariableTree(searchSpace, "x1");
 
-        var objective = problem.Evaluate(tree, TestRandoms.NoRandom);
+        var objective = problem.Evaluate([tree], TestRandoms.NoRandom)[0];
 
         objective.Count.ShouldBe(2);
         objective[1].ShouldBe(1.0);

@@ -13,7 +13,7 @@ public class DynamicTSPTests
         var file = Path.Combine("TestData", "berlin52.tsp");
         var data = TsplibTspInstanceProvider.LoadData(file);
         var cdata = data.ToCoordinatesData();
-        var prob = new ActivatedTravelingSalesmanProblem(cdata, RandomNumberGenerator.Create(0), epochLength: 10000);
+        var prob = new ActivatedTravelingSalesmanProblem(cdata, RandomNumberGenerator.Create(0), epochSchedule: new EvaluationCountSchedule(10000));
 
         //GA
         //ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);

@@ -19,10 +19,17 @@ file sealed class DummySearchSpace : ISearchSpace<DummyGenotype>
 file sealed class DummyDynamicProblem : DynamicProblem<DummyGenotype, DummySearchSpace>
 {
     public DummyDynamicProblem(IRandomNumberGenerator env, int epochLength)
-      : base(SingleObjective.Minimize, new DummySearchSpace(), env, UpdatePolicy.AfterEvaluation, epochLength)
+      : base(SingleObjective.Minimize, new DummySearchSpace(), env, new EvaluationCountSchedule(epochLength), UpdatePolicy.AfterEachBatchEvaluation)
     { }
 
-    public override ObjectiveVector Evaluate(DummyGenotype solution, IRandomNumberGenerator random, EvaluationTiming timing) => solution.Value;
+    /// <summary>How many candidates this problem was asked to score.</summary>
+    public long Evaluations { get; private set; }
+
+    protected override ObjectiveVector Evaluate(DummyGenotype solution, IRandomNumberGenerator random, int epoch)
+    {
+        Evaluations++;
+        return solution.Value;
+    }
 
     protected override void Update() { }
 }
@@ -43,7 +50,7 @@ file sealed record CountingEvaluator : StatelessEvaluator<DummyGenotype, DummySe
         LastBatchSize = solutions.Count;
         LastRandom = random;
 
-        return solutions.Select(s => problem.Evaluate(s, random)).ToArray();
+        return problem.Evaluate(solutions, random);
     }
 }
 
@@ -92,9 +99,9 @@ public class DynamicEvaluationCacheTests
         res.Select(v => v[0]).ToArray().ShouldBe([1.0, 1.0, 1.0]);
 
         // Only one real evaluation => one tick
-        problem.EpochClock.Ticks.ShouldBe(1L);
-        problem.EpochClock.CurrentEpoch.ShouldBe(0);
-        problem.EpochClock.PendingEpochs.ShouldBe(0);
+        problem.Evaluations.ShouldBe(1L);
+        problem.ApplyPendingUpdates();
+        problem.CurrentEpoch.ShouldBe(0); // nothing was pending, so nothing advanced
     }
 
     [Fact]
@@ -108,12 +115,12 @@ public class DynamicEvaluationCacheTests
 
         _ = cached.Evaluate([new DummyGenotype(1), new DummyGenotype(2)], TestRandoms.NoRandom, problem.SearchSpace, problem);
         inner.Calls.ShouldBe(1);
-        problem.EpochClock.Ticks.ShouldBe(2L);
+        problem.Evaluations.ShouldBe(2L);
 
         // Fully cached => inner evaluator not called => no ticking
         _ = cached.Evaluate([new DummyGenotype(2), new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
         inner.Calls.ShouldBe(1);
-        problem.EpochClock.Ticks.ShouldBe(2L);
+        problem.Evaluations.ShouldBe(2L);
     }
 
     [Fact]
@@ -130,14 +137,12 @@ public class DynamicEvaluationCacheTests
         // Evaluate two distinct keys -> 2 evaluations -> should hit boundary and schedule an epoch change
         _ = cachedInstance.Evaluate([new DummyGenotype(1), new DummyGenotype(2)], TestRandoms.NoRandom, problem.SearchSpace, problem);
         inner.Calls.ShouldBe(1);
-        problem.EpochClock.Ticks.ShouldBe(2L);
-        (problem.EpochClock.PendingEpochs > 0).ShouldBeTrue();
+        problem.Evaluations.ShouldBe(2L);
 
         // resolve -> fires OnEpochChange -> cached evaluator clears cache
-        problem.EpochClock.ResolvePendingEpochs(() => { });
+        problem.ApplyPendingUpdates();
 
-        problem.EpochClock.CurrentEpoch.ShouldBe(1);
-        problem.EpochClock.PendingEpochs.ShouldBe(0);
+        problem.CurrentEpoch.ShouldBe(1); // an epoch was pending, so applying it advanced the environment
 
         // Previously cached: now must be reevaluated
         _ = cachedInstance.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
@@ -157,23 +162,22 @@ public class DynamicEvaluationCacheTests
         var dummyGenotype = new DummyGenotype(1);
         _ = cached.Evaluate([dummyGenotype], TestRandoms.NoRandom, problem.SearchSpace, problem);
         inner.Calls.ShouldBe(1);
-        problem.EpochClock.Ticks.ShouldBe(1L);
-        problem.EpochClock.CurrentEpoch.ShouldBe(0);
+        problem.Evaluations.ShouldBe(1L);
+        problem.CurrentEpoch.ShouldBe(0);
 
         // Now do 3 cached batches => no ticking, but should force AdvanceEpoch
         _ = cached.Evaluate([dummyGenotype], TestRandoms.NoRandom, problem.SearchSpace, problem);
-        problem.EpochClock.Ticks.ShouldBe(1L); // still 1 => proves no ticking on cache hit
+        problem.Evaluations.ShouldBe(1L); // still 1 => proves no ticking on cache hit
         _ = cached.Evaluate([dummyGenotype], TestRandoms.NoRandom, problem.SearchSpace, problem);
-        problem.EpochClock.Ticks.ShouldBe(1L); // still 1 => proves no ticking on cache hit
+        problem.Evaluations.ShouldBe(1L); // still 1 => proves no ticking on cache hit
         _ = cached.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
 
-        problem.EpochClock.Ticks.ShouldBe(10_000L);
-        (problem.EpochClock.PendingEpochs > 0).ShouldBeTrue(); // epoch forced
+        problem.Evaluations.ShouldBe(1L); // the cached batches evaluated nothing
 
         // resolve -> epoch changes -> cache cleared
-        problem.EpochClock.ResolvePendingEpochs(() => { });
+        problem.ApplyPendingUpdates();
 
-        problem.EpochClock.CurrentEpoch.ShouldBe(1);
+        problem.CurrentEpoch.ShouldBe(1);
 
         // After clear, it must reevaluate
         _ = cached.Evaluate([dummyGenotype], TestRandoms.NoRandom, problem.SearchSpace, problem);
@@ -191,23 +195,23 @@ public class DynamicEvaluationCacheTests
 
         // Prime cache
         _ = cached.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
-        problem.EpochClock.Ticks.ShouldBe(1L);
+        problem.Evaluations.ShouldBe(1L);
 
         // Two cached hits => hitCount=2
         _ = cached.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
         _ = cached.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
-        problem.EpochClock.Ticks.ShouldBe(1L);
+        problem.Evaluations.ShouldBe(1L);
 
         // Uncached appears => tick increases and hitCount resets
         _ = cached.Evaluate([new DummyGenotype(2)], TestRandoms.NoRandom, problem.SearchSpace, problem);
-        problem.EpochClock.Ticks.ShouldBe(2L);
+        problem.Evaluations.ShouldBe(2L);
 
         // Another cached hit should not advance epoch (only 1 since reset)
         _ = cached.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
-        problem.EpochClock.Ticks.ShouldBe(2L);
+        problem.Evaluations.ShouldBe(2L);
 
-        problem.EpochClock.CurrentEpoch.ShouldBe(0);
-        problem.EpochClock.PendingEpochs.ShouldBe(0);
+        problem.ApplyPendingUpdates();
+        problem.CurrentEpoch.ShouldBe(0); // nothing was pending, so nothing advanced
     }
 
     [Fact]
@@ -219,16 +223,17 @@ public class DynamicEvaluationCacheTests
 
         var cached = ExecutionInstanceResolver.Create().Resolve(inner.WithCache(problem, DummyGenotypeValueCacheKeySelector.Instance) with { GraceCount = 1 });
 
-        var epochBefore = problem.EpochClock.CurrentEpoch;
-        var ticksBefore = problem.EpochClock.Ticks;
+        var epochBefore = problem.CurrentEpoch;
+        var evaluationsBefore = problem.Evaluations;
 
         var res = cached.Evaluate([], TestRandoms.NoRandom, problem.SearchSpace, problem);
 
         res.ShouldBeEmpty();
         inner.Calls.ShouldBe(0);
-        problem.EpochClock.CurrentEpoch.ShouldBe(epochBefore);
-        problem.EpochClock.Ticks.ShouldBe(ticksBefore);
-        problem.EpochClock.PendingEpochs.ShouldBe(0);
+        problem.Evaluations.ShouldBe(evaluationsBefore);
+
+        problem.ApplyPendingUpdates();
+        problem.CurrentEpoch.ShouldBe(epochBefore); // nothing was pending, so nothing advanced
     }
 
     [Fact]
@@ -241,12 +246,14 @@ public class DynamicEvaluationCacheTests
 
         // prime cache -> ticks=1
         _ = cached.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
-        problem.EpochClock.Ticks.ShouldBe(1L);
+        problem.Evaluations.ShouldBe(1L);
 
         // next fully cached batch triggers AdvanceEpoch immediately (GraceCount=1)
         _ = cached.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
 
-        problem.EpochClock.Ticks.ShouldBe(10_000L);
-        (problem.EpochClock.Ticks % problem.EpochClock.EpochLength).ShouldBe(0L);
+        problem.Evaluations.ShouldBe(1L); // the cached batch evaluated nothing
+
+        problem.ApplyPendingUpdates();
+        problem.CurrentEpoch.ShouldBe(1); // and forced exactly one epoch
     }
 }

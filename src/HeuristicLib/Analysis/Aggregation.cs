@@ -109,12 +109,38 @@ public sealed record BestCandidateAggregation<TCandidate> : IAggregation<Evaluat
     }
 }
 
+/// <summary>
+/// Counts the readings of one firing, so that a firing's sample is how many things it produced.
+/// </summary>
+public sealed record CountAggregation<TValue> : IAggregation<TValue, int>
+{
+    public int Aggregate(IReadOnlyList<TValue> readings, ObjectiveDirections objective) => readings.Count;
+}
+
+/// <summary>
+/// Takes the one reading of a firing, for a measurement that reads a single value rather than a set of them.
+/// </summary>
+public sealed record SingleAggregation<TValue> : IAggregation<TValue, TValue>
+{
+    public TValue Aggregate(IReadOnlyList<TValue> readings, ObjectiveDirections objective) =>
+        readings.Count == 1
+            ? readings[0]
+            : throw new InvalidOperationException($"A single aggregation needs exactly one reading per firing but received {readings.Count}.");
+}
+
 public static class Aggregate
 {
     /// <summary>
     /// Keeps the readings themselves rather than reducing them.
     /// </summary>
     public static ReadingsAggregation<TValue> Readings<TValue>() => new();
+
+    public static CountAggregation<TValue> Count<TValue>() => new();
+
+    /// <summary>
+    /// Records the one value a scalar measurement reads.
+    /// </summary>
+    public static SingleAggregation<TValue> Single<TValue>() => new();
 
     public static BestAggregation Best() => new();
 

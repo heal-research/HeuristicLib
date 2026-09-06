@@ -84,7 +84,7 @@ var diversity = Analyzer.Trace(
     Aggregate.MinMeanMax(),
     at: algorithm,
     clocks: [iterations, elapsed],
-    recording: Recording.EveryNth(10));
+    retention: Retain.EveryNth(10));
 
 var bestSoFar = Analyzer.Trace(
     new ObjectiveVectorsMeasurement<...>(),
@@ -92,7 +92,7 @@ var bestSoFar = Analyzer.Trace(
     at: algorithm,
     clocks: [evaluations],
     across: Across.RunningBest(),
-    recording: Recording.OnChange());
+    retention: Retain.OnChange());
 
 var run = algorithm.CreateRun(problem, random, bloat, diversity, bestSoFar);
 ```
@@ -178,7 +178,7 @@ clock is automatic. Clocks are typed objects tied to explicit observation source
 var iterations = Clock.FromIterations(algorithm);             // long
 var evaluations = Clock.FromEvaluations(algorithm.Evaluator); // long
 var elapsed = Clock.FromElapsedTime(TimeProvider.System);            // TimeSpan
-var epoch = Clock.FromValue(dynamicProblem, problem => problem.CurrentEpoch);
+var epoch = Clock.FromEpoch(dynamicProblem);                         // int, a domain clock
 ```
 
 The clock is also the typed read key. This supports several clocks of the same kind without enums or

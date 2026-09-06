@@ -15,13 +15,13 @@ public sealed class MovingPeaksProblem
 
     public MovingPeaksProblem(MovingPeaksParameters parameters,
                               IRandomNumberGenerator environmentRandom,
-                              UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                              int epochLength = int.MaxValue)
+                              IEpochSchedule? epochSchedule = null,
+                              UpdatePolicy updatePolicy = UpdatePolicy.AfterEachEvaluation)
         : base(SingleObjective.Maximize, new RealVectorSearchSpace(
             parameters.Dimension,
             parameters.LowerBound,
             parameters.UpperBound
-        ), environmentRandom, updatePolicy, epochLength)
+        ), environmentRandom, epochSchedule ?? new EvaluationCountSchedule(int.MaxValue), updatePolicy)
     {
         Validate(parameters);
         Parameters = parameters;
@@ -31,13 +31,13 @@ public sealed class MovingPeaksProblem
     public MovingPeaksProblem(MovingPeaksParameters parameters,
                               IRandomNumberGenerator environmentRandom,
                               (double[] center, double height, double width)[] peaks,
-                              UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                              int epochLength = int.MaxValue)
+                              IEpochSchedule? epochSchedule = null,
+                              UpdatePolicy updatePolicy = UpdatePolicy.AfterEachEvaluation)
         : base(SingleObjective.Maximize, new RealVectorSearchSpace(
             parameters.Dimension,
             parameters.LowerBound,
             parameters.UpperBound
-        ), environmentRandom, updatePolicy, epochLength)
+        ), environmentRandom, epochSchedule ?? new EvaluationCountSchedule(int.MaxValue), updatePolicy)
     {
         Validate(parameters);
         Parameters = parameters;
@@ -77,7 +77,7 @@ public sealed class MovingPeaksProblem
         }
     }
 
-    public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random, EvaluationTiming timing)
+    protected override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random, int epoch)
     {
         var best = double.NegativeInfinity;
 

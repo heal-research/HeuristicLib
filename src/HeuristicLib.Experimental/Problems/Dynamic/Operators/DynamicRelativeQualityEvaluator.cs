@@ -69,7 +69,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
             this.bestKnownProvider = bestKnownProvider;
             this.zeroBestKnownPolicy = zeroBestKnownPolicy;
             RefreshBestKnown(sourceProblem);
-            sourceProblem.EpochClock.OnEpochChange += OnEpochChange;
+            sourceProblem.OnEpochChange += OnEpochChange;
         }
 
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
@@ -84,7 +84,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
                 .ToArray();
         }
 
-        public void Dispose() => sourceProblem.EpochClock.OnEpochChange -= OnEpochChange;
+        public void Dispose() => sourceProblem.OnEpochChange -= OnEpochChange;
 
         private void OnEpochChange(object? sender, int epoch) => RefreshBestKnown(sourceProblem);
 

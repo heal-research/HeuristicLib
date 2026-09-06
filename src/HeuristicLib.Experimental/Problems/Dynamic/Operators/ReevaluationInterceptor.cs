@@ -28,7 +28,7 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
         var instance = new Instance(resolver.Resolve(Evaluator));
 
         // The subscription lifetime is shared with DynamicCachingEvaluator and requires a common lifecycle design.
-        SourceProblem.EpochClock.OnEpochChange += (_, _) => instance.RequestReevaluation();
+        SourceProblem.OnEpochChange += (_, _) => instance.RequestReevaluation();
 
         return instance;
     }

@@ -128,7 +128,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             var raceEnded = false;
             try
             {
-                problem.EpochClock.OnEpochChange += OnEpochChange;
+                problem.OnEpochChange += OnEpochChange;
                 while (!raceEnded)
                 {
                     var lowest = entries.MinBy(x => x.UsedCount);
@@ -140,7 +140,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             }
             finally
             {
-                problem.EpochClock.OnEpochChange -= OnEpochChange;
+                problem.OnEpochChange -= OnEpochChange;
             }
 
             try
@@ -169,13 +169,13 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             var epochEnded = false;
             try
             {
-                problem.EpochClock.OnEpochChange += OnEpochChange;
+                problem.OnEpochChange += OnEpochChange;
                 while (!epochEnded)
                     _ = entry.MakeMove(problem, random, CancellationToken.None);
             }
             finally
             {
-                problem.EpochClock.OnEpochChange -= OnEpochChange;
+                problem.OnEpochChange -= OnEpochChange;
             }
 
             incumbentAlgorithm = entry.Algorithm;
@@ -214,9 +214,13 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             if (earlyTerminationStrength <= 0)
                 return false;
 
+            // Early termination projects a contender forward to the end of the epoch, so it needs a schedule that
+            // measures epochs in the same evaluations the projection is made in.
+            if (problem.EpochSchedule is not EvaluationCountSchedule { EvaluationsPerEpoch: var predictionHorizon })
+                return false;
+
             var bestIndex = SelectWinner(entries, problem.Objective);
             var best = entries[bestIndex];
-            var predictionHorizon = problem.EpochClock.EpochLength;
             var requiredEvaluationCount = predictionHorizon * earlyTerminationStrength;
             return entries.Where((_, index) => index != bestIndex)
                 .All(contender => CanTerminateContender(best, contender, requiredEvaluationCount, predictionHorizon, problem.Objective));
