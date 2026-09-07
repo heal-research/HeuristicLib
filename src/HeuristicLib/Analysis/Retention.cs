@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Analysis;
 /// Retention is what separates a trace that records everything from one that records only what is worth keeping.
 /// Recording only on improvement, for instance, produces a far shorter series than recording at every firing while
 /// describing the same run. A retention keeps whatever it needs to decide, so it belongs to one trace and one run, the
-/// same way an analyzer does.
+/// same way an analyzer does. A retention that ranks values reads the run's objective the same way an aggregation does.
 /// </remarks>
 public interface IRetention<in TResult>
 {

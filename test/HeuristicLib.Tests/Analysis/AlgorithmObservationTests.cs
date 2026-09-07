@@ -18,7 +18,7 @@ public class AlgorithmObservationTests
         var observed = Analyzer.Trace(
             observation => (IReadOnlyList<double>)[observation.State.Population.EvaluatedCandidates.Count],
             Aggregate.MinMeanMax(),
-            algorithm);
+            Anchor.At(algorithm));
 
         await algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), observed)
                        .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -38,7 +38,7 @@ public class AlgorithmObservationTests
         var observed = Analyzer.Trace(
             observation => (IReadOnlyList<double>)[observation.State.Population.EvaluatedCandidates.Count],
             Aggregate.MinMeanMax(),
-            algorithm);
+            Anchor.At(algorithm));
 
         await algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), observed)
                        .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -62,7 +62,7 @@ public class AlgorithmObservationTests
                 return (IReadOnlyList<double>)[observation.Iteration];
             },
             Aggregate.MinMeanMax(),
-            algorithm);
+            Anchor.At(algorithm));
 
         await algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), observed)
                        .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -179,7 +179,7 @@ public class AlgorithmObservationTests
         var quality = Analyzer.Trace(
             new ObjectiveVectorsMeasurement<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(),
             Aggregate.BestMedianWorst(),
-            algorithm,
+            Anchor.At(algorithm),
             iterations);
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), quality);
 

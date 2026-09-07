@@ -16,9 +16,23 @@ public sealed record MutatorObservation<TCandidate, TSearchSpace, TProblem>(
     IReadOnlyList<TCandidate> Offspring,
     IReadOnlyList<TCandidate> Parents,
     TSearchSpace SearchSpace,
-    TProblem Problem) : Observation
+    TProblem Problem) : Observation<TProblem>(Problem)
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>;
+
+/// <summary>
+/// An anchor at every mutator call.
+/// </summary>
+public sealed class MutatorAnchor<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate, TSearchSpace, TProblem> mutator)
+    : IAnchor<MutatorObservation<TCandidate, TSearchSpace, TProblem>, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+{
+    public IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; } = mutator;
+
+    public void Install(ExecutionInstanceResolverBuilder builder, IObservationRecorder<MutatorObservation<TCandidate, TSearchSpace, TProblem>> recorder) =>
+        builder.Decorate(Mutator, current => new ObservingMutator<TCandidate, TSearchSpace, TProblem>(Mutator, current, [recorder]));
+}
 
 /// <summary>
 /// Delivers an observation after every mutator call.

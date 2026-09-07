@@ -5,6 +5,11 @@ namespace HEAL.HeuristicLib.Analysis;
 /// <summary>
 /// Reduces the readings taken at one firing to the single value recorded as that firing's sample.
 /// </summary>
+/// <remarks>
+/// The objective is the run's, offered by the trace that owns this aggregation. An aggregation that ranks its readings
+/// needs it, because "the best" is not a complete instruction until something says best by what. One that ranks
+/// nothing, such as a count or a mean, ignores it.
+/// </remarks>
 public interface IAggregation<in TValue, out TResult>
 {
     TResult Aggregate(IReadOnlyList<TValue> readings, ObjectiveDirections objective);

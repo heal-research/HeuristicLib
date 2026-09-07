@@ -13,7 +13,7 @@ namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 /// This analyzer holds its own data and is used for one run. Its graph accumulates across firings rather than being
 /// aggregated within one, which is the case a trace-based replacement still has to cover.
 /// </remarks>
-public sealed class GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> : IAnalyzer
+public sealed class GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> : IExecutionHook
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : PopulationState<TCandidate>
@@ -64,13 +64,13 @@ public sealed class GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearc
     public void Install(ExecutionInstanceResolverBuilder builder)
     {
         foreach (var crossover in crossovers)
-            builder.Observe(crossover, observation => AfterCross(observation.Offspring, observation.Parents));
+            builder.Observe(Anchor.At(crossover), observation => AfterCross(observation.Offspring, observation.Parents));
 
         foreach (var mutator in mutators)
-            builder.Observe(mutator, observation => AfterMutate(observation.Offspring, observation.Parents));
+            builder.Observe(Anchor.At(mutator), observation => AfterMutate(observation.Offspring, observation.Parents));
 
         foreach (var algorithm in algorithms)
-            builder.Observe(algorithm, observation => CloseGeneration(observation.State, observation.Problem));
+            builder.Observe(Anchor.At(algorithm), observation => CloseGeneration(observation.State, observation.Problem));
     }
 
     private void AfterCross(IReadOnlyList<TCandidate> offspring, IReadOnlyList<Parents<TCandidate>> parents)

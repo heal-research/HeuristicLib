@@ -23,7 +23,7 @@ public static class PopulationTraces
             Analyzer.Trace(
                 new EvaluatedCandidatesMeasurement<T, TS, TP, TR>(),
                 Aggregate.Readings<EvaluatedCandidate<T>>(),
-                algorithm,
+                Anchor.At(algorithm),
                 clocks);
 
         /// <summary>
@@ -41,7 +41,7 @@ public static class PopulationTraces
             Analyzer.Trace(
                 new ObjectiveVectorsFromEvaluationMeasurement<T, TS, TP>(),
                 Aggregate.Readings<ObjectiveVector>(),
-                evaluator,
+                Anchor.At(evaluator),
                 clocks);
     }
 }

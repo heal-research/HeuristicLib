@@ -14,7 +14,7 @@ public static class TrialAnalyzer
     public static TrialAnalyzer<TAlgorithm, TOperator, TAnalyzer> Create<TAlgorithm, TOperator, TAnalyzer>(
         Func<TAlgorithm, TOperator> selector,
         Func<TOperator, TAnalyzer> analyzerFactory)
-        where TAnalyzer : IAnalyzer => new(selector, analyzerFactory);
+        where TAnalyzer : IExecutionHook => new(selector, analyzerFactory);
 }
 
 /// <summary>
@@ -33,7 +33,7 @@ public abstract class TrialAnalyzer<TAlgorithm>
 }
 
 public sealed class TrialAnalyzer<TAlgorithm, TOperator, TAnalyzer> : TrialAnalyzer<TAlgorithm>
-    where TAnalyzer : IAnalyzer
+    where TAnalyzer : IExecutionHook
 {
     internal Func<TAlgorithm, TOperator> Selector { get; }
 
@@ -52,10 +52,10 @@ public sealed class TrialAnalyzer<TAlgorithm, TOperator, TAnalyzer> : TrialAnaly
 /// One trial and the analyzer that observed it.
 /// </summary>
 public sealed record TrialAnalysis<TTrial, TAnalyzer>(TTrial Trial, TAnalyzer Analyzer)
-    where TAnalyzer : IAnalyzer;
+    where TAnalyzer : IExecutionHook;
 
 public static class TrialAnalysis
 {
     public static TrialAnalysis<TTrial, TAnalyzer> From<TTrial, TAnalyzer>(TTrial trial, TAnalyzer analyzer)
-        where TAnalyzer : IAnalyzer => new(trial, analyzer);
+        where TAnalyzer : IExecutionHook => new(trial, analyzer);
 }

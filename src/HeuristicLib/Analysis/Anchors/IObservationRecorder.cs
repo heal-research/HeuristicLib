@@ -11,9 +11,10 @@ namespace HEAL.HeuristicLib.Analysis;
 /// data of its own, so everything a recorder accumulates belongs to the analyzer that installed it.
 /// </remarks>
 /// <remarks>
-/// Implement this together with <see cref="IExecutionHook"/> to write an analyzer the library does not provide. Install the
-/// recorder with <see cref="Anchors"/> at one of the anchors the library observes, or decorate an anchor with a wrapper
-/// of your own when you need a boundary the library does not cover.
+/// Implement this together with <see cref="IExecutionHook"/> to write an analyzer the library does not provide, and
+/// install the recorder with <see cref="Anchors.Observe"/> at an anchor from <see cref="Anchors"/>. For a boundary the
+/// library does not cover, derive an anchor of your own from <see cref="Anchor{TObservation}"/> rather than decorating
+/// by hand.
 /// </remarks>
 public interface IObservationRecorder<in TObservation>
     where TObservation : Observation

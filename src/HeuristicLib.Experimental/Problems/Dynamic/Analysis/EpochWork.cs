@@ -36,7 +36,7 @@ public static class EpochWorkTrace
             Analyzer.Trace(
                 observation => new[] { observation.ObjectiveVectors.Count },
                 Aggregate.Single<int>(),
-                at,
+                Anchor.At(at),
                 evaluations,
                 epoch);
     }

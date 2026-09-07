@@ -21,7 +21,7 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 /// its own observation handling.
 /// </para>
 /// </remarks>
-public sealed class BestBeforeChangePerformanceAnalysis<TCandidate, TSearchSpace, TProblem> : IAnalyzer
+public sealed class BestBeforeChangePerformanceAnalysis<TCandidate, TSearchSpace, TProblem> : IExecutionHook
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TCandidate, TSearchSpace>
 {
@@ -73,7 +73,7 @@ public sealed class BestBeforeChangePerformanceAnalysis<TCandidate, TSearchSpace
     public void Install(ExecutionInstanceResolverBuilder builder)
     {
         foreach (var evaluator in evaluators)
-            builder.Observe(evaluator, ReadBatch);
+            builder.Observe(Anchor.At(evaluator), ReadBatch);
     }
 
     private void ReadBatch(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation)

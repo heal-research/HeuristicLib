@@ -64,7 +64,7 @@ public class AutoEcPaperScenarioTests
         var qualityCurve = Analyzer.Trace(
             observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors),
             Aggregate.Best<Permutation>(),
-            evaluator,
+            Anchor.At(evaluator),
             epoch);
         var bbcp =
             new BestBeforeChangePerformanceAnalysis<Permutation, PermutationSearchSpace,
@@ -119,7 +119,7 @@ public class AutoEcPaperScenarioTests
         var qualityCurve = Analyzer.Trace(
             observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors),
             Aggregate.Best<RealVector>(),
-            evaluator,
+            Anchor.At(evaluator),
             epoch);
         var bbcp =
             new BestBeforeChangePerformanceAnalysis<RealVector, RealVectorSearchSpace, MovingPeaksProblem>(

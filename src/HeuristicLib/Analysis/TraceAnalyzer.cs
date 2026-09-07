@@ -11,7 +11,7 @@ namespace HEAL.HeuristicLib.Analysis;
 /// Properties publish already collected values without allocating. Snapshots and projections allocate immutable values
 /// that stay unchanged while the run continues, during and after execution.
 /// </remarks>
-public sealed class TraceAnalyzer<TResult> : IAnalyzer, IDisposable
+public sealed class TraceAnalyzer<TResult> : IExecutionHook, IDisposable
 {
     private readonly Lock sync = new();
     private readonly List<TraceEntry<TResult>> entries = [];
@@ -50,14 +50,24 @@ public sealed class TraceAnalyzer<TResult> : IAnalyzer, IDisposable
         return [.. Snapshot().Select(entry => new TracePoint<TTime, TResult>(entry.At(clock), entry.Value))];
     }
 
-    internal void Record(TResult value, ObjectiveDirections objective)
+    /// <summary>
+    /// Turns one firing's readings into one sample: aggregate them, then offer the result to the retention.
+    /// </summary>
+    /// <remarks>
+    /// The objective is the observed run's, read from the problem the boundary was called with, so ranking never
+    /// depends on anything the caller configured or the trace remembered.
+    /// </remarks>
+    internal void Sample<TValue>(IReadOnlyList<TValue> readings, IAggregation<TValue, TResult> aggregation, ObjectiveDirections objective) =>
+        Record(aggregation.Aggregate(readings, objective), objective);
+
+    private void Record(TResult value, ObjectiveDirections runObjective)
     {
         lock (sync)
         {
             if (isCompleted)
                 throw new InvalidOperationException("A completed analyzer cannot record another sample.");
 
-            if (!retention.ShouldRecord(value, objective))
+            if (!retention.ShouldRecord(value, runObjective))
                 return;
 
             entries.Add(new TraceEntry<TResult>(Moment.Read(clocks), value));

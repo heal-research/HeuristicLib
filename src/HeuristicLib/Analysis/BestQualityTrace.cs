@@ -29,7 +29,7 @@ public static class BestQualityTrace
                 new EvaluatedCandidatesFromEvaluationMeasurement<TCandidate, TSearchSpace, TProblem>(),
                 Aggregate.Best<TCandidate>(),
                 Retain.OnImprovement<TCandidate>(),
-                at,
+                Anchor.At(at),
                 clocks);
     }
 }

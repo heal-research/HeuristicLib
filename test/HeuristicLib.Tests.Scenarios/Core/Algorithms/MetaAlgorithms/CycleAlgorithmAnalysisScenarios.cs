@@ -128,11 +128,11 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     private sealed class EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator)
-        : IAnalyzer, IObservationRecorder<EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>>
+        : IExecutionHook, IObservationRecorder<EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>>
     {
         public ExecutionState Result { get; } = new();
 
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(Anchor.At(evaluator), this);
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);
@@ -151,11 +151,11 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     private sealed class InterceptionTraceAnalysis(IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor)
-        : IAnalyzer, IObservationRecorder<InterceptorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>>
+        : IExecutionHook, IObservationRecorder<InterceptorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>>
     {
         public ExecutionState Result { get; } = new();
 
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(interceptor, this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(Anchor.At(interceptor), this);
 
         public void Record(InterceptorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> observation) =>
             Result.RecordObjectiveValue(observation.UntransformedState);

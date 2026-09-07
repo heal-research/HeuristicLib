@@ -13,7 +13,7 @@ namespace HEAL.HeuristicLib.Analysis;
 /// This analyzer holds its own data and is used for one run. Its front accumulates across firings rather than being
 /// aggregated within one, which is the case a trace-based replacement still has to cover.
 /// </remarks>
-public sealed class ParetoFrontAnalysis<T, TS, TP> : IAnalyzer
+public sealed class ParetoFrontAnalysis<T, TS, TP> : IExecutionHook
     where TS : class, ISearchSpace<T>
     where TP : class, IProblem<T, TS>
 {
@@ -33,7 +33,7 @@ public sealed class ParetoFrontAnalysis<T, TS, TP> : IAnalyzer
     public void Install(ExecutionInstanceResolverBuilder builder)
     {
         foreach (var evaluator in evaluators)
-            builder.Observe(evaluator, new ParetoRecorder<T, TS, TP>(Front));
+            builder.Observe(Anchor.At(evaluator), new ParetoRecorder<T, TS, TP>(Front));
     }
 }
 

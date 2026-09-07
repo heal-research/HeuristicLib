@@ -98,7 +98,7 @@ public static class PopulationSimilarityTraces
             Analyzer.Trace(
                 new EvaluatedCandidatesMeasurement<T, TS, TP, TR>(),
                 new PopulationSimilarityAggregation<T>(candidateSimilarity),
-                algorithm,
+                Anchor.At(algorithm),
                 clocks);
 
         /// <summary>
@@ -114,7 +114,7 @@ public static class PopulationSimilarityTraces
             Analyzer.Trace(
                 new EvaluatedCandidatesMeasurement<T, TS, TP, TR>(),
                 new AverageSimilarityAggregation<T>(candidateSimilarity),
-                algorithm,
+                Anchor.At(algorithm),
                 clocks);
     }
 }

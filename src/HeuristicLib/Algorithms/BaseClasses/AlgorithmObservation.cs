@@ -17,7 +17,7 @@ public sealed record AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TS
     TSearchState State,
     TSearchState? PreviousState,
     TSearchSpace SearchSpace,
-    TProblem Problem) : Observation
+    TProblem Problem) : Observation<TProblem>(Problem)
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState;

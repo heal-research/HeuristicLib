@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Problems;
@@ -5,6 +6,20 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Analysis;
+
+/// <summary>
+/// An anchor at every crossover call.
+/// </summary>
+public sealed class CrossoverAnchor<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover)
+    : IAnchor<CrossoverObservation<TCandidate, TSearchSpace, TProblem>, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+{
+    public ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; } = crossover;
+
+    public void Install(ExecutionInstanceResolverBuilder builder, IObservationRecorder<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> recorder) =>
+        builder.Decorate(Crossover, current => new ObservingCrossover<TCandidate, TSearchSpace, TProblem>(Crossover, current, [recorder]));
+}
 
 /// <summary>
 /// Delivers an observation after every crossover call.

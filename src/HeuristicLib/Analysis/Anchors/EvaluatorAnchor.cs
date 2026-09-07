@@ -16,9 +16,23 @@ public sealed record EvaluatorObservation<TCandidate, TSearchSpace, TProblem>(
     IReadOnlyList<ObjectiveVector> ObjectiveVectors,
     IReadOnlyList<TCandidate> Candidates,
     TSearchSpace SearchSpace,
-    TProblem Problem) : Observation
+    TProblem Problem) : Observation<TProblem>(Problem)
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>;
+
+/// <summary>
+/// An anchor at every evaluator call.
+/// </summary>
+public sealed class EvaluatorAnchor<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
+    : IAnchor<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+{
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; } = evaluator;
+
+    public void Install(ExecutionInstanceResolverBuilder builder, IObservationRecorder<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> recorder) =>
+        builder.Decorate(Evaluator, current => new ObservingEvaluator<TCandidate, TSearchSpace, TProblem>(Evaluator, current, [recorder]));
+}
 
 /// <summary>
 /// Delivers an observation after every evaluator call.

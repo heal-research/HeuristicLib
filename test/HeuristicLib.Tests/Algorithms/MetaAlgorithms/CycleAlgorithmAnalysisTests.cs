@@ -32,7 +32,7 @@ public class CycleAlgorithmAnalysisTests
 
 
 
-    private static AlgorithmRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateRun(IAnalyzer analyzer)
+    private static AlgorithmRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateRun(IExecutionHook analyzer)
     {
         var evaluator = new IncrementingEvaluator();
         var problem = FuncProblem.Create(evaluateFunc: (int x) => x, encoding: DummySearchSpace<int>.Instance, objective: SingleObjective.Minimize);
@@ -98,11 +98,11 @@ public class CycleAlgorithmAnalysisTests
     }
 
     private sealed class EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator)
-        : IAnalyzer, IObservationRecorder<EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>>
+        : IExecutionHook, IObservationRecorder<EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>>
     {
         public ExecutionState Result { get; } = new();
 
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(Anchor.At(evaluator), this);
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);

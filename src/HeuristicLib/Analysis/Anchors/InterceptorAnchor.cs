@@ -22,10 +22,25 @@ public sealed record InterceptorObservation<TCandidate, TSearchSpace, TProblem, 
     TSearchState UntransformedState,
     TSearchState? PreviousState,
     TSearchSpace SearchSpace,
-    TProblem Problem) : Observation
+    TProblem Problem) : Observation<TProblem>(Problem)
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState;
+
+/// <summary>
+/// An anchor at every interceptor call.
+/// </summary>
+public sealed class InterceptorAnchor<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor)
+    : IAnchor<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
+{
+    public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Interceptor { get; } = interceptor;
+
+    public void Install(ExecutionInstanceResolverBuilder builder, IObservationRecorder<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> recorder) =>
+        builder.Decorate(Interceptor, current => new ObservingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(Interceptor, current, [recorder]));
+}
 
 /// <summary>
 /// Delivers an observation after every interceptor call.

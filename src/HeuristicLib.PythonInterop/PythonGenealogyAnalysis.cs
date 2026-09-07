@@ -200,11 +200,11 @@ public class PythonGenealogyAnalysis
         }
     }
 
-    private interface IAnalyzerSet<TCandidate>
+    private interface IHookSet<TCandidate>
         where TCandidate : notnull
     {
         ExperimentResult<TCandidate> ToExperimentResult(AlgorithmRun run);
-        IReadOnlyList<IAnalyzer> GetAll();
+        IReadOnlyList<IExecutionHook> GetAll();
     }
 
     private sealed record MyAnalyzers<TCandidate>(
@@ -212,8 +212,8 @@ public class PythonGenealogyAnalysis
         IRankAnalysis<TCandidate>? RankAnalysis,
         TraceAnalyzer<EvaluatedCandidate<TCandidate>> QualityCurve,
         TraceAnalyzer<IReadOnlyList<EvaluatedCandidate<TCandidate>>>? AllPopulations,
-        IAnalyzer? CallbackAnalyzer)
-        : IAnalyzerSet<TCandidate>
+        IExecutionHook? CallbackAnalyzer)
+        : IHookSet<TCandidate>
         where TCandidate : notnull
     {
         public ExperimentResult<TCandidate> ToExperimentResult(AlgorithmRun run)
@@ -236,9 +236,9 @@ public class PythonGenealogyAnalysis
             return new ExperimentResult<TCandidate>(rankGraph, rankLines, qRes, apRes);
         }
 
-        public IReadOnlyList<IAnalyzer> GetAll()
+        public IReadOnlyList<IExecutionHook> GetAll()
         {
-            var analyzers = new List<IAnalyzer>
+            var analyzers = new List<IExecutionHook>
             {
                 Qualities,
                 QualityCurve
@@ -293,12 +293,12 @@ public class PythonGenealogyAnalysis
     private sealed class CallbackAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(
         IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm,
         Action<PopulationState<TCandidate>> callback)
-        : IAnalyzer, IObservationRecorder<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>>
+        : IExecutionHook, IObservationRecorder<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : PopulationState<TCandidate>, ISearchState
     {
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(algorithm, this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(Anchor.At(algorithm), this);
 
         public void Record(AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>
             callback(observation.State);

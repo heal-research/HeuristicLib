@@ -98,11 +98,11 @@ public class ExperimentAnalysisTests
         IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator,
         int marker,
         List<int> invocationOrder)
-        : IAnalyzer, IObservationRecorder<EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>>
+        : IExecutionHook, IObservationRecorder<EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>>
     {
         public EvaluationResult Result { get; } = new();
 
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(Anchor.At(evaluator), this);
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation)
         {

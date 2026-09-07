@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 /// <summary>
 /// Reads what this analysis collected, without naming its anchor types.
 /// </summary>
-public interface IRankAnalysis<TCandidate> : IAnalyzer
+public interface IRankAnalysis<TCandidate> : IExecutionHook
     where TCandidate : notnull
 {
     RankState<TCandidate> State { get; }
@@ -54,7 +54,7 @@ public sealed class RankAnalysis<TCandidate, TSearchSpace, TProblem, TSearchStat
         graphBuilder.Install(builder);
 
         foreach (var algorithm in algorithms)
-            builder.Observe(algorithm, _ => RecordRanks(State));
+            builder.Observe(Anchor.At(algorithm), _ => RecordRanks(State));
     }
 
     private static void RecordRanks(RankState<TCandidate> state)

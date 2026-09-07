@@ -253,5 +253,5 @@ internal sealed class IterationUpdateHook<TCandidate, TSearchSpace, TProblem, TS
     where TSearchState : class, ISearchState
 {
     public void Install(ExecutionInstanceResolverBuilder builder) =>
-        builder.Observe(algorithm, _ => problem.CompleteIteration());
+        builder.Observe(Anchor.At(algorithm), _ => problem.CompleteIteration());
 }

@@ -24,7 +24,7 @@ public static class BestMedianWorstTrace
             Analyzer.Trace(
                 new EvaluatedCandidatesMeasurement<TCandidate, TSearchSpace, TProblem, TSearchState>(),
                 Aggregate.BestMedianWorst<TCandidate>(),
-                at,
+                Anchor.At(at),
                 clocks);
 
         /// <summary>
@@ -39,7 +39,7 @@ public static class BestMedianWorstTrace
             Analyzer.Trace(
                 new InterceptedCandidatesMeasurement<TCandidate, TSearchSpace, TProblem, TSearchState>(),
                 Aggregate.BestMedianWorst<TCandidate>(),
-                at,
+                Anchor.At(at),
                 clocks);
     }
 }

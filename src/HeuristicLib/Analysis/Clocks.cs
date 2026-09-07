@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -24,11 +23,15 @@ public abstract class Clock
     /// Declares whatever keeps this clock's time current, if anything does.
     /// </summary>
     /// <remarks>
-    /// A trace installs its clocks before its own recorder, so what this declares observes a shared boundary first and
-    /// the time is already current when the trace captures its moment. A clock whose source keeps the value itself
-    /// installs nothing. Several traces may select one clock, so this must be safe to call more than once.
+    /// This runs exactly once, while the run builds its resolver and before anything executes, so a clock may also use
+    /// it to capture a starting reference. A clock whose source keeps the time current itself overrides nothing. A
+    /// trace installs its clocks before its own recorder, so what this declares observes a shared boundary first and
+    /// the time is already current when the trace captures its moment. Several traces may select one clock, so this
+    /// must be safe to call more than once.
     /// </remarks>
-    public abstract void Install(ExecutionInstanceResolverBuilder builder);
+    public virtual void Install(ExecutionInstanceResolverBuilder builder)
+    {
+    }
 }
 
 /// <summary>
@@ -50,6 +53,31 @@ public abstract class Clock<TTime> : Clock
     internal sealed override object Read() => ReadTime()!;
 }
 
+/// <summary>
+/// A clock whose time is kept current by the observations of one anchor.
+/// </summary>
+/// <remarks>
+/// Derive from this rather than wiring an anchor by hand: it installs itself at the anchor it was given, so a clock of
+/// your own is left with reading an observation and reporting the time.
+/// </remarks>
+public abstract class ObservingClock<TTime, TObservation> : Clock<TTime>, IObservationRecorder<TObservation>
+    where TObservation : Observation
+{
+    private readonly IAnchor<TObservation> anchor;
+
+    protected ObservingClock(IAnchor<TObservation> anchor)
+    {
+        this.anchor = anchor;
+    }
+
+    public sealed override void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(anchor, this);
+
+    /// <summary>
+    /// Advances this clock from one observation of its anchor.
+    /// </summary>
+    public abstract void Record(TObservation observation);
+}
+
 internal sealed class Moment
 {
     private readonly ImmutableDictionary<Clock, object> times;
@@ -62,7 +90,7 @@ internal sealed class Moment
     internal TTime At<TTime>(Clock<TTime> clock)
     {
         if (!times.TryGetValue(clock, out var time))
-            throw new KeyNotFoundException("The moment does not contain a reading from the requested clock.");
+            throw new InvalidOperationException("The trace does not use the requested clock.");
         return (TTime)time;
     }
 
@@ -82,7 +110,7 @@ internal sealed class Moment
 /// A nested algorithm has its own iteration count, which is why the algorithm is named rather than inferred.
 /// </remarks>
 public sealed class IterationClock<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-    : Clock<long>, IObservationRecorder<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>>
+    : ObservingClock<long, AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>>(Anchor.At(algorithm))
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
@@ -91,9 +119,7 @@ public sealed class IterationClock<TCandidate, TSearchSpace, TProblem, TSearchSt
 
     protected override long ReadTime() => Interlocked.Read(ref latest);
 
-    public override void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(algorithm, this);
-
-    public void Record(AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>
+    public override void Record(AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>
         Interlocked.Exchange(ref latest, observation.Iteration);
 }
 
@@ -105,7 +131,7 @@ public sealed class IterationClock<TCandidate, TSearchSpace, TProblem, TSearchSt
 /// different work, which is why the evaluator is named rather than inferred.
 /// </remarks>
 public sealed class EvaluationClock<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
-    : Clock<long>, IObservationRecorder<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>>
+    : ObservingClock<long, EvaluatorObservation<TCandidate, TSearchSpace, TProblem>>(Anchor.At(evaluator))
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -113,9 +139,7 @@ public sealed class EvaluationClock<TCandidate, TSearchSpace, TProblem>(IEvaluat
 
     protected override long ReadTime() => Interlocked.Read(ref evaluations);
 
-    public override void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, this);
-
-    public void Record(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation) =>
+    public override void Record(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation) =>
         Interlocked.Add(ref evaluations, observation.ObjectiveVectors.Count);
 }
 
@@ -128,6 +152,9 @@ public sealed class ElapsedTimeClock(TimeProvider timeProvider) : Clock<TimeSpan
 
     protected override TimeSpan ReadTime() => timeProvider.GetElapsedTime(Interlocked.Read(ref startedAt));
 
+    /// <summary>
+    /// Captures the moment the run began. Nothing observes this clock, so installation is only where it starts.
+    /// </summary>
     public override void Install(ExecutionInstanceResolverBuilder builder) =>
         Interlocked.CompareExchange(ref startedAt, timeProvider.GetTimestamp(), 0);
 }

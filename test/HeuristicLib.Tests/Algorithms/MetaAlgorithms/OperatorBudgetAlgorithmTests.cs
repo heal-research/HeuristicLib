@@ -788,11 +788,11 @@ public class OperatorBudgetAlgorithmTests
     /// when a budget algorithm decorates the same evaluator.
     /// </summary>
     private sealed class EvaluationObservingAnalyzer(IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> evaluator)
-        : IAnalyzer, IObservationRecorder<EvaluatorObservation<RealVector, RealVectorSearchSpace, TestFunctionProblem>>
+        : IExecutionHook, IObservationRecorder<EvaluatorObservation<RealVector, RealVectorSearchSpace, TestFunctionProblem>>
     {
         public int ObservedCandidates { get; private set; }
 
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(Anchor.At(evaluator), this);
 
         public void Record(EvaluatorObservation<RealVector, RealVectorSearchSpace, TestFunctionProblem> observation) =>
             ObservedCandidates += observation.ObjectiveVectors.Count;

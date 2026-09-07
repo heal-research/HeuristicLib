@@ -40,6 +40,7 @@ public class HyperVolumeState<T>(ObjectiveVector referencePoint, ObjectiveDirect
 /// <remarks>
 /// This aggregation keeps the front it builds, so it belongs to one trace and one run, the same way a retention does.
 /// The recorded value is a plain number, so the trace's entries stay immutable even though the front behind them grows.
+/// Dominance is what a front is made of, so this reads the objective directions rather than only an ordering.
 /// </remarks>
 public sealed class HyperVolumeAggregation<TCandidate>(ObjectiveVector referencePoint)
     : IAggregation<EvaluatedCandidate<TCandidate>, double>
@@ -48,7 +49,7 @@ public sealed class HyperVolumeAggregation<TCandidate>(ObjectiveVector reference
 
     public double Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective)
     {
-        // The objective comes from the observed run, so the front cannot be built before the first firing.
+        // The objective is the run's, so the front cannot be built before the first firing.
         front ??= new HyperVolumeState<TCandidate>(referencePoint, objective);
         front.AddPoints(readings);
         return front.HyperVolume;
@@ -63,8 +64,7 @@ public static class HyperVolumeTraces
         /// Traces the hypervolume of the Pareto front accumulated over everything the evaluator produces.
         /// </summary>
         /// <remarks>
-        /// The front is the aggregation's own state, so the recorded entries are plain numbers and the run's objective
-        /// is taken from the observation rather than supplied up front.
+        /// The front is the aggregation's own state, so the recorded entries are plain numbers.
         /// </remarks>
         public static TraceAnalyzer<double> TraceHyperVolume<T, TS, TP>(
             ObjectiveVector referencePoint,
@@ -75,7 +75,7 @@ public static class HyperVolumeTraces
             Analyzer.Trace(
                 new EvaluatedCandidatesFromEvaluationMeasurement<T, TS, TP>(),
                 new HyperVolumeAggregation<T>(referencePoint),
-                evaluator,
+                Anchor.At(evaluator),
                 clocks);
     }
 }

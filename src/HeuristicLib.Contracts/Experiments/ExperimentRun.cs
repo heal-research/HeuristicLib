@@ -78,7 +78,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     /// Gets each trial together with the analyzer that observed it. Read the collected data from the analyzer.
     /// </summary>
     public ImmutableArray<TrialAnalysis<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAnalyzer>> GetAnalyzers<TOperator, TAnalyzer>(TrialAnalyzer<TAlgorithm, TOperator, TAnalyzer> trialAnalyzer)
-        where TAnalyzer : IAnalyzer
+        where TAnalyzer : IExecutionHook
     {
         var analyzers = trialAnalyzers[trialAnalyzer];
 

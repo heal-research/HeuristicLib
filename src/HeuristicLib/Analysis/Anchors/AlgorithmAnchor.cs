@@ -8,6 +8,26 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Analysis;
 
 /// <summary>
+/// An anchor at every search state an algorithm yields.
+/// </summary>
+/// <remarks>
+/// The wrapper sits outside the algorithm instance, so it observes exactly what the run streams: the state at the end
+/// of an iteration, after any interceptor has transformed it. Sub-iterations an algorithm does not yield are not
+/// observed. A nested algorithm is its own anchor, which is why the algorithm is named rather than inferred.
+/// </remarks>
+public sealed class AlgorithmAnchor<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+    : IAnchor<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
+{
+    public IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; } = algorithm;
+
+    public void Install(ExecutionInstanceResolverBuilder builder, IObservationRecorder<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> recorder) =>
+        builder.Decorate(Algorithm, current => new ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm, current, [recorder]));
+}
+
+/// <summary>
 /// Delivers an observation for every search state an algorithm yields.
 /// </summary>
 /// <remarks>
