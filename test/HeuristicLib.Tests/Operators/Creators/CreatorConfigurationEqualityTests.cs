@@ -17,7 +17,7 @@ public class CreatorConfigurationEqualityTests
     {
         var childCreator = new ConstantCreator(1);
 
-        var creator = childCreator.CountCreatorCalls(new ObservationCounter());
+        var creator = childCreator.CountCalls(new ObservationCounter());
 
         creator.ChildCreator.ShouldBeSameAs(childCreator);
     }
@@ -178,8 +178,8 @@ public class CreatorConfigurationEqualityTests
     public void CountingCreator_WithSameCounterAndMetric_IsEqual()
     {
         var counter = new ObservationCounter();
-        var left = new ConstantCreator(1).CountCreatorCalls(counter);
-        var right = new ConstantCreator(1).CountCreatorCalls(counter);
+        var left = new ConstantCreator(1).CountCalls(counter);
+        var right = new ConstantCreator(1).CountCalls(counter);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -189,8 +189,8 @@ public class CreatorConfigurationEqualityTests
     public void CountingCreator_WithDifferentMetric_IsNotEqual()
     {
         var counter = new ObservationCounter();
-        var left = new ConstantCreator(1).CountCreatorCalls(counter);
-        var right = new ConstantCreator(1).CountCreatedCandidates(counter);
+        var left = new ConstantCreator(1).CountCalls(counter);
+        var right = new ConstantCreator(1).CountCandidates(counter);
 
         left.ShouldNotBe(right);
     }
@@ -198,8 +198,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void CountingCreator_WithDifferentCounter_IsNotEqual()
     {
-        var left = new ConstantCreator(1).CountCreatorCalls(new ObservationCounter());
-        var right = new ConstantCreator(1).CountCreatorCalls(new ObservationCounter());
+        var left = new ConstantCreator(1).CountCalls(new ObservationCounter());
+        var right = new ConstantCreator(1).CountCalls(new ObservationCounter());
 
         left.ShouldNotBe(right);
     }
@@ -208,8 +208,8 @@ public class CreatorConfigurationEqualityTests
     public void CountingCreator_WithDifferentChildCreator_IsNotEqual()
     {
         var counter = new ObservationCounter();
-        var left = new ConstantCreator(1).CountCreatorCalls(counter);
-        var right = new ConstantCreator(2).CountCreatorCalls(counter);
+        var left = new ConstantCreator(1).CountCalls(counter);
+        var right = new ConstantCreator(2).CountCalls(counter);
 
         left.ShouldNotBe(right);
     }
@@ -218,8 +218,8 @@ public class CreatorConfigurationEqualityTests
     public void DurationMeasuringCreator_WithSameDurationAndTimeProvider_IsEqual()
     {
         var duration = new ObservationDuration();
-        var left = new ConstantCreator(1).MeasureCreatorDuration(duration, TimeProvider.System);
-        var right = new ConstantCreator(1).MeasureCreatorDuration(duration, TimeProvider.System);
+        var left = new ConstantCreator(1).MeasureDuration(duration, TimeProvider.System);
+        var right = new ConstantCreator(1).MeasureDuration(duration, TimeProvider.System);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -228,8 +228,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringCreator_WithDifferentDuration_IsNotEqual()
     {
-        var left = new ConstantCreator(1).MeasureCreatorDuration(new ObservationDuration(), TimeProvider.System);
-        var right = new ConstantCreator(1).MeasureCreatorDuration(new ObservationDuration(), TimeProvider.System);
+        var left = new ConstantCreator(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
+        var right = new ConstantCreator(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
 
         left.ShouldNotBe(right);
     }
@@ -238,8 +238,8 @@ public class CreatorConfigurationEqualityTests
     public void DurationMeasuringCreator_WithDifferentChildCreator_IsNotEqual()
     {
         var duration = new ObservationDuration();
-        var left = new ConstantCreator(1).MeasureCreatorDuration(duration, TimeProvider.System);
-        var right = new ConstantCreator(2).MeasureCreatorDuration(duration, TimeProvider.System);
+        var left = new ConstantCreator(1).MeasureDuration(duration, TimeProvider.System);
+        var right = new ConstantCreator(2).MeasureDuration(duration, TimeProvider.System);
 
         left.ShouldNotBe(right);
     }

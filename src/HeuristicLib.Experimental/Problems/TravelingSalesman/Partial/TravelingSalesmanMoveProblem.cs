@@ -16,17 +16,17 @@ public sealed class TravelingSalesmanMoveProblem
         this.data = data;
     }
 
-    public override ObjectiveVector Evaluate(Permutation candidate, IRandomNumberGenerator random)
-        => !IsTerminal(candidate, random) ? throw new ArgumentException("A complete tour is required for evaluation.", nameof(candidate)) : TourLength(candidate);
+    public override ObjectiveVector Evaluate(Permutation candidate, IRandomNumberGenerator random) =>
+        !IsTerminal(candidate, random) ? throw new ArgumentException("A complete tour is required for evaluation.", nameof(candidate)) : TourLength(candidate);
 
-    public override bool IsTerminal(Permutation candidate, IRandomNumberGenerator random)
-        => candidate.Count == data.NumberOfCities;
+    public override bool IsTerminal(Permutation candidate, IRandomNumberGenerator random) =>
+        candidate.Count == data.NumberOfCities;
 
-    public override ObjectiveVector Bound(Permutation candidate, IRandomNumberGenerator random)
-        => PathLength(candidate);
+    public override ObjectiveVector Bound(Permutation candidate, IRandomNumberGenerator random) =>
+        PathLength(candidate);
 
-    public override ObjectiveVector EvaluatePartial(Permutation candidate, IRandomNumberGenerator random)
-        => IsTerminal(candidate, random) ? TourLength(candidate) : PathLength(candidate);
+    public override ObjectiveVector EvaluatePartial(Permutation candidate, IRandomNumberGenerator random) =>
+        IsTerminal(candidate, random) ? TourLength(candidate) : PathLength(candidate);
 
     internal double TourLength(Permutation tour)
     {

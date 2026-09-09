@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Encodings.RealVectors;
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public class CombinedGradientTestFunction(params IReadOnlyList<IGradientTestFunction> functions)
-  : CombinedTestFunction(functions), IMultiObjectiveGradientTestFunction
+    : CombinedTestFunction(functions), IMultiObjectiveGradientTestFunction
 {
     private readonly ImmutableArray<IGradientTestFunction> functions = functions.ToImmutableArray();
 

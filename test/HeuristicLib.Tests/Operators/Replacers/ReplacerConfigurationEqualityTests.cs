@@ -12,7 +12,7 @@ public class ReplacerConfigurationEqualityTests
     {
         var child = new OffsetReplacer(1);
 
-        child.CountReplacerCalls(new ObservationCounter()).ChildReplacer.ShouldBeSameAs(child);
+        child.CountCalls(new ObservationCounter()).ChildReplacer.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -55,11 +55,11 @@ public class ReplacerConfigurationEqualityTests
     {
         var counter = new ObservationCounter();
         var duration = new ObservationDuration();
-        var left = new OffsetReplacer(1).CountReplacerCalls(counter);
-        var equal = new OffsetReplacer(1).CountReplacerCalls(counter);
-        var differentMetric = new OffsetReplacer(1).CountReplacementCandidates(counter);
-        var measured = new OffsetReplacer(1).MeasureReplacerDuration(duration, TimeProvider.System);
-        var measuredEqual = new OffsetReplacer(1).MeasureReplacerDuration(duration, TimeProvider.System);
+        var left = new OffsetReplacer(1).CountCalls(counter);
+        var equal = new OffsetReplacer(1).CountCalls(counter);
+        var differentMetric = new OffsetReplacer(1).CountCandidates(counter);
+        var measured = new OffsetReplacer(1).MeasureDuration(duration, TimeProvider.System);
+        var measuredEqual = new OffsetReplacer(1).MeasureDuration(duration, TimeProvider.System);
 
         left.ShouldBe(equal);
         left.ShouldNotBe(differentMetric);
@@ -109,8 +109,8 @@ public class ReplacerConfigurationEqualityTests
 
         private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IReplacerInstance<int, TSearchSpace, TProblem>> childReplacers)
             : MultiReplacerInstance<int, TSearchSpace, TProblem>(childReplacers)
-              where TSearchSpace : class, ISearchSpace<int>
-              where TProblem : class, IProblem<int, TSearchSpace>
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
         {
             public override IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildReplacers[0].Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);

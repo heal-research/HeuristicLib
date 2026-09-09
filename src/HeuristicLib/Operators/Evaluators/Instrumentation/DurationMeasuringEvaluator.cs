@@ -29,8 +29,8 @@ public sealed record DurationMeasuringEvaluator<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationDuration duration, TimeProvider timeProvider)
         : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -60,18 +60,18 @@ public static class EvaluatorDurationExtensions
 {
     extension<TCandidate>(IEvaluator<TCandidate> evaluator)
     {
-        public DurationMeasuringEvaluator<TCandidate> MeasureEvaluatorDuration(ObservationDuration duration) => new(evaluator, duration);
+        public DurationMeasuringEvaluator<TCandidate> MeasureDuration(ObservationDuration duration) => new(evaluator, duration);
 
-        public DurationMeasuringEvaluator<TCandidate> MeasureEvaluatorDuration(ObservationDuration duration, TimeProvider timeProvider) =>
+        public DurationMeasuringEvaluator<TCandidate> MeasureDuration(ObservationDuration duration, TimeProvider timeProvider) =>
             new(evaluator, duration, timeProvider);
 
-        public DurationMeasuringEvaluator<TCandidate> MeasureEvaluatorDuration(out ObservationDuration duration)
+        public DurationMeasuringEvaluator<TCandidate> MeasureDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return new(evaluator, duration);
         }
 
-        public DurationMeasuringEvaluator<TCandidate> MeasureEvaluatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringEvaluator<TCandidate> MeasureDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return new(evaluator, duration, timeProvider);

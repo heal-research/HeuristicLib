@@ -15,6 +15,6 @@ public sealed record NeighborhoodCreator<TCandidate, TSearchSpace, TProblem, TMo
         TCandidate candidate,
         IRandomNumberGenerator random,
         TSearchSpace searchSpace,
-        TProblem problem)
-        => neighborhood.Moves(candidate, random, searchSpace, problem);
+        TProblem problem) =>
+        neighborhood.Moves(candidate, random, searchSpace, problem);
 }

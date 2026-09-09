@@ -43,7 +43,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 evaluator,
                 maximumCalls,
-                static (observedOperator, counter) => observedOperator.CountEvaluatorCalls(counter));
+                static (observedOperator, counter) => observedOperator.CountCalls(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, IEvaluator<TCandidate>> WithMaxEvaluatedCandidates(
@@ -53,7 +53,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 evaluator,
                 maximumCandidates,
-                static (observedOperator, counter) => observedOperator.CountEvaluatedCandidates(counter));
+                static (observedOperator, counter) => observedOperator.CountCandidates(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, ICreator<TCandidate>> WithMaxCreatorCalls(
@@ -63,7 +63,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 creator,
                 maximumCalls,
-                static (observedOperator, counter) => observedOperator.CountCreatorCalls(counter));
+                static (observedOperator, counter) => observedOperator.CountCalls(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, ICreator<TCandidate>> WithMaxCreatedCandidates(
@@ -73,7 +73,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 creator,
                 maximumCandidates,
-                static (observedOperator, counter) => observedOperator.CountCreatedCandidates(counter));
+                static (observedOperator, counter) => observedOperator.CountCandidates(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, ICrossover<TCandidate>> WithMaxCrossoverCalls(
@@ -83,7 +83,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 crossover,
                 maximumCalls,
-                static (observedOperator, counter) => observedOperator.CountCrossoverCalls(counter));
+                static (observedOperator, counter) => observedOperator.CountCalls(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, ICrossover<TCandidate>> WithMaxCrossedCandidates(
@@ -93,7 +93,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 crossover,
                 maximumCandidates,
-                static (observedOperator, counter) => observedOperator.CountCrossedCandidates(counter));
+                static (observedOperator, counter) => observedOperator.CountCandidates(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, IMutator<TCandidate>> WithMaxMutatorCalls(
@@ -103,7 +103,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 mutator,
                 maximumCalls,
-                static (observedOperator, counter) => observedOperator.CountMutatorCalls(counter));
+                static (observedOperator, counter) => observedOperator.CountCalls(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, IMutator<TCandidate>> WithMaxMutatedCandidates(
@@ -113,7 +113,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 mutator,
                 maximumCandidates,
-                static (observedOperator, counter) => observedOperator.CountMutatedCandidates(counter));
+                static (observedOperator, counter) => observedOperator.CountCandidates(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, IRefiner<TCandidate>> WithMaxRefinerCalls(
@@ -123,7 +123,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 refiner,
                 maximumCalls,
-                static (observedOperator, counter) => observedOperator.CountRefinerCalls(counter));
+                static (observedOperator, counter) => observedOperator.CountCalls(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, IRefiner<TCandidate>> WithMaxRefinedCandidates(
@@ -133,7 +133,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 refiner,
                 maximumCandidates,
-                static (observedOperator, counter) => observedOperator.CountRefinedCandidates(counter));
+                static (observedOperator, counter) => observedOperator.CountCandidates(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, ISelector<TCandidate>> WithMaxSelectorCalls(
@@ -143,7 +143,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 selector,
                 maximumCalls,
-                static (observedOperator, counter) => observedOperator.CountSelectorCalls(counter));
+                static (observedOperator, counter) => observedOperator.CountCalls(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, ISelector<TCandidate>> WithMaxSelectedCandidates(
@@ -153,7 +153,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 selector,
                 maximumCandidates,
-                static (observedOperator, counter) => observedOperator.CountSelectedCandidates(counter));
+                static (observedOperator, counter) => observedOperator.CountCandidates(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, IReplacer<TCandidate>> WithMaxReplacerCalls(
@@ -163,7 +163,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 replacer,
                 maximumCalls,
-                static (observedOperator, counter) => observedOperator.CountReplacerCalls(counter));
+                static (observedOperator, counter) => observedOperator.CountCalls(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, IReplacer<TCandidate>> WithMaxReplacementCandidates(
@@ -173,7 +173,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 replacer,
                 maximumCandidates,
-                static (observedOperator, counter) => observedOperator.CountReplacementCandidates(counter));
+                static (observedOperator, counter) => observedOperator.CountCandidates(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, IInterceptor<TCandidate>> WithMaxInterceptorCalls(
@@ -183,7 +183,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 interceptor,
                 maximumCalls,
-                static (observedOperator, counter) => observedOperator.CountInterceptorCalls(counter));
+                static (observedOperator, counter) => observedOperator.CountCalls(counter));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, ITerminator<TCandidate>> WithMaxTerminatorCalls(
@@ -193,7 +193,7 @@ public static class OperatorCountBudgetExtensions
             return algorithm.WithMaxCount(
                 terminator,
                 maximumCalls,
-                static (observedOperator, counter) => observedOperator.CountTerminatorCalls(counter));
+                static (observedOperator, counter) => observedOperator.CountCalls(counter));
         }
     }
 }

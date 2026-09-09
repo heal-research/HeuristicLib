@@ -19,8 +19,8 @@ public sealed record PipelineInterceptor<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem, TSearchState>(ImmutableArray<IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
         : MultiInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptors)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)

@@ -23,8 +23,8 @@ public sealed record CountingRefiner<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner, ObservationCounter counter, OperatorCountMetric metric)
         : WrappingRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiner)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -45,20 +45,20 @@ public static class RefinerCounterExtensions
 {
     extension<TCandidate>(IRefiner<TCandidate> refiner)
     {
-        public CountingRefiner<TCandidate> CountRefinerCalls(ObservationCounter counter) => new(refiner, counter, OperatorCountMetric.Calls);
+        public CountingRefiner<TCandidate> CountCalls(ObservationCounter counter) => new(refiner, counter, OperatorCountMetric.Calls);
 
-        public CountingRefiner<TCandidate> CountRefinerCalls(out ObservationCounter counter)
+        public CountingRefiner<TCandidate> CountCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return refiner.CountRefinerCalls(counter);
+            return refiner.CountCalls(counter);
         }
 
-        public CountingRefiner<TCandidate> CountRefinedCandidates(ObservationCounter counter) => new(refiner, counter, OperatorCountMetric.Candidates);
+        public CountingRefiner<TCandidate> CountCandidates(ObservationCounter counter) => new(refiner, counter, OperatorCountMetric.Candidates);
 
-        public CountingRefiner<TCandidate> CountRefinedCandidates(out ObservationCounter counter)
+        public CountingRefiner<TCandidate> CountCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return refiner.CountRefinedCandidates(counter);
+            return refiner.CountCandidates(counter);
         }
     }
 }

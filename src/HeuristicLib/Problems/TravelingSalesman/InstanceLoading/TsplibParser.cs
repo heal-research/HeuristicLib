@@ -28,13 +28,13 @@ public class TsplibParser
     }
 
     public TsplibParser(string path)
-      : this()
+        : this()
     {
         source = new StreamReader(path);
     }
 
     public TsplibParser(Stream stream)
-      : this()
+        : this()
     {
         source = new StreamReader(stream);
     }
@@ -506,8 +506,8 @@ public class TsplibParser
                 if (node == -1)
                 {
                     finished = tours.Count > 0 && tours[^1].Count == 0 // -1 followed by -1
-                      || source.BaseStream.CanSeek && source.Peek() == -1
-                      || source.Peek() == 'E';
+                        || source.BaseStream.CanSeek && source.Peek() == -1
+                        || source.Peek() == 'E';
                     if (finished)
                     {
                         break;
@@ -619,7 +619,7 @@ public class TsplibParser
                         {
                             dim2++;
                             if ((!diagonal || dim2 != dim1 + 1)
-                              && (diagonal || dim2 != dim1))
+                                && (diagonal || dim2 != dim1))
                             {
                                 continue;
                             }

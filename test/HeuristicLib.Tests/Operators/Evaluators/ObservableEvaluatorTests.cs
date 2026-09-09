@@ -10,7 +10,7 @@ public class ObservableEvaluatorTests
     public void CountEvaluatorCalls_IncrementsOncePerEvaluateCall()
     {
         var counter = new ObservationCounter();
-        var evaluator = CreateEvaluator().CountEvaluatorCalls(counter);
+        var evaluator = CreateEvaluator().CountCalls(counter);
         evaluator.Counter.ShouldBeSameAs(counter);
         evaluator.Metric.ShouldBe(OperatorCountMetric.Calls);
         var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
@@ -26,7 +26,7 @@ public class ObservableEvaluatorTests
     public void CountEvaluatedCandidates_IncrementsByBatchSize()
     {
         var counter = new ObservationCounter();
-        var evaluator = CreateEvaluator().CountEvaluatedCandidates(counter);
+        var evaluator = CreateEvaluator().CountCandidates(counter);
         var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
@@ -41,7 +41,7 @@ public class ObservableEvaluatorTests
     {
         var duration = new ObservationDuration();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var evaluator = CreateEvaluator().MeasureEvaluatorDuration(duration, timeProvider);
+        var evaluator = CreateEvaluator().MeasureDuration(duration, timeProvider);
         evaluator.Duration.ShouldBeSameAs(duration);
         evaluator.TimeProvider.ShouldBeSameAs(timeProvider);
         var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
@@ -70,7 +70,7 @@ public class ObservableEvaluatorTests
     public void CountEvaluatorCalls_DoesNotCountFailedCall()
     {
         var counter = new ObservationCounter();
-        var evaluator = new ThrowingEvaluator().CountEvaluatorCalls(counter);
+        var evaluator = new ThrowingEvaluator().CountCalls(counter);
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
@@ -83,7 +83,7 @@ public class ObservableEvaluatorTests
     public void MeasureEvaluatorDuration_RecordsFailedCall()
     {
         var duration = new ObservationDuration();
-        var evaluator = new ThrowingEvaluator().MeasureEvaluatorDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
+        var evaluator = new ThrowingEvaluator().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>

@@ -10,7 +10,7 @@ public class EvaluatorCompositionTests
     public void CachingEvaluator_UsesIndependentCachePerExecutionInstance()
     {
         var counter = new ObservationCounter();
-        var evaluator = CreateEvaluator().CountEvaluatorCalls(counter).WithCache();
+        var evaluator = CreateEvaluator().CountCalls(counter).WithCache();
         var firstInstance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var secondInstance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
@@ -26,7 +26,7 @@ public class EvaluatorCompositionTests
     public void LimitEvaluator_UsesIndependentCounterPerExecutionInstance()
     {
         var counter = new ObservationCounter();
-        var evaluator = CreateEvaluator().CountEvaluatedCandidates(counter).LimitEvaluations(2, enforceLimitWithinBatch: true);
+        var evaluator = CreateEvaluator().CountCandidates(counter).LimitEvaluations(2, enforceLimitWithinBatch: true);
         var firstInstance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var secondInstance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
@@ -42,7 +42,7 @@ public class EvaluatorCompositionTests
     public void RepeatingEvaluator_InvokesResolvedChildForEveryEvaluation()
     {
         var counter = new ObservationCounter();
-        var evaluator = CreateEvaluator().CountEvaluatorCalls(counter).AsRepeated(2, ObjectiveVectorAggregation.Mean);
+        var evaluator = CreateEvaluator().CountCalls(counter).AsRepeated(2, ObjectiveVectorAggregation.Mean);
         var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 

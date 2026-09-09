@@ -52,14 +52,14 @@ public class MetaOptimizationTests
         hc = hc with
         {
             Evaluator = hc.Evaluator
-                          .AsRepeated(11, ObjectiveVectorAggregation.Median)
-                          .WithCache()
+                .AsRepeated(11, ObjectiveVectorAggregation.Median)
+                .WithCache()
         };
 
         //run meta alg
         var finalState = hc
-          .WithMaxIterations(5)
-          .Complete(metaProblem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+            .WithMaxIterations(5)
+            .Complete(metaProblem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         metaProblem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
         finalState.EvaluatedCandidate.ObjectiveVector.Count.ShouldBe(1);

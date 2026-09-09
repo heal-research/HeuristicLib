@@ -18,10 +18,10 @@ public static class MetaOptimizationProblem
 
 public class MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, TSearchState> :
   SingleSolutionProblem<MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, TSearchState>, CompositeGenotype<RealVector, IntegerVector>, CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>>
-  where TCandidate : class
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
-  where TSearchState : PopulationState<TCandidate>
+    where TCandidate : class
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : PopulationState<TCandidate>
 {
     private readonly TProblem problem;
     private readonly Func<CompositeGenotype<RealVector, IntegerVector>, IAlgorithm<TCandidate>> algBuilder;

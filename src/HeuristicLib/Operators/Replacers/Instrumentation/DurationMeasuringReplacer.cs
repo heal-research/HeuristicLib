@@ -29,8 +29,8 @@ public sealed record DurationMeasuringReplacer<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationDuration duration, TimeProvider timeProvider)
         : WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem>(childReplacer)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(
             IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
@@ -62,18 +62,18 @@ public static class ReplacerDurationExtensions
 {
     extension<TCandidate>(IReplacer<TCandidate> replacer)
     {
-        public DurationMeasuringReplacer<TCandidate> MeasureReplacerDuration(ObservationDuration duration) => new(replacer, duration);
+        public DurationMeasuringReplacer<TCandidate> MeasureDuration(ObservationDuration duration) => new(replacer, duration);
 
-        public DurationMeasuringReplacer<TCandidate> MeasureReplacerDuration(ObservationDuration duration, TimeProvider timeProvider) =>
+        public DurationMeasuringReplacer<TCandidate> MeasureDuration(ObservationDuration duration, TimeProvider timeProvider) =>
             new(replacer, duration, timeProvider);
 
-        public DurationMeasuringReplacer<TCandidate> MeasureReplacerDuration(out ObservationDuration duration)
+        public DurationMeasuringReplacer<TCandidate> MeasureDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return new(replacer, duration);
         }
 
-        public DurationMeasuringReplacer<TCandidate> MeasureReplacerDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringReplacer<TCandidate> MeasureDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return new(replacer, duration, timeProvider);

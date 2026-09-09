@@ -15,8 +15,8 @@ public sealed record RemoveDuplicatesInterceptor<TCandidate, TSearchState>
         Comparer = comparer;
     }
 
-    public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random)
-        => RemoveDuplicatesInterceptor.Transform(currentState, previousState, Comparer);
+    public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random) =>
+        RemoveDuplicatesInterceptor.Transform(currentState, previousState, Comparer);
 }
 
 public static class RemoveDuplicatesInterceptor

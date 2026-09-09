@@ -19,10 +19,10 @@ public interface ITerminator<TCandidate> : IOperator
 }
 
 public interface ITerminatorInstance<TCandidate, in TSearchSpace, in TProblem, in TSearchState>
-  : IOperatorInstance
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
-  where TSearchState : class, ISearchState
+    : IOperatorInstance
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
 {
     bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem);
 }

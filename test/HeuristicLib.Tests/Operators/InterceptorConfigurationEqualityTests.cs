@@ -11,7 +11,7 @@ public class InterceptorConfigurationEqualityTests
     {
         var child = new OffsetInterceptor(1);
 
-        child.CountInterceptorCalls(new ObservationCounter()).ChildInterceptor.ShouldBeSameAs(child);
+        child.CountCalls(new ObservationCounter()).ChildInterceptor.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -36,9 +36,9 @@ public class InterceptorConfigurationEqualityTests
     public void NestedComposition_WithEqualParts_IsEqual()
     {
         var counter = new ObservationCounter();
-        var left = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2)).CountInterceptorCalls(counter);
-        var equal = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2)).CountInterceptorCalls(counter);
-        var different = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(3)).CountInterceptorCalls(counter);
+        var left = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2)).CountCalls(counter);
+        var equal = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2)).CountCalls(counter);
+        var different = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(3)).CountCalls(counter);
 
         left.ShouldBe(equal);
         left.ShouldNotBe(different);
@@ -51,10 +51,10 @@ public class InterceptorConfigurationEqualityTests
         var duration = new ObservationDuration();
         var observer = new ActionInterceptorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>((_, _, _, _, _) => { });
 
-        new OffsetInterceptor(1).CountInterceptorCalls(counter).ShouldBe(new OffsetInterceptor(1).CountInterceptorCalls(counter));
-        new OffsetInterceptor(1).MeasureInterceptorDuration(duration, TimeProvider.System).ShouldBe(new OffsetInterceptor(1).MeasureInterceptorDuration(duration, TimeProvider.System));
+        new OffsetInterceptor(1).CountCalls(counter).ShouldBe(new OffsetInterceptor(1).CountCalls(counter));
+        new OffsetInterceptor(1).MeasureDuration(duration, TimeProvider.System).ShouldBe(new OffsetInterceptor(1).MeasureDuration(duration, TimeProvider.System));
         new OffsetInterceptor(1).ObserveWith(observer).ShouldBe(new OffsetInterceptor(1).ObserveWith(observer));
-        new OffsetInterceptor(1).CountInterceptorCalls(counter).ShouldNotBe(new OffsetInterceptor(2).CountInterceptorCalls(counter));
+        new OffsetInterceptor(1).CountCalls(counter).ShouldNotBe(new OffsetInterceptor(2).CountCalls(counter));
     }
 
     [Fact]

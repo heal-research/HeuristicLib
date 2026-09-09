@@ -44,8 +44,8 @@ public class EvolutionaryGenerationBudgetTests
         states.Count.ShouldBe(3);
         states.All(state => state.Population.EvaluatedCandidates.Count == 6).ShouldBeTrue();
         states.SelectMany(state => state.Population.EvaluatedCandidates)
-              .All(solution => solution.ObjectiveVector.Count == 2)
-              .ShouldBeTrue();
+            .All(solution => solution.ObjectiveVector.Count == 2)
+            .ShouldBeTrue();
     }
 
     [Fact]

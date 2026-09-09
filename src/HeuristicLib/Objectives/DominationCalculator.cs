@@ -165,8 +165,8 @@ public static class DominationCalculator
             if (relation == DominanceRelation.Equal)
             {
                 relation = dominateOnEqualQualities
-                  ? DominanceRelation.Dominates
-                  : DominanceRelation.Incomparable;
+                    ? DominanceRelation.Dominates
+                    : DominanceRelation.Incomparable;
             }
 
             switch (relation)
@@ -212,8 +212,8 @@ public static class DominationCalculator
             if (relation == DominanceRelation.Equal)
             {
                 relation = dominateOnEqualQualities
-                  ? DominanceRelation.Dominates
-                  : DominanceRelation.Incomparable;
+                    ? DominanceRelation.Dominates
+                    : DominanceRelation.Incomparable;
             }
 
             switch (relation)

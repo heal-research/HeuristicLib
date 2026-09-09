@@ -93,7 +93,7 @@ public class RoleBindingTests
             var forMethod = typeof(ExecutionInstanceRegistryResolverExtensions)
                 .GetMethods(BindingFlags.Public | BindingFlags.Static)
                 .Single(method => method.Name == nameof(ExecutionInstanceRegistryResolverExtensions.For)
-                                  && method.GetGenericArguments().Length == typeArguments.Length)
+                    && method.GetGenericArguments().Length == typeArguments.Length)
                 .MakeGenericMethod(typeArguments);
             receiver = forMethod.Invoke(null, [registry])!;
         }
@@ -101,7 +101,7 @@ public class RoleBindingTests
         var tryResolve = extensions
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Single(method => method.Name == "TryResolve"
-                              && method.GetParameters()[0].ParameterType.Name.StartsWith(viaResolver ? "ExecutionInstanceResolver" : nameof(ExecutionInstanceRegistry), StringComparison.Ordinal))
+                && method.GetParameters()[0].ParameterType.Name.StartsWith(viaResolver ? "ExecutionInstanceResolver" : nameof(ExecutionInstanceRegistry), StringComparison.Ordinal))
             .MakeGenericMethod(typeArguments);
         var arguments = new[] { receiver, BoundOperators[role], null, null };
         tryResolve.Invoke(null, arguments);

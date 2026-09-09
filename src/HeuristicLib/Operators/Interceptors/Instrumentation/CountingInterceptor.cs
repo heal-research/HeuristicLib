@@ -22,8 +22,8 @@ public sealed record CountingInterceptor<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem, TSearchState>(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, ObservationCounter counter)
         : WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptor)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
@@ -45,12 +45,12 @@ public static class InterceptorCounterExtensions
 {
     extension<TCandidate>(IInterceptor<TCandidate> interceptor)
     {
-        public CountingInterceptor<TCandidate> CountInterceptorCalls(ObservationCounter counter) => new(interceptor, counter);
+        public CountingInterceptor<TCandidate> CountCalls(ObservationCounter counter) => new(interceptor, counter);
 
-        public CountingInterceptor<TCandidate> CountInterceptorCalls(out ObservationCounter counter)
+        public CountingInterceptor<TCandidate> CountCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return interceptor.CountInterceptorCalls(counter);
+            return interceptor.CountCalls(counter);
         }
     }
 }

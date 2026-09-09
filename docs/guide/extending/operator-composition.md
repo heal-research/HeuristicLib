@@ -173,14 +173,14 @@ Execution instances are resolved by reference identity, so one evaluator object 
 By default a refiner uses its own plain `ProblemEvaluator`, which is unwrapped and therefore invisible to counting and analysis:
 
 ```csharp
-algorithm.Evaluator = new ProblemEvaluator<...>().CountEvaluatedCandidates(out var counter);
+algorithm.Evaluator = new ProblemEvaluator<...>().CountCandidates(out var counter);
 algorithm.Refiner = parameterFitting.WithImprovementCheck();
 ```
 
 The counter sees only the algorithm's own evaluations here; refinement effort is not measured. Sharing the counting evaluator brings it in:
 
 ```csharp
-var evaluator = new ProblemEvaluator<...>().CountEvaluatedCandidates(out var counter);
+var evaluator = new ProblemEvaluator<...>().CountCandidates(out var counter);
 
 algorithm.Evaluator = evaluator;
 algorithm.Refiner = parameterFitting.WithImprovementCheck(evaluator);
@@ -191,7 +191,7 @@ All three evaluations now increment one counter, so it measures total evaluation
 That counter is what an algorithm terminator reads to stop the run. `AfterOperatorCountTerminator` observes it directly:
 
 ```csharp
-var evaluator = new ProblemEvaluator<...>().CountEvaluatedCandidates(out var counter);
+var evaluator = new ProblemEvaluator<...>().CountCandidates(out var counter);
 
 algorithm.Evaluator = evaluator;
 algorithm.Refiner = parameterFitting.WithImprovementCheck(evaluator);
@@ -217,8 +217,8 @@ algorithm.Refiner = parameterFitting.WithImprovementCheck(evaluator);
 Where counting sits relative to the cache decides what the counter measures:
 
 ```csharp
-new CachingEvaluator<...>(problemEvaluator, keySelector).CountEvaluatedCandidates(out var requests) // cache hits count
-new CachingEvaluator<...>(problemEvaluator.CountEvaluatedCandidates(out var solves), keySelector)   // cache hits do not count
+new CachingEvaluator<...>(problemEvaluator, keySelector).CountCandidates(out var requests) // cache hits count
+new CachingEvaluator<...>(problemEvaluator.CountCandidates(out var solves), keySelector)   // cache hits do not count
 ```
 
 The first counts evaluation requests, the second counts actual problem evaluations. Both are legitimate; documentation for a preset should state which one it chose.
@@ -236,7 +236,7 @@ To attribute refinement effort separately instead of folding it into one counter
 
 ```csharp
 algorithm.Refiner = parameterFitting.WithImprovementCheck(
-    new ProblemEvaluator<...>().CountEvaluatedCandidates(out var refinementCounter));
+    new ProblemEvaluator<...>().CountCandidates(out var refinementCounter));
 ```
 
 ### Refinement evaluation

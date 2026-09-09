@@ -73,8 +73,8 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(IRefinerInstance<TCandidate, TSearchSpace, TProblem> refiner, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
         : RefinerInstance<TCandidate, TSearchSpace, TProblem>
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {

@@ -22,8 +22,8 @@ public static class IntegerVectorRandomExtensions
             return IntegerVector.FromOwnedArray(result);
         }
 
-        public IntegerVector NextIntegerVectorNormal(RealVector mean, RealVector std, IntegerVector minimum, IntegerVector maximum, int length)
-          => random.NextRealVectorNormal(mean, std, length).RoundToIntegerVector(minimum, maximum);
+        public IntegerVector NextIntegerVectorNormal(RealVector mean, RealVector std, IntegerVector minimum, IntegerVector maximum, int length) =>
+            random.NextRealVectorNormal(mean, std, length).RoundToIntegerVector(minimum, maximum);
 
         public int NextIntegerVectorUniformAt(IntegerVector minimum, IntegerVector maximum, int dim)
         {

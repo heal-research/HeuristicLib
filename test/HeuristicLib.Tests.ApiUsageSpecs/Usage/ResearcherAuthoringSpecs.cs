@@ -135,7 +135,7 @@ public class ResearcherAuthoringSpecs
     }
 
     private sealed record PullTowardZeroMutator
-      : SingleCandidateMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        : SingleCandidateMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         public override RealVector MutateCandidate(
           RealVector parent,
@@ -149,7 +149,7 @@ public class ResearcherAuthoringSpecs
     }
 
     private sealed record FirstEvaluatedStateTerminator
-      : StatelessTerminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
+        : StatelessTerminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
         public override bool IsTerminalState(
           SingleSolutionState<RealVector> state,
@@ -161,7 +161,7 @@ public class ResearcherAuthoringSpecs
     }
 
     private sealed record TestFunctionOriginCreator
-      : SingleCandidateCreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        : SingleCandidateCreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         public override RealVector CreateCandidate(
           IRandomNumberGenerator random,

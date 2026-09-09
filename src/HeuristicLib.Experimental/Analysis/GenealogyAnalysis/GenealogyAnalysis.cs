@@ -72,8 +72,8 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
     public void AfterInterception(GenealogyGraph<TCandidate> graph, TSearchState currentState, TProblem problem)
     {
         var ordered = currentState.Population
-                                  .OrderBy(keySelector: x => x.ObjectiveVector, problem.Objective.TotalOrderComparer)
-                                  .ToArray();
+            .OrderBy(keySelector: x => x.ObjectiveVector, problem.Objective.TotalOrderComparer)
+            .ToArray();
         graph.SetAsNewGeneration(ordered.Select(x => x.Candidate), saveSpace);
     }
 

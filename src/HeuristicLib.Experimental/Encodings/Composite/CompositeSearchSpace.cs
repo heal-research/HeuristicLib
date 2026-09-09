@@ -13,8 +13,8 @@ public static class CompositeSearchSpace
         where T1 : class
         where TS1 : class, ISearchSpace<T1>
         where T2 : class
-        where TS2 : class, ISearchSpace<T2>
-        => new(enc1, enc2);
+        where TS2 : class, ISearchSpace<T2> =>
+        new(enc1, enc2);
 }
 
 public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 SearchSpace2) : ISearchSpace<CompositeGenotype<T1, T2>>

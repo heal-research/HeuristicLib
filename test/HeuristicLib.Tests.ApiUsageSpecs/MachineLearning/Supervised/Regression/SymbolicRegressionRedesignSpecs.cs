@@ -237,7 +237,7 @@ public class SymbolicRegressionRedesignSpecs
 
         solution.Candidate.ShouldNotBeSameAs(rawExpression);
         rawExpression.Root.ShouldBeOfType<BinaryExpressionNode>().Left
-          .ShouldBeOfType<NumericConstantExpressionNode>().Value.ShouldBe(1.0);
+            .ShouldBeOfType<NumericConstantExpressionNode>().Value.ShouldBe(1.0);
         evaluator.Counters.FunctionEvaluations.ShouldBeGreaterThan(0);
         */
 

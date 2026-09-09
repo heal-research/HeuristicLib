@@ -60,18 +60,18 @@ public static class TerminatorDurationExtensions
 {
     extension<TCandidate>(ITerminator<TCandidate> terminator)
     {
-        public DurationMeasuringTerminator<TCandidate> MeasureTerminatorDuration(ObservationDuration duration) => new(terminator, duration);
+        public DurationMeasuringTerminator<TCandidate> MeasureDuration(ObservationDuration duration) => new(terminator, duration);
 
-        public DurationMeasuringTerminator<TCandidate> MeasureTerminatorDuration(ObservationDuration duration, TimeProvider timeProvider) =>
+        public DurationMeasuringTerminator<TCandidate> MeasureDuration(ObservationDuration duration, TimeProvider timeProvider) =>
             new(terminator, duration, timeProvider);
 
-        public DurationMeasuringTerminator<TCandidate> MeasureTerminatorDuration(out ObservationDuration duration)
+        public DurationMeasuringTerminator<TCandidate> MeasureDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return new(terminator, duration);
         }
 
-        public DurationMeasuringTerminator<TCandidate> MeasureTerminatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringTerminator<TCandidate> MeasureDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return new(terminator, duration, timeProvider);

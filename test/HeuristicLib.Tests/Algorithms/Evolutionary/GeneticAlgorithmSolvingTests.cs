@@ -247,7 +247,7 @@ public class GeneticAlgorithmSolvingTests
 
         result.Population.Candidates.ShouldBe(streamingResult.Population.Candidates);
         result.Population.EvaluatedCandidates.Select(solution => solution.ObjectiveVector)
-              .ShouldBe(streamingResult.Population.EvaluatedCandidates.Select(solution => solution.ObjectiveVector));
+            .ShouldBe(streamingResult.Population.EvaluatedCandidates.Select(solution => solution.ObjectiveVector));
     }
 
     private static TestFunctionProblem CreateProblem()

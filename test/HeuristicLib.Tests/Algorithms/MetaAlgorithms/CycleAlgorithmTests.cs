@@ -108,8 +108,8 @@ public class CycleAlgorithmTests
         };
 
         var states = cycle.WithMaxIterations(8)
-          .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
-          .ToList();
+            .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+            .ToList();
 
         states.Count.ShouldBe(8);
         states.Select(GetStateStamp).ShouldBe([1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0]);
@@ -182,7 +182,7 @@ public class CycleAlgorithmTests
     }
 
     private sealed record YieldedStateStampingInterceptor
-      : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, YieldedStateStampingInterceptor.ExecutionState>
+        : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, YieldedStateStampingInterceptor.ExecutionState>
     {
         protected override ExecutionState CreateInitialState() => new();
 

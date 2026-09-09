@@ -46,7 +46,7 @@ public class ImprovementCheckingRefinerTests
     public void Refine_WithAnEmptyBatch_ReturnsAnEmptyResultWithoutEvaluating()
     {
         var counter = new ObservationCounter();
-        var refiner = new AddOffsetRefiner(-5).WithImprovementCheck(CreateEvaluator().CountEvaluatorCalls(counter));
+        var refiner = new AddOffsetRefiner(-5).WithImprovementCheck(CreateEvaluator().CountCalls(counter));
 
         Refine(refiner.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry())).ShouldBeEmpty();
 
@@ -57,7 +57,7 @@ public class ImprovementCheckingRefinerTests
     public void Refine_EvaluatesTheOriginalAndTheRefinedCandidates()
     {
         var counter = new ObservationCounter();
-        var refiner = new AddOffsetRefiner(-5).WithImprovementCheck(CreateEvaluator().CountEvaluatedCandidates(counter));
+        var refiner = new AddOffsetRefiner(-5).WithImprovementCheck(CreateEvaluator().CountCandidates(counter));
 
         Refine(refiner.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry()), 10, 20);
 
@@ -69,7 +69,7 @@ public class ImprovementCheckingRefinerTests
     public void Refine_WithASharedCachingEvaluator_LetsALaterEvaluationHitTheCache()
     {
         var counter = new ObservationCounter();
-        var sharedEvaluator = CreateEvaluator().CountEvaluatedCandidates(counter).WithCache();
+        var sharedEvaluator = CreateEvaluator().CountCandidates(counter).WithCache();
         var refiner = new AddOffsetRefiner(-5).WithImprovementCheck(sharedEvaluator);
         var registry = new ExecutionInstanceRegistry();
         var refinerInstance = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
@@ -93,7 +93,7 @@ public class ImprovementCheckingRefinerTests
         var refiner = new AddOffsetRefiner(-5).WithImprovementCheck(sharedEvaluator);
 
         var budgetRegistry = new ExecutionInstanceRegistry().CreateChildRegistry();
-        budgetRegistry.RegisterReplacement(sharedEvaluator, sharedEvaluator.CountEvaluatedCandidates(counter));
+        budgetRegistry.RegisterReplacement(sharedEvaluator, sharedEvaluator.CountCandidates(counter));
 
         Refine(budgetRegistry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
 
@@ -109,7 +109,7 @@ public class ImprovementCheckingRefinerTests
         var refiner = new AddOffsetRefiner(-5).WithImprovementCheck();
 
         var budgetRegistry = new ExecutionInstanceRegistry().CreateChildRegistry();
-        budgetRegistry.RegisterReplacement(algorithmEvaluator, algorithmEvaluator.CountEvaluatedCandidates(counter));
+        budgetRegistry.RegisterReplacement(algorithmEvaluator, algorithmEvaluator.CountCandidates(counter));
 
         Refine(budgetRegistry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
 

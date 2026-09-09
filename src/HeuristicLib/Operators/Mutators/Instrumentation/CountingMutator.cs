@@ -44,20 +44,20 @@ public static class MutatorCounterExtensions
 {
     extension<TCandidate>(IMutator<TCandidate> mutator)
     {
-        public CountingMutator<TCandidate> CountMutatorCalls(ObservationCounter counter) => new(mutator, counter, OperatorCountMetric.Calls);
+        public CountingMutator<TCandidate> CountCalls(ObservationCounter counter) => new(mutator, counter, OperatorCountMetric.Calls);
 
-        public CountingMutator<TCandidate> CountMutatorCalls(out ObservationCounter counter)
+        public CountingMutator<TCandidate> CountCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return mutator.CountMutatorCalls(counter);
+            return mutator.CountCalls(counter);
         }
 
-        public CountingMutator<TCandidate> CountMutatedCandidates(ObservationCounter counter) => new(mutator, counter, OperatorCountMetric.Candidates);
+        public CountingMutator<TCandidate> CountCandidates(ObservationCounter counter) => new(mutator, counter, OperatorCountMetric.Candidates);
 
-        public CountingMutator<TCandidate> CountMutatedCandidates(out ObservationCounter counter)
+        public CountingMutator<TCandidate> CountCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return mutator.CountMutatedCandidates(counter);
+            return mutator.CountCandidates(counter);
         }
     }
 }

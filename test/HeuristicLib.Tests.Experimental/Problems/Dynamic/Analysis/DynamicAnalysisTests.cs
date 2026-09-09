@@ -27,7 +27,7 @@ public class DynamicAnalysisTests
 
         var result = run.GetResult(analysis);
         result.BestPerEpoch.Select(x => (x.candidate, objective: x.objectiveVector[0], x.timing.Epoch))
-              .ShouldBe([(5, 5.0, 0), (3, 3.0, 1), (10, 10.0, 1), (1, 1.0, 2), (4, 4.0, 2)]);
+            .ShouldBe([(5, 5.0, 0), (3, 3.0, 1), (10, 10.0, 1), (1, 1.0, 2), (4, 4.0, 2)]);
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public class DynamicAnalysisTests
 
         var result = run.GetResult(analysis);
         result.BestBeforeChange.Select(x => (x.Candidate, x.ObjectiveValue, x.Timing.Epoch))
-              .ShouldBe([(5, 5.0, 0), (3, 3.0, 1)]);
+            .ShouldBe([(5, 5.0, 0), (3, 3.0, 1)]);
         result.Performance.ShouldBe(4.0);
     }
 

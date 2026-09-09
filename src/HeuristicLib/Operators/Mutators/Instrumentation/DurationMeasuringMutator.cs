@@ -58,17 +58,17 @@ public static class MutatorDurationExtensions
 {
     extension<TCandidate>(IMutator<TCandidate> mutator)
     {
-        public DurationMeasuringMutator<TCandidate> MeasureMutatorDuration(ObservationDuration duration) => new(mutator, duration);
+        public DurationMeasuringMutator<TCandidate> MeasureDuration(ObservationDuration duration) => new(mutator, duration);
 
-        public DurationMeasuringMutator<TCandidate> MeasureMutatorDuration(ObservationDuration duration, TimeProvider timeProvider) => new(mutator, duration, timeProvider);
+        public DurationMeasuringMutator<TCandidate> MeasureDuration(ObservationDuration duration, TimeProvider timeProvider) => new(mutator, duration, timeProvider);
 
-        public DurationMeasuringMutator<TCandidate> MeasureMutatorDuration(out ObservationDuration duration)
+        public DurationMeasuringMutator<TCandidate> MeasureDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return new(mutator, duration);
         }
 
-        public DurationMeasuringMutator<TCandidate> MeasureMutatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringMutator<TCandidate> MeasureDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return new(mutator, duration, timeProvider);

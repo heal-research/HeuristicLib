@@ -20,10 +20,10 @@ public interface IInterceptor<TCandidate> : IOperator
 }
 
 public interface IInterceptorInstance<TCandidate, in TSearchSpace, in TProblem, TSearchState>
-  : IOperatorInstance
-  where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    : IOperatorInstance
+    where TSearchState : class, ISearchState
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

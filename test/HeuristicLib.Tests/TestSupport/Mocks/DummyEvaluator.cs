@@ -10,8 +10,8 @@ public static class DummyEvaluator
 }
 
 internal sealed record DummyEvaluator<TCandidate, TSearchSpace, TProblem> : SingleCandidateEvaluator<TCandidate, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public override ObjectiveVector EvaluateCandidate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => DummyEvaluator.DummyObjectives;
 }

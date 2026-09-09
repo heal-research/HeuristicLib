@@ -41,8 +41,8 @@ public sealed record ChooseOneReplacer<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> childReplacers, WeightedDispatcher<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> dispatcher)
         : MultiReplacerInstance<TCandidate, TSearchSpace, TProblem>(childReplacers)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             dispatcher.Dispatch(

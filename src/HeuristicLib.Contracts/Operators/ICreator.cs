@@ -14,9 +14,9 @@ public interface ICreator<TCandidate> : IOperator
 }
 
 public interface ICreatorInstance<TCandidate, in TSearchSpace, in TProblem>
-  : IOperatorInstance
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    : IOperatorInstance
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

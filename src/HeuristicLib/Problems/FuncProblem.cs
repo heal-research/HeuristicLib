@@ -10,7 +10,7 @@ public static class FuncProblem
 }
 
 public class FuncProblem<TCandidate, TSearchSpace> : SingleSolutionProblem<FuncProblem<TCandidate, TSearchSpace>, TCandidate, TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public FuncProblem(Func<TCandidate, ObjectiveVector> evaluateFunc, TSearchSpace searchSpace, ObjectiveDirections objective) : base(objective, searchSpace)
     {

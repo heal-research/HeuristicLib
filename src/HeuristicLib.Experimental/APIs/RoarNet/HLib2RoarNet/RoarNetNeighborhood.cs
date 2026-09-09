@@ -22,14 +22,14 @@ public readonly struct RoarNetNeighborhood<TG, TS, TP, TM1>(
     private readonly IMoveCreatorInstance<TG, TS, TP, TM1> creator = registry.For<TG, TS, TP>().Resolve(neighborhood.MoveCreator);
     private readonly IMoveEvaluatorInstance<TG, TS, TP, TM1> evaluator = registry.For<TG, TS, TP>().Resolve(neighborhood.MoveEvaluator);
 
-    private IRoarNetMove<TG> MakeMove(TM1 move)
-        => new RoarNetMove<TG, TS, TP, TM1>(move, this);
+    private IRoarNetMove<TG> MakeMove(TM1 move) =>
+        new RoarNetMove<TG, TS, TP, TM1>(move, this);
 
-    public IRoarNetSolution<TG> ApplyMove(TM1 move, IRoarNetSolution<TG> solution)
-        => new RoarNetSolution<TG>(applier.Apply(solution.Genotype, move, rng, problem.SearchSpace, problem.Problem), problem);
+    public IRoarNetSolution<TG> ApplyMove(TM1 move, IRoarNetSolution<TG> solution) =>
+        new RoarNetSolution<TG>(applier.Apply(solution.Genotype, move, rng, problem.SearchSpace, problem.Problem), problem);
 
-    public IEnumerable<IRoarNetMove<TG>> Moves(IRoarNetSolution<TG> solution)
-        => creator.Moves(solution.Genotype, rng, problem.SearchSpace, problem.Problem).Select(MakeMove);
+    public IEnumerable<IRoarNetMove<TG>> Moves(IRoarNetSolution<TG> solution) =>
+        creator.Moves(solution.Genotype, rng, problem.SearchSpace, problem.Problem).Select(MakeMove);
 
     public IRoarNetMove<TG>? RandomMove(IRoarNetSolution<TG> solution)
     {
@@ -37,8 +37,8 @@ public readonly struct RoarNetNeighborhood<TG, TS, TP, TM1>(
         return m is not null ? new RoarNetMove<TG, TS, TP, TM1>(m, this) : null;
     }
 
-    public IEnumerable<IRoarNetMove<TG>> RandomMoveWithOutReplacement(IRoarNetSolution<TG> solution)
-        => creator.Moves(solution.Genotype, rng, problem.SearchSpace, problem.Problem).Select(MakeMove);
+    public IEnumerable<IRoarNetMove<TG>> RandomMoveWithOutReplacement(IRoarNetSolution<TG> solution) =>
+        creator.Moves(solution.Genotype, rng, problem.SearchSpace, problem.Problem).Select(MakeMove);
 
     public double? LowerBoundIncrement(TM1 move, IRoarNetSolution<TG> solution)
     {

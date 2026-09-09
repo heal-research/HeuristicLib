@@ -80,8 +80,8 @@ public class RefinerConfigurationEqualityTests
     public void CountingRefiner_WithSameCounterAndMetric_IsEqual()
     {
         var counter = new ObservationCounter();
-        var left = new AddOffsetRefiner(1).CountRefinerCalls(counter);
-        var right = new AddOffsetRefiner(1).CountRefinerCalls(counter);
+        var left = new AddOffsetRefiner(1).CountCalls(counter);
+        var right = new AddOffsetRefiner(1).CountCalls(counter);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -91,8 +91,8 @@ public class RefinerConfigurationEqualityTests
     public void CountingRefiner_WithDifferentMetric_IsNotEqual()
     {
         var counter = new ObservationCounter();
-        var left = new AddOffsetRefiner(1).CountRefinerCalls(counter);
-        var right = new AddOffsetRefiner(1).CountRefinedCandidates(counter);
+        var left = new AddOffsetRefiner(1).CountCalls(counter);
+        var right = new AddOffsetRefiner(1).CountCandidates(counter);
 
         left.ShouldNotBe(right);
     }
@@ -100,8 +100,8 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void CountingRefiner_WithDifferentCounter_IsNotEqual()
     {
-        var left = new AddOffsetRefiner(1).CountRefinerCalls(new ObservationCounter());
-        var right = new AddOffsetRefiner(1).CountRefinerCalls(new ObservationCounter());
+        var left = new AddOffsetRefiner(1).CountCalls(new ObservationCounter());
+        var right = new AddOffsetRefiner(1).CountCalls(new ObservationCounter());
 
         left.ShouldNotBe(right);
     }
@@ -110,8 +110,8 @@ public class RefinerConfigurationEqualityTests
     public void CountingRefiner_WithDifferentChildRefiner_IsNotEqual()
     {
         var counter = new ObservationCounter();
-        var left = new AddOffsetRefiner(1).CountRefinerCalls(counter);
-        var right = new AddOffsetRefiner(2).CountRefinerCalls(counter);
+        var left = new AddOffsetRefiner(1).CountCalls(counter);
+        var right = new AddOffsetRefiner(2).CountCalls(counter);
 
         left.ShouldNotBe(right);
     }
@@ -120,8 +120,8 @@ public class RefinerConfigurationEqualityTests
     public void DurationMeasuringRefiner_WithSameDurationAndTimeProvider_IsEqual()
     {
         var duration = new ObservationDuration();
-        var left = new AddOffsetRefiner(1).MeasureRefinerDuration(duration, TimeProvider.System);
-        var right = new AddOffsetRefiner(1).MeasureRefinerDuration(duration, TimeProvider.System);
+        var left = new AddOffsetRefiner(1).MeasureDuration(duration, TimeProvider.System);
+        var right = new AddOffsetRefiner(1).MeasureDuration(duration, TimeProvider.System);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -130,8 +130,8 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringRefiner_WithDifferentDuration_IsNotEqual()
     {
-        var left = new AddOffsetRefiner(1).MeasureRefinerDuration(new ObservationDuration());
-        var right = new AddOffsetRefiner(1).MeasureRefinerDuration(new ObservationDuration());
+        var left = new AddOffsetRefiner(1).MeasureDuration(new ObservationDuration());
+        var right = new AddOffsetRefiner(1).MeasureDuration(new ObservationDuration());
 
         left.ShouldNotBe(right);
     }
@@ -140,8 +140,8 @@ public class RefinerConfigurationEqualityTests
     public void DurationMeasuringRefiner_WithDifferentChildRefiner_IsNotEqual()
     {
         var duration = new ObservationDuration();
-        var left = new AddOffsetRefiner(1).MeasureRefinerDuration(duration);
-        var right = new AddOffsetRefiner(2).MeasureRefinerDuration(duration);
+        var left = new AddOffsetRefiner(1).MeasureDuration(duration);
+        var right = new AddOffsetRefiner(2).MeasureDuration(duration);
 
         left.ShouldNotBe(right);
     }
@@ -220,10 +220,10 @@ public class RefinerConfigurationEqualityTests
     {
         var counter = new ObservationCounter();
         var left = PipelineRefiner.Create(
-            new AddOffsetRefiner(1).CountRefinerCalls(counter),
+            new AddOffsetRefiner(1).CountCalls(counter),
             new AddOffsetRefiner(2));
         var right = PipelineRefiner.Create(
-            new AddOffsetRefiner(1).CountRefinerCalls(counter),
+            new AddOffsetRefiner(1).CountCalls(counter),
             new AddOffsetRefiner(2));
 
         left.ShouldBe(right);
@@ -235,10 +235,10 @@ public class RefinerConfigurationEqualityTests
     {
         var counter = new ObservationCounter();
         var left = PipelineRefiner.Create(
-            new AddOffsetRefiner(1).CountRefinerCalls(counter),
+            new AddOffsetRefiner(1).CountCalls(counter),
             new AddOffsetRefiner(2));
         var right = PipelineRefiner.Create(
-            new AddOffsetRefiner(9).CountRefinerCalls(counter),
+            new AddOffsetRefiner(9).CountCalls(counter),
             new AddOffsetRefiner(2));
 
         left.ShouldNotBe(right);
@@ -289,8 +289,8 @@ public class RefinerConfigurationEqualityTests
 
         private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IRefinerInstance<int, TSearchSpace, TProblem>> childRefiners)
             : MultiRefinerInstance<int, TSearchSpace, TProblem>(childRefiners)
-              where TSearchSpace : class, ISearchSpace<int>
-              where TProblem : class, IProblem<int, TSearchSpace>
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
         {
             public override IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildRefiners[0].Refine(candidates, random, searchSpace, problem);

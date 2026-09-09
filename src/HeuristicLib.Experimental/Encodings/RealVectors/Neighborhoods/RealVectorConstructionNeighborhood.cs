@@ -15,6 +15,6 @@ public record RealVectorConstructionNeighborhood : RealVectorNeighborhood<double
         }
     }
 
-    public override RealVector Apply(RealVector genotype, double move, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace> problem)
-        => new(genotype.Append(move));
+    public override RealVector Apply(RealVector genotype, double move, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace> problem) =>
+        new(genotype.Append(move));
 }

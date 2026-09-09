@@ -16,8 +16,8 @@ public sealed record ParetoCrowdingReplacer<TCandidate>
         DominateOnEqualities = dominateOnEqualities;
     }
 
-    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
-        => ParetoCrowdingReplacer.Replace(previousPopulation, offspringPopulation, objective, count, DominateOnEqualities);
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
+        ParetoCrowdingReplacer.Replace(previousPopulation, offspringPopulation, objective, count, DominateOnEqualities);
 }
 
 public static class ParetoCrowdingReplacer

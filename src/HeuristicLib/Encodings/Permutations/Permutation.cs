@@ -53,8 +53,8 @@ public sealed class Permutation : Vector<int>, IEquatable<Permutation>
         return true;
     }
 
-    public static Permutation CreateRandom(int length, IRandomNumberGenerator rng)
-      => rng.NextPermutation(length);
+    public static Permutation CreateRandom(int length, IRandomNumberGenerator rng) =>
+        rng.NextPermutation(length);
 
     public static Permutation Range(int count)
     {

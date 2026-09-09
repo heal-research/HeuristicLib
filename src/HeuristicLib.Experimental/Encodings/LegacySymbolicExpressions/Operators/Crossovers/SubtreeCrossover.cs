@@ -131,10 +131,8 @@ public record SubtreeCrossover : SymbolicExpressionTreeCrossover
             // select from internal node if possible
             // select internal crossover point or leaf
             crossoverPoint = internalCrossoverPoints.Count > 0
-              ? internalCrossoverPoints[random.NextInt(internalCrossoverPoints.Count)]
-              :
-              // otherwise select external node
-              leafCrossoverPoints[random.NextInt(leafCrossoverPoints.Count)];
+                ? internalCrossoverPoints[random.NextInt(internalCrossoverPoints.Count)]
+                : leafCrossoverPoints[random.NextInt(leafCrossoverPoints.Count)]; // otherwise select external node
         }
         else if (leafCrossoverPoints.Count > 0)
         {

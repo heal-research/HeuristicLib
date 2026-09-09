@@ -9,8 +9,8 @@ public record MutationNeighborhood<TG, TS, TP>(StatelessMutator<TG, TS, TP> muta
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
 {
-    public override TG Apply(TG genotype, int move, IRandomNumberGenerator random, TS searchSpace, TP problem)
-        => mutator.Mutate([genotype], random.Fork(move), searchSpace, problem)[0];
+    public override TG Apply(TG genotype, int move, IRandomNumberGenerator random, TS searchSpace, TP problem) =>
+        mutator.Mutate([genotype], random.Fork(move), searchSpace, problem)[0];
 
 #pragma warning disable S2190
     public override IEnumerable<int> Moves(TG genotype, IRandomNumberGenerator random, TS searchSpace, TP problem)

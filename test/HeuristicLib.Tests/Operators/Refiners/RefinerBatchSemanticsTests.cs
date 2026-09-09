@@ -51,7 +51,7 @@ public class RefinerBatchSemanticsTests
         IReadOnlyList<Individual>? observedRefined = null;
         IReadOnlyList<Individual>? observedCandidates = null;
         var instance = new DropLastRefiner()
-            .CountRefinedCandidates(counter)
+            .CountCandidates(counter)
             .ObserveWith<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>((refined, candidates, _, _) =>
             {
                 observedRefined = refined;
@@ -87,8 +87,8 @@ public class RefinerBatchSemanticsTests
         yield return ("iterated", noChange.AsIterated(3));
         yield return ("choose one", ChooseOneRefiner.Create(noChange));
         yield return ("rate limited", new AddOffsetRefiner(1).WithRate(0.0));
-        yield return ("counting", noChange.CountRefinedCandidates(new ObservationCounter()));
-        yield return ("duration measuring", noChange.MeasureRefinerDuration(new ObservationDuration()));
+        yield return ("counting", noChange.CountCandidates(new ObservationCounter()));
+        yield return ("duration measuring", noChange.MeasureDuration(new ObservationDuration()));
         yield return ("observable", noChange.ObserveWith(_ => { }));
         yield return ("improvement checking", noChange.WithImprovementCheck());
         yield return ("single candidate", new IdentityRefiner());

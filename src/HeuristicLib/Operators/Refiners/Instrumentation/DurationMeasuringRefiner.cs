@@ -28,8 +28,8 @@ public sealed record DurationMeasuringRefiner<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner, ObservationDuration duration, TimeProvider timeProvider)
         : WrappingRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiner)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -59,19 +59,19 @@ public static class RefinerDurationExtensions
 {
     extension<TCandidate>(IRefiner<TCandidate> refiner)
     {
-        public DurationMeasuringRefiner<TCandidate> MeasureRefinerDuration(ObservationDuration duration) =>
+        public DurationMeasuringRefiner<TCandidate> MeasureDuration(ObservationDuration duration) =>
             new(refiner, duration);
 
-        public DurationMeasuringRefiner<TCandidate> MeasureRefinerDuration(ObservationDuration duration, TimeProvider timeProvider) =>
+        public DurationMeasuringRefiner<TCandidate> MeasureDuration(ObservationDuration duration, TimeProvider timeProvider) =>
             new(refiner, duration, timeProvider);
 
-        public DurationMeasuringRefiner<TCandidate> MeasureRefinerDuration(out ObservationDuration duration)
+        public DurationMeasuringRefiner<TCandidate> MeasureDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return new(refiner, duration);
         }
 
-        public DurationMeasuringRefiner<TCandidate> MeasureRefinerDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringRefiner<TCandidate> MeasureDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return new(refiner, duration, timeProvider);

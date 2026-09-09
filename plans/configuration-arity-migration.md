@@ -265,7 +265,7 @@ The state looked like it had to stay, on the grounds that it is what these two o
 
 What this bought, beyond the arity:
 
-- **Composite factories became inferable.** `terminator.And(other)` previously could not infer its state — it sat in the extension block's type parameters with nothing to infer it from, so callers wrote `And<Permutation, PopulationState<Permutation>>(...)`. The same held for `Or`, `CountTerminatorCalls` and `MeasureTerminatorDuration`. All of them now take no explicit type arguments at all.
+- **Composite factories became inferable.** `terminator.And(other)` previously could not infer its state — it sat in the extension block's type parameters with nothing to infer it from, so callers wrote `And<Permutation, PopulationState<Permutation>>(...)`. The same held for `Or`, `CountCalls` and `MeasureDuration`. All of them now take no explicit type arguments at all.
 - **The pass-through composites lost a type argument each.** `AllTerminator`, `AnyTerminator`, `PipelineInterceptor` and the four instrumentation wrappers never read the state; they only forwarded it. They are agnostic in it now, like the rest of the composite layer. `ObservableTerminator` and `ObservableInterceptor` keep one, renamed `TObserverSearchState`, because their observers really are written for a state — the `ObservableMutator` pattern.
 - **The state-aware bucket in `OperatorTopologyTests` is gone.** All nine roles are now checked by one theory: a migrated configuration names the candidate and nothing else.
 
@@ -305,7 +305,7 @@ The one cost is that `ExecutionInstanceResolver` became a class: structs cannot 
 
 So `IAlgorithm<TCandidate, TSearchState> : IAlgorithm<TCandidate>` exists, and membership is decided by **produced versus consumed**. `Complete` returns `TSearchState`, so its signature cannot be written on a type that does not name it — forced. The erased form keeps everything that does not need it: heterogeneous collections, composite children, and the whole `Resolve` / `ResolveOptional` / `TryResolve` family, which names all four run types at the call site regardless.
 
-**Terminators and interceptors do not follow it back.** Their state is a parameter of an *instance* method, and nothing on that side has a return type mentioning it — `terminator.And(other)` yields `AllTerminator<TCandidate>`, `CountTerminatorCalls` yields `CountingTerminator<TCandidate>`. Restoring it would buy only an earlier report of a mismatch that pre-flight already catches, at the price of making two of the twelve roles state what they are written for while the other ten do not. Revisit only if the pre-flight message proves to be a common stumble in practice.
+**Terminators and interceptors do not follow it back.** Their state is a parameter of an *instance* method, and nothing on that side has a return type mentioning it — `terminator.And(other)` yields `AllTerminator<TCandidate>`, `CountCalls` yields `CountingTerminator<TCandidate>`. Restoring it would buy only an earlier report of a mismatch that pre-flight already catches, at the price of making two of the twelve roles state what they are written for while the other ten do not. Revisit only if the pre-flight message proves to be a common stumble in practice.
 
 **Package 3 stragglers: complete, and green.** Four types held `IOperator<TExecutionInstance>` after the nine roles landed, and each was a different kind of leftover.
 
@@ -590,8 +590,9 @@ narrowed analysis is shown running.
 
 ## Before the documentation rewrite: is the overload surface necessary?
 
-Open question, to be answered before the docs are rewritten, because documentation written against a surface that is
-about to be unified would be rewritten twice.
+Answered. Recorded here so the documentation rewrite can start, and so the next role added does not re-litigate
+it. The question was posed because documentation written against a surface that is about to be unified would be
+rewritten twice; the conclusion is that the surface stays as it is, with one naming fix already landed.
 
 The impression that prompted this: the migration added a great many extension-method overloads, and a surface that
 grows that way is usually a sign that the design is expressing something the type system should express once.
@@ -639,6 +640,45 @@ Method: count first, then group by why each overload exists, then attack the lar
 survive scrutiny. Anything that stays should be stated once as a rule in the developer guidelines, so the next role
 added does not re-litigate it.
 
+### The answers
+
+**1. The resolver triple does not collapse, and the constraint is not the one the question assumed.** It is stronger.
+`ICreator<TCandidate>.CreateExecutionInstance<TSearchSpace, TProblem>` is a *generic method*: it is universally
+quantified over the run's types, and the caller chooses them at the call. A type parameter on the interface — the
+"role marker carrying its instance type as an associated type" the question proposed — can only capture a type, not a
+type constructor applied later. So no interface-level restructuring reaches it; the per-role declaration is forced by
+what the method quantifies over, not merely by nominal role contracts.
+
+**2. Two receivers per role is the right count, and both are load-bearing.**
+`registry.Resolve<TCandidate, TSearchSpace, TProblem>(creator)` is the canonical form: the registry is generic-less, so
+it cannot infer the triple and the call site names it. `resolver.Resolve(creator)` binds that same registry to a
+resolver that already knows the triple, so the call infers everything and names nothing — and under the hood it relays
+straight to the registry. They are one mechanism with two spellings, not two mechanisms. Keeping only the canonical
+form would put the triple on every call site inside a creation method; keeping only the resolver would remove the form
+that the resolver is defined in terms of. Both stay.
+
+This is what makes the family's scaling acceptable under the axis rule below: adding a role costs a fixed, known set of
+declarations that the role's author writes once, and it costs nothing to any existing role.
+
+**3. Instrumentation x role is justified, for the same reason.** Adding an operator role does not touch any existing
+instrumentation, and adding an instrumentation concern does not touch any existing role — each new cell is written
+explicitly by whoever adds the row or the column. Generalising instrumentation to a role-agnostic "operator" was tried
+again here and does not work without paying for it on the hot path: a uniform `Invoke` erases the per-role signature
+and violates the zero-overhead rule in the developer guidelines (§ 7.1 / § 8.1), and `DispatchProxy` violates § 7.1
+outright. A source generator is the only route that keeps both the arity and the performance, and it is not worth
+opening on this branch.
+
+What *was* wrong was the naming: the instrumentation members were spelled inconsistently across roles. That is fixed,
+and it is the only change this question produced.
+
+**The rule, so the next role does not re-litigate it.** Per-role duplication is acceptable when a role's author writes
+it once and existing roles are unaffected. Multiplicative scaling over an axis the role's author does not know exists
+is not. The resolve family and the instrumentation family are both the first kind. Call sites stay minimal regardless:
+a user writes `resolver.Resolve(creator)` or `registry.TryResolve(config, out var instance)` and nothing more.
+
+**Consequence for the exit criteria.** Criterion 5 is met with no unification landing, so the documentation rewrite
+(criterion 6) is unblocked.
+
 ## Documentation backlog
 
 Deferred until the API settles, recorded here so nothing is rediscovered. Four of six guide pages that were compiled
@@ -653,7 +693,7 @@ merely stale.
 | `docs/contributing/architecture/analyzers.md` | 302 | `Analyzer.BestQuality(algorithm.Evaluator)` — CS0411; this factory has never had a compiling form |
 | `docs/examples/custom-problem.md` | 68, 72 | `SingleSolutionProblem<TCandidate, TSearchSpace>` — CS0305, the base takes a self type first |
 | `docs/examples/multi-objective.md` | 26, 31 | `RealVectorSearchSpace` — CS0246, the type is `BoundedRealVectorSearchSpace` |
-| `docs/guide/extending/operator-composition.md` | 176, 177, 185, 186, 196, 197, 213, 214, 238 | Nine assignments to `init`-only properties; needs `with`. Also `CountEvaluatedCandidates` lives in `HEAL.HeuristicLib.Operators.Evaluators` while every sibling helper is in `HEAL.HeuristicLib.Operators`, and the page shows no `using` block |
+| `docs/guide/extending/operator-composition.md` | 176, 177, 185, 186, 196, 197, 213, 214, 238 | Nine assignments to `init`-only properties; needs `with`. Also `CountCandidates` lives in `HEAL.HeuristicLib.Operators.Evaluators` while every sibling helper is in `HEAL.HeuristicLib.Operators`, and the page shows no `using` block |
 
 The first two stop compiling for the reason the analysis layer still carries `TSearchSpace`/`TProblem`; they are written
 against the shape that layer should have, so they start compiling on their own once it is fixed rather than needing an
@@ -687,5 +727,5 @@ edit.
 2. Every execution instance contract still names both.
 3. One resolution path: the per-role overloads on `ExecutionInstanceResolver`, with no transitional overloads left.
 4. All four suites, formatting, style and analyzer verification green.
-5. The overload surface question above is answered, and any unification it calls for has landed, before the documentation is rewritten.
+5. **Done.** The overload surface question above is answered: the surface stays as it is, the instrumentation naming fix has landed, and no unification is called for. The documentation rewrite is unblocked.
 6. `NoviceFrictionSpecs` and the seven documentation pages reflect the new arities.

@@ -60,8 +60,8 @@ public sealed record RefinementEvaluator<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IRefinerInstance<TCandidate, TSearchSpace, TProblem> refiner)
         : EvaluatorInstance<TCandidate, TSearchSpace, TProblem>
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {

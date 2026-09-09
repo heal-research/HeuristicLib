@@ -8,7 +8,7 @@ public sealed class DefunTreeNode : SymbolicExpressionTreeNode
     }
 
     private DefunTreeNode(DefunTreeNode original)
-      : base(original)
+        : base(original)
     {
         NumberOfArguments = original.NumberOfArguments;
         FunctionName = original.FunctionName;

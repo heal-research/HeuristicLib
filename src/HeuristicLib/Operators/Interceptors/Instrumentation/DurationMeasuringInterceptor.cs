@@ -61,19 +61,19 @@ public static class InterceptorDurationExtensions
 {
     extension<TCandidate>(IInterceptor<TCandidate> interceptor)
     {
-        public DurationMeasuringInterceptor<TCandidate> MeasureInterceptorDuration(ObservationDuration duration) =>
+        public DurationMeasuringInterceptor<TCandidate> MeasureDuration(ObservationDuration duration) =>
             new(interceptor, duration);
 
-        public DurationMeasuringInterceptor<TCandidate> MeasureInterceptorDuration(ObservationDuration duration, TimeProvider timeProvider) =>
+        public DurationMeasuringInterceptor<TCandidate> MeasureDuration(ObservationDuration duration, TimeProvider timeProvider) =>
             new(interceptor, duration, timeProvider);
 
-        public DurationMeasuringInterceptor<TCandidate> MeasureInterceptorDuration(out ObservationDuration duration)
+        public DurationMeasuringInterceptor<TCandidate> MeasureDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return new(interceptor, duration);
         }
 
-        public DurationMeasuringInterceptor<TCandidate> MeasureInterceptorDuration(
+        public DurationMeasuringInterceptor<TCandidate> MeasureDuration(
             out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();

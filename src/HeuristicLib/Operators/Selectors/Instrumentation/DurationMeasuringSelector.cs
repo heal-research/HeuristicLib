@@ -29,8 +29,8 @@ public sealed record DurationMeasuringSelector<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, ObservationDuration duration, TimeProvider timeProvider)
         : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(childSelector)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -60,18 +60,18 @@ public static class SelectorDurationExtensions
 {
     extension<TCandidate>(ISelector<TCandidate> selector)
     {
-        public DurationMeasuringSelector<TCandidate> MeasureSelectorDuration(ObservationDuration duration) => new(selector, duration);
+        public DurationMeasuringSelector<TCandidate> MeasureDuration(ObservationDuration duration) => new(selector, duration);
 
-        public DurationMeasuringSelector<TCandidate> MeasureSelectorDuration(ObservationDuration duration, TimeProvider timeProvider) =>
+        public DurationMeasuringSelector<TCandidate> MeasureDuration(ObservationDuration duration, TimeProvider timeProvider) =>
             new(selector, duration, timeProvider);
 
-        public DurationMeasuringSelector<TCandidate> MeasureSelectorDuration(out ObservationDuration duration)
+        public DurationMeasuringSelector<TCandidate> MeasureDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return new(selector, duration);
         }
 
-        public DurationMeasuringSelector<TCandidate> MeasureSelectorDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringSelector<TCandidate> MeasureDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return new(selector, duration, timeProvider);

@@ -44,12 +44,12 @@ public static class TerminatorCounterExtensions
 {
     extension<TCandidate>(ITerminator<TCandidate> terminator)
     {
-        public CountingTerminator<TCandidate> CountTerminatorCalls(ObservationCounter counter) => new(terminator, counter);
+        public CountingTerminator<TCandidate> CountCalls(ObservationCounter counter) => new(terminator, counter);
 
-        public CountingTerminator<TCandidate> CountTerminatorCalls(out ObservationCounter counter)
+        public CountingTerminator<TCandidate> CountCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return terminator.CountTerminatorCalls(counter);
+            return terminator.CountCalls(counter);
         }
     }
 }

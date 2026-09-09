@@ -35,8 +35,8 @@ public sealed record LimitEvaluator<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch)
         : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         private readonly ObservationCounter counter = new();
 

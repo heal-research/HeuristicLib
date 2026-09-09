@@ -24,8 +24,8 @@ public sealed record CountingSelector<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, ObservationCounter counter, OperatorCountMetric metric)
         : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(childSelector)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -46,20 +46,20 @@ public static class SelectorCounterExtensions
 {
     extension<TCandidate>(ISelector<TCandidate> selector)
     {
-        public CountingSelector<TCandidate> CountSelectorCalls(ObservationCounter counter) => new(selector, counter, OperatorCountMetric.Calls);
+        public CountingSelector<TCandidate> CountCalls(ObservationCounter counter) => new(selector, counter, OperatorCountMetric.Calls);
 
-        public CountingSelector<TCandidate> CountSelectorCalls(out ObservationCounter counter)
+        public CountingSelector<TCandidate> CountCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return selector.CountSelectorCalls(counter);
+            return selector.CountCalls(counter);
         }
 
-        public CountingSelector<TCandidate> CountSelectedCandidates(ObservationCounter counter) => new(selector, counter, OperatorCountMetric.Candidates);
+        public CountingSelector<TCandidate> CountCandidates(ObservationCounter counter) => new(selector, counter, OperatorCountMetric.Candidates);
 
-        public CountingSelector<TCandidate> CountSelectedCandidates(out ObservationCounter counter)
+        public CountingSelector<TCandidate> CountCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return selector.CountSelectedCandidates(counter);
+            return selector.CountCandidates(counter);
         }
     }
 }

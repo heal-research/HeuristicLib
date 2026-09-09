@@ -156,8 +156,8 @@ public class SelectorConfigurationEqualityTests
     public void CountingSelector_WithSameCounterAndMetric_IsEqual()
     {
         var counter = new ObservationCounter();
-        var left = new RangeSelector(1).CountSelectorCalls(counter);
-        var right = new RangeSelector(1).CountSelectorCalls(counter);
+        var left = new RangeSelector(1).CountCalls(counter);
+        var right = new RangeSelector(1).CountCalls(counter);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -167,8 +167,8 @@ public class SelectorConfigurationEqualityTests
     public void CountingSelector_WithDifferentMetric_IsNotEqual()
     {
         var counter = new ObservationCounter();
-        var left = new RangeSelector(1).CountSelectorCalls(counter);
-        var right = new RangeSelector(1).CountSelectedCandidates(counter);
+        var left = new RangeSelector(1).CountCalls(counter);
+        var right = new RangeSelector(1).CountCandidates(counter);
 
         left.ShouldNotBe(right);
     }
@@ -176,8 +176,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void CountingSelector_WithDifferentCounter_IsNotEqual()
     {
-        var left = new RangeSelector(1).CountSelectorCalls(new ObservationCounter());
-        var right = new RangeSelector(1).CountSelectorCalls(new ObservationCounter());
+        var left = new RangeSelector(1).CountCalls(new ObservationCounter());
+        var right = new RangeSelector(1).CountCalls(new ObservationCounter());
 
         left.ShouldNotBe(right);
     }
@@ -186,8 +186,8 @@ public class SelectorConfigurationEqualityTests
     public void CountingSelector_WithDifferentChildSelector_IsNotEqual()
     {
         var counter = new ObservationCounter();
-        var left = new RangeSelector(1).CountSelectorCalls(counter);
-        var right = new RangeSelector(2).CountSelectorCalls(counter);
+        var left = new RangeSelector(1).CountCalls(counter);
+        var right = new RangeSelector(2).CountCalls(counter);
 
         left.ShouldNotBe(right);
     }
@@ -196,8 +196,8 @@ public class SelectorConfigurationEqualityTests
     public void DurationMeasuringSelector_WithSameDurationAndTimeProvider_IsEqual()
     {
         var duration = new ObservationDuration();
-        var left = new RangeSelector(1).MeasureSelectorDuration(duration, TimeProvider.System);
-        var right = new RangeSelector(1).MeasureSelectorDuration(duration, TimeProvider.System);
+        var left = new RangeSelector(1).MeasureDuration(duration, TimeProvider.System);
+        var right = new RangeSelector(1).MeasureDuration(duration, TimeProvider.System);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -206,8 +206,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringSelector_WithDifferentDuration_IsNotEqual()
     {
-        var left = new RangeSelector(1).MeasureSelectorDuration(new ObservationDuration(), TimeProvider.System);
-        var right = new RangeSelector(1).MeasureSelectorDuration(new ObservationDuration(), TimeProvider.System);
+        var left = new RangeSelector(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
+        var right = new RangeSelector(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
 
         left.ShouldNotBe(right);
     }
@@ -216,8 +216,8 @@ public class SelectorConfigurationEqualityTests
     public void DurationMeasuringSelector_WithDifferentChildSelector_IsNotEqual()
     {
         var duration = new ObservationDuration();
-        var left = new RangeSelector(1).MeasureSelectorDuration(duration, TimeProvider.System);
-        var right = new RangeSelector(2).MeasureSelectorDuration(duration, TimeProvider.System);
+        var left = new RangeSelector(1).MeasureDuration(duration, TimeProvider.System);
+        var right = new RangeSelector(2).MeasureDuration(duration, TimeProvider.System);
 
         left.ShouldNotBe(right);
     }
@@ -290,8 +290,8 @@ public class SelectorConfigurationEqualityTests
 
         private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ISelectorInstance<int, TSearchSpace, TProblem>> childSelectors)
             : MultiSelectorInstance<int, TSearchSpace, TProblem>(childSelectors)
-              where TSearchSpace : class, ISearchSpace<int>
-              where TProblem : class, IProblem<int, TSearchSpace>
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
         {
             public override IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildSelectors[0].Select(population, objective, count, random, searchSpace, problem);

@@ -24,8 +24,8 @@ public sealed record CountingEvaluator<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationCounter counter, OperatorCountMetric metric)
         : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -46,21 +46,21 @@ public static class EvaluatorCounterExtensions
 {
     extension<TCandidate>(IEvaluator<TCandidate> evaluator)
     {
-        public CountingEvaluator<TCandidate> CountEvaluatorCalls(ObservationCounter counter) => new(evaluator, counter, OperatorCountMetric.Calls);
+        public CountingEvaluator<TCandidate> CountCalls(ObservationCounter counter) => new(evaluator, counter, OperatorCountMetric.Calls);
 
-        public CountingEvaluator<TCandidate> CountEvaluatorCalls(out ObservationCounter counter)
+        public CountingEvaluator<TCandidate> CountCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return evaluator.CountEvaluatorCalls(counter);
+            return evaluator.CountCalls(counter);
         }
 
-        public CountingEvaluator<TCandidate> CountEvaluatedCandidates(ObservationCounter counter) =>
+        public CountingEvaluator<TCandidate> CountCandidates(ObservationCounter counter) =>
             new(evaluator, counter, OperatorCountMetric.Candidates);
 
-        public CountingEvaluator<TCandidate> CountEvaluatedCandidates(out ObservationCounter counter)
+        public CountingEvaluator<TCandidate> CountCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return evaluator.CountEvaluatedCandidates(counter);
+            return evaluator.CountCandidates(counter);
         }
     }
 }

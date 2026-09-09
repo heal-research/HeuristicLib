@@ -99,8 +99,8 @@ public class MultiObjectiveTests
         ids[2].ShouldBe(["C"]);
     }
 
-    private static string[][] FrontIds(List<List<EvaluatedCandidate<string>>> fronts)
-      => fronts.Select(f => f.Select(s => s.Candidate).OrderBy(x => x).ToArray()).ToArray();
+    private static string[][] FrontIds(List<List<EvaluatedCandidate<string>>> fronts) =>
+        fronts.Select(f => f.Select(s => s.Candidate).OrderBy(x => x).ToArray()).ToArray();
 
     private static EvaluatedCandidate<string> Sol(string id, params double[] values) => new(id, values);
 

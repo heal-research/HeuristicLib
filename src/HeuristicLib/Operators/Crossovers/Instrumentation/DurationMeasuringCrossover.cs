@@ -28,8 +28,8 @@ public sealed record DurationMeasuringCrossover<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> childCrossover, ObservationDuration duration, TimeProvider timeProvider)
         : WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(childCrossover)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -59,19 +59,19 @@ public static class CrossoverDurationExtensions
 {
     extension<TCandidate>(ICrossover<TCandidate> crossover)
     {
-        public DurationMeasuringCrossover<TCandidate> MeasureCrossoverDuration(ObservationDuration duration) =>
+        public DurationMeasuringCrossover<TCandidate> MeasureDuration(ObservationDuration duration) =>
             new(crossover, duration);
 
-        public DurationMeasuringCrossover<TCandidate> MeasureCrossoverDuration(ObservationDuration duration, TimeProvider timeProvider) =>
+        public DurationMeasuringCrossover<TCandidate> MeasureDuration(ObservationDuration duration, TimeProvider timeProvider) =>
             new(crossover, duration, timeProvider);
 
-        public DurationMeasuringCrossover<TCandidate> MeasureCrossoverDuration(out ObservationDuration duration)
+        public DurationMeasuringCrossover<TCandidate> MeasureDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return new(crossover, duration);
         }
 
-        public DurationMeasuringCrossover<TCandidate> MeasureCrossoverDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringCrossover<TCandidate> MeasureDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return new(crossover, duration, timeProvider);

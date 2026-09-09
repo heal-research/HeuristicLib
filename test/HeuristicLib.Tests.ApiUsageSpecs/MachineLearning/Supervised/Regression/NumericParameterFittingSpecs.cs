@@ -135,9 +135,9 @@ public class NumericParameterFittingSpecs
     {
         var problem = CreateProblem();
         var sharedEvaluator = new ProblemEvaluator<ExpressionTree>()
-            .CountEvaluatedCandidates(out var sharedCounter);
+            .CountCandidates(out var sharedCounter);
         var algorithmEvaluator = new ProblemEvaluator<ExpressionTree>()
-            .CountEvaluatedCandidates(out var ownCounter);
+            .CountCandidates(out var ownCounter);
 
         var sharing = CreateAlgorithm(problem) with
         {

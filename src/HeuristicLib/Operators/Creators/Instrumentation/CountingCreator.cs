@@ -23,8 +23,8 @@ public sealed record CountingCreator<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator, ObservationCounter counter, OperatorCountMetric metric)
         : WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem>(childCreator)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -37,8 +37,7 @@ public sealed record CountingCreator<TCandidate>
 
 public static class CountingCreator
 {
-    public static CountingCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> childCreator, ObservationCounter counter, OperatorCountMetric metric)
- =>
+    public static CountingCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> childCreator, ObservationCounter counter, OperatorCountMetric metric) =>
         new(childCreator, counter, metric);
 }
 
@@ -46,20 +45,20 @@ public static class CreatorCounterExtensions
 {
     extension<TCandidate>(ICreator<TCandidate> creator)
     {
-        public CountingCreator<TCandidate> CountCreatorCalls(ObservationCounter counter) => new(creator, counter, OperatorCountMetric.Calls);
+        public CountingCreator<TCandidate> CountCalls(ObservationCounter counter) => new(creator, counter, OperatorCountMetric.Calls);
 
-        public CountingCreator<TCandidate> CountCreatorCalls(out ObservationCounter counter)
+        public CountingCreator<TCandidate> CountCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return creator.CountCreatorCalls(counter);
+            return creator.CountCalls(counter);
         }
 
-        public CountingCreator<TCandidate> CountCreatedCandidates(ObservationCounter counter) => new(creator, counter, OperatorCountMetric.Candidates);
+        public CountingCreator<TCandidate> CountCandidates(ObservationCounter counter) => new(creator, counter, OperatorCountMetric.Candidates);
 
-        public CountingCreator<TCandidate> CountCreatedCandidates(out ObservationCounter counter)
+        public CountingCreator<TCandidate> CountCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return creator.CountCreatedCandidates(counter);
+            return creator.CountCandidates(counter);
         }
     }
 }

@@ -16,6 +16,6 @@ public sealed record NeighborhoodApplier<TCandidate, TSearchSpace, TProblem, TMo
         TMove move,
         IRandomNumberGenerator random,
         TSearchSpace searchSpace,
-        TProblem problem)
-        => neighborhood.Apply(candidate, move, random, searchSpace, problem);
+        TProblem problem) =>
+        neighborhood.Apply(candidate, move, random, searchSpace, problem);
 }

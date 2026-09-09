@@ -52,9 +52,8 @@ public class DynamicTestFunctionProblem : DynamicProblem<DynamicTestFunctionProb
         var rot = RandomRotationMatrix(CurrentState.Rotation, EnvironmentRandom,
             EnvironmentRandom.NextNormal(sigma: DeviationSigma.RotationStrength));
         var inScale = CurrentState.InputScaling
-                                  .Select(x =>
-                                      x + EnvironmentRandom.NextNormal(sigma: DeviationSigma.InputScalingStrength))
-                                  .ToArray();
+            .Select(x => x + EnvironmentRandom.NextNormal(sigma: DeviationSigma.InputScalingStrength))
+            .ToArray();
         var outScale = CurrentState.OutputScaling +
                        EnvironmentRandom.NextNormal(sigma: DeviationSigma.OutputScalingStrength);
         CurrentState = new State(shift, rot, inScale, outScale);

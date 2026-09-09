@@ -18,6 +18,6 @@ public sealed record NeighborhoodEvaluator<TCandidate, TSearchSpace, TProblem, T
         TMove move,
         IRandomNumberGenerator random,
         TSearchSpace searchSpace,
-        TProblem problem)
-        => neighborhood.Evaluate(candidate, move, random, searchSpace, problem);
+        TProblem problem) =>
+        neighborhood.Evaluate(candidate, move, random, searchSpace, problem);
 }

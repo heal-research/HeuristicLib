@@ -19,7 +19,7 @@ public class RepeatingEvaluatorTests
     {
         var counter = new ObservationCounter();
         var problem = CreateProblem();
-        var evaluator = new CandidateEvaluator().CountEvaluatorCalls(counter).AsRepeated(3);
+        var evaluator = new CandidateEvaluator().CountCalls(counter).AsRepeated(3);
 
         evaluator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry())
             .Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

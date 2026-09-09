@@ -6,7 +6,7 @@ public interface IAnalyzer
 }
 
 public interface IAnalyzer<out TResult> : IAnalyzer
-  where TResult : class
+    where TResult : class
 {
     new IAnalyzerRunState<TResult> CreateAnalyzerState();
 

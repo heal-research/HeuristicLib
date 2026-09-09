@@ -65,7 +65,7 @@ public static class MetaOptimizationProblemExamples
       ISelector<TCandidate>[] selectors,
       (int min, int max) populationSize,
       (double min, double max) mutationRate)
-      where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> where TCandidate : class
+        where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> where TCandidate : class
     {
         var b = new MetaOptimizationSearchSpaceBuilder();
         var creatorExtractor = b.AddChoiceParameter(creators);
@@ -105,7 +105,7 @@ public static class MetaOptimizationProblemExamples
       (int min, int max) populationSize,
       (int min, int max) numberOfChildren,
       (double min, double max) mutationRate)
-      where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> where TCandidate : class
+        where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> where TCandidate : class
     {
         IntegerVector integerMins = [0, 0, 0, 0, 0, 0, 0, populationSize.min, numberOfChildren.min];
         IntegerVector integerMaxs =

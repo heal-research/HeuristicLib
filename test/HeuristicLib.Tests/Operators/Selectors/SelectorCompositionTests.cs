@@ -11,7 +11,7 @@ public class SelectorCompositionTests
     {
         var counter = new ObservationCounter();
         var problem = CreateProblem();
-        var selector = BestSelector.For(problem).CountSelectorCalls(counter).AvoidSameMates(maximumAttempts: 3);
+        var selector = BestSelector.For(problem).CountCalls(counter).AvoidSameMates(maximumAttempts: 3);
         var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
         var population = new[]
         {

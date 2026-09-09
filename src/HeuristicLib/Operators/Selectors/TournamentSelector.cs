@@ -28,10 +28,12 @@ public static class TournamentSelector
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, int tournamentSize)
     {
         return Enumerable
-               .Range(0, count)
-               .Select(_ => random.NextInts(tournamentSize, population.Count)
-                                  .Select(i1 => population[i1])
-                                  .MinBy(participant => participant.ObjectiveVector, objective.TotalOrderComparer)!)
-               .ToArray();
+            .Range(0, count)
+            .Select(_ => random
+                .NextInts(tournamentSize, population.Count)
+                .Select(i1 => population[i1])
+                .MinBy(participant => participant.ObjectiveVector, objective.TotalOrderComparer)!
+            )
+            .ToArray();
     }
 }

@@ -41,8 +41,8 @@ public sealed record ChooseOneSelector<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> childSelectors, WeightedDispatcher<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> dispatcher)
         : MultiSelectorInstance<TCandidate, TSearchSpace, TProblem>(childSelectors)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             dispatcher.Dispatch(

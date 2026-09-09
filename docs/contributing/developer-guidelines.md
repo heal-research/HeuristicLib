@@ -389,6 +389,26 @@ Build random APIs from one source of base random values.
 
 Use concept first scalar names such as `NextDouble` and target first output names such as `NextRealVectorUniform`. Do not add a competing distribution layer for the same sampling behavior.
 
+### § 8.11 Let an API surface scale per role, never over hidden axes
+
+Duplicating a member once per operator role is acceptable. Adding a role is a deliberate act, its author writes the
+role's members once from an obvious template, and no existing role is disturbed. The resolve family
+(`Resolve`, `ResolveOptional`, `TryResolve`) and the instrumentation wrappers are both this shape, and both stay.
+
+What is not acceptable is a surface that multiplies over an axis the role's author does not know exists, so that
+adding one role silently obliges members for every value of some other dimension. Before adding a per-role member,
+name the axes it varies over and check that a role author can enumerate all of them.
+
+Two receivers for the same operation are not a second axis when one is defined in terms of the other.
+`registry.Resolve<TCandidate, TSearchSpace, TProblem>(config)` is canonical — the registry is generic-less and cannot
+infer the triple. `resolver.Resolve(config)` binds a registry that already knows the triple, infers everything and
+relays to the canonical form. One mechanism, two spellings; keep both.
+
+Whatever the declaration count, the call site stays minimal: `resolver.Resolve(config)` or
+`registry.TryResolve(config, out var instance)`, with nothing the caller is forced to supply to make inference work.
+An overload that exists so a type argument can be inferred is justified; one that exists only so a call site reads
+differently needs a separate argument.
+
 ## § 9 Documentation and source organization
 
 ### § 9.1 Document nonobvious public contracts

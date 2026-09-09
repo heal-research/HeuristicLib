@@ -23,8 +23,8 @@ public sealed record CountingCrossover<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> childCrossover, ObservationCounter counter, OperatorCountMetric metric)
         : WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(childCrossover)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -37,8 +37,7 @@ public sealed record CountingCrossover<TCandidate>
 
 public static class CountingCrossover
 {
-    public static CountingCrossover<TCandidate> Create<TCandidate>(ICrossover<TCandidate> childCrossover, ObservationCounter counter, OperatorCountMetric metric)
- =>
+    public static CountingCrossover<TCandidate> Create<TCandidate>(ICrossover<TCandidate> childCrossover, ObservationCounter counter, OperatorCountMetric metric) =>
         new(childCrossover, counter, metric);
 }
 
@@ -46,20 +45,20 @@ public static class CrossoverCounterExtensions
 {
     extension<TCandidate>(ICrossover<TCandidate> crossover)
     {
-        public CountingCrossover<TCandidate> CountCrossoverCalls(ObservationCounter counter) => new(crossover, counter, OperatorCountMetric.Calls);
+        public CountingCrossover<TCandidate> CountCalls(ObservationCounter counter) => new(crossover, counter, OperatorCountMetric.Calls);
 
-        public CountingCrossover<TCandidate> CountCrossoverCalls(out ObservationCounter counter)
+        public CountingCrossover<TCandidate> CountCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return crossover.CountCrossoverCalls(counter);
+            return crossover.CountCalls(counter);
         }
 
-        public CountingCrossover<TCandidate> CountCrossedCandidates(ObservationCounter counter) => new(crossover, counter, OperatorCountMetric.Candidates);
+        public CountingCrossover<TCandidate> CountCandidates(ObservationCounter counter) => new(crossover, counter, OperatorCountMetric.Candidates);
 
-        public CountingCrossover<TCandidate> CountCrossedCandidates(out ObservationCounter counter)
+        public CountingCrossover<TCandidate> CountCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return crossover.CountCrossedCandidates(counter);
+            return crossover.CountCandidates(counter);
         }
     }
 }

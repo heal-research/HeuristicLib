@@ -41,8 +41,8 @@ public sealed record ChooseOneCrossover<TCandidate>
 
     private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> childCrossovers, WeightedBatchDispatcher dispatcher)
         : MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem>(childCrossovers)
-          where TSearchSpace : class, ISearchSpace<TCandidate>
-          where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             dispatcher.Dispatch(

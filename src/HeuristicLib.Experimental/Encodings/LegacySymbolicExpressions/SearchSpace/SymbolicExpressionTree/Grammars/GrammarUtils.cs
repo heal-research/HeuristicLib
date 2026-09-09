@@ -92,8 +92,8 @@ public static class GrammarUtils
                 for (var argIndex = 0; argIndex < grammar.GetMinimumSubtreeCount(symbol); ++argIndex)
                 {
                     long length = grammar.GetAllowedActiveSymbols(symbol, argIndex)
-                      .Where(minimumExpressionLengths.ContainsKey)
-                      .Select(x => minimumExpressionLengths[x]).DefaultIfEmpty(int.MaxValue).Min();
+                        .Where(minimumExpressionLengths.ContainsKey)
+                        .Select(x => minimumExpressionLengths[x]).DefaultIfEmpty(int.MaxValue).Min();
                     minLength += length;
                 }
 
@@ -112,7 +112,7 @@ public static class GrammarUtils
                 foreach (var symbol in symbols)
                 {
                     var minLength = Enumerable.Range(0, grammar.GetMinimumSubtreeCount(symbol))
-                      .Sum(x => grammar.GetAllowedActiveSymbols(symbol, x)
+                        .Sum(x => grammar.GetAllowedActiveSymbols(symbol, x)
                         .Select(s => (long)minimumExpressionLengths[s]).DefaultIfEmpty(int.MaxValue).Min()) + 1;
                     if (minLength < minimumExpressionLengths[symbol])
                     {
@@ -152,8 +152,8 @@ public static class GrammarUtils
                 for (var argIndex = 0; argIndex < grammar.GetMinimumSubtreeCount(symbol); ++argIndex)
                 {
                     var depth = grammar.GetAllowedActiveSymbols(symbol, argIndex)
-                      .Where(minimumExpressionDepths.ContainsKey)
-                      .Select(x => (long)minimumExpressionDepths[x]).DefaultIfEmpty(int.MaxValue).Min() + 1;
+                        .Where(minimumExpressionDepths.ContainsKey)
+                        .Select(x => (long)minimumExpressionDepths[x]).DefaultIfEmpty(int.MaxValue).Min() + 1;
                     minDepth = Math.Max(minDepth, depth);
                 }
 
@@ -172,7 +172,7 @@ public static class GrammarUtils
                 foreach (var symbol in symbols)
                 {
                     var minDepth = Enumerable.Range(0, grammar.GetMinimumSubtreeCount(symbol))
-                      .Max(x => grammar.GetAllowedActiveSymbols(symbol, x)
+                        .Max(x => grammar.GetAllowedActiveSymbols(symbol, x)
                         .Select(s => (long)minimumExpressionDepths[s]).DefaultIfEmpty(int.MaxValue).Min()) + 1;
                     if (minDepth < minimumExpressionDepths[symbol])
                     {

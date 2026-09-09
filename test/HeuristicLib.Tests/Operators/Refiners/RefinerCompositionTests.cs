@@ -37,7 +37,7 @@ public class RefinerCompositionTests
     public void IteratedRefiner_AppliesTheChildRefinerOncePerIteration()
     {
         var counter = new ObservationCounter();
-        var instance = AddOffset(1).CountRefinerCalls(counter).AsIterated(4).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
+        var instance = AddOffset(1).CountCalls(counter).AsIterated(4).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
 
         Refine(instance, 3).ShouldBe([7]);
         counter.CurrentCount.ShouldBe(4);
@@ -103,7 +103,7 @@ public class RefinerCompositionTests
     public void CountRefinedCandidates_CountsEveryReturnedCandidate()
     {
         var counter = new ObservationCounter();
-        var instance = AddOffset(1).CountRefinedCandidates(counter).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
+        var instance = AddOffset(1).CountCandidates(counter).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
 
         Refine(instance, 3, 4, 5);
 
@@ -114,7 +114,7 @@ public class RefinerCompositionTests
     public void CountRefinerCalls_DoesNotIncrementWhenRefinementThrows()
     {
         var counter = new ObservationCounter();
-        var instance = new ThrowingRefiner().CountRefinerCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
+        var instance = new ThrowingRefiner().CountCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
 
         Should.Throw<InvalidOperationException>(() => Refine(instance, 3));
 
@@ -126,7 +126,7 @@ public class RefinerCompositionTests
     {
         var duration = new ObservationDuration();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var instance = new ThrowingRefiner().MeasureRefinerDuration(duration, timeProvider).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
+        var instance = new ThrowingRefiner().MeasureDuration(duration, timeProvider).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
 
         Should.Throw<InvalidOperationException>(() => Refine(instance, 3));
 
@@ -178,8 +178,8 @@ public class RefinerCompositionTests
     {
         var inside = new ObservationCounter();
         var around = new ObservationCounter();
-        var insideInstance = AddOffset(1).CountRefinerCalls(inside).AsIterated(3).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
-        var aroundInstance = AddOffset(1).AsIterated(3).CountRefinerCalls(around).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
+        var insideInstance = AddOffset(1).CountCalls(inside).AsIterated(3).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
+        var aroundInstance = AddOffset(1).AsIterated(3).CountCalls(around).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
 
         Refine(insideInstance, 3).ShouldBe([6]);
         Refine(aroundInstance, 3).ShouldBe([6]);
@@ -193,7 +193,7 @@ public class RefinerCompositionTests
     {
         var counter = new ObservationCounter();
         var instance = PipelineRefiner.Create(
-                AddOffset(1).CountRefinedCandidates(counter),
+                AddOffset(1).CountCandidates(counter),
                 Multiply(2).AsIterated(2))
             .CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
 

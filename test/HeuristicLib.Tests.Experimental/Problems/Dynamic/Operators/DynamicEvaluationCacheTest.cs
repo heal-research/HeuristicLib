@@ -19,7 +19,7 @@ file sealed class DummySearchSpace : ISearchSpace<DummyGenotype>
 file sealed class DummyDynamicProblem : DynamicProblem<DummyDynamicProblem, DummyGenotype, DummySearchSpace>
 {
     public DummyDynamicProblem(IRandomNumberGenerator env, int epochLength)
-      : base(SingleObjective.Minimize, new DummySearchSpace(), env, UpdatePolicy.AfterEvaluation, epochLength)
+        : base(SingleObjective.Minimize, new DummySearchSpace(), env, UpdatePolicy.AfterEvaluation, epochLength)
     { }
 
     public override ObjectiveVector Evaluate(DummyGenotype solution, IRandomNumberGenerator random, EvaluationTiming timing) => solution.Value;

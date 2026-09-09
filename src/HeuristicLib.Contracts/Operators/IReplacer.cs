@@ -15,9 +15,9 @@ public interface IReplacer<TCandidate> : IOperator
 }
 
 public interface IReplacerInstance<TCandidate, in TSearchSpace, in TProblem>
-  : IOperatorInstance
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    : IOperatorInstance
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(
       IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,

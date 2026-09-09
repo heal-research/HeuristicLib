@@ -100,8 +100,8 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
         var state = initialState;
 
         var cycleCountGenerator = MaximumCycles.HasValue
-          ? Enumerable.Range(0, Math.Max(0, MaximumCycles.Value))
-          : Enumerable.InfiniteSequence(0, 1);
+            ? Enumerable.Range(0, Math.Max(0, MaximumCycles.Value))
+            : Enumerable.InfiniteSequence(0, 1);
 
         foreach (var cycleCount in cycleCountGenerator)
         {

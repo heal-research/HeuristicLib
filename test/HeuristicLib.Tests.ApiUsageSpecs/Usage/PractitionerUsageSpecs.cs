@@ -223,19 +223,15 @@ public class PractitionerUsageSpecs
         };
 
         var cannotExtendPastInternalCompletion = internallyCappedAlgorithm
-          .WithMaxIterations(5)
-          .Stream(
-            problem,
-            RandomNumberGenerator.Create(456),
-            ct: TestContext.Current.CancellationToken)
-          .ToList();
+            .WithMaxIterations(5)
+            .Stream(
+                problem, RandomNumberGenerator.Create(456), ct: TestContext.Current.CancellationToken)
+            .ToList();
         var canStopEarlierThanInternalCompletion = externallyCappedAlgorithm
-          .WithMaxIterations(2)
-          .Stream(
-            problem,
-            RandomNumberGenerator.Create(456),
-            ct: TestContext.Current.CancellationToken)
-          .ToList();
+            .WithMaxIterations(2)
+            .Stream(
+                problem, RandomNumberGenerator.Create(456), ct: TestContext.Current.CancellationToken)
+            .ToList();
 
         cannotExtendPastInternalCompletion.Count.ShouldBe(2);
         canStopEarlierThanInternalCompletion.Count.ShouldBe(2);
@@ -253,12 +249,10 @@ public class PractitionerUsageSpecs
         };
 
         var earlyStoppedStates = algorithm
-          .WithMaxIterations(2)
-          .Stream(
-            problem,
-            RandomNumberGenerator.Create(789),
-            ct: TestContext.Current.CancellationToken)
-          .ToList();
+            .WithMaxIterations(2)
+            .Stream(
+                problem, RandomNumberGenerator.Create(789), ct: TestContext.Current.CancellationToken)
+            .ToList();
 
         earlyStoppedStates.Count.ShouldBe(2);
         internalTerminator.CheckedStateCount.ShouldBe(2);
@@ -282,7 +276,7 @@ public class PractitionerUsageSpecs
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
         states.Count.ShouldBe(2);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
@@ -305,14 +299,14 @@ public class PractitionerUsageSpecs
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
         var statesByEvaluatedCandidates = algorithm
             .WithMaxEvaluatedCandidates(algorithm.Evaluator, 2)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
         statesByEvaluatorCalls.Count.ShouldBe(2);
         statesByEvaluatedCandidates.Count.ShouldBe(1);
@@ -337,7 +331,7 @@ public class PractitionerUsageSpecs
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
         states.Count.ShouldBe(2);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
@@ -360,7 +354,7 @@ public class PractitionerUsageSpecs
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
         states.Count.ShouldBe(2);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
@@ -384,7 +378,7 @@ public class PractitionerUsageSpecs
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
         var statesByMutatedCandidates = algorithm
             .WithMaxMutatedCandidates(
                 algorithm.Mutator,
@@ -393,7 +387,7 @@ public class PractitionerUsageSpecs
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
         statesByMutatorCalls.Count.ShouldBe(2);
         statesByMutatorCalls.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
@@ -410,7 +404,7 @@ public class PractitionerUsageSpecs
         var duration = new ObservationDuration();
 
         var counted = new CountingMutator<RealVector>(mutator, counter, OperatorCountMetric.Candidates);
-        var measured = mutator.MeasureMutatorDuration(duration);
+        var measured = mutator.MeasureDuration(duration);
 
         counted.ChildMutator.ShouldBeSameAs(mutator);
         counted.Counter.ShouldBeSameAs(counter);
@@ -438,7 +432,7 @@ public class PractitionerUsageSpecs
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
         states.Count.ShouldBe(3);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
@@ -459,12 +453,12 @@ public class PractitionerUsageSpecs
                 algorithm.Mutator,
                 maximumCount: 20,
                 countedOperatorFactory: static (mutator, counter) =>
-                    mutator.CountMutatedCandidates(counter))
+                    mutator.CountCandidates(counter))
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
         states.Count.ShouldBe(3);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
@@ -482,8 +476,8 @@ public class PractitionerUsageSpecs
         };
         var observedAlgorithm = baseAlgorithm with
         {
-            Crossover = baseAlgorithm.Crossover.CountCrossoverCalls(counter),
-            Mutator = baseAlgorithm.Mutator.CountMutatorCalls(counter)
+            Crossover = baseAlgorithm.Crossover.CountCalls(counter),
+            Mutator = baseAlgorithm.Mutator.CountCalls(counter)
         };
         var algorithm = observedAlgorithm.WithTerminator(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 2));
 
@@ -491,7 +485,7 @@ public class PractitionerUsageSpecs
             problem,
             RandomNumberGenerator.Create(987),
             ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
         states.Count.ShouldBe(2);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();

@@ -17,9 +17,9 @@ public interface ICrossover<TCandidate> : IOperator
 }
 
 public interface ICrossoverInstance<TCandidate, in TSearchSpace, in TProblem>
-  : IOperatorInstance
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    : IOperatorInstance
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

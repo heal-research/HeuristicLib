@@ -68,7 +68,7 @@ public static class OperatorDurationBudgetExtensions
                 maximumDuration,
                 timeProvider,
                 static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureEvaluatorDuration(duration, timeProvider));
+                    observedOperator.MeasureDuration(duration, timeProvider));
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ICreator<TCandidate>> WithMaxCreatorDuration(
@@ -88,7 +88,7 @@ public static class OperatorDurationBudgetExtensions
                 maximumDuration,
                 timeProvider,
                 static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureCreatorDuration(duration, timeProvider));
+                    observedOperator.MeasureDuration(duration, timeProvider));
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ICrossover<TCandidate>> WithMaxCrossoverDuration(
@@ -108,7 +108,7 @@ public static class OperatorDurationBudgetExtensions
                 maximumDuration,
                 timeProvider,
                 static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureCrossoverDuration(duration, timeProvider));
+                    observedOperator.MeasureDuration(duration, timeProvider));
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IMutator<TCandidate>> WithMaxMutatorDuration(
@@ -128,7 +128,7 @@ public static class OperatorDurationBudgetExtensions
                 maximumDuration,
                 timeProvider,
                 static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureMutatorDuration(duration, timeProvider));
+                    observedOperator.MeasureDuration(duration, timeProvider));
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IRefiner<TCandidate>> WithMaxRefinerDuration(
@@ -148,7 +148,7 @@ public static class OperatorDurationBudgetExtensions
                 maximumDuration,
                 timeProvider,
                 static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureRefinerDuration(duration, timeProvider));
+                    observedOperator.MeasureDuration(duration, timeProvider));
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ISelector<TCandidate>> WithMaxSelectorDuration(
@@ -168,7 +168,7 @@ public static class OperatorDurationBudgetExtensions
                 maximumDuration,
                 timeProvider,
                 static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureSelectorDuration(duration, timeProvider));
+                    observedOperator.MeasureDuration(duration, timeProvider));
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IReplacer<TCandidate>> WithMaxReplacerDuration(
@@ -188,7 +188,7 @@ public static class OperatorDurationBudgetExtensions
                 maximumDuration,
                 timeProvider,
                 static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureReplacerDuration(duration, timeProvider));
+                    observedOperator.MeasureDuration(duration, timeProvider));
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IInterceptor<TCandidate>> WithMaxInterceptorDuration(
@@ -208,7 +208,7 @@ public static class OperatorDurationBudgetExtensions
                 maximumDuration,
                 timeProvider,
                 static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureInterceptorDuration(duration, timeProvider));
+                    observedOperator.MeasureDuration(duration, timeProvider));
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ITerminator<TCandidate>> WithMaxTerminatorDuration(
@@ -228,7 +228,7 @@ public static class OperatorDurationBudgetExtensions
                 maximumDuration,
                 timeProvider,
                 static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureTerminatorDuration(duration, timeProvider));
+                    observedOperator.MeasureDuration(duration, timeProvider));
         }
     }
 }

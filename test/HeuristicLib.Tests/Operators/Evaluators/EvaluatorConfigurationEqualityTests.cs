@@ -12,7 +12,7 @@ public class EvaluatorConfigurationEqualityTests
     {
         var child = new OffsetEvaluator(1);
 
-        child.CountEvaluatorCalls(new ObservationCounter()).ChildEvaluator.ShouldBeSameAs(child);
+        child.CountCalls(new ObservationCounter()).ChildEvaluator.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -45,11 +45,11 @@ public class EvaluatorConfigurationEqualityTests
     {
         var counter = new ObservationCounter();
         var duration = new ObservationDuration();
-        var counted = new OffsetEvaluator(1).CountEvaluatorCalls(counter);
-        var countedEqual = new OffsetEvaluator(1).CountEvaluatorCalls(counter);
-        var differentMetric = new OffsetEvaluator(1).CountEvaluatedCandidates(counter);
-        var measured = new OffsetEvaluator(1).MeasureEvaluatorDuration(duration, TimeProvider.System);
-        var measuredEqual = new OffsetEvaluator(1).MeasureEvaluatorDuration(duration, TimeProvider.System);
+        var counted = new OffsetEvaluator(1).CountCalls(counter);
+        var countedEqual = new OffsetEvaluator(1).CountCalls(counter);
+        var differentMetric = new OffsetEvaluator(1).CountCandidates(counter);
+        var measured = new OffsetEvaluator(1).MeasureDuration(duration, TimeProvider.System);
+        var measuredEqual = new OffsetEvaluator(1).MeasureDuration(duration, TimeProvider.System);
 
         counted.ShouldBe(countedEqual);
         counted.ShouldNotBe(differentMetric);
@@ -121,8 +121,8 @@ public class EvaluatorConfigurationEqualityTests
 
         private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IEvaluatorInstance<int, TSearchSpace, TProblem>> childEvaluators)
             : MultiEvaluatorInstance<int, TSearchSpace, TProblem>(childEvaluators)
-              where TSearchSpace : class, ISearchSpace<int>
-              where TProblem : class, IProblem<int, TSearchSpace>
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
         {
             public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildEvaluators[0].Evaluate(candidates, random, searchSpace, problem);

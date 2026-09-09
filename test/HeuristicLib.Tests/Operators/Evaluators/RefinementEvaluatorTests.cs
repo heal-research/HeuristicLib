@@ -49,7 +49,7 @@ public class RefinementEvaluatorTests
     public void Evaluate_IssuesItsEvaluationsThroughTheChildEvaluator()
     {
         var counter = new ObservationCounter();
-        var instance = CreateEvaluator().CountEvaluatedCandidates(counter).WithRefinement(new AddOffsetRefiner(10)).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
+        var instance = CreateEvaluator().CountCandidates(counter).WithRefinement(new AddOffsetRefiner(10)).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -62,7 +62,7 @@ public class RefinementEvaluatorTests
     public void Evaluate_SharesOneCounterWithAnAlgorithmUsingTheSameEvaluatorInstance()
     {
         var counter = new ObservationCounter();
-        var sharedEvaluator = CreateEvaluator().CountEvaluatedCandidates(counter);
+        var sharedEvaluator = CreateEvaluator().CountCandidates(counter);
         var registry = new ExecutionInstanceRegistry();
         var refining = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator.WithRefinement(new AddOffsetRefiner(10)));
         var direct = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);

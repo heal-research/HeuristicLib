@@ -537,7 +537,7 @@ public class OperatorAuthoringSpecs
         var observable = childSelector.ObserveWith(observer);
         var staticObservable = ObservableSelector.Create(childSelector, observer);
         var callbackObservable = ObservableSelector.Create(childSelector, _ => { });
-        var counting = childSelector.CountSelectorCalls(new ObservationCounter());
+        var counting = childSelector.CountCalls(new ObservationCounter());
         var chooseOne = ChooseOneSelector.Create(childSelector, new LastSelector());
 
         observable.ChildSelector.ShouldBeSameAs(childSelector);
@@ -819,7 +819,7 @@ public class OperatorAuthoringSpecs
     /// <see cref="ObservableCreator{TCandidate, TObserverSearchSpace, TObserverProblem}"/> uses for its observers.
     /// </summary>
     private sealed record PrefixingWrappingCreator(ICreator<RealVector> Child)
-      : WrappingCreator<RealVector>(Child)
+        : WrappingCreator<RealVector>(Child)
     {
         protected override ICreatorInstance<RealVector, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICreatorInstance<RealVector, TRunSearchSpace, TRunProblem> childCreator)
         {
@@ -846,7 +846,7 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record ConstantOriginCreator
-      : SingleCandidateCreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        : SingleCandidateCreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         public override RealVector CreateCandidate(
           IRandomNumberGenerator random,
@@ -949,8 +949,8 @@ public class OperatorAuthoringSpecs
 
         private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<RealVector, TSearchSpace, TProblem> childEvaluator)
             : WrappingEvaluatorInstance<RealVector, TSearchSpace, TProblem>(childEvaluator)
-              where TSearchSpace : class, ISearchSpace<RealVector>
-              where TProblem : class, IProblem<RealVector, TSearchSpace>
+            where TSearchSpace : class, ISearchSpace<RealVector>
+            where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
             public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
@@ -970,8 +970,8 @@ public class OperatorAuthoringSpecs
 
         private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IEvaluatorInstance<RealVector, TSearchSpace, TProblem>> childEvaluators)
             : MultiEvaluatorInstance<RealVector, TSearchSpace, TProblem>(childEvaluators)
-              where TSearchSpace : class, ISearchSpace<RealVector>
-              where TProblem : class, IProblem<RealVector, TSearchSpace>
+            where TSearchSpace : class, ISearchSpace<RealVector>
+            where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
             public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildEvaluators[0].Evaluate(candidates, random, searchSpace, problem);
@@ -1033,8 +1033,8 @@ public class OperatorAuthoringSpecs
 
         private sealed class Instance<TSearchSpace, TProblem>(ISelectorInstance<RealVector, TSearchSpace, TProblem> childSelector)
             : WrappingSelectorInstance<RealVector, TSearchSpace, TProblem>(childSelector)
-              where TSearchSpace : class, ISearchSpace<RealVector>
-              where TProblem : class, IProblem<RealVector, TSearchSpace>
+            where TSearchSpace : class, ISearchSpace<RealVector>
+            where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
             public override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
             {
@@ -1057,8 +1057,8 @@ public class OperatorAuthoringSpecs
 
         private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ISelectorInstance<RealVector, TSearchSpace, TProblem>> childSelectors)
             : MultiSelectorInstance<RealVector, TSearchSpace, TProblem>(childSelectors)
-              where TSearchSpace : class, ISearchSpace<RealVector>
-              where TProblem : class, IProblem<RealVector, TSearchSpace>
+            where TSearchSpace : class, ISearchSpace<RealVector>
+            where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
             public override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildSelectors[0].Select(population, objective, count, random, searchSpace, problem);
@@ -1111,8 +1111,8 @@ public class OperatorAuthoringSpecs
 
         private sealed class Instance<TSearchSpace, TProblem>(IReplacerInstance<RealVector, TSearchSpace, TProblem> childReplacer)
             : WrappingReplacerInstance<RealVector, TSearchSpace, TProblem>(childReplacer)
-              where TSearchSpace : class, ISearchSpace<RealVector>
-              where TProblem : class, IProblem<RealVector, TSearchSpace>
+            where TSearchSpace : class, ISearchSpace<RealVector>
+            where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
             public override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildReplacer.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
@@ -1132,8 +1132,8 @@ public class OperatorAuthoringSpecs
 
         private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IReplacerInstance<RealVector, TSearchSpace, TProblem>> childReplacers)
             : MultiReplacerInstance<RealVector, TSearchSpace, TProblem>(childReplacers)
-              where TSearchSpace : class, ISearchSpace<RealVector>
-              where TProblem : class, IProblem<RealVector, TSearchSpace>
+            where TSearchSpace : class, ISearchSpace<RealVector>
+            where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
             public override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildReplacers[0].Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
@@ -1385,7 +1385,7 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record ConstantOneCreator
-      : SingleCandidateCreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        : SingleCandidateCreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         public override RealVector CreateCandidate(
           IRandomNumberGenerator random,
@@ -1397,7 +1397,7 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record NoChangeMutator
-      : SingleCandidateMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        : SingleCandidateMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         public override RealVector MutateCandidate(
           RealVector parent,
@@ -1410,7 +1410,7 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record PullTowardZeroMutator
-      : SingleCandidateMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        : SingleCandidateMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         public override RealVector MutateCandidate(
           RealVector parent,
@@ -1463,7 +1463,7 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record HalveRefiner
-      : SingleCandidateRefiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        : SingleCandidateRefiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         public override RealVector RefineCandidate(
           RealVector candidate,
@@ -1504,8 +1504,8 @@ public class OperatorAuthoringSpecs
 
         private sealed class Instance<TSearchSpace, TProblem>(IRefinerInstance<RealVector, TSearchSpace, TProblem> childRefiner)
             : WrappingRefinerInstance<RealVector, TSearchSpace, TProblem>(childRefiner)
-              where TSearchSpace : class, ISearchSpace<RealVector>
-              where TProblem : class, IProblem<RealVector, TSearchSpace>
+            where TSearchSpace : class, ISearchSpace<RealVector>
+            where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
             public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
             {

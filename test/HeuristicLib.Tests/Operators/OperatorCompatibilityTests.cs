@@ -51,12 +51,13 @@ public class OperatorCompatibilityTests
 
     private static bool DoesCompile(string code, params Type[] usedTypes)
     {
-        var references = usedTypes.Concat([typeof(object), typeof(IAlgorithm<>), typeof(Algorithm<,,,,>)])
-                                  .Select(t => t.Assembly)
-                                  .Concat([Assembly.Load("System.Runtime")])
-                                  .Distinct()
-                                  .Select(a => MetadataReference.CreateFromFile(a.Location))
-                                  .ToArray();
+        var references = usedTypes
+            .Concat([typeof(object), typeof(IAlgorithm<>), typeof(Algorithm<,,,,>)])
+            .Select(t => t.Assembly)
+            .Concat([Assembly.Load("System.Runtime")])
+            .Distinct()
+            .Select(a => MetadataReference.CreateFromFile(a.Location))
+            .ToArray();
 
         var syntaxTree = CSharpSyntaxTree.ParseText(code);
         var compilation = CSharpCompilation.Create(
@@ -289,7 +290,7 @@ public class OperatorCompatibilityTests
         var tryResolve = typeof(CrossoverResolverExtensions)
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Single(method => method.Name == nameof(CrossoverResolverExtensions.TryResolve)
-                              && method.GetParameters() is [{ ParameterType.Name: nameof(ExecutionInstanceRegistry) }, _, _, _])
+                && method.GetParameters() is [{ ParameterType.Name: nameof(ExecutionInstanceRegistry) }, _, _, _])
             .MakeGenericMethod(candidate, searchSpace, problem);
 
         var arguments = new[] { new ExecutionInstanceRegistry(), @operator, null, null };

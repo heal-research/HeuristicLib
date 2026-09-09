@@ -277,7 +277,7 @@ public class OperatorBudgetAlgorithmTests
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)),
             static (observedOperator, duration, timeProvider) =>
-                observedOperator.MeasureEvaluatorDuration(duration, timeProvider))
+                observedOperator.MeasureDuration(duration, timeProvider))
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -432,7 +432,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Mutator,
             maximumCount: 1,
             countedOperatorFactory: static (observedOperator, counter) =>
-                observedOperator.CountMutatorCalls(counter))
+                observedOperator.CountCalls(counter))
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -478,7 +478,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Mutator,
             maximumCount: 6,
             countedOperatorFactory: static (observedOperator, counter) =>
-                observedOperator.CountMutatedCandidates(counter))
+                observedOperator.CountCandidates(counter))
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -546,7 +546,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Evaluator,
             maximumCount: 1,
             countedOperatorFactory: static (observedOperator, counter) =>
-                observedOperator.CountEvaluatorCalls(counter))
+                observedOperator.CountCalls(counter))
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -566,8 +566,8 @@ public class OperatorBudgetAlgorithmTests
         {
             MaximumGenerations = 5,
             MutationRate = 1.0,
-            Evaluator = baseAlgorithm.Evaluator.CountEvaluatorCalls(counter),
-            Mutator = baseAlgorithm.Mutator.CountMutatorCalls(counter)
+            Evaluator = baseAlgorithm.Evaluator.CountCalls(counter),
+            Mutator = baseAlgorithm.Mutator.CountCalls(counter)
         };
         var externallyStoppedAlgorithm = algorithm.WithTerminator(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 3));
 
@@ -634,7 +634,7 @@ public class OperatorBudgetAlgorithmTests
                 ObservedOperator = algorithm.Evaluator,
                 MaximumCount = maximumCount,
                 CountedOperatorFactory = static (observedOperator, counter) =>
-                    observedOperator.CountEvaluatorCalls(counter)
+                    observedOperator.CountCalls(counter)
             };
 
         budgeted.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
@@ -655,7 +655,7 @@ public class OperatorBudgetAlgorithmTests
                 ObservedOperator = algorithm.Evaluator,
                 MaximumDuration = TimeSpan.FromTicks(ticks),
                 MeasuredOperatorFactory = static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureEvaluatorDuration(duration, timeProvider)
+                    observedOperator.MeasureDuration(duration, timeProvider)
             };
 
         budgeted.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);

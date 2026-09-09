@@ -21,7 +21,7 @@ public static class BoundedRealVectorSearchSpaceRandomExtensions
             return random.NextRealVectorUniform(minimum ?? searchSpace.Minimum, maximum ?? searchSpace.Maximum, searchSpace.Length);
         }
 
-        public RealVector NextRealVectorNormal(BoundedRealVectorSearchSpace searchSpace, RealVector means, RealVector sigmas)
-          => RealVector.Clamp(random.NextRealVectorNormal(means, sigmas, searchSpace.Length), searchSpace.Minimum, searchSpace.Maximum);
+        public RealVector NextRealVectorNormal(BoundedRealVectorSearchSpace searchSpace, RealVector means, RealVector sigmas) =>
+            RealVector.Clamp(random.NextRealVectorNormal(means, sigmas, searchSpace.Length), searchSpace.Minimum, searchSpace.Maximum);
     }
 }

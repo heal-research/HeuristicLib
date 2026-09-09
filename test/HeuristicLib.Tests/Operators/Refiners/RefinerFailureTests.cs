@@ -59,7 +59,7 @@ public class RefinerFailureTests
     {
         var problem = CreateProblem();
         var counter = new ObservationCounter();
-        var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingAfterBatchesRefiner(2).CountRefinerCalls(counter) };
+        var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingAfterBatchesRefiner(2).CountCalls(counter) };
 
         Should.Throw<InvalidOperationException>(() => algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
 
