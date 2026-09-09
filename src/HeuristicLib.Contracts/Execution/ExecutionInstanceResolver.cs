@@ -4,11 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Execution;
 
-/// <remarks>
-/// Convenience only: every overload forwards to the registry overload of the same name. It is a class, not a struct,
-/// so that <see cref="ExecutionInstanceResolver{TCandidate, TSearchSpace, TProblem, TSearchState}"/> can derive from
-/// it and inherit its extension members.
-/// </remarks>
+/// <remarks>Convenience only: every overload forwards to the registry overload of the same name.</remarks>
 public class ExecutionInstanceResolver<TCandidate, TSearchSpace, TProblem>(ExecutionInstanceRegistry registry)
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -21,10 +17,8 @@ public class ExecutionInstanceResolver<TCandidate, TSearchSpace, TProblem>(Execu
 /// other operators.
 /// </summary>
 /// <remarks>
-/// Terminators and interceptors name only their candidate, like every other role, so the state they run over has to
-/// come from the call. Naming it as a method type argument is not expressible — an extension member declared in a
-/// generic extension block merges the block's type parameters into its own, so an explicit type argument list must
-/// supply all of them or none. Carrying the state on the resolver instead means nothing is named at the call site.
+/// Terminators and interceptors name only their candidate, so the state they run over comes from the resolver rather
+/// than from the call site.
 /// </remarks>
 public sealed class ExecutionInstanceResolver<TCandidate, TSearchSpace, TProblem, TSearchState>(ExecutionInstanceRegistry registry)
     : ExecutionInstanceResolver<TCandidate, TSearchSpace, TProblem>(registry)

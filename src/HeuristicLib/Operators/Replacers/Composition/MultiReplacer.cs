@@ -5,8 +5,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
 /// <remarks>
-/// A multi replacer owns children, so it stays agnostic in the search space and problem and passes the run's
-/// triple through unchanged. See <see cref="WrappingReplacer{TCandidate}"/> for why binding is a leaf concept.
+/// A multi replacer owns children, so it stays agnostic in the search space and problem and passes the run's triple
+/// through unchanged.
 /// </remarks>
 public abstract record MultiReplacer<TCandidate>
     : IReplacer<TCandidate>
@@ -19,8 +19,8 @@ public abstract record MultiReplacer<TCandidate>
     public ValueArray<IReplacer<TCandidate>> ChildReplacers { get; init; }
 
     /// <summary>
-    /// Resolves each child over the run's search space and problem and hands them to
-    /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
+    /// Resolves each child over the run's search space and problem and hands them to <see
+    /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
     public IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>

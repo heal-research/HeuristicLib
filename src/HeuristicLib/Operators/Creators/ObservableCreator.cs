@@ -10,9 +10,8 @@ namespace HEAL.HeuristicLib.Operators;
 /// </summary>
 /// <remarks>
 /// The observers are typed at the search space and problem they were written for, while the creator itself stays
-/// agnostic so it can be used over any run for its candidate type. The two meet when the execution instance is
-/// created: observers written for a wider search space or problem accept the run's, and a set written for a narrower
-/// one is reported there rather than silently ignored.
+/// agnostic so it can be used over any run for its candidate type. Observers written for a narrower search space
+/// or problem than the run supplies are reported when the execution instance is created.
 /// </remarks>
 public sealed record ObservableCreator<TCandidate, TObserverSearchSpace, TObserverProblem>
     : WrappingCreator<TCandidate>
@@ -90,7 +89,7 @@ public static class ObservableCreator
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(childCreator, new ActionCreatorObserver<TCandidate, TSearchSpace, TProblem>(afterCreation));
 
-    /// <summary>Observes candidates only, so the observer is written at the widest search space and problem.</summary>
+    /// <summary>Observes candidates only.</summary>
     public static ObservableCreator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> Create<TCandidate>(ICreator<TCandidate> childCreator, Action<IReadOnlyList<TCandidate>> afterCreation) =>
         new(childCreator, new ActionCreatorObserver<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>((candidates, _, _, _) => afterCreation(candidates)));
 }

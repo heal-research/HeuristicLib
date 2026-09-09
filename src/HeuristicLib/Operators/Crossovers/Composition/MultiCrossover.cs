@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 /// <remarks>
 /// A multi crossover owns children, so it stays agnostic in the search space and problem and passes the run's triple
-/// through unchanged. See <see cref="WrappingCrossover{TCandidate}"/> for why binding is a leaf concept.
+/// through unchanged.
 /// </remarks>
 public abstract record MultiCrossover<TCandidate>
     : ICrossover<TCandidate>
@@ -20,9 +20,7 @@ public abstract record MultiCrossover<TCandidate>
 
     /// <summary>
     /// Resolves each child over the run's search space and problem and hands them to
-    /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>. Left visible, because unlike a leaf
-    /// crossover this base offers no other creation member and hiding it would leave an author with no view of the
-    /// mechanism their override plugs into.
+    /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
     public ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>

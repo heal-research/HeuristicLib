@@ -47,10 +47,6 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProb
         ExecutionInstanceRegistry instanceRegistry,
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor);
 
-    /// <remarks>
-    /// Resolves the interceptor at this algorithm's own search space and problem, which is what the creation method
-    /// below takes.
-    /// </remarks>
     public sealed override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
     {
         var resolver = instanceRegistry.For<TCandidate, TSearchSpace, TProblem, TSearchState>();

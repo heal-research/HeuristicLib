@@ -6,8 +6,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 /// <remarks>
-/// A multi terminator owns children, so it stays agnostic in the search space, problem and search state, and passes
-/// the run's binding through to the children unchanged. See <see cref="WrappingTerminator{TCandidate}"/> for why binding is a leaf concept.
+/// A multi terminator owns children, so it stays agnostic in the search space, problem and search state, and passes the
+/// run's binding through to the children unchanged.
 /// </remarks>
 public abstract record MultiTerminator<TCandidate>
     : ITerminator<TCandidate>
@@ -20,8 +20,8 @@ public abstract record MultiTerminator<TCandidate>
     public ValueArray<ITerminator<TCandidate>> ChildTerminators { get; init; }
 
     /// <summary>
-    /// Resolves each child over the run's search space and problem and hands them to
-    /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
+    /// Resolves each child over the run's search space and problem and hands them to <see
+    /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
     /// </summary>
     public ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>

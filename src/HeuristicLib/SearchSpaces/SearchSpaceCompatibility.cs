@@ -26,11 +26,8 @@ public sealed record Incompatibility(IncompatibilityReason Reason, string Invari
 /// Decides whether an operator may be used over a search space, from the invariants both declare.
 /// </summary>
 /// <remarks>
-/// Two checks, because an operator can fail either one alone. The output check asks whether everything the space
-/// requires of its members is guaranteed by the operator; the input check asks whether everything the operator
-/// requires of its input is guaranteed by the space. An operator that accepts anything but returns candidates outside
-/// the space fails only the first, and one that returns valid candidates but rejects members of the space fails only
-/// the second.
+/// Two checks, because an operator can fail either one alone: whether everything the space requires of its members is
+/// guaranteed by the operator, and whether everything the operator requires of its input is guaranteed by the space.
 /// </remarks>
 public static class SearchSpaceCompatibility
 {
@@ -39,11 +36,8 @@ public static class SearchSpaceCompatibility
     /// or an empty list when it can.
     /// </summary>
     /// <remarks>
-    /// Checking is per invariant. An operator that declares no contract, or answers <see langword="null"/> for an
-    /// invariant, is not checked for it: the type system has already decided which search spaces the operator may be
-    /// used over, and invariants only refine that answer where a declaration says something the type system cannot.
-    /// Declaring is therefore opt in, and adding invariants to a search space never invalidates operators written
-    /// before them.
+    /// Checking is per invariant, and declaring is opt in: an operator that declares no contract, or answers
+    /// <see langword="null"/> for an invariant, is not checked for it.
     /// </remarks>
     public static IReadOnlyList<Incompatibility> Check<TCandidate>(IOperator candidateOperator, ISearchSpace<TCandidate> searchSpace)
     {

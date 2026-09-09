@@ -33,8 +33,7 @@ public record GaussianMutator
 
     /// <summary>
     /// The instance offers an adaptable strength, which an algorithm reaches by testing for
-    /// <see cref="IAdaptableMutationStrengthInstance{TCandidate,TSearchSpace,TProblem}"/>. Nothing on the configuration
-    /// announces this, because adaptation only ever happens to an instance.
+    /// <see cref="IAdaptableMutationStrengthInstance{TCandidate,TSearchSpace,TProblem}"/>.
     /// </summary>
     public override IMutatorInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         new Instance(MutationRate, MutationStrength);

@@ -8,8 +8,7 @@ namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 /// The three move operators that make up a neighborhood.
 /// </summary>
 /// <remarks>
-/// It names only the candidate representation and the kind of move, because each of the three operators it exposes
-/// now names only those as well. What the neighborhood was written for is stated on
+/// What the neighborhood was written for is stated on
 /// <see cref="Neighborhood{TCandidate,TSearchSpace,TProblem,TMove}"/>, which is where it is authored.
 /// </remarks>
 public interface INeighborhood<TCandidate, TMove>

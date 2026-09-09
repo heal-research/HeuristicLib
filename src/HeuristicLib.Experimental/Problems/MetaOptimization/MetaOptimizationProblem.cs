@@ -36,9 +36,7 @@ public class MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, TSearch
 
     /// <remarks>
     /// The builder hands back an <see cref="IAlgorithm{TCandidate}"/>, which says nothing about the state a run
-    /// yields, so the typed <c>Complete</c> on the authoring base does not apply. Resolving the algorithm explicitly
-    /// is what an erased holder pays: it names the run's binding once and then runs an execution instance, which is
-    /// typed.
+    /// yields, so the algorithm is resolved explicitly and its execution instance run.
     /// </remarks>
     public override ObjectiveVector Evaluate(CompositeGenotype<RealVector, IntegerVector> solution, IRandomNumberGenerator random)
     {

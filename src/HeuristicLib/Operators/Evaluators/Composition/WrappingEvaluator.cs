@@ -5,8 +5,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 /// <remarks>
-/// A wrapping evaluator owns a child, so it stays agnostic in the search space and problem and passes the run's
-/// triple through unchanged. Binding is a leaf concept.
+/// A wrapping evaluator owns a child, so it stays agnostic in the search space and problem and passes the run's triple
+/// through unchanged.
 /// </remarks>
 public abstract record WrappingEvaluator<TCandidate>
     : IEvaluator<TCandidate>
@@ -19,8 +19,8 @@ public abstract record WrappingEvaluator<TCandidate>
     public IEvaluator<TCandidate> ChildEvaluator { get; init; }
 
     /// <summary>
-    /// Resolves the child over the run's search space and problem and hands it to
-    /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
+    /// Resolves the child over the run's search space and problem and hands it to <see
+    /// cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
     public IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>

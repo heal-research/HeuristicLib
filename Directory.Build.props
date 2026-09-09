@@ -5,6 +5,9 @@
         <Nullable>enable</Nullable>
         <WarningsAsErrors>Nullable</WarningsAsErrors>
         <DebugType>embedded</DebugType>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);1591</NoWarn>
+        <WarningsAsErrors>$(WarningsAsErrors);1570;1571;1572;1574;1580;1584;1587;1710;1711</WarningsAsErrors>
     </PropertyGroup>
 
     <PropertyGroup>

@@ -4,9 +4,7 @@ namespace HEAL.HeuristicLib.Numerics;
 /// What every operation declares about itself.
 /// </summary>
 /// <remarks>
-/// Members are static because an operation has no state. Declaring them here makes the compiler require an operation
-/// to supply them, which a switch cannot do: a switch that forgets a case still compiles. Arity is deliberately not
-/// declared, because it follows from which interface an operation implements and so cannot be stated wrongly.
+/// Arity is not declared: it follows from which interface an operation implements.
 /// </remarks>
 internal interface IOperationDefinition
 {
@@ -24,15 +22,14 @@ internal interface ITerminalOperationDefinition : IOperationDefinition
 }
 
 /// <remarks>
-/// An operand is either one value, when a constant subexpression folded, or a span of values. Both shapes are
-/// declared so a caller can pick without the operation knowing how operands are stored.
+/// An operand is either one value, when a constant subexpression folded, or a span of values. Both shapes are declared.
 /// </remarks>
 internal interface IUnaryOperationDefinition : IOperationDefinition
 {
     /// <summary>How many working spans this operation needs. Each is as long as the result.</summary>
     static abstract int ScratchSpanCount { get; }
 
-    /// <summary>How many working spans this operation's adjoint rule needs. Declared apart from the forward count because a derivative builds different intermediates than the value does.</summary>
+    /// <summary>How many working spans this operation's adjoint rule needs, which differs from the forward count.</summary>
     static abstract int AdjointScratchSpanCount { get; }
 
     /// <summary>How this operation is written when an expression is rendered. Unary operations are always calls.</summary>
@@ -51,24 +48,23 @@ internal interface IUnaryOperationDefinition : IOperationDefinition
     /// <param name="operandAdjoints">Accumulated into, never assigned, because an operand reached by several paths receives a contribution from each.</param>
     /// <param name="scratch">As many working spans as <see cref="AdjointScratchSpanCount"/> declared, each as long as the batch.</param>
     /// <remarks>
-    /// There is no activity flag, because with one operand a passive operand means there is nothing to do at all and
-    /// the caller skips the rule instead. An operation that declares <see cref="IOperationDefinition.IsDifferentiable"/>
-    /// false throws from here; it is still required to supply the member so that the omission cannot be silent.
+    /// There is no activity flag: with one operand the caller skips the rule instead. An operation that declares
+    /// <see cref="IOperationDefinition.IsDifferentiable"/> false throws from here; it is still required to supply the
+    /// member so that the omission cannot be silent.
     /// </remarks>
     static abstract void Adjoint(ReadOnlySpan<double> upstream, Operand operand, Operand result, Span<double> operandAdjoints, ScratchSpans scratch);
 }
 
 /// <remarks>
-/// Either operand may be one value or a span of values, so there are four combinations. Declaring all four keeps the
-/// broadcast forms that avoid expanding a single value into a whole span, and lets the caller route to the right
-/// one without every operation repeating that choice.
+/// Either operand may be one value or a span of values, so all four combinations are declared. The broadcast forms
+/// avoid expanding a single value into a whole span.
 /// </remarks>
 internal interface IBinaryOperationDefinition : IOperationDefinition
 {
     /// <summary>How many working spans this operation needs. Each is as long as the result.</summary>
     static abstract int ScratchSpanCount { get; }
 
-    /// <summary>How many working spans this operation's adjoint rule needs. Declared apart from the forward count because a derivative builds different intermediates than the value does.</summary>
+    /// <summary>How many working spans this operation's adjoint rule needs, which differs from the forward count.</summary>
     static abstract int AdjointScratchSpanCount { get; }
 
     /// <summary>How this operation is written when an expression is rendered.</summary>
@@ -97,9 +93,7 @@ internal interface IBinaryOperationDefinition : IOperationDefinition
     /// <remarks>
     /// Active and passive are the activity-analysis terms: an operand is active when it depends on a parameter, and a
     /// passive one has no derivative to receive.
-    /// Each side carries its own flag, because either can be passive while the other is active and the caller can only
-    /// skip the rule when both are. The flags say what the empty adjoint span would also say, and are stated anyway so
-    /// that a rule reads the condition it is meant to test rather than a convention about span lengths. An operation that
+    /// Each side carries its own flag, because either can be passive while the other is active. An operation that
     /// declares <see cref="IOperationDefinition.IsDifferentiable"/> false throws from here; it is still required to
     /// supply the member so that the omission cannot be silent.
     /// </remarks>

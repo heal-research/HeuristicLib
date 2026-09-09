@@ -69,7 +69,7 @@ public static class ObservableEvaluator
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(childEvaluator, new ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>(afterEvaluation));
 
-    /// <summary>Observes results only, so the observer is written at the widest search space and problem.</summary>
+    /// <summary>Observes results only.</summary>
     public static ObservableEvaluator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> Create<TCandidate>(IEvaluator<TCandidate> childEvaluator, Action<IReadOnlyList<ObjectiveVector>, IReadOnlyList<TCandidate>> afterEvaluation) =>
         new(childEvaluator, new ActionEvaluatorObserver<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>((objectiveVectors, candidates, _, _) => afterEvaluation(objectiveVectors, candidates)));
 }

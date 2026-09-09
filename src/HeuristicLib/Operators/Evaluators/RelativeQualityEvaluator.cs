@@ -24,9 +24,6 @@ public sealed record RelativeQualityEvaluator<TCandidate>
     /// </summary>
     public ObjectiveVector BestKnown { get; init; }
 
-    /// <summary>
-    /// Gets the policy applied when a best-known objective value is zero.
-    /// </summary>
     public RelativeQualityZeroBestKnownPolicy ZeroBestKnownPolicy { get; init; } = RelativeQualityZeroBestKnownPolicy.SignedInfinity;
 
     public RelativeQualityEvaluator(IEvaluator<TCandidate> childEvaluator, ObjectiveVector bestKnown)

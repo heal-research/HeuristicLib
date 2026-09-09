@@ -6,8 +6,7 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 
 /// <remarks>
 /// A wrapping replacer owns a child, so it stays agnostic in the search space and problem and passes the run's
-/// triple through unchanged. Binding is a leaf concept: a composite that narrowed the triple would reject children the
-/// run supports.
+/// triple through unchanged.
 /// </remarks>
 public abstract record WrappingReplacer<TCandidate>
     : IReplacer<TCandidate>

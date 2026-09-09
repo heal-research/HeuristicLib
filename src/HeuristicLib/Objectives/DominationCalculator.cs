@@ -14,6 +14,7 @@ public static class DominationCalculator
     ///   can be set to true to avoid plateaus becoming too attractive for the search process.
     /// </remarks>
     /// <param name="evaluatedCandidates">The evaluated candidates of the population.</param>
+    /// <param name="objective">The problem's objective directions.</param>
     /// <param name="dominateOnEqualQualities">Whether evaluated candidates with exactly equal objective vectors should dominate one another.</param>
     /// <returns>The pareto front containing the best evaluated candidates.</returns>
     public static List<EvaluatedCandidate<T>> CalculateBestParetoFront<T>(IReadOnlyList<EvaluatedCandidate<T>> evaluatedCandidates, ObjectiveDirections objective, bool dominateOnEqualQualities = true) => CalculateBestFront(evaluatedCandidates, objective, evaluatedCandidates.Count, dominateOnEqualQualities, out _, out _, out _);
@@ -31,6 +32,7 @@ public static class DominationCalculator
     ///   can be set to true to avoid plateaus becoming too attractive for the search process.
     /// </remarks>
     /// <param name="evaluatedCandidates">The evaluated candidates of the population.</param>
+    /// <param name="objective">The problem's objective directions.</param>
     /// <param name="rank">The rank of each evaluated candidate, corresponding to the front it is put in.</param>
     /// <param name="dominateOnEqualQualities">Whether evaluated candidates with exactly equal objective vectors should dominate one another.</param>
     /// <returns>A sorted list of the pareto fronts from best to worst.</returns>

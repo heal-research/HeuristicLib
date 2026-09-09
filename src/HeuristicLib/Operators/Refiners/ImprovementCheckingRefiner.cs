@@ -13,11 +13,10 @@ namespace HEAL.HeuristicLib.Operators;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This is an ordinary refiner. Its contract is still candidate to candidate, and the algorithm evaluates the returned
-/// candidate afterwards exactly as it would for any other refiner. A naive configuration therefore performs three
-/// problem evaluations per refined candidate: two here and one in the algorithm. That cost is visible and removable —
-/// sharing one <see cref="CachingEvaluator{TCandidate,TSearchSpace,TProblem}"/> instance with the algorithm turns the
-/// third evaluation into a cache hit.
+/// The algorithm still evaluates the returned candidate afterwards, so a naive configuration performs three problem
+/// evaluations per refined candidate: two here and one in the algorithm. Sharing one
+/// <see cref="CachingEvaluator{TCandidate}"/> instance with the algorithm turns the third into a
+/// cache hit.
 /// </para>
 /// <para>
 /// A refiner that cannot improve a candidate returns it unchanged, so its objective vector is unchanged too and the
@@ -25,7 +24,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// </para>
 /// <para>
 /// Wrapping order matters and expresses genuinely different searches. An
-/// <see cref="IteratedRefiner{TCandidate,TSearchSpace,TProblem}"/> around this refiner is a memetic hill climb that
+/// <see cref="IteratedRefiner{TCandidate}"/> around this refiner is a memetic hill climb that
 /// keeps each round only if it improved, while this refiner around an iterated one runs every round and then accepts or
 /// rejects the final result once.
 /// </para>
@@ -47,10 +46,9 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     /// Gets the evaluator used for both comparison evaluations.
     /// </summary>
     /// <remarks>
-    /// The default is an ordinary <see cref="ProblemEvaluator{TCandidate,TSearchSpace,TProblem}"/>. Because counting,
-    /// limiting and caching are wrapper behavior rather than properties of the evaluator role, that default is
-    /// unwrapped and therefore invisible to budgets and analysis. Supply the same evaluator instance the algorithm uses
-    /// to have these evaluations counted, limited or served from one shared cache.
+    /// The default is an unwrapped <see cref="ProblemEvaluator{TCandidate,TSearchSpace,TProblem}"/> and is therefore
+    /// invisible to budgets and analysis. Supply the same evaluator instance the algorithm uses to have these
+    /// evaluations counted, limited or served from one shared cache.
     /// </remarks>
     public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
@@ -123,9 +121,7 @@ public static class ImprovementCheckingRefiner
 /// </summary>
 /// <remarks>
 /// The two operands are not interchangeable: the criterion answers one directed question rather than defining an
-/// ordering. This is why the role is not an <see cref="IComparer{T}"/>. An ordering cannot express a threshold, because
-/// moving one operand by a margin makes <c>Compare(a, b)</c> and <c>-Compare(b, a)</c> disagree, and it cannot know
-/// which direction to move it in because a comparer does not receive the objective directions.
+/// ordering, and it receives the objective directions a comparer would not.
 /// </remarks>
 public interface IImprovementCriterion
 {

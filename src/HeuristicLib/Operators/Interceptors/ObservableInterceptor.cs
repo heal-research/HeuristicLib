@@ -76,7 +76,7 @@ public static class ObservableInterceptor
         where TObserverSearchState : class, ISearchState =>
         new(childInterceptor, new ActionInterceptorObserver<TCandidate, TSearchSpace, TProblem, TObserverSearchState>(afterInterception));
 
-    /// <summary>Observes the new state only, so the observer is written at the widest search space and problem.</summary>
+    /// <summary>Observes the new state only.</summary>
     public static ObservableInterceptor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TObserverSearchState> Create<TCandidate, TObserverSearchState>(IInterceptor<TCandidate> childInterceptor, Action<TObserverSearchState> afterInterception)
         where TObserverSearchState : class, ISearchState =>
         new(childInterceptor, new ActionInterceptorObserver<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TObserverSearchState>((newState, _, _, _, _) => afterInterception(newState)));

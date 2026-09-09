@@ -7,10 +7,9 @@ namespace HEAL.HeuristicLib.Numerics;
 /// The element-wise shapes <see cref="TensorPrimitives"/> does not provide.
 /// </summary>
 /// <remarks>
-/// Two gaps are filled here. <see cref="TensorPrimitives"/> solves span-or-single-value with an overload per shape,
-/// which an <see cref="Operand"/> cannot use because it carries its shape at run time; these dispatch on it once for
-/// the whole span rather than once per element. And it has no accumulating divide to match its
-/// <see cref="TensorPrimitives.MultiplyAdd(ReadOnlySpan{double}, ReadOnlySpan{double}, ReadOnlySpan{double}, Span{double})"/>.
+/// Fills two gaps in <see cref="TensorPrimitives"/>: dispatching on an <see cref="Operand"/> shape once for the whole
+/// span rather than once per element, and an accumulating divide to match
+/// <c>TensorPrimitives.MultiplyAdd</c>.
 /// Everything else a caller needs is already there and should be called there.
 /// </remarks>
 internal static class TensorPrimitivesEx

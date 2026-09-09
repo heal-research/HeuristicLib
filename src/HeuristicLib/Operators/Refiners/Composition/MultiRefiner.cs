@@ -5,8 +5,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Refiners;
 
 /// <remarks>
-/// A multi refiner owns children, so it stays agnostic in the search space and problem and passes the run's
-/// triple through unchanged. See <see cref="WrappingRefiner{TCandidate}"/> for why binding is a leaf concept.
+/// A multi refiner owns children, so it stays agnostic in the search space and problem and passes the run's triple
+/// through unchanged.
 /// </remarks>
 public abstract record MultiRefiner<TCandidate>
     : IRefiner<TCandidate>
@@ -19,8 +19,8 @@ public abstract record MultiRefiner<TCandidate>
     public ValueArray<IRefiner<TCandidate>> ChildRefiners { get; init; }
 
     /// <summary>
-    /// Resolves each child over the run's search space and problem and hands them to
-    /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
+    /// Resolves each child over the run's search space and problem and hands them to <see
+    /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
     public IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>

@@ -6,8 +6,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 /// <remarks>
-/// A wrapping terminator owns a child, so it stays agnostic in the search space, problem and search state, and
-/// passes the run's binding through to the child unchanged. Binding is a leaf concept.
+/// A wrapping terminator owns a child, so it stays agnostic in the search space, problem and search state, and passes
+/// the run's binding through to the child unchanged.
 /// </remarks>
 public abstract record WrappingTerminator<TCandidate>
     : ITerminator<TCandidate>
@@ -20,8 +20,8 @@ public abstract record WrappingTerminator<TCandidate>
     public ITerminator<TCandidate> ChildTerminator { get; init; }
 
     /// <summary>
-    /// Resolves the child over the run's search space and problem and hands it to
-    /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
+    /// Resolves the child over the run's search space and problem and hands it to <see
+    /// cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
     /// </summary>
     public ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>

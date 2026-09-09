@@ -5,8 +5,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Refiners;
 
 /// <remarks>
-/// A wrapping refiner owns a child, so it stays agnostic in the search space and problem and passes the run's
-/// triple through unchanged. Binding is a leaf concept.
+/// A wrapping refiner owns a child, so it stays agnostic in the search space and problem and passes the run's triple
+/// through unchanged.
 /// </remarks>
 public abstract record WrappingRefiner<TCandidate>
     : IRefiner<TCandidate>
@@ -19,8 +19,8 @@ public abstract record WrappingRefiner<TCandidate>
     public IRefiner<TCandidate> ChildRefiner { get; init; }
 
     /// <summary>
-    /// Resolves the child over the run's search space and problem and hands it to
-    /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
+    /// Resolves the child over the run's search space and problem and hands it to <see
+    /// cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
     public IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>

@@ -5,9 +5,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Encodings.RealVectors;
 
 /// <remarks>
-/// A capability, not a role, so it has no configuration counterpart: a strength that changes during a run can only
-/// live on an instance. Any mutator may offer it by returning an instance that implements it, and an algorithm that
-/// adapts strength tests its resolved mutator for it.
+/// A capability, not a role, so it has no configuration counterpart. Any mutator may offer it by returning an instance
+/// that implements it, and an algorithm that adapts strength tests its resolved mutator for it.
 /// </remarks>
 public interface IAdaptableMutationStrengthInstance<TCandidate, in TSearchSpace, in TProblem>
     : IMutatorInstance<TCandidate, TSearchSpace, TProblem>

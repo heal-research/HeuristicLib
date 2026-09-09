@@ -10,9 +10,8 @@ namespace HEAL.HeuristicLib.Operators;
 /// </summary>
 /// <remarks>
 /// The observers are typed at the search space and problem they were written for, while the mutator itself stays
-/// agnostic so it can be used over any run for its candidate type. The two meet when the execution instance is
-/// created: observers written for a wider search space or problem accept the run's, and a set written for a narrower
-/// one is reported there rather than silently ignored.
+/// agnostic so it can be used over any run for its candidate type. Observers written for a narrower search space
+/// or problem than the run supplies are reported when the execution instance is created.
 /// </remarks>
 public sealed record ObservableMutator<TCandidate, TObserverSearchSpace, TObserverProblem>
     : WrappingMutator<TCandidate>

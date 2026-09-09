@@ -6,8 +6,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 /// <remarks>
-/// A wrapping interceptor owns a child, so it stays agnostic in the search space, problem and search state, and
-/// passes the run's binding through to the child unchanged. Binding is a leaf concept.
+/// A wrapping interceptor owns a child, so it stays agnostic in the search space, problem and search state, and passes
+/// the run's binding through to the child unchanged.
 /// </remarks>
 public abstract record WrappingInterceptor<TCandidate>
     : IInterceptor<TCandidate>
@@ -20,8 +20,8 @@ public abstract record WrappingInterceptor<TCandidate>
     public IInterceptor<TCandidate> ChildInterceptor { get; init; }
 
     /// <summary>
-    /// Resolves the child over the run's search space and problem and hands it to
-    /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
+    /// Resolves the child over the run's search space and problem and hands it to <see
+    /// cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
     /// </summary>
     public IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>

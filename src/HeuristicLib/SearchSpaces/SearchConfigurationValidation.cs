@@ -47,14 +47,8 @@ public sealed record ValidationReport(ImmutableArray<ValidationDiagnostic> Diagn
 /// </summary>
 /// <remarks>
 /// The walk is by reflection over configuration properties, so it covers algorithms and operators written outside the
-/// library without any of them implementing a traversal contract. Configurations are identified by
-/// <see cref="IExecutionInstanceResolvable"/>, which is what an algorithm and an operator have in common. It runs once
-/// per validation, never during a run.
-/// <para>
-/// An operator is checked when it declares an invariant contract, and skipped otherwise. Nothing enumerates operator
-/// roles, so a role added outside this library participates on the same terms as the built-in ones, and a role whose
-/// output is not a candidate simply never declares a contract.
-/// </para>
+/// library, and runs once per validation, never during a run. An operator is checked when it declares an invariant
+/// contract, and skipped otherwise.
 /// </remarks>
 public static class SearchConfigurationValidation
 {

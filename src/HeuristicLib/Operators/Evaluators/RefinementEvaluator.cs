@@ -13,20 +13,13 @@ namespace HEAL.HeuristicLib.Operators;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The refined candidates are transient. They exist only for the duration of one evaluation, are discarded when it
-/// returns, and are never written back into the population, the search state or any algorithm result. The caller keeps
-/// the candidates it supplied and pairs them with the returned objective vectors by position, exactly as with every
-/// other evaluator.
+/// The refined candidates are transient: they are discarded when the evaluation returns and are never written back
+/// into the population, the search state or any algorithm result. This is Baldwinian refinement, as opposed to
+/// configuring the refiner on the algorithm, which continues the search with the refined candidate.
 /// </para>
 /// <para>
-/// This is Baldwinian refinement: the refinement influences fitness without becoming part of the candidate. Configuring
-/// the same refiner as an algorithm's refiner instead makes it Lamarckian, because the algorithm then continues with
-/// the refined candidate. The two are different searches and both are expressed by where the refiner is configured.
-/// </para>
-/// <para>
-/// Refiners are generally free to return a differently sized population, but this evaluator is not: it owes its caller
-/// one objective vector per supplied candidate. A refiner that changes the population size or order therefore throws
-/// here rather than producing a miscounted result.
+/// A refiner that changes the population size or order throws here, because this evaluator owes its caller one
+/// objective vector per supplied candidate.
 /// </para>
 /// <para>
 /// The evaluations issued here belong to <see cref="Evaluator"/>, so counting, limiting and caching attach in the usual
@@ -51,10 +44,9 @@ public sealed record RefinementEvaluator<TCandidate>
     /// Gets the evaluator that measures the refined candidates.
     /// </summary>
     /// <remarks>
-    /// The default is an ordinary <see cref="ProblemEvaluator{TCandidate,TSearchSpace,TProblem}"/>. Because counting,
-    /// limiting and caching are wrapper behavior rather than properties of the evaluator role, that default is
-    /// unwrapped and therefore invisible to budgets and analysis. Supply the same evaluator instance the algorithm uses
-    /// to have these evaluations counted, limited or served from one shared cache.
+    /// The default is an unwrapped <see cref="ProblemEvaluator{TCandidate,TSearchSpace,TProblem}"/> and is therefore
+    /// invisible to budgets and analysis. Supply the same evaluator instance the algorithm uses to have these
+    /// evaluations counted, limited or served from one shared cache.
     /// </remarks>
     public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 

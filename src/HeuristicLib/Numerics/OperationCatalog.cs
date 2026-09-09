@@ -6,17 +6,11 @@ namespace HEAL.HeuristicLib.Numerics;
 /// <remarks>
 /// <para>
 /// Adding an operation means adding a type in <c>OperationDefinitions.cs</c> and one line to the declaration list. The
-/// compiler then requires that type to supply every facet, including its adjoint rule, which is what stops an
-/// operation from being half-added.
+/// compiler then requires that type to supply every facet, including its adjoint rule.
 /// </para>
 /// <para>
 /// Kernels are looked up separately from information, and separately per arity, so that nothing a caller receives is
 /// optional. Asking for the kernels of the wrong arity is a mistake and throws rather than returning nothing.
-/// </para>
-/// <para>
-/// Lookup is an array index. The arrays span the operation values rather than their count, because operation values are a
-/// persistence and backend contract and are appended rather than renumbered, so the space is expected to develop
-/// gaps. They stay small while numbering stays disciplined.
 /// </para>
 /// </remarks>
 internal static class OperationCatalog
@@ -112,11 +106,8 @@ internal static class OperationCatalog
     /// Applies a binary operation to operands of which at least one is a span, choosing the matching shape.
     /// </summary>
     /// <remarks>
-    /// Three of the four shapes appear here rather than four. Two scalar operands produce a scalar rather than
-    /// filling a span, and a caller reserves no span for that case — the interpreter's workspace only grows for
-    /// results that are spans — so there would be nowhere to write. That case belongs to the caller, which has to
-    /// treat a scalar result differently in any event. Everything else is decided once here, instead of once per
-    /// operation as the interpreter used to.
+    /// Three shapes rather than four: two scalar operands produce a scalar rather than filling a span, and that case
+    /// belongs to the caller, which has to treat a scalar result differently in any event.
     /// </remarks>
     public static void ApplyToSpan(in BinaryOperationKernels kernels, in Operand left, in Operand right, Span<double> result, ScratchSpans scratch)
     {

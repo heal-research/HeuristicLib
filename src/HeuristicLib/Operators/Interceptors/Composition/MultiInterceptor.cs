@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 /// <remarks>
 /// A multi interceptor owns children, so it stays agnostic in the search space, problem and search state, and passes
-/// the run's binding through to the children unchanged. See <see cref="WrappingInterceptor{TCandidate}"/> for why binding is a leaf concept.
+/// the run's binding through to the children unchanged.
 /// </remarks>
 public abstract record MultiInterceptor<TCandidate>
     : IInterceptor<TCandidate>
@@ -20,8 +20,8 @@ public abstract record MultiInterceptor<TCandidate>
     public ValueArray<IInterceptor<TCandidate>> ChildInterceptors { get; init; }
 
     /// <summary>
-    /// Resolves each child over the run's search space and problem and hands them to
-    /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
+    /// Resolves each child over the run's search space and problem and hands them to <see
+    /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
     /// </summary>
     public IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>

@@ -19,10 +19,7 @@ public interface IAlgorithm<TCandidate> : IExecutionInstanceResolvable
         where TRunSearchState : class, ISearchState;
 }
 
-/// <remarks>
-/// Naming the search state is what lets a run say what it yields, so the execution surface hangs off this form rather
-/// than off <see cref="IAlgorithm{TCandidate}"/>. The search space and problem stay run supplied.
-/// </remarks>
+/// <remarks>The search space and problem stay run supplied; only the search state is named here.</remarks>
 public interface IAlgorithm<TCandidate, TSearchState> : IAlgorithm<TCandidate>
     where TSearchState : class, ISearchState
 {

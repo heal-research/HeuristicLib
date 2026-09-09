@@ -10,10 +10,6 @@ public static class AlgorithmExtensions
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        /// <remarks>
-        /// Takes the problem base so the search space is inferable; the concrete problem is recovered by a cast the
-        /// self-type constraint makes correct by convention.
-        /// </remarks>
         public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun<TProblem, TSearchSpace>(
             Problem<TProblem, TCandidate, TSearchSpace> problem, IRandomNumberGenerator random)
             where TProblem : Problem<TProblem, TCandidate, TSearchSpace>

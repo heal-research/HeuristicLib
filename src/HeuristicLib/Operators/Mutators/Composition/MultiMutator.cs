@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 /// <remarks>
 /// A multi mutator owns children, so it stays agnostic in the search space and problem and passes the run's triple
-/// through unchanged. See <see cref="WrappingMutator{TCandidate}"/> for why binding is a leaf concept.
+/// through unchanged.
 /// </remarks>
 public abstract record MultiMutator<TCandidate>
     : IMutator<TCandidate>, IInvariantContract<TCandidate>
@@ -20,9 +20,7 @@ public abstract record MultiMutator<TCandidate>
 
     /// <summary>
     /// Resolves each child over the run's search space and problem and hands them to
-    /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>. Left visible, because unlike a leaf
-    /// mutator this base offers no other creation member and hiding it would leave an author with no view of the
-    /// mechanism their override plugs into.
+    /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
     public IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>

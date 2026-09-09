@@ -12,9 +12,6 @@ namespace HEAL.HeuristicLib.Operators;
 public record PredefinedCandidatesCreator<TCandidate>
     : ICreator<TCandidate>
 {
-    /// <summary>
-    /// Gets the creator asked for the candidates that remain once the predefined candidates are exhausted.
-    /// </summary>
     public ICreator<TCandidate> CreatorForRemainingCandidates { get; init; }
 
     public ValueArray<TCandidate> PredefinedCandidates { get; init; }

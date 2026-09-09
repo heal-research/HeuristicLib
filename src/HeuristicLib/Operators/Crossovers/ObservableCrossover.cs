@@ -10,9 +10,8 @@ namespace HEAL.HeuristicLib.Operators;
 /// </summary>
 /// <remarks>
 /// The observers are typed at the search space and problem they were written for, while the crossover itself stays
-/// agnostic so it can be used over any run for its candidate type. The two meet when the execution instance is
-/// created: observers written for a wider search space or problem accept the run's, and a set written for a narrower
-/// one is reported there rather than silently ignored.
+/// agnostic so it can be used over any run for its candidate type. Observers written for a narrower search space
+/// or problem than the run supplies are reported when the execution instance is created.
 /// </remarks>
 public sealed record ObservableCrossover<TCandidate, TObserverSearchSpace, TObserverProblem>
     : WrappingCrossover<TCandidate>
@@ -90,7 +89,7 @@ public static class ObservableCrossover
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(childCrossover, new ActionCrossoverObserver<TCandidate, TSearchSpace, TProblem>(afterCross));
 
-    /// <summary>Observes offspring only, so the observer is written at the widest search space and problem.</summary>
+    /// <summary>Observes offspring only.</summary>
     public static ObservableCrossover<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> Create<TCandidate>(ICrossover<TCandidate> childCrossover, Action<IReadOnlyList<TCandidate>> afterCross) =>
         new(childCrossover, new ActionCrossoverObserver<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>((offspring, _, _, _) => afterCross(offspring)));
 }

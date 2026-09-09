@@ -18,14 +18,8 @@ public sealed record RepeatingEvaluator<TCandidate>
     /// </summary>
     public int Repetitions { get; init; }
 
-    /// <summary>
-    /// Gets the strategy used to aggregate the repeated objective vectors.
-    /// </summary>
     public IObjectiveVectorAggregator Aggregator { get; init; } = ObjectiveVectorAggregation.Mean;
 
-    /// <summary>
-    /// Gets the concurrency used to execute the repeated evaluation batches.
-    /// </summary>
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
     public RepeatingEvaluator(IEvaluator<TCandidate> childEvaluator, int repetitions)

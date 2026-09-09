@@ -44,9 +44,6 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
     /// </summary>
     public IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> BestKnownProvider { get; init; }
 
-    /// <summary>
-    /// Gets the policy applied when a best-known objective value is zero.
-    /// </summary>
     public RelativeQualityZeroBestKnownPolicy ZeroBestKnownPolicy { get; init; } = RelativeQualityZeroBestKnownPolicy.SignedInfinity;
 
     public DynamicRelativeQualityEvaluator(IEvaluator<TCandidate> childEvaluator, TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider)
@@ -56,10 +53,6 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
         BestKnownProvider = bestKnownProvider;
     }
 
-    /// <remarks>
-    /// The instance stays generic in the run's types and holds the problem it is bound to as a value, so a run is
-    /// accepted on the identity of that problem rather than on its static type.
-    /// </remarks>
     protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
         new Instance<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy);
 

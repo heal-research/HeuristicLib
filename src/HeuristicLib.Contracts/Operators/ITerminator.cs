@@ -71,10 +71,6 @@ public static class TerminatorResolverExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        /// <remarks>
-        /// Nothing is named at the call site: all four come from the resolver, which is why this role's resolver form
-        /// takes the quadruple rather than the triple the other seven use.
-        /// </remarks>
         public ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve(ITerminator<TCandidate> terminator) =>
             resolver.Registry.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
 

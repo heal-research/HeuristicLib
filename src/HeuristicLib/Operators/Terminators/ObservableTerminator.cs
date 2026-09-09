@@ -75,7 +75,7 @@ public static class ObservableTerminator
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(childTerminator, new ActionTerminatorObserver<TCandidate, TSearchSpace, TProblem, TObserverSearchState>(afterTerminalStateCheck));
 
-    /// <summary>Observes the outcome only, so the observer is written at the widest search space and problem.</summary>
+    /// <summary>Observes the outcome only.</summary>
     public static ObservableTerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TObserverSearchState> Create<TCandidate, TObserverSearchState>(ITerminator<TCandidate> childTerminator, Action<bool> afterTerminalStateCheck)
         where TObserverSearchState : class, ISearchState =>
         new(childTerminator, new ActionTerminatorObserver<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TObserverSearchState>((isTerminalState, _, _, _) => afterTerminalStateCheck(isTerminalState)));

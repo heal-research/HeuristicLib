@@ -10,10 +10,8 @@ namespace HEAL.HeuristicLib.Encodings.BoolVectors;
 /// element flip would not.
 /// </summary>
 /// <remarks>
-/// The mutator reads its search space rather than inferring the target cardinality from the candidate, so a candidate
-/// that arrived off cardinality is moved toward the space instead of having its error preserved. This is why the
-/// operator is written against the concrete search space type: <see cref="BoolVectorSearchSpace"/> cannot state a
-/// cardinality, so the same code has nothing to read there.
+/// The target cardinality is read from the search space, not inferred from the candidate, so a candidate that arrived
+/// off cardinality is moved toward the space instead of having its error preserved.
 /// </remarks>
 public record BitSwapMutator
     : SingleCandidateMutator<BoolVector, FixedCardinalityBoolVectorSearchSpace>, IInvariantContract<BoolVector>

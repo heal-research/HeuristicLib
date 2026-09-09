@@ -16,8 +16,7 @@ public record BitFlipMutator : SingleCandidateMutator<BoolVector, BoolVectorSear
     /// average. The expected value is in <c>[0, 1]</c>.
     /// </summary>
     /// <remarks>
-    /// The default scales with the candidate, so a longer vector is not disrupted more than a shorter one. Fixing the
-    /// rate instead makes the expected number of flips grow with the length.
+    /// The default scales with the candidate, so a longer vector is not disrupted more than a shorter one.
     /// </remarks>
     public double? FlipProbability { get; init; }
 

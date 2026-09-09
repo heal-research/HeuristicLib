@@ -14,11 +14,6 @@ namespace HEAL.HeuristicLib.Operators;
 /// leaves a candidate unchanged, because candidate equality is not generally meaningful and a fixed iteration count
 /// keeps the result reproducible. Each iteration receives its own forked random number generator, so the result does
 /// not depend on how many random draws an individual iteration consumes.
-/// <para>
-/// Iterating an accepted refinement and accepting an iterated refinement are different searches. Wrapping an
-/// improvement-checking refiner in this refiner keeps every round that improved, while wrapping this refiner in an
-/// improvement-checking refiner accepts or rejects the final result once.
-/// </para>
 /// </remarks>
 public sealed record IteratedRefiner<TCandidate>
     : WrappingRefiner<TCandidate>

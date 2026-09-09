@@ -8,9 +8,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Analysis;
 
 /// <remarks>
-/// Each factory comes in two forms. The one naming only the candidate writes the analysis at the widest search space,
-/// problem and population state, which serves any run because observers are contravariant in all three. Name the
-/// remaining arguments when an analysis has to read a concrete search space or problem.
+/// Each factory comes in two forms. The one naming only the candidate serves any run; name the remaining type
+/// arguments when the analysis has to read a concrete search space, problem or state.
 /// </remarks>
 public static class ExperimentalAnalyzers
 {

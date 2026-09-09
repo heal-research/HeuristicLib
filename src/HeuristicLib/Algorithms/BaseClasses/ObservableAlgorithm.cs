@@ -86,7 +86,7 @@ public static class ObservableAlgorithm
         where TSearchState : class, ISearchState =>
         new(childAlgorithm, new ActionAlgorithmObserver<TCandidate, TSearchSpace, TProblem, TSearchState>(afterIteration));
 
-    /// <summary>Observes the state only, so the observer is written at the widest search space and problem.</summary>
+    /// <summary>Observes the state only.</summary>
     public static ObservableAlgorithm<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> Create<TCandidate, TSearchState>(
         IAlgorithm<TCandidate, TSearchState> childAlgorithm, Action<TSearchState> afterIteration)
         where TSearchState : class, ISearchState =>
@@ -131,7 +131,6 @@ public static class ObservableAlgorithmExtensions
             algorithm.ObserveWith(new ActionAlgorithmObserver<TCandidate, TSearchSpace, TProblem, TSearchState>(afterIteration));
     }
 
-    /// <remarks>On the authoring base so the lambda's state parameter is typed from the receiver.</remarks>
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {

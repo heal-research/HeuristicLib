@@ -11,20 +11,18 @@ namespace HEAL.HeuristicLib.Problems.MachineLearning;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The parameters are the occurrences of <see cref="EvolvableConstantSymbol"/> in the expression. They are constant
-/// within one evaluation, which is why the genotype calls them constants, and free variables of the fitted model,
-/// which is why the numerics call them parameters. PySR and HeuristicLab call this capability constant optimization.
+/// The parameters are the occurrences of <see cref="EvolvableConstantSymbol"/> in the expression: constants within one
+/// evaluation, free variables of the fitted model. PySR and HeuristicLab call this constant optimization.
 /// </para>
 /// <para>
 /// The fit minimizes the mean squared error against the raw training targets, which need not be the problem's
 /// configured objective. The fitted expression is therefore returned without being compared to the original. Wrap this
-/// refiner in an <see cref="ImprovementCheckingRefiner{TCandidate, TSearchSpace, TProblem}"/> to keep the result only
+/// refiner in an <see cref="Operators.ImprovementCheckingRefiner{TCandidate}"/> to keep the result only
 /// where it improves the problem objective.
 /// </para>
 /// <para>
 /// An expression the solver cannot fit is returned unchanged, as is one with no evolvable constants. An expression
-/// using an operation that cannot be differentiated, or a variable the training data does not supply, throws instead:
-/// both describe the configuration rather than the candidate, so every affected candidate would fail the same way.
+/// using an operation that cannot be differentiated, or a variable the training data does not supply, throws instead.
 /// </para>
 /// <para>
 /// Linear scaling stays an evaluation concern. The fit runs against raw targets even where the problem applies scaling
@@ -46,14 +44,12 @@ public sealed record NumericParameterFittingRefiner
     /// <remarks>
     /// <para>
     /// Set this to fit on a subset of the rows, which trades fitting accuracy for solver time. The subset is fixed for
-    /// the lifetime of the configuration, so every candidate is fitted to the same rows. Drawing a fresh sample per
-    /// candidate is deliberately not offered here: it would recompute a binding per candidate for a benefit that a
-    /// fixed representative sample already provides.
+    /// the lifetime of the configuration, so every candidate is fitted to the same rows.
     /// </para>
     /// <para>
     /// The problem still evaluates on its own training data, so fitting to a subset makes the refiner's objective
     /// differ from the problem's more sharply than it already does. Compose an
-    /// <see cref="ImprovementCheckingRefiner{TCandidate, TSearchSpace, TProblem}"/> around it to reject a fit that
+    /// <see cref="Operators.ImprovementCheckingRefiner{TCandidate}"/> around it to reject a fit that
     /// does not carry over.
     /// </para>
     /// <para>
@@ -61,8 +57,7 @@ public sealed record NumericParameterFittingRefiner
     /// </para>
     /// <para>
     /// Data that does not supply a variable the expressions use is reported when the first affected candidate is
-    /// refined. A search space whose constants are all fixed reaches the solver for no candidate at all, so such a
-    /// mismatch stays unreported until the search space also offers an <see cref="EvolvableConstantSymbol"/>.
+    /// refined, which never happens where a search space fixes every constant.
     /// </para>
     /// </remarks>
     public RegressionData? FittingData { get; init; }

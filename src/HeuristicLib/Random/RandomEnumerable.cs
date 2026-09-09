@@ -36,7 +36,6 @@ public static class RandomEnumerable
         /// </remarks>
         /// <exception cref="ArgumentException">If the sequence is empty.</exception>
         /// <param name="random">The random number generator to use, its NextDouble() method must produce values in the range [0;1)</param>
-        /// <param name="count">The number of items to be selected.</param>
         /// <returns>An element that has been chosen randomly from the sequence.</returns>
         public T SampleRandom(IRandomNumberGenerator random) => source.SampleRandom(random, 1).First();
 
@@ -147,7 +146,7 @@ public static class RandomEnumerable
         public IEnumerable<T> SampleProportional(IRandomNumberGenerator random, int count, IEnumerable<double> weights, bool windowing = true, bool inverseProportional = false) => source.SampleProportional(random, weights, windowing, inverseProportional).Take(count);
 
         /// <summary>
-        ///   Same as <see also cref="SampleProportional<T>"/>, but chooses an item exactly once.
+        ///   Same as <c>SampleProportional</c>, but chooses an item exactly once.
         /// </summary>
         /// <remarks>
         ///   In case both <paramref name="inverseProportional" /> and <paramref name="windowing" /> are false values must be &gt;

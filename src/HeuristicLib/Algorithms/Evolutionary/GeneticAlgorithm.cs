@@ -105,13 +105,7 @@ public static class GeneticAlgorithm
     /// Creates a genetic algorithm for a problem that states its own operator preferences, asking the problem first
     /// and falling back to the search space's encoding defaults for every role the problem declines.
     /// </summary>
-    /// <remarks>
-    /// The self type on <see cref="Problem{TSelf, TCandidate, TSearchSpace}"/> is what lets the concrete problem type
-    /// be inferred here, which is what puts that problem's own defaults within reach.
-    /// <para>
-    /// Every operator is optional and overrides whatever the defaults would have supplied for that role.
-    /// </para>
-    /// </remarks>
+    /// <remarks>Every operator is optional and overrides whatever the defaults would have supplied for that role.</remarks>
     public static GeneticAlgorithm<TCandidate> For<TProblem, TCandidate, TSearchSpace>(
         Problem<TProblem, TCandidate, TSearchSpace> problem,
         ICreator<TCandidate>? creator = null,
@@ -163,8 +157,8 @@ public static class GeneticAlgorithm
     /// Creates a genetic algorithm from a search space's encoding defaults alone, with no problem instance.
     /// </summary>
     /// <remarks>
-    /// The result runs against any problem over that search space, which is what makes it a reusable configuration.
-    /// Pass the problem instead when that problem's own preferences should be consulted.
+    /// The result runs against any problem over that search space. Pass the problem instead when that problem's own
+    /// preferences should be consulted.
     /// <para>
     /// Every operator is optional and overrides whatever the defaults would have supplied for that role.
     /// </para>

@@ -439,6 +439,23 @@ Promote a feature from Experimental only when its responsibility belongs in the 
 
 The main and Contracts packages must never reference Experimental. Experimental may reference the main package.
 
+### § 9.7 Keep XML documentation verifiable by the build
+
+`Directory.Build.props` sets `GenerateDocumentationFile`, so the compiler parses every `///` block and resolves every
+`cref`. The generated XML file ships in the NuGet package for consumer IntelliSense, but the checks are the reason the
+flag is on.
+
+A documentation comment that states something false about the code is an error. A comment that is merely missing is not.
+
+- Errors: CS1570, CS1571, CS1572, CS1574, CS1580, CS1584, CS1587, CS1710 and CS1711. These report badly formed XML, an
+  unresolvable or malformed `cref`, a `param` or `typeparam` tag naming something that does not exist or naming it
+  twice, and a comment placed on an element that cannot carry one.
+- Warnings: CS1573 and CS1712, which report a tag that is absent rather than one that is wrong.
+- CS1591 is suppressed. It reports documentation coverage, which § 9.1 deliberately does not require.
+- Add a diagnostic to the error list only when it reports a comment that contradicts the code.
+
+An incremental build does not re-emit these diagnostics, so verification needs a clean build.
+
 ## § 10 Enforcement and implementation style
 
 ### § 10.1 Match each rule to its enforcement mechanism

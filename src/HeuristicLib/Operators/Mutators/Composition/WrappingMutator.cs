@@ -6,8 +6,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 /// <remarks>
 /// A wrapping mutator owns a child, so it stays agnostic in the search space and problem and passes the run's triple
-/// through unchanged. Binding is a leaf concept: a composite that narrowed the triple would reject children the run
-/// supports.
+/// through unchanged.
 /// </remarks>
 public abstract record WrappingMutator<TCandidate>
     : IMutator<TCandidate>, IInvariantContract<TCandidate>
@@ -21,9 +20,7 @@ public abstract record WrappingMutator<TCandidate>
 
     /// <summary>
     /// Resolves the child over the run's search space and problem and hands it to
-    /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>. Left visible, because unlike a leaf mutator
-    /// this base offers no other creation member and hiding it would leave an author with no view of the mechanism
-    /// their override plugs into.
+    /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
     public IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>

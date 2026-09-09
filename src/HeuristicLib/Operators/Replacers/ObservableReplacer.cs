@@ -11,9 +11,8 @@ namespace HEAL.HeuristicLib.Operators;
 /// </summary>
 /// <remarks>
 /// The observers are typed at the search space and problem they were written for, while the replacer itself stays
-/// agnostic so it can be used over any run for its candidate type. The two meet when the execution instance is
-/// created: observers written for a wider search space or problem accept the run's, and a set written for a narrower
-/// one is reported there rather than silently ignored.
+/// agnostic so it can be used over any run for its candidate type. Observers written for a narrower search space
+/// or problem than the run supplies are reported when the execution instance is created.
 /// </remarks>
 public sealed record ObservableReplacer<TCandidate, TObserverSearchSpace, TObserverProblem>
     : WrappingReplacer<TCandidate>
@@ -75,7 +74,7 @@ public static class ObservableReplacer
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(childReplacer, new ActionReplacerObserver<TCandidate, TSearchSpace, TProblem>(afterReplacement));
 
-    /// <summary>Observes the resulting population only, so the observer is written at the widest search space and problem.</summary>
+    /// <summary>Observes the resulting population only.</summary>
     public static ObservableReplacer<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> Create<TCandidate>(IReplacer<TCandidate> childReplacer, Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>> afterReplacement) =>
         new(childReplacer, new ActionReplacerObserver<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>((newPopulation, _, _, _, _, _) => afterReplacement(newPopulation)));
 }

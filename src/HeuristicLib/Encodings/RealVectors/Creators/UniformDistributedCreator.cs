@@ -31,18 +31,8 @@ public record UniformDistributedCreator : SingleCandidateCreator<RealVector, Bou
     public RealVector? Maximum { get; init; }
 
     /// <summary>
-    /// Gets the bounds this creator produces within, when both are overridden. Candidates come from nothing rather
-    /// than from an input, so bounds are stated outright instead of being carried across.
-    /// </summary>
-    /// <remarks>
-    /// Overriding both bounds only satisfies a search space when the override lies inside that space's bounds. Stating
-    /// it here reports an override that reaches outside the space when the configuration is validated, rather than
-    /// when the run first creates a candidate and throws. Leaving either bound unset takes that side from the search
-    /// space, which is always inside it, so nothing needs stating.
-    /// </remarks>
-    /// <summary>
     /// Length comes from the search space. Bounds do too, unless both are overridden, in which case the override must
-    /// lie inside the space's own bounds.
+    /// lie inside the space's own bounds, which is reported when the configuration is validated.
     /// </summary>
     /// <remarks>A one sided override cannot be compared without knowing the space, so it is not checked here.</remarks>
     public bool? Ensures(ISearchInvariant<RealVector> invariant) => invariant switch

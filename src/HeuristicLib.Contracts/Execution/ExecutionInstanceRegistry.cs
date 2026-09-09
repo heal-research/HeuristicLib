@@ -60,31 +60,9 @@ public class ExecutionInstanceRegistry
     /// <paramref name="create"/> for the creation step.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// Both overloads are one resolution system; they differ only in who makes the creation call. When a configuration
-    /// names the single execution instance type it creates, that call is <c>resolvable.CreateExecutionInstance(registry)</c>
-    /// and the other overload makes it here. When a configuration names only its candidate, each role declares its own
-    /// creation method returning its own instance type — <c>IMutator</c> returns an <c>IMutatorInstance</c>,
-    /// <c>ICreator</c> an <c>ICreatorInstance</c> — and to call any of them this registry would have to name one role
-    /// and return that role's instance type. Writing that once for all roles would need a type parameter standing for a
-    /// type constructor, which C# cannot express, so the role passes the call in.
-    /// </para>
-    /// <para>
-    /// It is not that the run's search space and problem are unknown. They are threaded down from the root of the
-    /// resolution graph and the caller has them; naming the role is the part that cannot be made generic.
-    /// </para>
-    /// <para>
-    /// The alternative is one overload here per role, which would make the execution machinery depend on every role
-    /// contract and would leave roles declared outside this assembly — the experimental move operators, and anything a
-    /// consumer writes — unable to resolve at all. Keeping this role agnostic means the policy above lives in one
-    /// place instead of being copied into every role.
-    /// </para>
-    /// <para>
-    /// <paramref name="create"/> receives the resolvable to create from — the one passed in, or the registered
-    /// replacement when there is one, which is how observation keeps working. Pass a <see langword="static"/> lambda: it needs no captured state,
-    /// since the type arguments it uses come from the calling generic method, and the compiler then caches the
-    /// delegate instead of allocating one per resolution.
-    /// </para>
+    /// <paramref name="create"/> receives the resolvable to create from: the one passed in, or the registered
+    /// replacement when there is one, which is how observation keeps working. Pass a <see langword="static"/> lambda,
+    /// so the compiler caches the delegate instead of allocating one per resolution.
     /// </remarks>
     public TExecutionInstance Resolve<TResolvable, TExecutionInstance>(TResolvable resolvable, Func<TResolvable, ExecutionInstanceRegistry, TExecutionInstance> create)
         where TResolvable : class, IExecutionInstanceResolvable
@@ -133,10 +111,6 @@ public class ExecutionInstanceRegistry
     /// <summary>
     /// Registers a ready-made instance for a resolvable, so resolution returns it instead of creating one.
     /// </summary>
-    /// <remarks>
-    /// Not generic in the execution instance type, for the reason given on <see cref="RegisterReplacement"/>: a
-    /// configuration whose instance type depends on the search space and problem does not name one.
-    /// </remarks>
     public void RegisterInstance(IExecutionInstanceResolvable resolvable, IExecutionInstance instance)
     {
         StoreInstance(resolvable, instance);
@@ -145,12 +119,8 @@ public class ExecutionInstanceRegistry
     /// <summary>
     /// Returns an instance already held here as the type the caller asked for, or explains why it is not that type.
     /// </summary>
-    /// <remarks>
-    /// Instances are keyed by reference identity, and a registry serves one run — one candidate, search space and
-    /// problem. Asking the same registry for an operator at a second triple therefore finds an instance built for the
-    /// first, which is a misuse rather than an incompatible operator, and is reported as such instead of surfacing as
-    /// a cast failure from inside resolution.
-    /// </remarks>
+    /// <remarks>A registry serves one run, so finding an instance of another type here means it was built for a
+    /// different search space or problem.</remarks>
     private static TExecutionInstance RequireInstanceOf<TExecutionInstance>(IExecutionInstanceResolvable resolvable, IExecutionInstance instance)
         where TExecutionInstance : class, IExecutionInstance
     {
@@ -176,10 +146,7 @@ public class ExecutionInstanceRegistry
     /// Registers <paramref name="replacementResolvable"/> to be created in place of <paramref name="resolvable"/>,
     /// which is how an observer wraps an operator already referenced by a resolvable.
     /// </summary>
-    /// <remarks>
-    /// Keyed by reference identity, like every other lookup here. It carries no execution instance type argument
-    /// because a resolvable whose instance type depends on the search space and problem does not name one.
-    /// </remarks>
+    /// <remarks>Keyed by reference identity, like every other lookup here.</remarks>
     public void RegisterReplacement(IExecutionInstanceResolvable resolvable, IExecutionInstanceResolvable replacementResolvable)
     {
         if (!replacementResolvables.TryAdd(resolvable, replacementResolvable))

@@ -12,17 +12,11 @@ namespace HEAL.HeuristicLib.Operators;
 /// procedures.
 /// </summary>
 /// <remarks>
-/// Algorithms normally refine newly created or varied candidates before evaluating them, and then continue the search
-/// with the refined candidates. Refinement is composed through the usual operator topologies: <c>PipelineRefiner</c>
-/// runs an ordered sequence such as repair, simplification and constant optimization, <c>IteratedRefiner</c> repeats
-/// one refinement, and <c>ChooseOneRefiner</c> applies one alternative per candidate.
-/// <para>
 /// A refiner differs from a mutator by intent. A mutator perturbs a candidate to create variation, while a refiner
 /// moves a candidate towards a better one along a specific dimension of quality. Where objective values guide the
 /// refinement or decide whether to keep its result, the refiner takes an
-/// <see cref="IEvaluator{TCandidate,TSearchSpace,TProblem}"/> as a configured dependency, which keeps those evaluations
+/// <see cref="IEvaluator{TCandidate}"/> as a configured dependency, which keeps those evaluations
 /// visible to budgets, termination, caching and analysis.
-/// </para>
 /// <para>
 /// Continuing the search with the refined candidate is Lamarckian refinement. <c>RefinementEvaluator</c> instead
 /// measures a transient refined copy and reports its objective vector for the original candidate, which is Baldwinian.

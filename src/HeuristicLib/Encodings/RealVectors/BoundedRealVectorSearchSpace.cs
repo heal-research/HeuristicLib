@@ -31,7 +31,6 @@ public record BoundedRealVectorSearchSpace : SearchSpace<RealVector>
     }
 
     /// <remarks>
-    /// Built on access rather than cached in a field, because a field would take part in this record's value equality.
     /// Invariants are read during validation, never during a run.
     /// </remarks>
     public override IReadOnlyList<ISearchInvariant<RealVector>> Invariants =>

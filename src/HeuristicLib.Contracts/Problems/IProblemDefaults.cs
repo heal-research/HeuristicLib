@@ -7,8 +7,8 @@ namespace HEAL.HeuristicLib.Problems;
 /// Declares the creator a problem suggests in place of the one its encoding would supply.
 /// </summary>
 /// <remarks>
-/// Returning <see langword="null"/> delegates the role to the encoding, and is how a problem that an algorithm
-/// requires this role from expresses that it has no opinion — either at all, or for this particular instance.
+/// Returning <see langword="null"/> delegates the role to the encoding, which is how a problem states that it has no
+/// opinion, either at all or for this particular instance.
 /// <para>
 /// Every call must return a new operator, for the reason given on
 /// <see cref="IEncodingDefaultCreator{TCandidate,TSearchSpace}"/>.

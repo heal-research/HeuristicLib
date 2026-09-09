@@ -60,7 +60,7 @@ public class SearchSpaceCompatibilityTests
     /// </summary>
     /// <param name="Strength">
     /// Gets the perturbation strength. Larger values search more widely and are an ordinary choice; the range over
-    /// which cardinality is still preserved is stated by <see cref="SatisfiedInvariantKinds"/>.
+    /// which cardinality is still preserved is stated by <see cref="Ensures"/>.
     /// </param>
     private sealed record ParameterDependent(double Strength) : IOperator, IInvariantContract<BoolVector>
     {

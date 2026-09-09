@@ -7,11 +7,10 @@ namespace HEAL.HeuristicLib.Encodings.BoolVectors;
 /// cardinality is in <c>[0, length]</c>.
 /// </summary>
 /// <remarks>
-/// This is a strict subspace of <see cref="BoolVectorSearchSpace"/> over the same candidate representation, so the two
-/// are subsets of one type rather than two types. C# cannot express which operators keep candidates inside such a
-/// subset, which is why this space declares its <see cref="Invariants"/> and operators declare matching guarantees.
-/// An operator written for the unconstrained space stays valid there and leaves this one, because flipping a single
-/// element changes the number of set elements.
+/// A strict subspace of <see cref="BoolVectorSearchSpace"/> over the same candidate representation. An operator
+/// written for the unconstrained space may leave this one, because flipping a single element changes the number of set
+/// elements, so this space states its <see cref="Invariants"/> and cardinality preserving operators declare matching
+/// guarantees.
 /// <para>
 /// A cardinality of zero or of the full length leaves exactly one member, so cardinality preserving operators have no
 /// move available and return their input unchanged.
@@ -37,8 +36,7 @@ public record FixedCardinalityBoolVectorSearchSpace : SearchSpace<BoolVector>
         candidate.Count == Length && CountSetElements(candidate) == Cardinality;
 
     /// <remarks>
-    /// Built on access rather than cached in a field, because a field would take part in this record's value equality
-    /// and make two equal spaces compare unequal. Invariants are read during validation, never during a run.
+    /// Invariants are read during validation, never during a run.
     /// </remarks>
     public override IReadOnlyList<ISearchInvariant<BoolVector>> Invariants =>
         [new BoolVectorLength(Length), new BoolVectorCardinality(Cardinality)];

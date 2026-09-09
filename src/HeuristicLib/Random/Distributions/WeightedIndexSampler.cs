@@ -17,14 +17,7 @@ namespace HEAL.HeuristicLib.Random;
 /// </para>
 /// <para>
 /// <see cref="Weights"/> is the only member a <c>with</c> expression may set, so <c>sampler with { Weights = … }</c>
-/// recompiles the sampling representation for the unchanged entry count. Everything the compiled representation
-/// depends on besides the weights must stay constructor-only, because a copied sampler keeps the compiled
-/// representation of the original until the <see cref="Weights"/> accessor replaces it.
-/// </para>
-/// <para>
-/// The <see cref="Weights"/> accessor is the single place weight counts are validated. Every type that samples through
-/// this one reaches it, whether it constructs a sampler or reweights an existing one, so those types state their
-/// weights without repeating the check.
+/// reweights the unchanged entry count.
 /// </para>
 /// </remarks>
 public sealed record WeightedIndexSampler : IDistribution<int>
@@ -34,7 +27,7 @@ public sealed record WeightedIndexSampler : IDistribution<int>
 
     /// <summary>
     /// Gets the configured weights, exactly as supplied, or an empty collection for uniform sampling. Setting them
-    /// compiles the sampling representation once, so construction and <c>with</c> share one code path.
+    /// compiles the sampling representation once.
     /// </summary>
     public ValueArray<double> Weights
     {
@@ -194,7 +187,6 @@ public sealed record WeightedIndexSampler : IDistribution<int>
     /// <summary>
     /// Compares the fixed entry count and configured weights. The compiled sampling representation is derived from
     /// them and never participates, so a type holding a <see cref="WeightedIndexSampler"/> compares by configuration.
-    /// This replaces the synthesized record equality, which would compare the compiled arrays by reference.
     /// </summary>
     public bool Equals(WeightedIndexSampler? other) =>
         other is not null && Count == other.Count && Weights.Equals(other.Weights);

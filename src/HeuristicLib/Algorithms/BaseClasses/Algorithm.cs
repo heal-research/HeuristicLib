@@ -49,10 +49,6 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
 {
     public abstract AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 
-    /// <remarks>
-    /// A type test, not a type comparison: the instance contracts are contravariant, so an algorithm written for
-    /// <c>IProblem</c> does serve a run over a concrete problem.
-    /// </remarks>
     public sealed override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
     {
         if (CreateExecutionInstance(instanceRegistry) is not IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> instance)

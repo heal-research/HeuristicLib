@@ -53,9 +53,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     public long GraceCount { get; init; } = long.MaxValue;
 
     /// <remarks>
-    /// The instance stays generic in the run's types and holds the problem it is bound to as a value, so a run is
-    /// accepted on the identity of that problem rather than on its static type. This evaluator serves exactly one
-    /// problem instance, which is what <c>Evaluate</c> checks.
+    /// This evaluator serves exactly one problem instance, matched by identity, which <c>Evaluate</c> checks.
     /// </remarks>
     protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
         new Instance<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, SizeLimit, GraceCount);
@@ -172,11 +170,6 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     }
 }
 
-/// <remarks>
-/// The problem is taken as <see cref="IDynamicProblem{TCandidate, TSearchSpace}"/> rather than by its own type, which
-/// is what puts the search space in inference position: every argument here is supplied by a parameter, so no call
-/// site names one.
-/// </remarks>
 public static class DynamicCachedEvaluatorExtension
 {
     extension<TCandidate>(IEvaluator<TCandidate> evaluator) where TCandidate : class

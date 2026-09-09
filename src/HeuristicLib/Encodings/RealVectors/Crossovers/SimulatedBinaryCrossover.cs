@@ -24,9 +24,11 @@ public record SimulatedBinaryCrossover : SingleCandidateCrossover<RealVector, Bo
     ///   For more details refer to the paper by Deb and Agrawal.
     /// </summary>
     /// <remarks>
-    ///   The manipulated value is not restricted by the (possibly) specified lower and upper bounds. Use the
-    ///   <see cref="BoundsChecker" /> to correct the values after performing the crossover.
+    ///   The result is not restricted by the search space bounds. Clamp it afterwards where the bounds must hold.
     /// </remarks>
+    /// <param name="random">The random number generator to use.</param>
+    /// <param name="parent1">The first parent.</param>
+    /// <param name="parent2">The second parent.</param>
     /// <param name="contiguity">
     ///   Specifies how close a child should be to its parents; larger values mean closer. Typical values are in the
     ///   range [2;5]. See <see cref="Contiguity"/> for the behavior outside that range.

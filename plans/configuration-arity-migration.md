@@ -588,6 +588,57 @@ narrowed analysis is shown running.
 - **Encoding defaults for the remaining search spaces are postponed by decision**, not by oversight. `For(problem)` and `For(searchSpace)` work only where a search space declares `IEncodingDefault*` and a problem declares `IProblemDefault*` — today `PermutationSearchSpace` and `TravelingSalesmanProblem`. Adding them for the other encodings is a couple of static methods each, but it is a product decision to be taken once the architecture and API settle, and before the documentation is rewritten. Until then the restriction is a documentation entry, not a code gap.
 - `CompositeSearchSpace.WithSearchSpace` — `T1` and `T2` are likewise constraint-only, but the suggested fix of re-parameterising on the candidate pair would erase `TS1`/`TS2` to `ISearchSpace<T1>`. The composite resolves its child operators at those types, and the meta-optimization search space is built from creators bound to `BoundedRealVectorSearchSpace`, which would then be refused. The arity is holding a real capability.
 
+## Before the documentation rewrite: is the overload surface necessary?
+
+Open question, to be answered before the docs are rewritten, because documentation written against a surface that is
+about to be unified would be rewritten twice.
+
+The impression that prompted this: the migration added a great many extension-method overloads, and a surface that
+grows that way is usually a sign that the design is expressing something the type system should express once.
+
+Measured on the current tree, so the discussion starts from numbers rather than the impression:
+
+| | Count |
+| --- | ---: |
+| Files declaring at least one `extension` block | 105 |
+| `extension` blocks | 146 |
+| Public members declared in those files | 396 |
+
+The surface is not spread evenly. It is dominated by a handful of names repeated once per operator role, which is the
+shape worth interrogating:
+
+| Member | Overloads | What varies |
+| --- | ---: | --- |
+| `ObserveWith` | 40 | 10 observable roles x ~4 observer shapes each |
+| `Resolve` / `ResolveOptional` / `TryResolve` | 78 | one triple per role, plus the quadruple for the two state aware ones |
+| `Observe` | 20 | one per role |
+| `Measure*Duration` | 28 | one family per role, 4 shapes each |
+
+That is roughly 166 of the 396 members in four families. None of them is arbitrary — each exists because a role
+contract is nominal and C# cannot abstract over the role — but the repetition is mechanical enough that it should be
+re-derived rather than assumed.
+
+Questions to settle:
+
+1. **Can the resolver triple collapse?** `Resolve`, `ResolveOptional` and `TryResolve` are declared once per role
+   because each returns that role's own instance type, which is the same obstacle recorded on
+   `ExecutionInstanceRegistry.Resolve`: naming the role generically would need a type parameter standing for a type
+   constructor. Confirm that this is still the binding constraint, and that no interface-level restructuring
+   (for example a role marker carrying its instance type as an associated type) removes it.
+2. **Is `ObserveWith` at 40 overloads the minimum?** The terminator work showed one of them was removable outright by
+   writing the observer at the widest state. Check the other nine roles for the same, and check whether the
+   observer-shape axis (observer, params observers, full lambda, narrow lambda) needs all four everywhere or only
+   where a role actually has a narrow lambda worth offering.
+3. **Do `Observe` and `Measure*Duration` need a per-role spelling at all**, or can they anchor on something the roles
+   already share?
+4. **Which of these are load-bearing for inference** and which are only convenience? An overload that exists purely so
+   a call site reads better is a different decision from one that exists so a type argument can be inferred, and the
+   two should not be defended with the same argument.
+
+Method: count first, then group by why each overload exists, then attack the largest group whose reason does not
+survive scrutiny. Anything that stays should be stated once as a rule in the developer guidelines, so the next role
+added does not re-litigate it.
+
 ## Documentation backlog
 
 Deferred until the API settles, recorded here so nothing is rediscovered. Four of six guide pages that were compiled
@@ -626,7 +677,7 @@ edit.
 
 ### Structural
 
-- `GenerateDocumentationFile` is not set in `Directory.Build.props`, so CS1574 never fires and a `<see cref>` naming a deleted type rots silently. Five already have: `IRefiner.cs:23`, `ImprovementCheckingRefiner.cs:19, 28`, `NumericParameterFittingRefiner.cs:21, 56`. Turning it on converts this whole class into a build error.
+- `GenerateDocumentationFile` **is now set in `Directory.Build.props`**, so a `<see cref>` naming a deleted type can no longer rot silently. CS1591 is suppressed and the nine diagnostics that report a comment contradicting the code are escalated to errors; the rule and its rationale are § 9.7 of the developer guidelines. Before the flag went on, building the four source projects with it reported 28 XML warnings, not the five previously recorded here: seven rotted crefs (five from the arity migration naming the pre-migration three-argument types, plus `BoundsChecker`, a type that no longer exists, and a generic-method cref), five malformed-XML errors in `RandomEnumerable`, and six `<param>` tags that no longer matched their signature. Enabling it across the whole solution then caught one further rotted cref, in `SearchSpaceCompatibilityTests.cs:63`, which named `SatisfiedInvariantKinds`, a member that exists nowhere in the tree; it now points at `Ensures`. The full solution builds clean with documentation generation on, and the generated XML ships in the package. Note that an *incremental* build does not re-emit these warnings, so verification needs `--no-incremental`.
 - `SymbolicRegressionRedesignSpecs.cs:215-244` and `:252-287` are green tests whose bodies are comment blocks followed by `typeof(T).ShouldNotBeNull()`. They claim coverage of numeric optimization authoring that does not exist.
 - Doc snippets are not compiled by anything. `HeuristicLib.Tests.ApiUsageSpecs` is the mechanism that would catch every entry in the first table.
 
@@ -636,4 +687,5 @@ edit.
 2. Every execution instance contract still names both.
 3. One resolution path: the per-role overloads on `ExecutionInstanceResolver`, with no transitional overloads left.
 4. All four suites, formatting, style and analyzer verification green.
-5. `NoviceFrictionSpecs` and the seven documentation pages reflect the new arities.
+5. The overload surface question above is answered, and any unification it calls for has landed, before the documentation is rewritten.
+6. `NoviceFrictionSpecs` and the seven documentation pages reflect the new arities.

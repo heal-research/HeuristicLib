@@ -90,7 +90,7 @@ public static class ObservableRefiner
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(childRefiner, new ActionRefinerObserver<TCandidate, TSearchSpace, TProblem>(afterRefine));
 
-    /// <summary>Observes refined candidates only, so the observer is written at the widest search space and problem.</summary>
+    /// <summary>Observes refined candidates only.</summary>
     public static ObservableRefiner<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> Create<TCandidate>(
         IRefiner<TCandidate> childRefiner,
         Action<IReadOnlyList<TCandidate>> afterRefine) =>
