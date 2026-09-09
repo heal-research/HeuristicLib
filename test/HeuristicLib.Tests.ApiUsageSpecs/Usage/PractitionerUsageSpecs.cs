@@ -223,12 +223,12 @@ public class PractitionerUsageSpecs
         };
 
         var cannotExtendPastInternalCompletion = internallyCappedAlgorithm
-            .WithMaxIterations(5)
+            .TerminatedAfterIterations(5)
             .Stream(
                 problem, RandomNumberGenerator.Create(456), ct: TestContext.Current.CancellationToken)
             .ToList();
         var canStopEarlierThanInternalCompletion = externallyCappedAlgorithm
-            .WithMaxIterations(2)
+            .TerminatedAfterIterations(2)
             .Stream(
                 problem, RandomNumberGenerator.Create(456), ct: TestContext.Current.CancellationToken)
             .ToList();
@@ -249,7 +249,7 @@ public class PractitionerUsageSpecs
         };
 
         var earlyStoppedStates = algorithm
-            .WithMaxIterations(2)
+            .TerminatedAfterIterations(2)
             .Stream(
                 problem, RandomNumberGenerator.Create(789), ct: TestContext.Current.CancellationToken)
             .ToList();
@@ -271,7 +271,7 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .WithMaxEvaluatorCalls(algorithm.Evaluator, 2)
+            .LimitedToEvaluatorCalls(algorithm.Evaluator, 2)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
@@ -294,14 +294,14 @@ public class PractitionerUsageSpecs
         };
 
         var statesByEvaluatorCalls = algorithm
-            .WithMaxEvaluatorCalls(algorithm.Evaluator, 2)
+            .LimitedToEvaluatorCalls(algorithm.Evaluator, 2)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
               .ToList();
         var statesByEvaluatedCandidates = algorithm
-            .WithMaxEvaluatedCandidates(algorithm.Evaluator, 2)
+            .LimitedToEvaluatedCandidates(algorithm.Evaluator, 2)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
@@ -323,7 +323,7 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .WithMaxEvaluatorDuration(
+            .LimitedToEvaluatorDuration(
                 algorithm.Evaluator,
                 TimeSpan.FromSeconds(3),
                 new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -347,7 +347,7 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .WithMaxAlgorithmDuration(
+            .LimitedToDuration(
                 TimeSpan.FromSeconds(3),
                 new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
             .Stream(
@@ -371,7 +371,7 @@ public class PractitionerUsageSpecs
         };
 
         var statesByMutatorCalls = algorithm
-            .WithMaxMutatorCalls(
+            .LimitedToMutatorCalls(
                 algorithm.Mutator,
                 maximumCalls: 1)
             .Stream(
@@ -380,7 +380,7 @@ public class PractitionerUsageSpecs
                 ct: TestContext.Current.CancellationToken)
               .ToList();
         var statesByMutatedCandidates = algorithm
-            .WithMaxMutatedCandidates(
+            .LimitedToMutatedCandidates(
                 algorithm.Mutator,
                 maximumCandidates: 20)
             .Stream(
@@ -424,7 +424,7 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .WithMaxMutatorDuration(
+            .LimitedToMutatorDuration(
                 algorithm.Mutator,
                 TimeSpan.FromSeconds(3),
                 new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -449,7 +449,7 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .WithMaxCount(
+            .LimitedToCount(
                 algorithm.Mutator,
                 maximumCount: 20,
                 countedOperatorFactory: static (mutator, counter) =>
@@ -479,7 +479,7 @@ public class PractitionerUsageSpecs
             Crossover = baseAlgorithm.Crossover.CountCalls(counter),
             Mutator = baseAlgorithm.Mutator.CountCalls(counter)
         };
-        var algorithm = observedAlgorithm.WithTerminator(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 2));
+        var algorithm = observedAlgorithm.TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 2));
 
         var states = algorithm.Stream(
             problem,
@@ -503,7 +503,7 @@ public class PractitionerUsageSpecs
             Direction = LocalSearchDirection.FirstImprovement,
             BatchSize = 4,
             MaxNeighbors = 12
-        }.WithMaxIterations(10);
+        }.TerminatedAfterIterations(10);
 
         var finalState = await algorithm.CompleteAsync(
           problem,
@@ -546,7 +546,7 @@ public class PractitionerUsageSpecs
             Direction = LocalSearchDirection.FirstImprovement,
             BatchSize = 4,
             MaxNeighbors = 12
-        }.WithMaxIterations(6);
+        }.TerminatedAfterIterations(6);
         var repeated = algorithm.Repeat(3);
 
         var results = await repeated.CompleteAsync(

@@ -9,9 +9,9 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Usage;
 /// <summary>
 /// Flips one position. Needs nothing of its input and promises only that the result has the same length.
 /// </summary>
-internal sealed record FlipOneBitMutator : SingleCandidateMutator<BoolVector>, IInvariantContract<BoolVector>
+internal sealed record FlipOneBitMutator : SingleCandidateMutator<BoolVector>, IOperatorContract<BoolVector>
 {
-    public bool? Ensures(ISearchInvariant<BoolVector> invariant) => invariant switch
+    public bool? Ensures(ICandidateInvariant<BoolVector> invariant) => invariant switch
     {
         BoolVectorLength => true,
         BoolVectorCardinality => false,
@@ -41,11 +41,11 @@ internal sealed record FlipOneBitMutator : SingleCandidateMutator<BoolVector>, I
 /// <see cref="FlipOneBitMutator"/>: it always keeps a candidate inside a fixed cardinality space, and it cannot be
 /// used over unconstrained bool vectors, where a candidate may have fewer than two set elements.
 /// </remarks>
-internal sealed record SwapSecondTrueMutator : SingleCandidateMutator<BoolVector>, IInvariantContract<BoolVector>
+internal sealed record SwapSecondTrueMutator : SingleCandidateMutator<BoolVector>, IOperatorContract<BoolVector>
 {
-    public IReadOnlyList<ISearchInvariant<BoolVector>> RequiredInputInvariants => [new BoolVectorMinimumSetElements(2)];
+    public IReadOnlyList<ICandidateInvariant<BoolVector>> Requires => [new BoolVectorMinimumSetElements(2)];
 
-    public bool? Ensures(ISearchInvariant<BoolVector> invariant) => invariant switch
+    public bool? Ensures(ICandidateInvariant<BoolVector> invariant) => invariant switch
     {
         BoolVectorLength or BoolVectorCardinality => true,
         _ => null
@@ -281,17 +281,17 @@ public class SearchSpaceCompatibilitySpecs
         var samples = AllBoolVectorsOfLength(Length).ToArray();
         var random = RandomNumberGenerator.Create(seed: 17);
 
-        InvariantContractVerification
+        OperatorContractVerification
             .Verify(new BitSwapMutator(), constrained, samples,
                 candidate => BitSwapOverFixedCardinality(constrained)(candidate, random))
             .ShouldBeEmpty();
 
-        InvariantContractVerification
+        OperatorContractVerification
             .Verify(new SwapSecondTrueMutator(), constrained, samples,
                 candidate => SwapSecondTrue()(candidate, random))
             .ShouldBeEmpty();
 
-        InvariantContractVerification
+        OperatorContractVerification
             .Verify(new FlipOneBitMutator(), Unconstrained, samples,
                 candidate => FlipOneBit()(candidate, random))
             .ShouldBeEmpty();
@@ -306,7 +306,7 @@ public class SearchSpaceCompatibilitySpecs
     {
         var random = RandomNumberGenerator.Create(seed: 17);
 
-        var violations = InvariantContractVerification.Verify(
+        var violations = OperatorContractVerification.Verify(
             new OverclaimingFlipMutator(),
             Constrained,
             AllBoolVectorsOfLength(Length),
@@ -316,9 +316,9 @@ public class SearchSpaceCompatibilitySpecs
         violations[0].ShouldContain("Cardinality(2)");
     }
 
-    private sealed record OverclaimingFlipMutator : SingleCandidateMutator<BoolVector>, IInvariantContract<BoolVector>
+    private sealed record OverclaimingFlipMutator : SingleCandidateMutator<BoolVector>, IOperatorContract<BoolVector>
     {
-        public bool? Ensures(ISearchInvariant<BoolVector> invariant) => invariant switch
+        public bool? Ensures(ICandidateInvariant<BoolVector> invariant) => invariant switch
         {
             BoolVectorLength or BoolVectorCardinality => true,
             _ => null

@@ -9,13 +9,13 @@ namespace HEAL.HeuristicLib.Encodings.BoolVectors;
 /// Takes each element from one parent chosen at random, so the child inherits position by position rather than in
 /// contiguous runs.
 /// </summary>
-public record BitUniformCrossover : SingleCandidateCrossover<BoolVector, BoolVectorSearchSpace>, IInvariantContract<BoolVector>
+public record BitUniformCrossover : SingleCandidateCrossover<BoolVector, BoolVectorSearchSpace>, IOperatorContract<BoolVector>
 {
     /// <remarks>
     /// Every element comes from a parent at the same position, so the length is whatever the parents share. Cardinality
     /// is not: a child can take set elements from either side and end up outside both parents' counts.
     /// </remarks>
-    public bool? Ensures(ISearchInvariant<BoolVector> invariant) => invariant switch
+    public bool? Ensures(ICandidateInvariant<BoolVector> invariant) => invariant switch
     {
         BoolVectorLength => true,
         BoolVectorCardinality => false,

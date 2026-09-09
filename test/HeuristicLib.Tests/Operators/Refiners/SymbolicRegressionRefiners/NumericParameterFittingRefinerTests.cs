@@ -153,7 +153,7 @@ public sealed class NumericParameterFittingRefinerTests
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
         var instance = new NumericParameterFittingRefiner { MaximumIterations = 100 }
-            .WithImprovementCheck()
+            .CheckedForImprovement()
             .CreateExecutionInstance<ExpressionTreeSearchSpace, SymbolicRegressionProblem>(new ExecutionInstanceRegistry());
 
         var refined = instance.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
@@ -168,7 +168,7 @@ public sealed class NumericParameterFittingRefinerTests
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
         var instance = new NumericParameterFittingRefiner { MaximumIterations = 100 }
-            .WithImprovementCheck()
+            .CheckedForImprovement()
             .CreateExecutionInstance<ExpressionTreeSearchSpace, SymbolicRegressionProblem>(new ExecutionInstanceRegistry());
 
         var refined = instance.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);

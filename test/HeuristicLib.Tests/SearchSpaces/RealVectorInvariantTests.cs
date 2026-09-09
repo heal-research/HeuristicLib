@@ -18,8 +18,8 @@ public class RealVectorInvariantTests
     {
         var bounds = new RealVectorBounds(new RealVector(-1.0), new RealVector(1.0));
 
-        bounds.IsSatisfiedBy(new RealVector(0.5, -0.5, 1.0)).ShouldBeTrue();
-        bounds.IsSatisfiedBy(new RealVector(0.5, -0.5, 1.5)).ShouldBeFalse();
+        bounds.Holds(new RealVector(0.5, -0.5, 1.0)).ShouldBeTrue();
+        bounds.Holds(new RealVector(0.5, -0.5, 1.5)).ShouldBeFalse();
     }
 
     /// <summary>
@@ -32,9 +32,9 @@ public class RealVectorInvariantTests
         var narrow = new RealVectorBounds(new RealVector(-0.5), new RealVector(0.5));
         var wide = new RealVectorBounds(new RealVector(-1.0), new RealVector(1.0));
 
-        narrow.Entails(wide).ShouldBeTrue();
-        wide.Entails(narrow).ShouldBeFalse();
-        narrow.Entails(narrow).ShouldBeTrue();
+        narrow.Implies(wide).ShouldBeTrue();
+        wide.Implies(narrow).ShouldBeFalse();
+        narrow.Implies(narrow).ShouldBeTrue();
     }
 
     [Fact]
@@ -106,13 +106,13 @@ public class RealVectorInvariantTests
         var samples = Samples().ToArray();
         var random = RandomNumberGenerator.Create(seed: 11);
 
-        InvariantContractVerification.Verify(new GaussianMutator(mutationRate: 1.0, mutationStrength: 5.0), UnitBox, samples,
+        OperatorContractVerification.Verify(new GaussianMutator(mutationRate: 1.0, mutationStrength: 5.0), UnitBox, samples,
             candidate => GaussianMutator.Mutate(candidate, random, UnitBox, mutationRate: 1.0, mutationStrength: 5.0)).ShouldBeEmpty();
 
-        InvariantContractVerification.Verify(new AlphaBetaBlendCrossover { Alpha = 3.0 }, UnitBox, samples,
+        OperatorContractVerification.Verify(new AlphaBetaBlendCrossover { Alpha = 3.0 }, UnitBox, samples,
             candidate => AlphaBetaBlendCrossover.Cross(candidate, new RealVector(-1.0, -1.0, -1.0), random, UnitBox, alpha: 3.0)).ShouldBeEmpty();
 
-        InvariantContractVerification.Verify(new PolynomialMutator(), UnitBox, samples,
+        OperatorContractVerification.Verify(new PolynomialMutator(), UnitBox, samples,
             candidate => new PolynomialMutator().MutateCandidate(candidate, random, UnitBox)).ShouldBeEmpty();
     }
 

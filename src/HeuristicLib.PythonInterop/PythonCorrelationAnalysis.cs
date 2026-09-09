@@ -75,8 +75,8 @@ public static class PythonCorrelationAnalysis
           {
               AlgorithmName = "nsga2",
               Creator = new UniformDistributedCreator(),
-              Crossover = new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithRate(0.9),
-              Mutator = new PolynomialMutator().WithRate(0.9),
+              Crossover = new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.AppliedAtRate(0.9),
+              Mutator = new PolynomialMutator().AppliedAtRate(0.9),
               Iterations = generations,
               PopulationSize = populationSize,
               MutationRate = 1,

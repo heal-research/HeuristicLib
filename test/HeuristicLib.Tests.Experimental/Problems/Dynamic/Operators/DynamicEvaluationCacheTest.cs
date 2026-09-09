@@ -81,7 +81,7 @@ public class DynamicEvaluationCacheTests
         var problem = new DummyDynamicProblem(env, 10_000); // avoid boundary
         var inner = new CountingEvaluator();
 
-        var cached = inner.WithCache(problem, DummyGenotypeValueCacheKeySelector.Instance);
+        var cached = inner.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance);
 
         var res = new ExecutionInstanceRegistry().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(cached).Evaluate(
           [new DummyGenotype(1), new DummyGenotype(1), new DummyGenotype(1)],
@@ -104,7 +104,7 @@ public class DynamicEvaluationCacheTests
         var problem = new DummyDynamicProblem(env, 10_000); // avoid boundary
         var inner = new CountingEvaluator();
 
-        var cached = new ExecutionInstanceRegistry().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(inner.WithCache(problem, DummyGenotypeValueCacheKeySelector.Instance));
+        var cached = new ExecutionInstanceRegistry().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(inner.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance));
 
         _ = cached.Evaluate([new DummyGenotype(1), new DummyGenotype(2)], TestRandoms.NoRandom, problem.SearchSpace, problem);
         inner.Calls.ShouldBe(1);
@@ -124,7 +124,7 @@ public class DynamicEvaluationCacheTests
         var problem = new DummyDynamicProblem(env, 2); // boundary every 2 evals
         var inner = new CountingEvaluator();
 
-        var cached = inner.WithCache(problem, DummyGenotypeValueCacheKeySelector.Instance);
+        var cached = inner.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance);
         var cachedInstance = new ExecutionInstanceRegistry().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(cached);
 
         // Evaluate two distinct keys -> 2 evaluations -> should hit boundary and schedule an epoch change
@@ -151,7 +151,7 @@ public class DynamicEvaluationCacheTests
         var problem = new DummyDynamicProblem(env, 10_000); // avoid natural boundary
         var inner = new CountingEvaluator();
 
-        var cached = new ExecutionInstanceRegistry().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(inner.WithCache(problem, DummyGenotypeValueCacheKeySelector.Instance) with { GraceCount = 3 });
+        var cached = new ExecutionInstanceRegistry().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(inner.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance) with { GraceCount = 3 });
 
         // Prime cache (causes 1 tick)
         var dummyGenotype = new DummyGenotype(1);
@@ -187,7 +187,7 @@ public class DynamicEvaluationCacheTests
         var problem = new DummyDynamicProblem(env, 10_000); // avoid natural boundary
         var inner = new CountingEvaluator();
 
-        var cached = new ExecutionInstanceRegistry().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(inner.WithCache(problem, DummyGenotypeValueCacheKeySelector.Instance) with { GraceCount = 3 });
+        var cached = new ExecutionInstanceRegistry().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(inner.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance) with { GraceCount = 3 });
 
         // Prime cache
         _ = cached.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
@@ -217,7 +217,7 @@ public class DynamicEvaluationCacheTests
         var problem = new DummyDynamicProblem(env, 10_000);
         var inner = new CountingEvaluator();
 
-        var cached = new ExecutionInstanceRegistry().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(inner.WithCache(problem, DummyGenotypeValueCacheKeySelector.Instance) with { GraceCount = 1 });
+        var cached = new ExecutionInstanceRegistry().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(inner.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance) with { GraceCount = 1 });
 
         var epochBefore = problem.EpochClock.CurrentEpoch;
         var ticksBefore = problem.EpochClock.Ticks;
@@ -237,7 +237,7 @@ public class DynamicEvaluationCacheTests
         var env = RandomNumberGenerator.Create(0);
         var problem = new DummyDynamicProblem(env, 10_000);
         var inner = new CountingEvaluator();
-        var cached = new ExecutionInstanceRegistry().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(inner.WithCache(problem, DummyGenotypeValueCacheKeySelector.Instance) with { GraceCount = 1 });
+        var cached = new ExecutionInstanceRegistry().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(inner.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance) with { GraceCount = 1 });
 
         // prime cache -> ticks=1
         _ = cached.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);

@@ -16,7 +16,7 @@ public class ExperimentSpecs
     public async Task RepeatedExperiment_UsesIndependentAlgorithmRuns()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = CreateSimpleHillClimber(problem).WithMaxIterations(6);
+        var algorithm = CreateSimpleHillClimber(problem).TerminatedAfterIterations(6);
         var experiment = algorithm.Repeat(3);
 
         var results = await experiment.CompleteAsync(problem, RandomNumberGenerator.Create(999), cancellationToken: TestContext.Current.CancellationToken);
@@ -54,7 +54,7 @@ public class ExperimentSpecs
             .AsGrid()
             .VaryBy([4, 8], (algorithm, maximumNeighbors) => algorithm with { MaxNeighbors = maximumNeighbors });
         var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456))
-            .WithAnalyzer(
+            .AttachAnalyzer(
                 algorithm => algorithm.Evaluator,
                 evaluator => Analyzer.BestQuality(evaluator),
                 out var bestQuality);
@@ -71,7 +71,7 @@ public class ExperimentSpecs
     public async Task StartTrials_AllowsProcessingTrialsAsTheyComplete()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var experiment = CreateSimpleHillClimber(problem).WithMaxIterations(6).Repeat(3);
+        var experiment = CreateSimpleHillClimber(problem).TerminatedAfterIterations(6).Repeat(3);
         var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(789));
         var trialTasks = run.StartTrials(ExecutionConcurrency.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken);
         var completedKeys = new List<int>();
@@ -90,7 +90,7 @@ public class ExperimentSpecs
     public void DirectExperimentExecutionExtensions_ExposeStreamAndComplete()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = CreateSimpleHillClimber(problem).WithMaxIterations(2);
+        var algorithm = CreateSimpleHillClimber(problem).TerminatedAfterIterations(2);
 
         var streamedEntries = algorithm.Repeat(2)
             .Stream(problem, RandomNumberGenerator.Create(234), ExecutionConcurrency.Sequential(), cancellationToken: TestContext.Current.CancellationToken)

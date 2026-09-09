@@ -146,8 +146,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void EliteSelector_WithDifferentChildSelector_IsNotEqual()
     {
-        var left = new RangeSelector(1).WithElites(2);
-        var right = new RangeSelector(2).WithElites(2);
+        var left = new RangeSelector(1).CombinedWithElites(2);
+        var right = new RangeSelector(2).CombinedWithElites(2);
 
         left.ShouldNotBe(right);
     }
@@ -255,8 +255,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void NestedSelectorComposition_WithEqualParts_IsEqual()
     {
-        var left = ChooseOneSelector.Create(new RangeSelector(1).WithElites(2), new RangeSelector(2));
-        var right = ChooseOneSelector.Create(new RangeSelector(1).WithElites(2), new RangeSelector(2));
+        var left = ChooseOneSelector.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
+        var right = ChooseOneSelector.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -265,8 +265,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void NestedSelectorComposition_WithDifferentNestedChildSelector_IsNotEqual()
     {
-        var left = ChooseOneSelector.Create(new RangeSelector(1).WithElites(2), new RangeSelector(2));
-        var right = ChooseOneSelector.Create(new RangeSelector(9).WithElites(2), new RangeSelector(2));
+        var left = ChooseOneSelector.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
+        var right = ChooseOneSelector.Create(new RangeSelector(9).CombinedWithElites(2), new RangeSelector(2));
 
         left.ShouldNotBe(right);
     }

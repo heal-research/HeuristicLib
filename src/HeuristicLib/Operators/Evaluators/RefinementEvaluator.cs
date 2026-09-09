@@ -92,7 +92,7 @@ public static class RefinementEvaluatorExtensions
 {
     extension<TCandidate>(IEvaluator<TCandidate> evaluator)
     {
-        public RefinementEvaluator<TCandidate> WithRefinement(IRefiner<TCandidate> refiner) =>
+        public RefinementEvaluator<TCandidate> AppliedAfterRefinement(IRefiner<TCandidate> refiner) =>
             new RefinementEvaluator<TCandidate>(refiner) { Evaluator = evaluator };
     }
 }

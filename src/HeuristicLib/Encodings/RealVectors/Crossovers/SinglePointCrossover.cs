@@ -5,13 +5,13 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Encodings.RealVectors;
 
-public record SinglePointCrossover : SingleCandidateCrossover<RealVector, BoundedRealVectorSearchSpace>, IInvariantContract<RealVector>
+public record SinglePointCrossover : SingleCandidateCrossover<RealVector, BoundedRealVectorSearchSpace>, IOperatorContract<RealVector>
 {
     /// <summary>
     /// Offspring take elements from the parents and are clamped to the search space bounds, so length and bounds both
     /// survive.
     /// </summary>
-    public bool? Ensures(ISearchInvariant<RealVector> invariant) => invariant switch
+    public bool? Ensures(ICandidateInvariant<RealVector> invariant) => invariant switch
     {
         RealVectorLength or RealVectorBounds => true,
         _ => null

@@ -109,16 +109,16 @@ public static class DynamicRelativeQualityEvaluatorExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
     {
-        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> WithDynamicRelativeQuality(TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider) =>
+        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> ScaledToDynamicBestKnown(TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider) =>
             new(evaluator, problem, bestKnownProvider);
 
-        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> WithDynamicRelativeQuality(TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy) =>
+        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> ScaledToDynamicBestKnown(TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy) =>
             new(evaluator, problem, bestKnownProvider) { ZeroBestKnownPolicy = zeroBestKnownPolicy };
 
-        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> WithDynamicRelativeQuality(TProblem problem, Func<TProblem, ObjectiveVector> getBestKnown) =>
+        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> ScaledToDynamicBestKnown(TProblem problem, Func<TProblem, ObjectiveVector> getBestKnown) =>
             new(evaluator, problem, new FuncBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>(getBestKnown));
 
-        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> WithDynamicRelativeQuality(TProblem problem, Func<TProblem, ObjectiveVector> getBestKnown, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy) =>
+        public DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> ScaledToDynamicBestKnown(TProblem problem, Func<TProblem, ObjectiveVector> getBestKnown, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy) =>
             new(evaluator, problem, new FuncBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>(getBestKnown)) { ZeroBestKnownPolicy = zeroBestKnownPolicy };
     }
 }

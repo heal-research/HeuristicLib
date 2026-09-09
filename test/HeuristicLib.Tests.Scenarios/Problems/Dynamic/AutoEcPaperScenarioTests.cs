@@ -37,7 +37,7 @@ public class AutoEcPaperScenarioTests
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.1),
             new UniformOnePositionMutator());
-        var evaluator = problem.CreateEvaluator().WithDynamicRelativeQuality(
+        var evaluator = problem.CreateEvaluator().ScaledToDynamicBestKnown(
             problem,
             new ActivatedTravelingSalesmanExactBestKnownProvider(
                 new ConcordeTravelingSalesmanExactSolver(concordePath)));
@@ -69,7 +69,7 @@ public class AutoEcPaperScenarioTests
                 [evaluator]);
 
         var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123))
-                        .WithAnalyzers(qualityCurve, bbcp);
+                        .AttachAnalyzers(qualityCurve, bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -124,7 +124,7 @@ public class AutoEcPaperScenarioTests
                 [evaluator]);
 
         var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123))
-                        .WithAnalyzers(qualityCurve, bbcp);
+                        .AttachAnalyzers(qualityCurve, bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -201,13 +201,13 @@ public class AutoEcPaperScenarioTests
     private static CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
         CreateHyperParameterSearchSpace() =>
         new BoundedRealVectorSearchSpace(1, new RealVector(0.05), new RealVector(0.4))
-            .WithSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
+            .CombinedWith<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
                 new IntegerVectorSearchSpace(1, new IntegerVector(8), new IntegerVector(16)));
 
     private static CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
         CreateTspHyperParameterSearchSpace() =>
         new BoundedRealVectorSearchSpace(1, new RealVector(0.01), new RealVector(0.2))
-            .WithSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
+            .CombinedWith<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
                 new IntegerVectorSearchSpace(1, new IntegerVector(20), new IntegerVector(60)));
 
     private static GeneticAlgorithm<Permutation>

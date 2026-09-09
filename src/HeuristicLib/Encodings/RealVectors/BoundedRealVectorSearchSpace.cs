@@ -33,7 +33,7 @@ public record BoundedRealVectorSearchSpace : SearchSpace<RealVector>
     /// <remarks>
     /// Invariants are read during validation, never during a run.
     /// </remarks>
-    public override IReadOnlyList<ISearchInvariant<RealVector>> Invariants =>
+    public override IReadOnlyList<ICandidateInvariant<RealVector>> Invariants =>
         [new RealVectorLength(Length), new RealVectorBounds(Minimum, Maximum)];
 
     public double GetMinimum(int dim) => Minimum.Count == 1 ? Minimum[0] : Minimum[dim];

@@ -75,7 +75,7 @@ public static class PredefinedCandidatesCreatorExtensions
 {
     extension<TCandidate>(ICreator<TCandidate> creator)
     {
-        public PredefinedCandidatesCreator<TCandidate> WithPredefinedCandidates(IReadOnlyList<TCandidate> predefinedCandidates) =>
+        public PredefinedCandidatesCreator<TCandidate> SeededWith(IReadOnlyList<TCandidate> predefinedCandidates) =>
             PredefinedCandidatesCreator.Create(predefinedCandidates, creator);
     }
 }

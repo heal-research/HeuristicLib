@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Encodings.RealVectors;
 
-public record UniformDistributedCreator : SingleCandidateCreator<RealVector, BoundedRealVectorSearchSpace>, IInvariantContract<RealVector>
+public record UniformDistributedCreator : SingleCandidateCreator<RealVector, BoundedRealVectorSearchSpace>, IOperatorContract<RealVector>
 {
     public UniformDistributedCreator() { }
 
@@ -35,10 +35,10 @@ public record UniformDistributedCreator : SingleCandidateCreator<RealVector, Bou
     /// lie inside the space's own bounds, which is reported when the configuration is validated.
     /// </summary>
     /// <remarks>A one sided override cannot be compared without knowing the space, so it is not checked here.</remarks>
-    public bool? Ensures(ISearchInvariant<RealVector> invariant) => invariant switch
+    public bool? Ensures(ICandidateInvariant<RealVector> invariant) => invariant switch
     {
         RealVectorLength => true,
-        RealVectorBounds bounds when Minimum is not null && Maximum is not null => new RealVectorBounds(Minimum, Maximum).Entails(bounds),
+        RealVectorBounds bounds when Minimum is not null && Maximum is not null => new RealVectorBounds(Minimum, Maximum).Implies(bounds),
         RealVectorBounds => true,
         _ => null
     };

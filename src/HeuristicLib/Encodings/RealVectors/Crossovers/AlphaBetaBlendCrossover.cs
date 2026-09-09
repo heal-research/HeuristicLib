@@ -5,14 +5,14 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Encodings.RealVectors;
 
-public record AlphaBetaBlendCrossover : SingleCandidateCrossover<RealVector, BoundedRealVectorSearchSpace>, IInvariantContract<RealVector>
+public record AlphaBetaBlendCrossover : SingleCandidateCrossover<RealVector, BoundedRealVectorSearchSpace>, IOperatorContract<RealVector>
 {
     /// <summary>
     /// The blend is clamped to the search space bounds, so length and bounds survive at any <see cref="Alpha"/>. A
     /// value outside <c>[0, 1]</c> extrapolates beyond the parents and is pinned to the bounds rather than escaping
     /// them.
     /// </summary>
-    public bool? Ensures(ISearchInvariant<RealVector> invariant) => invariant switch
+    public bool? Ensures(ICandidateInvariant<RealVector> invariant) => invariant switch
     {
         RealVectorLength or RealVectorBounds => true,
         _ => null
@@ -23,7 +23,7 @@ public record AlphaBetaBlendCrossover : SingleCandidateCrossover<RealVector, Bou
     // rather than the operator being changed to hide it, and validation would report an out-of-range Alpha against
     // the configuration that set it:
     //
-    // public bool? Ensures(ISearchInvariant<RealVector> invariant) => invariant switch
+    // public bool? Ensures(ICandidateInvariant<RealVector> invariant) => invariant switch
     // {
     //     RealVectorLength => true,
     //     RealVectorBounds => Alpha is >= 0.0 and <= 1.0,

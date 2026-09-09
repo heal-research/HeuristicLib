@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.SearchSpaces;
 /// The two halves decide two separate checks. Accepting more input makes an operator more widely usable, and so does
 /// ensuring more about its output, so neither check substitutes for the other.
 /// </remarks>
-public interface IInvariantContract<TCandidate>
+public interface IOperatorContract<TCandidate>
 {
     /// <summary>
     /// Determines whether every candidate this operator produces has <paramref name="invariant"/>. Returns
@@ -19,12 +19,12 @@ public interface IInvariantContract<TCandidate>
     /// value where it makes a concrete claim, with a discard arm returning <see langword="null"/>. An answer may
     /// depend on the operator's own configured values, holding over part of a parameter range and not the rest.
     /// </remarks>
-    bool? Ensures(ISearchInvariant<TCandidate> invariant);
+    bool? Ensures(ICandidateInvariant<TCandidate> invariant);
 
     /// <summary>
     /// Gets the invariants a candidate must have for this operator to accept it. Empty means the operator accepts any
     /// candidate of its representation. A requirement is satisfied when the search space states an invariant that
-    /// entails it.
+    /// implies it.
     /// </summary>
-    IReadOnlyList<ISearchInvariant<TCandidate>> RequiredInputInvariants => [];
+    IReadOnlyList<ICandidateInvariant<TCandidate>> Requires => [];
 }

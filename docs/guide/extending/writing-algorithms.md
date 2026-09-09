@@ -20,77 +20,77 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Objectives;
-using HEAL.HeuristicLib.Problems.TestFunctions;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 public sealed record SingleCreateAlgorithm
-    : IterativeAlgorithm<
-        SingleCreateAlgorithm,
-        RealVector,
-        BoundedRealVectorSearchSpace,
-        TestFunctionProblem,
-        SingleSolutionState<RealVector>>
+    : IterativeAlgorithm<SingleCreateAlgorithm, RealVector, SingleSolutionState<RealVector>>
 {
-    public required ICreator<
-        RealVector,
-        BoundedRealVectorSearchSpace,
-        TestFunctionProblem> Creator { get; init; }
+    public required ICreator<RealVector> Creator { get; init; }
 
-    public IEvaluator<
-        RealVector,
-        BoundedRealVectorSearchSpace,
-        TestFunctionProblem> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
+    public IEvaluator<RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
-    protected override IterativeAlgorithmInstance<
-        RealVector,
-        BoundedRealVectorSearchSpace,
-        TestFunctionProblem,
-        SingleSolutionState<RealVector>> CreateExecutionInstance(
-            ExecutionInstanceRegistry registry,
-            IInterceptorInstance<
-                RealVector,
-                BoundedRealVectorSearchSpace,
-                TestFunctionProblem,
-                SingleSolutionState<RealVector>>? interceptor) =>
-        new Instance(
-            interceptor,
-            registry.Resolve(Creator),
-            registry.Resolve(Evaluator));
+    protected override IterativeAlgorithmInstance<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>
+        CreateExecutionInstance<TRunSearchSpace, TRunProblem>(
+            ExecutionInstanceRegistry instanceRegistry,
+            IInterceptorInstance<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
+    {
+        var resolver = instanceRegistry.For<RealVector, TRunSearchSpace, TRunProblem>();
 
-    private sealed class Instance(
-        IInterceptorInstance<
-            RealVector,
-            BoundedRealVectorSearchSpace,
-            TestFunctionProblem,
-            SingleSolutionState<RealVector>>? interceptor,
-        ICreatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> creator,
-        IEvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> evaluator)
-        : IterativeAlgorithmInstance<
-            RealVector,
-            BoundedRealVectorSearchSpace,
-            TestFunctionProblem,
-            SingleSolutionState<RealVector>>(interceptor)
+        return new Instance<TRunSearchSpace, TRunProblem>(
+            resolvedInterceptor,
+            resolver.Resolve(Creator),
+            resolver.Resolve(Evaluator));
+    }
+
+    private sealed class Instance<TSearchSpace, TProblem>(
+        IInterceptorInstance<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>? interceptor,
+        ICreatorInstance<RealVector, TSearchSpace, TProblem> creator,
+        IEvaluatorInstance<RealVector, TSearchSpace, TProblem> evaluator)
+        : IterativeAlgorithmInstance<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>(interceptor)
+        where TSearchSpace : class, ISearchSpace<RealVector>
+        where TProblem : class, IProblem<RealVector, TSearchSpace>
     {
         protected override SingleSolutionState<RealVector> ExecuteStep(
             SingleSolutionState<RealVector>? previousState,
-            TestFunctionProblem problem,
+            TProblem problem,
             IRandomNumberGenerator random)
         {
             var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
-            var objective = evaluator.Evaluate(
-                [candidate],
-                random,
-                problem.SearchSpace,
-                problem)[0];
+            var objective = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-            return SingleSolutionState.From(candidate.ToEvaluated(objective));
+            return SingleSolutionState.From(candidate, objective);
         }
     }
 }
 ```
 
-Use `.WithMaxIterations(count)` or another terminator when the algorithm does not stop itself.
+### Why the configuration names only the candidate
+
+`SingleCreateAlgorithm` never reads a member of a particular problem. It hands the search space and the problem straight to its operators, so it does not need to name either, and the base above takes three type arguments: the algorithm's own type, the candidate, and the state it produces.
+
+That choice is what keeps the operator slots at one type argument each. `ICreator<RealVector>` accepts any creator written for real vectors, including one written against `BoundedRealVectorSearchSpace`, because the run supplies the space when the execution instance is created.
+
+The cost is visible in the example and worth naming: the run's search space and problem arrive as *method* type arguments on `CreateExecutionInstance`, so the nested instance class is generic in them and carries two constraints. That is the whole price, it is paid once by the algorithm's author, and it is paid nowhere by anyone configuring or holding the algorithm.
+
+### When to name the search space and problem instead
+
+An algorithm that reads something only one problem has — a distance matrix, a dataset, a domain-specific bound — cannot work that way, and derives from the five-argument base:
+
+```csharp
+public sealed record MatrixAwareAlgorithm
+    : IterativeAlgorithm<
+        MatrixAwareAlgorithm,
+        Permutation,
+        PermutationSearchSpace,
+        TravelingSalesmanProblem,
+        SingleSolutionState<Permutation>>
+```
+
+Its `CreateExecutionInstance` takes no type arguments and its instance class is not generic, so authoring is simpler. In exchange, every mention of the configuration names five types, its operator slots name three each, and it runs over exactly one problem type; anything else is refused when the execution graph is built. Choose this base when the algorithm genuinely reads the problem, not to avoid the generic instance class.
+
+Use `.TerminatedAfterIterations(count)` or another terminator when the algorithm does not stop itself.
 
 ## Resolve operators once
 

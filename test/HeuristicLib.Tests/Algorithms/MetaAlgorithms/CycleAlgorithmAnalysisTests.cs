@@ -21,7 +21,7 @@ public class CycleAlgorithmAnalysisTests
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzers(analysis1, analysis2);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AttachAnalyzers(analysis1, analysis2);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -85,7 +85,7 @@ public class CycleAlgorithmAnalysisTests
         var evaluator = new IncrementingEvaluator();
         var problem = FuncProblem.Create(evaluateFunc: (int x) => x, encoding: DummySearchSpace<int>.Instance, objective: SingleObjective.Minimize);
         var algorithm = new SingleStepAlgorithm(1, evaluator, new IdentityInterceptor<int, PopulationState<int>>());
-        return algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analyzer);
+        return algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AttachAnalyzer(analyzer);
     }
 
     private sealed record IncrementingEvaluator

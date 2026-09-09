@@ -351,7 +351,7 @@ Do not make callers spell generic arguments available values can determine.
 - Anchor a `For(...)` that also takes optional operators on an invariant parameter type. A covariant anchor such as `IProblem<TCandidate, out TSearchSpace>` contributes only a lower bound, so an operator declared at a reduced arity widens the inferred search space and fails against constraints the caller never named. An invariant anchor contributes an exact bound, fixing the type from the anchor alone.
 - Treat a `For(...)` argument as a type witness unless the contract says it is retained.
 - Add a fluent extension only when its receiver becomes part of the configuration.
-- Put fluent methods in `<Type>Extensions`. A concern specific helper such as `WithRate` may use its own companion.
+- Put fluent methods in `<Type>Extensions`. A concern specific helper such as `AppliedAtRate` may use its own companion.
 - Keep direct construction when no value can supply the types.
 - Prove intended inference with API usage specs. Use architecture tests or analyzers only where each fits under § 10.1.
 
@@ -408,6 +408,34 @@ Whatever the declaration count, the call site stays minimal: `resolver.Resolve(c
 `registry.TryResolve(config, out var instance)`, with nothing the caller is forced to supply to make inference work.
 An overload that exists so a type argument can be inferred is justified; one that exists only so a call site reads
 differently needs a separate argument.
+
+### § 8.12 Name a method for what it returns, not for what it looks like
+
+`With*` is the record convention: same type, changed slot, nothing mutated. Reserve it for exactly that.
+
+A method that returns a **different type wrapping the receiver** is named as a past participle describing the result,
+because an adjective cannot be misread as a command to modify the receiver: `algorithm.TerminatedBy(terminator)`,
+`evaluator.Cached(keySelector)`, `refiner.CheckedForImprovement()`, `mutator.AppliedAtRate(0.3)`,
+`algorithm.LimitedToEvaluatedCandidates(evaluator, 100_000)`. `ga.TerminatedBy(t)` is not a genetic algorithm any
+more, and the name should not suggest otherwise.
+
+A method that **mutates the receiver** is named with an imperative verb and never with `With*`, even when it returns
+the receiver for chaining: `run.AttachAnalyzer(analyzer)`. A fluent chain is not evidence that a value is being built,
+so the name has to carry that distinction on its own.
+
+This was applied across the library after `With*` was found covering three different semantics at once, one of which
+genuinely modified its receiver while reading exactly like the other two.
+
+### § 8.13 Name a contract member for the question it answers
+
+Prefer a member name that reads as the predicate at the call site: `invariant.Holds(candidate)`,
+`exactCount.Implies(minimumCount)`, `contract.Ensures(invariant)`. Avoid names that state a mechanism
+(`IsSatisfiedBy`) or a term of art the reader must look up (`Entails`) where a plain word carries the same meaning.
+
+Name an interface for what it is about, not only for its role in a system: `ICandidateInvariant<TCandidate>` says
+which thing the invariant constrains, and `IOperatorContract<TCandidate>` says whose contract it is. Verify the verb
+covers every implementer — `Ensures` survived a rename to `Preserves` precisely because a creator establishes an
+invariant rather than preserving one.
 
 ## § 9 Documentation and source organization
 

@@ -14,7 +14,7 @@ public interface ISearchSpace<TCandidate> : ISearchSpace
     /// An operator may be used here only if it guarantees each of these of its output and everything it requires of
     /// its input is entailed by one of these.
     /// </remarks>
-    IReadOnlyList<ISearchInvariant<TCandidate>> Invariants => [];
+    IReadOnlyList<ICandidateInvariant<TCandidate>> Invariants => [];
 
     //bool IsSubspaceOf(ISearchSpace<TCandidate> other);
 }

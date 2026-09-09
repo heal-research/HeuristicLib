@@ -24,7 +24,7 @@ public class ResearcherAuthoringSpecs
             Direction = LocalSearchDirection.FirstImprovement,
             BatchSize = 4,
             MaxNeighbors = 12
-        }.WithMaxIterations(5);
+        }.TerminatedAfterIterations(5);
 
         var finalState = await algorithm.CompleteAsync(
           problem,
@@ -47,7 +47,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var algorithm = innerAlgorithm.WithTerminator(new FirstEvaluatedStateTerminator());
+        var algorithm = innerAlgorithm.TerminatedBy(new FirstEvaluatedStateTerminator());
 
         var finalState = await algorithm.CompleteAsync(
           problem,
@@ -72,7 +72,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var algorithm = innerAlgorithm.WithTerminator(CancellationTokenTerminator.For(problem, stopAfterCurrentState.Token));
+        var algorithm = innerAlgorithm.TerminatedBy(CancellationTokenTerminator.For(problem, stopAfterCurrentState.Token));
 
         var states = algorithm.Stream(
           problem,
@@ -97,7 +97,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var algorithm = innerAlgorithm.WithTerminator(AfterElapsedTimeTerminator.For(problem, TimeSpan.FromSeconds(1), timeProvider));
+        var algorithm = innerAlgorithm.TerminatedBy(AfterElapsedTimeTerminator.For(problem, TimeSpan.FromSeconds(1), timeProvider));
 
         var states = algorithm.Stream(
           problem,

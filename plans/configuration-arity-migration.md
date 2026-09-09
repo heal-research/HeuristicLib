@@ -679,53 +679,113 @@ a user writes `resolver.Resolve(creator)` or `registry.TryResolve(config, out va
 **Consequence for the exit criteria.** Criterion 5 is met with no unification landing, so the documentation rewrite
 (criterion 6) is unblocked.
 
-## Documentation backlog
+## Documentation rewrite: done
 
-Deferred until the API settles, recorded here so nothing is rediscovered. Four of six guide pages that were compiled
-against the library had a snippet that does not build, so the entries below are grouped by whether they are broken or
-merely stale.
+Criterion 5 unblocked this, and it has now landed. Every entry below was verified by compiling the corrected snippet
+against the library rather than by reading, so the "fixed" claims are measured.
 
-### Snippets that do not compile
+### Snippets that did not compile
 
-| Page | Line | Failure |
+| Page | Failure | Resolution |
 | --- | --- | --- |
-| `docs/guide/execution/observability-and-analysis.md` | 57 | `Analyzer.BestMedianWorst(interceptor)` — CS0411, no inferring overload for the interceptor anchor |
-| `docs/contributing/architecture/analyzers.md` | 302 | `Analyzer.BestQuality(algorithm.Evaluator)` — CS0411; this factory has never had a compiling form |
-| `docs/examples/custom-problem.md` | 68, 72 | `SingleSolutionProblem<TCandidate, TSearchSpace>` — CS0305, the base takes a self type first |
-| `docs/examples/multi-objective.md` | 26, 31 | `RealVectorSearchSpace` — CS0246, the type is `BoundedRealVectorSearchSpace` |
-| `docs/guide/extending/operator-composition.md` | 176, 177, 185, 186, 196, 197, 213, 214, 238 | Nine assignments to `init`-only properties; needs `with`. Also `CountCandidates` lives in `HEAL.HeuristicLib.Operators.Evaluators` while every sibling helper is in `HEAL.HeuristicLib.Operators`, and the page shows no `using` block |
-
-The first two stop compiling for the reason the analysis layer still carries `TSearchSpace`/`TProblem`; they are written
-against the shape that layer should have, so they start compiling on their own once it is fixed rather than needing an
-edit.
+| `docs/guide/execution/observability-and-analysis.md:57` | `Analyzer.BestMedianWorst(interceptor)` — CS0411 | **Fixed itself.** The analysis layer shed `TSearchSpace`/`TProblem`, and the snippet now compiles unedited, exactly as this plan predicted. |
+| `docs/contributing/architecture/analyzers.md:302` | `Analyzer.BestQuality(algorithm.Evaluator)` — CS0411 | **Fixed itself**, same cause. This factory had never had a compiling form. |
+| `docs/examples/custom-problem.md:68, 72` | `SingleSolutionProblem<TCandidate, TSearchSpace>` — CS0305 | Self type added, plus a paragraph saying why the base takes it. |
+| `docs/examples/multi-objective.md:26, 31` | `RealVectorSearchSpace` — CS0246 | Renamed to `BoundedRealVectorSearchSpace` in both places. |
+| `docs/guide/extending/operator-composition.md` | Nine assignments to `init`-only properties | Rewritten as `with` expressions, with a sentence stating that configurations are records so a slot is filled at construction or through `with`. The page also gained the four-namespace using block it lacked, calling out that `CountCandidates` sits one namespace deeper than the helpers it chains onto. |
 
 ### Stale against the current shape
 
-- `docs/guide/extending/writing-algorithms.md:28` teaches the bound five argument `IterativeAlgorithm` as the default. The unbound rung is the default; the bound one is for an algorithm that reads its problem.
-- `docs/guide/extending/writing-meta-algorithms.md:38, 44, 46` still shows the pre-migration four argument `IAlgorithm`.
-- `docs/guide/fundamentals/algorithms.md:26, 49, 62` presents `For(problem)` as one of three peer construction forms without saying it requires a search space declaring `IEncodingDefault*` and a problem declaring `IProblemDefault*` — today only permutations and the traveling salesman problem.
-- `docs/guide/getting-started.md:38` passes `selector: TournamentSelector.For(problem, tournamentSize: 2)`, which reconstructs `GeneticAlgorithmDefaults.Selector<T>()` exactly. It is the only line mentioning the problem before the run and teaches a coupling that does not exist.
-- `docs/guide/execution/running-algorithms.md:54` describes `MaximumGenerations` without stating its default, which is now `GeneticAlgorithmDefaults.MaximumGenerations` rather than unbounded.
-- `docs/guide/fundamentals/problems.md` never shows a problem base class signature, so the self type — which `custom-problem.md` gets wrong — is documented nowhere a reader would look.
-- `README.md:36`, `docs/guide/fundamentals/search-spaces.md:11` and `docs/guide/fundamentals/operators.md:37` advertise boolean vectors. A creator, crossover and bit flip mutator now exist for `BoolVectorSearchSpace`, so these can name them.
-- Eight operator `For(problem, …)` factory mentions across nine pages now take one type argument rather than two. The call sites are unchanged, so this is a check rather than an edit.
+- **`writing-algorithms.md` rewritten.** It taught the bound five-argument `IterativeAlgorithm` as the default, with
+  operator slots at three type arguments each, so the first page an algorithm author read presented maximum arity as
+  normal. The example reads no concrete problem member, so it is now on the three-argument base with
+  `ICreator<RealVector>` slots. Two sections were added: why the configuration names only the candidate, and when to
+  name the search space and problem instead. The page also had a latent defect the arity work did not cause —
+  `candidate.ToEvaluated(objective)`, which is a batch extension and never applied to a single candidate. It is now
+  `SingleSolutionState.From(candidate, objective)`.
+- **`writing-meta-algorithms.md` rewritten.** It showed the pre-migration four-argument `IAlgorithm`. The example is
+  now `TwoStageAlgorithm<TCandidate, TSearchState>` over `IAlgorithm<TCandidate, TSearchState>`, with the run's types
+  arriving as method type arguments and a resolver bound once. The usage snippet drops from four type arguments to
+  two, and the child-registry snippet names the four the generic-less registry cannot infer.
+- **`algorithms.md`.** `For(problem)` was presented as a peer of the other two construction forms. It is not
+  universally available, and the page now says so: it requires `IProblemDefault*` or `IEncodingDefault*` for every
+  required role, today permutations and the traveling salesman problem, and a problem lacking them fails at compile
+  time with a constraint error naming the missing interface.
+- **`getting-started.md`.** The `selector: TournamentSelector.For(problem, tournamentSize: 2)` argument reconstructed
+  `GeneticAlgorithmDefaults.Selector<T>()` exactly, and was the only line mentioning the problem before the run, so it
+  taught a coupling that does not exist. Removed.
+- **`running-algorithms.md`.** `MaximumGenerations` now states its default of 1000 and that `null` means "terminator
+  only".
+- **`problems.md`.** Now shows the `SingleSolutionProblem<TSelf, TCandidate, TSearchSpace>` signature and a derived
+  example, so the self type — which `custom-problem.md` had wrong — is documented where a reader would look, together
+  with the CS0305 it produces when forgotten.
+- **`search-spaces.md` and `operators.md`.** Bool vectors are named concretely now:
+  `RandomBoolVectorCreator`, `BitUniformCrossover`, `BitFlipMutator`, and `BitSwapMutator` for
+  `FixedCardinalityBoolVectorSearchSpace`, which the search space table also gained a row for.
+- **The eight `For(problem, …)` factory mentions were a check, and the check passed.** Every call site in the docs
+  infers its type arguments, and no page spells them, so the drop from two to one required no edit.
 
 ### Absent rather than wrong
 
-- `Validate` and `ValidateAndThrow` appear in no user facing page. They are the pre-flight answer to an operator written for another search space, which otherwise fails once the run starts.
-- The invariant system (`IInvariantContract`, `ISearchInvariant`, `RealVectorBounds`, `BoolVectorCardinality`) is unmentioned, while `search-spaces.md:49` warns in prose to preserve validity.
+- **`Validate` and `ValidateAndThrow` are documented**, in `search-spaces.md`, immediately after the prose warning
+  about preserving validity that they are the answer to.
+- **The invariant system is documented** in the same place: `ISearchInvariant<TCandidate>`,
+  `IInvariantContract<TCandidate>` and the three-valued `Ensures`, with `BitSwapMutator` as the worked example. The
+  section states why a type argument could never have expressed this, which is the same finding
+  `NoviceFrictionSpecs.TheSearchSpaceArgument_DoesNotProtectAConstrainedSubspace` records in executable form.
+
+### What `NoviceFrictionSpecs` now measures
+
+The suite was written to record entry-barrier friction. Three of the frictions it recorded are gone, and each was
+verified by compiling the case rather than by reasoning about it:
+
+| Recorded friction | Now |
+| --- | --- |
+| `IMutator<BoolVector> = new BitSwapMutator()` was CS0266 | Compiles. The slot names no search space, so an operator valid over the wider space can fill it. Pure arity cost, paid off. |
+| The two `For` entry points returned different types, so a common type meant the interface plus a leaked search state | Both return `GeneticAlgorithm<Permutation>`; `var` covers it. |
+| Declaring an algorithm named the candidate three times | Once. |
+| `For(problem)` on a problem without defaults was CS0411, "cannot be inferred", listing thirteen parameters at full arity | Still fails, but as CS0311 naming the missing `IProblemDefaultCreator<…>`. |
+
+The last row is the honest limit of what the migration bought: that friction is real, it is not an arity problem, and
+the reduction did not remove it. What changed is that the compiler now names the cause. The one remaining "accepted
+and should not be" — a flip mutator filling a constrained slot — is likewise not an arity question, and the spec now
+asserts the invariant contract that does distinguish the two operators instead of only noting the gap.
 
 ### Structural
 
-- `GenerateDocumentationFile` **is now set in `Directory.Build.props`**, so a `<see cref>` naming a deleted type can no longer rot silently. CS1591 is suppressed and the nine diagnostics that report a comment contradicting the code are escalated to errors; the rule and its rationale are § 9.7 of the developer guidelines. Before the flag went on, building the four source projects with it reported 28 XML warnings, not the five previously recorded here: seven rotted crefs (five from the arity migration naming the pre-migration three-argument types, plus `BoundsChecker`, a type that no longer exists, and a generic-method cref), five malformed-XML errors in `RandomEnumerable`, and six `<param>` tags that no longer matched their signature. Enabling it across the whole solution then caught one further rotted cref, in `SearchSpaceCompatibilityTests.cs:63`, which named `SatisfiedInvariantKinds`, a member that exists nowhere in the tree; it now points at `Ensures`. The full solution builds clean with documentation generation on, and the generated XML ships in the package. Note that an *incremental* build does not re-emit these warnings, so verification needs `--no-incremental`.
-- `SymbolicRegressionRedesignSpecs.cs:215-244` and `:252-287` are green tests whose bodies are comment blocks followed by `typeof(T).ShouldNotBeNull()`. They claim coverage of numeric optimization authoring that does not exist.
-- Doc snippets are not compiled by anything. `HeuristicLib.Tests.ApiUsageSpecs` is the mechanism that would catch every entry in the first table.
+- `GenerateDocumentationFile` **is now set in `Directory.Build.props`**, so a `<see cref>` naming a deleted type can no
+  longer rot silently. CS1591 is suppressed and the nine diagnostics that report a comment contradicting the code are
+  escalated to errors; the rule and its rationale are § 9.7 of the developer guidelines. Before the flag went on,
+  building the four source projects with it reported 28 XML warnings, not the five previously recorded here: seven
+  rotted crefs (five from the arity migration naming the pre-migration three-argument types, plus `BoundsChecker`, a
+  type that no longer exists, and a generic-method cref), five malformed-XML errors in `RandomEnumerable`, and six
+  `<param>` tags that no longer matched their signature. Enabling it across the whole solution then caught one further
+  rotted cref, in `SearchSpaceCompatibilityTests.cs:63`, which named `SatisfiedInvariantKinds`, a member that exists
+  nowhere in the tree; it now points at `Ensures`. The full solution builds clean with documentation generation on, and
+  the generated XML ships in the package. Note that an *incremental* build does not re-emit these warnings, so
+  verification needs `--no-incremental`.
+- **Still open: doc snippets are not compiled by anything.** Every fix above was verified by pasting the snippet into
+  `HeuristicLib.Tests.ApiUsageSpecs` and building, then deleting the probe. That is the right mechanism and the wrong
+  process — nothing stops these five pages from breaking again. Making it automatic is the one documentation task this
+  branch does not close.
+- **Still open: `SymbolicRegressionRedesignSpecs.cs:215-244` and `:252-287`** are green tests whose bodies are comment
+  blocks followed by `typeof(T).ShouldNotBeNull()`. They claim coverage of numeric optimization authoring that does not
+  exist. Unrelated to arity; carried to [developer-backlog.md](developer-backlog.md).
+
 
 ## Exit criteria
 
-1. No configuration type in `src` names `TSearchSpace` or `TProblem`.
-2. Every execution instance contract still names both.
-3. One resolution path: the per-role overloads on `ExecutionInstanceResolver`, with no transitional overloads left.
-4. All four suites, formatting, style and analyzer verification green.
+1. **Met in substance, and the wording needs a decision.** No *role contract* names `TSearchSpace` or `TProblem`:
+   all nine are `I<Role><TCandidate>`, and the algorithms match the target table. But the criterion as written says
+   "no configuration type", and the authoring bases (`SingleCandidateMutator<TCandidate, TSearchSpace>` and its
+   siblings) still name them deliberately — that is the authoring ladder of § 8.4, and the bridge is what lets such an
+   operator fill an `IMutator<TCandidate>` slot. The bound algorithm rungs are the same deliberate exception. Reword
+   this criterion to name contracts rather than every configuration type, or record the ladder as its stated
+   exception.
+2. **Done.** Every execution instance contract still names both.
+3. **Done.** One resolution path: the per-role overloads, with no transitional overloads left. The registry form is
+   canonical and the resolver form binds to it; see the overload surface answers above for why both stay.
+4. **Done.** Clean `--no-incremental` release build, 2545 tests across all four suites, and whitespace, style and
+   analyzer verification all clean.
 5. **Done.** The overload surface question above is answered: the surface stays as it is, the instrumentation naming fix has landed, and no unification is called for. The documentation rewrite is unblocked.
-6. `NoviceFrictionSpecs` and the seven documentation pages reflect the new arities.
+6. **Done.** `NoviceFrictionSpecs` and every affected documentation page reflect the new arities; see the rewrite section above for what each page needed and how it was verified.

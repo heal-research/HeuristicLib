@@ -19,7 +19,7 @@ public class AlgorithmAuthoringSpecs
     public async Task IterativeAlgorithm_AuthoringExample_UsesResolvedExecutionInstances()
     {
         var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
-        var algorithm = new SingleCreateAlgorithm { Creator = new CountingCreator() }.WithMaxIterations(1);
+        var algorithm = new SingleCreateAlgorithm { Creator = new CountingCreator() }.TerminatedAfterIterations(1);
 
         var finalState = await algorithm.CompleteAsync(
             problem,
@@ -33,7 +33,7 @@ public class AlgorithmAuthoringSpecs
     public async Task IterativeAlgorithm_AuthoringExample_KeepsMutableDataRunScoped()
     {
         var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
-        var algorithm = new DoubleCreateAlgorithm { Creator = new CountingCreator() }.WithMaxIterations(1);
+        var algorithm = new DoubleCreateAlgorithm { Creator = new CountingCreator() }.TerminatedAfterIterations(1);
 
         var firstRunState = await algorithm.CompleteAsync(
             problem,
@@ -55,7 +55,7 @@ public class AlgorithmAuthoringSpecs
         var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
         var creator = new CountingCreator();
         var configuration = new DoubleCreateAlgorithm { Creator = creator };
-        var algorithm = configuration.WithMaxIterations(1);
+        var algorithm = configuration.TerminatedAfterIterations(1);
 
         var runs = await Task.WhenAll(
             algorithm.CompleteAsync(problem, RandomNumberGenerator.Create(123), ct: TestContext.Current.CancellationToken),
@@ -73,7 +73,7 @@ public class AlgorithmAuthoringSpecs
         {
             Creator = new CountingCreator(),
             Interceptor = new ThirdCoordinateIncrementingInterceptor()
-        }.WithMaxIterations(1);
+        }.TerminatedAfterIterations(1);
 
         var finalState = await algorithm.CompleteAsync(
             problem,

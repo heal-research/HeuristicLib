@@ -88,7 +88,7 @@ public class RefinerCompositionTests
     [Fact]
     public void WithRate_OfZero_LeavesEveryCandidateUnchanged()
     {
-        var instance = AddOffset(1).WithRate(0.0).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
+        var instance = AddOffset(1).AppliedAtRate(0.0).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
 
         Refine(instance, 3, 4, 5).ShouldBe([3, 4, 5]);
     }
@@ -218,7 +218,7 @@ public class RefinerCompositionTests
     [Fact]
     public void WithRate_OfOne_RefinesEveryCandidate()
     {
-        var instance = AddOffset(1).WithRate(1.0).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
+        var instance = AddOffset(1).AppliedAtRate(1.0).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
 
         Refine(instance, 3, 4, 5).ShouldBe([4, 5, 6]);
     }

@@ -40,7 +40,7 @@ public record GeneticAlgorithm<TCandidate>
     protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
         var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>();
-        var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate);
+        var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.AppliedAtRate(MutationRate);
         return new Instance<TRunSearchSpace, TRunProblem>(resolvedInterceptor, resolver.Resolve(Evaluator), resolver.Resolve(Creator), resolver.Resolve(Crossover),
             resolver.Resolve(effectiveMutator), resolver.Resolve(Selector), resolver.ResolveOptional(Terminator),
             resolver.ResolveOptional(Refiner), PopulationSize, MaximumGenerations, Elites);

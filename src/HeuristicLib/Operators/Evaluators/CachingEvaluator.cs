@@ -140,10 +140,10 @@ public static class CachingEvaluatorExtensions
     extension<TCandidate>(IEvaluator<TCandidate> evaluator)
         where TCandidate : notnull
     {
-        public CachingEvaluator<TCandidate, TKey> WithCache<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit = null) where TKey : notnull =>
+        public CachingEvaluator<TCandidate, TKey> Cached<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit = null) where TKey : notnull =>
             new(evaluator, keySelector) { SizeLimit = sizeLimit };
 
-        public CachingEvaluator<TCandidate> WithCache(long? sizeLimit = null) =>
+        public CachingEvaluator<TCandidate> Cached(long? sizeLimit = null) =>
             new(evaluator) { SizeLimit = sizeLimit };
     }
 }

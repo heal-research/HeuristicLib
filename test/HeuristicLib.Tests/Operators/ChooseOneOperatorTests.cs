@@ -275,7 +275,7 @@ public class ChooseOneOperatorTests
     [InlineData(double.PositiveInfinity, 101)]
     public void MutatorWithRate_UsesThresholdSemantics(double mutationRate, int expected)
     {
-        var mutator = new AddOffsetMutator(100).WithRate(mutationRate);
+        var mutator = new AddOffsetMutator(100).AppliedAtRate(mutationRate);
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var instance = new ExecutionInstanceRegistry().ResolveMutator(mutator);
 
@@ -294,7 +294,7 @@ public class ChooseOneOperatorTests
     [InlineData(double.PositiveInfinity, 101)]
     public void CrossoverWithRate_UsesThresholdSemantics(double crossoverRate, int expected)
     {
-        var crossover = new FirstParentCrossover(100).WithRate(crossoverRate);
+        var crossover = new FirstParentCrossover(100).AppliedAtRate(crossoverRate);
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var instance = new ExecutionInstanceRegistry().ResolveCrossover(crossover);
 

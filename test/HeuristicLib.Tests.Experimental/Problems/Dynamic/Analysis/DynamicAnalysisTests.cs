@@ -21,7 +21,7 @@ public class DynamicAnalysisTests
                 problem,
                 algorithm.Evaluator);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AttachAnalyzer(analysis);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -45,7 +45,7 @@ public class DynamicAnalysisTests
                 [algorithm.Evaluator],
                 predictionEpochMultiplier: 2);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AttachAnalyzer(analysis);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 

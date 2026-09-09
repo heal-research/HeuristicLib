@@ -40,7 +40,7 @@ public record NSGA2<TCandidate>
     {
         var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem>();
         return new Instance<TRunSearchSpace, TRunProblem>(resolvedInterceptor, resolver.Resolve(Evaluator), resolver.Resolve(Creator), resolver.Resolve(Crossover),
-            resolver.Resolve(MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate)), resolver.Resolve(Selector),
+            resolver.Resolve(MutationRate >= 1.0 ? Mutator : Mutator.AppliedAtRate(MutationRate)), resolver.Resolve(Selector),
             resolver.Resolve(Replacer), resolver.ResolveOptional(Refiner), PopulationSize, MaximumGenerations);
     }
 

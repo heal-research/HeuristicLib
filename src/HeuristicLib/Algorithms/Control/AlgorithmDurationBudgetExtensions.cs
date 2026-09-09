@@ -5,13 +5,13 @@ public static class AlgorithmDurationBudgetExtensions
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState> WithMaxAlgorithmDuration(
+        public AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration(
             TimeSpan maximumDuration)
         {
-            return algorithm.WithMaxAlgorithmDuration(maximumDuration, TimeProvider.System);
+            return algorithm.LimitedToDuration(maximumDuration, TimeProvider.System);
         }
 
-        public AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState> WithMaxAlgorithmDuration(
+        public AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration(
             TimeSpan maximumDuration,
             TimeProvider timeProvider)
         {

@@ -14,13 +14,13 @@ namespace HEAL.HeuristicLib.Encodings.BoolVectors;
 /// off cardinality is moved toward the space instead of having its error preserved.
 /// </remarks>
 public record BitSwapMutator
-    : SingleCandidateMutator<BoolVector, FixedCardinalityBoolVectorSearchSpace>, IInvariantContract<BoolVector>
+    : SingleCandidateMutator<BoolVector, FixedCardinalityBoolVectorSearchSpace>, IOperatorContract<BoolVector>
 {
     /// <summary>
     /// Length and cardinality both survive a swap, and no input invariant is needed, so this operator is usable over
     /// constrained and unconstrained bool vector spaces alike.
     /// </summary>
-    public bool? Ensures(ISearchInvariant<BoolVector> invariant) => invariant switch
+    public bool? Ensures(ICandidateInvariant<BoolVector> invariant) => invariant switch
     {
         BoolVectorLength or BoolVectorCardinality => true,
         _ => null

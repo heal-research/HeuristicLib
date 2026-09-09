@@ -86,11 +86,11 @@ public class RefinerBatchSemanticsTests
         yield return ("empty pipeline", PipelineRefiner.Create<Individual>());
         yield return ("iterated", noChange.AsIterated(3));
         yield return ("choose one", ChooseOneRefiner.Create(noChange));
-        yield return ("rate limited", new AddOffsetRefiner(1).WithRate(0.0));
+        yield return ("rate limited", new AddOffsetRefiner(1).AppliedAtRate(0.0));
         yield return ("counting", noChange.CountCandidates(new ObservationCounter()));
         yield return ("duration measuring", noChange.MeasureDuration(new ObservationDuration()));
         yield return ("observable", noChange.ObserveWith(_ => { }));
-        yield return ("improvement checking", noChange.WithImprovementCheck());
+        yield return ("improvement checking", noChange.CheckedForImprovement());
         yield return ("single candidate", new IdentityRefiner());
     }
 

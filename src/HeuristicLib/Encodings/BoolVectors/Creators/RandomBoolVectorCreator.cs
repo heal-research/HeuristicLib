@@ -11,14 +11,14 @@ namespace HEAL.HeuristicLib.Encodings.BoolVectors;
 /// Use <see cref="FixedCardinalityBoolVectorSearchSpace"/> with a creator of its own when a candidate has to start at
 /// a given number of set elements; independent draws reach that count only by chance.
 /// </remarks>
-public record RandomBoolVectorCreator : SingleCandidateCreator<BoolVector, BoolVectorSearchSpace>, IInvariantContract<BoolVector>
+public record RandomBoolVectorCreator : SingleCandidateCreator<BoolVector, BoolVectorSearchSpace>, IOperatorContract<BoolVector>
 {
     /// <summary>
     /// Gets the probability that an element is set. The expected value is in <c>[0, 1]</c>.
     /// </summary>
     public double SetProbability { get; init; } = 0.5;
 
-    public bool? Ensures(ISearchInvariant<BoolVector> invariant) => invariant switch
+    public bool? Ensures(ICandidateInvariant<BoolVector> invariant) => invariant switch
     {
         BoolVectorLength length => length.Length >= 0,
         _ => null

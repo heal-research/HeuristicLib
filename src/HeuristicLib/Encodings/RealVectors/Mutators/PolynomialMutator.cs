@@ -5,12 +5,12 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Encodings.RealVectors;
 
-public record PolynomialMutator : SingleCandidateMutator<RealVector, BoundedRealVectorSearchSpace>, IInvariantContract<RealVector>
+public record PolynomialMutator : SingleCandidateMutator<RealVector, BoundedRealVectorSearchSpace>, IOperatorContract<RealVector>
 {
     /// <summary>
     /// The result is clamped to the search space bounds, so length and bounds both survive at any distribution index.
     /// </summary>
-    public bool? Ensures(ISearchInvariant<RealVector> invariant) => invariant switch
+    public bool? Ensures(ICandidateInvariant<RealVector> invariant) => invariant switch
     {
         RealVectorLength or RealVectorBounds => true,
         _ => null

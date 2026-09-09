@@ -20,7 +20,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, 1).Stream(
+        var results = algorithm.LimitedToEvaluatorCalls(algorithm.Evaluator, 1).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -38,7 +38,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, 2).Stream(
+        var results = algorithm.LimitedToEvaluatorCalls(algorithm.Evaluator, 2).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -55,7 +55,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatedCandidates(algorithm.Evaluator, 2).Stream(
+        var results = algorithm.LimitedToEvaluatedCandidates(algorithm.Evaluator, 2).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -73,7 +73,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatedCandidates(algorithm.Evaluator, 6).Stream(
+        var results = algorithm.LimitedToEvaluatedCandidates(algorithm.Evaluator, 6).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -90,7 +90,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatorDuration(
+        var results = algorithm.LimitedToEvaluatorDuration(
             algorithm.Evaluator,
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -112,7 +112,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatorDuration(
+        var results = algorithm.LimitedToEvaluatorDuration(
             algorithm.Evaluator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -137,7 +137,7 @@ public class OperatorBudgetAlgorithmTests
             Terminator = internalTerminator
         };
 
-        var results = algorithm.WithMaxEvaluatorDuration(
+        var results = algorithm.LimitedToEvaluatorDuration(
             algorithm.Evaluator,
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -161,7 +161,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatorDuration(
+        var results = algorithm.LimitedToEvaluatorDuration(
             algorithm.Evaluator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -183,7 +183,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxAlgorithmDuration(
+        var results = algorithm.LimitedToDuration(
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
             .Stream(
@@ -204,7 +204,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxAlgorithmDuration(
+        var results = algorithm.LimitedToDuration(
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
             .Stream(
@@ -228,7 +228,7 @@ public class OperatorBudgetAlgorithmTests
             Terminator = internalTerminator
         };
 
-        var results = algorithm.WithMaxAlgorithmDuration(
+        var results = algorithm.LimitedToDuration(
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
             .Stream(
@@ -251,7 +251,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 2
         };
 
-        var results = algorithm.WithMaxAlgorithmDuration(
+        var results = algorithm.LimitedToDuration(
             TimeSpan.FromSeconds(10),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
             .Stream(
@@ -272,7 +272,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxOperatorDuration(
+        var results = algorithm.LimitedToOperatorDuration(
             algorithm.Evaluator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)),
@@ -296,7 +296,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxCreatorCalls(
+        var results = algorithm.LimitedToCreatorCalls(
             algorithm.Creator,
             maximumCalls: 1)
             .Stream(
@@ -317,7 +317,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxCreatedCandidates(
+        var results = algorithm.LimitedToCreatedCandidates(
             algorithm.Creator,
             maximumCandidates: 2)
             .Stream(
@@ -338,7 +338,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxCreatorDuration(
+        var results = algorithm.LimitedToCreatorDuration(
             algorithm.Creator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -361,7 +361,7 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 0.0
         };
 
-        var results = algorithm.WithMaxCrossoverCalls(
+        var results = algorithm.LimitedToCrossoverCalls(
             algorithm.Crossover,
             maximumCalls: 1)
             .Stream(
@@ -383,7 +383,7 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 0.0
         };
 
-        var results = algorithm.WithMaxCrossedCandidates(
+        var results = algorithm.LimitedToCrossedCandidates(
             algorithm.Crossover,
             maximumCandidates: 6)
             .Stream(
@@ -405,7 +405,7 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 0.0
         };
 
-        var results = algorithm.WithMaxCrossoverDuration(
+        var results = algorithm.LimitedToCrossoverDuration(
             algorithm.Crossover,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -428,7 +428,7 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 1.0
         };
 
-        var results = algorithm.WithMaxCount(
+        var results = algorithm.LimitedToCount(
             algorithm.Mutator,
             maximumCount: 1,
             countedOperatorFactory: static (observedOperator, counter) =>
@@ -452,7 +452,7 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 1.0
         };
 
-        var results = algorithm.WithMaxMutatorCalls(
+        var results = algorithm.LimitedToMutatorCalls(
             algorithm.Mutator,
             maximumCalls: 1)
             .Stream(
@@ -474,7 +474,7 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 1.0
         };
 
-        var results = algorithm.WithMaxCount(
+        var results = algorithm.LimitedToCount(
             algorithm.Mutator,
             maximumCount: 6,
             countedOperatorFactory: static (observedOperator, counter) =>
@@ -498,7 +498,7 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 1.0
         };
 
-        var results = algorithm.WithMaxMutatedCandidates(
+        var results = algorithm.LimitedToMutatedCandidates(
             algorithm.Mutator,
             maximumCandidates: 6)
             .Stream(
@@ -520,7 +520,7 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 1.0
         };
 
-        var results = algorithm.WithMaxMutatorDuration(
+        var results = algorithm.LimitedToMutatorDuration(
             algorithm.Mutator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -542,7 +542,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxCount(
+        var results = algorithm.LimitedToCount(
             algorithm.Evaluator,
             maximumCount: 1,
             countedOperatorFactory: static (observedOperator, counter) =>
@@ -569,7 +569,7 @@ public class OperatorBudgetAlgorithmTests
             Evaluator = baseAlgorithm.Evaluator.CountCalls(counter),
             Mutator = baseAlgorithm.Mutator.CountCalls(counter)
         };
-        var externallyStoppedAlgorithm = algorithm.WithTerminator(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 3));
+        var externallyStoppedAlgorithm = algorithm.TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 3));
 
         var results = externallyStoppedAlgorithm.Stream(
             problem,

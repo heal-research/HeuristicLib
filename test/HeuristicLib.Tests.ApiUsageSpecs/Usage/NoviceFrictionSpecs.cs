@@ -25,6 +25,11 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Usage;
 /// it pins the behavior so a later change to the type model produces a visible diff here. Code a newcomer would
 /// plausibly write but that does not compile is kept as a commented block with the compiler's objection, because an
 /// executable spec cannot hold it.
+/// <para>
+/// The arity reduction has landed, so several specs here now record a result rather than a cost, and each says which
+/// friction it used to record. What survives is friction that arity was never the cause of: a problem that declares
+/// no operator defaults, and an invariant that no type argument could have expressed.
+/// </para>
 /// </remarks>
 public class NoviceFrictionSpecs
 {
@@ -53,8 +58,10 @@ public class NoviceFrictionSpecs
     /// </summary>
     /// <remarks>
     /// A newcomer's own problem will not declare them, so the zero argument path is unavailable exactly when a
-    /// newcomer needs it most. The failure is an inference error naming all thirteen factory parameters, not a
-    /// message pointing at the missing declaration.
+    /// newcomer needs it most. The arity reduction did not change that, but it changed the diagnostic: the failure
+    /// used to be CS0411, an inference error listing all thirteen factory parameters at full arity and naming no
+    /// cause. It is now CS0311, which names the missing declaration outright. The message is still long, because it
+    /// repeats once per missing default, but every line points at something to fix.
     /// </remarks>
     [Fact]
     public void TheZeroArgumentFactory_IsAvailableOnlyToProblemsThatDeclareTheirDefaults()
@@ -70,73 +77,86 @@ public class NoviceFrictionSpecs
         problemsDeclaringDefaults.ShouldBe([nameof(TravelingSalesmanProblem)]);
 
         // Does not compile, although it is the first thing the getting started guide teaches for a different problem.
-        // TestFunctionProblem does not declare defaults, so nothing fixes TCandidate and TSearchSpace:
+        // TestFunctionProblem declares no defaults, so the constraints on For go unsatisfied:
         //
         // var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
         // var algorithm = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
         //
-        // CS0411: the type arguments for method
-        //   'GeneticAlgorithm.For<TProblem, TCandidate, TSearchSpace>(IProblem<TProblem, TCandidate,
-        //   TSearchSpace>, ICreator<...>?, ICrossover<...>?, IMutator<...>?, ISelector<...>?, IEvaluator<...>?,
-        //   IRefiner<...>?, ITerminator<...>?, IInterceptor<...>?, int, int?, double, int)'
-        //   cannot be inferred from the usage. Try specifying the type arguments explicitly.
+        // CS0311: the type 'TestFunctionProblem' cannot be used as type parameter 'TProblem' in the generic type or
+        //   method 'GeneticAlgorithm.For<TProblem, TCandidate, TSearchSpace>(Problem<TProblem, TCandidate,
+        //   TSearchSpace>, ICreator<TCandidate>?, ICrossover<TCandidate>?, IMutator<TCandidate>?,
+        //   ISelector<TCandidate>?, IEvaluator<TCandidate>?, IRefiner<TCandidate>?, ITerminator<TCandidate>?,
+        //   IInterceptor<TCandidate>?, int, int?, double, int)'. There is no implicit reference conversion from
+        //   'TestFunctionProblem' to 'IProblemDefaultCreator<TestFunctionProblem, RealVector,
+        //   BoundedRealVectorSearchSpace>'. Repeated for the crossover and mutator defaults, and again for the three
+        //   IEncodingDefault* interfaces on the search space.
+        //
+        // Every operator parameter above now reads ICreator<TCandidate>, one argument, which is what makes the
+        // constraint failure legible at all: what remains noisy is the repetition, not the arity.
     }
 
     /// <summary>
-    /// Naming the algorithm is the barrier. The moment a configuration outlives a single expression it needs a
-    /// declared type, and <c>var</c> cannot help a field, a parameter or a return type.
+    /// Naming the algorithm is still the moment its type becomes visible — <c>var</c> cannot help a field, a
+    /// parameter or a return type — but what it forces is now one type argument, and that argument is the one thing
+    /// the newcomer already knows they are optimizing.
     /// </summary>
     /// <remarks>
-    /// The candidate type is named three times in one declaration, because the inferred problem argument is itself
-    /// generic over the candidate and the search space.
+    /// This spec was written when the declaration named the candidate three times, because the search space and the
+    /// problem had to be spelled alongside it. Both have left the configuration layer, so the suite's former headline
+    /// friction is now a single word.
     /// </remarks>
     [Fact]
-    public void StoringOrPassingAnAlgorithm_RequiresEveryTypeArgument()
+    public void StoringOrPassingAnAlgorithm_NamesOnlyTheCandidate()
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
 
-        GeneticAlgorithm<RealVector> declared =
-            CreateRastriginAlgorithm(problem);
+        GeneticAlgorithm<RealVector> declared = CreateRastriginAlgorithm(problem);
 
         var widened = WidenPopulation(declared, populationSize: 40);
-        var configured =
-            new List<GeneticAlgorithm<RealVector>>
-            {
-                declared,
-                widened
-            };
+        var configured = new List<GeneticAlgorithm<RealVector>> { declared, widened };
 
+        // One argument on the declared type, and it is the candidate.
+        typeof(GeneticAlgorithm<RealVector>).GetGenericArguments().ShouldHaveSingleItem().ShouldBe(typeof(RealVector));
         configured.Count.ShouldBe(2);
         widened.PopulationSize.ShouldBe(40);
     }
 
     /// <summary>
-    /// The arity spreads. A helper that takes and returns an algorithm repeats every argument twice, so the cost is
-    /// paid again in each calling layer rather than once at construction.
+    /// The arity used to spread. A helper taking and returning an algorithm repeated every argument twice, so each
+    /// calling layer paid the cost again rather than paying it once at construction. It still repeats, but one
+    /// argument twice fits on one line, which is the difference between a signature that gets read and one that gets
+    /// skipped.
     /// </summary>
-    private static GeneticAlgorithm<RealVector>
-        WidenPopulation(
-            GeneticAlgorithm<RealVector> algorithm,
-            int populationSize) =>
+    private static GeneticAlgorithm<RealVector> WidenPopulation(GeneticAlgorithm<RealVector> algorithm, int populationSize) =>
         algorithm with { PopulationSize = populationSize };
 
     /// <summary>
-    /// Two algorithms over the same encoding but built through different entry points do not share a type. Holding
-    /// them together names the interface, which costs a fourth type argument and exposes the search state.
+    /// Two algorithms over the same encoding but built through different entry points now share a type outright, so
+    /// holding them together names nothing at all.
     /// </summary>
+    /// <remarks>
+    /// This spec recorded the opposite. The problem anchored and encoding anchored factories differed in the search
+    /// space baked into the returned type, so a common type had to be reached for through the interface, which cost a
+    /// further argument and exposed the search state to someone who had not asked about it. With the search space out
+    /// of the configuration both factories return <c>GeneticAlgorithm&lt;Permutation&gt;</c> and <c>var</c> covers the
+    /// collection. The interface form is kept below to show it now stops at the candidate.
+    /// </remarks>
     [Fact]
-    public void HoldingTwoAlgorithmsTogether_ExposesTheSearchStateArgumentAsWell()
+    public void HoldingTwoAlgorithmsTogether_NamesNothing()
     {
         var problem = new TravelingSalesmanProblem();
 
         var problemAnchored = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
         var encodingAnchored = GeneticAlgorithm.For(problem.SearchSpace, populationSize: 20, maximumGenerations: 5);
 
-        // The two locals differ in their third type argument, so the common type has to be spelled out in full.
-        List<IAlgorithm<Permutation>>
-            both = [problemAnchored, encodingAnchored];
+        // Same type, so this needs no type argument anywhere.
+        var both = new[] { problemAnchored, encodingAnchored };
 
-        both.Count.ShouldBe(2);
+        // And where the interface is genuinely wanted, it names the candidate and stops.
+        List<IAlgorithm<Permutation>> viaInterface = [problemAnchored, encodingAnchored];
+
+        both.GetType().GetElementType().ShouldBe(typeof(GeneticAlgorithm<Permutation>));
+        viaInterface.Count.ShouldBe(2);
     }
 
     /// <summary>
@@ -251,10 +271,16 @@ public class NoviceFrictionSpecs
     /// way round.
     /// </summary>
     /// <remarks>
-    /// Preserving an invariant is a postcondition on the operator's output, and a postcondition is not a type. This
-    /// bounds how much the search space argument can be expected to protect: it is not the mechanism that keeps a
-    /// candidate inside a constrained space, so removing it would not forfeit a guarantee that exists. The full
-    /// compatibility table lives in <see cref="SearchSpaceCompatibilitySpecs"/>.
+    /// This spec recorded two failures, and the arity reduction removed one. <see cref="BitSwapMutator"/> preserves
+    /// cardinality, which is stronger than the unconstrained space requires, so it is valid there; but it named the
+    /// narrower space and contravariance ran the other way, so the slot refused it. The slot names no search space
+    /// now, and the assignment is simply accepted. That failure was pure arity cost and it is paid off.
+    /// <para>
+    /// The other failure remains, and it is not an arity question. Preserving an invariant is a postcondition on the
+    /// operator's output, and a postcondition is not a type, so no type argument was ever going to answer it — which
+    /// is why removing the argument forfeits no guarantee that existed. The invariant contract is what answers it.
+    /// The full compatibility table lives in <see cref="SearchSpaceCompatibilitySpecs"/>.
+    /// </para>
     /// </remarks>
     [Fact]
     public void TheSearchSpaceArgument_DoesNotProtectAConstrainedSubspace()
@@ -263,25 +289,25 @@ public class NoviceFrictionSpecs
         bool[] twoOfFour = [true, true, false, false];
         var candidate = BoolVector.Create(twoOfFour);
 
-        // Accepted, and should not be. The operator declares no search space, so contravariance lets it fill every
-        // space slot, and a single flip takes the candidate straight out of the constrained space.
+        // Accepted, and should not be. A single flip takes the candidate straight out of the constrained space, and
+        // no arrangement of type arguments would have caught it, because it is a fact about the output.
         IMutator<BoolVector> constrainedSlot = new FlipOneBitMutator();
 
-        // Rejected, and should not be. BitSwapMutator preserves cardinality, which is stronger than the
-        // unconstrained space requires, so it is valid there; but it names the narrower space and contravariance
-        // runs the other way:
-        //
-        // IMutator<BoolVector> wideSlot =
-        //     new BitSwapMutator();
-        //
-        // CS0266: cannot implicitly convert type 'BitSwapMutator' to
-        //   'IMutator<BoolVector>'
+        // Accepted, and now rightly so. This was CS0266 before the reduction: the slot named the unconstrained space,
+        // BitSwapMutator named the narrower one, and contravariance ran the wrong way. The slot names neither now.
+        IMutator<BoolVector> wideSlot = new BitSwapMutator();
 
         var flipped = new FlipOneBitMutator().MutateCandidate(candidate, RandomNumberGenerator.Create(seed: 1));
 
         constrainedSlot.ShouldNotBeNull();
+        wideSlot.ShouldNotBeNull();
         constrained.Contains(candidate).ShouldBeTrue();
         constrained.Contains(flipped).ShouldBeFalse();
+
+        // The slot accepts both, so it was never what distinguished them. This is, and it is a value the operator
+        // states about itself rather than a position in a type argument list.
+        new BitSwapMutator().Ensures(new BoolVectorCardinality(Cardinality: 2)).ShouldBe(true);
+        new FlipOneBitMutator().Ensures(new BoolVectorCardinality(Cardinality: 2)).ShouldNotBe(true);
     }
 
     private static readonly Comparer<Type> TypeNameComparer =
@@ -414,8 +440,7 @@ public class NoviceFrictionSpecs
     /// The operator route: supply the creator, crossover and mutator, and the factory infers the only type it names.
     /// The problem argument reaches the operators that need it; the run supplies the search space and problem.
     /// </summary>
-    private static GeneticAlgorithm<RealVector>
-        CreateRastriginAlgorithm(TestFunctionProblem problem) =>
+    private static GeneticAlgorithm<RealVector> CreateRastriginAlgorithm(TestFunctionProblem problem) =>
         GeneticAlgorithm.Create(
             new UniformDistributedCreator(problem.SearchSpace),
             new AlphaBetaBlendCrossover(),

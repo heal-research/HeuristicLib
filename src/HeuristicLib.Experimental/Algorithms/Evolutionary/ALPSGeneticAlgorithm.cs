@@ -44,7 +44,7 @@ public record AlpsGeneticAlgorithm<TCandidate>
     protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>>? resolvedInterceptor)
     {
         var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate);
+        var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.AppliedAtRate(MutationRate);
         return new Instance<TRunSearchSpace, TRunProblem>(resolvedInterceptor, resolver.Resolve(Evaluator), resolver.Resolve(Creator), resolver.Resolve(Crossover),
             resolver.Resolve(effectiveMutator), resolver.Resolve(Selector), resolver.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations);
     }

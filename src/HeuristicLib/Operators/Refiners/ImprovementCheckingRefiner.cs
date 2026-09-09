@@ -319,16 +319,16 @@ public static class ImprovementCheckingRefinerExtensions
 {
     extension<TCandidate>(IRefiner<TCandidate> refiner)
     {
-        public ImprovementCheckingRefiner<TCandidate> WithImprovementCheck() =>
+        public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement() =>
             new ImprovementCheckingRefiner<TCandidate>(refiner);
 
-        public ImprovementCheckingRefiner<TCandidate> WithImprovementCheck(IImprovementCriterion criterion) =>
+        public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement(IImprovementCriterion criterion) =>
             new ImprovementCheckingRefiner<TCandidate>(refiner) { Criterion = criterion };
 
-        public ImprovementCheckingRefiner<TCandidate> WithImprovementCheck(IEvaluator<TCandidate> evaluator) =>
+        public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement(IEvaluator<TCandidate> evaluator) =>
             new ImprovementCheckingRefiner<TCandidate>(refiner) { Evaluator = evaluator };
 
-        public ImprovementCheckingRefiner<TCandidate> WithImprovementCheck(IEvaluator<TCandidate> evaluator, IImprovementCriterion criterion) =>
+        public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement(IEvaluator<TCandidate> evaluator, IImprovementCriterion criterion) =>
             new ImprovementCheckingRefiner<TCandidate>(refiner) { Evaluator = evaluator, Criterion = criterion };
     }
 }

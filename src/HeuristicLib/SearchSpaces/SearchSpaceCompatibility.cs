@@ -41,13 +41,13 @@ public static class SearchSpaceCompatibility
     /// </remarks>
     public static IReadOnlyList<Incompatibility> Check<TCandidate>(IOperator candidateOperator, ISearchSpace<TCandidate> searchSpace)
     {
-        if (candidateOperator is not IInvariantContract<TCandidate> contract)
+        if (candidateOperator is not IOperatorContract<TCandidate> contract)
         {
             return [];
         }
 
         var spaceInvariants = searchSpace.Invariants;
-        var required = contract.RequiredInputInvariants;
+        var required = contract.Requires;
         var operatorName = candidateOperator.GetType().Name;
         var searchSpaceName = searchSpace.GetType().Name;
         var incompatibilities = new List<Incompatibility>();
@@ -83,11 +83,11 @@ public static class SearchSpaceCompatibility
     public static bool IsCompatible<TCandidate>(IOperator candidateOperator, ISearchSpace<TCandidate> searchSpace) =>
         Check(candidateOperator, searchSpace).Count == 0;
 
-    private static bool IsEntailedByAny<TCandidate>(IReadOnlyList<ISearchInvariant<TCandidate>> available, ISearchInvariant<TCandidate> needed)
+    private static bool IsEntailedByAny<TCandidate>(IReadOnlyList<ICandidateInvariant<TCandidate>> available, ICandidateInvariant<TCandidate> needed)
     {
         foreach (var invariant in available)
         {
-            if (invariant.Entails(needed))
+            if (invariant.Implies(needed))
             {
                 return true;
             }

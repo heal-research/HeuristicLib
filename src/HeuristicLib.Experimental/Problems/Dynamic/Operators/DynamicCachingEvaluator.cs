@@ -174,14 +174,14 @@ public static class DynamicCachedEvaluatorExtension
 {
     extension<TCandidate>(IEvaluator<TCandidate> evaluator) where TCandidate : class
     {
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey> WithCache<TSearchSpace, TKey>(IDynamicProblem<TCandidate, TSearchSpace> problem, ICacheKeySelector<TCandidate, TKey> keySelector)
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey> Cached<TSearchSpace, TKey>(IDynamicProblem<TCandidate, TSearchSpace> problem, ICacheKeySelector<TCandidate, TKey> keySelector)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TKey : notnull
         {
             return new(evaluator, problem, keySelector);
         }
 
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TCandidate> WithCache<TSearchSpace>(IDynamicProblem<TCandidate, TSearchSpace> problem)
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TCandidate> Cached<TSearchSpace>(IDynamicProblem<TCandidate, TSearchSpace> problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
         {
             return new(evaluator, problem, CacheKeySelection<TCandidate>.Identity);
@@ -192,11 +192,11 @@ public static class DynamicCachedEvaluatorExtension
         where TCandidate : class
         where TSearchSpace : class, ISearchSpace<TCandidate>
     {
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey> WithCache<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector)
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey> Cached<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector)
             where TKey : notnull =>
             new(new ProblemEvaluator<TCandidate>(), problem, keySelector);
 
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TCandidate> WithCache() =>
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TCandidate> Cached() =>
             new(new ProblemEvaluator<TCandidate>(), problem, CacheKeySelection<TCandidate>.Identity);
     }
 }

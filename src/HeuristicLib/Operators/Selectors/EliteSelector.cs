@@ -68,6 +68,6 @@ public static class EliteSelectorExtensions
 {
     extension<TCandidate>(ISelector<TCandidate> selector)
     {
-        public EliteSelector<TCandidate> WithElites(int elites = 1) => EliteSelector.Create(selector, elites);
+        public EliteSelector<TCandidate> CombinedWithElites(int elites = 1) => EliteSelector.Create(selector, elites);
     }
 }

@@ -126,7 +126,7 @@ public class CreatorConfigurationEqualityTests
     {
         var fallback = new ConstantCreator(1);
 
-        var creator = fallback.WithPredefinedCandidates([7, 8]);
+        var creator = fallback.SeededWith([7, 8]);
 
         creator.CreatorForRemainingCandidates.ShouldBeSameAs(fallback);
         creator.PredefinedCandidates.ShouldBe([7, 8]);
@@ -135,8 +135,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void PredefinedCandidatesCreator_WithEqualParts_IsEqual()
     {
-        var left = new ConstantCreator(1).WithPredefinedCandidates([7, 8]);
-        var right = new ConstantCreator(1).WithPredefinedCandidates([7, 8]);
+        var left = new ConstantCreator(1).SeededWith([7, 8]);
+        var right = new ConstantCreator(1).SeededWith([7, 8]);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -145,8 +145,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void PredefinedCandidatesCreator_WithDifferentFallbackCreator_IsNotEqual()
     {
-        var left = new ConstantCreator(1).WithPredefinedCandidates([7, 8]);
-        var right = new ConstantCreator(2).WithPredefinedCandidates([7, 8]);
+        var left = new ConstantCreator(1).SeededWith([7, 8]);
+        var right = new ConstantCreator(2).SeededWith([7, 8]);
 
         left.ShouldNotBe(right);
     }
@@ -155,7 +155,7 @@ public class CreatorConfigurationEqualityTests
     public void PredefinedCandidatesCreator_SnapshotsPredefinedCandidates()
     {
         var predefined = new List<int> { 7, 8 };
-        var creator = new ConstantCreator(1).WithPredefinedCandidates(predefined);
+        var creator = new ConstantCreator(1).SeededWith(predefined);
 
         predefined.Clear();
 

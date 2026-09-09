@@ -14,7 +14,7 @@ The built in composition overview is:
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | Weighted alternatives per element | Chooses a child independently for each element of a batch, invokes grouped child batches and restores input order | `ChooseOneCreator`, `ChooseOneCrossover`, `ChooseOneMutator`, `ChooseOneRefiner`                            | Creators, crossovers, mutators and refiners           |
 | Weighted alternatives per call    | Chooses one child for the complete operation call                                                                 | `ChooseOneSelector`, `ChooseOneReplacer`                                                                    | Selectors and replacers                               |
-| Conditional application           | Chooses between an operation and role specific unchanged behavior                                                 | `mutator.WithRate(...)`, `crossover.WithRate(...)`, `refiner.WithRate(...)`                                 | Mutators, crossovers and refiners                     |
+| Conditional application           | Chooses between an operation and role specific unchanged behavior                                                 | `mutator.AppliedAtRate(...)`, `crossover.AppliedAtRate(...)`, `refiner.AppliedAtRate(...)`                                 | Mutators, crossovers and refiners                     |
 | Sequential composition            | Passes each stage result to the next stage in order                                                               | `PipelineMutator`, `PipelineRefiner`, `PipelineInterceptor`                                                 | Mutators, refiners and interceptors                   |
 | Repeated composition              | Feeds a result back into the same child for a configured number of iterations                                     | `IteratedRefiner`                                                                                           | Refiners                                              |
 | Objective-aware retention         | Measures a child's result and keeps it only when a criterion counts it as an improvement                          | `ImprovementCheckingRefiner`                                                                                | Refiners                                              |
@@ -67,11 +67,11 @@ var selector = ChooseOneSelector.Create(
 
 ### Conditional application
 
-`mutator.WithRate(mutationRate)` is a weighted choice between the mutator and `NoChangeMutator`. The decision is made independently for each candidate.
+`mutator.AppliedAtRate(mutationRate)` is a weighted choice between the mutator and `NoChangeMutator`. The decision is made independently for each candidate.
 
-`crossover.WithRate(crossoverRate)` is a weighted choice between the crossover and `SelectFirstParentCrossover`. The decision is made independently for each parent group. Skipping crossover therefore returns the first parent candidate.
+`crossover.AppliedAtRate(crossoverRate)` is a weighted choice between the crossover and `SelectFirstParentCrossover`. The decision is made independently for each parent group. Skipping crossover therefore returns the first parent candidate.
 
-`refiner.WithRate(refinementRate)` is a weighted choice between the refiner and `NoChangeRefiner`. The decision is made independently for each candidate, which is the usual way to apply an expensive refinement to part of a population.
+`refiner.AppliedAtRate(refinementRate)` is a weighted choice between the refiner and `NoChangeRefiner`. The decision is made independently for each candidate, which is the usual way to apply an expensive refinement to part of a population.
 
 Rate controlled composition is intended for operations that should be applied conditionally. It is distinct from transformed composition, which always invokes its transformation step.
 
@@ -110,7 +110,7 @@ Creators do not form a natural pipeline because a creator does not consume candi
 
 Refinement is normally the most expensive part of an algorithm. In one genetic algorithm benchmark with 80 candidates, 30 generations and `NumericParameterFittingRefiner` at five iterations, the refiner used 96 to 99 percent of total run time across datasets with 200 to 20,000 rows. Enabling it made the run 45 to 120 times slower. Every other role used less than two percent.
 
-Two consequences are worth carrying into a configuration. Optimizing anything else while refinement is enabled changes nothing measurable, and the setting that moves a run is how many candidates are refined at all: `refiner.WithRate(refinementRate)` is the usual lever, and a refiner's own iteration count is the next one. The exact numbers belong to one machine and one problem, but the order of magnitude is the point.
+Two consequences are worth carrying into a configuration. Optimizing anything else while refinement is enabled changes nothing measurable, and the setting that moves a run is how many candidates are refined at all: `refiner.AppliedAtRate(refinementRate)` is the usual lever, and a refiner's own iteration count is the next one. The exact numbers belong to one machine and one problem, but the order of magnitude is the point.
 
 Repeated refinement is expressed through `IteratedRefiner` rather than by placing the same refiner at two lifecycle points. It applies its child exactly `Iterations` times, feeding each result back in and forking a random number generator per iteration. There is no early exit when an iteration leaves a candidate unchanged, because candidate equality is not generally meaningful and a fixed iteration count keeps the result reproducible.
 
@@ -124,7 +124,7 @@ var fluentRefiner = parameterFitting.AsIterated(5);
 An ordinary refiner returns whatever it produced, which is sometimes worse than what it started from: a local optimizer can diverge, a simplification can lose accuracy. `ImprovementCheckingRefiner` wraps any refiner and keeps its result only when it is an improvement.
 
 ```csharp
-var refiner = parameterFitting.WithImprovementCheck();
+var refiner = parameterFitting.CheckedForImprovement();
 ```
 
 ```text
@@ -148,7 +148,7 @@ It remains an ordinary refiner returning a candidate, so it composes like any ot
 | `MinimumRelativeImprovement(fraction)` | Every objective improved by at least `abs(original) * fraction`                                      |
 
 ```csharp
-parameterFitting.WithImprovementCheck(ImprovementChecking.MinimumImprovement(0.01))
+parameterFitting.CheckedForImprovement(ImprovementChecking.MinimumImprovement(0.01))
 ```
 
 Use a threshold when a marginal improvement is not worth keeping, for example when refinement makes a candidate harder to interpret or when tiny numeric gains are noise. The margin is applied in each objective's own direction, so a positive threshold always means "better by at least this much" whether the objective is minimized or maximized. Thresholds are retained exactly as configured: zero accepts anything not worse, and a negative value deliberately tolerates a bounded worsening.
@@ -158,8 +158,8 @@ A criterion is deliberately not an `IComparer<ObjectiveVector>`. It answers whet
 Nesting decides where acceptance happens, and the two orders are genuinely different searches rather than two spellings of one:
 
 ```csharp
-new IteratedRefiner<...>(parameterFitting.WithImprovementCheck(), 5)   // memetic hill climb
-parameterFitting.AsIterated(5).WithImprovementCheck()                  // accept the final result once
+new IteratedRefiner<...>(parameterFitting.CheckedForImprovement(), 5)   // memetic hill climb
+parameterFitting.AsIterated(5).CheckedForImprovement()                  // accept the final result once
 ```
 
 A refinement that has to pass through a worse candidate to reach a better one is rejected by the first, because the uphill step never survives its round, and kept by the second, which judges only the final result.
@@ -170,11 +170,27 @@ Improvement checking evaluates twice, and the algorithm then evaluates the retur
 
 Execution instances are resolved by reference identity, so one evaluator object resolves to one execution instance, and therefore to one counter and one cache. Two separately constructed but structurally identical configurations resolve to two independent instances.
 
+The snippets in this section need four namespaces:
+
+```csharp
+using HEAL.HeuristicLib.Algorithms;   // TerminatedBy, LimitedToEvaluatedCandidates
+using HEAL.HeuristicLib.Analysis;     // ObservationCounter
+using HEAL.HeuristicLib.Operators;    // ProblemEvaluator, CachingEvaluator, CheckedForImprovement, LimitEvaluations
+using HEAL.HeuristicLib.Operators.Evaluators; // CountCandidates
+```
+
+`CountCandidates` sits one namespace deeper than the helpers it chains onto, because instrumentation is declared beside the role it instruments. It is the one import in this list that is not guessable from the snippet.
+
+Algorithm configurations are records with `init` properties, so a slot is filled at construction or through `with`, never by assignment to an existing instance. Every snippet below therefore produces a new configuration rather than mutating one.
+
 By default a refiner uses its own plain `ProblemEvaluator`, which is unwrapped and therefore invisible to counting and analysis:
 
 ```csharp
-algorithm.Evaluator = new ProblemEvaluator<...>().CountCandidates(out var counter);
-algorithm.Refiner = parameterFitting.WithImprovementCheck();
+var unshared = algorithm with
+{
+    Evaluator = new ProblemEvaluator<...>().CountCandidates(out var counter),
+    Refiner = parameterFitting.CheckedForImprovement()
+};
 ```
 
 The counter sees only the algorithm's own evaluations here; refinement effort is not measured. Sharing the counting evaluator brings it in:
@@ -182,8 +198,11 @@ The counter sees only the algorithm's own evaluations here; refinement effort is
 ```csharp
 var evaluator = new ProblemEvaluator<...>().CountCandidates(out var counter);
 
-algorithm.Evaluator = evaluator;
-algorithm.Refiner = parameterFitting.WithImprovementCheck(evaluator);
+var shared = algorithm with
+{
+    Evaluator = evaluator,
+    Refiner = parameterFitting.CheckedForImprovement(evaluator)
+};
 ```
 
 All three evaluations now increment one counter, so it measures total evaluation effort including refinement.
@@ -193,15 +212,17 @@ That counter is what an algorithm terminator reads to stop the run. `AfterOperat
 ```csharp
 var evaluator = new ProblemEvaluator<...>().CountCandidates(out var counter);
 
-algorithm.Evaluator = evaluator;
-algorithm.Refiner = parameterFitting.WithImprovementCheck(evaluator);
-
-var budgeted = algorithm.WithTerminator(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 100_000));
+var budgeted = (algorithm with
+    {
+        Evaluator = evaluator,
+        Refiner = parameterFitting.CheckedForImprovement(evaluator)
+    })
+    .TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 100_000));
 ```
 
 The refiner's comparison evaluations increment the same counter that ends the run, so termination reflects the true cost of the search including refinement. Leave the refiner on its inherited default and the opposite holds: it holds a different evaluator instance, its evaluations never reach the counter, and refinement never shortens the run. Both behaviours are intentional, and the only thing that decides between them is whether the same evaluator object appears in both places.
 
-`algorithm.WithMaxEvaluatedCandidates(evaluator, 100_000)` is the shorthand for the same arrangement. It installs a counting replacement for the evaluator instance it observes and attaches the matching terminator. Replacements are also resolved by reference, so a refiner holding that instance resolves the counted version too and the accounting works out identically.
+`algorithm.LimitedToEvaluatedCandidates(evaluator, 100_000)` is the shorthand for the same arrangement. It installs a counting replacement for the evaluator instance it observes and attaches the matching terminator. Replacements are also resolved by reference, so a refiner holding that instance resolves the counted version too and the accounting works out identically.
 
 Several observed operators can feed the same termination criterion by sharing one `ObservationCounter`. For example, the same counter can track refiner calls and evaluations.
 
@@ -210,8 +231,11 @@ Sharing a `CachingEvaluator` pays for two evaluations rather than three, because
 ```csharp
 var evaluator = new CachingEvaluator<...>(new ProblemEvaluator<...>(), keySelector);
 
-algorithm.Evaluator = evaluator;
-algorithm.Refiner = parameterFitting.WithImprovementCheck(evaluator);
+var cached = algorithm with
+{
+    Evaluator = evaluator,
+    Refiner = parameterFitting.CheckedForImprovement(evaluator)
+};
 ```
 
 Where counting sits relative to the cache decides what the counter measures:
@@ -235,8 +259,11 @@ With the limit outside, the budget means evaluation requests, so a refiner re-ev
 To attribute refinement effort separately instead of folding it into one counter, give the refiner its own counted evaluator:
 
 ```csharp
-algorithm.Refiner = parameterFitting.WithImprovementCheck(
-    new ProblemEvaluator<...>().CountCandidates(out var refinementCounter));
+var attributed = algorithm with
+{
+    Refiner = parameterFitting.CheckedForImprovement(
+        new ProblemEvaluator<...>().CountCandidates(out var refinementCounter))
+};
 ```
 
 ### Refinement evaluation
@@ -246,7 +273,7 @@ algorithm.Refiner = parameterFitting.WithImprovementCheck(
 ```csharp
 var evaluator = RefinementEvaluator.Create(parameterFitting);
 var sharedEvaluator = RefinementEvaluator.Create(parameterFitting, algorithm.Evaluator);
-var fluentEvaluator = algorithm.Evaluator.WithRefinement(parameterFitting);
+var fluentEvaluator = algorithm.Evaluator.AppliedAfterRefinement(parameterFitting);
 ```
 
 This is Baldwinian refinement, because the refinement influences fitness without becoming part of the candidate: a candidate is credited with what it could reach through refinement while the population keeps the unrefined genotype. Configuring the same refiner as the algorithm's refiner makes it Lamarckian, because the algorithm then continues with the refined candidate.
@@ -305,10 +332,10 @@ Specialized selector compositions also provide static and fluent construction:
 
 ```csharp
 var predefinedCreator = PredefinedCandidatesCreator.Create(predefinedCandidates, fallbackCreator);
-var fluentPredefinedCreator = fallbackCreator.WithPredefinedCandidates(predefinedCandidates);
+var fluentPredefinedCreator = fallbackCreator.SeededWith(predefinedCandidates);
 
 var eliteSelector = EliteSelector.Create(selector, elites: 2);
-var fluentEliteSelector = selector.WithElites(elites: 2);
+var fluentEliteSelector = selector.CombinedWithElites(elites: 2);
 
 var pairedSelector = GenderSpecificSelector.Create(femaleSelector, maleSelector);
 var fluentPairedSelector = femaleSelector.PairWith(maleSelector);

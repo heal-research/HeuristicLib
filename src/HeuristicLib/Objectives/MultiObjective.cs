@@ -12,7 +12,7 @@ public static class MultiObjective
 
     extension(ObjectiveDirections objectives)
     {
-        public ObjectiveDirections WithWithWeightedSum(IReadOnlyList<double> weights) => WeightedSum(objectives.Directions, weights);
+        public ObjectiveDirections WithWeightedSum(IReadOnlyList<double> weights) => WeightedSum(objectives.Directions, weights);
         public ObjectiveDirections WithLexicographicOrder(IReadOnlyList<int> order) => Lexicographic(objectives.Directions, order);
     }
 }

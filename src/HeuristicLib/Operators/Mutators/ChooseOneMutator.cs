@@ -66,7 +66,7 @@ public static class ChooseOneMutatorExtensions
 {
     extension<TCandidate>(IMutator<TCandidate> mutator)
     {
-        public ChooseOneMutator<TCandidate> WithRate(double mutationRate) =>
+        public ChooseOneMutator<TCandidate> AppliedAtRate(double mutationRate) =>
             ChooseOneMutator.Create(
                 [mutator, NoChangeMutator<TCandidate>.Instance],
                 [mutationRate, double.IsNaN(mutationRate) ? double.PositiveInfinity : 1 - mutationRate]);

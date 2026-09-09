@@ -23,12 +23,12 @@ A container using less material and holding more is strictly better, so it domin
 Two decisions, radius and height, so a candidate is a `RealVector` of length two. Evaluation returns two values instead of one.
 
 ```csharp
-var searchSpace = new RealVectorSearchSpace(
+var searchSpace = new BoundedRealVectorSearchSpace(
     length: 2,
     minimum: [2.0, 2.0],
     maximum: [12.0, 25.0]);
 
-var problem = new FuncProblem<RealVector, RealVectorSearchSpace>(
+var problem = new FuncProblem<RealVector, BoundedRealVectorSearchSpace>(
     (RealVector candidate) =>
     {
         var radius = candidate[0];

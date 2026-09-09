@@ -67,7 +67,7 @@ public static class ChooseOneCrossoverExtensions
 {
     extension<TCandidate>(ICrossover<TCandidate> crossover)
     {
-        public ChooseOneCrossover<TCandidate> WithRate(double crossoverRate) =>
+        public ChooseOneCrossover<TCandidate> AppliedAtRate(double crossoverRate) =>
             ChooseOneCrossover.Create(
                 [crossover, SelectFirstParentCrossover<TCandidate>.Instance],
                 [crossoverRate, double.IsNaN(crossoverRate) ? double.PositiveInfinity : 1 - crossoverRate]);

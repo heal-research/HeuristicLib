@@ -17,8 +17,10 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Usage;
 /// operators nested inside composed ones, and reports each incompatibility with the path that leads to it.
 /// </summary>
 /// <remarks>
-/// Validation is opt in. Nothing in the library calls it, so a configuration that would be reported here still runs,
-/// and the specs below show both why a caller would choose to ask and what the answer covers.
+/// Creating a run validates by default, so a configuration reported here does not start. Passing
+/// <c>validate: false</c> opts out, for an author deliberately running a configuration whose declared contracts do not
+/// hold yet. Calling <c>Validate</c> directly is still worthwhile when the answer is wanted without a run, or wanted
+/// as a report rather than as an exception.
 /// </remarks>
 public class PreflightValidationSpecs
 {
@@ -107,11 +109,16 @@ public class PreflightValidationSpecs
     }
 
     /// <summary>
-    /// Nothing validates on a caller's behalf, which is why asking is worth it: an operator that does not preserve a
-    /// search space's invariant still runs, and produces candidates the space would reject.
+    /// Resolution itself does not validate, which is what the check at run creation is protecting against: an operator
+    /// that does not preserve a search space's invariant builds and runs perfectly well, and produces candidates the
+    /// space would reject.
     /// </summary>
+    /// <remarks>
+    /// Reaching the execution instance directly, as here, bypasses run creation and therefore the check. That is the
+    /// behavior a caller opts into with <c>validate: false</c>, stated as a mechanism rather than as a default.
+    /// </remarks>
     [Fact]
-    public void ARunDoesNotValidate_SoAnUncheckedConfigurationLeavesTheSearchSpace()
+    public void ResolvingDoesNotValidate_SoAnUncheckedConfigurationLeavesTheSearchSpace()
     {
         var mutator = new FlipOneBitMutator();
         SearchConfigurationValidation.Validate(mutator, Constrained).IsValid.ShouldBeFalse();
@@ -123,9 +130,72 @@ public class PreflightValidationSpecs
 
         var mutated = instance.Mutate([inSpace], RandomNumberGenerator.Create(1), Constrained, null!)[0];
 
-        // The run neither checked nor complained; the candidate simply left the space.
+        // Nothing checked or complained at this level; the candidate simply left the space.
         Constrained.Contains(mutated).ShouldBeFalse();
     }
+
+    /// <summary>
+    /// Creating a run checks the whole configuration against the problem's search space, so an operator that declares
+    /// it cannot be used there stops the run before it starts instead of quietly leaving the space.
+    /// </summary>
+    [Fact]
+    public void CreatingARun_RefusesAnOperatorTheSearchSpaceRulesOut()
+    {
+        var problem = ConstrainedProblem();
+        var algorithm = new HillClimber<BoolVector>
+        {
+            Creator = new RandomBoolVectorCreator(),
+            Mutator = new FlipOneBitMutator()
+        };
+
+        var failure = Should.Throw<InvalidOperationException>(
+            () => algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1)));
+
+        failure.Message.ShouldContain(nameof(FlipOneBitMutator));
+        failure.Message.ShouldContain("Cardinality(2)");
+    }
+
+    /// <summary>
+    /// The check is a default, not a rule. <c>validate: false</c> runs the same configuration, which is what an author
+    /// needs while an operator's declared contract is still being worked out.
+    /// </summary>
+    [Fact]
+    public void CreatingARun_SkipsTheCheckWhenAskedTo()
+    {
+        var problem = ConstrainedProblem();
+        var algorithm = new HillClimber<BoolVector>
+        {
+            Creator = new RandomBoolVectorCreator(),
+            Mutator = new FlipOneBitMutator()
+        };
+
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1), validate: false);
+
+        run.ShouldNotBeNull();
+    }
+
+    /// <summary>
+    /// A configuration that satisfies the space starts without anything to opt out of, so the default costs a correct
+    /// caller nothing but the walk.
+    /// </summary>
+    [Fact]
+    public void CreatingARun_PassesForAConfigurationTheSpaceAccepts()
+    {
+        var problem = ConstrainedProblem();
+        var algorithm = new HillClimber<BoolVector>
+        {
+            Creator = new RandomBoolVectorCreator(),
+            Mutator = new BitSwapMutator()
+        };
+
+        Should.NotThrow(() => algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1)));
+    }
+
+    private static FuncProblem<BoolVector, FixedCardinalityBoolVectorSearchSpace> ConstrainedProblem() =>
+        FuncProblem.Create(
+            (BoolVector candidate) => candidate.Count,
+            Constrained,
+            SingleObjective.Minimize);
 
     /// <summary>
     /// The same call also answers whether every operator can be built for this run at all, which is where problem

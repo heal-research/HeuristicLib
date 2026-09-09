@@ -29,6 +29,8 @@ All three forms use the algorithm's public defaults class for omitted optional s
 
 The constructor is the direct record API. `Create(...)` and `For(...)` are type inference conveniences over it. After construction, every form supports the same property access and `with` expressions.
 
+The three forms are not equally available. Direct construction and `Create(...)` work for any problem. `For(problem, ...)` additionally requires the problem to declare `IProblemDefault*` interfaces, or its search space to declare `IEncodingDefault*`, for every required operator role; today that means permutations and `TravelingSalesmanProblem`. A problem that declares none is refused at compile time with a constraint error naming the missing interface, so reach for `Create(...)` when writing your own problem.
+
 ## Configure a genetic algorithm
 
 ```csharp
@@ -46,7 +48,7 @@ Algorithm owned settings such as `MaximumGenerations` describe ordinary run beha
 
 ## Use suggested defaults
 
-Some encodings and problems publish suggested operators. Use `For(problem, ...)` when that complete defaults flow exists:
+Some encodings and problems publish suggested operators. Use `For(problem, ...)` when that complete defaults flow exists — a problem you wrote yourself will not have it until you declare the `IProblemDefault*` or `IEncodingDefault*` interfaces:
 
 ```csharp
 var algorithm = GeneticAlgorithm.For(

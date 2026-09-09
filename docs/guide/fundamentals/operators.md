@@ -34,7 +34,7 @@ Start with the candidate representation:
 
 - Real vectors use numerical crossover and mutation.
 - Integer vectors need changes that preserve integral values and bounds.
-- Boolean vectors use bit based variation.
+- Boolean vectors use bit based variation: `RandomBoolVectorCreator`, `BitUniformCrossover` and `BitFlipMutator`. Use `BitSwapMutator` instead of `BitFlipMutator` over `FixedCardinalityBoolVectorSearchSpace`, since a single flip changes the number of set bits and leaves that space.
 - Permutations need order aware operators that preserve every element exactly once.
 
 Then consider how useful solutions differ from nearby solutions. Small Gaussian changes suit local refinement in continuous spaces. Swap or inversion mutation can preserve useful subsequences in routes. Tournament pressure affects how quickly a population concentrates around good candidates.

@@ -15,14 +15,14 @@ namespace HEAL.HeuristicLib.SearchSpaces;
 /// this.
 /// </para>
 /// </remarks>
-public static class InvariantContractComposition
+public static class OperatorContractComposition
 {
     /// <summary>
     /// Answers for a composition from the answers of <paramref name="children"/>: <see langword="false"/> if any child
     /// breaks the invariant, <see langword="null"/> if none breaks it but any child has no opinion, and
     /// <see langword="true"/> when every child ensures it.
     /// </summary>
-    public static bool? Ensures<TCandidate>(IEnumerable<IOperator> children, ISearchInvariant<TCandidate> invariant)
+    public static bool? Ensures<TCandidate>(IEnumerable<IOperator> children, ICandidateInvariant<TCandidate> invariant)
     {
         var anyUnanswered = false;
         var anyChild = false;
@@ -30,7 +30,7 @@ public static class InvariantContractComposition
         foreach (var child in children)
         {
             anyChild = true;
-            var answer = (child as IInvariantContract<TCandidate>)?.Ensures(invariant);
+            var answer = (child as IOperatorContract<TCandidate>)?.Ensures(invariant);
             if (answer == false)
             {
                 return false;
@@ -46,12 +46,12 @@ public static class InvariantContractComposition
     /// Collects the input requirements of <paramref name="children"/>, without duplicates. Any child may be handed the
     /// composition's input, so the composition requires everything they do.
     /// </summary>
-    public static IReadOnlyList<ISearchInvariant<TCandidate>> RequiredInputInvariants<TCandidate>(IEnumerable<IOperator> children)
+    public static IReadOnlyList<ICandidateInvariant<TCandidate>> Requires<TCandidate>(IEnumerable<IOperator> children)
     {
-        var required = new List<ISearchInvariant<TCandidate>>();
+        var required = new List<ICandidateInvariant<TCandidate>>();
         foreach (var child in children)
         {
-            foreach (var requirement in (child as IInvariantContract<TCandidate>)?.RequiredInputInvariants ?? [])
+            foreach (var requirement in (child as IOperatorContract<TCandidate>)?.Requires ?? [])
             {
                 if (!required.Contains(requirement))
                 {

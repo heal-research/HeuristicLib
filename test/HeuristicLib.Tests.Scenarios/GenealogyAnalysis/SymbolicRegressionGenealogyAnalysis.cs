@@ -49,7 +49,7 @@ public class GenealogyGraphTests
 
         var analysis = Analyzer.BestMedianWorst(ga.Interceptor!);
 
-        var run = ga.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzer(analysis);
+        var run = ga.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).AttachAnalyzer(analysis);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         var ares = run.GetResult(analysis);
 
@@ -90,7 +90,7 @@ public class GenealogyGraphTests
         var genealogyAnalysis =
             ExperimentalAnalyzers.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzers(evalQualities, qualities, genealogyAnalysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).AttachAnalyzers(evalQualities, qualities, genealogyAnalysis);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         var qres = run.GetResult(qualities);
@@ -124,7 +124,7 @@ public class GenealogyGraphTests
                 IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>,
                 SingleSolutionState<SymbolicExpressionTree>>(
                 mutator: algorithm.Mutator, interceptor: algorithm.Interceptor);
-        var run = algorithm.WithMaxIterations(8).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzer(genealogy);
+        var run = algorithm.TerminatedAfterIterations(8).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).AttachAnalyzer(genealogy);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         var gres = run.GetResult(genealogy);
         res.Population.EvaluatedCandidates.ShouldHaveSingleItem();
@@ -161,7 +161,7 @@ public class GenealogyGraphTests
         var genealogy = ExperimentalAnalyzers.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
         var qualities = Analyzer.BestMedianWorst(algorithm.Interceptor!);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzers(genealogy, qualities);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).AttachAnalyzers(genealogy, qualities);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         var gres = run.GetResult(genealogy);
         var qres = run.GetResult(qualities);

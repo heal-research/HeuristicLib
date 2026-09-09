@@ -108,7 +108,7 @@ public class AlgorithmRefinementTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with
         {
-            Evaluator = new ProblemEvaluator<RealVector>().WithRefinement(new OriginShiftRefiner()),
+            Evaluator = new ProblemEvaluator<RealVector>().AppliedAfterRefinement(new OriginShiftRefiner()),
             MaximumGenerations = 1
         };
 

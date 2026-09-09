@@ -68,14 +68,14 @@ public static class StateTerminatedAlgorithmExtensions
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public StateTerminatedAlgorithm<TCandidate, TSearchState> WithTerminator(ITerminator<TCandidate> terminator)
+        public StateTerminatedAlgorithm<TCandidate, TSearchState> TerminatedBy(ITerminator<TCandidate> terminator)
         {
             return StateTerminatedAlgorithm.Create(algorithm, terminator);
         }
 
-        public StateTerminatedAlgorithm<TCandidate, TSearchState> WithMaxIterations(int maximumIterations)
+        public StateTerminatedAlgorithm<TCandidate, TSearchState> TerminatedAfterIterations(int maximumIterations)
         {
-            return algorithm.WithTerminator(new AfterIterationsTerminator<TCandidate>(maximumIterations));
+            return algorithm.TerminatedBy(new AfterIterationsTerminator<TCandidate>(maximumIterations));
         }
     }
 }

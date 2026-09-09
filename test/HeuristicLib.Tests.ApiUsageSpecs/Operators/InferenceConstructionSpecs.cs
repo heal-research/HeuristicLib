@@ -58,13 +58,13 @@ public class InferenceConstructionSpecs
         var countingInterceptor = CountingInterceptor.Create(identityInterceptor, new ObservationCounter());
         var measuredInterceptor = DurationMeasuringInterceptor.Create(identityInterceptor, new ObservationDuration());
         var eliteSelector = EliteSelector.Create(algorithm.Selector, elites: 1);
-        var fluentEliteSelector = algorithm.Selector.WithElites(elites: 1);
+        var fluentEliteSelector = algorithm.Selector.CombinedWithElites(elites: 1);
         var genderSpecificSelector = GenderSpecificSelector.Create(algorithm.Selector, algorithm.Selector);
         var fluentGenderSpecificSelector = algorithm.Selector.PairWith(algorithm.Selector);
         var noSameMatesSelector = NoSameMatesSelector.Create(algorithm.Selector, maximumAttempts: 3);
         var fluentNoSameMatesSelector = algorithm.Selector.AvoidSameMates(maximumAttempts: 3);
         var predefinedCreator = PredefinedCandidatesCreator.Create([RealVector.Create(0.0)], algorithm.Creator);
-        var fluentPredefinedCreator = algorithm.Creator.WithPredefinedCandidates([RealVector.Create(0.0)]);
+        var fluentPredefinedCreator = algorithm.Creator.SeededWith([RealVector.Create(0.0)]);
         var unchangedMutator = NoChangeMutator.For(problem);
         var firstParentCrossover = SelectFirstParentCrossover.For(problem);
         var secondParentCrossover = SelectSecondParentCrossover.For(problem);
@@ -73,8 +73,8 @@ public class InferenceConstructionSpecs
         var targetTerminator = TargetTerminator.For(problem, new ObjectiveVector(0.0));
         var neverTerminator = NeverTerminator.For(problem);
 
-        var firstTerminator = algorithm.WithMaxIterations(2).Terminator;
-        var secondTerminator = algorithm.WithMaxIterations(3).Terminator;
+        var firstTerminator = algorithm.TerminatedAfterIterations(2).Terminator;
+        var secondTerminator = algorithm.TerminatedAfterIterations(3).Terminator;
         var anyTerminator = AnyTerminator.Create(firstTerminator, secondTerminator);
         var fluentAnyTerminator = firstTerminator.Or(secondTerminator);
         var allTerminator = AllTerminator.Create(firstTerminator, secondTerminator);
@@ -83,10 +83,10 @@ public class InferenceConstructionSpecs
         var countingTerminator = CountingTerminator.Create(firstTerminator, new ObservationCounter());
         var measuredTerminator = DurationMeasuringTerminator.Create(firstTerminator, new ObservationDuration());
         var terminatedAlgorithm = StateTerminatedAlgorithm.Create(algorithm, firstTerminator);
-        var fluentTerminatedAlgorithm = algorithm.WithTerminator(firstTerminator);
+        var fluentTerminatedAlgorithm = algorithm.TerminatedBy(firstTerminator);
 
-        var firstStage = algorithm.WithMaxIterations(2);
-        var secondStage = algorithm.WithMaxIterations(3);
+        var firstStage = algorithm.TerminatedAfterIterations(2);
+        var secondStage = algorithm.TerminatedAfterIterations(3);
         var pipelineAlgorithm = PipelineAlgorithm.Create(firstStage, secondStage);
         var fluentPipelineAlgorithm = firstStage.Then(secondStage);
         var cycleAlgorithm = CycleAlgorithm.Create(firstStage, secondStage);

@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Encodings.BoolVectors;
 /// <see cref="BoolVectorSearchSpace"/> rather than <see cref="FixedCardinalityBoolVectorSearchSpace"/>. Use
 /// <see cref="BitSwapMutator"/> where the count has to survive.
 /// </summary>
-public record BitFlipMutator : SingleCandidateMutator<BoolVector, BoolVectorSearchSpace>, IInvariantContract<BoolVector>
+public record BitFlipMutator : SingleCandidateMutator<BoolVector, BoolVectorSearchSpace>, IOperatorContract<BoolVector>
 {
     /// <summary>
     /// Gets the probability that an element is flipped, or <see langword="null"/> to flip one element per candidate on
@@ -24,7 +24,7 @@ public record BitFlipMutator : SingleCandidateMutator<BoolVector, BoolVectorSear
     /// Length survives a flip and cardinality does not, so this operator is refused over a search space that
     /// constrains the count rather than failing once the run is under way.
     /// </remarks>
-    public bool? Ensures(ISearchInvariant<BoolVector> invariant) => invariant switch
+    public bool? Ensures(ICandidateInvariant<BoolVector> invariant) => invariant switch
     {
         BoolVectorLength => true,
         BoolVectorCardinality => false,

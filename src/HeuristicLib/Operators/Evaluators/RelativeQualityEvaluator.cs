@@ -93,10 +93,10 @@ public static class RelativeQualityEvaluatorExtensions
 {
     extension<TCandidate>(IEvaluator<TCandidate> evaluator)
     {
-        public RelativeQualityEvaluator<TCandidate> WithRelativeQuality(ObjectiveVector bestKnown) =>
+        public RelativeQualityEvaluator<TCandidate> ScaledToBestKnown(ObjectiveVector bestKnown) =>
             new(evaluator, bestKnown);
 
-        public RelativeQualityEvaluator<TCandidate> WithRelativeQuality(ObjectiveVector bestKnown, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy) =>
+        public RelativeQualityEvaluator<TCandidate> ScaledToBestKnown(ObjectiveVector bestKnown, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy) =>
             new(evaluator, bestKnown) { ZeroBestKnownPolicy = zeroBestKnownPolicy };
     }
 }

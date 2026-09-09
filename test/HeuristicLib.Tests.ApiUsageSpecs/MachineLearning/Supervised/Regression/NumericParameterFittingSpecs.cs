@@ -52,7 +52,7 @@ public class NumericParameterFittingSpecs
         {
             Evaluator = evaluator,
             Refiner = new NumericParameterFittingRefiner { MaximumIterations = 10 }
-                .WithImprovementCheck(evaluator)
+                .CheckedForImprovement(evaluator)
         };
 
         var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
@@ -69,7 +69,7 @@ public class NumericParameterFittingSpecs
 
         var algorithm = CreateAlgorithm(problem) with
         {
-            Refiner = new NumericParameterFittingRefiner().WithRate(0.25)
+            Refiner = new NumericParameterFittingRefiner().AppliedAtRate(0.25)
         };
 
         var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
@@ -142,12 +142,12 @@ public class NumericParameterFittingSpecs
         var sharing = CreateAlgorithm(problem) with
         {
             Evaluator = sharedEvaluator,
-            Refiner = new NumericParameterFittingRefiner().WithImprovementCheck(sharedEvaluator)
+            Refiner = new NumericParameterFittingRefiner().CheckedForImprovement(sharedEvaluator)
         };
         var notSharing = CreateAlgorithm(problem) with
         {
             Evaluator = algorithmEvaluator,
-            Refiner = new NumericParameterFittingRefiner().WithImprovementCheck()
+            Refiner = new NumericParameterFittingRefiner().CheckedForImprovement()
         };
 
         sharing.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);

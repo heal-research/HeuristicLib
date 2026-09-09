@@ -272,7 +272,7 @@ public class SymbolicRegressionRedesignSpecs
               tolerance: 1e-8),
             Selector = new TournamentSelector<ExpressionTree>(tournamentSize: 2),
             Elites = 1
-        }.WithMaxIterations(8);
+        }.TerminatedAfterIterations(8);
 
         var finalState = await algorithm.RunToCompletionAsync(
           problem,

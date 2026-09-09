@@ -41,7 +41,7 @@ public class IterationObservationSpecs
         var qualityAnalyzer = Analyzer.BestMedianWorst(algorithm);
         var run = algorithm
             .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-            .WithAnalyzer(qualityAnalyzer);
+            .AttachAnalyzer(qualityAnalyzer);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -56,7 +56,7 @@ public class IterationObservationSpecs
         var cycle = CycleAlgorithm.Create(innerAlgorithm) with { MaximumCycles = 2, NewExecutionInstancesPerCycle = false };
 
         var innerQuality = Analyzer.BestMedianWorst(innerAlgorithm);
-        var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).WithAnalyzer(innerQuality);
+        var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AttachAnalyzer(innerQuality);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 

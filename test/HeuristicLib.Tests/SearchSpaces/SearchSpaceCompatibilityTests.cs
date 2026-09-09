@@ -14,9 +14,9 @@ public class SearchSpaceCompatibilityTests
     /// Answers <see langword="true"/> for the named kinds, <see langword="false"/> for anything the search space
     /// states that is not among them, and <see langword="null"/> when <paramref name="opinionated"/> is false.
     /// </summary>
-    private sealed record Declared(Type[] Ensured, IReadOnlyList<ISearchInvariant<BoolVector>> RequiredInputInvariants, bool opinionated = true) : IOperator, IInvariantContract<BoolVector>
+    private sealed record Declared(Type[] Ensured, IReadOnlyList<ICandidateInvariant<BoolVector>> Requires, bool opinionated = true) : IOperator, IOperatorContract<BoolVector>
     {
-        public bool? Ensures(ISearchInvariant<BoolVector> invariant) =>
+        public bool? Ensures(ICandidateInvariant<BoolVector> invariant) =>
             !opinionated ? null : Ensured.Contains(invariant.GetType());
     }
 
@@ -62,7 +62,7 @@ public class SearchSpaceCompatibilityTests
     /// Gets the perturbation strength. Larger values search more widely and are an ordinary choice; the range over
     /// which cardinality is still preserved is stated by <see cref="Ensures"/>.
     /// </param>
-    private sealed record ParameterDependent(double Strength) : IOperator, IInvariantContract<BoolVector>
+    private sealed record ParameterDependent(double Strength) : IOperator, IOperatorContract<BoolVector>
     {
         /// <summary>
         /// Cardinality survives only while <see cref="Strength"/> stays within <c>[0, 1]</c>. Length always survives.
@@ -72,7 +72,7 @@ public class SearchSpaceCompatibilityTests
         /// configuration; it simply stops keeping candidates inside a fixed cardinality search space, and validation
         /// reports that against the configuration rather than treating it as a defect.
         /// </remarks>
-        public bool? Ensures(ISearchInvariant<BoolVector> invariant) => invariant switch
+        public bool? Ensures(ICandidateInvariant<BoolVector> invariant) => invariant switch
         {
             BoolVectorLength => true,
             BoolVectorCardinality => Strength is >= 0.0 and <= 1.0,
@@ -90,7 +90,7 @@ public class SearchSpaceCompatibilityTests
     }
 
     [Fact]
-    public void RequiredInputInvariant_IsSatisfiedByAStrongerSpaceInvariant()
+    public void RequiredInvariant_IsMetByAStrongerSpaceInvariant()
     {
         var space = new FixedCardinalityBoolVectorSearchSpace(length: 5, cardinality: 3);
         var declared = new Declared([typeof(BoolVectorLength), typeof(BoolVectorCardinality)], [new BoolVectorMinimumSetElements(2)]);
@@ -99,7 +99,7 @@ public class SearchSpaceCompatibilityTests
     }
 
     [Fact]
-    public void RequiredInputInvariant_IsNotSatisfiedByAWeakerSpaceInvariant()
+    public void RequiredInvariant_IsNotMetByAWeakerSpaceInvariant()
     {
         var space = new FixedCardinalityBoolVectorSearchSpace(length: 5, cardinality: 1);
         var declared = new Declared([typeof(BoolVectorLength), typeof(BoolVectorCardinality)], [new BoolVectorMinimumSetElements(2)]);
@@ -111,16 +111,16 @@ public class SearchSpaceCompatibilityTests
     }
 
     [Fact]
-    public void CardinalityEntailsAMinimumItMeetsAndNothingStronger()
+    public void CardinalityImpliesAMinimumItMeetsAndNothingStronger()
     {
         var exactlyThree = new BoolVectorCardinality(3);
 
-        exactlyThree.Entails(new BoolVectorMinimumSetElements(2)).ShouldBeTrue();
-        exactlyThree.Entails(new BoolVectorMinimumSetElements(3)).ShouldBeTrue();
-        exactlyThree.Entails(new BoolVectorMinimumSetElements(4)).ShouldBeFalse();
-        exactlyThree.Entails(new BoolVectorCardinality(3)).ShouldBeTrue();
-        exactlyThree.Entails(new BoolVectorCardinality(2)).ShouldBeFalse();
-        exactlyThree.Entails(new BoolVectorLength(3)).ShouldBeFalse();
+        exactlyThree.Implies(new BoolVectorMinimumSetElements(2)).ShouldBeTrue();
+        exactlyThree.Implies(new BoolVectorMinimumSetElements(3)).ShouldBeTrue();
+        exactlyThree.Implies(new BoolVectorMinimumSetElements(4)).ShouldBeFalse();
+        exactlyThree.Implies(new BoolVectorCardinality(3)).ShouldBeTrue();
+        exactlyThree.Implies(new BoolVectorCardinality(2)).ShouldBeFalse();
+        exactlyThree.Implies(new BoolVectorLength(3)).ShouldBeFalse();
     }
 
     [Fact]
@@ -128,11 +128,11 @@ public class SearchSpaceCompatibilityTests
     {
         var twoOfFour = BoolVector.Create(true, false, true, false);
 
-        new BoolVectorLength(4).IsSatisfiedBy(twoOfFour).ShouldBeTrue();
-        new BoolVectorLength(3).IsSatisfiedBy(twoOfFour).ShouldBeFalse();
-        new BoolVectorCardinality(2).IsSatisfiedBy(twoOfFour).ShouldBeTrue();
-        new BoolVectorMinimumSetElements(2).IsSatisfiedBy(twoOfFour).ShouldBeTrue();
-        new BoolVectorMinimumSetElements(3).IsSatisfiedBy(twoOfFour).ShouldBeFalse();
+        new BoolVectorLength(4).Holds(twoOfFour).ShouldBeTrue();
+        new BoolVectorLength(3).Holds(twoOfFour).ShouldBeFalse();
+        new BoolVectorCardinality(2).Holds(twoOfFour).ShouldBeTrue();
+        new BoolVectorMinimumSetElements(2).Holds(twoOfFour).ShouldBeTrue();
+        new BoolVectorMinimumSetElements(3).Holds(twoOfFour).ShouldBeFalse();
     }
 
     /// <summary>
@@ -145,9 +145,9 @@ public class SearchSpaceCompatibilityTests
         var ensuresBoth = new Declared([typeof(BoolVectorLength), typeof(BoolVectorCardinality)], []);
         var ensuresLengthOnly = new Declared([typeof(BoolVectorLength)], [new BoolVectorMinimumSetElements(2)]);
 
-        InvariantContractComposition.Ensures([ensuresBoth, ensuresLengthOnly], new BoolVectorLength(4)).ShouldBe(true);
-        InvariantContractComposition.Ensures([ensuresBoth, ensuresLengthOnly], new BoolVectorCardinality(2)).ShouldBe(false);
-        InvariantContractComposition.RequiredInputInvariants<BoolVector>([ensuresBoth, ensuresLengthOnly]).ShouldBe([new BoolVectorMinimumSetElements(2)]);
+        OperatorContractComposition.Ensures([ensuresBoth, ensuresLengthOnly], new BoolVectorLength(4)).ShouldBe(true);
+        OperatorContractComposition.Ensures([ensuresBoth, ensuresLengthOnly], new BoolVectorCardinality(2)).ShouldBe(false);
+        OperatorContractComposition.Requires<BoolVector>([ensuresBoth, ensuresLengthOnly]).ShouldBe([new BoolVectorMinimumSetElements(2)]);
     }
 
     /// <summary>
@@ -160,9 +160,9 @@ public class SearchSpaceCompatibilityTests
         var silent = new Declared([], [], opinionated: false);
         var ensuresLength = new Declared([typeof(BoolVectorLength)], []);
 
-        InvariantContractComposition.Ensures([silent, silent], new BoolVectorLength(4)).ShouldBeNull();
-        InvariantContractComposition.Ensures([silent, ensuresLength], new BoolVectorLength(4)).ShouldBeNull();
-        InvariantContractComposition.Ensures([ensuresLength, ensuresLength], new BoolVectorLength(4)).ShouldBe(true);
+        OperatorContractComposition.Ensures([silent, silent], new BoolVectorLength(4)).ShouldBeNull();
+        OperatorContractComposition.Ensures([silent, ensuresLength], new BoolVectorLength(4)).ShouldBeNull();
+        OperatorContractComposition.Ensures([ensuresLength, ensuresLength], new BoolVectorLength(4)).ShouldBe(true);
     }
 
     private sealed record NoInvariantSpace : SearchSpace<BoolVector>

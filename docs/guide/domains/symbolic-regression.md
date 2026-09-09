@@ -209,11 +209,11 @@ most are how many candidates are
 refined and how many iterations each fit gets:
 
 ```csharp
-Refiner = new NumericParameterFittingRefiner().WithRate(0.25)
+Refiner = new NumericParameterFittingRefiner().AppliedAtRate(0.25)
 ```
 
 `FittingData` restricts fitting to a subset of rows. Wrapping with
-`.WithImprovementCheck()` keeps a fit only when it actually improved the candidate.
+`.CheckedForImprovement()` keeps a fit only when it actually improved the candidate.
 Refiner composition, evaluation accounting, and the cost measurements behind these
 recommendations are covered in
 [operator composition](/guide/extending/operator-composition#refiner-composition).

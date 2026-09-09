@@ -28,7 +28,7 @@ public class RefinerEvaluatorAccountingTests
         var problem = CreateProblem();
         var sharedEvaluator = CreateEvaluator().LimitEvaluations(2);
         var registry = new ExecutionInstanceRegistry();
-        var refiner = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).WithImprovementCheck(sharedEvaluator));
+        var refiner = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator));
         var algorithmEvaluator = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
 
         // One original and one refined candidate exhaust the budget of two.
@@ -45,7 +45,7 @@ public class RefinerEvaluatorAccountingTests
         var problem = CreateProblem();
         var algorithmEvaluator = CreateEvaluator().LimitEvaluations(2);
         var registry = new ExecutionInstanceRegistry();
-        var refiner = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).WithImprovementCheck(CreateEvaluator().LimitEvaluations(2)));
+        var refiner = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().LimitEvaluations(2)));
         var evaluatorInstance = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(algorithmEvaluator);
 
         refiner.Refine([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -60,8 +60,8 @@ public class RefinerEvaluatorAccountingTests
     public void WrapperOrder_DecidesWhetherCacheHitsConsumeTheBudget()
     {
         var problem = CreateProblem();
-        var limitOutside = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().WithCache().LimitEvaluations(2));
-        var cacheOutside = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().LimitEvaluations(2).WithCache());
+        var limitOutside = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().Cached().LimitEvaluations(2));
+        var cacheOutside = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().LimitEvaluations(2).Cached());
 
         for (var request = 0; request < 2; request++)
         {
@@ -82,7 +82,7 @@ public class RefinerEvaluatorAccountingTests
         var counter = new ObservationCounter();
         var instance = PipelineRefiner.Create(
                 new AddOffsetRefiner(-1),
-                new AddOffsetRefiner(-5).WithImprovementCheck(CreateEvaluator().CountCandidates(counter)))
+                new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().CountCandidates(counter)))
             .CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
         var problem = CreateProblem();
 

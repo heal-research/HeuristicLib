@@ -73,7 +73,7 @@ public class BoolVectorOperatorTests
     [Fact]
     public void TheTwoMutators_DisagreeOnCardinality()
     {
-        ISearchInvariant<BoolVector> cardinality = new BoolVectorCardinality(4);
+        ICandidateInvariant<BoolVector> cardinality = new BoolVectorCardinality(4);
 
         new BitSwapMutator().Ensures(cardinality).ShouldBe(true);
         new BitFlipMutator().Ensures(cardinality).ShouldBe(false);

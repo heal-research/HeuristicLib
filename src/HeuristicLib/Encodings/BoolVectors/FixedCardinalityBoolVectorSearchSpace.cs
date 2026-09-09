@@ -38,7 +38,7 @@ public record FixedCardinalityBoolVectorSearchSpace : SearchSpace<BoolVector>
     /// <remarks>
     /// Invariants are read during validation, never during a run.
     /// </remarks>
-    public override IReadOnlyList<ISearchInvariant<BoolVector>> Invariants =>
+    public override IReadOnlyList<ICandidateInvariant<BoolVector>> Invariants =>
         [new BoolVectorLength(Length), new BoolVectorCardinality(Cardinality)];
 
     /// <summary>

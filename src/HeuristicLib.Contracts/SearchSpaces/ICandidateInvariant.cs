@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.SearchSpaces;
 /// Implementations should be immutable value types, ordinarily records, so that equality is by value. Any type may
 /// declare a new invariant; nothing in the library enumerates them.
 /// </remarks>
-public interface ISearchInvariant<TCandidate>
+public interface ICandidateInvariant<TCandidate>
 {
     /// <summary>
     /// Gets a short human readable name used in diagnostics, such as <c>Length(4)</c>.
@@ -20,12 +20,12 @@ public interface ISearchInvariant<TCandidate>
     /// Determines whether <paramref name="candidate"/> has this property. Compatibility checking does not call this;
     /// it exists for diagnostics and for verifying that a declared invariant matches actual behavior.
     /// </summary>
-    bool IsSatisfiedBy(TCandidate candidate);
+    bool Holds(TCandidate candidate);
 
     /// <summary>
     /// Determines whether holding this invariant implies holding <paramref name="other"/>. The default is value
-    /// equality. Override where one invariant is strictly stronger than another, as an exact count entails a minimum
+    /// equality. Override where one invariant is strictly stronger than another, as an exact count implies a minimum
     /// count.
     /// </summary>
-    bool Entails(ISearchInvariant<TCandidate> other) => Equals(other);
+    bool Implies(ICandidateInvariant<TCandidate> other) => Equals(other);
 }

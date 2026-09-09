@@ -123,7 +123,7 @@ public static class MetaOptimizationProblemExamples
         ];
         var integerVectorSearchSpace = new IntegerVectorSearchSpace(integerMins.Count, integerMins, integerMaxs);
         var realVectorSearchSpace = new BoundedRealVectorSearchSpace(1, mutationRate.min, mutationRate.max);
-        var combinedSearchSpace = realVectorSearchSpace.WithSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(integerVectorSearchSpace);
+        var combinedSearchSpace = realVectorSearchSpace.CombinedWith<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(integerVectorSearchSpace);
 
         return new MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(problem, combinedSearchSpace, AlgBuilder);
 

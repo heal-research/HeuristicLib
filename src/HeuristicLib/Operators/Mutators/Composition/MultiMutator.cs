@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 /// through unchanged.
 /// </remarks>
 public abstract record MultiMutator<TCandidate>
-    : IMutator<TCandidate>, IInvariantContract<TCandidate>
+    : IMutator<TCandidate>, IOperatorContract<TCandidate>
 {
     protected MultiMutator(IReadOnlyList<IMutator<TCandidate>> childMutators)
     {
@@ -39,12 +39,12 @@ public abstract record MultiMutator<TCandidate>
     /// Answers from the child mutators. Any child may run, so an invariant survives only when none of them breaks it.
     /// </summary>
     /// <remarks>Override in a multi mutator that changes candidates itself rather than only delegating.</remarks>
-    public virtual bool? Ensures(ISearchInvariant<TCandidate> invariant) => InvariantContractComposition.Ensures(ChildMutators, invariant);
+    public virtual bool? Ensures(ICandidateInvariant<TCandidate> invariant) => OperatorContractComposition.Ensures(ChildMutators, invariant);
 
     /// <summary>Requires whatever the child mutators require, since any of them may be handed this operator's input.</summary>
     /// <remarks>Override in a multi mutator that changes candidates itself rather than only delegating.</remarks>
-    public virtual IReadOnlyList<ISearchInvariant<TCandidate>> RequiredInputInvariants =>
-        InvariantContractComposition.RequiredInputInvariants<TCandidate>(ChildMutators);
+    public virtual IReadOnlyList<ICandidateInvariant<TCandidate>> Requires =>
+        OperatorContractComposition.Requires<TCandidate>(ChildMutators);
 }
 
 public abstract class MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators)

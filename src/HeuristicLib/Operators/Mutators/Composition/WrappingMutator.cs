@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 /// through unchanged.
 /// </remarks>
 public abstract record WrappingMutator<TCandidate>
-    : IMutator<TCandidate>, IInvariantContract<TCandidate>
+    : IMutator<TCandidate>, IOperatorContract<TCandidate>
 {
     protected WrappingMutator(IMutator<TCandidate> childMutator)
     {
@@ -37,12 +37,12 @@ public abstract record WrappingMutator<TCandidate>
     /// child ensures.
     /// </summary>
     /// <remarks>Override in a wrapper that changes candidates itself rather than only delegating.</remarks>
-    public virtual bool? Ensures(ISearchInvariant<TCandidate> invariant) => InvariantContractComposition.Ensures([ChildMutator], invariant);
+    public virtual bool? Ensures(ICandidateInvariant<TCandidate> invariant) => OperatorContractComposition.Ensures([ChildMutator], invariant);
 
     /// <summary>Requires whatever the wrapped mutator requires, since it is handed this operator's input.</summary>
     /// <remarks>Override in a wrapper that changes candidates itself rather than only delegating.</remarks>
-    public virtual IReadOnlyList<ISearchInvariant<TCandidate>> RequiredInputInvariants =>
-        InvariantContractComposition.RequiredInputInvariants<TCandidate>([ChildMutator]);
+    public virtual IReadOnlyList<ICandidateInvariant<TCandidate>> Requires =>
+        OperatorContractComposition.Requires<TCandidate>([ChildMutator]);
 }
 
 public abstract class WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem>(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator)

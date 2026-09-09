@@ -10,7 +10,7 @@ public class EvaluatorCompositionTests
     public void CachingEvaluator_UsesIndependentCachePerExecutionInstance()
     {
         var counter = new ObservationCounter();
-        var evaluator = CreateEvaluator().CountCalls(counter).WithCache();
+        var evaluator = CreateEvaluator().CountCalls(counter).Cached();
         var firstInstance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var secondInstance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
@@ -54,7 +54,7 @@ public class EvaluatorCompositionTests
     [Fact]
     public void RelativeQualityEvaluator_NormalizesElementwise()
     {
-        var evaluator = CreateEvaluator().WithRelativeQuality(new ObjectiveVector(2.0, -4.0));
+        var evaluator = CreateEvaluator().ScaledToBestKnown(new ObjectiveVector(2.0, -4.0));
         var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = new FuncProblem<int, DummySearchSpace<int>>(
             static candidate => new ObjectiveVector(candidate, -2.0 * candidate),
@@ -69,7 +69,7 @@ public class EvaluatorCompositionTests
     [Fact]
     public void RelativeQualityEvaluator_AppliesZeroBestKnownPolicy()
     {
-        var evaluator = CreateEvaluator().WithRelativeQuality(new ObjectiveVector(0.0),
+        var evaluator = CreateEvaluator().ScaledToBestKnown(new ObjectiveVector(0.0),
             RelativeQualityZeroBestKnownPolicy.Difference);
         var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();

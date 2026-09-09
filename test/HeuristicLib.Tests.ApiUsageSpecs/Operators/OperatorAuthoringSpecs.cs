@@ -252,7 +252,7 @@ public class OperatorAuthoringSpecs
         var problem = CreateRastriginProblem(dimension: 3);
         var candidate = RealVector.Repeat(1.0, 3);
         var evaluator = new ProblemEvaluator<RealVector>()
-            .WithRefinement(new HalveRefiner());
+            .AppliedAfterRefinement(new HalveRefiner());
 
         var objectiveVectors = new ExecutionInstanceRegistry().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator).Evaluate(
             [candidate],
@@ -439,7 +439,7 @@ public class OperatorAuthoringSpecs
         var counting = CountingEvaluator.Create(child, new ObservationCounter(), OperatorCountMetric.Calls);
         var duration = DurationMeasuringEvaluator.Create(child, new ObservationDuration());
         var repeating = child.AsRepeated(3, ObjectiveVectorAggregation.Median);
-        var caching = child.WithCache(new FirstCoordinateCacheKeySelector());
+        var caching = child.Cached(new FirstCoordinateCacheKeySelector());
 
         observable.ChildEvaluator.ShouldBeSameAs(child);
         observable.Observers.ShouldBe([observer]);
@@ -785,7 +785,7 @@ public class OperatorAuthoringSpecs
             Direction = LocalSearchDirection.FirstImprovement,
             BatchSize = 2,
             MaxNeighbors = 2
-        }.WithMaxIterations(1);
+        }.TerminatedAfterIterations(1);
 
         var finalState = await algorithm.CompleteAsync(
           problem,

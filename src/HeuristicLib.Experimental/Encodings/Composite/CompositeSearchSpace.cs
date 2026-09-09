@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Encodings.Composite;
 
 public static class CompositeSearchSpace
 {
-    public static CompositeSearchSpace<T1, TS1, T2, TS2> WithSearchSpace<T1, TS1, T2, TS2>(this TS1 enc1, TS2 enc2)
+    public static CompositeSearchSpace<T1, TS1, T2, TS2> CombinedWith<T1, TS1, T2, TS2>(this TS1 enc1, TS2 enc2)
         where T1 : class
         where TS1 : class, ISearchSpace<T1>
         where T2 : class

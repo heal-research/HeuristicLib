@@ -35,7 +35,6 @@ var algorithm = GeneticAlgorithm.Create(
     new UniformDistributedCreator(),
     new AlphaBetaBlendCrossover { Alpha = 0.7 },
     new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
-    selector: TournamentSelector.For(problem, tournamentSize: 2),
     populationSize: 200,
     maximumGenerations: 500,
     mutationRate: 0.2);

@@ -34,25 +34,28 @@ using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-public sealed record TwoStageAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : Algorithm<TwoStageAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>,
-        TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
+    : Algorithm<TwoStageAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
-    public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> First { get; init; }
+    public required IAlgorithm<TCandidate, TSearchState> First { get; init; }
 
-    public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Second { get; init; }
+    public required IAlgorithm<TCandidate, TSearchState> Second { get; init; }
 
-    public override IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(
-        ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(First), instanceRegistry.Resolve(Second));
+    public override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>
+        CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
 
-    private sealed class Instance(
+        return new Instance<TRunSearchSpace, TRunProblem>(resolver.Resolve(First), resolver.Resolve(Second));
+    }
+
+    private sealed class Instance<TSearchSpace, TProblem>(
         IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> first,
         IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> second)
         : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(
             TProblem problem,
@@ -82,19 +85,27 @@ Three details carry the design:
 - **Both children are resolved in `CreateExecutionInstance`**, not during the run. That is where the registry is available and where replacements are applied.
 - **The last state of the first stage becomes the initial state of the second.** Nothing converts between them, because both stages are declared over the same `TSearchState`.
 - **Each stage gets its own random stream** through `random.Fork(index)`. Forking by a stable index keeps the stages independent and the run reproducible.
+- **The stages are named by candidate and state only.** `IAlgorithm<TCandidate, TSearchState>` accepts any algorithm over that candidate producing that state, whatever search space or problem it was written for. The run supplies those, which arrive as the method type arguments `TRunSearchSpace` and `TRunProblem` on `CreateExecutionInstance` and are threaded into the nested instance class. Binding a resolver once with `instanceRegistry.For<...>()` is what keeps the two `Resolve` calls free of type arguments.
 
 Use it by naming the two stages:
 
 ```csharp
+using HEAL.HeuristicLib.Analysis; // TrackBestMedianWorst
+
 var explore = geneticAlgorithm with { MutationRate = 0.5, MaximumGenerations = 200 };
 var exploit = geneticAlgorithm with { MutationRate = 0.05, MaximumGenerations = 300 };
 
-var staged = new TwoStageAlgorithm<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem,
-    PopulationState<RealVector>> { First = explore, Second = exploit };
+var staged = new TwoStageAlgorithm<RealVector, PopulationState<RealVector>>
+{
+    First = explore,
+    Second = exploit
+};
 
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
     .TrackBestMedianWorst(out var wholeRun);
 ```
+
+Two type arguments, not four. The search space and the problem are supplied by `CreateRun`, so the same `staged` value composes stages written for any real vector problem.
 
 Because the children are resolved through the registry, either stage can also be observed on its own:
 
@@ -102,7 +113,7 @@ Because the children are resolved through the registry, either stage can also be
 var exploreQuality = Analyzer.BestMedianWorst(explore);
 
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .WithAnalyzer(exploreQuality)
+    .AttachAnalyzer(exploreQuality)
     .TrackBestMedianWorst(out var wholeRun);
 ```
 
@@ -114,8 +125,10 @@ Resolve a child once per instance when the child should keep its state for the w
 
 ```csharp
 var childRegistry = registry.CreateChildRegistry();
-var instance = childRegistry.Resolve(childAlgorithm);
+var instance = childRegistry.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm);
 ```
+
+The registry itself has no type arguments, so it cannot infer the four the resolution needs and the call names them. Where several children are resolved against the same child registry, bind it once with `childRegistry.For<TCandidate, TSearchSpace, TProblem, TSearchState>()` and the individual `Resolve` calls need no type arguments at all. Both spellings reach the same resolution; the resolver only saves the repetition.
 
 A child registry inherits replacements from its parent, so observation still works. Calling `CreateExecutionInstance` on the child registry does not, for the reason in the warning above.
 

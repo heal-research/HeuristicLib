@@ -53,7 +53,7 @@ public class StateTerminatedAlgorithmTests
     public void WithMaxIterations_YieldsTriggeringStateBeforeStopping()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var algorithm = new AdditiveStepAlgorithm(1).WithMaxIterations(1);
+        var algorithm = new AdditiveStepAlgorithm(1).TerminatedAfterIterations(1);
 
         var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -64,7 +64,7 @@ public class StateTerminatedAlgorithmTests
     public void WithMaxIterations_StopsOnFirstCheck_WhenMaximumIterationsIsNotPositive()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var algorithm = new AdditiveStepAlgorithm(1).WithMaxIterations(0);
+        var algorithm = new AdditiveStepAlgorithm(1).TerminatedAfterIterations(0);
 
         var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -135,7 +135,7 @@ public class StateTerminatedAlgorithmTests
     public void CreateExecutionInstance_ResolvesTerminatorBeforeWrappedAlgorithm()
     {
         var events = new List<string>();
-        var algorithm = new RecordingAlgorithm(events).WithTerminator(new RecordingResolveTerminator(events));
+        var algorithm = new RecordingAlgorithm(events).TerminatedBy(new RecordingResolveTerminator(events));
 
         _ = algorithm.CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
 
@@ -144,7 +144,7 @@ public class StateTerminatedAlgorithmTests
 
     private static StateTerminatedAlgorithm<int, PopulationState<int>> CreateStateTerminatedAlgorithm(ITerminator<int> terminator)
     {
-        return new AdditiveStepAlgorithm(1).WithTerminator(terminator);
+        return new AdditiveStepAlgorithm(1).TerminatedBy(terminator);
     }
 
     private static PopulationState<int> CreateState(int candidate)

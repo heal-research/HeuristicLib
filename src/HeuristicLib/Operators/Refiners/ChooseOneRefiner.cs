@@ -67,7 +67,7 @@ public static class ChooseOneRefinerExtensions
 {
     extension<TCandidate>(IRefiner<TCandidate> refiner)
     {
-        public ChooseOneRefiner<TCandidate> WithRate(double refinementRate) =>
+        public ChooseOneRefiner<TCandidate> AppliedAtRate(double refinementRate) =>
             ChooseOneRefiner.Create(
                 [refiner, NoChangeRefiner<TCandidate>.Instance],
                 [refinementRate, double.IsNaN(refinementRate) ? double.PositiveInfinity : 1 - refinementRate]);

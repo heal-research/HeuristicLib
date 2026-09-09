@@ -15,7 +15,7 @@ namespace HEAL.HeuristicLib.SearchSpaces;
 /// disproves it.
 /// </para>
 /// </remarks>
-public static class InvariantContractVerification
+public static class OperatorContractVerification
 {
     /// <summary>
     /// Applies <paramref name="produce"/> to each sample and reports every invariant the operator answered for that
@@ -27,7 +27,7 @@ public static class InvariantContractVerification
     /// </remarks>
     public static IReadOnlyList<string> Verify<TCandidate>(IOperator candidateOperator, ISearchSpace<TCandidate> searchSpace, IEnumerable<TCandidate> samples, Func<TCandidate, TCandidate> produce)
     {
-        var contract = candidateOperator as IInvariantContract<TCandidate>;
+        var contract = candidateOperator as IOperatorContract<TCandidate>;
         var operatorName = candidateOperator.GetType().Name;
 
         var claimed = searchSpace.Invariants
@@ -50,7 +50,7 @@ public static class InvariantContractVerification
             var produced = produce(sample);
             foreach (var invariant in claimed)
             {
-                if (!invariant.IsSatisfiedBy(produced))
+                if (!invariant.Holds(produced))
                 {
                     violations.Add($"{operatorName} declares that it ensures {invariant.Name}, but produced a candidate without it.");
                 }

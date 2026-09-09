@@ -25,7 +25,7 @@ public static class AlgorithmRunAnalysisExtensions
             out BestMedianWorstAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> analyzer)
         {
             analyzer = Analyzer.BestMedianWorst<TCandidate, TSearchSpace, TProblem, TSearchState>(run.Algorithm);
-            return run.WithAnalyzer(analyzer);
+            return run.AttachAnalyzer(analyzer);
         }
     }
 }

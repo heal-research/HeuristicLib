@@ -72,7 +72,7 @@ public class AlgorithmObservationTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 4);
         var analysis = Analyzer.BestMedianWorst(algorithm);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).WithAnalyzer(analysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AttachAnalyzer(analysis);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.GetResult(analysis).Count.ShouldBe(4);
@@ -86,7 +86,7 @@ public class AlgorithmObservationTests
         var first = Analyzer.BestMedianWorst(algorithm);
         var second = Analyzer.BestMedianWorst(algorithm);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).WithAnalyzers(first, second);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AttachAnalyzers(first, second);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.GetResult(first).Count.ShouldBe(3);
@@ -106,7 +106,7 @@ public class AlgorithmObservationTests
         var atInterceptor = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(interceptor);
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-                           .WithAnalyzers(atIterationEnd, atInterceptor);
+                           .AttachAnalyzers(atIterationEnd, atInterceptor);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.GetResult(atIterationEnd).Count.ShouldBe(3);
@@ -124,7 +124,7 @@ public class AlgorithmObservationTests
         var analysis = Analyzer.BestMedianWorst(algorithm);
 
         var copy = algorithm with { PopulationSize = PopulationSize * 2 };
-        var run = copy.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).WithAnalyzer(analysis);
+        var run = copy.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AttachAnalyzer(analysis);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.GetResult(analysis).ShouldBeEmpty();

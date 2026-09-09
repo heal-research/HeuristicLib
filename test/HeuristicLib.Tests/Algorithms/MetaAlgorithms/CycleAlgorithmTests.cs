@@ -107,7 +107,7 @@ public class CycleAlgorithmTests
             MaximumCycles = 5
         };
 
-        var states = cycle.WithMaxIterations(8)
+        var states = cycle.TerminatedAfterIterations(8)
             .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .ToList();
 

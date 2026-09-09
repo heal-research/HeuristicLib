@@ -54,7 +54,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         Trials = trials.ToImmutableArray();
     }
 
-    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> WithAnalyzer<TOperator, TResult>(TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
+    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> AttachAnalyzer<TOperator, TResult>(TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
         where TResult : class
     {
         EnsureNotStarted();
@@ -64,7 +64,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         var analyzers = Trials.Select(trial => (IAnalyzer)trialAnalyzer.AnalyzerFactory(trialAnalyzer.Selector(trial.Algorithm))).ToImmutableArray();
         for (var index = 0; index < Trials.Length; index++)
         {
-            Trials[index].Run.WithAnalyzer(analyzers[index]);
+            Trials[index].Run.AttachAnalyzer(analyzers[index]);
         }
 
         trialAnalyzers.Add(trialAnalyzer, analyzers);
@@ -72,11 +72,11 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         return this;
     }
 
-    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> WithAnalyzer<TOperator, TResult>(Func<TAlgorithm, TOperator> selector, Func<TOperator, IAnalyzer<TResult>> analyzerFactory, out TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
+    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> AttachAnalyzer<TOperator, TResult>(Func<TAlgorithm, TOperator> selector, Func<TOperator, IAnalyzer<TResult>> analyzerFactory, out TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
         where TResult : class
     {
         trialAnalyzer = TrialAnalyzer.Create(selector, analyzerFactory);
-        return WithAnalyzer(trialAnalyzer);
+        return AttachAnalyzer(trialAnalyzer);
     }
 
     public ImmutableArray<TrialAnalysisResult<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TResult>> GetResults<TOperator, TResult>(TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)

@@ -16,8 +16,8 @@ public class ImprovementCheckingCompositionTests
     {
         var problem = new FuncProblem<int, DummySearchSpace<int>>(static candidate => candidate, DummySearchSpace<int>.Instance, SingleObjective.Maximize);
 
-        Refine(new AddOffsetRefiner(5).WithImprovementCheck(), problem, 10).ShouldBe([15]);
-        Refine(new AddOffsetRefiner(-5).WithImprovementCheck(), problem, 10).ShouldBe([10]);
+        Refine(new AddOffsetRefiner(5).CheckedForImprovement(), problem, 10).ShouldBe([15]);
+        Refine(new AddOffsetRefiner(-5).CheckedForImprovement(), problem, 10).ShouldBe([10]);
     }
 
     // Without a total order the default criterion falls back to dominance, which rejects the trade-off; a declared
@@ -25,7 +25,7 @@ public class ImprovementCheckingCompositionTests
     [Fact]
     public void TheDefaultCriterion_FollowsTheProblemsObjectiveOrder()
     {
-        var refiner = new AddOffsetRefiner(-5).WithImprovementCheck();
+        var refiner = new AddOffsetRefiner(-5).CheckedForImprovement();
 
         // Lowering the candidate improves the first objective and worsens the second.
         Refine(refiner, CreateTradeOffProblem(MultiObjective.Create(ObjectiveDirection.Minimize, ObjectiveDirection.Minimize)), 10)
@@ -39,8 +39,8 @@ public class ImprovementCheckingCompositionTests
     {
         var problem = CreateProblem();
 
-        Refine(new AddOffsetRefiner(-3).WithImprovementCheck(ImprovementChecking.MinimumImprovement(5.0)), problem, 10).ShouldBe([10]);
-        Refine(new AddOffsetRefiner(-6).WithImprovementCheck(ImprovementChecking.MinimumImprovement(5.0)), problem, 10).ShouldBe([4]);
+        Refine(new AddOffsetRefiner(-3).CheckedForImprovement(ImprovementChecking.MinimumImprovement(5.0)), problem, 10).ShouldBe([10]);
+        Refine(new AddOffsetRefiner(-6).CheckedForImprovement(ImprovementChecking.MinimumImprovement(5.0)), problem, 10).ShouldBe([4]);
     }
 
     [Fact]
@@ -48,8 +48,8 @@ public class ImprovementCheckingCompositionTests
     {
         var problem = CreateProblem();
 
-        Refine(new AddOffsetRefiner(-4).WithImprovementCheck(ImprovementChecking.MinimumRelativeImprovement(0.5)), problem, 10).ShouldBe([10]);
-        Refine(new AddOffsetRefiner(-6).WithImprovementCheck(ImprovementChecking.MinimumRelativeImprovement(0.5)), problem, 10).ShouldBe([4]);
+        Refine(new AddOffsetRefiner(-4).CheckedForImprovement(ImprovementChecking.MinimumRelativeImprovement(0.5)), problem, 10).ShouldBe([10]);
+        Refine(new AddOffsetRefiner(-6).CheckedForImprovement(ImprovementChecking.MinimumRelativeImprovement(0.5)), problem, 10).ShouldBe([4]);
     }
 
     // NSGA2 declares no total order, so acceptance is dominance-based and the worsened point never survives.
@@ -67,7 +67,7 @@ public class ImprovementCheckingCompositionTests
             Selector = RandomSelector.For(problem),
             Replacer = ParetoCrowdingReplacer.For(problem, dominateOnEqualities: true),
             MaximumGenerations = 3,
-            Refiner = new UpperBoundRefiner().WithImprovementCheck()
+            Refiner = new UpperBoundRefiner().CheckedForImprovement()
         };
 
         var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
