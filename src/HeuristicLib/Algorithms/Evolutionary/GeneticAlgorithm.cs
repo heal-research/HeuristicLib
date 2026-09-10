@@ -36,6 +36,7 @@ public record GeneticAlgorithm<TCandidate>
     public double MutationRate { get; init; } = GeneticAlgorithmDefaults.MutationRate;
 
     public ISelector<TCandidate> Selector { get; init; } = GeneticAlgorithmDefaults.Selector<TCandidate>();
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Terminator, Evaluator, Refiner, Selector);
 
     protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {

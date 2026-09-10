@@ -67,6 +67,27 @@ Every pattern needs a concrete responsibility. This includes streaming, explicit
 
 Builders, factories, extensions and helper bases may support the conceptual core. They must not define it.
 
+### § 3.3 Treat consumer-provided types as first class
+
+An operator, operator role, algorithm, encoding, search space, problem or invariant declared in a consumer's
+assembly participates on the same terms as one shipped in the package. Shipping first is not a privilege, and there
+is no tier of built-in types that mechanisms serve better.
+
+The failure mode is a mechanism that **enumerates** the built-in cases: a base class implementing the built-in roles'
+interfaces, a switch over the known encodings, a registry seeded with the package's own types. Each works for what it
+lists and silently demotes everything else into a second tier a consumer cannot join without editing the library.
+Reach a type through what that type declares about itself, not through a list of types the library happens to know.
+
+Two settled decisions rest on this rule.
+
+- Invariant checking keys on whether a contract is declared, never on which role an operator fills. A role added by
+  a consumer participates unchanged, and a role whose output is not a candidate simply never declares one.
+- `Problem<TSelf, TCandidate, TSearchSpace>` does not implement the three `IProblemDefault*` interfaces in order to
+  satisfy a factory constraint, although doing so would remove real friction for every problem at once. A base class
+  naming the built-in default interfaces would supply them for the built-in roles permanently, while a consumer's
+  role still declared its own on every problem. The friction is addressed by changing the mechanism instead; see
+  step 1 of `plans/generic-arity-usability.md`.
+
 ## § 4 Configuration and execution ownership
 
 ### § 4.1 Separate reusable configurations from execution instances
@@ -323,6 +344,15 @@ Where a parameter carries both, its documentation points at the member that defi
 
 Reduced arities let authors omit operation inputs they do not use. Keep each role family consistent.
 
+The ladder is also where the search space and problem type arguments legitimately live. They have left the role
+contracts — every role is `I<Role><TCandidate>` — but an authoring base that reads a search space or a problem still
+names it, deliberately, for two reasons. The base performs the type check, bridging the authored member into the
+candidate-only contract and reporting a mismatch when a run supplies types the operator was not written for, so the
+pair costs the author two type arguments and costs every consumer none. And for a stateless operator the
+configuration **is** the executable part: it has no separate execution instance to receive those values later, so it
+needs them in scope where it is written. Erasing them from the authoring layer would force stateless operators to
+grow an execution instance purely to carry types, which is the boilerplate this ladder exists to remove.
+
 - A reduced configuration base derives from the next fuller configuration base.
 - A reduced instance base implements the full interface directly and forwards explicitly to one narrower abstract operation. It does not derive from the fuller instance base.
 - A reduced stateless base derives from the reduced configuration base and implements the role instance interface directly.
@@ -338,7 +368,7 @@ Reduce type arguments consumed by the operator's own code. Do not reduce type ar
 | `StatelessMutator`, `StatefulMutator`, `SingleCandidateMutator` |       Yes       | Type arguments describe operation data |
 | `WrappingMutator`, `MultiMutator`                               |       No        | Type arguments describe child slots    |
 
-Keep topology type arguments open so their children determine them. Role contracts remain full arity. Reduced arities are authoring conveniences, not separate contracts.
+Keep topology type arguments open so their children determine them. Reduced arities are authoring conveniences, not separate contracts: a role contract names only the candidate, and every rung of the ladder reaches it through the bridge described in § 8.4.
 
 ### § 8.6 Provide type inference helpers when values supply the types
 

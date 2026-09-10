@@ -18,6 +18,9 @@ public abstract record WrappingEvaluator<TCandidate>
 
     public IEvaluator<TCandidate> ChildEvaluator { get; init; }
 
+    public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildEvaluator);
+
+
     /// <summary>
     /// Resolves the child over the run's search space and problem and hands it to <see
     /// cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.

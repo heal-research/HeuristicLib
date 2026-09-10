@@ -21,6 +21,7 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>
     public int Elites { get; init; } = 1;
     public required int MaxEffort { get; init; }
     public IRefiner<TCandidate>? Refiner { get; init; }
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Selector, Evaluator, Refiner);
 
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.

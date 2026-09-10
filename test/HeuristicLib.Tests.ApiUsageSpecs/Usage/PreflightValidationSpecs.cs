@@ -4,6 +4,7 @@ using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
@@ -184,11 +185,76 @@ public class PreflightValidationSpecs
         var problem = ConstrainedProblem();
         var algorithm = new HillClimber<BoolVector>
         {
-            Creator = new RandomBoolVectorCreator(),
+            Creator = new FixedCardinalityCreator(),
             Mutator = new BitSwapMutator()
         };
 
         Should.NotThrow(() => algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1)));
+    }
+
+    /// <summary>
+    /// The check answers about the run's types, not only about declared invariants, so an operator written for a
+    /// different search space is reported even when it declares no invariant contract at all.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="RandomBoolVectorCreator"/> names <see cref="BoolVectorSearchSpace"/>, and
+    /// <see cref="FixedCardinalityBoolVectorSearchSpace"/> does not derive from it, so this configuration throws the
+    /// moment the run resolves the creator. It is reported before the run starts instead.
+    /// </remarks>
+    [Fact]
+    public void CreatingARun_RefusesAnOperatorWrittenForAnotherSearchSpace()
+    {
+        var problem = ConstrainedProblem();
+        var algorithm = new HillClimber<BoolVector>
+        {
+            Creator = new RandomBoolVectorCreator(),
+            Mutator = new BitSwapMutator()
+        };
+
+        var failure = Should.Throw<InvalidOperationException>(
+            () => algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1)));
+
+        failure.Message.ShouldContain(nameof(RandomBoolVectorCreator));
+        failure.Message.ShouldContain(nameof(FixedCardinalityBoolVectorSearchSpace));
+
+        // Skipping the check does not make the configuration work; it only moves the failure to run start.
+        var atRunStart = Record.Exception(
+            () => algorithm.Complete(problem, RandomNumberGenerator.Create(seed: 1), validate: false));
+        atRunStart.ShouldNotBeNull();
+        atRunStart.Message.ShouldContain(nameof(RandomBoolVectorCreator));
+    }
+
+    /// <summary>
+    /// The reason the check reads declarations instead of attempting a resolution: a cycling algorithm resolves its
+    /// stages lazily, once per cycle and during the run, so nothing a trial resolve builds up front would ever reach
+    /// the operator at fault. Reading what each configuration declares reaches it regardless of when it is built.
+    /// </summary>
+    [Fact]
+    public void CreatingARun_ReachesAnOperatorInsideAnAlgorithmThatResolvesItsStagesLazily()
+    {
+        var problem = ConstrainedProblem();
+        var stage = new HillClimber<BoolVector>
+        {
+            Creator = new RandomBoolVectorCreator(),
+            Mutator = new BitSwapMutator()
+        };
+
+        var cycled = stage.CycleWith(stage with { }, maximumCycles: 2);
+
+        var failure = Should.Throw<InvalidOperationException>(
+            () => cycled.CreateRun(problem, RandomNumberGenerator.Create(seed: 1)));
+
+        // Named with the path that leads to it, from the outer algorithm down to the stage's own slot.
+        failure.Message.ShouldContain(nameof(RandomBoolVectorCreator));
+        failure.Message.ShouldContain("Creator");
+    }
+
+    /// <summary>A creator that really is written for the constrained space, unlike the library's bool vector creator.</summary>
+    private sealed record FixedCardinalityCreator
+        : SingleCandidateCreator<BoolVector, FixedCardinalityBoolVectorSearchSpace>
+    {
+        public override BoolVector CreateCandidate(IRandomNumberGenerator random, FixedCardinalityBoolVectorSearchSpace searchSpace) =>
+            BoolVector.Create(Enumerable.Range(0, searchSpace.Length).Select(index => index < searchSpace.Cardinality));
     }
 
     private static FuncProblem<BoolVector, FixedCardinalityBoolVectorSearchSpace> ConstrainedProblem() =>

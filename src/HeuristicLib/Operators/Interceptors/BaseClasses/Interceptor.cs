@@ -19,15 +19,23 @@ public abstract record Interceptor<TCandidate, TSearchSpace, TProblem, TSearchSt
 {
     public abstract IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 
+    /// <summary>An interceptor returns the search state, so that one must match exactly rather than convert.</summary>
+    public bool Fits(ExecutionSignature execution) =>
+        execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
+        && execution.Problem.IsAssignableTo(typeof(TProblem))
+        && execution.SearchState == typeof(TSearchState);
+
     IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> IInterceptor<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
     {
-        if (CreateExecutionInstance(instanceRegistry) is not IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> instance)
+        if (!Fits(ExecutionSignature.For<TRunSearchSpace, TRunProblem, TRunSearchState>()))
         {
-            throw new InvalidOperationException(
-                $"{GetType().Name} is written for {typeof(TSearchSpace).Name}, {typeof(TProblem).Name} and {typeof(TSearchState).Name}, and cannot run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name} and {typeof(TRunSearchState).Name}.");
+            throw ExecutionSignature.Mismatch(
+                this,
+                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)),
+                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem), typeof(TRunSearchState)));
         }
 
-        return instance;
+        return (IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>)CreateExecutionInstance(instanceRegistry);
     }
 }
 

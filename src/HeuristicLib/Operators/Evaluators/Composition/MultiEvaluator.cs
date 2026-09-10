@@ -18,6 +18,9 @@ public abstract record MultiEvaluator<TCandidate>
 
     public ValueArray<IEvaluator<TCandidate>> ChildEvaluators { get; init; }
 
+    public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildEvaluators]);
+
+
     /// <summary>
     /// Resolves each child over the run's search space and problem and hands them to <see
     /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.

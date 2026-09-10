@@ -19,6 +19,9 @@ public abstract record MultiInterceptor<TCandidate>
 
     public ValueArray<IInterceptor<TCandidate>> ChildInterceptors { get; init; }
 
+    public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildInterceptors]);
+
+
     /// <summary>
     /// Resolves each child over the run's search space and problem and hands them to <see
     /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.

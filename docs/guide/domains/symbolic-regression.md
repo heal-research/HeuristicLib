@@ -129,7 +129,7 @@ Combine them with the general `ChooseOneMutator` rather than a symbolic-expressi
 specific multi-mutator:
 
 ```csharp
-Mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(
+Mutator = new ChooseOneMutator<ExpressionTree>(
     [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()])
 {
     Weights = [1.0, 1.0, 1.0]

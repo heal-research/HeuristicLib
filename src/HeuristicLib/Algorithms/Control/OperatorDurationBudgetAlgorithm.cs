@@ -15,6 +15,8 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
 {
     public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
     public required TOperator ObservedOperator { get; init; }
+
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
     public required Func<TOperator, ObservationDuration, TimeProvider, TOperator> MeasuredOperatorFactory { get; init; }
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 

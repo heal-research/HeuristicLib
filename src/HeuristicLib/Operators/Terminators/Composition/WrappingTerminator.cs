@@ -19,6 +19,9 @@ public abstract record WrappingTerminator<TCandidate>
 
     public ITerminator<TCandidate> ChildTerminator { get; init; }
 
+    public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildTerminator);
+
+
     /// <summary>
     /// Resolves the child over the run's search space and problem and hands it to <see
     /// cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.

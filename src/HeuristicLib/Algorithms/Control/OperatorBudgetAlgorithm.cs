@@ -15,6 +15,8 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchState, TOperator>
 {
     public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
     public required TOperator ObservedOperator { get; init; }
+
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
     public required Func<TOperator, ObservationCounter, TOperator> CountedOperatorFactory { get; init; }
 
     /// <summary>

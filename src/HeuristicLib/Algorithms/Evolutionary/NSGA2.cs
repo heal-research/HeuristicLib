@@ -29,6 +29,7 @@ public record NSGA2<TCandidate>
     /// </remarks>
     public double MutationRate { get; init; } = NSGA2Defaults.MutationRate;
     public IRefiner<TCandidate>? Refiner { get; init; }
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Selector, Replacer, Evaluator, Refiner);
 
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.

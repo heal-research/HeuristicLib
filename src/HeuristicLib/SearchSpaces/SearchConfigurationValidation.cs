@@ -47,20 +47,46 @@ public sealed record ValidationReport(ImmutableArray<ValidationDiagnostic> Diagn
 /// </summary>
 /// <remarks>
 /// The walk is by reflection over configuration properties, so it covers algorithms and operators written outside the
-/// library, and runs once per validation, never during a run. An operator is checked when it declares an invariant
-/// contract, and skipped otherwise.
+/// library, and runs once per validation, never during a run.
+/// <para>
+/// Two independent questions are asked of each node. Whether it declares an invariant contract the search space
+/// contradicts, which is skipped when it declares none; and, when the run's types are supplied, whether it was
+/// written for them at all. The second is the same <see cref="IExecutionInstanceResolvable.Fits"/> the
+/// authoring bases apply when they bridge, so validation and execution decide by one rule. Because the walk asks each
+/// node directly rather than building anything, it also reaches children a run would only resolve later, such as the
+/// stages inside a cycling algorithm.
+/// </para>
 /// </remarks>
 public static class SearchConfigurationValidation
 {
     /// <summary>
     /// Validates every operator reachable from <paramref name="configuration"/> against
-    /// <paramref name="searchSpace"/>.
+    /// <paramref name="searchSpace"/>, checking declared invariants only.
     /// </summary>
+    /// <remarks>
+    /// The form to use for one operator or composition on its own, where there is no problem and no search state to
+    /// name. Use the overload taking an <see cref="ExecutionSignature"/> where all three are known; it adds the check
+    /// that each configuration was written for that execution.
+    /// </remarks>
     public static ValidationReport Validate<TCandidate>(IExecutionInstanceResolvable configuration, ISearchSpace<TCandidate> searchSpace)
     {
         var diagnostics = ImmutableArray.CreateBuilder<ValidationDiagnostic>();
-        var visited = new HashSet<IExecutionInstanceResolvable>(ReferenceEqualityComparer.Instance);
-        Walk(configuration, configuration.GetType().Name, searchSpace, visited, diagnostics);
+        Walk(configuration, configuration.GetType().Name, searchSpace, new HashSet<IExecutionInstanceResolvable>(ReferenceEqualityComparer.Instance), diagnostics);
+        return new ValidationReport(diagnostics.ToImmutable());
+    }
+
+    /// <summary>
+    /// Validates every operator reachable from <paramref name="configuration"/> against
+    /// <paramref name="searchSpace"/>, and every configuration in the graph against
+    /// <paramref name="execution"/>.
+    /// </summary>
+    public static ValidationReport Validate<TCandidate>(IExecutionInstanceResolvable configuration, ISearchSpace<TCandidate> searchSpace, ExecutionSignature execution)
+    {
+        var diagnostics = ImmutableArray.CreateBuilder<ValidationDiagnostic>();
+        var rootPath = configuration.GetType().Name;
+
+        ReportMismatch(configuration, rootPath, execution, diagnostics);
+        Walk(configuration, rootPath, searchSpace, new HashSet<IExecutionInstanceResolvable>(ReferenceEqualityComparer.Instance), diagnostics);
         return new ValidationReport(diagnostics.ToImmutable());
     }
 
@@ -105,6 +131,37 @@ public static class SearchConfigurationValidation
         }
 
         return reported;
+    }
+
+    /// <summary>
+    /// Reports the node or nodes responsible when <paramref name="node"/> was not written for
+    /// <paramref name="execution"/>, and returns whether it was responsible at all.
+    /// </summary>
+    /// <remarks>
+    /// A composition that passes the run to its children answers for its whole subtree, so a subtree that answers yes
+    /// is not descended into at all. Descending only into a subtree that answered no is also what keeps a composition
+    /// which adapts its children out of the report: such a composition does not forward, so it answers for itself, and
+    /// its children are never asked about a run they were never going to see.
+    /// </remarks>
+    private static bool ReportMismatch(IExecutionInstanceResolvable node, string path, ExecutionSignature execution, ImmutableArray<ValidationDiagnostic>.Builder diagnostics)
+    {
+        if (node.Fits(execution))
+        {
+            return false;
+        }
+
+        var blamedAChild = false;
+        foreach (var (child, childPath) in Children(node, path))
+        {
+            blamedAChild |= ReportMismatch(child, childPath, execution, diagnostics);
+        }
+
+        if (!blamedAChild)
+        {
+            diagnostics.Add(new ValidationDiagnostic(path, $"{node.GetType().Name} was not written for an execution over {execution}."));
+        }
+
+        return true;
     }
 
     /// <summary>

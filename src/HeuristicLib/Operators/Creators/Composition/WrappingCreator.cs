@@ -18,6 +18,9 @@ public abstract record WrappingCreator<TCandidate>
 
     public ICreator<TCandidate> ChildCreator { get; init; }
 
+    public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildCreator);
+
+
     /// <summary>
     /// Resolves the child over the run's search space and problem and hands it to
     /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.

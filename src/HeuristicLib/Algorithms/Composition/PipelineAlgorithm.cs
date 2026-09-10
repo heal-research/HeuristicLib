@@ -13,6 +13,8 @@ public record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchState>
 {
     public ValueArray<TAlgorithm> Algorithms { get; }
 
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits([.. Algorithms]);
+
     public PipelineAlgorithm(IReadOnlyList<TAlgorithm> algorithms)
     {
         if (algorithms.Count == 0)

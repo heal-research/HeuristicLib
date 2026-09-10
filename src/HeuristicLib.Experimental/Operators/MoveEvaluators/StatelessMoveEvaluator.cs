@@ -22,14 +22,18 @@ public abstract record StatelessMoveEvaluator<TCandidate, TSearchSpace, TProblem
 
     public ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
 
+    public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
+
     IMoveEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove> IMoveEvaluator<TCandidate, TMove>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
     {
-        if (CreateExecutionInstance(instanceRegistry) is not IMoveEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove> instance)
+        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
-            throw new InvalidOperationException(
-                $"{GetType().Name} is written for {typeof(TSearchSpace).Name} and {typeof(TProblem).Name}, and cannot run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name}.");
+            throw ExecutionSignature.Mismatch(
+                this,
+                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)),
+                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return instance;
+        return (IMoveEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove>)CreateExecutionInstance(instanceRegistry);
     }
 }

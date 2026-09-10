@@ -40,7 +40,7 @@ public sealed record AdjacentSwapMutator : SingleCandidateMutator<Permutation>
 }
 ```
 
-Assign it anywhere an `IMutator<Permutation, ...>` is expected:
+Assign it anywhere an `IMutator<Permutation>` is expected — the role contract names only the candidate, so an operator authored at any rung of the ladder fits:
 
 ```csharp
 var algorithm = GeneticAlgorithm.For(problem)

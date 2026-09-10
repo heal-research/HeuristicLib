@@ -18,6 +18,9 @@ public abstract record WrappingSelector<TCandidate>
 
     public ISelector<TCandidate> ChildSelector { get; init; }
 
+    public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildSelector);
+
+
     /// <summary>
     /// Resolves the child over the run's search space and problem and hands it to
     /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.

@@ -11,6 +11,8 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
     public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
+
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm);
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
     /// <summary>

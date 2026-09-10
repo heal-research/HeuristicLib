@@ -26,6 +26,7 @@ public record EvolutionStrategy<TCandidate>
     public IEvaluator<TCandidate> Evaluator { get; init; } = EvolutionStrategyDefaults.Evaluator<TCandidate>();
     public ISelector<TCandidate> Selector { get; init; } = EvolutionStrategyDefaults.Selector<TCandidate>();
     public IRefiner<TCandidate>? Refiner { get; init; }
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Mutator, Crossover, Evaluator, Selector, Refiner);
 
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.

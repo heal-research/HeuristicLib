@@ -18,6 +18,9 @@ public abstract record MultiSelector<TCandidate>
 
     public ValueArray<ISelector<TCandidate>> ChildSelectors { get; init; }
 
+    public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildSelectors]);
+
+
     /// <summary>
     /// Resolves each child over the run's search space and problem and hands them to <see
     /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.

@@ -775,13 +775,23 @@ asserts the invariant contract that does distinguish the two operators instead o
 
 ## Exit criteria
 
-1. **Met in substance, and the wording needs a decision.** No *role contract* names `TSearchSpace` or `TProblem`:
-   all nine are `I<Role><TCandidate>`, and the algorithms match the target table. But the criterion as written says
-   "no configuration type", and the authoring bases (`SingleCandidateMutator<TCandidate, TSearchSpace>` and its
-   siblings) still name them deliberately — that is the authoring ladder of § 8.4, and the bridge is what lets such an
-   operator fill an `IMutator<TCandidate>` slot. The bound algorithm rungs are the same deliberate exception. Reword
-   this criterion to name contracts rather than every configuration type, or record the ladder as its stated
-   exception.
+1. **Done, with the criterion reworded to say what it meant.** It now reads: *no role contract in `src` names
+   `TSearchSpace` or `TProblem`.* All nine are `I<Role><TCandidate>`, and the algorithms match the target table.
+
+   The authoring bases — `SingleCandidateMutator<TCandidate, TSearchSpace>` and its siblings — still name both, and
+   that is intended rather than residue. Two reasons, and the second is the one that settles it:
+
+   - The base class does the type check. An operator authored at the bound rung is bridged into
+     `IMutator<TCandidate>` and reports a mismatch when the run supplies types it was not written for, so naming the
+     pair costs the *author* two type arguments and costs every *consumer* nothing.
+   - For a stateless operator the configuration **is** the executable part. It has no separate execution instance to
+     receive the search space and problem later, so it needs them in scope where it is written. Erasing them from the
+     authoring layer would mean giving stateless operators an execution instance purely to carry types, which is the
+     boilerplate the whole ladder exists to avoid.
+
+   So the ladder is the answer to this criterion rather than an exception to it: arity leaves the *contracts*, which
+   is where users meet it, and stays in the *authoring bases*, which is where it does work. The bound algorithm rungs
+   are the same shape for the same reason.
 2. **Done.** Every execution instance contract still names both.
 3. **Done.** One resolution path: the per-role overloads, with no transitional overloads left. The registry form is
    canonical and the resolver form binds to it; see the overload surface answers above for why both stay.

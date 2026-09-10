@@ -15,6 +15,8 @@ public record HillClimber<TCandidate>
     public required IMutator<TCandidate> Mutator { get; init; }
     public IEvaluator<TCandidate> Evaluator { get; init; } = HillClimberDefaults.Evaluator<TCandidate>();
     public IRefiner<TCandidate>? Refiner { get; init; }
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Mutator, Evaluator, Refiner);
+
     public LocalSearchDirection Direction { get; init; } = HillClimberDefaults.Direction;
     public int MaxNeighbors { get; init; } = HillClimberDefaults.MaxNeighbors;
     public int BatchSize { get; init; } = HillClimberDefaults.BatchSize;

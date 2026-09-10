@@ -18,15 +18,22 @@ public abstract record Terminator<TCandidate, TSearchSpace, TProblem, TSearchSta
 {
     public abstract ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 
+    public bool Fits(ExecutionSignature execution) =>
+        execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
+        && execution.Problem.IsAssignableTo(typeof(TProblem))
+        && execution.SearchState.IsAssignableTo(typeof(TSearchState));
+
     ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> ITerminator<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
     {
-        if (CreateExecutionInstance(instanceRegistry) is not ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> instance)
+        if (!Fits(ExecutionSignature.For<TRunSearchSpace, TRunProblem, TRunSearchState>()))
         {
-            throw new InvalidOperationException(
-                $"{GetType().Name} is written for {typeof(TSearchSpace).Name}, {typeof(TProblem).Name} and {typeof(TSearchState).Name}, and cannot run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name} and {typeof(TRunSearchState).Name}.");
+            throw ExecutionSignature.Mismatch(
+                this,
+                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)),
+                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem), typeof(TRunSearchState)));
         }
 
-        return instance;
+        return (ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>)CreateExecutionInstance(instanceRegistry);
     }
 }
 

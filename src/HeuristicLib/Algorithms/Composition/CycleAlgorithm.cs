@@ -13,6 +13,8 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
 {
     public ValueArray<TAlgorithm> Algorithms { get; }
 
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits([.. Algorithms]);
+
     /// <summary>
     /// Gets the cycle limit, or <see langword="null"/> for unlimited cycling. The expected value is positive.
     /// </summary>

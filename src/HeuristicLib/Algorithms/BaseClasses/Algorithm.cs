@@ -20,15 +20,20 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchState>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
+    /// <summary>
+    /// Agnostic in the search space and problem, so this base answers on the search state alone, which
+    /// <see cref="IAlgorithmInstance{TCandidate, TSearchSpace, TProblem, TSearchState}"/> is invariant in.
+    /// </summary>
+    public virtual bool Fits(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState);
+
     IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> IAlgorithm<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
     {
-        if (CreateExecutionInstance<TRunSearchSpace, TRunProblem>(instanceRegistry) is not IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> instance)
+        if (typeof(TRunSearchState) != typeof(TSearchState))
         {
-            throw new InvalidOperationException(
-                $"{GetType().Name} produces {typeof(TSearchState).Name}, and cannot run producing {typeof(TRunSearchState).Name}.");
+            throw new InvalidOperationException($"{GetType().Name} produces {typeof(TSearchState).Name}, and cannot run producing {typeof(TRunSearchState).Name}.");
         }
 
-        return instance;
+        return (IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>)CreateExecutionInstance<TRunSearchSpace, TRunProblem>(instanceRegistry);
     }
 }
 
@@ -49,15 +54,22 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
 {
     public abstract AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 
+    public override bool Fits(ExecutionSignature execution) =>
+        base.Fits(execution)
+        && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
+        && execution.Problem.IsAssignableTo(typeof(TProblem));
+
     public sealed override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
     {
-        if (CreateExecutionInstance(instanceRegistry) is not IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> instance)
+        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
-            throw new InvalidOperationException(
-                $"{GetType().Name} is written for {typeof(TSearchSpace).Name} and {typeof(TProblem).Name}, and cannot run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name}.");
+            throw ExecutionSignature.Mismatch(
+                this,
+                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)),
+                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return instance;
+        return (IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>)CreateExecutionInstance(instanceRegistry);
     }
 }
 

@@ -18,6 +18,9 @@ public abstract record MultiCreator<TCandidate>
 
     public ValueArray<ICreator<TCandidate>> ChildCreators { get; init; }
 
+    public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildCreators]);
+
+
     /// <summary>
     /// Resolves each child over the run's search space and problem and hands them to
     /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.

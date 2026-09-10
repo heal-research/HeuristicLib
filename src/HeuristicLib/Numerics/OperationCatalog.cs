@@ -161,8 +161,9 @@ internal static class OperationCatalog
         var lookup = new TKernels[HighestOperationValue() + 1];
         foreach (var declaration in Declarations)
         {
-            if (select(declaration) is { } kernels)
-                lookup[(int)declaration.Info.Operation] = kernels;
+            var kernels = select(declaration);
+            if (kernels is not null)
+                lookup[(int)declaration.Info.Operation] = kernels.Value;
         }
 
         return lookup;

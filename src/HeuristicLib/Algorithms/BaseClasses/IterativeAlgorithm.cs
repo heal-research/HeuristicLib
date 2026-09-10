@@ -15,6 +15,8 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
 {
     public IInterceptor<TCandidate>? Interceptor { get; init; }
 
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Interceptor);
+
     public override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
     {
         var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
@@ -47,18 +49,26 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProb
         ExecutionInstanceRegistry instanceRegistry,
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor);
 
+    public override bool Fits(ExecutionSignature execution) =>
+        base.Fits(execution)
+        && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
+        && execution.Problem.IsAssignableTo(typeof(TProblem));
+
     public sealed override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
     {
+        // Asked before the interceptor is resolved, so a mismatch costs no resolution at all.
+        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
+        {
+            throw ExecutionSignature.Mismatch(
+                this,
+                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)),
+                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
+        }
+
         var resolver = instanceRegistry.For<TCandidate, TSearchSpace, TProblem, TSearchState>();
         var bound = CreateExecutionInstance(instanceRegistry, resolver.ResolveOptional(Interceptor));
 
-        if (bound is not IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> instance)
-        {
-            throw new InvalidOperationException(
-                $"{GetType().Name} is written for {typeof(TSearchSpace).Name} and {typeof(TProblem).Name}, and cannot run over {typeof(TRunSearchSpace).Name} with {typeof(TRunProblem).Name}.");
-        }
-
-        return instance;
+        return (IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>)bound;
     }
 
     protected sealed override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(

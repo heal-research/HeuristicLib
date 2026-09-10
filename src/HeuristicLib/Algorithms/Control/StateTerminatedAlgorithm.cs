@@ -15,6 +15,8 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchState>
     public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
     public required ITerminator<TCandidate> Terminator { get; init; }
 
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, Terminator);
+
     public override StateTerminatedAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
     {
         var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();

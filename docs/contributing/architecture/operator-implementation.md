@@ -46,20 +46,28 @@ public record SwapMutator : SingleCandidateMutator<Permutation>
 }
 ```
 
-Reduction changes what the author declares, not where the operator fits. Role contracts are contravariant in the search space and the problem, so the `SwapMutator` above is directly usable as an `IMutator<Permutation, PermutationSearchSpace, TravellingSalesmanProblem>`.
+Reduction changes what the author declares, not where the operator fits. **The role contract names only the candidate.** `IMutator<Permutation>` is the whole contract, so the `SwapMutator` above fills any mutator slot over permutations, and so does an operator authored at the fullest rung against a specific problem.
 
-The role contracts themselves exist only at the full arity. There is no `IMutator<Permutation>`, so a consumer, field or child property still names `IMutator<Permutation, ISearchSpace<Permutation>, IProblem<Permutation, ISearchSpace<Permutation>>>`. A reduced-arity interface would have to be implemented explicitly, which would make a hand-written role contract implementation second class; that trade is deliberately not taken.
+That is what the ladder buys and it is worth being precise about who pays. The arity lives in the authoring bases, where it does work: the base performs the type check when a run supplies types the operator was not written for, and for a stateless operator the configuration *is* the executable part, so it needs the search space and problem in scope where it is written. A consumer, field or child property never names them. Earlier revisions of this page described the opposite arrangement, where the contracts carried the full triple and reduction was an authoring convenience only; that was reversed by the arity migration.
 
-Wrapping and multi bases have **no** reduced arities. Their type arguments type the child slot rather than the operator's own inputs, so narrowing them widens what a child must satisfy: a `MultiMutator<Permutation>` would accept only mutators that work for every search space and every problem, and a problem-specific child could never be composed in. Leave `TSearchSpace` and `TProblem` open on a wrapping or multi type so they are inferred from the children.
+Wrapping and multi bases are agnostic in the search space and the problem, and take **one** type argument:
 
 ```csharp
-// Open type parameters: composes with universal and problem-specific children alike.
-public sealed record RetryingMutator<TCandidate, TSearchSpace, TProblem>(
-    IMutator<TCandidate, TSearchSpace, TProblem> ChildMutator)
-    : WrappingMutator<TCandidate, TSearchSpace, TProblem>(ChildMutator)
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>;
+public sealed record RetryingMutator<TCandidate>(IMutator<TCandidate> ChildMutator, int Attempts)
+    : WrappingMutator<TCandidate>(ChildMutator)
+{
+    protected override IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem>
+        WrapExecutionInstance<TRunSearchSpace, TRunProblem>(
+            IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childMutator) =>
+        new Instance<TRunSearchSpace, TRunProblem>(childMutator, Attempts);
+
+    // Nested instance, generic in the run's types and constrained the same way.
+}
 ```
+
+Binding is a leaf concept, so a composite never names what its children were written for. The run's search space and problem arrive as *method* type arguments on `WrapExecutionInstance`, are threaded into a nested generic instance class, and the child is resolved against them. A problem-specific child composes in exactly as a universal one does, because the child slot is `IMutator<TCandidate>` either way.
+
+The cost of that agnosticism falls on the composite's author, and only there: a generic method with a constraint clause and a nested generic instance class, instead of a plain nested class. Leaf authoring is unchanged, and every consumer of the composite names one type argument.
 
 > Watch the last type argument. The stateful bases end in `TState`, so `StatefulMutator<TCandidate, TSearchSpace, TState>` and `StatefulMutator<TCandidate, TSearchSpace, TProblem>` have the same shape. Passing a problem where the state belongs compiles and silently produces a problem-agnostic operator whose state is a problem. `HLib0004` reports this.
 
@@ -119,12 +127,11 @@ Framework managed state does not have a disposal lifecycle. Do not put disposabl
 The configuration describes reusable parameters and graph structure. Its instance creation method resolves child configurations through the registry and creates an execution instance. The instance owns operation logic, resolved child instances and mutable execution data.
 
 ```csharp
-private sealed record ForwardingEvaluator(
-    IEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Inner)
+private sealed record ForwardingEvaluator(IEvaluator<RealVector> Inner)
     : Evaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
 {
     public override EvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(Inner));
+        new Instance(instanceRegistry.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
 
     private sealed class Instance(IEvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> inner)
         : EvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
@@ -169,23 +176,24 @@ Reach for them when the children are identified by being children and nothing mo
 When a child plays a specific part in the operation, derive from the unprefixed role base instead and declare that child yourself:
 
 ```csharp
-public record EliteSelector<TCandidate, TSearchSpace, TProblem>
-    : Selector<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record EliteSelector<TCandidate> : ISelector<TCandidate>
 {
-    public ISelector<TCandidate, TSearchSpace, TProblem> SelectorForRemaining { get; }
-    public int Elites { get; }
+    public ISelector<TCandidate> SelectorForRemaining { get; init; }
+    public int Elites { get; init; } = 1;
 
-    public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(SelectorForRemaining), Elites);
+    public ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem>
+        CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
+        new Instance<TRunSearchSpace, TRunProblem>(
+            instanceRegistry.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(SelectorForRemaining), Elites);
     // ...
 }
 ```
 
 `EliteSelector` takes its elites first and asks `SelectorForRemaining` only for the places that are left, so calling that child `ChildSelector` would hide what it does. Wrapping it and adding a second, better-named property is not the fix. The two properties return the same object and a reader cannot tell which one to use. Declaring the child directly also lets the constructor fix how many children there are. `GenderSpecificSelector` needs exactly one `FemaleSelector` and one `MaleSelector`, which a multi base cannot express.
 
-Unlike the leaf authoring bases, these are available at the full arity only. See [Choose an arity](#choose-an-arity) for why narrowing a child slot is a restriction rather than a convenience.
+Like every composite, these name only the candidate. A child slot is `ISelector<TCandidate>`, and the run's search space and problem arrive as method type arguments on the creation method. See [Choose an arity](#choose-an-arity) for what that costs the author and why it costs the consumer nothing.
 
 Composition helpers such as choosing one child, applying a transformation and running a pipeline are covered in [Operator composition](/guide/extending/operator-composition).
 

@@ -18,6 +18,9 @@ public abstract record WrappingRefiner<TCandidate>
 
     public IRefiner<TCandidate> ChildRefiner { get; init; }
 
+    public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildRefiner);
+
+
     /// <summary>
     /// Resolves the child over the run's search space and problem and hands it to <see
     /// cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.

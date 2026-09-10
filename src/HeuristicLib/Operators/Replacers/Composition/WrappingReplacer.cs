@@ -18,6 +18,9 @@ public abstract record WrappingReplacer<TCandidate>
 
     public IReplacer<TCandidate> ChildReplacer { get; init; }
 
+    public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildReplacer);
+
+
     /// <summary>
     /// Resolves the child over the run's search space and problem and hands it to
     /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.

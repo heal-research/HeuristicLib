@@ -18,6 +18,9 @@ public abstract record MultiCrossover<TCandidate>
 
     public ValueArray<ICrossover<TCandidate>> ChildCrossovers { get; init; }
 
+    public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildCrossovers]);
+
+
     /// <summary>
     /// Resolves each child over the run's search space and problem and hands them to
     /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.

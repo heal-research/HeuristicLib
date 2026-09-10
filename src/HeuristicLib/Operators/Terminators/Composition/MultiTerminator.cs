@@ -19,6 +19,9 @@ public abstract record MultiTerminator<TCandidate>
 
     public ValueArray<ITerminator<TCandidate>> ChildTerminators { get; init; }
 
+    public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildTerminators]);
+
+
     /// <summary>
     /// Resolves each child over the run's search space and problem and hands them to <see
     /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
