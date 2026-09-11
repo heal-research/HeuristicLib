@@ -33,7 +33,7 @@ public static class PythonCorrelationAnalysis
         var evaluator = new ProblemEvaluator<RealVector>();
         var res = new double[candidates.Count];
         var sigma = RealVector.Create(delta);
-        Parallel.ForEach(candidates, (vector, state, i) =>
+        Parallel.ForEach(candidates, (vector, _, i) =>
         {
             var r = random.Fork((int)i);
             var n = Enumerable.Range(0, count).Select(_ => NextSphere(r, vector, sigma, vector.Count, false)).ToArray();

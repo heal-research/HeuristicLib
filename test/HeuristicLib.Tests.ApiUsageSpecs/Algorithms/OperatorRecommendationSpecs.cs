@@ -21,7 +21,7 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Algorithms;
 public class OperatorRecommendationSpecs
 {
     [Fact]
-    public void ProblemWithOwnPreferences_TakesThemAndFallsBackToTheEncodingForTheRest()
+    public void ProblemWithOwnRecommendations_TakesThemAndFallsBackToTheSearchSpaceForTheRest()
     {
         var problem = new TravelingSalesmanProblem();
 
@@ -102,8 +102,8 @@ public class OperatorRecommendationSpecs
         var assignment = new QuadraticAssignmentProblem(
             new QuadraticAssignmentProblemData(SymmetricMatrix(), SymmetricMatrix()));
 
-        algorithm.Complete(tour, RandomNumberGenerator.Create(seed: 1)).ShouldNotBeNull();
-        algorithm.Complete(assignment, RandomNumberGenerator.Create(seed: 1)).ShouldNotBeNull();
+        algorithm.Complete(tour, RandomNumberGenerator.Create(seed: 1), ct: TestContext.Current.CancellationToken).ShouldNotBeNull();
+        algorithm.Complete(assignment, RandomNumberGenerator.Create(seed: 1), ct: TestContext.Current.CancellationToken).ShouldNotBeNull();
     }
 
     [Fact]

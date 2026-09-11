@@ -101,7 +101,7 @@ public class CycleAlgorithmAnalysisTests
 
         protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, ExecutionState executionState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
         {
-            return candidates.Select(candidate => new ObjectiveVector(++executionState.Value)).ToArray();
+            return candidates.Select(_ => new ObjectiveVector(++executionState.Value)).ToArray();
         }
     }
 

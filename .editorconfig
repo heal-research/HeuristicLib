@@ -234,7 +234,7 @@ dotnet_naming_style.begins_with_i.capitalization = pascal_case
 dotnet_diagnostic.S1694.severity = none # An abstract class should have both abstract and concrete methods
 dotnet_diagnostic.S2094.severity = none # Classes should not be empty
 dotnet_diagnostic.S125.severity = none # Sections of code should not be commented out
-dotnet_diagnostics.S1144.severity = none # Unused private members should be removed
+dotnet_diagnostic.S1144.severity = none # Unused private members should be removed
 dotnet_diagnostic.S3246.severity = none # Generic variance is an intentional API decision
 dotnet_diagnostic.S2368.severity = none # Multidimensional arrays are intentional in numerical APIs
 

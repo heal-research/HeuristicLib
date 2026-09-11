@@ -54,7 +54,7 @@ public class GenealogyGraphTests
         var ares = run.GetResult(analysis);
 
         ares.Count.ShouldBe(6);
-        res.Population.EvaluatedCandidates.Count().ShouldBe(8);
+        res.Population.EvaluatedCandidates.Count.ShouldBe(8);
         res.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate))
            .ShouldBeTrue();
         res.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();

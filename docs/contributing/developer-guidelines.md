@@ -78,7 +78,7 @@ interfaces, a switch over the known encodings, a registry seeded with the packag
 lists and silently demotes everything else into a second tier a consumer cannot join without editing the library.
 Reach a type through what that type declares about itself, not through a list of types the library happens to know.
 
-Two settled decisions rest on this rule.
+The following settled decisions rest on this rule.
 
 - Invariant checking keys on whether a contract is declared, never on which role an operator fills. A role added by
   a consumer participates unchanged, and a role whose output is not a candidate simply never declares one.
@@ -88,8 +88,21 @@ Two settled decisions rest on this rule.
   current state. It returns `false` with `null` to decline, which lets resolution continue to the next source.
 - `Problem<TSelf, TCandidate, TSearchSpace>` does not implement recommendation interfaces for built-in roles. A base
   class naming them would supply those roles permanently while a consumer's role still required separate treatment.
-  Problems and search spaces implement only the recommendations they make. See step 1 of
-  `plans/generic-arity-usability.md`.
+  Problems and search spaces implement only the recommendations they make. See
+  [Algorithms](/guide/fundamentals/algorithms#use-operator-recommendations).
+
+### § 3.4 Separate membership, invariants and recommendations
+
+A search space describes which candidates belong to it and which invariants all its members satisfy. Split search
+space types when membership or data exposed to operators differ. Do not split a search space only to make different
+operators appear suitable for different problems over the same candidates.
+
+Use operator contracts to state whether an operator accepts the search space's members and keeps its outputs inside
+the space. Use problem and search space recommendations to suggest suitable starting operators. A recommendation is
+not a compatibility restriction and an operator omitted from the recommendations remains a valid experiment.
+
+`IsSubspaceOf` describes candidate membership only. Do not use it as a substitute for operator contracts or
+recommendations.
 
 ## § 4 Configuration and execution ownership
 

@@ -476,7 +476,7 @@ Every branch here uses the repository-standard commands:
 dotnet restore
 dotnet build --configuration Release --no-restore
 dotnet test --configuration Release --no-restore
-dotnet format ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity error
+dotnet format ./HEAL.HeuristicLib.slnx --verify-no-changes --no-restore --severity error
 ```
 
 Place fast invariants in `test/HeuristicLib.Tests`, workflows in `test/HeuristicLib.Tests.Scenarios`, and

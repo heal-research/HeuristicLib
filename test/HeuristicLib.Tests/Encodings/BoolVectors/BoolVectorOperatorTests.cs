@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Encodings.BoolVectors;
-using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 

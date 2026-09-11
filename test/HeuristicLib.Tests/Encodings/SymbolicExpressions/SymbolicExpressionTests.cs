@@ -178,7 +178,7 @@ public sealed class SymbolicExpressionTests
         left.Parent.ShouldNotBeNull();
         left.Parent.IsRoot.ShouldBeTrue();
         left.Parent.Tree.ShouldBeSameAs(expression);
-        left.Parent!.Node.ShouldBeSameAs(expression.Root);
+        left.Parent.Node.ShouldBeSameAs(expression.Root);
         left.ChildIndex.ShouldBe(0);
         right.ChildIndex.ShouldBe(1);
         left.Depth.ShouldBe(1);
