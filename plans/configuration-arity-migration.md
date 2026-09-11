@@ -253,11 +253,11 @@ Guard tests that changed, and why each change is the measurement rather than an 
 
 **Cost, measured.** Composite authoring is heavier, as §8.5 of the developer guidelines predicted: an author of a wrapping or multi mutator now writes a generic method with a constraint clause and a nested generic instance class. Leaf authoring is unchanged — the common case pays nothing. Consumers who held an operator as a concrete type pay nothing; consumers who held it behind the interface name the triple once per call site.
 
-**Operator defaults moved to what declares them.** `IEncodingDefault*` is now `HEAL.HeuristicLib.SearchSpaces` and `IProblemDefault*` is `HEAL.HeuristicLib.Problems`, beside `ISearchSpace` and `IProblem` respectively; the `Contracts/Algorithms/Defaults` folder is gone.
+**Operator defaults first moved to what declared them.** At this point in the migration `IEncodingDefault*` lived in `HEAL.HeuristicLib.SearchSpaces` and `IProblemDefault*` in `HEAL.HeuristicLib.Problems`. The later recommendation cleanup replaced both families with the source neutral `IRecommends<TOperator>` contract in `HEAL.HeuristicLib.Operators`.
 
-The case against leaving them under `Algorithms` is concrete rather than taxonomic. `IProblemDefaults<TSelf, TCandidate, TSearchSpace>` *extends* `IProblem`, so an `IProblem` was living in the algorithms namespace; and `PermutationSearchSpace.cs` — a pure encoding type — opened with `using HEAL.HeuristicLib.Algorithms;` for no reason other than to describe itself. A default is what the encoding or problem says about itself, and it holds whether or not any algorithm ever reads it; algorithm factories are merely today's only reader.
+The case against leaving them under `Algorithms` was concrete rather than taxonomic. `IProblemDefaults<TSelf, TCandidate, TSearchSpace>` extended `IProblem`, so an `IProblem` lived in the algorithms namespace. `PermutationSearchSpace.cs` opened with an algorithms namespace import only to describe itself. The final source neutral contracts instead describe the recommended operator role and can be implemented by either source.
 
-The move needed **no new using anywhere**, and removed a dead one, which is the test that it went to the right place. An earlier idea of a neutral `Contracts/Defaults/` namespace was worse: it would have moved the interfaces away from both the declarer and the reader. `AssemblyDependencyTests.ConceptFolders_UseTheirIntendedNamespaces` pins the new mapping — it is what caught the move.
+The generic contract sits beside `IOperator`. Problems and search spaces implement it once for each operator role they may recommend. `TryCreateRecommendedOperator` returns `true` with a fresh, nonnull operator. It returns `false` with `null` to decline for the source's current state, allowing the next source to participate. Resolution does not enumerate roles and public `OperatorRecommendationResolution` gives a consumer defined algorithm the same precedence and missing parameter behavior.
 
 **The search state leaves the configuration too: terminators and interceptors now name only the candidate.**
 
@@ -340,7 +340,7 @@ This is not a typing nuisance. It is working user code that now throws at pre-fl
 
 **It resolves once the algorithms migrate.** The run's triple is established at the root, and today the root is the algorithm's own type, pinned at construction by whatever the factory could infer. Once an algorithm configuration names only its candidate, the root moves to `Complete(problem, …)`: a Rastrigin problem supplies `BoundedRealVectorSearchSpace`, resolution happens there, and a creator bound to that space matches. Same mechanism as the operators, one level up.
 
-One prerequisite, already solved in the tree for a different reason. A parameter typed `TProblem problem` leaves the candidate and search space in constraint position, where C# inference cannot reach them — the XML doc on `IProblemDefaults<TSelf, TCandidate, TSearchSpace>` states exactly this, which is why that interface exists and why `GeneticAlgorithm.For` takes it rather than a bare problem. `Complete` needs the same shape. Today only problems declaring a role default reach `IProblemDefaults` (`TravelingSalesmanProblem` does, `TestFunctionProblem` does not), so extending it to every problem is part of the algorithm package.
+One prerequisite was already solved in the tree for a different reason. A parameter typed `TProblem problem` leaves the candidate and search space in constraint position, where C# inference cannot reach them. The first implementation used `IProblemDefaults<TSelf, TCandidate, TSearchSpace>` as that anchor, but only problems declaring operator defaults implemented it. Package 4 replaced it with the `Problem<TSelf, TCandidate, TSearchSpace>` authoring base, which reaches every ordinary problem and remains the anchor after the recommendation cleanup.
 
 **Resolved by package 4, and the resolution was subtraction.** The algorithm configurations migrated, so the run's triple is established at `Complete(problem, …)` and a bound creator meets the problem's own search space there. That left `Create`'s `TSearchSpace` and `TProblem` naming nothing the method uses — not a parameter, not the return type, not the body, only their own `where` clauses. A type parameter in that position cannot be inferred at all, which is why the interim spelling had to name all three; it was never a widening to be pinned. Deleting them leaves `Create<TCandidate>(creator, …)`, inferred from the operators, at `GeneticAlgorithm`, `EvolutionStrategy`, `NSGA2` and `HillClimber`.
 
@@ -382,7 +382,7 @@ The reduced arity moved type arguments from declarations to call sites, and the 
 
 Walking those call sites found one pattern behind all of them, and it is not a trade-off: a type parameter that appears only in a `where` clause. Nothing can supply it, so it is not merely hard to infer but impossible, and the compiler's only recourse is to demand the whole list. It hit `GeneticAlgorithm.Create` and its three siblings, and — with the same symptom of a call site naming types no argument mentions — `Repeat`, `CycleWith`, `Then` and `AsGrid`, where the extension block's own parameters were the uninferable ones. The fix in both places was deletion, not an anchor parameter: the information was not being carried badly, it was not needed.
 
-`IProblemDefaults<TSelf, TCandidate, TSearchSpace>` remains the shape for the genuine case, where a value in hand does mention all three and `For(problem)` reads it off that value.
+`Problem<TSelf, TCandidate, TSearchSpace>` remains the inference anchor for `For(problem)`, where the value in hand mentions all three. A recommendation contract names only the operator role it can supply.
 
 ### The two state aware roles
 
@@ -408,7 +408,7 @@ The algorithm arity reduction cannot start without this, which the plan predicte
 
 `Stream`, `Complete` and `CreateRun` work today because the search space comes from the **receiver**: they are declared on `IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>`. Once an algorithm names only its candidate, the receiver carries nothing, and a plain `TProblem problem` parameter cannot supply the rest — the search space sits in constraint position, where C# inference does not reach. So the run call itself is blocked, not just the `For` factories.
 
-**The self type lives on the authoring base, not on the contract.** `Problem<TSelf, TCandidate, TSearchSpace>` now names the problem's own type, exactly as `Algorithm<TSelf, …>` does while `IAlgorithm` stays clean. A first attempt put it on a second interface, `IProblem<TSelf, TCandidate, TSearchSpace>`, which every problem declared; that was rejected, and rightly — it is an inference device, and a contract should not carry one. `IProblemDefaults`, which was that same device under a name about defaults, is gone too; the `IProblemDefault*` role interfaces keep their `TSelf` because their static members take it, which is a use rather than a trick.
+**The self type lives on the authoring base, not on a contract.** `Problem<TSelf, TCandidate, TSearchSpace>` now names the problem's own type, exactly as `Algorithm<TSelf, …>` does while `IAlgorithm` stays clean. A first attempt put it on a second interface, `IProblem<TSelf, TCandidate, TSearchSpace>`, which every problem declared. That was rejected because it was an inference device rather than a problem contract. The later recommendation cleanup also removed `TSelf` from operator recommendations by changing their factories from static methods receiving the problem to instance methods.
 
 `TSelf` threads through ten abstract bases (`Problem`, `SingleSolutionProblem`, `RealVectorProblem`, `PermutationProblem`, `DynamicProblem`, the three partial-problem bases, `DataAnalysisProblem`, `RegressionProblem`) and is named by each concrete problem: `TestFunctionProblem : RealVectorProblem<TestFunctionProblem>`. That is shorter than the interface line it replaces and is the CRTP shape the algorithm bases already use.
 
@@ -418,7 +418,7 @@ The algorithm arity reduction cannot start without this, which the plan predicte
 
 **Quality-of-life methods reach only problems typed on the base**, which is the accepted trade: the four types implementing `IProblem` directly (`EmptyMetaOptProblem`, `NoProblem`, and two test doubles) do not get them. Every problem a user runs derives from `Problem<…>`.
 
-`InferenceConstructionSpecs.OneProblemArgument_InfersTheProblemTheCandidateAndTheSearchSpace` pins the mechanism over `TestFunctionProblem`, a problem that declares no operator defaults at all — the case the old `IProblemDefaults` could not serve.
+`InferenceConstructionSpecs.OneProblemArgument_InfersTheProblemTheCandidateAndTheSearchSpace` pins the mechanism over `TestFunctionProblem`, a problem that declares no operator recommendations.
 
 One harness fix fell out: `OperatorCompatibilityTests.GetCompilableName` rendered generic type arguments by `FullName`, which emits backtick metadata names. It is recursive now, so a generic argument compiles as C# source.
 
@@ -585,7 +585,7 @@ narrowed analysis is shown running.
   `EvaluationClock` is exposed rather than `IEpochClock`, deliberately: `AdvanceEpoch`, `PendingEpochs` and `ResolvePendingEpochs` are on the class and not the interface, so narrowing the property would have pulled three more members onto a contract that dynamic problems may still reshape. The smaller change is the right one while this area is experimental.
 
   Two neighbours keep their arity for good reasons. `DynamicRelativeQualityEvaluator` hands the problem to a user supplied `IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>`, whose `GetBestKnown` may read concrete members. `ReevaluationInterceptor` sits on the bound interceptor rung, so its `Transform` signature names the problem.
-- **Encoding defaults for the remaining search spaces are postponed by decision**, not by oversight. `For(problem)` and `For(searchSpace)` work only where a search space declares `IEncodingDefault*` and a problem declares `IProblemDefault*` — today `PermutationSearchSpace` and `TravelingSalesmanProblem`. Adding them for the other encodings is a couple of static methods each, but it is a product decision to be taken once the architecture and API settle, and before the documentation is rewritten. Until then the restriction is a documentation entry, not a code gap.
+- **Recommendations for the remaining search spaces are postponed by decision**, not by oversight. `For(problem)` and `For(searchSpace)` now accept every correctly typed anchor and throw during construction when supplied values and recommendations leave required parameters unresolved. Adding recommendations to other search spaces remains a product decision requiring evidence for each choice.
 - `CompositeSearchSpace.WithSearchSpace` — `T1` and `T2` are likewise constraint-only, but the suggested fix of re-parameterising on the candidate pair would erase `TS1`/`TS2` to `ISearchSpace<T1>`. The composite resolves its child operators at those types, and the meta-optimization search space is built from creators bound to `BoundedRealVectorSearchSpace`, which would then be refused. The arity is holding a real capability.
 
 ## Before the documentation rewrite: is the overload surface necessary?
@@ -707,10 +707,10 @@ against the library rather than by reading, so the "fixed" claims are measured.
   now `TwoStageAlgorithm<TCandidate, TSearchState>` over `IAlgorithm<TCandidate, TSearchState>`, with the run's types
   arriving as method type arguments and a resolver bound once. The usage snippet drops from four type arguments to
   two, and the child-registry snippet names the four the generic-less registry cannot infer.
-- **`algorithms.md`.** `For(problem)` was presented as a peer of the other two construction forms. It is not
-  universally available, and the page now says so: it requires `IProblemDefault*` or `IEncodingDefault*` for every
-  required role, today permutations and the traveling salesman problem, and a problem lacking them fails at compile
-  time with a constraint error naming the missing interface.
+- **`algorithms.md`.** The first rewrite documented the defaults constraints. The later recommendation cleanup made
+  `For(problem)` universally callable and changed absence into one construction-time error naming every unresolved
+  parameter. Its operator recommendations section records precedence, current built in recommendations, conditional
+  decline behavior and the extension contract.
 - **`getting-started.md`.** The `selector: TournamentSelector.For(problem, tournamentSize: 2)` argument reconstructed
   `GeneticAlgorithmDefaults.Selector<T>()` exactly, and was the only line mentioning the problem before the run, so it
   taught a coupling that does not exist. Removed.
@@ -744,12 +744,11 @@ verified by compiling the case rather than by reasoning about it:
 | `IMutator<BoolVector> = new BitSwapMutator()` was CS0266 | Compiles. The slot names no search space, so an operator valid over the wider space can fill it. Pure arity cost, paid off. |
 | The two `For` entry points returned different types, so a common type meant the interface plus a leaked search state | Both return `GeneticAlgorithm<Permutation>`; `var` covers it. |
 | Declaring an algorithm named the candidate three times | Once. |
-| `For(problem)` on a problem without defaults was CS0411, "cannot be inferred", listing thirteen parameters at full arity | Still fails, but as CS0311 naming the missing `IProblemDefaultCreator<…>`. |
+| `For(problem)` on a problem without operator recommendations | Infers every type, then throws one `InvalidOperationException` naming all unresolved required parameters. |
 
-The last row is the honest limit of what the migration bought: that friction is real, it is not an arity problem, and
-the reduction did not remove it. What changed is that the compiler now names the cause. The one remaining "accepted
-and should not be" — a flip mutator filling a constrained slot — is likewise not an arity question, and the spec now
-asserts the invariant contract that does distinguish the two operators instead of only noting the gap.
+The last row was not an arity problem. The recommendation cleanup addressed it separately by removing constraints
+that expressed the wrong rule. The remaining "accepted and should not be" case, a flip mutator filling a constrained
+slot, is likewise not an arity question. The spec asserts the invariant contract that distinguishes the two operators.
 
 ### Structural
 

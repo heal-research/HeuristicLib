@@ -82,11 +82,14 @@ Two settled decisions rest on this rule.
 
 - Invariant checking keys on whether a contract is declared, never on which role an operator fills. A role added by
   a consumer participates unchanged, and a role whose output is not a candidate simply never declares one.
-- `Problem<TSelf, TCandidate, TSearchSpace>` does not implement the three `IProblemDefault*` interfaces in order to
-  satisfy a factory constraint, although doing so would remove real friction for every problem at once. A base class
-  naming the built-in default interfaces would supply them for the built-in roles permanently, while a consumer's
-  role still declared its own on every problem. The friction is addressed by changing the mechanism instead; see
-  step 1 of `plans/generic-arity-usability.md`.
+- Operator recommendation resolution keys on `IRecommends<TOperator>`, never on a list of known roles. A consumer
+  defined role participates by using its own role contract as `TOperator`.
+- `TryCreateRecommendedOperator` returns `true` with a fresh, nonnull operator when the source recommends one in its
+  current state. It returns `false` with `null` to decline, which lets resolution continue to the next source.
+- `Problem<TSelf, TCandidate, TSearchSpace>` does not implement recommendation interfaces for built-in roles. A base
+  class naming them would supply those roles permanently while a consumer's role still required separate treatment.
+  Problems and search spaces implement only the recommendations they make. See step 1 of
+  `plans/generic-arity-usability.md`.
 
 ## § 4 Configuration and execution ownership
 
@@ -376,7 +379,9 @@ Do not make callers spell generic arguments available values can determine.
 
 - Put public constructors on the configuration type.
 - Put `Create(...)`, `For(problem, ...)` and `For(algorithm, ...)` on a static companion named after the type.
-- Use `Create(...)` when the caller supplies the required collaborators and they determine the type arguments. Use `For(anchor, ...)` when an anchor value supplies both the type arguments and the defaults, so every remaining parameter can be optional.
+- Use `Create(...)` when the caller supplies the required collaborators and they determine the type arguments. Use `For(anchor, ...)` when an anchor value supplies the type arguments and may recommend omitted collaborators.
+- A recommendation based `For(...)` resolves explicit values first, then the documented recommendation sources in order. It throws `InvalidOperationException` during construction and names every required parameter left unresolved.
+- Get each required operator through `OperatorRecommendationResolution`, generic in that operator's role contract. The algorithm lists its own required parameters. Shared recommendation machinery must not group or enumerate operator roles.
 - A `Create(...)` or `For(...)` must be able to return a complete configuration. Accept every configurable member as a parameter, required in `Create` and optional in `For`, so a caller is never left finishing a partly configured result. `with` changes a configuration that already exists; it is not the way to complete one the factory could not build.
 - Anchor a `For(...)` that also takes optional operators on an invariant parameter type. A covariant anchor such as `IProblem<TCandidate, out TSearchSpace>` contributes only a lower bound, so an operator declared at a reduced arity widens the inferred search space and fails against constraints the caller never named. An invariant anchor contributes an exact bound, fixing the type from the anchor alone.
 - Treat a `For(...)` argument as a type witness unless the contract says it is retained.

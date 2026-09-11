@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
@@ -7,16 +8,17 @@ namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
     : PermutationProblem<TravelingSalesmanProblem>(SingleObjective.Minimize, GetEncoding(problemData)),
-      IProblemDefaultCreator<TravelingSalesmanProblem, Permutation, PermutationSearchSpace>,
-      IProblemDefaultCrossover<TravelingSalesmanProblem, Permutation, PermutationSearchSpace>,
-      IProblemDefaultMutator<TravelingSalesmanProblem, Permutation, PermutationSearchSpace> /*, IDeterministicProblem<Permutation>*/
+      IRecommends<ICrossover<Permutation>>
 {
 
     public TravelingSalesmanProblem() : this(new TravelingSalesmanCoordinatesData(DefaultProblemCoordinates)) { }
     public ITravelingSalesmanProblemData ProblemData { get; } = problemData;
 
-    public static ICrossover<Permutation> CreateDefaultCrossover(TravelingSalesmanProblem problem) =>
-        new OrderCrossover();
+    public bool TryCreateRecommendedOperator([NotNullWhen(true)] out ICrossover<Permutation>? recommendation)
+    {
+        recommendation = new OrderCrossover();
+        return true;
+    }
 
     public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random)
     {

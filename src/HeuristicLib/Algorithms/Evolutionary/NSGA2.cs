@@ -98,9 +98,15 @@ public static class NSGA2
 #pragma warning restore S101
 {
     /// <summary>
-    /// Creates an NSGA-II for a problem that states its own operator preferences, asking the problem first and falling
-    /// back to the search space's encoding defaults for every required role.
+    /// Creates an NSGA-II for a problem, asking the problem first and its search space second for every required
+    /// operator the caller does not supply.
     /// </summary>
+    /// <remarks>
+    /// The creator, crossover and mutator are selected independently. An explicit argument wins, followed by a
+    /// problem recommendation and then a search space recommendation. The selector, replacer and evaluator come from
+    /// <see cref="NSGA2Defaults"/> when omitted. Other omitted operators remain null.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
     public static NSGA2<TCandidate> For<TProblem, TCandidate, TSearchSpace>(
         Problem<TProblem, TCandidate, TSearchSpace> problem,
         ICreator<TCandidate>? creator = null,
@@ -114,23 +120,21 @@ public static class NSGA2
         int populationSize = NSGA2Defaults.PopulationSize,
         int? maximumGenerations = NSGA2Defaults.MaximumGenerations,
         double mutationRate = NSGA2Defaults.MutationRate)
-        where TProblem : Problem<TProblem, TCandidate, TSearchSpace>,
-                         IProblemDefaultCreator<TProblem, TCandidate, TSearchSpace>,
-                         IProblemDefaultCrossover<TProblem, TCandidate, TSearchSpace>,
-                         IProblemDefaultMutator<TProblem, TCandidate, TSearchSpace>
-        where TSearchSpace : class, ISearchSpace<TCandidate>,
-                             IEncodingDefaultCreator<TCandidate, TSearchSpace>,
-                             IEncodingDefaultCrossover<TCandidate, TSearchSpace>,
-                             IEncodingDefaultMutator<TCandidate, TSearchSpace>
+        where TProblem : Problem<TProblem, TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
     {
         var searchSpace = problem.SearchSpace;
-        var self = problem as TProblem;
+        var recommendations = new OperatorRecommendationResolution(problem, searchSpace);
+        creator = recommendations.GetOrRecommend(nameof(creator), creator);
+        crossover = recommendations.GetOrRecommend(nameof(crossover), crossover);
+        mutator = recommendations.GetOrRecommend(nameof(mutator), mutator);
+        recommendations.ThrowIfIncomplete(nameof(NSGA2));
 
         return new()
         {
-            Creator = creator ?? (self is null ? null : TProblem.CreateDefaultCreator(self)) ?? TSearchSpace.CreateDefaultCreator(searchSpace),
-            Crossover = crossover ?? (self is null ? null : TProblem.CreateDefaultCrossover(self)) ?? TSearchSpace.CreateDefaultCrossover(searchSpace),
-            Mutator = mutator ?? (self is null ? null : TProblem.CreateDefaultMutator(self)) ?? TSearchSpace.CreateDefaultMutator(searchSpace),
+            Creator = creator!,
+            Crossover = crossover!,
+            Mutator = mutator!,
             Selector = selector ?? NSGA2Defaults.Selector<TCandidate>(),
             Replacer = replacer ?? NSGA2Defaults.Replacer<TCandidate>(),
             Evaluator = evaluator ?? NSGA2Defaults.Evaluator<TCandidate>(),
@@ -143,10 +147,16 @@ public static class NSGA2
     }
 
     /// <summary>
-    /// Creates an NSGA-II from a search space's encoding defaults alone, with no problem instance.
+    /// Creates an NSGA-II from a search space's operator recommendations alone, with no problem instance.
     /// </summary>
-    public static NSGA2<TCandidate> For<TCandidate, TSearchSpace>(
-        IEncodingDefaults<TCandidate, TSearchSpace> searchSpace,
+    /// <remarks>
+    /// The creator, crossover and mutator are selected independently. An explicit argument wins over the search
+    /// space recommendation. The selector, replacer and evaluator come from <see cref="NSGA2Defaults"/> when omitted.
+    /// Other omitted operators remain null.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
+    public static NSGA2<TCandidate> For<TCandidate>(
+        ISearchSpace<TCandidate> searchSpace,
         ICreator<TCandidate>? creator = null,
         ICrossover<TCandidate>? crossover = null,
         IMutator<TCandidate>? mutator = null,
@@ -158,18 +168,18 @@ public static class NSGA2
         int populationSize = NSGA2Defaults.PopulationSize,
         int? maximumGenerations = NSGA2Defaults.MaximumGenerations,
         double mutationRate = NSGA2Defaults.MutationRate)
-        where TSearchSpace : class, ISearchSpace<TCandidate>,
-                             IEncodingDefaultCreator<TCandidate, TSearchSpace>,
-                             IEncodingDefaultCrossover<TCandidate, TSearchSpace>,
-                             IEncodingDefaultMutator<TCandidate, TSearchSpace>
     {
-        var typedSearchSpace = (TSearchSpace)searchSpace;
+        var recommendations = new OperatorRecommendationResolution(problem: null, searchSpace);
+        creator = recommendations.GetOrRecommend(nameof(creator), creator);
+        crossover = recommendations.GetOrRecommend(nameof(crossover), crossover);
+        mutator = recommendations.GetOrRecommend(nameof(mutator), mutator);
+        recommendations.ThrowIfIncomplete(nameof(NSGA2));
 
         return new()
         {
-            Creator = creator ?? TSearchSpace.CreateDefaultCreator(typedSearchSpace),
-            Crossover = crossover ?? TSearchSpace.CreateDefaultCrossover(typedSearchSpace),
-            Mutator = mutator ?? TSearchSpace.CreateDefaultMutator(typedSearchSpace),
+            Creator = creator!,
+            Crossover = crossover!,
+            Mutator = mutator!,
             Selector = selector ?? NSGA2Defaults.Selector<TCandidate>(),
             Replacer = replacer ?? NSGA2Defaults.Replacer<TCandidate>(),
             Evaluator = evaluator ?? NSGA2Defaults.Evaluator<TCandidate>(),

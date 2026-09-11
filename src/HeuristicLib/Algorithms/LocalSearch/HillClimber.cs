@@ -113,9 +113,15 @@ public record HillClimber<TCandidate>
 public static class HillClimber
 {
     /// <summary>
-    /// Creates a hill climber for a problem that states its own operator preferences, asking the problem first and
-    /// falling back to the search space's encoding defaults for the required creator and mutator.
+    /// Creates a hill climber for a problem, asking the problem first and its search space second for every required
+    /// operator the caller does not supply.
     /// </summary>
+    /// <remarks>
+    /// The creator and mutator are selected independently. An explicit argument wins, followed by a problem
+    /// recommendation and then a search space recommendation. The evaluator comes from
+    /// <see cref="HillClimberDefaults"/> when omitted. Other omitted operators remain null.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
     public static HillClimber<TCandidate> For<TProblem, TCandidate, TSearchSpace>(
         Problem<TProblem, TCandidate, TSearchSpace> problem,
         ICreator<TCandidate>? creator = null,
@@ -126,20 +132,19 @@ public static class HillClimber
         LocalSearchDirection direction = HillClimberDefaults.Direction,
         int maxNeighbors = HillClimberDefaults.MaxNeighbors,
         int batchSize = HillClimberDefaults.BatchSize)
-        where TProblem : Problem<TProblem, TCandidate, TSearchSpace>,
-                         IProblemDefaultCreator<TProblem, TCandidate, TSearchSpace>,
-                         IProblemDefaultMutator<TProblem, TCandidate, TSearchSpace>
-        where TSearchSpace : class, ISearchSpace<TCandidate>,
-                             IEncodingDefaultCreator<TCandidate, TSearchSpace>,
-                             IEncodingDefaultMutator<TCandidate, TSearchSpace>
+        where TProblem : Problem<TProblem, TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
     {
         var searchSpace = problem.SearchSpace;
-        var self = problem as TProblem;
+        var recommendations = new OperatorRecommendationResolution(problem, searchSpace);
+        creator = recommendations.GetOrRecommend(nameof(creator), creator);
+        mutator = recommendations.GetOrRecommend(nameof(mutator), mutator);
+        recommendations.ThrowIfIncomplete(nameof(HillClimber));
 
         return new()
         {
-            Creator = creator ?? (self is null ? null : TProblem.CreateDefaultCreator(self)) ?? TSearchSpace.CreateDefaultCreator(searchSpace),
-            Mutator = mutator ?? (self is null ? null : TProblem.CreateDefaultMutator(self)) ?? TSearchSpace.CreateDefaultMutator(searchSpace),
+            Creator = creator!,
+            Mutator = mutator!,
             Evaluator = evaluator ?? HillClimberDefaults.Evaluator<TCandidate>(),
             Refiner = refiner,
             Interceptor = interceptor,
@@ -150,10 +155,15 @@ public static class HillClimber
     }
 
     /// <summary>
-    /// Creates a hill climber from a search space's creator and mutator defaults, with no problem instance.
+    /// Creates a hill climber from a search space's creator and mutator recommendations, with no problem instance.
     /// </summary>
-    public static HillClimber<TCandidate> For<TCandidate, TSearchSpace>(
-        IEncodingDefaults<TCandidate, TSearchSpace> searchSpace,
+    /// <remarks>
+    /// An explicit creator or mutator wins over its search space recommendation. The evaluator comes from
+    /// <see cref="HillClimberDefaults"/> when omitted. Other omitted operators remain null.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
+    public static HillClimber<TCandidate> For<TCandidate>(
+        ISearchSpace<TCandidate> searchSpace,
         ICreator<TCandidate>? creator = null,
         IMutator<TCandidate>? mutator = null,
         IEvaluator<TCandidate>? evaluator = null,
@@ -162,16 +172,16 @@ public static class HillClimber
         LocalSearchDirection direction = HillClimberDefaults.Direction,
         int maxNeighbors = HillClimberDefaults.MaxNeighbors,
         int batchSize = HillClimberDefaults.BatchSize)
-        where TSearchSpace : class, ISearchSpace<TCandidate>,
-                             IEncodingDefaultCreator<TCandidate, TSearchSpace>,
-                             IEncodingDefaultMutator<TCandidate, TSearchSpace>
     {
-        var typedSearchSpace = (TSearchSpace)searchSpace;
+        var recommendations = new OperatorRecommendationResolution(problem: null, searchSpace);
+        creator = recommendations.GetOrRecommend(nameof(creator), creator);
+        mutator = recommendations.GetOrRecommend(nameof(mutator), mutator);
+        recommendations.ThrowIfIncomplete(nameof(HillClimber));
 
         return new()
         {
-            Creator = creator ?? TSearchSpace.CreateDefaultCreator(typedSearchSpace),
-            Mutator = mutator ?? TSearchSpace.CreateDefaultMutator(typedSearchSpace),
+            Creator = creator!,
+            Mutator = mutator!,
             Evaluator = evaluator ?? HillClimberDefaults.Evaluator<TCandidate>(),
             Refiner = refiner,
             Interceptor = interceptor,

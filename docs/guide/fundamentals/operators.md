@@ -47,6 +47,7 @@ Operators can also be useful outside a complete algorithm. Direct calls are help
 
 ## Related guides
 
+- [Use operator recommendations](/guide/fundamentals/algorithms#use-operator-recommendations)
 - [Compose several operators](/guide/extending/operator-composition)
 - [Write an operator](/guide/extending/writing-operators)
 - [See how algorithms run them](/guide/fundamentals/algorithms)

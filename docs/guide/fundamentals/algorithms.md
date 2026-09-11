@@ -23,13 +23,13 @@ HeuristicLib offers three ways to construct a standard algorithm. They create th
 | ---------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
 | Constructor and object initializer | You need an exact generic type or want every configured member visible as a property | Generic type arguments and every required operator                                 |
 | `Create(...)`                      | You chose the required operators and want their types inferred                       | Required operators, followed by any algorithm setting overrides                    |
-| `For(...)`                         | The problem or encoding publishes a complete set of suggested operators              | A problem or search space, followed by any operator or algorithm setting overrides |
+| `For(...)`                         | A problem or search space recommends some or all required operators                   | A problem or search space, followed by any operator or algorithm setting overrides |
 
-All three forms use the algorithm's public defaults class for omitted optional settings. Direct construction and `Create(...)` never choose required variation operators for you. `For(...)` is the only form that asks a problem first, then its encoding, for those operators.
+All three forms use the algorithm's public defaults class for omitted optional settings. Direct construction and `Create(...)` never choose required variation operators for you. `For(...)` is the only form that asks a problem first, then its search space, for recommendations.
 
 The constructor is the direct record API. `Create(...)` and `For(...)` are type inference conveniences over it. After construction, every form supports the same property access and `with` expressions.
 
-The three forms are not equally available. Direct construction and `Create(...)` work for any problem. `For(problem, ...)` additionally requires the problem to declare `IProblemDefault*` interfaces, or its search space to declare `IEncodingDefault*`, for every required operator role; today that means permutations and `TravelingSalesmanProblem`. A problem that declares none is refused at compile time with a constraint error naming the missing interface, so reach for `Create(...)` when writing your own problem.
+All three forms work with any problem. `For(...)` chooses each required operator from an explicit argument, a problem recommendation or a search space recommendation, in that order. If any required parameters remain missing, it throws `InvalidOperationException` during construction and names every missing parameter.
 
 ## Configure a genetic algorithm
 
@@ -46,9 +46,9 @@ var algorithm = GeneticAlgorithm.Create(
 
 Algorithm owned settings such as `MaximumGenerations` describe ordinary run behavior. The operators make search policy visible and replaceable. `Create(...)` infers the generic arguments from those operators.
 
-## Use suggested defaults
+## Use operator recommendations
 
-Some encodings and problems publish suggested operators. Use `For(problem, ...)` when that complete defaults flow exists — a problem you wrote yourself will not have it until you declare the `IProblemDefault*` or `IEncodingDefault*` interfaces:
+Some problems and search spaces recommend operators. Use `For(problem, ...)` when those recommendations cover the required parameters you do not supply:
 
 ```csharp
 var algorithm = GeneticAlgorithm.For(
@@ -57,20 +57,37 @@ var algorithm = GeneticAlgorithm.For(
     maximumGenerations: 500);
 ```
 
-The problem gets the first chance to suggest each required operator. A role it declines falls back to the encoding. For `TravelingSalesmanProblem`, the problem supplies order crossover and `PermutationSearchSpace` supplies random creation and inversion mutation. Selector, evaluator and scalar settings come from `GeneticAlgorithmDefaults`.
+For each required operator, `For(problem, ...)` checks these sources in order:
 
-Each standard algorithm has a public defaults class, such as `GeneticAlgorithmDefaults` or `NSGA2Defaults`. Direct record construction, `Create(...)` and `For(...)` read the same values for omitted algorithm settings. Switching construction forms therefore does not change an omitted population size, selector or evaluator. Encoding and problem defaults are separate because those types own the information needed to recommend variation operators.
+1. The operator argument passed to `For(...)`.
+2. A recommendation from the problem.
+3. A recommendation from the problem's search space.
 
-`For(searchSpace, ...)` uses encoding defaults alone and returns a configuration that can run against any compatible problem. `EvolutionStrategy`, `NSGA2` and `HillClimber` offer the same two forms, constrained to the operator roles each algorithm requires.
+`For(searchSpace, ...)` uses the same order without the problem step. A source may decline to recommend an operator for its current state. The factory then continues to the next source. If any required operator remains missing, the factory throws `InvalidOperationException` and names all missing parameters.
 
-Defaults are documented starting points. They are not tuned for every instance and changing them can change results. State important choices explicitly when a configuration must remain independent of future default changes:
+The current built in recommendations are deliberately small:
+
+| Source | Creator | Crossover | Mutator |
+| --- | --- | --- | --- |
+| `PermutationSearchSpace` | `RandomPermutationCreator` | `EdgeRecombinationCrossover` | `InversionMutator` |
+| `TravelingSalesmanProblem` | none | `OrderCrossover` | none |
+
+This means the example uses order crossover from `TravelingSalesmanProblem`, then random creation and inversion mutation from `PermutationSearchSpace`. The problem recommendation wins over the search space recommendation for crossover.
+
+Each standard algorithm has a public defaults class, such as `GeneticAlgorithmDefaults` or `NSGA2Defaults`. Direct record construction, `Create(...)` and `For(...)` read the same values for omitted algorithm settings. Switching construction forms therefore does not change an omitted population size, selector or evaluator. Operator recommendations are separate because a problem or search space owns the information needed to make them.
+
+`For(searchSpace, ...)` returns a configuration that can run against any compatible problem. `GeneticAlgorithm` and `NSGA2` request a creator, crossover and mutator. `EvolutionStrategy` and `HillClimber` request a creator and mutator. Optional operators are not populated from recommendations. For example, `EvolutionStrategy.Crossover` remains `null` unless the caller supplies it.
+
+Recommendation discovery uses `IRecommends<TOperator>`, where `TOperator` is the requested operator role. `TryCreateRecommendedOperator` returns `true` with a fresh, nonnull operator. It returns `false` with `null` when the source declines for its current state. A problem or search space can implement this contract for built in or consumer defined roles. Consumer algorithms can use `OperatorRecommendationResolution` to apply the same precedence and aggregate missing parameter error.
+
+Recommendations are documented starting points. They are not tuned for every instance and changing them can change results. State important choices explicitly when a configuration must remain independent of future recommendation changes:
 
 ```csharp
 var algorithm = GeneticAlgorithm.For(travelingSalesmanProblem)
     with { Crossover = new EdgeRecombinationCrossover() };
 ```
 
-Use `Create(...)` when no defaults flow exists or when the required operators are part of the experiment. Optional arguments override algorithm defaults in either form.
+Use `Create(...)` when every required operator is part of the experiment. Optional arguments override algorithm defaults in either form.
 
 ## Run it
 

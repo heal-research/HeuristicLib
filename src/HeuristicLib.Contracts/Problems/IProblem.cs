@@ -4,11 +4,16 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public interface IProblem<TCandidate, out TSearchSpace>
+/// <summary>Describes the part of a problem that does not depend on its candidate or search space types.</summary>
+public interface IProblem
+{
+    ObjectiveDirections Objective { get; }
+}
+
+public interface IProblem<TCandidate, out TSearchSpace> : IProblem
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     TSearchSpace SearchSpace { get; }
-    ObjectiveDirections Objective { get; }
 
     //ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random);
     IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);

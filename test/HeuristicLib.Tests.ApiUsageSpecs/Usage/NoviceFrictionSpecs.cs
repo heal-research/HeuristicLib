@@ -27,15 +27,15 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Usage;
 /// executable spec cannot hold it.
 /// <para>
 /// The arity reduction has landed, so several specs here now record a result rather than a cost, and each says which
-/// friction it used to record. What survives is friction that arity was never the cause of: a problem that declares
-/// no operator defaults, and an invariant that no type argument could have expressed.
+/// friction it used to record. What survives is friction that arity was never the cause of, such as an invariant no
+/// type argument could have expressed.
 /// </para>
 /// </remarks>
 public class NoviceFrictionSpecs
 {
     /// <summary>
-    /// The best case costs nothing. When the problem declares its own operator defaults, every type argument is
-    /// inferred and a first program names no generic type at all.
+    /// The best case costs nothing. The problem and search space recommendations supply the operators, every type
+    /// argument is inferred and a first program names no generic type at all.
     /// </summary>
     [Fact]
     public async Task BuildingAndRunningAnAlgorithm_NamesNoTypeArgument()
@@ -53,46 +53,32 @@ public class NoviceFrictionSpecs
     }
 
     /// <summary>
-    /// The best case is also the rare case. Only a problem that declares operator defaults can be handed to
-    /// <c>For(problem)</c>, and only one problem in the library does.
+    /// <c>For(problem)</c> is available to every problem. If supplied values and recommendations leave required
+    /// parameters unresolved, the factory reports all of them at once.
     /// </summary>
     /// <remarks>
-    /// A newcomer's own problem will not declare them, so the zero argument path is unavailable exactly when a
-    /// newcomer needs it most. The arity reduction did not change that, but it changed the diagnostic: the failure
-    /// used to be CS0411, an inference error listing all thirteen factory parameters at full arity and naming no
-    /// cause. It is now CS0311, which names the missing declaration outright. The message is still long, because it
-    /// repeats once per missing default, but every line points at something to fix.
+    /// This used to be a compile error caused by six constraints. The constraints required both sources to declare
+    /// every role even though the intended rule was supplied value, problem recommendation or search space
+    /// recommendation for each parameter.
     /// </remarks>
     [Fact]
-    public void TheZeroArgumentFactory_IsAvailableOnlyToProblemsThatDeclareTheirDefaults()
+    public void TheZeroArgumentFactory_ReportsEveryMissingRecommendation()
     {
-        var problemsDeclaringDefaults = CoreAssembly.GetTypes()
-            .Where(type => type is { IsAbstract: false, IsGenericTypeDefinition: false })
-            .Where(type => type.GetInterfaces().Any(role =>
-                role.IsGenericType && role.GetGenericTypeDefinition() == typeof(IProblemDefaultCreator<,,>)))
-            .Select(type => type.Name)
-            .Order()
-            .ToArray();
+        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
 
-        problemsDeclaringDefaults.ShouldBe([nameof(TravelingSalesmanProblem)]);
+        var exception = Should.Throw<InvalidOperationException>(() => GeneticAlgorithm.For(problem));
 
-        // Does not compile, although it is the first thing the getting started guide teaches for a different problem.
-        // TestFunctionProblem declares no defaults, so the constraints on For go unsatisfied:
-        //
-        // var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
-        // var algorithm = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
-        //
-        // CS0311: the type 'TestFunctionProblem' cannot be used as type parameter 'TProblem' in the generic type or
-        //   method 'GeneticAlgorithm.For<TProblem, TCandidate, TSearchSpace>(Problem<TProblem, TCandidate,
-        //   TSearchSpace>, ICreator<TCandidate>?, ICrossover<TCandidate>?, IMutator<TCandidate>?,
-        //   ISelector<TCandidate>?, IEvaluator<TCandidate>?, IRefiner<TCandidate>?, ITerminator<TCandidate>?,
-        //   IInterceptor<TCandidate>?, int, int?, double, int)'. There is no implicit reference conversion from
-        //   'TestFunctionProblem' to 'IProblemDefaultCreator<TestFunctionProblem, RealVector,
-        //   BoundedRealVectorSearchSpace>'. Repeated for the crossover and mutator defaults, and again for the three
-        //   IEncodingDefault* interfaces on the search space.
-        //
-        // Every operator parameter above now reads ICreator<TCandidate>, one argument, which is what makes the
-        // constraint failure legible at all: what remains noisy is the repetition, not the arity.
+        exception.Message.ShouldBe(
+            "Cannot create GeneticAlgorithm. No value or recommendation was found for required parameters: " +
+            "creator, crossover, mutator. Consulted TestFunctionProblem and BoundedRealVectorSearchSpace.");
+
+        GeneticAlgorithm<RealVector> explicitlyConfigured = GeneticAlgorithm.For(
+            problem,
+            creator: new UniformDistributedCreator(problem.SearchSpace),
+            crossover: new SinglePointCrossover(),
+            mutator: new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1));
+
+        explicitlyConfigured.Creator.ShouldBeOfType<UniformDistributedCreator>();
     }
 
     /// <summary>

@@ -213,7 +213,7 @@ public class InferenceConstructionSpecs
     /// problem's own type on <see cref="Problem{TSelf,TCandidate,TSearchSpace}"/> is what makes all three
     /// inferable from the single argument a user already passes.
     /// <para>
-    /// Every problem declares it, so this holds for problems that state no operator defaults at all — which is what
+    /// Every problem declares it, so this holds for problems that state no operator recommendations at all, which is what
     /// the anchor being a problem contract rather than a defaults one is about.
     /// </para>
     /// </remarks>

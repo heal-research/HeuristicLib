@@ -43,6 +43,7 @@ public sealed class AssemblyDependencyTests
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts", "Problems"), "HEAL.HeuristicLib.Problems", mismatches);
 
         typeof(ICrossover<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
+        typeof(IRecommends<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
         typeof(Parents<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
 
         var encodingsRoot = Path.Combine(repositoryRoot, "src", "HeuristicLib", "Encodings");
