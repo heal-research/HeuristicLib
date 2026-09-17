@@ -14,34 +14,34 @@ public enum EvolutionStrategyType
     Plus
 }
 
-public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
-    : IterativeAlgorithm<EvolutionStrategy<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record EvolutionStrategy<TCandidate>
+    : IterativeAlgorithm<EvolutionStrategy<TCandidate>, TCandidate, PopulationState<TCandidate>>
 {
     public int PopulationSize { get; init; } = EvolutionStrategyDefaults.PopulationSize;
     public int NumberOfChildren { get; init; } = EvolutionStrategyDefaults.NumberOfChildren;
     public EvolutionStrategyType Strategy { get; init; } = EvolutionStrategyDefaults.Strategy;
-    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
-    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
-    public ICrossover<TCandidate, TSearchSpace, TProblem>? Crossover { get; init; }
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = EvolutionStrategyDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>();
-    public ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; } = EvolutionStrategyDefaults.Selector<TCandidate, TSearchSpace, TProblem>();
-    public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
+    public required ICreator<TCandidate> Creator { get; init; }
+    public required IMutator<TCandidate> Mutator { get; init; }
+    public ICrossover<TCandidate>? Crossover { get; init; }
+    public IEvaluator<TCandidate> Evaluator { get; init; } = EvolutionStrategyDefaults.Evaluator<TCandidate>();
+    public ISelector<TCandidate> Selector { get; init; } = EvolutionStrategyDefaults.Selector<TCandidate>();
+    public IRefiner<TCandidate>? Refiner { get; init; }
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Mutator, Crossover, Evaluator, Selector, Refiner);
 
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
     /// </summary>
     /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
-    public int? MaximumGenerations { get; init; }
+    public int? MaximumGenerations { get; init; } = EvolutionStrategyDefaults.MaximumGenerations;
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor)
+    protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
-        var mutator = instanceRegistry.Resolve(Mutator);
-        return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), mutator, instanceRegistry.Resolve(Selector), instanceRegistry.ResolveOptional(Crossover), instanceRegistry.ResolveOptional(Refiner), PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
+        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        return new Instance<TRunSearchSpace, TRunProblem>(resolvedInterceptor, resolver.Resolve(Evaluator), resolver.Resolve(Creator), resolver.Resolve(Mutator), resolver.Resolve(Selector),
+            resolver.ResolveOptional(Crossover), resolver.ResolveOptional(Refiner), PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
     }
 
-    private sealed class Instance(
+    private sealed class Instance<TSearchSpace, TProblem>(
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
         IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
         ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
@@ -54,6 +54,8 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
         EvolutionStrategyType strategy,
         int? maximumGenerations)
         : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState, TProblem problem) =>
             yieldedStateCount >= maximumGenerations;
@@ -96,12 +98,16 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
 
             var evaluatedChildren = children.ToEvaluated(evaluator.Evaluate(children, random, problem.SearchSpace, problem));
 
-            if (mutator is IVariableStrengthMutatorInstance<TCandidate, TSearchSpace, TProblem> variableStrengthMutator)
+            if (mutator is IAdaptableMutationStrengthInstance<TCandidate, TSearchSpace, TProblem> adaptableMutator)
             {
-                var successes = parentQualities.Zip(evaluatedChildren).Count(
+                // The rate is over the parent/child pairs actually compared, which is the number of children rather
+                // than the population size; the two differ whenever the strategy is configured with more or fewer
+                // children than parents.
+                var comparisons = parentQualities.Zip(evaluatedChildren).ToArray();
+                var successes = comparisons.Count(
                     pair => pair.Second.ObjectiveVector.CompareTo(pair.First, problem.Objective) == DominanceRelation.Dominates);
-                var successRate = successes / (double)populationSize;
-                variableStrengthMutator.CurrentMutationStrength *= successRate switch
+                var successRate = comparisons.Length == 0 ? 0.0 : successes / (double)comparisons.Length;
+                adaptableMutator.CurrentMutationStrength *= successRate switch
                 {
                     > 0.2 => 1.5,
                     < 0.2 => 1 / 1.5,
@@ -125,39 +131,45 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
 public static class EvolutionStrategy
 {
     /// <summary>
-    /// Creates an evolution strategy for a problem that states its own operator preferences, asking the problem first
-    /// and falling back to the search space's encoding defaults for the required creator and mutator.
+    /// Creates an evolution strategy for a problem, asking the problem first and its search space second for every
+    /// required operator the caller does not supply.
     /// </summary>
-    public static EvolutionStrategy<TCandidate, TSearchSpace, TProblem> For<TProblem, TCandidate, TSearchSpace>(
-        IProblemDefaults<TProblem, TCandidate, TSearchSpace> problem,
-        ICreator<TCandidate, TSearchSpace, TProblem>? creator = null,
-        IMutator<TCandidate, TSearchSpace, TProblem>? mutator = null,
-        ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
-        ISelector<TCandidate, TSearchSpace, TProblem>? selector = null,
-        IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,
-        IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null,
-        IInterceptor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor = null,
+    /// <remarks>
+    /// The creator and mutator are selected independently. An explicit argument wins, followed by a problem
+    /// recommendation and then a search space recommendation. The selector and evaluator come from
+    /// <see cref="EvolutionStrategyDefaults"/> when omitted. Crossover and the other optional operators are not
+    /// populated from recommendations.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
+    public static EvolutionStrategy<TCandidate> For<TProblem, TCandidate, TSearchSpace>(
+        Problem<TProblem, TCandidate, TSearchSpace> problem,
+        ICreator<TCandidate>? creator = null,
+        IMutator<TCandidate>? mutator = null,
+        ICrossover<TCandidate>? crossover = null,
+        ISelector<TCandidate>? selector = null,
+        IEvaluator<TCandidate>? evaluator = null,
+        IRefiner<TCandidate>? refiner = null,
+        IInterceptor<TCandidate>? interceptor = null,
         int populationSize = EvolutionStrategyDefaults.PopulationSize,
         int numberOfChildren = EvolutionStrategyDefaults.NumberOfChildren,
         EvolutionStrategyType strategy = EvolutionStrategyDefaults.Strategy,
-        int? maximumGenerations = null)
-        where TProblem : class,
-                         IProblemDefaultCreator<TProblem, TCandidate, TSearchSpace>,
-                         IProblemDefaultMutator<TProblem, TCandidate, TSearchSpace>
-        where TSearchSpace : class, ISearchSpace<TCandidate>,
-                             IEncodingDefaultCreator<TCandidate, TSearchSpace>,
-                             IEncodingDefaultMutator<TCandidate, TSearchSpace>
+        int? maximumGenerations = EvolutionStrategyDefaults.MaximumGenerations)
+        where TProblem : Problem<TProblem, TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
     {
         var searchSpace = problem.SearchSpace;
-        var self = problem as TProblem;
+        var recommendations = new OperatorRecommendationResolution(problem, searchSpace);
+        creator = recommendations.GetOrRecommend(nameof(creator), creator);
+        mutator = recommendations.GetOrRecommend(nameof(mutator), mutator);
+        recommendations.ThrowIfIncomplete(nameof(EvolutionStrategy));
 
         return new()
         {
-            Creator = creator ?? (self is null ? null : TProblem.CreateDefaultCreator(self)) ?? TSearchSpace.CreateDefaultCreator(searchSpace),
-            Mutator = mutator ?? (self is null ? null : TProblem.CreateDefaultMutator(self)) ?? TSearchSpace.CreateDefaultMutator(searchSpace),
+            Creator = creator!,
+            Mutator = mutator!,
             Crossover = crossover,
-            Selector = selector ?? EvolutionStrategyDefaults.Selector<TCandidate, TSearchSpace, TProblem>(),
-            Evaluator = evaluator ?? EvolutionStrategyDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>(),
+            Selector = selector ?? EvolutionStrategyDefaults.Selector<TCandidate>(),
+            Evaluator = evaluator ?? EvolutionStrategyDefaults.Evaluator<TCandidate>(),
             Refiner = refiner,
             Interceptor = interceptor,
             PopulationSize = populationSize,
@@ -168,35 +180,41 @@ public static class EvolutionStrategy
     }
 
     /// <summary>
-    /// Creates an evolution strategy from a search space's required creator and mutator defaults, with no problem
+    /// Creates an evolution strategy from a search space's creator and mutator recommendations, with no problem
     /// instance.
     /// </summary>
-    public static EvolutionStrategy<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> For<TCandidate, TSearchSpace>(
-        IEncodingDefaults<TCandidate, TSearchSpace> searchSpace,
-        ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? creator = null,
-        IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? mutator = null,
-        ICrossover<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? crossover = null,
-        ISelector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? selector = null,
-        IEvaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? evaluator = null,
-        IRefiner<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? refiner = null,
-        IInterceptor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, PopulationState<TCandidate>>? interceptor = null,
+    /// <remarks>
+    /// An explicit creator or mutator wins over its search space recommendation. The selector and evaluator come
+    /// from <see cref="EvolutionStrategyDefaults"/> when omitted. Crossover and the other optional operators are not
+    /// populated from recommendations.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
+    public static EvolutionStrategy<TCandidate> For<TCandidate>(
+        ISearchSpace<TCandidate> searchSpace,
+        ICreator<TCandidate>? creator = null,
+        IMutator<TCandidate>? mutator = null,
+        ICrossover<TCandidate>? crossover = null,
+        ISelector<TCandidate>? selector = null,
+        IEvaluator<TCandidate>? evaluator = null,
+        IRefiner<TCandidate>? refiner = null,
+        IInterceptor<TCandidate>? interceptor = null,
         int populationSize = EvolutionStrategyDefaults.PopulationSize,
         int numberOfChildren = EvolutionStrategyDefaults.NumberOfChildren,
         EvolutionStrategyType strategy = EvolutionStrategyDefaults.Strategy,
-        int? maximumGenerations = null)
-        where TSearchSpace : class, ISearchSpace<TCandidate>,
-                             IEncodingDefaultCreator<TCandidate, TSearchSpace>,
-                             IEncodingDefaultMutator<TCandidate, TSearchSpace>
+        int? maximumGenerations = EvolutionStrategyDefaults.MaximumGenerations)
     {
-        var typedSearchSpace = (TSearchSpace)searchSpace;
+        var recommendations = new OperatorRecommendationResolution(problem: null, searchSpace);
+        creator = recommendations.GetOrRecommend(nameof(creator), creator);
+        mutator = recommendations.GetOrRecommend(nameof(mutator), mutator);
+        recommendations.ThrowIfIncomplete(nameof(EvolutionStrategy));
 
         return new()
         {
-            Creator = creator ?? TSearchSpace.CreateDefaultCreator(typedSearchSpace),
-            Mutator = mutator ?? TSearchSpace.CreateDefaultMutator(typedSearchSpace),
+            Creator = creator!,
+            Mutator = mutator!,
             Crossover = crossover,
-            Selector = selector ?? EvolutionStrategyDefaults.Selector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>(),
-            Evaluator = evaluator ?? EvolutionStrategyDefaults.Evaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>(),
+            Selector = selector ?? EvolutionStrategyDefaults.Selector<TCandidate>(),
+            Evaluator = evaluator ?? EvolutionStrategyDefaults.Evaluator<TCandidate>(),
             Refiner = refiner,
             Interceptor = interceptor,
             PopulationSize = populationSize,
@@ -207,30 +225,28 @@ public static class EvolutionStrategy
     }
 
     /// <summary>
-    /// Creates an evolution strategy from the operators it requires, inferring the candidate, search space and problem
-    /// types from them. Every remaining member is optional and falls back to <see cref="EvolutionStrategyDefaults"/>.
+    /// Creates an evolution strategy from the operators it requires, inferring the candidate type from them. Every
+    /// remaining member is optional and falls back to <see cref="EvolutionStrategyDefaults"/>.
     /// </summary>
-    public static EvolutionStrategy<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
-        ICreator<TCandidate, TSearchSpace, TProblem> creator,
-        IMutator<TCandidate, TSearchSpace, TProblem> mutator,
-        ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
-        ISelector<TCandidate, TSearchSpace, TProblem>? selector = null,
-        IEvaluator<TCandidate, TSearchSpace, TProblem>? evaluator = null,
-        IRefiner<TCandidate, TSearchSpace, TProblem>? refiner = null,
-        IInterceptor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor = null,
+    public static EvolutionStrategy<TCandidate> Create<TCandidate>(
+        ICreator<TCandidate> creator,
+        IMutator<TCandidate> mutator,
+        ICrossover<TCandidate>? crossover = null,
+        ISelector<TCandidate>? selector = null,
+        IEvaluator<TCandidate>? evaluator = null,
+        IRefiner<TCandidate>? refiner = null,
+        IInterceptor<TCandidate>? interceptor = null,
         int populationSize = EvolutionStrategyDefaults.PopulationSize,
         int numberOfChildren = EvolutionStrategyDefaults.NumberOfChildren,
         EvolutionStrategyType strategy = EvolutionStrategyDefaults.Strategy,
-        int? maximumGenerations = null)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        int? maximumGenerations = EvolutionStrategyDefaults.MaximumGenerations) =>
         new()
         {
             Creator = creator,
             Mutator = mutator,
             Crossover = crossover,
-            Selector = selector ?? EvolutionStrategyDefaults.Selector<TCandidate, TSearchSpace, TProblem>(),
-            Evaluator = evaluator ?? EvolutionStrategyDefaults.Evaluator<TCandidate, TSearchSpace, TProblem>(),
+            Selector = selector ?? EvolutionStrategyDefaults.Selector<TCandidate>(),
+            Evaluator = evaluator ?? EvolutionStrategyDefaults.Evaluator<TCandidate>(),
             Refiner = refiner,
             Interceptor = interceptor,
             PopulationSize = populationSize,

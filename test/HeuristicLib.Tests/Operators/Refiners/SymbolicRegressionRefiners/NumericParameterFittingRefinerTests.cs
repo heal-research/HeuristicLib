@@ -153,8 +153,8 @@ public sealed class NumericParameterFittingRefinerTests
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
         var instance = new NumericParameterFittingRefiner { MaximumIterations = 100 }
-            .WithImprovementCheck()
-            .CreateExecutionInstance(new ExecutionInstanceRegistry());
+            .CheckedForImprovement()
+            .CreateExecutionInstance<ExpressionTreeSearchSpace, SymbolicRegressionProblem>(new ExecutionInstanceRegistry());
 
         var refined = instance.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
@@ -168,8 +168,8 @@ public sealed class NumericParameterFittingRefinerTests
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
         var instance = new NumericParameterFittingRefiner { MaximumIterations = 100 }
-            .WithImprovementCheck()
-            .CreateExecutionInstance(new ExecutionInstanceRegistry());
+            .CheckedForImprovement()
+            .CreateExecutionInstance<ExpressionTreeSearchSpace, SymbolicRegressionProblem>(new ExecutionInstanceRegistry());
 
         var refined = instance.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
@@ -223,7 +223,7 @@ public sealed class NumericParameterFittingRefinerTests
         var fittingData = new RegressionData(
             new DataFrame([Series<double>.FromOwnedArray("other", [.. Inputs])]),
             Series<double>.FromOwnedArray("y", [.. Targets]));
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
+        var algorithm = new GeneticAlgorithm<ExpressionTree>
         {
             PopulationSize = 4,
             Creator = new GrowTreeCreator(),

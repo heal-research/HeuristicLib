@@ -89,10 +89,6 @@ public static class ExpressionInterpreter
     /// <summary>
     /// Applies one operation, taking its behavior from the operation catalog.
     /// </summary>
-    /// <remarks>
-    /// The choice between an operand that is one value and one that is a column is made here, once, rather than
-    /// inside each operation. An operation supplies the shapes; this picks among them.
-    /// </remarks>
     private static void Apply(ref EvaluationStack stack, Operation operation, ref readonly OperationInfo info)
     {
         if (info.Arity == 1)

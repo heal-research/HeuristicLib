@@ -15,9 +15,9 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
     private readonly IEqualityComparer<TCandidate>? equality;
     private readonly bool saveSpace;
 
-    public GenealogyAnalysis(ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
-                             IMutator<TCandidate, TSearchSpace, TProblem>? mutator = null,
-                             IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor = null,
+    public GenealogyAnalysis(ICrossover<TCandidate>? crossover = null,
+                             IMutator<TCandidate>? mutator = null,
+                             IInterceptor<TCandidate>? interceptor = null,
                              IEqualityComparer<TCandidate>? equality = null,
                              bool saveSpace = false)
     {
@@ -28,25 +28,25 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
         Interceptor = interceptor;
     }
 
-    private ICrossover<TCandidate, TSearchSpace, TProblem>? Crossover { get; }
-    private IMutator<TCandidate, TSearchSpace, TProblem>? Mutator { get; }
-    private IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; }
+    private ICrossover<TCandidate>? Crossover { get; }
+    private IMutator<TCandidate>? Mutator { get; }
+    private IInterceptor<TCandidate>? Interceptor { get; }
 
     public override void RegisterObservations(ObservationPlan observations, GenealogyGraph<TCandidate> graph)
     {
         if (Crossover is not null)
         {
-            observations.Observe(Crossover, ((offspring, parents, _, _) => AfterCross(graph, offspring, parents)));
+            observations.Observe<TCandidate, TSearchSpace, TProblem>(Crossover, (offspring, parents, _, _) => AfterCross(graph, offspring, parents));
         }
 
         if (Mutator is not null)
         {
-            observations.Observe(Mutator, ((offspring, parent, _, _) => AfterMutate(graph, offspring, parent)));
+            observations.Observe<TCandidate, TSearchSpace, TProblem>(Mutator, (offspring, parent, _, _) => AfterMutate(graph, offspring, parent));
         }
 
         if (Interceptor is not null)
         {
-            observations.Observe(Interceptor,
+            observations.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(Interceptor,
                 ((currentState, _, _, _, problem) => AfterInterception(graph, currentState, problem)));
         }
     }
@@ -72,8 +72,8 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
     public void AfterInterception(GenealogyGraph<TCandidate> graph, TSearchState currentState, TProblem problem)
     {
         var ordered = currentState.Population
-                                  .OrderBy(keySelector: x => x.ObjectiveVector, problem.Objective.TotalOrderComparer)
-                                  .ToArray();
+            .OrderBy(keySelector: x => x.ObjectiveVector, problem.Objective.TotalOrderComparer)
+            .ToArray();
         graph.SetAsNewGeneration(ordered.Select(x => x.Candidate), saveSpace);
     }
 

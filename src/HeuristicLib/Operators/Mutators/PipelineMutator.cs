@@ -5,21 +5,20 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public sealed record PipelineMutator<TCandidate, TSearchSpace, TProblem>
-    : MultiMutator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record PipelineMutator<TCandidate> : MultiMutator<TCandidate>
 {
-    public PipelineMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> childMutators)
+    public PipelineMutator(IReadOnlyList<IMutator<TCandidate>> childMutators)
         : base(childMutators)
     {
     }
 
-    protected override MultiMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators) =>
-        new Instance(childMutators);
+    protected override IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem>> childMutators) =>
+        new Instance<TRunSearchSpace, TRunProblem>(childMutators);
 
-    private sealed class Instance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators)
+    private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators)
         : MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(childMutators)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -36,18 +35,14 @@ public sealed record PipelineMutator<TCandidate, TSearchSpace, TProblem>
 
 public static class PipelineMutator
 {
-    public static PipelineMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> childMutators)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(childMutators);
+    public static PipelineMutator<TCandidate> Create<TCandidate>(params IReadOnlyList<IMutator<TCandidate>> childMutators) => new(childMutators);
 }
 
 public static class PipelineMutatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate, TSearchSpace, TProblem> mutator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IMutator<TCandidate> mutator)
     {
-        public PipelineMutator<TCandidate, TSearchSpace, TProblem> Then(params IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> followingMutators) =>
+        public PipelineMutator<TCandidate> Then(params IReadOnlyList<IMutator<TCandidate>> followingMutators) =>
             PipelineMutator.Create([mutator, .. followingMutators]);
     }
 }

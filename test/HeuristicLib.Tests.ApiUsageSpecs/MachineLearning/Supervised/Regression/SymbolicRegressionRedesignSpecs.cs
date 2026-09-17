@@ -51,7 +51,7 @@ public class SymbolicRegressionRedesignSpecs
     {
         var data = CreateLinearRegressionData();
         var predictor = (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build()
-            .ToRegressor("prediction")
+            .ToRegressor()
             .ToBounded(double.NegativeInfinity, double.PositiveInfinity);
 
         var result = FeatureImportance.Permutation(
@@ -76,7 +76,7 @@ public class SymbolicRegressionRedesignSpecs
             .ShouldBeOfType<VariableExpressionNode>().VariableName.ShouldBe("x1");
         var data = DataFrame.FromMatrix(
           ["x0", "x1"],
-          new double[,]
+          new[,]
           {
               { 1.0, 3.0 },
               { 2.0, 4.0 },
@@ -138,7 +138,7 @@ public class SymbolicRegressionRedesignSpecs
         var data = new RegressionData(
             DataFrame.FromMatrix(
                 ["x0"],
-                new double[,]
+                new[,]
                 {
                     { 1.0 },
                     { 2.0 },
@@ -237,7 +237,7 @@ public class SymbolicRegressionRedesignSpecs
 
         solution.Candidate.ShouldNotBeSameAs(rawExpression);
         rawExpression.Root.ShouldBeOfType<BinaryExpressionNode>().Left
-          .ShouldBeOfType<NumericConstantExpressionNode>().Value.ShouldBe(1.0);
+            .ShouldBeOfType<NumericConstantExpressionNode>().Value.ShouldBe(1.0);
         evaluator.Counters.FunctionEvaluations.ShouldBeGreaterThan(0);
         */
 
@@ -260,7 +260,7 @@ public class SymbolicRegressionRedesignSpecs
              allowedSymbols: Symbols.MinimalOperations,
              allowedVariables: ["x0", "x1"]));
 
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
+        var algorithm = new GeneticAlgorithm<ExpressionTree>
         {
             PopulationSize = 24,
             Creator = new UnrestrictedSymbolicExpressionCreator(),
@@ -272,7 +272,7 @@ public class SymbolicRegressionRedesignSpecs
               tolerance: 1e-8),
             Selector = new TournamentSelector<ExpressionTree>(tournamentSize: 2),
             Elites = 1
-        }.WithMaxIterations(8);
+        }.TerminatedAfterIterations(8);
 
         var finalState = await algorithm.RunToCompletionAsync(
           problem,
@@ -284,7 +284,7 @@ public class SymbolicRegressionRedesignSpecs
         */
 
         data.Inputs.Columns.Select(series => series.Name).ShouldBe(["x0", "x1"]);
-        typeof(GeneticAlgorithm<,,>).ShouldNotBeNull();
+        typeof(GeneticAlgorithm<>).ShouldNotBeNull();
     }
 
     private sealed class PrefixExpressionFormatter : ExpressionFormatter
@@ -297,7 +297,7 @@ public class SymbolicRegressionRedesignSpecs
         new(
             DataFrame.FromMatrix(
                 ["x0", "x1"],
-                new double[,]
+                new[,]
                 {
                     { 1.0, 3.0 },
                     { 2.0, 4.0 },

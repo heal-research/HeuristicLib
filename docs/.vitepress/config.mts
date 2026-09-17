@@ -39,6 +39,7 @@ export default defineConfig({
                         { text: "Objectives and candidates", link: "/guide/fundamentals/objectives" },
                         { text: "Operators", link: "/guide/fundamentals/operators" },
                         { text: "Algorithms", link: "/guide/fundamentals/algorithms" },
+                        { text: "Invariants and validation", link: "/guide/fundamentals/invariants-and-validation" },
                     ],
                 },
                 {

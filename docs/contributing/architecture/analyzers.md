@@ -180,8 +180,8 @@ This makes analyzer retrieval:
 
 ```csharp
 var run = algorithm.CreateRun(problem, random)
-    .WithAnalyzer(analyzer1)
-    .WithAnalyzer(analyzer2);
+    .AttachAnalyzer(analyzer1)
+    .AttachAnalyzer(analyzer2);
 ```
 
 3. The first call to `Stream()`, `Complete()` or `CompleteAsync()` starts execution and freezes analyzer setup.
@@ -298,7 +298,7 @@ Preferred pattern:
 
 ```csharp
 var run = algorithm.CreateRun(problem, random)
-    .WithAnalyzer(
+    .AttachAnalyzer(
         Analyzer.BestQuality(algorithm.Evaluator),
         out var bestQuality);
 

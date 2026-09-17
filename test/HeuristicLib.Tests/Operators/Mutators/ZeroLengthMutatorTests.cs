@@ -22,7 +22,7 @@ public sealed class ZeroLengthMutatorTests
     public void RealVectorMutators_ReturnOriginalWithoutUsingRandom()
     {
         var candidate = RealVector.Create();
-        var searchSpace = new RealVectorSearchSpace(0, minimum: 0, maximum: 1);
+        var searchSpace = new BoundedRealVectorSearchSpace(0, minimum: 0, maximum: 1);
         var random = new ThrowingRandomNumberGenerator();
 
         GaussianMutator.Mutate(candidate, random, searchSpace, mutationRate: 1, mutationStrength: 1).ShouldBeSameAs(candidate);

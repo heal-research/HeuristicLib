@@ -25,6 +25,5 @@ public record RandomCrossover<TCandidate> : SingleCandidateCrossover<TCandidate>
 
 public static class RandomCrossover
 {
-    public static RandomCrossover<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, double bias = 0.5)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new() { Bias = bias };
+    public static RandomCrossover<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, double bias = 0.5) => new() { Bias = bias };
 }

@@ -77,14 +77,26 @@ public sealed class CreateExecutionInstanceCodeFixProvider : CodeFixProvider
         if (string.IsNullOrWhiteSpace(registryParamName))
             return document;
 
-        // Replace with: <registryParam>.Resolve(<expr>)
+        // Resolve names the instance type's arguments, and none of them is inferable from the operator alone, so the
+        // replacement has to spell them. The bypassed call already produces that instance type, which is where they
+        // come from — this serves the bound and the generic creation shapes alike, and the four argument roles too.
+        if (semanticModel.GetTypeInfo(invocation, cancellationToken).Type is not INamedTypeSymbol { IsGenericType: true } instanceType)
+            return document;
+
+        var typeArguments = SyntaxFactory.TypeArgumentList(
+          SyntaxFactory.SeparatedList(
+            instanceType.TypeArguments.Select(
+              typeArgument => SyntaxFactory.ParseTypeName(
+                typeArgument.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)))));
+
+        // Replace with: <registryParam>.Resolve<...>(<expr>)
         var instanceExpression = memberAccess.Expression.WithoutTrivia();
 
         var newInvocation = SyntaxFactory.InvocationExpression(
             SyntaxFactory.MemberAccessExpression(
               SyntaxKind.SimpleMemberAccessExpression,
               SyntaxFactory.IdentifierName(registryParamName!),
-              SyntaxFactory.IdentifierName("Resolve")))
+              SyntaxFactory.GenericName(SyntaxFactory.Identifier("Resolve")).WithTypeArgumentList(typeArguments)))
           .WithArgumentList(
             SyntaxFactory.ArgumentList(
               SyntaxFactory.SingletonSeparatedList(

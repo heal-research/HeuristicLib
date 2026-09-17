@@ -11,11 +11,26 @@ namespace HEAL.HeuristicLib.Operators.Refiners;
 /// Use <see cref="StatefulRefiner{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
 /// </remarks>
 public abstract record Refiner<TCandidate, TSearchSpace, TProblem>
-    : IRefiner<TCandidate, TSearchSpace, TProblem>
+    : IRefiner<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public abstract IRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+
+    public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
+
+    IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> IRefiner<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
+        {
+            throw ExecutionSignature.Mismatch(
+                this,
+                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)),
+                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
+        }
+
+        return (IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem>)CreateExecutionInstance(instanceRegistry);
+    }
 }
 
 public abstract record Refiner<TCandidate, TSearchSpace>

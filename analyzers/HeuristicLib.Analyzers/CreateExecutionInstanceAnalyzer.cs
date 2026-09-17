@@ -45,7 +45,7 @@ public sealed class CreateExecutionInstanceAnalyzer : DiagnosticAnalyzer
         if (containingMethodSymbol is null)
             return;
 
-        if (!string.Equals(containingMethodSymbol.Name, CreateExecutionInstanceMethodName, StringComparison.Ordinal))
+        if (!IsCreationMethod(containingMethodSymbol))
             return;
 
         // Only if this CreateExecutionInstance has an ExecutionInstanceRegistry parameter (name doesn't matter).
@@ -63,16 +63,38 @@ public sealed class CreateExecutionInstanceAnalyzer : DiagnosticAnalyzer
         if (!string.Equals(targetMethod.Name, CreateExecutionInstanceMethodName, StringComparison.Ordinal))
             return;
 
-        // Must be calling either CreateExecutionInstance() or CreateExecutionInstance(ExecutionInstanceRegistry)
-        if (!(targetMethod.Parameters.Length == 0
-            || (targetMethod.Parameters.Length == 1 && IsExecutionInstanceRegistryParameter(targetMethod.Parameters[0]))))
+        // Type parameters are not value parameters, so a generic creation method matches this shape too.
+        if (targetMethod.Parameters.Length != 1 || !IsExecutionInstanceRegistryParameter(targetMethod.Parameters[0]))
             return;
 
-        // Ignore self calls (including base/this)
-        if (SymbolEqualityComparer.Default.Equals(targetMethod.ContainingType, containingMethodSymbol.ContainingType))
+        // Reaching its own overload through this, base, or an implicit receiver is how a bridge works, not a bypass.
+        // The receiver is what says so: comparing containing types instead would both miss a base call, whose target
+        // is declared on the base, and wave through a child that happens to share its holder's type.
+        if (IsSelfReceiver(invocation.Expression))
             return;
 
         context.ReportDiagnostic(Diagnostic.Create(Rule, invocation.GetLocation()));
+    }
+
+    /// <remarks>
+    /// An explicit interface implementation carries the qualified name, so matching only <see cref="ISymbol.Name"/>
+    /// would skip every bridge written that way.
+    /// </remarks>
+    private static bool IsCreationMethod(IMethodSymbol method)
+    {
+        return string.Equals(method.Name, CreateExecutionInstanceMethodName, StringComparison.Ordinal)
+          || method.ExplicitInterfaceImplementations.Any(
+               static implemented => string.Equals(implemented.Name, CreateExecutionInstanceMethodName, StringComparison.Ordinal));
+    }
+
+    private static bool IsSelfReceiver(ExpressionSyntax invoked)
+    {
+        return invoked switch
+        {
+            MemberAccessExpressionSyntax memberAccess => memberAccess.Expression is ThisExpressionSyntax or BaseExpressionSyntax,
+            IdentifierNameSyntax or GenericNameSyntax => true,
+            _ => false
+        };
     }
 
     private static bool IsExecutionInstanceRegistryParameter(IParameterSymbol parameter)

@@ -12,12 +12,31 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 /// Use <see cref="StatefulInterceptor{TCandidate,TSearchSpace,TProblem,TSearchState,TState}"/> when only ordinary execution data is needed.
 /// </remarks>
 public abstract record Interceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : IInterceptor<TCandidate>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public abstract IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+
+    /// <summary>An interceptor returns the search state, so that one must match exactly rather than convert.</summary>
+    public bool Fits(ExecutionSignature execution) =>
+        execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
+        && execution.Problem.IsAssignableTo(typeof(TProblem))
+        && execution.SearchState == typeof(TSearchState);
+
+    IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> IInterceptor<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        if (!Fits(ExecutionSignature.For<TRunSearchSpace, TRunProblem, TRunSearchState>()))
+        {
+            throw ExecutionSignature.Mismatch(
+                this,
+                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)),
+                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem), typeof(TRunSearchState)));
+        }
+
+        return (IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>)CreateExecutionInstance(instanceRegistry);
+    }
 }
 
 public abstract record Interceptor<TCandidate, TSearchSpace, TSearchState>

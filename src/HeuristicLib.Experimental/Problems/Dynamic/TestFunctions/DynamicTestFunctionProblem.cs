@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorSearchSpace>
+public class DynamicTestFunctionProblem : DynamicProblem<DynamicTestFunctionProblem, RealVector, BoundedRealVectorSearchSpace>
 {
     private readonly TestFunctionProblem problem;
 
@@ -52,9 +52,8 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
         var rot = RandomRotationMatrix(CurrentState.Rotation, EnvironmentRandom,
             EnvironmentRandom.NextNormal(sigma: DeviationSigma.RotationStrength));
         var inScale = CurrentState.InputScaling
-                                  .Select(x =>
-                                      x + EnvironmentRandom.NextNormal(sigma: DeviationSigma.InputScalingStrength))
-                                  .ToArray();
+            .Select(x => x + EnvironmentRandom.NextNormal(sigma: DeviationSigma.InputScalingStrength))
+            .ToArray();
         var outScale = CurrentState.OutputScaling +
                        EnvironmentRandom.NextNormal(sigma: DeviationSigma.OutputScalingStrength);
         CurrentState = new State(shift, rot, inScale, outScale);

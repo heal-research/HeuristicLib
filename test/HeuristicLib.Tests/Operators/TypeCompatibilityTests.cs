@@ -8,10 +8,10 @@ public class TypeCompatibilityTests
     [Fact]
     public void InvalidCodeCompilation_ReturnsErrorDiagnostic()
     {
-        var hlAssembly = typeof(ICreator<,,>).Assembly;
+        var hlAssembly = typeof(ICreator<>).Assembly;
         var compilation = CSharpCompilation.Create("asd")
-          .AddReferences(MetadataReference.CreateFromFile(hlAssembly.Location))
-          .AddSyntaxTrees(CSharpSyntaxTree.ParseText(@"
+            .AddReferences(MetadataReference.CreateFromFile(hlAssembly.Location))
+            .AddSyntaxTrees(CSharpSyntaxTree.ParseText(@"
         using HEAL.HeuristicLib.Operators;
 
         public class

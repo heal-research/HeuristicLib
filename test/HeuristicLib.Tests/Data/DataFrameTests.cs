@@ -71,7 +71,7 @@ public sealed class DataFrameTests
     {
         var data = DataFrame.FromMatrix(
             ["x0", "x1"],
-            new double[,]
+            new[,]
             {
                 { 1.0, 3.0 },
                 { 2.0, 4.0 }
@@ -85,7 +85,7 @@ public sealed class DataFrameTests
     public void FromMatrix_RejectsWrongColumnNameCount()
     {
         Should.Throw<ArgumentException>(() =>
-            DataFrame.FromMatrix(["x0"], new double[,] { { 1.0, 2.0 } }));
+            DataFrame.FromMatrix(["x0"], new[,] { { 1.0, 2.0 } }));
     }
 
     [Fact]

@@ -12,11 +12,26 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 /// Use <see cref="StatefulReplacer{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
 /// </remarks>
 public abstract record Replacer<TCandidate, TSearchSpace, TProblem>
-    : IReplacer<TCandidate, TSearchSpace, TProblem>
+    : IReplacer<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public abstract IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+
+    public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
+
+    IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> IReplacer<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
+        {
+            throw ExecutionSignature.Mismatch(
+                this,
+                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)),
+                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
+        }
+
+        return (IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem>)CreateExecutionInstance(instanceRegistry);
+    }
 }
 
 public abstract record Replacer<TCandidate, TSearchSpace>

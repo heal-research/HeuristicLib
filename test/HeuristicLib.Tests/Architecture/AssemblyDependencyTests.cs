@@ -9,8 +9,8 @@ public sealed class AssemblyDependencyTests
     {
         var assemblies = new[]
         {
-            typeof(Algorithm<,,,,>).Assembly,
-            typeof(IAlgorithm<,,,>).Assembly
+            typeof(Algorithm<, , , , >).Assembly,
+            typeof(IAlgorithm<>).Assembly
         };
 
         foreach (var assembly in assemblies)
@@ -35,10 +35,15 @@ public sealed class AssemblyDependencyTests
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Random", "RandomEngines"), "HEAL.HeuristicLib.Random", mismatches);
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Analysis", "Quality"), "HEAL.HeuristicLib.Analysis", mismatches);
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Encodings", "SymbolicExpressions"), "HEAL.HeuristicLib.Encodings.SymbolicExpressions", mismatches);
-        CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts", "Algorithms", "Defaults"), "HEAL.HeuristicLib.Algorithms", mismatches);
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts", "Algorithms", "SearchStates"), "HEAL.HeuristicLib.Algorithms", mismatches);
 
-        typeof(ICrossover<,,>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
+        // Operator defaults sit with what declares them rather than with the factories that read them, so a search
+        // space or problem states its defaults without importing the algorithms namespace to describe itself.
+        CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts", "SearchSpaces"), "HEAL.HeuristicLib.SearchSpaces", mismatches);
+        CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts", "Problems"), "HEAL.HeuristicLib.Problems", mismatches);
+
+        typeof(ICrossover<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
+        typeof(IRecommends<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
         typeof(Parents<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
 
         var encodingsRoot = Path.Combine(repositoryRoot, "src", "HeuristicLib", "Encodings");
@@ -69,12 +74,12 @@ public sealed class AssemblyDependencyTests
     [Fact]
     public void MainAssembly_OwnsStableBoundaryTypesOnly()
     {
-        var main = typeof(GeneticAlgorithm<,,>).Assembly;
+        var main = typeof(GeneticAlgorithm<>).Assembly;
 
         main.GetType("HEAL.HeuristicLib.Problems.MachineLearning.SymbolicRegressionProblem").ShouldNotBeNull();
-        main.GetType("HEAL.HeuristicLib.Algorithms.NSGA2`3").ShouldNotBeNull();
+        main.GetType("HEAL.HeuristicLib.Algorithms.NSGA2`1").ShouldNotBeNull();
         main.GetType("HEAL.HeuristicLib.Problems.QuadraticAssignment.QuadraticAssignmentProblem").ShouldNotBeNull();
-        main.GetType("HEAL.HeuristicLib.Algorithms.AlpsGeneticAlgorithm`3").ShouldBeNull();
+        main.GetType("HEAL.HeuristicLib.Algorithms.AlpsGeneticAlgorithm`1").ShouldBeNull();
         main.GetType("HEAL.HeuristicLib.Analysis.PopulationSimilarityAnalyzer`4").ShouldBeNull();
         main.GetType("HEAL.HeuristicLib.SearchSpaces.ISubencodingComparable`1").ShouldBeNull();
         main.GetType("HEAL.HeuristicLib.Algorithms.ISolutionLayout`1").ShouldBeNull();
@@ -92,7 +97,8 @@ public sealed class AssemblyDependencyTests
             Path.Combine(repositoryRoot, "test", "HeuristicLib.Tests.ApiUsageSpecs"),
             Path.Combine(repositoryRoot, "docs", "guide"),
             Path.Combine(repositoryRoot, "docs", "examples"),
-            Path.Combine(repositoryRoot, "examples")
+            Path.Combine(repositoryRoot, "samples"),
+            Path.Combine(repositoryRoot, "python-samples")
         };
 
         var files = roots.SelectMany(root => Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
@@ -135,7 +141,7 @@ public sealed class AssemblyDependencyTests
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "HEAL.HeuristicLib.sln")))
+            if (File.Exists(Path.Combine(directory.FullName, "HEAL.HeuristicLib.slnx")))
                 return directory.FullName;
         }
 

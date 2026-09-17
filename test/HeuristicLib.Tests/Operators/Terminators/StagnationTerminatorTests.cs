@@ -9,7 +9,7 @@ public class StagnationTerminatorTests
     public void TerminatesWhenConsecutiveNonImprovingStatesReachThreshold()
     {
         var problem = CreateProblem();
-        var instance = new ExecutionInstanceRegistry().Resolve(StagnationTerminator.For(problem, stagnationThreshold: 2));
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(StagnationTerminator.For(problem, stagnationThreshold: 2));
 
         instance.IsTerminalState(CreateState(3), problem.SearchSpace, problem).ShouldBeFalse();
         instance.IsTerminalState(CreateState(3), problem.SearchSpace, problem).ShouldBeFalse();
@@ -20,7 +20,7 @@ public class StagnationTerminatorTests
     public void StrictImprovementResetsConsecutiveNonImprovingStateCount()
     {
         var problem = CreateProblem();
-        var instance = new ExecutionInstanceRegistry().Resolve(StagnationTerminator.For(problem, stagnationThreshold: 2));
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(StagnationTerminator.For(problem, stagnationThreshold: 2));
 
         instance.IsTerminalState(CreateState(3), problem.SearchSpace, problem).ShouldBeFalse();
         instance.IsTerminalState(CreateState(3), problem.SearchSpace, problem).ShouldBeFalse();
@@ -35,7 +35,7 @@ public class StagnationTerminatorTests
     public void NonPositiveThresholdTerminatesOnFirstCheckedProducedState(int threshold)
     {
         var problem = CreateProblem();
-        var instance = new ExecutionInstanceRegistry().Resolve(StagnationTerminator.For(problem, threshold));
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(StagnationTerminator.For(problem, threshold));
 
         instance.IsTerminalState(CreateState(3), problem.SearchSpace, problem).ShouldBeTrue();
     }

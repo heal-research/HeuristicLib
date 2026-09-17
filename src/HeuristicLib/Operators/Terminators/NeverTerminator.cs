@@ -12,8 +12,7 @@ public sealed record NeverTerminator<TCandidate>
 
 public static class NeverTerminator
 {
-    public static NeverTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new();
+    public static NeverTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => new();
 
 #pragma warning disable S3400
     public static bool IsTerminalState() => false;

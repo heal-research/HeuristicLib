@@ -15,13 +15,13 @@ public abstract class AlgorithmRun
 
     public bool ExecutionStarted { get; private set; }
 
-    protected void AttachAnalyzer(IAnalyzer analyzer)
+    protected void RegisterAnalyzer(IAnalyzer analyzer)
     {
         EnsureNotStarted();
         analyzers.Add(analyzer);
     }
 
-    protected void AttachAnalyzers(IReadOnlyList<IAnalyzer> analyzers)
+    protected void RegisterAnalyzers(IReadOnlyList<IAnalyzer> analyzers)
     {
         EnsureNotStarted();
         this.analyzers.AddRange(analyzers);
@@ -116,42 +116,42 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; }
+    public IAlgorithm<TCandidate, TSearchState> Algorithm { get; }
 
     public TProblem Problem { get; }
 
     public IRandomNumberGenerator Random { get; }
 
-    public AlgorithmRun(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random)
+    public AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random)
     {
         Algorithm = algorithm;
         Problem = problem;
         Random = random;
     }
 
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> WithAnalyzer(IAnalyzer analyzer)
+    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AttachAnalyzer(IAnalyzer analyzer)
     {
-        AttachAnalyzer(analyzer);
+        RegisterAnalyzer(analyzer);
         return this;
     }
 
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> WithAnalyzer<TAnalyzer>(TAnalyzer analyzer, out TAnalyzer attachedAnalyzer)
+    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AttachAnalyzer<TAnalyzer>(TAnalyzer analyzer, out TAnalyzer attachedAnalyzer)
         where TAnalyzer : IAnalyzer
     {
         attachedAnalyzer = analyzer;
-        AttachAnalyzer(analyzer);
+        RegisterAnalyzer(analyzer);
         return this;
     }
 
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> WithAnalyzers(params IReadOnlyList<IAnalyzer> analyzers)
+    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AttachAnalyzers(params IReadOnlyList<IAnalyzer> analyzers)
     {
-        AttachAnalyzers(analyzers);
+        RegisterAnalyzers(analyzers);
         return this;
     }
 
     public ExecutionStream<TSearchState> Stream(TSearchState? initialState = null, CancellationToken cancellationToken = default)
     {
-        var algorithmInstance = StartExecution().Resolve(Algorithm);
+        var algorithmInstance = StartExecution().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
         return new(StreamStates(algorithmInstance, initialState, cancellationToken), cancellationToken);
     }
 

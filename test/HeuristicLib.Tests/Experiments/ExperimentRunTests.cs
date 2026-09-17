@@ -81,7 +81,7 @@ public class ExperimentRunTests
         Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: TestContext.Current.CancellationToken));
     }
 
-    private static RepeatedExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm> CreateExperiment() =>
+    private static RepeatedExperiment<int, AdditiveStepAlgorithm, PopulationState<int>> CreateExperiment() =>
         new AdditiveStepAlgorithm(1).Repeat(2);
 
     private static ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm, int> CreateRun() =>

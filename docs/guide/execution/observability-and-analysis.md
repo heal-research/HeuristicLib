@@ -39,7 +39,7 @@ Each entry is captured from a state the algorithm yields, after any interceptor 
 
 ```csharp
 var innerQuality = Analyzer.BestMedianWorst(innerAlgorithm);
-var run = cycleAlgorithm.CreateRun(problem, random).WithAnalyzer(innerQuality);
+var run = cycleAlgorithm.CreateRun(problem, random).AttachAnalyzer(innerQuality);
 ```
 
 An algorithm is an anchor by reference. `algorithm with { PopulationSize = 200 }` is a different object and therefore a different anchor, so an analyzer created for the original silently observes nothing when the copy is run. `TrackBestMedianWorst` resolves the anchor at attach time and cannot get this wrong.
@@ -58,7 +58,7 @@ var analysis = Analyzer.BestMedianWorst(interceptor);
 
 var run = observedAlgorithm
     .CreateRun(problem, RandomNumberGenerator.Create(seed: 777))
-    .WithAnalyzer(analysis);
+    .AttachAnalyzer(analysis);
 ```
 
 An interceptor anchor observes the state at that point in the iteration, which is what you want when several interceptors run and the distinction matters. For a plain quality curve, prefer the algorithm anchor: it needs no placeholder operator in the configuration.

@@ -13,20 +13,13 @@ namespace HEAL.HeuristicLib.Operators;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The refined candidates are transient. They exist only for the duration of one evaluation, are discarded when it
-/// returns, and are never written back into the population, the search state or any algorithm result. The caller keeps
-/// the candidates it supplied and pairs them with the returned objective vectors by position, exactly as with every
-/// other evaluator.
+/// The refined candidates are transient: they are discarded when the evaluation returns and are never written back
+/// into the population, the search state or any algorithm result. This is Baldwinian refinement, as opposed to
+/// configuring the refiner on the algorithm, which continues the search with the refined candidate.
 /// </para>
 /// <para>
-/// This is Baldwinian refinement: the refinement influences fitness without becoming part of the candidate. Configuring
-/// the same refiner as an algorithm's refiner instead makes it Lamarckian, because the algorithm then continues with
-/// the refined candidate. The two are different searches and both are expressed by where the refiner is configured.
-/// </para>
-/// <para>
-/// Refiners are generally free to return a differently sized population, but this evaluator is not: it owes its caller
-/// one objective vector per supplied candidate. A refiner that changes the population size or order therefore throws
-/// here rather than producing a miscounted result.
+/// A refiner that changes the population size or order throws here, because this evaluator owes its caller one
+/// objective vector per supplied candidate.
 /// </para>
 /// <para>
 /// The evaluations issued here belong to <see cref="Evaluator"/>, so counting, limiting and caching attach in the usual
@@ -34,12 +27,10 @@ namespace HEAL.HeuristicLib.Operators;
 /// and therefore to one counter and one cache.
 /// </para>
 /// </remarks>
-public sealed record RefinementEvaluator<TCandidate, TSearchSpace, TProblem>
-    : Evaluator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record RefinementEvaluator<TCandidate>
+    : IEvaluator<TCandidate>
 {
-    public RefinementEvaluator(IRefiner<TCandidate, TSearchSpace, TProblem> refiner)
+    public RefinementEvaluator(IRefiner<TCandidate> refiner)
     {
         Refiner = refiner;
     }
@@ -47,24 +38,30 @@ public sealed record RefinementEvaluator<TCandidate, TSearchSpace, TProblem>
     /// <summary>
     /// Gets the refiner that produces the transient candidates being measured.
     /// </summary>
-    public IRefiner<TCandidate, TSearchSpace, TProblem> Refiner { get; init; }
+    public IRefiner<TCandidate> Refiner { get; init; }
 
     /// <summary>
     /// Gets the evaluator that measures the refined candidates.
     /// </summary>
     /// <remarks>
-    /// The default is an ordinary <see cref="ProblemEvaluator{TCandidate,TSearchSpace,TProblem}"/>. Because counting,
-    /// limiting and caching are wrapper behavior rather than properties of the evaluator role, that default is
-    /// unwrapped and therefore invisible to budgets and analysis. Supply the same evaluator instance the algorithm uses
-    /// to have these evaluations counted, limited or served from one shared cache.
+    /// The default is an unwrapped <see cref="ProblemEvaluator{TCandidate,TSearchSpace,TProblem}"/> and is therefore
+    /// invisible to budgets and analysis. Supply the same evaluator instance the algorithm uses to have these
+    /// evaluations counted, limited or served from one shared cache.
     /// </remarks>
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+    public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
-    public override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Refiner));
+    public IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    {
+        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        return new Instance<TRunSearchSpace, TRunProblem>(resolver.Resolve(Evaluator), resolver.Resolve(Refiner));
+    }
 
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IRefinerInstance<TCandidate, TSearchSpace, TProblem> refiner)
+    private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IRefinerInstance<TCandidate, TSearchSpace, TProblem> refiner)
         : EvaluatorInstance<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -84,24 +81,18 @@ public sealed record RefinementEvaluator<TCandidate, TSearchSpace, TProblem>
 
 public static class RefinementEvaluator
 {
-    public static RefinementEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner) =>
         new(refiner);
 
-    public static RefinementEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner, IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IEvaluator<TCandidate> evaluator) =>
         new(refiner) { Evaluator = evaluator };
 }
 
 public static class RefinementEvaluatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
     {
-        public RefinementEvaluator<TCandidate, TSearchSpace, TProblem> WithRefinement(IRefiner<TCandidate, TSearchSpace, TProblem> refiner) =>
-            new RefinementEvaluator<TCandidate, TSearchSpace, TProblem>(refiner) { Evaluator = evaluator };
+        public RefinementEvaluator<TCandidate> AppliedAfterRefinement(IRefiner<TCandidate> refiner) =>
+            new RefinementEvaluator<TCandidate>(refiner) { Evaluator = evaluator };
     }
 }

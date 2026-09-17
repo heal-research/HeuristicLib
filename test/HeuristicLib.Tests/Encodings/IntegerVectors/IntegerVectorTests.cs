@@ -336,7 +336,7 @@ public sealed class IntegerVectorTests
     public void BroadcastLength_VectorAndEnumerable_ReturnsCommonLengthOrThrows()
     {
         IntegerVector scalar = 1;
-        var compatible = new[] { IntegerVector.Create(1, 2, 3), (IntegerVector)2 };
+        var compatible = new[] { IntegerVector.Create(1, 2, 3), 2 };
         var incompatible = new[] { IntegerVector.Create(1, 2), IntegerVector.Create(3, 4, 5) };
 
         Vector.BroadcastLength(scalar, compatible).ShouldBe(3);

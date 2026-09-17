@@ -77,11 +77,13 @@ Best tour length: 7797
 1000: best     7797  median     7797  worst    10181
 ```
 
-## Defaults and the explicit crossover
+## Recommendations and the explicit crossover
 
 A valid tour contains each city once. Permutation creators and variation operators preserve that invariant. A real or integer vector operator could introduce duplicate cities and omit others.
 
-`GeneticAlgorithm.For(problem, ...)` gets random creation and inversion mutation from `PermutationSearchSpace`. `TravelingSalesmanProblem` normally suggests order crossover. This example overrides only that role with edge recombination so the remaining defaults stay visible.
+`GeneticAlgorithm.For(problem, ...)` gets recommended random creation and inversion mutation from `PermutationSearchSpace`. `TravelingSalesmanProblem` recommends order crossover. This example overrides only that role with edge recombination so the remaining recommendations stay visible.
+
+See [Use operator recommendations](/guide/fundamentals/algorithms#use-operator-recommendations) for the lookup order and the complete list of current built in recommendations.
 
 Edge recombination tries to retain city adjacencies from both parents. Inversion mutation reverses a segment of the route and often produces a meaningful local change. Neither is a tuned choice for every instance. Keep the operators explicit when comparing search policies.
 

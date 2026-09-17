@@ -1,0 +1,34 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/analyzers/">
+    <Project Path="analyzers/HeuristicLib.Analyzers.CodeFixes/HeuristicLib.Analyzers.CodeFixes.csproj" />
+    <Project Path="analyzers/HeuristicLib.Analyzers/HeuristicLib.Analyzers.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/TravelingSalesman/TravelingSalesman.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/HeuristicLib.Contracts/HeuristicLib.Contracts.csproj" />
+    <Project Path="src/HeuristicLib.Experimental/HeuristicLib.Experimental.csproj" />
+    <Project Path="src/HeuristicLib.PythonInterop/HeuristicLib.PythonInterop.csproj" />
+    <Project Path="src/HeuristicLib/HeuristicLib.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj" />
+    <Project Path="test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Experimental.csproj" />
+    <Project Path="test/HeuristicLib.Tests.Scenarios/HeuristicLib.Tests.Scenarios.csproj" />
+    <Project Path="test/HeuristicLib.Tests/HeuristicLib.Tests.csproj" />
+  </Folder>
+  <Folder Name="/_ Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="README.md" />
+    <File Path="version.json" />
+  </Folder>
+</Solution>

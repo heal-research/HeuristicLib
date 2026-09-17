@@ -11,12 +11,30 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 /// Use <see cref="StatefulTerminator{TCandidate,TSearchSpace,TProblem,TSearchState,TState}"/> when only ordinary execution data is needed.
 /// </remarks>
 public abstract record Terminator<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : ITerminator<TCandidate>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public abstract ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+
+    public bool Fits(ExecutionSignature execution) =>
+        execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
+        && execution.Problem.IsAssignableTo(typeof(TProblem))
+        && execution.SearchState.IsAssignableTo(typeof(TSearchState));
+
+    ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> ITerminator<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        if (!Fits(ExecutionSignature.For<TRunSearchSpace, TRunProblem, TRunSearchState>()))
+        {
+            throw ExecutionSignature.Mismatch(
+                this,
+                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)),
+                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem), typeof(TRunSearchState)));
+        }
+
+        return (ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>)CreateExecutionInstance(instanceRegistry);
+    }
 }
 
 public abstract record Terminator<TCandidate, TSearchSpace, TSearchState>

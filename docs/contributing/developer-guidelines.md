@@ -67,6 +67,43 @@ Every pattern needs a concrete responsibility. This includes streaming, explicit
 
 Builders, factories, extensions and helper bases may support the conceptual core. They must not define it.
 
+### § 3.3 Treat consumer-provided types as first class
+
+An operator, operator role, algorithm, encoding, search space, problem or invariant declared in a consumer's
+assembly participates on the same terms as one shipped in the package. Shipping first is not a privilege, and there
+is no tier of built-in types that mechanisms serve better.
+
+The failure mode is a mechanism that **enumerates** the built-in cases: a base class implementing the built-in roles'
+interfaces, a switch over the known encodings, a registry seeded with the package's own types. Each works for what it
+lists and silently demotes everything else into a second tier a consumer cannot join without editing the library.
+Reach a type through what that type declares about itself, not through a list of types the library happens to know.
+
+The following settled decisions rest on this rule.
+
+- Invariant checking keys on whether a contract is declared, never on which role an operator fills. A role added by
+  a consumer participates unchanged, and a role whose output is not a candidate simply never declares one.
+- Operator recommendation resolution keys on `IRecommends<TOperator>`, never on a list of known roles. A consumer
+  defined role participates by using its own role contract as `TOperator`.
+- `TryCreateRecommendedOperator` returns `true` with a fresh, nonnull operator when the source recommends one in its
+  current state. It returns `false` with `null` to decline, which lets resolution continue to the next source.
+- `Problem<TSelf, TCandidate, TSearchSpace>` does not implement recommendation interfaces for built-in roles. A base
+  class naming them would supply those roles permanently while a consumer's role still required separate treatment.
+  Problems and search spaces implement only the recommendations they make. See
+  [Algorithms](/guide/fundamentals/algorithms#use-operator-recommendations).
+
+### § 3.4 Separate membership, invariants and recommendations
+
+A search space describes which candidates belong to it and which invariants all its members satisfy. Split search
+space types when membership or data exposed to operators differ. Do not split a search space only to make different
+operators appear suitable for different problems over the same candidates.
+
+Use operator contracts to state whether an operator accepts the search space's members and keeps its outputs inside
+the space. Use problem and search space recommendations to suggest suitable starting operators. A recommendation is
+not a compatibility restriction and an operator omitted from the recommendations remains a valid experiment.
+
+`IsSubspaceOf` describes candidate membership only. Do not use it as a substitute for operator contracts or
+recommendations.
+
 ## § 4 Configuration and execution ownership
 
 ### § 4.1 Separate reusable configurations from execution instances
@@ -307,6 +344,10 @@ Make intended use easy and misuse difficult.
 
 Put the ordinary contract and expected range in `<summary>`. Put unusual values and edge cases in `<remarks>`.
 
+An invariant contract states something narrower, and the two must not be conflated. The range in a contract is the range in which a **guarantee holds**, not the range that is a good choice. A blend crossover with an alpha above one is a legitimate setting that widens the search; what it stops doing is keeping candidates inside the bounds the search space states. A mutation rate of `0.9` is unusual advice and breaks no invariant, so it stays prose and never reaches a contract. Keep judgement about good values in `<summary>`, and keep guarantee ranges in the contract member, so a contract does not accumulate opinions.
+
+Where a parameter carries both, its documentation points at the member that defines the contract instead of restating the threshold. The condition is then written once, in the executable place, and prose cannot drift away from it.
+
 ### § 8.3 Use variance only when substitution is meaningful
 
 - `TCandidate` is invariant throughout the public API. It identifies the exact shared representation.
@@ -318,6 +359,15 @@ Put the ordinary contract and expected range in `<summary>`. Put unusual values 
 ### § 8.4 Reduce role arity through the authoring hierarchy
 
 Reduced arities let authors omit operation inputs they do not use. Keep each role family consistent.
+
+The ladder is also where the search space and problem type arguments legitimately live. They have left the role
+contracts — every role is `I<Role><TCandidate>` — but an authoring base that reads a search space or a problem still
+names it, deliberately, for two reasons. The base performs the type check, bridging the authored member into the
+candidate-only contract and reporting a mismatch when a run supplies types the operator was not written for, so the
+pair costs the author two type arguments and costs every consumer none. And for a stateless operator the
+configuration **is** the executable part: it has no separate execution instance to receive those values later, so it
+needs them in scope where it is written. Erasing them from the authoring layer would force stateless operators to
+grow an execution instance purely to carry types, which is the boilerplate this ladder exists to remove.
 
 - A reduced configuration base derives from the next fuller configuration base.
 - A reduced instance base implements the full interface directly and forwards explicitly to one narrower abstract operation. It does not derive from the fuller instance base.
@@ -334,7 +384,7 @@ Reduce type arguments consumed by the operator's own code. Do not reduce type ar
 | `StatelessMutator`, `StatefulMutator`, `SingleCandidateMutator` |       Yes       | Type arguments describe operation data |
 | `WrappingMutator`, `MultiMutator`                               |       No        | Type arguments describe child slots    |
 
-Keep topology type arguments open so their children determine them. Role contracts remain full arity. Reduced arities are authoring conveniences, not separate contracts.
+Keep topology type arguments open so their children determine them. Reduced arities are authoring conveniences, not separate contracts: a role contract names only the candidate, and every rung of the ladder reaches it through the bridge described in § 8.4.
 
 ### § 8.6 Provide type inference helpers when values supply the types
 
@@ -342,12 +392,14 @@ Do not make callers spell generic arguments available values can determine.
 
 - Put public constructors on the configuration type.
 - Put `Create(...)`, `For(problem, ...)` and `For(algorithm, ...)` on a static companion named after the type.
-- Use `Create(...)` when the caller supplies the required collaborators and they determine the type arguments. Use `For(anchor, ...)` when an anchor value supplies both the type arguments and the defaults, so every remaining parameter can be optional.
+- Use `Create(...)` when the caller supplies the required collaborators and they determine the type arguments. Use `For(anchor, ...)` when an anchor value supplies the type arguments and may recommend omitted collaborators.
+- A recommendation based `For(...)` resolves explicit values first, then the documented recommendation sources in order. It throws `InvalidOperationException` during construction and names every required parameter left unresolved.
+- Get each required operator through `OperatorRecommendationResolution`, generic in that operator's role contract. The algorithm lists its own required parameters. Shared recommendation machinery must not group or enumerate operator roles.
 - A `Create(...)` or `For(...)` must be able to return a complete configuration. Accept every configurable member as a parameter, required in `Create` and optional in `For`, so a caller is never left finishing a partly configured result. `with` changes a configuration that already exists; it is not the way to complete one the factory could not build.
 - Anchor a `For(...)` that also takes optional operators on an invariant parameter type. A covariant anchor such as `IProblem<TCandidate, out TSearchSpace>` contributes only a lower bound, so an operator declared at a reduced arity widens the inferred search space and fails against constraints the caller never named. An invariant anchor contributes an exact bound, fixing the type from the anchor alone.
 - Treat a `For(...)` argument as a type witness unless the contract says it is retained.
 - Add a fluent extension only when its receiver becomes part of the configuration.
-- Put fluent methods in `<Type>Extensions`. A concern specific helper such as `WithRate` may use its own companion.
+- Put fluent methods in `<Type>Extensions`. A concern specific helper such as `AppliedAtRate` may use its own companion.
 - Keep direct construction when no value can supply the types.
 - Prove intended inference with API usage specs. Use architecture tests or analyzers only where each fits under § 10.1.
 
@@ -384,6 +436,54 @@ Build random APIs from one source of base random values.
 6. Type factory aliases forward to the RNG helpers.
 
 Use concept first scalar names such as `NextDouble` and target first output names such as `NextRealVectorUniform`. Do not add a competing distribution layer for the same sampling behavior.
+
+### § 8.11 Let an API surface scale per role, never over hidden axes
+
+Duplicating a member once per operator role is acceptable. Adding a role is a deliberate act, its author writes the
+role's members once from an obvious template, and no existing role is disturbed. The resolve family
+(`Resolve`, `ResolveOptional`, `TryResolve`) and the instrumentation wrappers are both this shape, and both stay.
+
+What is not acceptable is a surface that multiplies over an axis the role's author does not know exists, so that
+adding one role silently obliges members for every value of some other dimension. Before adding a per-role member,
+name the axes it varies over and check that a role author can enumerate all of them.
+
+Two receivers for the same operation are not a second axis when one is defined in terms of the other.
+`registry.Resolve<TCandidate, TSearchSpace, TProblem>(config)` is canonical — the registry is generic-less and cannot
+infer the triple. `resolver.Resolve(config)` binds a registry that already knows the triple, infers everything and
+relays to the canonical form. One mechanism, two spellings; keep both.
+
+Whatever the declaration count, the call site stays minimal: `resolver.Resolve(config)` or
+`registry.TryResolve(config, out var instance)`, with nothing the caller is forced to supply to make inference work.
+An overload that exists so a type argument can be inferred is justified; one that exists only so a call site reads
+differently needs a separate argument.
+
+### § 8.12 Name a method for what it returns, not for what it looks like
+
+`With*` is the record convention: same type, changed slot, nothing mutated. Reserve it for exactly that.
+
+A method that returns a **different type wrapping the receiver** is named as a past participle describing the result,
+because an adjective cannot be misread as a command to modify the receiver: `algorithm.TerminatedBy(terminator)`,
+`evaluator.Cached(keySelector)`, `refiner.CheckedForImprovement()`, `mutator.AppliedAtRate(0.3)`,
+`algorithm.LimitedToEvaluatedCandidates(evaluator, 100_000)`. `ga.TerminatedBy(t)` is not a genetic algorithm any
+more, and the name should not suggest otherwise.
+
+A method that **mutates the receiver** is named with an imperative verb and never with `With*`, even when it returns
+the receiver for chaining: `run.AttachAnalyzer(analyzer)`. A fluent chain is not evidence that a value is being built,
+so the name has to carry that distinction on its own.
+
+This was applied across the library after `With*` was found covering three different semantics at once, one of which
+genuinely modified its receiver while reading exactly like the other two.
+
+### § 8.13 Name a contract member for the question it answers
+
+Prefer a member name that reads as the predicate at the call site: `invariant.Holds(candidate)`,
+`exactCount.Implies(minimumCount)`, `contract.Ensures(invariant)`. Avoid names that state a mechanism
+(`IsSatisfiedBy`) or a term of art the reader must look up (`Entails`) where a plain word carries the same meaning.
+
+Name an interface for what it is about, not only for its role in a system: `ICandidateInvariant<TCandidate>` says
+which thing the invariant constrains, and `IOperatorContract<TCandidate>` says whose contract it is. Verify the verb
+covers every implementer — `Ensures` survived a rename to `Preserves` precisely because a creator establishes an
+invariant rather than preserving one.
 
 ## § 9 Documentation and source organization
 
@@ -434,6 +534,23 @@ Do not move empty implementations, inaccessible results or known unbounded defec
 Promote a feature from Experimental only when its responsibility belongs in the standard toolkit, its central API has no expected replacement, its ownership rules match this guide, its advertised behavior is complete, its normal setup has an API usage spec and its important failure behavior has unit tests. Promotion must not force unrelated experimental concepts or unsuitable dependencies into the main package.
 
 The main and Contracts packages must never reference Experimental. Experimental may reference the main package.
+
+### § 9.7 Keep XML documentation verifiable by the build
+
+`Directory.Build.props` sets `GenerateDocumentationFile`, so the compiler parses every `///` block and resolves every
+`cref`. The generated XML file ships in the NuGet package for consumer IntelliSense, but the checks are the reason the
+flag is on.
+
+A documentation comment that states something false about the code is an error. A comment that is merely missing is not.
+
+- Errors: CS1570, CS1571, CS1572, CS1574, CS1580, CS1584, CS1587, CS1710 and CS1711. These report badly formed XML, an
+  unresolvable or malformed `cref`, a `param` or `typeparam` tag naming something that does not exist or naming it
+  twice, and a comment placed on an element that cannot carry one.
+- Warnings: CS1573 and CS1712, which report a tag that is absent rather than one that is wrong.
+- CS1591 is suppressed. It reports documentation coverage, which § 9.1 deliberately does not require.
+- Add a diagnostic to the error list only when it reports a comment that contradicts the code.
+
+An incremental build does not re-emit these diagnostics, so verification needs a clean build.
 
 ## § 10 Enforcement and implementation style
 

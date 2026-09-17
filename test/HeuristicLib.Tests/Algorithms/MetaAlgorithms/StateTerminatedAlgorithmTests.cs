@@ -1,5 +1,7 @@
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
@@ -51,7 +53,7 @@ public class StateTerminatedAlgorithmTests
     public void WithMaxIterations_YieldsTriggeringStateBeforeStopping()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var algorithm = new AdditiveStepAlgorithm(1).WithMaxIterations(1);
+        var algorithm = new AdditiveStepAlgorithm(1).TerminatedAfterIterations(1);
 
         var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -62,7 +64,7 @@ public class StateTerminatedAlgorithmTests
     public void WithMaxIterations_StopsOnFirstCheck_WhenMaximumIterationsIsNotPositive()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var algorithm = new AdditiveStepAlgorithm(1).WithMaxIterations(0);
+        var algorithm = new AdditiveStepAlgorithm(1).TerminatedAfterIterations(0);
 
         var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -111,7 +113,7 @@ public class StateTerminatedAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var timeProvider = new ManualTimeProvider();
         var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5)) { TimeProvider = timeProvider };
-        var instance = new ExecutionInstanceRegistry().Resolve(terminator);
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator);
 
         instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeFalse();
 
@@ -124,7 +126,7 @@ public class StateTerminatedAlgorithmTests
     public void AfterElapsedTimeTerminator_StopsOnFirstCheck_WhenMaximumElapsedTimeIsNotPositive()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var instance = new ExecutionInstanceRegistry().Resolve(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
+        var instance = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
 
         instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeTrue();
     }
@@ -133,16 +135,16 @@ public class StateTerminatedAlgorithmTests
     public void CreateExecutionInstance_ResolvesTerminatorBeforeWrappedAlgorithm()
     {
         var events = new List<string>();
-        var algorithm = new RecordingAlgorithm(events).WithTerminator(new RecordingResolveTerminator(events));
+        var algorithm = new RecordingAlgorithm(events).TerminatedBy(new RecordingResolveTerminator(events));
 
-        _ = algorithm.CreateExecutionInstance();
+        _ = algorithm.CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
 
         events.ShouldBe(["terminator", "algorithm"]);
     }
 
-    private static StateTerminatedAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateStateTerminatedAlgorithm(ITerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> terminator)
+    private static StateTerminatedAlgorithm<int, PopulationState<int>> CreateStateTerminatedAlgorithm(ITerminator<int> terminator)
     {
-        return new AdditiveStepAlgorithm(1).WithTerminator(terminator);
+        return new AdditiveStepAlgorithm(1).TerminatedBy(terminator);
     }
 
     private static PopulationState<int> CreateState(int candidate)
@@ -181,18 +183,20 @@ public class StateTerminatedAlgorithmTests
     }
 
     private sealed record RecordingAlgorithm(List<string> Events)
-        : Algorithm<RecordingAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        : Algorithm<RecordingAlgorithm, int, PopulationState<int>>
     {
-        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
         {
             Events.Add("algorithm");
-            return new Instance();
+            return new Instance<TRunSearchSpace, TRunProblem>();
         }
 
-        private sealed class Instance
-            : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        private sealed class Instance<TSearchSpace, TProblem>
+            : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 await Task.CompletedTask;
                 yield break;
@@ -201,12 +205,15 @@ public class StateTerminatedAlgorithmTests
     }
 
     private sealed record RecordingResolveTerminator(List<string> Events)
-        : ITerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        : ITerminator<int>
     {
-        public ITerminatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+        public ITerminatorInstance<int, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
+            where TRunSearchSpace : class, ISearchSpace<int>
+            where TRunProblem : class, IProblem<int, TRunSearchSpace>
+            where TRunSearchState : class, ISearchState
         {
             Events.Add("terminator");
-            return new Instance();
+            return (ITerminatorInstance<int, TRunSearchSpace, TRunProblem, TRunSearchState>)(object)new Instance();
         }
 
         private sealed class Instance : ITerminatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>

@@ -8,22 +8,73 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
+public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
+    : Algorithm<TSelf, TCandidate, TSearchState>, IIterativeAlgorithm<TCandidate>
+    where TSelf : IterativeAlgorithm<TSelf, TCandidate, TSearchState>
+    where TSearchState : class, ISearchState
+{
+    public IInterceptor<TCandidate>? Interceptor { get; init; }
+
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Interceptor);
+
+    public override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    {
+        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
+        return CreateExecutionInstance(instanceRegistry, resolver.ResolveOptional(Interceptor));
+    }
+
+    protected abstract IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(
+        ExecutionInstanceRegistry instanceRegistry,
+        IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>? resolvedInterceptor)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+}
+
+/// <remarks>
+/// Derive from this base only when the algorithm reads its search space or problem itself; naming them costs two type
+/// arguments on every mention of the configuration. An algorithm that just hands them to its operators belongs on
+/// <see cref="IterativeAlgorithm{TSelf, TCandidate, TSearchState}"/>.
+/// <para>
+/// A run this algorithm was not written for is reported when the execution graph is built.
+/// </para>
+/// </remarks>
 public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>
-    : Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>, IIterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : IterativeAlgorithm<TSelf, TCandidate, TSearchState>
     where TSelf : IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; init; }
+    protected abstract IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(
+        ExecutionInstanceRegistry instanceRegistry,
+        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor);
 
-    public sealed override AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public override bool Fits(ExecutionSignature execution) =>
+        base.Fits(execution)
+        && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
+        && execution.Problem.IsAssignableTo(typeof(TProblem));
+
+    public sealed override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
     {
-        var resolvedInterceptor = instanceRegistry.ResolveOptional(Interceptor);
-        return CreateExecutionInstance(instanceRegistry, resolvedInterceptor);
+        // Asked before the interceptor is resolved, so a mismatch costs no resolution at all.
+        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
+        {
+            throw ExecutionSignature.Mismatch(
+                this,
+                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)),
+                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
+        }
+
+        var resolver = instanceRegistry.For<TCandidate, TSearchSpace, TProblem, TSearchState>();
+        var bound = CreateExecutionInstance(instanceRegistry, resolver.ResolveOptional(Interceptor));
+
+        return (IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>)bound;
     }
 
-    protected abstract IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor);
+    protected sealed override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(
+        ExecutionInstanceRegistry instanceRegistry,
+        IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>? resolvedInterceptor) =>
+        throw new NotSupportedException("A bound algorithm builds its instance through its own creation method.");
 }
 
 public abstract class IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>

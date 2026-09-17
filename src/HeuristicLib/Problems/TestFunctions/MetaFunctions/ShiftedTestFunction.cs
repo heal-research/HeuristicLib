@@ -13,6 +13,6 @@ public class ShiftedGradientTestFunction(RealVector shiftVector, IGradientTestFu
 {
     protected readonly IGradientTestFunction GradientInner = inner;
 
-    public RealVector EvaluateGradient(RealVector solution)
-      => GradientInner.EvaluateGradient(solution + ShiftVector);
+    public RealVector EvaluateGradient(RealVector solution) =>
+        GradientInner.EvaluateGradient(solution + ShiftVector);
 }

@@ -107,7 +107,7 @@ public sealed class FeatureImportanceTests
     {
         var inputs = DataFrame.FromMatrix(
             ["x"],
-            new double[,]
+            new[,]
             {
                 { 0.0 },
                 { 1.0 },
@@ -159,7 +159,7 @@ public sealed class FeatureImportanceTests
 
         Should.Throw<ArgumentOutOfRangeException>(() => FeatureImportance.Perturbation(
             predictor, data, random, Metrics.MSE, FeaturePerturbations.Mean, repetitions: 0));
-        Should.Throw<ArgumentException>(() => FeatureImportance.Perturbation<double>(
+        Should.Throw<ArgumentException>(() => FeatureImportance.Perturbation(
             predictor, data, random, [], FeaturePerturbations.Mean));
         Should.Throw<ArgumentException>(() => FeatureImportance.Perturbation(
             predictor, data, random, Metrics.MSE, FeaturePerturbations.Mean, featureNames: ["x1", "x1"]));
@@ -210,7 +210,7 @@ public sealed class FeatureImportanceTests
     {
         var inputs = DataFrame.FromMatrix(
             ["x1", "x2"],
-            new double[,]
+            new[,]
             {
                 { 0.0, 3.0 },
                 { 1.0, 2.0 },

@@ -81,7 +81,7 @@ public sealed class SymbolicExpressionCompilerTests
     [Fact]
     public void Compile_ExternalMacroSymbolCanEmitMultipleBuiltInOpcodes()
     {
-        var expression = ExpressionDraft.Apply(new DoubleSymbol(), Variable("x0")).Build();
+        var expression = Apply(new DoubleSymbol(), Variable("x0")).Build();
 
         expression.Compile(optimize: false).ToInfixString().ShouldBe("(x0 * 2)");
     }

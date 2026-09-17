@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.APIs.RoarNet;
 
 public readonly struct RoarNetNeighborhood<TG, TS, TP, TM1>(
-    INeighborhood<TG, TS, TP, TM1> neighborhood,
+    INeighborhood<TG, TM1> neighborhood,
     IRoarNetOperationsProblem<TG, TS, TP> problem,
     ExecutionInstanceRegistry registry,
     IRandomNumberGenerator rng)
@@ -18,18 +18,18 @@ public readonly struct RoarNetNeighborhood<TG, TS, TP, TM1>(
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
 {
-    private readonly IMoveApplierInstance<TG, TS, TP, TM1> applier = registry.Resolve(neighborhood.MoveApplier);
-    private readonly IMoveCreatorInstance<TG, TS, TP, TM1> creator = registry.Resolve(neighborhood.MoveCreator);
-    private readonly IMoveEvaluatorInstance<TG, TS, TP, TM1> evaluator = registry.Resolve(neighborhood.MoveEvaluator);
+    private readonly IMoveApplierInstance<TG, TS, TP, TM1> applier = registry.For<TG, TS, TP>().Resolve(neighborhood.MoveApplier);
+    private readonly IMoveCreatorInstance<TG, TS, TP, TM1> creator = registry.For<TG, TS, TP>().Resolve(neighborhood.MoveCreator);
+    private readonly IMoveEvaluatorInstance<TG, TS, TP, TM1> evaluator = registry.For<TG, TS, TP>().Resolve(neighborhood.MoveEvaluator);
 
-    private IRoarNetMove<TG> MakeMove(TM1 move)
-        => new RoarNetMove<TG, TS, TP, TM1>(move, this);
+    private IRoarNetMove<TG> MakeMove(TM1 move) =>
+        new RoarNetMove<TG, TS, TP, TM1>(move, this);
 
-    public IRoarNetSolution<TG> ApplyMove(TM1 move, IRoarNetSolution<TG> solution)
-        => new RoarNetSolution<TG>(applier.Apply(solution.Genotype, move, rng, problem.SearchSpace, problem.Problem), problem);
+    public IRoarNetSolution<TG> ApplyMove(TM1 move, IRoarNetSolution<TG> solution) =>
+        new RoarNetSolution<TG>(applier.Apply(solution.Genotype, move, rng, problem.SearchSpace, problem.Problem), problem);
 
-    public IEnumerable<IRoarNetMove<TG>> Moves(IRoarNetSolution<TG> solution)
-        => creator.Moves(solution.Genotype, rng, problem.SearchSpace, problem.Problem).Select(MakeMove);
+    public IEnumerable<IRoarNetMove<TG>> Moves(IRoarNetSolution<TG> solution) =>
+        creator.Moves(solution.Genotype, rng, problem.SearchSpace, problem.Problem).Select(MakeMove);
 
     public IRoarNetMove<TG>? RandomMove(IRoarNetSolution<TG> solution)
     {
@@ -37,8 +37,8 @@ public readonly struct RoarNetNeighborhood<TG, TS, TP, TM1>(
         return m is not null ? new RoarNetMove<TG, TS, TP, TM1>(m, this) : null;
     }
 
-    public IEnumerable<IRoarNetMove<TG>> RandomMoveWithOutReplacement(IRoarNetSolution<TG> solution)
-        => creator.Moves(solution.Genotype, rng, problem.SearchSpace, problem.Problem).Select(MakeMove);
+    public IEnumerable<IRoarNetMove<TG>> RandomMoveWithOutReplacement(IRoarNetSolution<TG> solution) =>
+        creator.Moves(solution.Genotype, rng, problem.SearchSpace, problem.Problem).Select(MakeMove);
 
     public double? LowerBoundIncrement(TM1 move, IRoarNetSolution<TG> solution)
     {

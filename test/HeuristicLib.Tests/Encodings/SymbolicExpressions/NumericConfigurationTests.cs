@@ -7,10 +7,7 @@ public sealed class NumericConfigurationTests
     [Fact]
     public void MixtureDistribution_SamplesItsSelectedComponent()
     {
-        var distribution = new MixtureDistribution<double>([
-            (new UniformDoubleDistribution(-10, 0), 1.0),
-            (new UniformDoubleDistribution(10, 20), 3.0)
-        ]);
+        var distribution = new MixtureDistribution<double>((new UniformDoubleDistribution(-10, 0), 1.0), (new UniformDoubleDistribution(10, 20), 3.0));
 
         distribution.Sample(new SequenceRandomNumberGenerator(0.9, 0.5)).ShouldBe(15.0);
     }
@@ -18,14 +15,8 @@ public sealed class NumericConfigurationTests
     [Fact]
     public void MixtureDistribution_CanNestWeightedMixtures()
     {
-        var inner = new MixtureDistribution<double>([
-            (new UniformDoubleDistribution(0.0, 0.0), 1.0),
-            (new UniformDoubleDistribution(10.0, 10.0), 3.0)
-        ]);
-        var outer = new MixtureDistribution<double>([
-            (inner, 3.0),
-            (new UniformDoubleDistribution(100.0, 100.0), 1.0)
-        ]);
+        var inner = new MixtureDistribution<double>((new UniformDoubleDistribution(0.0, 0.0), 1.0), (new UniformDoubleDistribution(10.0, 10.0), 3.0));
+        var outer = new MixtureDistribution<double>((inner, 3.0), (new UniformDoubleDistribution(100.0, 100.0), 1.0));
 
         outer.Sample(new SequenceRandomNumberGenerator(0.5, 0.9, 0.0)).ShouldBe(10.0);
     }
@@ -148,14 +139,8 @@ public sealed class NumericConfigurationTests
     [Fact]
     public void CompositeConfigurations_HaveStructuralValueEquality()
     {
-        var firstMixture = new MixtureDistribution<double>([
-            (new UniformDoubleDistribution(-1.0, 0.0), 1.0),
-            (new NormalDoubleDistribution(1.0, 2.0), 3.0)
-        ]);
-        var secondMixture = new MixtureDistribution<double>([
-            (new UniformDoubleDistribution(-1.0, 0.0), 1.0),
-            (new NormalDoubleDistribution(1.0, 2.0), 3.0)
-        ]);
+        var firstMixture = new MixtureDistribution<double>((new UniformDoubleDistribution(-1.0, 0.0), 1.0), (new NormalDoubleDistribution(1.0, 2.0), 3.0));
+        var secondMixture = new MixtureDistribution<double>((new UniformDoubleDistribution(-1.0, 0.0), 1.0), (new NormalDoubleDistribution(1.0, 2.0), 3.0));
         var firstPerturbation = new ChooseNumericPerturbation([
             (new ResampleNumericPerturbation(firstMixture), 1.0),
             (new ResampleInitialNumericPerturbation(), 1.0)

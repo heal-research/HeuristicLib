@@ -46,13 +46,13 @@ public class NumericParameterFittingSpecs
     public void KeepingAFittedCandidateOnlyWhenItImprovesTheObjective()
     {
         var problem = CreateProblem();
-        var evaluator = new ProblemEvaluator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>();
+        var evaluator = new ProblemEvaluator<ExpressionTree>();
 
         var algorithm = CreateAlgorithm(problem) with
         {
             Evaluator = evaluator,
             Refiner = new NumericParameterFittingRefiner { MaximumIterations = 10 }
-                .WithImprovementCheck(evaluator)
+                .CheckedForImprovement(evaluator)
         };
 
         var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
@@ -69,7 +69,7 @@ public class NumericParameterFittingSpecs
 
         var algorithm = CreateAlgorithm(problem) with
         {
-            Refiner = new NumericParameterFittingRefiner().WithRate(0.25)
+            Refiner = new NumericParameterFittingRefiner().AppliedAtRate(0.25)
         };
 
         var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
@@ -96,7 +96,7 @@ public class NumericParameterFittingSpecs
     }
 
     private static double BestMeanSquaredError(
-        GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem> algorithm,
+        GeneticAlgorithm<ExpressionTree> algorithm,
         SymbolicRegressionProblem problem) =>
         algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .Population.EvaluatedCandidates
@@ -134,20 +134,20 @@ public class NumericParameterFittingSpecs
     public void DecidingWhetherRefinementEffortCountsAgainstTheEvaluationBudget()
     {
         var problem = CreateProblem();
-        var sharedEvaluator = new ProblemEvaluator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>()
-            .CountEvaluatedCandidates(out var sharedCounter);
-        var algorithmEvaluator = new ProblemEvaluator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>()
-            .CountEvaluatedCandidates(out var ownCounter);
+        var sharedEvaluator = new ProblemEvaluator<ExpressionTree>()
+            .CountCandidates(out var sharedCounter);
+        var algorithmEvaluator = new ProblemEvaluator<ExpressionTree>()
+            .CountCandidates(out var ownCounter);
 
         var sharing = CreateAlgorithm(problem) with
         {
             Evaluator = sharedEvaluator,
-            Refiner = new NumericParameterFittingRefiner().WithImprovementCheck(sharedEvaluator)
+            Refiner = new NumericParameterFittingRefiner().CheckedForImprovement(sharedEvaluator)
         };
         var notSharing = CreateAlgorithm(problem) with
         {
             Evaluator = algorithmEvaluator,
-            Refiner = new NumericParameterFittingRefiner().WithImprovementCheck()
+            Refiner = new NumericParameterFittingRefiner().CheckedForImprovement()
         };
 
         sharing.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
@@ -158,7 +158,7 @@ public class NumericParameterFittingSpecs
         sharedCounter.CurrentCount.ShouldBeGreaterThan(ownCounter.CurrentCount);
     }
 
-    private static GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem> CreateAlgorithm(
+    private static GeneticAlgorithm<ExpressionTree> CreateAlgorithm(
         SymbolicRegressionProblem problem) =>
         new()
         {

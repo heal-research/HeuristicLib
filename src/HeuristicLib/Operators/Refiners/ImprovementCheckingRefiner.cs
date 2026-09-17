@@ -13,11 +13,10 @@ namespace HEAL.HeuristicLib.Operators;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This is an ordinary refiner. Its contract is still candidate to candidate, and the algorithm evaluates the returned
-/// candidate afterwards exactly as it would for any other refiner. A naive configuration therefore performs three
-/// problem evaluations per refined candidate: two here and one in the algorithm. That cost is visible and removable —
-/// sharing one <see cref="CachingEvaluator{TCandidate,TSearchSpace,TProblem}"/> instance with the algorithm turns the
-/// third evaluation into a cache hit.
+/// The algorithm still evaluates the returned candidate afterwards, so a naive configuration performs three problem
+/// evaluations per refined candidate: two here and one in the algorithm. Sharing one
+/// <see cref="CachingEvaluator{TCandidate}"/> instance with the algorithm turns the third into a
+/// cache hit.
 /// </para>
 /// <para>
 /// A refiner that cannot improve a candidate returns it unchanged, so its objective vector is unchanged too and the
@@ -25,17 +24,15 @@ namespace HEAL.HeuristicLib.Operators;
 /// </para>
 /// <para>
 /// Wrapping order matters and expresses genuinely different searches. An
-/// <see cref="IteratedRefiner{TCandidate,TSearchSpace,TProblem}"/> around this refiner is a memetic hill climb that
+/// <see cref="IteratedRefiner{TCandidate}"/> around this refiner is a memetic hill climb that
 /// keeps each round only if it improved, while this refiner around an iterated one runs every round and then accepts or
 /// rejects the final result once.
 /// </para>
 /// </remarks>
-public sealed record ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProblem>
-    : Refiner<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record ImprovementCheckingRefiner<TCandidate>
+    : IRefiner<TCandidate>
 {
-    public ImprovementCheckingRefiner(IRefiner<TCandidate, TSearchSpace, TProblem> refiner)
+    public ImprovementCheckingRefiner(IRefiner<TCandidate> refiner)
     {
         Refiner = refiner;
     }
@@ -43,18 +40,17 @@ public sealed record ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProbl
     /// <summary>
     /// Gets the refiner whose result is accepted or rejected.
     /// </summary>
-    public IRefiner<TCandidate, TSearchSpace, TProblem> Refiner { get; init; }
+    public IRefiner<TCandidate> Refiner { get; init; }
 
     /// <summary>
     /// Gets the evaluator used for both comparison evaluations.
     /// </summary>
     /// <remarks>
-    /// The default is an ordinary <see cref="ProblemEvaluator{TCandidate,TSearchSpace,TProblem}"/>. Because counting,
-    /// limiting and caching are wrapper behavior rather than properties of the evaluator role, that default is
-    /// unwrapped and therefore invisible to budgets and analysis. Supply the same evaluator instance the algorithm uses
-    /// to have these evaluations counted, limited or served from one shared cache.
+    /// The default is an unwrapped <see cref="ProblemEvaluator{TCandidate,TSearchSpace,TProblem}"/> and is therefore
+    /// invisible to budgets and analysis. Supply the same evaluator instance the algorithm uses to have these
+    /// evaluations counted, limited or served from one shared cache.
     /// </remarks>
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+    public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
     /// <summary>
     /// Gets the criterion deciding whether a refined candidate is kept.
@@ -67,11 +63,18 @@ public sealed record ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProbl
     /// </remarks>
     public IImprovementCriterion Criterion { get; init; } = ImprovementChecking.Default;
 
-    public override IRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(Refiner), instanceRegistry.Resolve(Evaluator), Criterion);
+    public IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    {
+        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        return new Instance<TRunSearchSpace, TRunProblem>(resolver.Resolve(Refiner), resolver.Resolve(Evaluator), Criterion);
+    }
 
-    private sealed class Instance(IRefinerInstance<TCandidate, TSearchSpace, TProblem> refiner, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
+    private sealed class Instance<TSearchSpace, TProblem>(IRefinerInstance<TCandidate, TSearchSpace, TProblem> refiner, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
         : RefinerInstance<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -100,24 +103,16 @@ public sealed record ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProbl
 
 public static class ImprovementCheckingRefiner
 {
-    public static ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner) =>
         new(refiner);
 
-    public static ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner, IImprovementCriterion criterion)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IImprovementCriterion criterion) =>
         new(refiner) { Criterion = criterion };
 
-    public static ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner, IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IEvaluator<TCandidate> evaluator) =>
         new(refiner) { Evaluator = evaluator };
 
-    public static ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner, IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IEvaluator<TCandidate> evaluator, IImprovementCriterion criterion) =>
         new(refiner) { Evaluator = evaluator, Criterion = criterion };
 }
 
@@ -126,9 +121,7 @@ public static class ImprovementCheckingRefiner
 /// </summary>
 /// <remarks>
 /// The two operands are not interchangeable: the criterion answers one directed question rather than defining an
-/// ordering. This is why the role is not an <see cref="IComparer{T}"/>. An ordering cannot express a threshold, because
-/// moving one operand by a margin makes <c>Compare(a, b)</c> and <c>-Compare(b, a)</c> disagree, and it cannot know
-/// which direction to move it in because a comparer does not receive the objective directions.
+/// ordering, and it receives the objective directions a comparer would not.
 /// </remarks>
 public interface IImprovementCriterion
 {
@@ -324,20 +317,18 @@ internal static class ImprovementMargin
 
 public static class ImprovementCheckingRefinerExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IRefiner<TCandidate> refiner)
     {
-        public ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProblem> WithImprovementCheck() =>
-            new ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProblem>(refiner);
+        public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement() =>
+            new ImprovementCheckingRefiner<TCandidate>(refiner);
 
-        public ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProblem> WithImprovementCheck(IImprovementCriterion criterion) =>
-            new ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProblem>(refiner) { Criterion = criterion };
+        public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement(IImprovementCriterion criterion) =>
+            new ImprovementCheckingRefiner<TCandidate>(refiner) { Criterion = criterion };
 
-        public ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProblem> WithImprovementCheck(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator) =>
-            new ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProblem>(refiner) { Evaluator = evaluator };
+        public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement(IEvaluator<TCandidate> evaluator) =>
+            new ImprovementCheckingRefiner<TCandidate>(refiner) { Evaluator = evaluator };
 
-        public ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProblem> WithImprovementCheck(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion) =>
-            new ImprovementCheckingRefiner<TCandidate, TSearchSpace, TProblem>(refiner) { Evaluator = evaluator, Criterion = criterion };
+        public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement(IEvaluator<TCandidate> evaluator, IImprovementCriterion criterion) =>
+            new ImprovementCheckingRefiner<TCandidate>(refiner) { Evaluator = evaluator, Criterion = criterion };
     }
 }

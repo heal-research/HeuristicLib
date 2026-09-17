@@ -32,10 +32,10 @@ public sealed record ReplaceBranchManipulation : SymbolicExpressionTreeManipulat
 
             allowedSymbols.Clear();
             allowedSymbols.AddRange(searchSpace.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
-              .Where(symbol => symbol != child.Symbol
-                && symbol.InitialFrequency > 0
-                && searchSpace.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth
-                && searchSpace.Grammar.GetMinimumExpressionLength(symbol) <= maxLength));
+                .Where(symbol => symbol != child.Symbol
+                    && symbol.InitialFrequency > 0
+                    && searchSpace.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth
+                    && searchSpace.Grammar.GetMinimumExpressionLength(symbol) <= maxLength));
 
             tries++;
         } while (tries < MaxTries && allowedSymbols.Count == 0);

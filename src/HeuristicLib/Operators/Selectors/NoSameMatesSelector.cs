@@ -6,12 +6,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public record NoSameMatesSelector<TCandidate, TSearchSpace, TProblem>
-    : WrappingSelector<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record NoSameMatesSelector<TCandidate>
+    : WrappingSelector<TCandidate>
 {
-    public NoSameMatesSelector(ISelector<TCandidate, TSearchSpace, TProblem> childSelector, int maxAttempts)
+    public NoSameMatesSelector(ISelector<TCandidate> childSelector, int maxAttempts)
         : base(childSelector)
     {
         MaxAttempts = maxAttempts;
@@ -19,11 +17,13 @@ public record NoSameMatesSelector<TCandidate, TSearchSpace, TProblem>
 
     public int MaxAttempts { get; init; }
 
-    protected override WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector) =>
-        new Instance(childSelector, MaxAttempts);
+    protected override ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> childSelector) =>
+        new Instance<TRunSearchSpace, TRunProblem>(childSelector, MaxAttempts);
 
-    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, int maxAttempts)
+    private sealed class Instance<TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, int maxAttempts)
         : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(childSelector)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -65,17 +65,13 @@ public record NoSameMatesSelector<TCandidate, TSearchSpace, TProblem>
 
 public static class NoSameMatesSelector
 {
-    public static NoSameMatesSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector, int maximumAttempts)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(selector, maximumAttempts);
+    public static NoSameMatesSelector<TCandidate> Create<TCandidate>(ISelector<TCandidate> selector, int maximumAttempts) => new(selector, maximumAttempts);
 }
 
 public static class NoSameMatesSelectorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(ISelector<TCandidate> selector)
     {
-        public NoSameMatesSelector<TCandidate, TSearchSpace, TProblem> AvoidSameMates(int maximumAttempts) => NoSameMatesSelector.Create(selector, maximumAttempts);
+        public NoSameMatesSelector<TCandidate> AvoidSameMates(int maximumAttempts) => NoSameMatesSelector.Create(selector, maximumAttempts);
     }
 }

@@ -21,13 +21,13 @@ public class DynamicAnalysisTests
                 problem,
                 algorithm.Evaluator);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AttachAnalyzer(analysis);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         var result = run.GetResult(analysis);
         result.BestPerEpoch.Select(x => (x.candidate, objective: x.objectiveVector[0], x.timing.Epoch))
-              .ShouldBe([(5, 5.0, 0), (3, 3.0, 1), (10, 10.0, 1), (1, 1.0, 2), (4, 4.0, 2)]);
+            .ShouldBe([(5, 5.0, 0), (3, 3.0, 1), (10, 10.0, 1), (1, 1.0, 2), (4, 4.0, 2)]);
     }
 
     [Fact]
@@ -45,13 +45,13 @@ public class DynamicAnalysisTests
                 [algorithm.Evaluator],
                 predictionEpochMultiplier: 2);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AttachAnalyzer(analysis);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         var result = run.GetResult(analysis);
         result.BestBeforeChange.Select(x => (x.Candidate, x.ObjectiveValue, x.Timing.Epoch))
-              .ShouldBe([(5, 5.0, 0), (3, 3.0, 1)]);
+            .ShouldBe([(5, 5.0, 0), (3, 3.0, 1)]);
         result.Performance.ShouldBe(4.0);
     }
 
@@ -60,7 +60,7 @@ public class DynamicAnalysisTests
         public bool Contains(int candidate) => true;
     }
 
-    private sealed class IntegerDynamicProblem : DynamicProblem<int, IntegerSearchSpace>
+    private sealed class IntegerDynamicProblem : DynamicProblem<IntegerDynamicProblem, int, IntegerSearchSpace>
     {
         public IntegerDynamicProblem(int epochLength)
             : base(SingleObjective.Minimize, new IntegerSearchSpace(), RandomNumberGenerator.Create(0),
@@ -86,11 +86,11 @@ public class DynamicAnalysisTests
     private sealed record BatchEvaluationAlgorithm(IReadOnlyList<IReadOnlyList<int>> Batches)
         : Algorithm<BatchEvaluationAlgorithm, int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
     {
-        public IEvaluator<int, IntegerSearchSpace, IntegerDynamicProblem> Evaluator { get; } = new ProblemEvaluator();
+        public IEvaluator<int> Evaluator { get; } = new ProblemEvaluator();
 
         public override AlgorithmInstance<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
             CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-            new Instance(instanceRegistry.Resolve(Evaluator), Batches);
+            new Instance(instanceRegistry.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(Evaluator), Batches);
 
         private sealed class Instance(
             IEvaluatorInstance<int, IntegerSearchSpace, IntegerDynamicProblem> evaluator,

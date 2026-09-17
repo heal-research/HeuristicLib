@@ -50,7 +50,7 @@ public class AlgorithmObservationTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var previousStates = new List<PopulationState<RealVector>?>();
 
-        algorithm.ObserveWith((_, previousState, searchSpace, observedProblem) =>
+        algorithm.ObserveWith((PopulationState<RealVector> _, PopulationState<RealVector>? previousState, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem observedProblem) =>
                  {
                      previousStates.Add(previousState);
                      searchSpace.ShouldBeSameAs(problem.SearchSpace);
@@ -72,7 +72,7 @@ public class AlgorithmObservationTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 4);
         var analysis = Analyzer.BestMedianWorst(algorithm);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).WithAnalyzer(analysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AttachAnalyzer(analysis);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.GetResult(analysis).Count.ShouldBe(4);
@@ -86,7 +86,7 @@ public class AlgorithmObservationTests
         var first = Analyzer.BestMedianWorst(algorithm);
         var second = Analyzer.BestMedianWorst(algorithm);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).WithAnalyzers(first, second);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AttachAnalyzers(first, second);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.GetResult(first).Count.ShouldBe(3);
@@ -100,10 +100,13 @@ public class AlgorithmObservationTests
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3) with { Interceptor = interceptor };
         var atIterationEnd = Analyzer.BestMedianWorst(algorithm);
-        var atInterceptor = Analyzer.BestMedianWorst(interceptor);
+
+        // Named rather than inferred on purpose: this is where an analysis narrowed to a concrete search space and
+        // problem is shown running, which the inferred spelling elsewhere no longer covers.
+        var atInterceptor = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(interceptor);
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-                           .WithAnalyzers(atIterationEnd, atInterceptor);
+                           .AttachAnalyzers(atIterationEnd, atInterceptor);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.GetResult(atIterationEnd).Count.ShouldBe(3);
@@ -121,7 +124,7 @@ public class AlgorithmObservationTests
         var analysis = Analyzer.BestMedianWorst(algorithm);
 
         var copy = algorithm with { PopulationSize = PopulationSize * 2 };
-        var run = copy.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).WithAnalyzer(analysis);
+        var run = copy.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AttachAnalyzer(analysis);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.GetResult(analysis).ShouldBeEmpty();
@@ -145,10 +148,8 @@ public class AlgorithmObservationTests
     {
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
 
-        var first = Analyzer.BestMedianWorst<RealVector, RealVectorSearchSpace, TestFunctionProblem,
-            PopulationState<RealVector>>(interceptor);
-        var second = Analyzer.BestMedianWorst<RealVector, RealVectorSearchSpace, TestFunctionProblem,
-            PopulationState<RealVector>>(interceptor);
+        var first = Analyzer.BestMedianWorst(interceptor);
+        var second = Analyzer.BestMedianWorst(interceptor);
 
         first.ShouldBe(second);
         first.GetHashCode().ShouldBe(second.GetHashCode());
@@ -162,15 +163,14 @@ public class AlgorithmObservationTests
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
 
         var atAlgorithm = Analyzer.BestMedianWorst(algorithm);
-        var atInterceptor = Analyzer.BestMedianWorst<RealVector, RealVectorSearchSpace, TestFunctionProblem,
-            PopulationState<RealVector>>(interceptor);
+        var atInterceptor = Analyzer.BestMedianWorst(interceptor);
 
-        atAlgorithm.ShouldNotBe(atInterceptor);
+        atAlgorithm.ShouldNotBe<object>(atInterceptor);
     }
 
     private static TestFunctionProblem CreateProblem() => new(new RastriginFunction(dimension: 4));
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(
+    private static GeneticAlgorithm<RealVector> CreateAlgorithm(
         TestFunctionProblem problem, int maximumGenerations) =>
         new()
         {

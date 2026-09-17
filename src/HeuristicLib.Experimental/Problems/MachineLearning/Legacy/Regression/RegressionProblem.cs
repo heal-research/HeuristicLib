@@ -4,9 +4,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.MachineLearning.Legacy;
 
-public abstract class RegressionProblem<TProblemData, TCandidate, TSearchSpace> : DataAnalysisProblem<TProblemData, TCandidate, TSearchSpace>
-  where TProblemData : RegressionProblemData
-  where TSearchSpace : class, ISearchSpace<TCandidate>
+public abstract class RegressionProblem<TSelf, TProblemData, TCandidate, TSearchSpace> : DataAnalysisProblem<TSelf, TProblemData, TCandidate, TSearchSpace>
+    where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
+    where TProblemData : RegressionProblemData
+    where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public const double PunishmentFactor = 10.0;
     private readonly int[] rowIndicesCache; // unsure if this is faster than using the enumerable directly
@@ -38,7 +39,7 @@ public abstract class RegressionProblem<TProblemData, TCandidate, TSearchSpace> 
     public ObjectiveVector Evaluate(TCandidate candidate, IReadOnlyList<int> rows, IReadOnlyList<double> targets)
     {
         var predictions = PredictAndTrain(candidate, rows, targets)
-          .LimitToRange(LowerPredictionBound, UpperPredictionBound);
+            .LimitToRange(LowerPredictionBound, UpperPredictionBound);
         if (Evaluators.Count == 1)
         {
             return new ObjectiveVector(Evaluators[0].Evaluate(candidate, predictions, targets));

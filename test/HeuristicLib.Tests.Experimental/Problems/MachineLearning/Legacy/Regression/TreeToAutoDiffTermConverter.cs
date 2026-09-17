@@ -17,20 +17,20 @@ public class TreeToAutoDiffTermConverterTests
         var problemData = new RegressionProblemData(new ModifiableDataset(["x", "y"], Data));
 
         IRegressionEvaluator<SymbolicExpressionTree>[] objectives = multiObjective
-          ? [
-            new MaxAbsoluteErrorEvaluator(),
-        new MeanAbsoluteErrorEvaluator(),
-        new MeanLogErrorEvaluator(),
-        new MeanRelativeErrorEvaluator(),
-        new MeanSquaredErrorCalculator(),
-        new NormalizedMeanSquaredErrorEvaluator(),
-        new NumberOfVariablesEvaluator(),
-        new PearsonR2Evaluator(),
-        new RootMeanSquaredErrorEvaluator(),
-        new TreeComplexityEvaluator(),
-        new TreeLengthEvaluator()
-          ]
-          : [new RootMeanSquaredErrorEvaluator()];
+            ? [
+                new MaxAbsoluteErrorEvaluator(),
+                new MeanAbsoluteErrorEvaluator(),
+                new MeanLogErrorEvaluator(),
+                new MeanRelativeErrorEvaluator(),
+                new MeanSquaredErrorCalculator(),
+                new NormalizedMeanSquaredErrorEvaluator(),
+                new NumberOfVariablesEvaluator(),
+                new PearsonR2Evaluator(),
+                new RootMeanSquaredErrorEvaluator(),
+                new TreeComplexityEvaluator(),
+                new TreeLengthEvaluator()
+            ]
+            : [new RootMeanSquaredErrorEvaluator()];
         var problem = new SymbolicRegressionProblem(problemData, objectives)
         {
             LowerPredictionBound = 0,

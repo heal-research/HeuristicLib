@@ -1,3 +1,4 @@
+using System.Globalization;
 using HEAL.HeuristicLib.Numerics;
 using HEAL.HeuristicLib.Random;
 
@@ -34,7 +35,7 @@ public abstract record TerminalSymbol(string Name) : Symbol(Name, 0);
 public abstract record ConstantSymbol(string Name) : TerminalSymbol(Name);
 
 public sealed record FixedConstantSymbol(double Value, string? DisplayName = null)
-    : ConstantSymbol(DisplayName ?? Value.ToString("G", System.Globalization.CultureInfo.InvariantCulture))
+    : ConstantSymbol(DisplayName ?? Value.ToString("G", CultureInfo.InvariantCulture))
 {
     public override ExpressionNode CreateNode(IRandomNumberGenerator random, params ImmutableArray<ExpressionNode> children)
     {
@@ -103,10 +104,10 @@ public sealed record EvolvableConstantSymbol(IDistribution<double> InitialDistri
 
 /// <remarks>
 /// <see cref="SelectionWeights"/> is the only member a <c>with</c> expression may set, so
-/// <c>symbol with { SelectionWeights = … }</c> reweights the unchanged variables. Sampling a different set of variables
-/// means constructing a new symbol, which is also the honest operation: a symbol is compared by value, so a reweighted
-/// symbol no longer matches the nodes an earlier one created. Reweighting is therefore a configuration-time facility,
-/// not a way to retune a running algorithm.
+/// <c>symbol with { SelectionWeights = … }</c> reweights the unchanged variables; sampling a different set of variables
+/// means constructing a new symbol. A symbol is compared by value, so a reweighted symbol no longer matches the nodes
+/// an earlier one created, which makes reweighting a configuration-time facility rather than a way to retune a running
+/// algorithm.
 /// </remarks>
 public sealed record VariableSymbol : TerminalSymbol
 {

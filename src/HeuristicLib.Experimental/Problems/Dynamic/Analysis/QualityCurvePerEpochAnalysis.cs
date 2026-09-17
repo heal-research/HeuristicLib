@@ -7,9 +7,9 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 public sealed record QualityCurvePerEpochAnalysis<TCandidate, TSearchSpace, TProblem>
     : DynamicAnalysis<TCandidate, TSearchSpace, TProblem, QualityCurvePerEpochAnalysisResult<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
 {
-    public QualityCurvePerEpochAnalysis(TProblem problem, params IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators)
+    public QualityCurvePerEpochAnalysis(TProblem problem, params IReadOnlyList<IEvaluator<TCandidate>> evaluators)
         : base(problem, evaluators)
     { }
 

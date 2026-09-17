@@ -7,9 +7,9 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 public sealed record InvalidPerEpochAnalysis<TCandidate, TSearchSpace, TProblem>
     : DynamicAnalysis<TCandidate, TSearchSpace, TProblem, InvalidPerEpochAnalysisResult<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
 {
-    public InvalidPerEpochAnalysis(TProblem problem, params IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators)
+    public InvalidPerEpochAnalysis(TProblem problem, params IReadOnlyList<IEvaluator<TCandidate>> evaluators)
         : base(problem, evaluators)
     { }
 

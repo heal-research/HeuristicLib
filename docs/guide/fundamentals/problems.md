@@ -11,7 +11,7 @@ using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 
-var searchSpace = new RealVectorSearchSpace(
+var searchSpace = new BoundedRealVectorSearchSpace(
     length: 3,
     minimum: [-10.0],
     maximum: [10.0]);
@@ -54,6 +54,26 @@ See [Objective vectors and evaluated candidates](/guide/fundamentals/objectives)
 ## When to create a problem type
 
 Create a dedicated problem type when evaluation needs named domain data, validation or reusable behavior. A domain type makes that contract visible and avoids closing over a large mutable object graph in a delegate.
+
+A problem evaluating one candidate at a time derives from `SingleSolutionProblem` and overrides one method:
+
+```csharp
+public abstract class SingleSolutionProblem<TSelf, TCandidate, TSearchSpace>
+{
+    public abstract ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random);
+}
+```
+
+The first type argument is the problem's own type, so a derived problem writes its own name there:
+
+```csharp
+public sealed class ProductMixProblem(ProductionPlan plan)
+    : SingleSolutionProblem<ProductMixProblem, IntegerVector, IntegerVectorSearchSpace>(
+        SingleObjective.Maximize,
+        new IntegerVectorSearchSpace(plan.Products.Length, 0, plan.MaximumBatchSize))
+```
+
+That is the [curiously recurring pattern](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern), and it is what lets the base class name the derived type in members that return a problem, so nothing hands you back a base type to cast. It is also the argument most often forgotten; the compiler reports it as CS0305, wrong number of type arguments.
 
 [Model your own problem](/examples/custom-problem) builds one end to end, including the choice of representation and how to treat candidates that violate a constraint.
 

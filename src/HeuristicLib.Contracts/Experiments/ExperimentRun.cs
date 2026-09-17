@@ -13,12 +13,12 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
-    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
 {
     private readonly Dictionary<TrialAnalyzer, ImmutableArray<IAnalyzer>> trialAnalyzers = new(ReferenceEqualityComparer.Instance);
     private bool executionStarted;
 
-    public IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Experiment { get; }
+    public IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> Experiment { get; }
 
     public TProblem Problem { get; }
 
@@ -28,7 +28,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
     public bool ExecutionStarted => executionStarted || Trials.Any(trial => trial.Run.ExecutionStarted);
 
-    public ExperimentRun(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> experiment, TProblem problem, IRandomNumberGenerator random)
+    public ExperimentRun(IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> experiment, TProblem problem, IRandomNumberGenerator random)
     {
         Experiment = experiment;
         Problem = problem;
@@ -54,7 +54,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         Trials = trials.ToImmutableArray();
     }
 
-    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> WithAnalyzer<TOperator, TResult>(TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
+    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> AttachAnalyzer<TOperator, TResult>(TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
         where TResult : class
     {
         EnsureNotStarted();
@@ -64,7 +64,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         var analyzers = Trials.Select(trial => (IAnalyzer)trialAnalyzer.AnalyzerFactory(trialAnalyzer.Selector(trial.Algorithm))).ToImmutableArray();
         for (var index = 0; index < Trials.Length; index++)
         {
-            Trials[index].Run.WithAnalyzer(analyzers[index]);
+            Trials[index].Run.AttachAnalyzer(analyzers[index]);
         }
 
         trialAnalyzers.Add(trialAnalyzer, analyzers);
@@ -72,11 +72,11 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         return this;
     }
 
-    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> WithAnalyzer<TOperator, TResult>(Func<TAlgorithm, TOperator> selector, Func<TOperator, IAnalyzer<TResult>> analyzerFactory, out TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
+    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> AttachAnalyzer<TOperator, TResult>(Func<TAlgorithm, TOperator> selector, Func<TOperator, IAnalyzer<TResult>> analyzerFactory, out TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
         where TResult : class
     {
         trialAnalyzer = TrialAnalyzer.Create(selector, analyzerFactory);
-        return WithAnalyzer(trialAnalyzer);
+        return AttachAnalyzer(trialAnalyzer);
     }
 
     public ImmutableArray<TrialAnalysisResult<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TResult>> GetResults<TOperator, TResult>(TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
@@ -302,7 +302,7 @@ public sealed class ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchS
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
-    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
 {
     internal int Index { get; }
 

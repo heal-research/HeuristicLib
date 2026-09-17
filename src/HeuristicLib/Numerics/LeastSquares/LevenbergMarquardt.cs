@@ -43,7 +43,7 @@ internal static class LevenbergMarquardt
         {
             var targetVector = new DenseVector(targets.ToArray());
             var unusedIndependentVariables = new DenseVector(rowCount);
-            var objective = ObjectiveFunction.NonlinearModel(EvaluateModel, EvaluateJacobian, unusedIndependentVariables, targetVector, null);
+            var objective = ObjectiveFunction.NonlinearModel(EvaluateModel, EvaluateJacobian, unusedIndependentVariables, targetVector);
             var minimizer = new LevenbergMarquardtMinimizer(maximumIterations: maximumIterations);
             var minimum = minimizer.FindMinimum(objective, new DenseVector(initialParameters.ToArray()));
             result = new LevenbergMarquardtResult(minimum.MinimizingPoint.ToArray(), minimum.ModelInfoAtMinimum.Value / rowCount);

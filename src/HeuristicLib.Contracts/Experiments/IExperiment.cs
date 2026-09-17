@@ -1,14 +1,15 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Experiments;
 
-public interface IExperiment<TCandidate, in TSearchSpace, in TProblem, TSearchState, TAlgorithm, TKey>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+/// <remarks>
+/// The search space and problem a run happens over belong to
+/// <see cref="ExperimentRun{TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey}"/>, where a problem is
+/// supplied.
+/// </remarks>
+public interface IExperiment<TCandidate, TAlgorithm, TSearchState, TKey>
+    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
-    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     ImmutableArray<ExperimentCase<TAlgorithm, TKey>> MaterializeCases();
 }

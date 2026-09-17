@@ -14,10 +14,10 @@ public class GeneticAlgorithmTests
         var creator = new UniformDistributedCreator { Maximum = 3.0 };
         var crossover = new SinglePointCrossover();
         var mutator = new GaussianMutator(0.1, 0.1);
-        var evaluator = new DummyEvaluator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>();
+        var evaluator = new DummyEvaluator<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
         var selector = new RandomSelector<RealVector>();
 
-        var algorithm = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>
+        var algorithm = new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 250,
             Creator = creator,
@@ -38,7 +38,7 @@ public class GeneticAlgorithmTests
         algorithm.Selector.ShouldBeSameAs(selector);
         algorithm.Elites.ShouldBe(1);
         algorithm.Terminator.ShouldBeNull();
-        algorithm.MaximumGenerations.ShouldBeNull();
+        algorithm.MaximumGenerations.ShouldBe(GeneticAlgorithmDefaults.MaximumGenerations);
         algorithm.Interceptor.ShouldBeNull();
     }
 }

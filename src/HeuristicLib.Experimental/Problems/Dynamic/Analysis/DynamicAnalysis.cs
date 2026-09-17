@@ -13,24 +13,24 @@ public interface IDynamicAnalysisResult<TCandidate>
 public abstract record DynamicAnalysis<TCandidate, TSearchSpace, TProblem, TResult>
     : Analyzer<TResult>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
     where TResult : class, IDynamicAnalysisResult<TCandidate>
 {
-    protected DynamicAnalysis(TProblem problem, params IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators)
+    protected DynamicAnalysis(TProblem problem, params IReadOnlyList<IEvaluator<TCandidate>> evaluators)
     {
         Problem = problem;
         Evaluators = [.. evaluators];
     }
 
     public TProblem Problem { get; }
-    public ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> Evaluators { get; }
+    public ImmutableArray<IEvaluator<TCandidate>> Evaluators { get; }
 
     public override IAnalyzerRunState<TResult> CreateAnalyzerState() => new RunState(this, CreateInitialResult());
 
     public override void RegisterObservations(ObservationPlan observations, TResult result)
     {
         foreach (var evaluator in Evaluators)
-            observations.Observe(evaluator, Problem);
+            observations.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, Problem);
     }
 
     private sealed class RunState(DynamicAnalysis<TCandidate, TSearchSpace, TProblem, TResult> analyzer, TResult result)

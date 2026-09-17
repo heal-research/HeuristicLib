@@ -10,9 +10,9 @@ public record BestPerEvaluationAnalysis<TCandidate, TSearchSpace, TProblem> : An
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 
 {
-    private ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> Evaluators { get; }
+    private ImmutableArray<IEvaluator<TCandidate>> Evaluators { get; }
 
-    public BestPerEvaluationAnalysis(params IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators)
+    public BestPerEvaluationAnalysis(params IReadOnlyList<IEvaluator<TCandidate>> evaluators)
     {
         Evaluators = evaluators.ToImmutableArray();
     }
@@ -50,7 +50,7 @@ public record BestPerEvaluationAnalysis<TCandidate, TSearchSpace, TProblem> : An
     {
         foreach (var evaluator in Evaluators)
         {
-            observations.Observe(evaluator,
+            observations.Observe<TCandidate, TSearchSpace, TProblem>(evaluator,
                 (objectiveVectors, candidates, _, problem) =>
                     AfterEvaluation(curve, candidates.ToEvaluated(objectiveVectors), problem));
         }

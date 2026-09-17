@@ -1,5 +1,4 @@
 using System.Collections;
-
 using HEAL.HeuristicLib.Objectives;
 
 namespace HEAL.HeuristicLib.Algorithms;

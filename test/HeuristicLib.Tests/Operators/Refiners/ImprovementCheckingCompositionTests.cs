@@ -14,10 +14,10 @@ public class ImprovementCheckingCompositionTests
     [Fact]
     public void OnAMaximizedObjective_TheHigherObjectiveVectorIsKept()
     {
-        var problem = new FuncProblem<int, DummySearchSpace<int>>(static (int candidate) => (double)candidate, DummySearchSpace<int>.Instance, SingleObjective.Maximize);
+        var problem = new FuncProblem<int, DummySearchSpace<int>>(static candidate => candidate, DummySearchSpace<int>.Instance, SingleObjective.Maximize);
 
-        Refine(new AddOffsetRefiner(5).WithImprovementCheck(), problem, 10).ShouldBe([15]);
-        Refine(new AddOffsetRefiner(-5).WithImprovementCheck(), problem, 10).ShouldBe([10]);
+        Refine(new AddOffsetRefiner(5).CheckedForImprovement(), problem, 10).ShouldBe([15]);
+        Refine(new AddOffsetRefiner(-5).CheckedForImprovement(), problem, 10).ShouldBe([10]);
     }
 
     // Without a total order the default criterion falls back to dominance, which rejects the trade-off; a declared
@@ -25,7 +25,7 @@ public class ImprovementCheckingCompositionTests
     [Fact]
     public void TheDefaultCriterion_FollowsTheProblemsObjectiveOrder()
     {
-        var refiner = new AddOffsetRefiner(-5).WithImprovementCheck();
+        var refiner = new AddOffsetRefiner(-5).CheckedForImprovement();
 
         // Lowering the candidate improves the first objective and worsens the second.
         Refine(refiner, CreateTradeOffProblem(MultiObjective.Create(ObjectiveDirection.Minimize, ObjectiveDirection.Minimize)), 10)
@@ -39,8 +39,8 @@ public class ImprovementCheckingCompositionTests
     {
         var problem = CreateProblem();
 
-        Refine(new AddOffsetRefiner(-3).WithImprovementCheck(ImprovementChecking.MinimumImprovement(5.0)), problem, 10).ShouldBe([10]);
-        Refine(new AddOffsetRefiner(-6).WithImprovementCheck(ImprovementChecking.MinimumImprovement(5.0)), problem, 10).ShouldBe([4]);
+        Refine(new AddOffsetRefiner(-3).CheckedForImprovement(ImprovementChecking.MinimumImprovement(5.0)), problem, 10).ShouldBe([10]);
+        Refine(new AddOffsetRefiner(-6).CheckedForImprovement(ImprovementChecking.MinimumImprovement(5.0)), problem, 10).ShouldBe([4]);
     }
 
     [Fact]
@@ -48,8 +48,8 @@ public class ImprovementCheckingCompositionTests
     {
         var problem = CreateProblem();
 
-        Refine(new AddOffsetRefiner(-4).WithImprovementCheck(ImprovementChecking.MinimumRelativeImprovement(0.5)), problem, 10).ShouldBe([10]);
-        Refine(new AddOffsetRefiner(-6).WithImprovementCheck(ImprovementChecking.MinimumRelativeImprovement(0.5)), problem, 10).ShouldBe([4]);
+        Refine(new AddOffsetRefiner(-4).CheckedForImprovement(ImprovementChecking.MinimumRelativeImprovement(0.5)), problem, 10).ShouldBe([10]);
+        Refine(new AddOffsetRefiner(-6).CheckedForImprovement(ImprovementChecking.MinimumRelativeImprovement(0.5)), problem, 10).ShouldBe([4]);
     }
 
     // NSGA2 declares no total order, so acceptance is dominance-based and the worsened point never survives.
@@ -58,7 +58,7 @@ public class ImprovementCheckingCompositionTests
     {
         var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
         var worsened = RealVector.Repeat(problem.SearchSpace.GetMaximum(0), problem.SearchSpace.Length);
-        var algorithm = new NSGA2<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
+        var algorithm = new NSGA2<RealVector>
         {
             PopulationSize = 6,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -67,7 +67,7 @@ public class ImprovementCheckingCompositionTests
             Selector = RandomSelector.For(problem),
             Replacer = ParetoCrowdingReplacer.For(problem, dominateOnEqualities: true),
             MaximumGenerations = 3,
-            Refiner = new UpperBoundRefiner().WithImprovementCheck()
+            Refiner = new UpperBoundRefiner().CheckedForImprovement()
         };
 
         var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
@@ -76,17 +76,17 @@ public class ImprovementCheckingCompositionTests
     }
 
     private static IReadOnlyList<int> Refine(
-        IRefiner<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> refiner,
+        IRefiner<int> refiner,
         FuncProblem<int, DummySearchSpace<int>> problem,
         params int[] candidates) =>
-        refiner.CreateExecutionInstance().Refine(candidates, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        refiner.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry()).Refine(candidates, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>
-        FuncProblem.Create(static (int candidate) => (double)candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+        FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
 
     // Every change improves one objective exactly as much as it worsens the other, so only the declared order can decide.
     private static FuncProblem<int, DummySearchSpace<int>> CreateTradeOffProblem(ObjectiveDirections objective) =>
-        new(static (int candidate) => new double[] { candidate, -candidate }, DummySearchSpace<int>.Instance, objective);
+        new(static candidate => new double[] { candidate, -candidate }, DummySearchSpace<int>.Instance, objective);
 
     private sealed record AddOffsetRefiner(int Offset) : SingleCandidateRefiner<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
@@ -94,9 +94,9 @@ public class ImprovementCheckingCompositionTests
             candidate + Offset;
     }
 
-    private sealed record UpperBoundRefiner : SingleCandidateRefiner<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
+    private sealed record UpperBoundRefiner : SingleCandidateRefiner<RealVector, BoundedRealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
     {
-        public override RealVector RefineCandidate(RealVector candidate, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, MultiObjectiveTestFunctionProblem problem) =>
+        public override RealVector RefineCandidate(RealVector candidate, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, MultiObjectiveTestFunctionProblem problem) =>
             RealVector.Repeat(searchSpace.GetMaximum(0), candidate.Count);
     }
 }

@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Analysis;
 
 public record PopulationSimilarityAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState>(
     ICandidateSimilarityCalculator<TCandidate> CandidateSimilarity,
-    params IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>[] Interceptor)
+    params IInterceptor<TCandidate>[] Interceptor)
     : Analyzer<PopulationSimilarityAnalyzerState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -22,7 +22,7 @@ public record PopulationSimilarityAnalyzer<TCandidate, TSearchSpace, TProblem, T
     {
         foreach (var interceptor in Interceptor)
         {
-            observations.Observe(interceptor,
+            observations.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor,
                 (populationState, _, _, _, problem) => AfterInterception(result, populationState, problem));
         }
     }

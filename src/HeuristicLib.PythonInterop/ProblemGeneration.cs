@@ -78,7 +78,7 @@ public class ProblemGeneration
         var testFunction = new CombinedGradientTestFunction(
             new ShiftedGradientTestFunction(-shift, new SphereFunction(dimensions)),
             new RastriginFunction(dimensions));
-        var encoding = new RealVectorSearchSpace(dimensions, min, max);
+        var encoding = new BoundedRealVectorSearchSpace(dimensions, min, max);
         var prob = new MultiObjectiveTestFunctionProblem(testFunction, encoding);
 
         return prob;
@@ -87,7 +87,7 @@ public class ProblemGeneration
     public static MultiObjectiveTravellingSalesmanProblem CreateMultiObjectiveRealVectorTravellingSalesmanProblem(params string[] files) => new(files.Select(CreateTravellingSalesmanProblem).ToArray());
 
     public class PythonProblem(CustomFunc cfunc, int dimensions, double min, double max, bool[] maximization)
-        : RealVectorProblem(MultiObjective.Create(maximization), new RealVectorSearchSpace(dimensions, min, max))
+        : RealVectorProblem<PythonProblem>(MultiObjective.Create(maximization), new BoundedRealVectorSearchSpace(dimensions, min, max))
     {
         public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) => cfunc(solution);
     }
@@ -106,8 +106,8 @@ public class ProblemGeneration
     }
 
     public class MultiObjectiveTravellingSalesmanProblem(TravelingSalesmanProblem[] tsps) :
-        RealVectorProblem(MultiObjective.Create(tsps.Select(_ => false).ToArray()),
-            new RealVectorSearchSpace(
+        RealVectorProblem<MultiObjectiveTravellingSalesmanProblem>(MultiObjective.Create(tsps.Select(_ => false).ToArray()),
+            new BoundedRealVectorSearchSpace(
                 tsps.Max(x => x.ProblemData.NumberOfCities),
                 [0.0], [1.0]))
     {

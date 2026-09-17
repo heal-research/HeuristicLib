@@ -8,29 +8,28 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Algorithms;
 
 // Adapter for algorithms that do not have an inner termination criterion; revisit if every algorithm exposes a terminal-state hook.
-public record StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : Algorithm<StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record StateTerminatedAlgorithm<TCandidate, TSearchState>
+    : Algorithm<StateTerminatedAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
-    public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
-    public required ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Terminator { get; init; }
+    public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
+    public required ITerminator<TCandidate> Terminator { get; init; }
 
-    public override StateTerminatedAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, Terminator);
+
+    public override StateTerminatedAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
     {
+        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
         // Resolve the terminator before the wrapped algorithm so elapsed-time terminators start at the earliest point this wrapper controls, including wrapped algorithm instancing.
-        var terminator = instanceRegistry.Resolve(Terminator);
-        return new(instanceRegistry.Resolve(Algorithm), terminator);
+        var terminator = resolver.Resolve(Terminator);
+        return new(resolver.Resolve(Algorithm), terminator);
     }
 }
 
 public static class StateTerminatedAlgorithm
 {
-    public static StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(
-        IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    public static StateTerminatedAlgorithm<TCandidate, TSearchState> Create<TCandidate, TSearchState>(
+        IAlgorithm<TCandidate, TSearchState> algorithm, ITerminator<TCandidate> terminator)
         where TSearchState : class, ISearchState => new()
         {
             Algorithm = algorithm,
@@ -68,19 +67,17 @@ public class StateTerminatedAlgorithmInstance<TCandidate, TSearchSpace, TProblem
 
 public static class StateTerminatedAlgorithmExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> WithTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
+        public StateTerminatedAlgorithm<TCandidate, TSearchState> TerminatedBy(ITerminator<TCandidate> terminator)
         {
             return StateTerminatedAlgorithm.Create(algorithm, terminator);
         }
 
-        public StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> WithMaxIterations(int maximumIterations)
+        public StateTerminatedAlgorithm<TCandidate, TSearchState> TerminatedAfterIterations(int maximumIterations)
         {
-            return algorithm.WithTerminator(new AfterIterationsTerminator<TCandidate>(maximumIterations));
+            return algorithm.TerminatedBy(new AfterIterationsTerminator<TCandidate>(maximumIterations));
         }
     }
 }

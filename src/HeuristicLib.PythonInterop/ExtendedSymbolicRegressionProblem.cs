@@ -31,7 +31,7 @@ public class ExtendedSymbolicRegressionProblem(
     ObjectiveDirections objective,
     ExpressionTreeSearchSpace searchSpace,
     Func<ExpressionTree, ObjectiveVector, double[]> individualPythonCallback)
-    : SingleSolutionProblem<ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
+    : SingleSolutionProblem<ExtendedSymbolicRegressionProblem, ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
 {
     private sealed record InnerProblemParameterFittingRefiner(NumericParameterFittingRefiner ChildRefiner)
         : SingleCandidateRefiner<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>
@@ -85,7 +85,7 @@ public class ExtendedSymbolicRegressionProblem(
 
         // The number of objectives, these directions, and the objective vectors returned by
         // the Python callbacks must remain in sync.
-        var directions = new ObjectiveDirection[]
+        var directions = new[]
         {
             ObjectiveDirection.Maximize, // combined score supplied by Python
             ObjectiveDirection.Maximize, // Pearson R2, retained for final comparison
@@ -104,11 +104,11 @@ public class ExtendedSymbolicRegressionProblem(
         {
             InnerProblem = innerProblem
         };
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>
+        var algorithm = new GeneticAlgorithm<ExpressionTree>
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover { InternalNodeProbability = 0.9 },
-            Mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>(
+            Mutator = new ChooseOneMutator<ExpressionTree>(
                 [.. SymbolicExpressionMutators.Default]),
             MutationRate = 0.1,
             Selector = new TournamentSelector<ExpressionTree>(4),

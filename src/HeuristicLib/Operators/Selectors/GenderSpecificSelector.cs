@@ -14,26 +14,31 @@ namespace HEAL.HeuristicLib.Operators;
 /// The result order is female 0, male 0, female 1, male 1 and so on. For an odd requested count, the final
 /// candidate is selected by the female selector.
 /// </remarks>
-public record GenderSpecificSelector<TCandidate, TSearchSpace, TProblem>
-    : Selector<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record GenderSpecificSelector<TCandidate>
+    : ISelector<TCandidate>
 {
-    public GenderSpecificSelector(ISelector<TCandidate, TSearchSpace, TProblem> femaleSelector, ISelector<TCandidate, TSearchSpace, TProblem> maleSelector)
+    public GenderSpecificSelector(ISelector<TCandidate> femaleSelector, ISelector<TCandidate> maleSelector)
     {
         FemaleSelector = femaleSelector;
         MaleSelector = maleSelector;
     }
 
-    public ISelector<TCandidate, TSearchSpace, TProblem> FemaleSelector { get; init; }
+    public ISelector<TCandidate> FemaleSelector { get; init; }
 
-    public ISelector<TCandidate, TSearchSpace, TProblem> MaleSelector { get; init; }
+    public ISelector<TCandidate> MaleSelector { get; init; }
 
-    public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(FemaleSelector), instanceRegistry.Resolve(MaleSelector));
+    public ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    {
+        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        return new Instance<TRunSearchSpace, TRunProblem>(resolver.Resolve(FemaleSelector), resolver.Resolve(MaleSelector));
+    }
 
-    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> femaleSelector, ISelectorInstance<TCandidate, TSearchSpace, TProblem> maleSelector)
+    private sealed class Instance<TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> femaleSelector, ISelectorInstance<TCandidate, TSearchSpace, TProblem> maleSelector)
         : SelectorInstance<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
@@ -59,19 +64,15 @@ public record GenderSpecificSelector<TCandidate, TSearchSpace, TProblem>
 
 public static class GenderSpecificSelector
 {
-    public static GenderSpecificSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
-        ISelector<TCandidate, TSearchSpace, TProblem> femaleSelector, ISelector<TCandidate, TSearchSpace, TProblem> maleSelector)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(femaleSelector, maleSelector);
+    public static GenderSpecificSelector<TCandidate> Create<TCandidate>(
+        ISelector<TCandidate> femaleSelector, ISelector<TCandidate> maleSelector) => new(femaleSelector, maleSelector);
 }
 
 public static class GenderSpecificSelectorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> femaleSelector)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(ISelector<TCandidate> femaleSelector)
     {
-        public GenderSpecificSelector<TCandidate, TSearchSpace, TProblem> PairWith(ISelector<TCandidate, TSearchSpace, TProblem> maleSelector) =>
+        public GenderSpecificSelector<TCandidate> PairWith(ISelector<TCandidate> maleSelector) =>
             GenderSpecificSelector.Create(femaleSelector, maleSelector);
     }
 }

@@ -49,7 +49,7 @@ public class CycleAlgorithmAnalysisScenarios
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = cycleAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzers(evaluationTrace1, evaluationTrace2, interceptionTrace);
+        var run = cycleAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AttachAnalyzers(evaluationTrace1, evaluationTrace2, interceptionTrace);
         var finalState = run.Complete();
 
         return new CycleRunResult(
@@ -87,34 +87,39 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
-    private sealed record SingleStepAlgorithm : Algorithm<SingleStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    private sealed record SingleStepAlgorithm : Algorithm<SingleStepAlgorithm, int, PopulationState<int>>
     {
         public int Candidate { get; }
 
-        public IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator { get; }
+        public IEvaluator<int> Evaluator { get; }
 
-        public IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; }
+        public IInterceptor<int> Interceptor { get; }
 
-        public SingleStepAlgorithm(int candidate, IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor)
+        public SingleStepAlgorithm(int candidate, IEvaluator<int> evaluator, IInterceptor<int> interceptor)
         {
             Candidate = candidate;
             Interceptor = interceptor;
             Evaluator = evaluator;
         }
 
-        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-            new Instance(instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Interceptor), Candidate);
-
-        private sealed class Instance(IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor, int candidate)
-            : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
         {
-            private readonly IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator = evaluator;
+            var resolver = instanceRegistry.For<int, TRunSearchSpace, TRunProblem, PopulationState<int>>();
+            return new Instance<TRunSearchSpace, TRunProblem>(resolver.Resolve(Evaluator), resolver.Resolve(Interceptor), Candidate);
+        }
 
-            private readonly IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor = interceptor;
+        private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator, IInterceptorInstance<int, TSearchSpace, TProblem, PopulationState<int>> interceptor, int candidate)
+            : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
+        {
+            private readonly IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator = evaluator;
+
+            private readonly IInterceptorInstance<int, TSearchSpace, TProblem, PopulationState<int>> interceptor = interceptor;
 
             private readonly int candidate = candidate;
 
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 ct.ThrowIfCancellationRequested();
 
@@ -127,14 +132,14 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
-    private sealed record EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator)
+    private sealed record EvaluationTraceAnalysis(IEvaluator<int> Evaluator)
         : Analyzer<EvaluationTraceAnalysis.ExecutionState>
     {
         public override ExecutionState CreateInitialResult() => new();
 
         public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
         {
-            observations.Observe(Evaluator, (objectiveVectors, _, _, _) => result.RecordObjectiveValues(objectiveVectors));
+            observations.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Evaluator, (objectiveVectors, _, _, _) => result.RecordObjectiveValues(objectiveVectors));
         }
 
         public sealed class ExecutionState
@@ -150,14 +155,14 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
-    private sealed record InterceptionTraceAnalysis(IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor)
+    private sealed record InterceptionTraceAnalysis(IInterceptor<int> Interceptor)
         : Analyzer<InterceptionTraceAnalysis.ExecutionState>
     {
         public override ExecutionState CreateInitialResult() => new();
 
         public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
         {
-            observations.Observe(Interceptor, (_, currentState, _, _, _) => result.RecordObjectiveValue(currentState));
+            observations.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(Interceptor, (_, currentState, _, _, _) => result.RecordObjectiveValue(currentState));
         }
 
         public sealed class ExecutionState

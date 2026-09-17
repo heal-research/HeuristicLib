@@ -19,7 +19,7 @@ public class AnalysisSpecs
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
         var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(777)).WithAnalyzer(analysis);
+        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(777)).AttachAnalyzer(analysis);
 
         var finalState = await run.CompleteAsync(
             cancellationToken: TestContext.Current.CancellationToken);
@@ -38,7 +38,7 @@ public class AnalysisSpecs
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 3);
         var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(888)).WithAnalyzer(analysis);
+        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(888)).AttachAnalyzer(analysis);
 
         await using var enumerator = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
                                         .GetAsyncEnumerator(TestContext.Current.CancellationToken);
@@ -67,7 +67,7 @@ public class AnalysisSpecs
             [baseAlgorithm.Evaluator],
             [interceptor]);
 
-        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(321)).WithAnalyzer(analysis);
+        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(321)).AttachAnalyzer(analysis);
 
         await run.CompleteAsync(
             cancellationToken: TestContext.Current.CancellationToken);
@@ -86,7 +86,7 @@ public class AnalysisSpecs
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
 
         var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(333))
-            .WithAnalyzer(Analyzer.BestMedianWorst(interceptor), out var analysis);
+            .AttachAnalyzer(Analyzer.BestMedianWorst(interceptor), out var analysis);
         var finalState = await run.CompleteAsync(
             cancellationToken: TestContext.Current.CancellationToken);
 
@@ -101,13 +101,13 @@ public class AnalysisSpecs
         return new TestFunctionProblem(new RastriginFunction(dimension));
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private static GeneticAlgorithm<RealVector>
         CreateSimpleGeneticAlgorithm(
             TestFunctionProblem problem,
             IdentityInterceptor<RealVector, PopulationState<RealVector>> interceptor,
             int maximumGenerations)
     {
-        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        return new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 16,
             MaximumGenerations = maximumGenerations,

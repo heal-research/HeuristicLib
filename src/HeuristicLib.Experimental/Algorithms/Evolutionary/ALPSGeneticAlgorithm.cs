@@ -13,20 +13,19 @@ public record AlpsState<TCandidate> : SearchState
     public required ImmutableArray<ImmutableArray<int>> Ages { get; init; }
 }
 
-public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
-    : IterativeAlgorithm<AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record AlpsGeneticAlgorithm<TCandidate>
+    : IterativeAlgorithm<AlpsGeneticAlgorithm<TCandidate>, TCandidate, AlpsState<TCandidate>>
 {
     public required int PopulationSize { get; init; }
-    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
-    public required ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; init; }
-    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
-    public required ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+    public required ICreator<TCandidate> Creator { get; init; }
+    public required ICrossover<TCandidate> Crossover { get; init; }
+    public required IMutator<TCandidate> Mutator { get; init; }
+    public required ISelector<TCandidate> Selector { get; init; }
+    public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
     public int Elites { get; init; }
-    public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
+    public IRefiner<TCandidate>? Refiner { get; init; }
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Selector, Evaluator, Refiner);
 
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
@@ -43,14 +42,15 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
     /// </remarks>
     public double MutationRate { get; init; } = 0.1;
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>? resolvedInterceptor)
+    protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>>? resolvedInterceptor)
     {
-        var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate);
-        return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover),
-            instanceRegistry.Resolve(effectiveMutator), instanceRegistry.Resolve(Selector), instanceRegistry.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations);
+        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.AppliedAtRate(MutationRate);
+        return new Instance<TRunSearchSpace, TRunProblem>(resolvedInterceptor, resolver.Resolve(Evaluator), resolver.Resolve(Creator), resolver.Resolve(Crossover),
+            resolver.Resolve(effectiveMutator), resolver.Resolve(Selector), resolver.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations);
     }
 
-    private sealed class Instance(
+    private sealed class Instance<TSearchSpace, TProblem>(
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>? interceptor,
         IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
         ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
@@ -62,6 +62,8 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
         int elites,
         int? maximumGenerations)
         : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>(interceptor)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         protected override bool HasCompleted(int yieldedStateCount, AlpsState<TCandidate>? previousState, TProblem problem) =>
             maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;

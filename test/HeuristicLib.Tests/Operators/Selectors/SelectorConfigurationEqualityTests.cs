@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Selectors;
@@ -36,7 +37,7 @@ public class SelectorConfigurationEqualityTests
     {
         var first = new RangeSelector(1);
         var second = new RangeSelector(2);
-        var childSelectors = new List<ISelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var childSelectors = new List<ISelector<int>> { first, second };
         var selector = new FirstOfSelector(childSelectors);
 
         childSelectors.Clear();
@@ -84,9 +85,9 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void ChooseOneSelector_WithDifferentWeights_IsNotEqual()
     {
-        ISelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[] childSelectors = [new RangeSelector(1), new RangeSelector(2)];
-        var left = new ChooseOneSelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childSelectors) { Weights = [1.0, 2.0] };
-        var right = new ChooseOneSelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childSelectors) { Weights = [2.0, 1.0] };
+        ISelector<int>[] childSelectors = [new RangeSelector(1), new RangeSelector(2)];
+        var left = new ChooseOneSelector<int>(childSelectors) { Weights = [1.0, 2.0] };
+        var right = new ChooseOneSelector<int>(childSelectors) { Weights = [2.0, 1.0] };
 
         left.ShouldNotBe(right);
     }
@@ -145,8 +146,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void EliteSelector_WithDifferentChildSelector_IsNotEqual()
     {
-        var left = new RangeSelector(1).WithElites(2);
-        var right = new RangeSelector(2).WithElites(2);
+        var left = new RangeSelector(1).CombinedWithElites(2);
+        var right = new RangeSelector(2).CombinedWithElites(2);
 
         left.ShouldNotBe(right);
     }
@@ -155,8 +156,8 @@ public class SelectorConfigurationEqualityTests
     public void CountingSelector_WithSameCounterAndMetric_IsEqual()
     {
         var counter = new ObservationCounter();
-        var left = new RangeSelector(1).CountSelectorCalls(counter);
-        var right = new RangeSelector(1).CountSelectorCalls(counter);
+        var left = new RangeSelector(1).CountCalls(counter);
+        var right = new RangeSelector(1).CountCalls(counter);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -166,8 +167,8 @@ public class SelectorConfigurationEqualityTests
     public void CountingSelector_WithDifferentMetric_IsNotEqual()
     {
         var counter = new ObservationCounter();
-        var left = new RangeSelector(1).CountSelectorCalls(counter);
-        var right = new RangeSelector(1).CountSelectedCandidates(counter);
+        var left = new RangeSelector(1).CountCalls(counter);
+        var right = new RangeSelector(1).CountCandidates(counter);
 
         left.ShouldNotBe(right);
     }
@@ -175,8 +176,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void CountingSelector_WithDifferentCounter_IsNotEqual()
     {
-        var left = new RangeSelector(1).CountSelectorCalls(new ObservationCounter());
-        var right = new RangeSelector(1).CountSelectorCalls(new ObservationCounter());
+        var left = new RangeSelector(1).CountCalls(new ObservationCounter());
+        var right = new RangeSelector(1).CountCalls(new ObservationCounter());
 
         left.ShouldNotBe(right);
     }
@@ -185,8 +186,8 @@ public class SelectorConfigurationEqualityTests
     public void CountingSelector_WithDifferentChildSelector_IsNotEqual()
     {
         var counter = new ObservationCounter();
-        var left = new RangeSelector(1).CountSelectorCalls(counter);
-        var right = new RangeSelector(2).CountSelectorCalls(counter);
+        var left = new RangeSelector(1).CountCalls(counter);
+        var right = new RangeSelector(2).CountCalls(counter);
 
         left.ShouldNotBe(right);
     }
@@ -195,8 +196,8 @@ public class SelectorConfigurationEqualityTests
     public void DurationMeasuringSelector_WithSameDurationAndTimeProvider_IsEqual()
     {
         var duration = new ObservationDuration();
-        var left = new RangeSelector(1).MeasureSelectorDuration(duration, TimeProvider.System);
-        var right = new RangeSelector(1).MeasureSelectorDuration(duration, TimeProvider.System);
+        var left = new RangeSelector(1).MeasureDuration(duration, TimeProvider.System);
+        var right = new RangeSelector(1).MeasureDuration(duration, TimeProvider.System);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -205,8 +206,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringSelector_WithDifferentDuration_IsNotEqual()
     {
-        var left = new RangeSelector(1).MeasureSelectorDuration(new ObservationDuration(), TimeProvider.System);
-        var right = new RangeSelector(1).MeasureSelectorDuration(new ObservationDuration(), TimeProvider.System);
+        var left = new RangeSelector(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
+        var right = new RangeSelector(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
 
         left.ShouldNotBe(right);
     }
@@ -215,8 +216,8 @@ public class SelectorConfigurationEqualityTests
     public void DurationMeasuringSelector_WithDifferentChildSelector_IsNotEqual()
     {
         var duration = new ObservationDuration();
-        var left = new RangeSelector(1).MeasureSelectorDuration(duration, TimeProvider.System);
-        var right = new RangeSelector(2).MeasureSelectorDuration(duration, TimeProvider.System);
+        var left = new RangeSelector(1).MeasureDuration(duration, TimeProvider.System);
+        var right = new RangeSelector(2).MeasureDuration(duration, TimeProvider.System);
 
         left.ShouldNotBe(right);
     }
@@ -245,8 +246,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void ObservableSelector_WithSeparatelyConstructedActionObservers_IsNotEqual()
     {
-        var left = new RangeSelector(1).ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => { });
-        var right = new RangeSelector(1).ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => { });
+        var left = new RangeSelector(1).ObserveWith(_ => { });
+        var right = new RangeSelector(1).ObserveWith(_ => { });
 
         left.ShouldNotBe(right);
     }
@@ -254,8 +255,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void NestedSelectorComposition_WithEqualParts_IsEqual()
     {
-        var left = ChooseOneSelector.Create(new RangeSelector(1).WithElites(2), new RangeSelector(2));
-        var right = ChooseOneSelector.Create(new RangeSelector(1).WithElites(2), new RangeSelector(2));
+        var left = ChooseOneSelector.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
+        var right = ChooseOneSelector.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -264,8 +265,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void NestedSelectorComposition_WithDifferentNestedChildSelector_IsNotEqual()
     {
-        var left = ChooseOneSelector.Create(new RangeSelector(1).WithElites(2), new RangeSelector(2));
-        var right = ChooseOneSelector.Create(new RangeSelector(9).WithElites(2), new RangeSelector(2));
+        var left = ChooseOneSelector.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
+        var right = ChooseOneSelector.Create(new RangeSelector(9).CombinedWithElites(2), new RangeSelector(2));
 
         left.ShouldNotBe(right);
     }
@@ -277,20 +278,22 @@ public class SelectorConfigurationEqualityTests
     }
 
     private sealed record FirstOfSelector
-        : MultiSelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        : MultiSelector<int>
     {
-        public FirstOfSelector(IReadOnlyList<ISelector<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childSelectors)
+        public FirstOfSelector(IReadOnlyList<ISelector<int>> childSelectors)
             : base(childSelectors)
         {
         }
 
-        protected override MultiSelectorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<ISelectorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childSelectors) =>
-            new Instance(childSelectors);
+        protected override ISelectorInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ISelectorInstance<int, TRunSearchSpace, TRunProblem>> childSelectors) =>
+            new Instance<TRunSearchSpace, TRunProblem>(childSelectors);
 
-        private sealed class Instance(ImmutableArray<ISelectorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childSelectors)
-            : MultiSelectorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childSelectors)
+        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ISelectorInstance<int, TSearchSpace, TProblem>> childSelectors)
+            : MultiSelectorInstance<int, TSearchSpace, TProblem>(childSelectors)
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+            public override IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildSelectors[0].Select(population, objective, count, random, searchSpace, problem);
         }
     }

@@ -18,10 +18,10 @@ public sealed class IntegerVector : Vector<int>, IEquatable<IntegerVector>
     { }
 
     public bool Equals(IntegerVector? other) =>
-      other is not null && (ReferenceEquals(this, other) || HasSameElements(other));
+        other is not null && (ReferenceEquals(this, other) || HasSameElements(other));
 
     public override bool Equals(object? obj) =>
-      obj is IntegerVector other && Equals(other);
+        obj is IntegerVector other && Equals(other);
 
     public override int GetHashCode() => GetElementsHashCode();
 
@@ -47,8 +47,8 @@ public sealed class IntegerVector : Vector<int>, IEquatable<IntegerVector>
     /// </summary>
     public static IntegerVector FromOwnedArray(int[] elements) => new(TakeOwnership(elements));
 
-    public static IntegerVector CreateUniform(int length, IntegerVector low, IntegerVector high, IRandomNumberGenerator random)
-      => random.NextIntegerVectorUniform(low, high, length);
+    public static IntegerVector CreateUniform(int length, IntegerVector low, IntegerVector high, IRandomNumberGenerator random) =>
+        random.NextIntegerVectorUniform(low, high, length);
 
     public static RealVector ToRealVector(IntegerVector input)
     {

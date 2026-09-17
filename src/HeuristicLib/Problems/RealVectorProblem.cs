@@ -3,4 +3,6 @@ using HEAL.HeuristicLib.Objectives;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public abstract class RealVectorProblem(ObjectiveDirections objective, RealVectorSearchSpace searchSpace) : SingleSolutionProblem<RealVector, RealVectorSearchSpace>(objective, searchSpace);
+public abstract class RealVectorProblem<TSelf>(ObjectiveDirections objective, BoundedRealVectorSearchSpace searchSpace)
+    : SingleSolutionProblem<TSelf, RealVector, BoundedRealVectorSearchSpace>(objective, searchSpace)
+    where TSelf : RealVectorProblem<TSelf>;

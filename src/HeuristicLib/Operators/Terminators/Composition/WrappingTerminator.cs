@@ -5,23 +5,38 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public abstract record WrappingTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : Terminator<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchState : class, ISearchState
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+/// <remarks>
+/// A wrapping terminator owns a child, so it stays agnostic in the search space, problem and search state, and passes
+/// the run's binding through to the child unchanged.
+/// </remarks>
+public abstract record WrappingTerminator<TCandidate>
+    : ITerminator<TCandidate>
 {
-    protected WrappingTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator)
+    protected WrappingTerminator(ITerminator<TCandidate> childTerminator)
     {
         ChildTerminator = childTerminator;
     }
 
-    public ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> ChildTerminator { get; init; }
+    public ITerminator<TCandidate> ChildTerminator { get; init; }
 
-    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        CreateExecutionInstance(instanceRegistry.Resolve(ChildTerminator));
+    public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildTerminator);
 
-    protected abstract WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator);
+
+    /// <summary>
+    /// Resolves the child over the run's search space and problem and hands it to <see
+    /// cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
+    /// </summary>
+    public ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+        where TRunSearchState : class, ISearchState =>
+        WrapExecutionInstance(instanceRegistry.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(ChildTerminator));
+
+    /// <summary>Wraps the child's execution instance in this operator's own.</summary>
+    protected abstract ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childTerminator)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+        where TRunSearchState : class, ISearchState;
 }
 
 public abstract class WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator)

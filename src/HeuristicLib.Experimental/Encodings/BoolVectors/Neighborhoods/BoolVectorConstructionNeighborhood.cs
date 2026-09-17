@@ -11,6 +11,6 @@ public record BoolVectorConstructionNeighborhood : BoolVectorNeighborhood<bool>
         yield return true;
     }
 
-    public override BoolVector Apply(BoolVector genotype, bool move, IRandomNumberGenerator random, BoolVectorSearchSpace searchSpace, IProblem<BoolVector, BoolVectorSearchSpace> problem)
-        => new(genotype.Append(move));
+    public override BoolVector Apply(BoolVector genotype, bool move, IRandomNumberGenerator random, BoolVectorSearchSpace searchSpace, IProblem<BoolVector, BoolVectorSearchSpace> problem) =>
+        new(genotype.Append(move));
 }

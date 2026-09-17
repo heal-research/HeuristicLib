@@ -3,7 +3,6 @@ using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
 // These classes are used for cross language purposes and therefore have public properties and constructors.
@@ -14,16 +13,16 @@ namespace HEAL.HeuristicLib.PythonInterop;
 public class ExperimentParameters<TCandidate, TSearchSpace> where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public string AlgorithmName { get; set; } = "ga";
-    public ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Creator { get; set; }
-    public ICrossover<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Crossover { get; set; }
+    public ICreator<TCandidate>? Creator { get; set; }
+    public ICrossover<TCandidate>? Crossover { get; set; }
     public int Elites { get; set; } = 1;
     public int Iterations { get; set; } = 30;
     public double MutationRate { get; set; } = 0.05;
-    public IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Mutator { get; set; }
+    public IMutator<TCandidate>? Mutator { get; set; }
     public int NoChildren { get; set; } = -1;
     public int PopulationSize { get; set; } = 10;
     public int Seed { get; set; }
-    public ISelector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Selector { get; set; }
+    public ISelector<TCandidate>? Selector { get; set; }
     public EvolutionStrategyType Strategy { get; set; } = EvolutionStrategyType.Plus;
     public bool TrackGenealogy { get; set; }
     public bool TrackPopulations { get; set; }
@@ -78,7 +77,7 @@ public class TravelingSalesmanExperimentParameters : ExperimentParameters<Permut
     public TravelingSalesmanExperimentParameters(TravelingSalesmanExperimentParameters parameters) : base(parameters) { }
 }
 
-public class TestFunctionExperimentParameters : ExperimentParameters<RealVector, RealVectorSearchSpace>
+public class TestFunctionExperimentParameters : ExperimentParameters<RealVector, BoundedRealVectorSearchSpace>
 {
     public int Dimension { get; set; } = 10;
     public int Instance { get; set; } = 1;

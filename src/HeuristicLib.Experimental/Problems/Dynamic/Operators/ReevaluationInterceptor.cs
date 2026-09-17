@@ -12,12 +12,12 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
     : Interceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchState : PopulationState<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
 {
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; }
+    public IEvaluator<TCandidate> Evaluator { get; init; }
     public TProblem SourceProblem { get; init; }
 
-    public ReevaluationInterceptor(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, TProblem sourceProblem)
+    public ReevaluationInterceptor(IEvaluator<TCandidate> evaluator, TProblem sourceProblem)
     {
         Evaluator = evaluator;
         SourceProblem = sourceProblem;
@@ -25,7 +25,7 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
 
     public override InterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
-        var instance = new Instance(instanceRegistry.Resolve(Evaluator));
+        var instance = new Instance(instanceRegistry.Resolve<TCandidate, TSearchSpace, TProblem>(Evaluator));
 
         // The subscription lifetime is shared with DynamicCachingEvaluator and requires a common lifecycle design.
         SourceProblem.EpochClock.OnEpochChange += (_, _) => instance.RequestReevaluation();
@@ -58,9 +58,9 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
 
 public static class ReevaluationInterceptor
 {
-    public static ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, TProblem sourceProblem)
+    public static ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(IEvaluator<TCandidate> evaluator, TProblem sourceProblem)
         where TSearchState : PopulationState<TCandidate>
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : DynamicProblem<TCandidate, TSearchSpace> =>
+        where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace> =>
         new(evaluator, sourceProblem);
 }

@@ -1,6 +1,4 @@
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
@@ -16,19 +14,21 @@ public static class GeneticAlgorithmDefaults
 {
     public const int PopulationSize = 100;
 
+    /// <summary>
+    /// The generation limit an algorithm takes when the caller sets none. A run that should end on a terminator
+    /// alone states that by setting the limit to <see langword="null"/>.
+    /// </summary>
+    public const int MaximumGenerations = 1000;
+
     public const double MutationRate = 0.1;
 
     public const int Elites = 1;
 
     public const int TournamentSize = 2;
 
-    public static ISelector<TCandidate, TSearchSpace, TProblem> Selector<TCandidate, TSearchSpace, TProblem>()
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static ISelector<TCandidate> Selector<TCandidate>() =>
         new TournamentSelector<TCandidate>(TournamentSize);
 
-    public static IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator<TCandidate, TSearchSpace, TProblem>()
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+    public static IEvaluator<TCandidate> Evaluator<TCandidate>() =>
+        new ProblemEvaluator<TCandidate>();
 }

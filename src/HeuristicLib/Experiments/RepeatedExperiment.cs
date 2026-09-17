@@ -1,15 +1,11 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Experiments;
 
-public sealed record RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
-    : Experiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, int>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record RepeatedExperiment<TCandidate, TAlgorithm, TSearchState>
+    : Experiment<TCandidate, TAlgorithm, TSearchState, int>
+    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
-    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     public TAlgorithm Algorithm { get; }
 
@@ -30,18 +26,16 @@ public sealed record RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSea
         Enumerable.Range(0, Repetitions).Select(repetition => ExperimentCase.From(Algorithm, repetition, [repetition])).ToImmutableArray();
 }
 
-public sealed record RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TInnerKey>
-    : Experiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, (TInnerKey Inner, int Repetition)>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record RepeatedExperiment<TCandidate, TAlgorithm, TSearchState, TInnerKey>
+    : Experiment<TCandidate, TAlgorithm, TSearchState, (TInnerKey Inner, int Repetition)>
+    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
-    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
-    public IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TInnerKey> InnerExperiment { get; }
+    public IExperiment<TCandidate, TAlgorithm, TSearchState, TInnerKey> InnerExperiment { get; }
 
     public int Repetitions { get; }
 
-    public RepeatedExperiment(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TInnerKey> innerExperiment, int repetitions)
+    public RepeatedExperiment(IExperiment<TCandidate, TAlgorithm, TSearchState, TInnerKey> innerExperiment, int repetitions)
     {
         if (repetitions <= 0)
         {
@@ -59,29 +53,23 @@ public sealed record RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSea
 
 public static class RepeatedExperimentExtensions
 {
-    extension<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TSelf, TCandidate, TSearchState>(Algorithm<TSelf, TCandidate, TSearchState> algorithm)
+        where TSelf : Algorithm<TSelf, TCandidate, TSearchState>
         where TSearchState : class, ISearchState
     {
-        public RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> Repeat(int repetitions) => new(algorithm.Self, repetitions);
+        public RepeatedExperiment<TCandidate, TSelf, TSearchState> Repeat(int repetitions) => new(algorithm.Self, repetitions);
     }
 
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> Repeat(int repetitions) => new(algorithm, repetitions);
+        public RepeatedExperiment<TCandidate, IAlgorithm<TCandidate, TSearchState>, TSearchState> Repeat(int repetitions) => new(algorithm, repetitions);
     }
 
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TInnerKey>(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TInnerKey> experiment)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate, TSearchState, TAlgorithm, TInnerKey>(IExperiment<TCandidate, TAlgorithm, TSearchState, TInnerKey> experiment)
+        where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
         where TSearchState : class, ISearchState
-        where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
-        public RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TInnerKey> Repeat(int repetitions) => new(experiment, repetitions);
+        public RepeatedExperiment<TCandidate, TAlgorithm, TSearchState, TInnerKey> Repeat(int repetitions) => new(experiment, repetitions);
     }
 }

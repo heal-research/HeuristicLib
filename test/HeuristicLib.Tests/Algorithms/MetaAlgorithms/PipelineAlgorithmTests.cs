@@ -12,7 +12,7 @@ public class PipelineAlgorithmTests
         var first = new AdditiveStepAlgorithm(1);
         var second = new AdditiveStepAlgorithm(2);
         var algorithms = new List<AdditiveStepAlgorithm> { first, second };
-        var pipeline = new PipelineAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithms);
+        var pipeline = new PipelineAlgorithm<AdditiveStepAlgorithm, int, PopulationState<int>>(algorithms);
 
         algorithms.Clear();
 
@@ -23,7 +23,7 @@ public class PipelineAlgorithmTests
     public void PipelineAlgorithm_RequiresAtLeastOneAlgorithm()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new PipelineAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([]));
+            new PipelineAlgorithm<AdditiveStepAlgorithm, int, PopulationState<int>>([]));
 
         exception.ParamName.ShouldBe("algorithms");
     }
@@ -64,7 +64,7 @@ public class PipelineAlgorithmTests
         var evaluator = new ForwardingEvaluator();
         var pipeline = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Then(new AdditiveStepAlgorithm(10) { Evaluator = evaluator }, new AdditiveStepAlgorithm(100) { Evaluator = evaluator });
         var analysis = new EvaluationCountAnalysis(evaluator);
-        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analysis);
+        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).AttachAnalyzer(analysis);
 
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 
@@ -80,8 +80,8 @@ public class PipelineAlgorithmTests
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
         var pipeline = algorithm.Then(algorithm);
         var registry = new ExecutionInstanceRegistry();
-        _ = registry.Resolve(evaluator);
-        var pipelineInstance = registry.Resolve(pipeline);
+        _ = registry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
+        var pipelineInstance = registry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(pipeline);
 
         var states = pipelineInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -101,14 +101,14 @@ public class PipelineAlgorithmTests
     }
 
     private sealed record EvaluationCountAnalysis(
-        IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator)
+        IEvaluator<int> Evaluator)
         : Analyzer<EvaluationCountAnalysis.Result>
     {
         public override Result CreateInitialResult() => new();
 
         public override void RegisterObservations(ObservationPlan observations, Result result)
         {
-            observations.Observe(Evaluator, (_, objectiveVectors, _, _) => result.Count += objectiveVectors.Count);
+            observations.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Evaluator, (_, objectiveVectors, _, _) => result.Count += objectiveVectors.Count);
         }
 
         public sealed class Result

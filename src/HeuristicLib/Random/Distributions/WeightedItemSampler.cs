@@ -41,8 +41,7 @@ public sealed record WeightedItemSampler<T> : IDistribution<T>
     public T Sample(IRandomNumberGenerator random) => Items[indexSampler.Sample(random)];
 
     /// <summary>
-    /// Compares the configured items and weights. Stating this explicitly instead of relying on the synthesized record
-    /// equality keeps equality pinned to the configuration, independent of any derived state the sampler holds.
+    /// Compares the configured items and weights, so equality stays independent of any derived state the sampler holds.
     /// </summary>
     public bool Equals(WeightedItemSampler<T>? other) =>
         other is not null && Items.Equals(other.Items) && Weights.Equals(other.Weights);

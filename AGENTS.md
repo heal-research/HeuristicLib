@@ -18,7 +18,8 @@ Use [docs/guide/glossary.md](docs/guide/glossary.md) for canonical HeuristicLib 
 - `test/HeuristicLib.Tests.ApiUsageSpecs`: executable API usage specs; see `test/README.md` before editing specs.
 - `analyzers`: Roslyn analyzers and code fixes for repository-specific API usage rules.
 - `docs`: user-facing and design documentation.
-- `examples`: runnable examples and external-language demonstrations.
+- `samples`: runnable C# sample applications, one project per sample, referencing the projects in `src` so an API change breaks them here first.
+- `python-samples`: Python demonstrations and notebooks. Not part of the solution, so nothing builds, formats or tests them.
 
 Test-suite placement guidance lives in `test/README.md`.
 
@@ -27,9 +28,9 @@ Test-suite placement guidance lives in `test/README.md`.
 - Restore dependencies with `dotnet restore`.
 - Build with `dotnet build --configuration Release --no-restore`.
 - Run the selected test scope with `dotnet test --configuration Release --no-restore`.
-- Check whitespace with `dotnet format whitespace ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore`.
-- Check code style with `dotnet format style ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity warn`.
-- Check analyzer fixes with `dotnet format analyzers ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity error`.
+- Check whitespace with `dotnet format whitespace ./HEAL.HeuristicLib.slnx --verify-no-changes --no-restore`.
+- Check code style with `dotnet format style ./HEAL.HeuristicLib.slnx --verify-no-changes --no-restore --severity warn`.
+- Check analyzer fixes with `dotnet format analyzers ./HEAL.HeuristicLib.slnx --verify-no-changes --no-restore --severity error`.
 - CI currently runs restore, release build, release tests, formatting verification, and package creation. Formatting verification is currently non-blocking in CI, so do not treat a green CI format job as proof that formatting is clean.
 
 ### Test execution strategy

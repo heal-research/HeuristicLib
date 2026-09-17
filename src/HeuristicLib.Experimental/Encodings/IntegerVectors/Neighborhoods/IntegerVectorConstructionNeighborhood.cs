@@ -59,6 +59,6 @@ public record IntegerVectorConstructionNeighborhood(MoveMode mode, int maxSize =
         }
     }
 
-    public override IntegerVector Apply(IntegerVector genotype, int move, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace, IProblem<IntegerVector, IntegerVectorSearchSpace> problem)
-        => new(genotype.Append(move));
+    public override IntegerVector Apply(IntegerVector genotype, int move, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace, IProblem<IntegerVector, IntegerVectorSearchSpace> problem) =>
+        new(genotype.Append(move));
 }

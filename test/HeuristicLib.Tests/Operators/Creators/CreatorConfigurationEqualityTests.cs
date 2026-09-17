@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Creators;
@@ -16,7 +17,7 @@ public class CreatorConfigurationEqualityTests
     {
         var childCreator = new ConstantCreator(1);
 
-        var creator = childCreator.CountCreatorCalls(new ObservationCounter());
+        var creator = childCreator.CountCalls(new ObservationCounter());
 
         creator.ChildCreator.ShouldBeSameAs(childCreator);
     }
@@ -37,7 +38,7 @@ public class CreatorConfigurationEqualityTests
     {
         var first = new ConstantCreator(1);
         var second = new ConstantCreator(2);
-        var childCreators = new List<ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var childCreators = new List<ICreator<int>> { first, second };
         var creator = new FirstOfCreator(childCreators);
 
         childCreators.Clear();
@@ -85,9 +86,9 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void ChooseOneCreator_WithDifferentWeights_IsNotEqual()
     {
-        ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[] childCreators = [new ConstantCreator(1), new ConstantCreator(2)];
-        var left = new ChooseOneCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCreators) { Weights = [1.0, 2.0] };
-        var right = new ChooseOneCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCreators) { Weights = [2.0, 1.0] };
+        ICreator<int>[] childCreators = [new ConstantCreator(1), new ConstantCreator(2)];
+        var left = new ChooseOneCreator<int>(childCreators) { Weights = [1.0, 2.0] };
+        var right = new ChooseOneCreator<int>(childCreators) { Weights = [2.0, 1.0] };
 
         left.ShouldNotBe(right);
     }
@@ -99,9 +100,9 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void ChooseOneCreator_WithOmittedWeights_IsNotEqualToExplicitUniformWeights()
     {
-        ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[] childCreators = [new ConstantCreator(1), new ConstantCreator(2)];
-        var omitted = new ChooseOneCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCreators);
-        var explicitUniform = new ChooseOneCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCreators) { Weights = [0.5, 0.5] };
+        ICreator<int>[] childCreators = [new ConstantCreator(1), new ConstantCreator(2)];
+        var omitted = new ChooseOneCreator<int>(childCreators);
+        var explicitUniform = new ChooseOneCreator<int>(childCreators) { Weights = [0.5, 0.5] };
 
         omitted.Weights.ShouldBeEmpty();
         omitted.ShouldNotBe(explicitUniform);
@@ -125,7 +126,7 @@ public class CreatorConfigurationEqualityTests
     {
         var fallback = new ConstantCreator(1);
 
-        var creator = fallback.WithPredefinedCandidates([7, 8]);
+        var creator = fallback.SeededWith([7, 8]);
 
         creator.CreatorForRemainingCandidates.ShouldBeSameAs(fallback);
         creator.PredefinedCandidates.ShouldBe([7, 8]);
@@ -134,8 +135,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void PredefinedCandidatesCreator_WithEqualParts_IsEqual()
     {
-        var left = new ConstantCreator(1).WithPredefinedCandidates([7, 8]);
-        var right = new ConstantCreator(1).WithPredefinedCandidates([7, 8]);
+        var left = new ConstantCreator(1).SeededWith([7, 8]);
+        var right = new ConstantCreator(1).SeededWith([7, 8]);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -144,8 +145,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void PredefinedCandidatesCreator_WithDifferentFallbackCreator_IsNotEqual()
     {
-        var left = new ConstantCreator(1).WithPredefinedCandidates([7, 8]);
-        var right = new ConstantCreator(2).WithPredefinedCandidates([7, 8]);
+        var left = new ConstantCreator(1).SeededWith([7, 8]);
+        var right = new ConstantCreator(2).SeededWith([7, 8]);
 
         left.ShouldNotBe(right);
     }
@@ -154,7 +155,7 @@ public class CreatorConfigurationEqualityTests
     public void PredefinedCandidatesCreator_SnapshotsPredefinedCandidates()
     {
         var predefined = new List<int> { 7, 8 };
-        var creator = new ConstantCreator(1).WithPredefinedCandidates(predefined);
+        var creator = new ConstantCreator(1).SeededWith(predefined);
 
         predefined.Clear();
 
@@ -177,8 +178,8 @@ public class CreatorConfigurationEqualityTests
     public void CountingCreator_WithSameCounterAndMetric_IsEqual()
     {
         var counter = new ObservationCounter();
-        var left = new ConstantCreator(1).CountCreatorCalls(counter);
-        var right = new ConstantCreator(1).CountCreatorCalls(counter);
+        var left = new ConstantCreator(1).CountCalls(counter);
+        var right = new ConstantCreator(1).CountCalls(counter);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -188,8 +189,8 @@ public class CreatorConfigurationEqualityTests
     public void CountingCreator_WithDifferentMetric_IsNotEqual()
     {
         var counter = new ObservationCounter();
-        var left = new ConstantCreator(1).CountCreatorCalls(counter);
-        var right = new ConstantCreator(1).CountCreatedCandidates(counter);
+        var left = new ConstantCreator(1).CountCalls(counter);
+        var right = new ConstantCreator(1).CountCandidates(counter);
 
         left.ShouldNotBe(right);
     }
@@ -197,8 +198,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void CountingCreator_WithDifferentCounter_IsNotEqual()
     {
-        var left = new ConstantCreator(1).CountCreatorCalls(new ObservationCounter());
-        var right = new ConstantCreator(1).CountCreatorCalls(new ObservationCounter());
+        var left = new ConstantCreator(1).CountCalls(new ObservationCounter());
+        var right = new ConstantCreator(1).CountCalls(new ObservationCounter());
 
         left.ShouldNotBe(right);
     }
@@ -207,8 +208,8 @@ public class CreatorConfigurationEqualityTests
     public void CountingCreator_WithDifferentChildCreator_IsNotEqual()
     {
         var counter = new ObservationCounter();
-        var left = new ConstantCreator(1).CountCreatorCalls(counter);
-        var right = new ConstantCreator(2).CountCreatorCalls(counter);
+        var left = new ConstantCreator(1).CountCalls(counter);
+        var right = new ConstantCreator(2).CountCalls(counter);
 
         left.ShouldNotBe(right);
     }
@@ -217,8 +218,8 @@ public class CreatorConfigurationEqualityTests
     public void DurationMeasuringCreator_WithSameDurationAndTimeProvider_IsEqual()
     {
         var duration = new ObservationDuration();
-        var left = new ConstantCreator(1).MeasureCreatorDuration(duration, TimeProvider.System);
-        var right = new ConstantCreator(1).MeasureCreatorDuration(duration, TimeProvider.System);
+        var left = new ConstantCreator(1).MeasureDuration(duration, TimeProvider.System);
+        var right = new ConstantCreator(1).MeasureDuration(duration, TimeProvider.System);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -227,8 +228,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringCreator_WithDifferentDuration_IsNotEqual()
     {
-        var left = new ConstantCreator(1).MeasureCreatorDuration(new ObservationDuration(), TimeProvider.System);
-        var right = new ConstantCreator(1).MeasureCreatorDuration(new ObservationDuration(), TimeProvider.System);
+        var left = new ConstantCreator(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
+        var right = new ConstantCreator(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
 
         left.ShouldNotBe(right);
     }
@@ -237,8 +238,8 @@ public class CreatorConfigurationEqualityTests
     public void DurationMeasuringCreator_WithDifferentChildCreator_IsNotEqual()
     {
         var duration = new ObservationDuration();
-        var left = new ConstantCreator(1).MeasureCreatorDuration(duration, TimeProvider.System);
-        var right = new ConstantCreator(2).MeasureCreatorDuration(duration, TimeProvider.System);
+        var left = new ConstantCreator(1).MeasureDuration(duration, TimeProvider.System);
+        var right = new ConstantCreator(2).MeasureDuration(duration, TimeProvider.System);
 
         left.ShouldNotBe(right);
     }
@@ -267,8 +268,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void ObservableCreator_WithSeparatelyConstructedActionObservers_IsNotEqual()
     {
-        var left = new ConstantCreator(1).ObserveWith((IReadOnlyList<int> _) => { });
-        var right = new ConstantCreator(1).ObserveWith((IReadOnlyList<int> _) => { });
+        var left = new ConstantCreator(1).ObserveWith(_ => { });
+        var right = new ConstantCreator(1).ObserveWith(_ => { });
 
         left.ShouldNotBe(right);
     }
@@ -312,20 +313,22 @@ public class CreatorConfigurationEqualityTests
     }
 
     private sealed record FirstOfCreator
-        : MultiCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        : MultiCreator<int>
     {
-        public FirstOfCreator(IReadOnlyList<ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCreators)
+        public FirstOfCreator(IReadOnlyList<ICreator<int>> childCreators)
             : base(childCreators)
         {
         }
 
-        protected override MultiCreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCreators) =>
-            new Instance(childCreators);
+        protected override ICreatorInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICreatorInstance<int, TRunSearchSpace, TRunProblem>> childCreators) =>
+            new Instance<TRunSearchSpace, TRunProblem>(childCreators);
 
-        private sealed class Instance(ImmutableArray<ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCreators)
-            : MultiCreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCreators)
+        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ICreatorInstance<int, TSearchSpace, TProblem>> childCreators)
+            : MultiCreatorInstance<int, TSearchSpace, TProblem>(childCreators)
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<int> Create(int count, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+            public override IReadOnlyList<int> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildCreators[0].Create(count, random, searchSpace, problem);
         }
     }

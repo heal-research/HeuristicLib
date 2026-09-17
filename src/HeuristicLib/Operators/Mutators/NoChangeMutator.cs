@@ -14,8 +14,7 @@ public record NoChangeMutator<TCandidate> : SingleCandidateMutator<TCandidate>
 
 public static class NoChangeMutator
 {
-    public static NoChangeMutator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => NoChangeMutator<TCandidate>.Instance;
+    public static NoChangeMutator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => NoChangeMutator<TCandidate>.Instance;
 
     public static TCandidate Mutate<TCandidate>(TCandidate parent, IRandomNumberGenerator random) => parent;
 }

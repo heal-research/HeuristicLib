@@ -127,7 +127,7 @@ public sealed partial class DataFrame
     }
 
     private static Series<T> ParseSeries<T>(string name, IReadOnlyList<string> values, IFormatProvider formatProvider)
-        where T : notnull, IParsable<T>
+        where T : IParsable<T>
     {
         var parsedValues = new T[values.Count];
         for (var rowIndex = 0; rowIndex < values.Count; rowIndex++)

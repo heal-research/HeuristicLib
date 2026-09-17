@@ -4,7 +4,7 @@ namespace HEAL.HeuristicLib.Tests.TestSupport.SpecialTestEncoding;
 
 // This is an example problem that do not use any of the standard search spaces and needs to define its own operators
 
-public class SpecialProblem(double data) : SingleSolutionProblem<SpecialGenotype, SpecialSearchSpace>(SingleObjective.Maximize, GeTSearchSpace())
+public class SpecialProblem(double data) : SingleSolutionProblem<SpecialProblem, SpecialGenotype, SpecialSearchSpace>(SingleObjective.Maximize, GeTSearchSpace())
 {
     public double Data { get; set; } = data;
 

@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Mutators;
@@ -59,7 +60,7 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void ChooseOneMutator_WithDifferentWeights_IsNotEqual()
     {
-        var children = new IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[]
+        var children = new IMutator<int>[]
         {
             new AddOffsetMutator(1),
             new AddOffsetMutator(2),
@@ -83,8 +84,8 @@ public class MutatorConfigurationEqualityTests
     public void CountingMutator_WithSameCounterAndMetric_IsEqual()
     {
         var counter = new ObservationCounter();
-        var left = new AddOffsetMutator(1).CountMutatorCalls(counter);
-        var right = new AddOffsetMutator(1).CountMutatorCalls(counter);
+        var left = new AddOffsetMutator(1).CountCalls(counter);
+        var right = new AddOffsetMutator(1).CountCalls(counter);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -94,8 +95,8 @@ public class MutatorConfigurationEqualityTests
     public void CountingMutator_WithDifferentMetric_IsNotEqual()
     {
         var counter = new ObservationCounter();
-        var left = new AddOffsetMutator(1).CountMutatorCalls(counter);
-        var right = new AddOffsetMutator(1).CountMutatedCandidates(counter);
+        var left = new AddOffsetMutator(1).CountCalls(counter);
+        var right = new AddOffsetMutator(1).CountCandidates(counter);
 
         left.ShouldNotBe(right);
     }
@@ -103,8 +104,8 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void CountingMutator_WithDifferentCounter_IsNotEqual()
     {
-        var left = new AddOffsetMutator(1).CountMutatorCalls(new ObservationCounter());
-        var right = new AddOffsetMutator(1).CountMutatorCalls(new ObservationCounter());
+        var left = new AddOffsetMutator(1).CountCalls(new ObservationCounter());
+        var right = new AddOffsetMutator(1).CountCalls(new ObservationCounter());
 
         left.ShouldNotBe(right);
     }
@@ -113,8 +114,8 @@ public class MutatorConfigurationEqualityTests
     public void CountingMutator_WithDifferentChildMutator_IsNotEqual()
     {
         var counter = new ObservationCounter();
-        var left = new AddOffsetMutator(1).CountMutatorCalls(counter);
-        var right = new AddOffsetMutator(2).CountMutatorCalls(counter);
+        var left = new AddOffsetMutator(1).CountCalls(counter);
+        var right = new AddOffsetMutator(2).CountCalls(counter);
 
         left.ShouldNotBe(right);
     }
@@ -123,8 +124,8 @@ public class MutatorConfigurationEqualityTests
     public void DurationMeasuringMutator_WithSameDurationAndTimeProvider_IsEqual()
     {
         var duration = new ObservationDuration();
-        var left = new AddOffsetMutator(1).MeasureMutatorDuration(duration, TimeProvider.System);
-        var right = new AddOffsetMutator(1).MeasureMutatorDuration(duration, TimeProvider.System);
+        var left = new AddOffsetMutator(1).MeasureDuration(duration, TimeProvider.System);
+        var right = new AddOffsetMutator(1).MeasureDuration(duration, TimeProvider.System);
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -133,8 +134,8 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringMutator_WithDifferentDuration_IsNotEqual()
     {
-        var left = new AddOffsetMutator(1).MeasureMutatorDuration(new ObservationDuration());
-        var right = new AddOffsetMutator(1).MeasureMutatorDuration(new ObservationDuration());
+        var left = new AddOffsetMutator(1).MeasureDuration(new ObservationDuration());
+        var right = new AddOffsetMutator(1).MeasureDuration(new ObservationDuration());
 
         left.ShouldNotBe(right);
     }
@@ -143,8 +144,8 @@ public class MutatorConfigurationEqualityTests
     public void DurationMeasuringMutator_WithDifferentChildMutator_IsNotEqual()
     {
         var duration = new ObservationDuration();
-        var left = new AddOffsetMutator(1).MeasureMutatorDuration(duration);
-        var right = new AddOffsetMutator(2).MeasureMutatorDuration(duration);
+        var left = new AddOffsetMutator(1).MeasureDuration(duration);
+        var right = new AddOffsetMutator(2).MeasureDuration(duration);
 
         left.ShouldNotBe(right);
     }
@@ -177,8 +178,8 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void ObservableMutator_WithSeparatelyConstructedActionObservers_IsNotEqual()
     {
-        var left = new AddOffsetMutator(1).ObserveWith((IReadOnlyList<int> _) => { });
-        var right = new AddOffsetMutator(1).ObserveWith((IReadOnlyList<int> _) => { });
+        var left = new AddOffsetMutator(1).ObserveWith(_ => { });
+        var right = new AddOffsetMutator(1).ObserveWith(_ => { });
 
         left.ShouldNotBe(right);
     }
@@ -197,10 +198,10 @@ public class MutatorConfigurationEqualityTests
     {
         var counter = new ObservationCounter();
         var left = PipelineMutator.Create(
-            new AddOffsetMutator(1).CountMutatorCalls(counter),
+            new AddOffsetMutator(1).CountCalls(counter),
             new AddOffsetMutator(2));
         var right = PipelineMutator.Create(
-            new AddOffsetMutator(1).CountMutatorCalls(counter),
+            new AddOffsetMutator(1).CountCalls(counter),
             new AddOffsetMutator(2));
 
         left.ShouldBe(right);
@@ -212,10 +213,10 @@ public class MutatorConfigurationEqualityTests
     {
         var counter = new ObservationCounter();
         var left = PipelineMutator.Create(
-            new AddOffsetMutator(1).CountMutatorCalls(counter),
+            new AddOffsetMutator(1).CountCalls(counter),
             new AddOffsetMutator(2));
         var right = PipelineMutator.Create(
-            new AddOffsetMutator(9).CountMutatorCalls(counter),
+            new AddOffsetMutator(9).CountCalls(counter),
             new AddOffsetMutator(2));
 
         left.ShouldNotBe(right);
@@ -238,7 +239,7 @@ public class MutatorConfigurationEqualityTests
     {
         var first = new AddOffsetMutator(1);
         var second = new AddOffsetMutator(2);
-        var childMutators = new List<IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var childMutators = new List<IMutator<int>> { first, second };
         var mutator = new FirstOfMutator(childMutators);
 
         childMutators.Clear();
@@ -256,20 +257,22 @@ public class MutatorConfigurationEqualityTests
     /// structural equality follows from <c>ChildMutators</c> being a value array.
     /// </summary>
     private sealed record FirstOfMutator
-        : MultiMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        : MultiMutator<int>
     {
-        public FirstOfMutator(IReadOnlyList<IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childMutators)
+        public FirstOfMutator(IReadOnlyList<IMutator<int>> childMutators)
             : base(childMutators)
         {
         }
 
-        protected override MultiMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childMutators) =>
-            new Instance(childMutators);
+        protected override IMutatorInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorInstance<int, TRunSearchSpace, TRunProblem>> childMutators) =>
+            new Instance<TRunSearchSpace, TRunProblem>(childMutators);
 
-        private sealed class Instance(ImmutableArray<IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childMutators)
-            : MultiMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childMutators)
+        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IMutatorInstance<int, TSearchSpace, TProblem>> childMutators)
+            : MultiMutatorInstance<int, TSearchSpace, TProblem>(childMutators)
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 ChildMutators[0].Mutate(parents, random, searchSpace, problem);
         }
     }

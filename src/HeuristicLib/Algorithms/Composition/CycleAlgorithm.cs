@@ -6,14 +6,14 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-    : Algorithm<CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
+    : Algorithm<CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
-    where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TAlgorithm : IAlgorithm<TCandidate, TSearchState>
 {
     public ValueArray<TAlgorithm> Algorithms { get; }
+
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits([.. Algorithms]);
 
     /// <summary>
     /// Gets the cycle limit, or <see langword="null"/> for unlimited cycling. The expected value is positive.
@@ -31,52 +31,44 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSe
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public override CycleAlgorithmInstance<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry) =>
         new(instanceRegistry, Algorithms, MaximumCycles, NewExecutionInstancesPerCycle);
 }
 
 public static class CycleAlgorithm
 {
-    public static CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> Create<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(
-        Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> firstAlgorithm, params IReadOnlyList<TAlgorithm> followingAlgorithms)
-        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    public static CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> Create<TAlgorithm, TCandidate, TSearchState>(
+        Algorithm<TAlgorithm, TCandidate, TSearchState> firstAlgorithm, params IReadOnlyList<TAlgorithm> followingAlgorithms)
+        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchState>
         where TSearchState : class, ISearchState => new([firstAlgorithm.Self, .. followingAlgorithms]);
 
-    public static CycleAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(
-        params IReadOnlyList<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithms)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    public static CycleAlgorithm<IAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState> Create<TCandidate, TSearchState>(
+        params IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms)
         where TSearchState : class, ISearchState => new([.. algorithms]);
 }
 
 public static class CycleAlgorithmExtensions
 {
-    extension<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TAlgorithm, TCandidate, TSearchState>(Algorithm<TAlgorithm, TCandidate, TSearchState> algorithm)
+        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchState>
         where TSearchState : class, ISearchState
     {
-        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CycleWith(TAlgorithm followingAlgorithm, int? maximumCycles = null) =>
+        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(TAlgorithm followingAlgorithm, int? maximumCycles = null) =>
             new([algorithm.Self, followingAlgorithm]) { MaximumCycles = maximumCycles };
 
-        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CycleWith(IReadOnlyList<TAlgorithm> followingAlgorithms, int? maximumCycles = null) =>
+        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(IReadOnlyList<TAlgorithm> followingAlgorithms, int? maximumCycles = null) =>
             new([algorithm.Self, .. followingAlgorithms]) { MaximumCycles = maximumCycles };
     }
 
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public CycleAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> CycleWith(
-            IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> followingAlgorithm, int? maximumCycles = null) =>
+        public CycleAlgorithm<IAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState> CycleWith(
+            IAlgorithm<TCandidate, TSearchState> followingAlgorithm, int? maximumCycles = null) =>
             new([algorithm, followingAlgorithm]) { MaximumCycles = maximumCycles };
 
-        public CycleAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> CycleWith(
-            IReadOnlyList<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> followingAlgorithms, int? maximumCycles = null) =>
+        public CycleAlgorithm<IAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState> CycleWith(
+            IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> followingAlgorithms, int? maximumCycles = null) =>
             new([algorithm, .. followingAlgorithms]) { MaximumCycles = maximumCycles };
     }
 }
@@ -86,14 +78,14 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
-    where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TAlgorithm : IAlgorithm<TCandidate, TSearchState>
 {
     private readonly ExecutionInstanceRegistry registry;
     protected readonly ImmutableArray<TAlgorithm> Algorithms;
     protected readonly int? MaximumCycles;
     protected readonly bool NewExecutionInstancesPerCycle;
 
-    private readonly Dictionary<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithmInstances;
+    private readonly Dictionary<IAlgorithm<TCandidate>, IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithmInstances;
 
     public CycleAlgorithmInstance(ExecutionInstanceRegistry registry, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle)
     {
@@ -110,8 +102,8 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
         var state = initialState;
 
         var cycleCountGenerator = MaximumCycles.HasValue
-          ? Enumerable.Range(0, Math.Max(0, MaximumCycles.Value))
-          : Enumerable.InfiniteSequence(0, 1);
+            ? Enumerable.Range(0, Math.Max(0, MaximumCycles.Value))
+            : Enumerable.InfiniteSequence(0, 1);
 
         foreach (var cycleCount in cycleCountGenerator)
         {
@@ -157,5 +149,5 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
     }
 
     private IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateChildAlgorithmInstance(TAlgorithm algorithm) =>
-        registry.CreateChildRegistry().Resolve(algorithm);
+        registry.CreateChildRegistry().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 }

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -7,15 +9,17 @@ namespace HEAL.HeuristicLib.Operators;
 
 public readonly record struct Parents<T>(T Parent1, T Parent2);
 
-public interface ICrossover<TCandidate, in TSearchSpace, in TProblem>
-  : IOperator<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>;
+public interface ICrossover<TCandidate> : IOperator
+{
+    ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+}
 
 public interface ICrossoverInstance<TCandidate, in TSearchSpace, in TProblem>
-  : IOperatorInstance
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    : IOperatorInstance
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
@@ -80,5 +84,61 @@ public static class ParentsExtensions
 
             return parentPairs;
         }
+    }
+}
+
+public static class CrossoverResolverExtensions
+{
+    extension(ExecutionInstanceRegistry registry)
+    {
+        public ICrossoverInstance<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate> crossover)
+            where TSearchSpace : class, ISearchSpace<TCandidate>
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+            registry.Resolve(crossover, static (creationTarget, childRegistry) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childRegistry));
+
+        /// <remarks>A true result carries the instance the run will use, so validating and creating are one step.</remarks>
+        public bool TryResolve<TCandidate, TSearchSpace, TProblem>(
+            ICrossover<TCandidate> crossover,
+            [NotNullWhen(true)] out ICrossoverInstance<TCandidate, TSearchSpace, TProblem>? instance,
+            [NotNullWhen(false)] out string? reason)
+            where TSearchSpace : class, ISearchSpace<TCandidate>
+            where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        {
+            try
+            {
+                instance = registry.Resolve<TCandidate, TSearchSpace, TProblem>(crossover);
+                reason = null;
+                return true;
+            }
+            catch (InvalidOperationException exception)
+            {
+                instance = null;
+                reason = exception.Message;
+                return false;
+            }
+        }
+
+        /// <remarks>For an optional slot such as the crossover of an evolution strategy.</remarks>
+        public ICrossoverInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate>? crossover)
+            where TSearchSpace : class, ISearchSpace<TCandidate>
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+            crossover is null ? null : registry.Resolve<TCandidate, TSearchSpace, TProblem>(crossover);
+    }
+
+    extension<TCandidate, TSearchSpace, TProblem>(ExecutionInstanceResolver<TCandidate, TSearchSpace, TProblem> resolver)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        public ICrossoverInstance<TCandidate, TSearchSpace, TProblem> Resolve(ICrossover<TCandidate> crossover) =>
+            resolver.Registry.Resolve<TCandidate, TSearchSpace, TProblem>(crossover);
+
+        public ICrossoverInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional(ICrossover<TCandidate>? crossover) =>
+            crossover is null ? null : resolver.Resolve(crossover);
+
+        public bool TryResolve(
+            ICrossover<TCandidate> crossover,
+            [NotNullWhen(true)] out ICrossoverInstance<TCandidate, TSearchSpace, TProblem>? instance,
+            [NotNullWhen(false)] out string? reason) =>
+            resolver.Registry.TryResolve(crossover, out instance, out reason);
     }
 }
