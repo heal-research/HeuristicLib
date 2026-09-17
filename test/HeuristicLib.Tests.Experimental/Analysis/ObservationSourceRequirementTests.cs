@@ -8,15 +8,15 @@ using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 namespace HEAL.HeuristicLib.Tests.Experimental.Analysis;
 
 /// <summary>
-/// Covers the rule that an analysis cannot be built without something to observe.
+/// Covers the rule that an analyzer cannot be built without something to observe.
 /// </summary>
-public class AnchorRequirementTests
+public class ObservationSourceRequirementTests
 {
     [Fact]
-    public void RequiredAnchors_RejectAnEmptyCollection()
+    public void RequiredSources_RejectAnEmptyCollection()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new ParetoFrontAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem>(
+            new ParetoFrontAnalyzer<RealVector, RealVectorSearchSpace, TestFunctionProblem>(
                 SingleObjective.Minimize,
                 new ObjectiveVector(1.0),
                 []));
@@ -25,7 +25,7 @@ public class AnchorRequirementTests
     }
 
     [Fact]
-    public void SingleAnchor_NeedsNoCollectionCeremony()
+    public void SingleSource_NeedsNoCollectionCeremony()
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 2));
         var algorithm = new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
@@ -43,23 +43,23 @@ public class AnchorRequirementTests
     }
 
     /// <summary>
-    /// Genealogy observes three kinds of anchor and each kind on its own is optional, so the requirement is that the
-    /// analysis has some anchor rather than one of a particular kind.
+    /// Genealogy observes three kinds of source and each kind on its own is optional, so the requirement is that the
+    /// analyzer has some source rather than one of a particular kind.
     /// </summary>
     [Fact]
-    public void GenealogyAnalysis_NeedsAtLeastOneAnchorOfAnyKind()
+    public void GenealogyAnalyzer_NeedsAtLeastOneSourceOfAnyKind()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new GenealogyAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>());
+            new GenealogyAnalyzer<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>());
 
         exception.Message.ShouldContain("at least one crossover, mutator or algorithm");
     }
 
     [Fact]
-    public void GenealogyAnalysis_AcceptsAnyOneKindOnItsOwn()
+    public void GenealogyAnalyzer_AcceptsAnyOneKindOnItsOwn()
     {
         // Without an interceptor the graph still records descent, it just gains no generational structure.
-        var withCrossoverOnly = new GenealogyAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
+        var withCrossoverOnly = new GenealogyAnalyzer<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
             crossovers: [new SinglePointCrossover()]);
 
         withCrossoverOnly.Graph.ShouldNotBeNull();

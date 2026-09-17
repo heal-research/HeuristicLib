@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -10,9 +11,9 @@ namespace HEAL.HeuristicLib.Analysis;
 /// </summary>
 /// <remarks>
 /// <see cref="Matrix"/> is the raw similarity of every candidate pair, indexed in the order the candidates were ranked
-/// by the run's objective. It is kept as written rather than copied, so treat it as read-only.
+/// by the run's objective. Rows are immutable snapshots of the calculator output.
 /// </remarks>
-public sealed record PopulationSimilarity(double[,] Matrix, MinMeanMax Average);
+public sealed record PopulationSimilarity(ValueArray<ValueArray<double>> Matrix, MinMeanMax Average);
 
 public interface ICandidateSimilarityCalculator<TCandidate>
 {
@@ -23,14 +24,16 @@ public interface ICandidateSimilarityCalculator<TCandidate>
 /// Reduces a population to its pairwise similarity matrix and the summary over it.
 /// </summary>
 public sealed class PopulationSimilarityAggregation<TCandidate>(ICandidateSimilarityCalculator<TCandidate> candidateSimilarity)
-    : IAggregation<EvaluatedCandidate<TCandidate>, PopulationSimilarity>
+    : IAggregation<EvaluatedCandidate<TCandidate>, PopulationSimilarity>, IAggregationInstance<EvaluatedCandidate<TCandidate>, PopulationSimilarity>
 {
-    public PopulationSimilarity Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective)
+    public IAggregationInstance<EvaluatedCandidate<TCandidate>, PopulationSimilarity> CreateExecutionInstance(ExecutionInstanceResolver resolver) => this;
+
+    public PopulationSimilarity Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
     {
         if (readings.Count == 0)
             throw new InvalidOperationException("There are no readings, cannot determine population similarity.");
 
-        var candidates = readings.OrderBy(candidate => candidate.ObjectiveVector, objective.TotalOrderComparer).ToArray();
+        var candidates = readings.OrderBy(candidate => candidate.ObjectiveVector, objective.RequireTotalOrder(objectiveComparer)).ToArray();
         var similarities = candidateSimilarity.CalculateSimilarity(candidates);
         var count = candidates.Length;
         var minSimilarities = new double[count];
@@ -60,7 +63,8 @@ public sealed class PopulationSimilarityAggregation<TCandidate>(ICandidateSimila
         }
 
         return new PopulationSimilarity(
-            similarities,
+            Enumerable.Range(0, count).Select(row =>
+                Enumerable.Range(0, count).Select(column => similarities[row, column]).ToValueArray()).ToValueArray(),
             new MinMeanMax(minSimilarities.Average(), meanSimilarities.Average(), maxSimilarities.Average()));
     }
 }
@@ -73,12 +77,14 @@ public sealed class PopulationSimilarityAggregation<TCandidate>(ICandidateSimila
 /// keeps every entry, and a matrix per iteration grows with the square of the population size.
 /// </remarks>
 public sealed class AverageSimilarityAggregation<TCandidate>(ICandidateSimilarityCalculator<TCandidate> candidateSimilarity)
-    : IAggregation<EvaluatedCandidate<TCandidate>, MinMeanMax>
+    : IAggregation<EvaluatedCandidate<TCandidate>, MinMeanMax>, IAggregationInstance<EvaluatedCandidate<TCandidate>, MinMeanMax>
 {
     private readonly PopulationSimilarityAggregation<TCandidate> full = new(candidateSimilarity);
 
-    public MinMeanMax Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective) =>
-        full.Aggregate(readings, objective).Average;
+    public IAggregationInstance<EvaluatedCandidate<TCandidate>, MinMeanMax> CreateExecutionInstance(ExecutionInstanceResolver resolver) => this;
+
+    public MinMeanMax Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null) =>
+        full.Aggregate(readings, objective, objectiveComparer).Average;
 }
 
 public static class PopulationSimilarityTraces
@@ -91,15 +97,16 @@ public static class PopulationSimilarityTraces
         public static TraceAnalyzer<PopulationSimilarity> TracePopulationSimilarity<T, TS, TP, TR>(
             ICandidateSimilarityCalculator<T> candidateSimilarity,
             IAlgorithm<T, TS, TP, TR> algorithm,
-            params IReadOnlyList<Clock> clocks)
+            IReadOnlyList<Clock>? clocks = null,
+            TraceRetention? retention = null)
             where TS : class, ISearchSpace<T>
             where TP : class, IProblem<T, TS>
             where TR : PopulationState<T> =>
             Analyzer.Trace(
+                algorithm,
                 new EvaluatedCandidatesMeasurement<T, TS, TP, TR>(),
                 new PopulationSimilarityAggregation<T>(candidateSimilarity),
-                Anchor.At(algorithm),
-                clocks);
+                clocks, retention);
 
         /// <summary>
         /// Traces the smallest, mean and largest average pairwise similarity of every population the algorithm yields.
@@ -107,14 +114,15 @@ public static class PopulationSimilarityTraces
         public static TraceAnalyzer<MinMeanMax> TraceAverageSimilarity<T, TS, TP, TR>(
             ICandidateSimilarityCalculator<T> candidateSimilarity,
             IAlgorithm<T, TS, TP, TR> algorithm,
-            params IReadOnlyList<Clock> clocks)
+            IReadOnlyList<Clock>? clocks = null,
+            TraceRetention? retention = null)
             where TS : class, ISearchSpace<T>
             where TP : class, IProblem<T, TS>
             where TR : PopulationState<T> =>
             Analyzer.Trace(
+                algorithm,
                 new EvaluatedCandidatesMeasurement<T, TS, TP, TR>(),
                 new AverageSimilarityAggregation<T>(candidateSimilarity),
-                Anchor.At(algorithm),
-                clocks);
+                clocks, retention);
     }
 }

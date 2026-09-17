@@ -48,7 +48,7 @@ return new(childResolver.Resolve(Algorithm), counter, MaximumCount);
 
 ## Decorations
 
-A decoration wraps whatever the resolver resolves for one configuration object. Decorations **compose**: several at one anchor all apply, and a child resolver's decorations apply on top of its ancestors' rather than replacing them.
+A decoration wraps whatever the resolver resolves for one configuration object. Decorations **compose**: several for one configuration all apply, and a child resolver's decorations apply on top of its ancestors' rather than replacing them.
 
 Each decoration records its **origin**, which is a fact about who installed it rather than something it claims:
 
@@ -245,7 +245,7 @@ Each rule above exists because a simpler-looking rule fails somewhere:
 
 | Alternative rule                                          | What it breaks                                                                                  |
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Nearest resolver's decorations win, ignore ancestors      | An analyzer at the root vanishes as soon as any child resolver decorates the same anchor        |
+| Nearest resolver's decorations win, ignore ancestors      | An analyzer at the root vanishes as soon as any child resolver decorates the same configuration |
 | Check ancestor instances before decorations               | A child's own decoration is skipped — a budget resolves an undecorated operator and never fires |
 | Check decorations before ancestor instances, always build | Parent and child build two identical decorated instances and split any state they hold          |
 | Hoist new instances to the ancestor owning the chain      | Siblings start sharing, so recreating execution instances per cycle stops working               |

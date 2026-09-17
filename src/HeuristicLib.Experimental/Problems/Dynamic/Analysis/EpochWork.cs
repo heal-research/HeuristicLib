@@ -34,11 +34,10 @@ public static class EpochWorkTrace
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : DynamicProblem<TCandidate, TSearchSpace> =>
             Analyzer.Trace(
+                at,
                 observation => new[] { observation.ObjectiveVectors.Count },
                 Aggregate.Single<int>(),
-                Anchor.At(at),
-                evaluations,
-                epoch);
+                [evaluations, epoch]);
     }
 
     /// <summary>

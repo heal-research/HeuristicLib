@@ -216,6 +216,7 @@ public sealed class ExecutionInstanceResolverBuilder
 {
     private readonly ExecutionInstanceResolver? parent;
     private readonly Dictionary<IExecutionInstanceResolvable<IExecutionInstance>, List<Decoration>> decorations = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<IExecutionHook> installedHooks = new(ReferenceEqualityComparer.Instance);
     private DecorationOrigin origin = DecorationOrigin.Configuration;
     private int declared;
 
@@ -228,7 +229,7 @@ public sealed class ExecutionInstanceResolverBuilder
     /// Declares that the resolver wraps whatever it resolves for a resolvable.
     /// </summary>
     /// <remarks>
-    /// Decorations compose rather than replace one another, so declaring several at one anchor stacks them all, and a
+    /// Decorations compose rather than replace one another, so declaring several for one configuration stacks them all, and a
     /// child resolver's decorations apply on top of its ancestors' rather than displacing them. Declaring the same
     /// decoration twice stacks it twice.
     /// </remarks>
@@ -254,6 +255,10 @@ public sealed class ExecutionInstanceResolverBuilder
     /// </remarks>
     public ExecutionInstanceResolverBuilder Install(IExecutionHook hook)
     {
+        if (!installedHooks.Add(hook))
+            return this;
+
+        var previousOrigin = origin;
         origin = DecorationOrigin.Hook;
         try
         {
@@ -261,7 +266,7 @@ public sealed class ExecutionInstanceResolverBuilder
         }
         finally
         {
-            origin = DecorationOrigin.Configuration;
+            origin = previousOrigin;
         }
 
         return this;
@@ -315,7 +320,7 @@ internal sealed class Decoration<TResolvable>(Func<TResolvable, TResolvable> dec
         {
             throw new InvalidOperationException(
                 $"A decoration declared for '{typeof(TResolvable)}' cannot be applied to '{current.GetType()}'. " +
-                "Decorations composing at one anchor must all accept the type the previous one produces.");
+                "Decorations composing for one configuration must all accept the type the previous one produces.");
         }
 
         return decorate(typed);

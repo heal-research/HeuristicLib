@@ -14,14 +14,12 @@ public class ExperimentAnalysisTests
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
         var experiment = algorithm.Repeat(2);
-        var first = TrialAnalyzer.Create((CountingInstanceAlgorithm alg) => alg.Evaluator,
-            eval => new OrderedEvaluationAnalyzer(eval, 1, invocationOrder));
-        var second = TrialAnalyzer.Create((CountingInstanceAlgorithm alg) => alg.Evaluator,
-            eval => new OrderedEvaluationAnalyzer(eval, 2, invocationOrder));
-        var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), first, second);
+        var first = TrialAnalyzer.Create((CountingInstanceAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, invocationOrder));
+        var second = TrialAnalyzer.Create((CountingInstanceAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 2, invocationOrder));
+        var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42)).AddTrialAnalyzer(first).AddTrialAnalyzer(second);
 
         Should.Throw<InvalidOperationException>(() =>
-            experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), first, first));
+            experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42)).AddTrialAnalyzer(first).AddTrialAnalyzer(first));
 
         var stream = run.Stream(cancellationToken: TestContext.Current.CancellationToken);
         run.GetAnalyzers(first).ShouldAllBe(analysis => analysis.Analyzer.Result.Count == 0);
@@ -44,13 +42,12 @@ public class ExperimentAnalysisTests
             ExperimentCase.From(secondAlgorithm, 1, [1])
         ]);
         var failing = TrialAnalyzer.Create(
-            (CountingInstanceAlgorithm algorithm) => algorithm,
-            algorithm => algorithm.Increment == 2
+            (CountingInstanceAlgorithm algorithm) => algorithm.Increment == 2
                 ? throw new InvalidOperationException("Analyzer creation failed.")
                 : new OrderedEvaluationAnalyzer(algorithm.Evaluator, 1, invocations));
 
         Should.Throw<InvalidOperationException>(() =>
-            experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), failing));
+            experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42)).AddTrialAnalyzer(failing));
 
         var run = ExperimentTestSupport.CreateRun(experiment);
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -64,10 +61,9 @@ public class ExperimentAnalysisTests
         var invocations = new List<int>();
         var algorithm = new CountingInstanceAlgorithm(1, new CountingResolutionEvaluator());
         var experiment = algorithm.Repeat(2);
-        var trialAnalyzer = TrialAnalyzer.Create((CountingInstanceAlgorithm alg) => alg.Evaluator,
-            evaluator => new OrderedEvaluationAnalyzer(evaluator, 1, invocations));
-        _ = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(1), trialAnalyzer);
-        var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(2), trialAnalyzer);
+        var trialAnalyzer = TrialAnalyzer.Create((CountingInstanceAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, invocations));
+        _ = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(1)).AddTrialAnalyzer(trialAnalyzer);
+        var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(2)).AddTrialAnalyzer(trialAnalyzer);
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -79,10 +75,9 @@ public class ExperimentAnalysisTests
     public async Task TrialAnalyzers_CollectPerTrialAsEachTrialCompletes()
     {
         var algorithm = new CountingInstanceAlgorithm(1, new CountingResolutionEvaluator());
-        var trialAnalyzer = TrialAnalyzer.Create((CountingInstanceAlgorithm alg) => alg.Evaluator,
-            evaluator => new OrderedEvaluationAnalyzer(evaluator, 1, []));
+        var trialAnalyzer = TrialAnalyzer.Create((CountingInstanceAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, []));
         var run = algorithm.Repeat(2)
-            .CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), trialAnalyzer);
+            .CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42)).AddTrialAnalyzer(trialAnalyzer);
 
         _ = await run.Trials[0].Run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -98,11 +93,11 @@ public class ExperimentAnalysisTests
         IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator,
         int marker,
         List<int> invocationOrder)
-        : IExecutionHook, IObservationRecorder<EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>>
+        : IAnalyzer
     {
         public EvaluationResult Result { get; } = new();
 
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(Anchor.At(evaluator), this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, Record);
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation)
         {

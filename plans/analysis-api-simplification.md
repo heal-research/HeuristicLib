@@ -1,5 +1,11 @@
 # Analysis API simplification
 
+The approved [first-class analyzers and run lifecycle](first-class-analyzers-and-run-lifecycle.md) plan owns the current
+rework. This document records the first simplification pass and contains decisions that the newer plan intentionally
+revisits, including deleting `IAnalyzer`, introducing anchors and treating analyzers as execution hooks.
+
+The accepted [analysis usability follow-up](analysis-usability-follow-up.md) now owns the next implementation sequence. It supersedes remaining sequencing and conflicting recommendations below, including deleting named measurements, replacing trial results with tuples, and deferring the documentation rewrite. This document records the first simplification and its earlier proposals.
+
 ## Summary
 
 The analysis rework in [analysis-system-rework.md](analysis-system-rework.md) landed the right model: analysis data belongs to one run, observations attach at declared anchors, and a trace composes from a measurement, an aggregation, a retention and a set of clocks. That model is sound and this plan does not reopen it.
@@ -140,7 +146,7 @@ This is the item that changes how the system reads: one analyzer shape instead o
 `ObservationCounter`, `ObservationDuration` and 18 `Counting*`/`DurationMeasuring*` wrappers do what an anchor and a recorder do, hand-rolled per operator kind and threaded into the budget algorithms through `Func<TOperator, ObservationCounter, TOperator>` factories. It lives in the `Analysis` namespace but it is control flow, and its presence there is part of why the analysis concept count reads as high as it does.
 
 - **Safe:** move it out of `Analysis`. It feeds budgets; name it for that.
-- **Bigger:** rebuild the budget algorithms on anchors, so `OperatorBudgetAlgorithm` installs a counting recorder instead of demanding an operator factory. That deletes 18 wrappers, 2 counter types and the factory parameter. `DecorationOrigin` still protects the ordering, provided budgets install at `Configuration` origin.
+- **Bigger:** rebuild the budget algorithms on anchors, so `OperatorBudgetAlgorithm` installs a counting recorder instead of demanding an operator factory. That deletes 18 wrappers, 2 counter types and the factory parameter. `DecorationOrigin` still protects the comparer, provided budgets install at `Configuration` origin.
 
 ### 7. `TrialAnalyzer`: five types to two · *queued*
 
@@ -159,7 +165,7 @@ Keep the abstract `TrialAnalyzer<TAlgorithm>` base for heterogeneous storage in 
 
 - **`DecorationOrigin` should be internal.** It is public, but no caller can supply one: `Install` flips it and `Decorate` reads it. It is documentation wearing an API's clothes.
 - **`*Analysis` versus `*Analyzer`.** The glossary defines *analyzer* as the stateful run object and *analysis snapshot* as the immutable value it publishes. `ParetoFrontAnalysis`, `GenealogyAnalysis`, `RankAnalysis` and `BestBeforeChangePerformanceAnalysis` are all analyzers wearing the snapshot's name.
-- **`EpochWorkTrace.PerEpoch` reconstructs staleness post hoc**, re-deriving epoch boundaries from evaluation counts, with documented caveats: it breaks under a caching evaluator and mis-reports the final open epoch. The problem knows the exact epoch, evaluation count and staleness at the moment it advances. Recording it there deletes the reconstruction and the caveats.
+- **`EpochWorkTrace.PerEpoch` reconstructs staleness post hoc**, re-deriving epoch boundaries from evaluation counts, with documented caveats: it breaks under a caching evaluator and mis-reports the final open epoch. The problem knows the exact epoch, evaluation count and staleness at the moment it advances. TraceRetention it there deletes the reconstruction and the caveats.
 - **`docs/contributing/architecture/analyzers.md` documents the deleted system** almost end to end — `IAnalyzerRunState`, `ObservationPlan`, `run.GetResult()`, `ObservableAlgorithm`. This branch only renamed `Registry` to `Resolver` in it. It has to be rewritten against whatever shape items 1 through 8 settle on, not before.
 
 ## Decisions
@@ -201,7 +207,7 @@ Keep the abstract `TrialAnalyzer<TAlgorithm>` base for heterogeneous storage in 
 | Declarations of `Problem` across the observation records | 5 | 1 (on the shared base) |
 | Clock types writing their own installation | 3 of 4 | 1 of 4 (`ElapsedTimeClock`, which starts a stopwatch rather than observing) |
 
-Two new tests cover the extension points this opened: `CustomAnchor_ObservesABoundaryTheLibraryDoesNotCover` observes a creator, which the library ships no anchor for, and `CustomObservingClock_InstallsItselfAtItsAnchor` derives a clock over crossover calls. The second also pins the decoration ordering that makes clocks read correctly, since it asserts the first generation is recorded at zero crossover calls.
+Two new tests cover the extension points this opened: `CustomAnchor_ObservesABoundaryTheLibraryDoesNotCover` observes a creator, which the library ships no anchor for, and `CustomObservingClock_InstallsItselfAtItsAnchor` derives a clock over crossover calls. The second also pins the decoration comparer that makes clocks read correctly, since it asserts the first generation is recorded at zero crossover calls.
 
 Concept count is down from about fourteen to about eleven. Item 4 is what would take it to six.
 

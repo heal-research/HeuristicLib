@@ -145,7 +145,9 @@ public class PythonGenealogyAnalysis
                         elites: parameters.Elites);
                     var analyzers = CreateAnalyzers(parameters, gaAlgorithm, gaAlgorithm.Evaluator, gaAlgorithm.Crossover, gaAlgorithm.Mutator, callback);
                     var gaRun = gaAlgorithm.WithMaxIterations(parameters.Iterations)
-                                           .CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed), analyzers.GetAll());
+                                           .CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed));
+                    foreach (var analyzer in analyzers.GetAll())
+                        gaRun.AddAnalyzer(analyzer);
                     gaRun.Complete();
                     return analyzers.ToExperimentResult(gaRun);
                 }
@@ -163,7 +165,9 @@ public class PythonGenealogyAnalysis
                     var analyzers = CreateAnalyzers(parameters, esAlgorithm, esAlgorithm.Evaluator, esAlgorithm.Crossover, esAlgorithm.Mutator, callback);
 
                     var esRun = esAlgorithm.WithMaxIterations(parameters.Iterations)
-                                           .CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed), analyzers.GetAll());
+                                           .CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed));
+                    foreach (var analyzer in analyzers.GetAll())
+                        esRun.AddAnalyzer(analyzer);
                     esRun.Complete();
                     return analyzers.ToExperimentResult(esRun);
                 }
@@ -191,7 +195,9 @@ public class PythonGenealogyAnalysis
                         mutationRate: parameters.MutationRate);
                     var analyzers = CreateAnalyzers(parameters, nsga2Algorithm, nsga2Algorithm.Evaluator, nsga2Algorithm.Crossover, nsga2Algorithm.Mutator, callback);
                     var nsga2Run = nsga2Algorithm.WithMaxIterations(parameters.Iterations)
-                                                 .CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed), analyzers.GetAll());
+                                                 .CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed));
+                    foreach (var analyzer in analyzers.GetAll())
+                        nsga2Run.AddAnalyzer(analyzer);
                     _ = nsga2Run.Complete();
                     return analyzers.ToExperimentResult(nsga2Run);
                 }
@@ -204,15 +210,15 @@ public class PythonGenealogyAnalysis
         where TCandidate : notnull
     {
         ExperimentResult<TCandidate> ToExperimentResult(AlgorithmRun run);
-        IReadOnlyList<IExecutionHook> GetAll();
+        IReadOnlyList<IAnalyzer> GetAll();
     }
 
     private sealed record MyAnalyzers<TCandidate>(
         TraceAnalyzer<BestMedianWorstEntry<TCandidate>> Qualities,
-        IRankAnalysis<TCandidate>? RankAnalysis,
+        IRankAnalyzer<TCandidate>? RankAnalysis,
         TraceAnalyzer<EvaluatedCandidate<TCandidate>> QualityCurve,
         TraceAnalyzer<IReadOnlyList<EvaluatedCandidate<TCandidate>>>? AllPopulations,
-        IExecutionHook? CallbackAnalyzer)
+        IAnalyzer? CallbackAnalyzer)
         : IHookSet<TCandidate>
         where TCandidate : notnull
     {
@@ -236,9 +242,9 @@ public class PythonGenealogyAnalysis
             return new ExperimentResult<TCandidate>(rankGraph, rankLines, qRes, apRes);
         }
 
-        public IReadOnlyList<IExecutionHook> GetAll()
+        public IReadOnlyList<IAnalyzer> GetAll()
         {
-            var analyzers = new List<IExecutionHook>
+            var analyzers = new List<IAnalyzer>
             {
                 Qualities,
                 QualityCurve
@@ -293,12 +299,12 @@ public class PythonGenealogyAnalysis
     private sealed class CallbackAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(
         IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm,
         Action<PopulationState<TCandidate>> callback)
-        : IExecutionHook, IObservationRecorder<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>>
+        : IAnalyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : PopulationState<TCandidate>, ISearchState
     {
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(Anchor.At(algorithm), this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(algorithm, Record);
 
         public void Record(AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>
             callback(observation.State);
@@ -316,11 +322,11 @@ public class PythonGenealogyAnalysis
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : PopulationState<TCandidate>
     {
-        var qualities = Analyzer.TraceBestMedianWorst(algorithm);
+        var qualities = algorithm.TracePopulationCandidates(objectiveComparer: parameters.ObjectiveComparer);
         var rankAnalysis = parameters.TrackGenealogy
-            ? Analyzer.Rank(crossover, mutator, algorithm)
+            ? Analyzer.Rank(crossover, mutator, algorithm, objectiveComparer: parameters.ObjectiveComparer)
             : null;
-        var qc = Analyzer.TraceBestQuality(evaluator);
+        var qc = evaluator.TraceBestCandidateSoFar(objectiveComparer: parameters.ObjectiveComparer);
         var apt = parameters.TrackPopulations ? Analyzer.TraceAllPopulations(algorithm) : null;
         var c = callback != null
             ? new CallbackAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, callback)

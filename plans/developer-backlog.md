@@ -12,7 +12,6 @@ These items have meaningful progress behind them, but should still stay on the b
 - define the intended serialization boundary for experiments. Grid configurators and trial analyzer selectors and factories are runtime setup delegates, while materialized algorithm, operator and analyzer configurations remain serialization friendly in principle. Decide whether experiment configurations themselves need a persistable representation
 - extend experiment composition only from concrete user needs. Deferred candidates include per trial problem and initial state creation, heterogeneous algorithm comparison, benchmark experiments across problem instances and dedicated individual cancellation handles
 - reconsider typed hierarchical trial paths only if composed tuple keys and `RandomForkPath` metadata prove insufficient. Do not introduce untyped path tags that require casts
-- desired-state analysis API, beside the current-state analysis specs, as the first step of [analysis-system-rework.md](analysis-system-rework.md)
 - execution-graph invariants within one run
 - separate operation concurrency capability from requested execution policy. A future run-level execution context should let users select sequential or concurrent operation execution once, while operators and other execution boundaries declare the concurrency they safely allow. Define how the effective policy is constrained, how it reaches run-scoped instances through the execution registry without ambient state, how stateless operator bases capture run-specific settings, how problem evaluation participates, how per-trial experiment concurrency remains separate and whether maximum concurrency is per batch or shared across a whole run
 - work out run-scoped mutable operator parameters as a deliberate authoring capability and present the pattern clearly to users. Define naming and ownership for immutable configured values versus mutable current instance values, identify examples beyond mutation strength and decide how coordinating algorithms discover and control these parameters without prematurely introducing a generic parameter framework
@@ -29,20 +28,21 @@ These items have meaningful progress behind them, but should still stay on the b
 
 Why these are only partial today:
 
-- the experiment and analysis specs cover the current API well, but there is not yet a separate desired-state API story
-- the analyzer docs are much clearer now, but the broader desired-state analysis spec story is still open
 - immutability is now an explicit design rule, but that is stronger as policy than as a completed whole-repo audit
 
 ## Still not taken care of
 
 These are still real open items:
 
+- reduce the number of equivalent public API entry points. Several subsystems currently expose the same outcome through constructors, static helpers, extension methods and fluent convenience methods. Analysis is one example: users can construct analyzers directly or reach equivalent analyzers through several helper layers, making it unclear which path is canonical. Algorithm construction, run creation, execution, completion and streaming similarly offer overlapping routes that need a deliberate review. For each workflow, choose one clear canonical entry point and retain only a small convenience layer where it removes meaningful type-inference or setup friction. Remove, internalize or stop promoting alternatives that merely provide another spelling for the same operation. Judge the resulting API by whether a new user can identify the intended path without first comparing several equivalent choices.
+- define how genealogy represents repeated candidate values with different derivations in one generation. `GenealogyGraph.AddConnection` currently throws on the second value unless it equals one of its parents. A three-generation NSGA-II run with real-vector alpha/beta crossover, population 10, and seed 42 exposed this while validating explicit analysis ordering. It predates the trace changes and requires a decision about occurrence identity, not merely replacing dictionary insertion.
+
 - multi-objective short-path usage
 - generalize `PipelineAlgorithm` so consecutive algorithms may use different search state types
 - add explicit state transformations between `PipelineAlgorithm` stages, including transformations where the input and output state types are the same
 - introduce a probability based selection abstraction that separates selection from mappings such as fitness to probability and rank to probability
-- rework the objective system around the glossary terms `objective value`, `objective vector`, `objective direction`, and `objective directions`: keep the conceptual model open enough for single-objective and multi-objective cases, and clarify when an algorithm/operator requires exactly one objective value, a total ordering over objective vectors, or multi-objective comparison semantics
-- rework the analysis subsystem according to [analysis-system-rework.md](analysis-system-rework.md). The inventory, target design, concrete analyzer triage, lifecycle decisions, implementation sequence and acceptance criteria live there. Defer this until after the next main release and the mechanical namespace and folder restructuring, then complete it on a separate branch
+- rework the objective system around the glossary terms `objective value`, `objective vector`, `objective direction`, and `objective directions`: keep the conceptual model open enough for single-objective and multi-objective cases, and clarify when an algorithm/operator requires exactly one objective value, a total comparer over objective vectors, or multi-objective comparison semantics
+- analysis follow-up outside the implemented [usability plan](analysis-usability-follow-up.md): instrumentation unification and exact dynamic epoch-work recording remain separate work. The old analyzer state/result lookup rework is no longer pending.
 
 - island-style population workflow
 - fully implement ALPS-style age-layered workflow; the current ALPS algorithm still behaves like a simple single-layer evolutionary loop with a regular generation budget

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -34,25 +35,28 @@ public class HyperVolumeState<T>(ObjectiveVector referencePoint, ObjectiveDirect
     }
 }
 
-/// <summary>
-/// Accumulates a Pareto front across firings and reports its hypervolume at each of them.
-/// </summary>
-/// <remarks>
-/// This aggregation keeps the front it builds, so it belongs to one trace and one run, the same way a retention does.
-/// The recorded value is a plain number, so the trace's entries stay immutable even though the front behind them grows.
-/// Dominance is what a front is made of, so this reads the objective directions rather than only an ordering.
-/// </remarks>
-public sealed class HyperVolumeAggregation<TCandidate>(ObjectiveVector referencePoint)
-    : IAggregation<EvaluatedCandidate<TCandidate>, double>
+/// <summary>Reusable settings for accumulating a Pareto front and reporting its hypervolume.</summary>
+public sealed record HyperVolumeAggregation<TCandidate> : IAggregation<EvaluatedCandidate<TCandidate>, double>
 {
-    private HyperVolumeState<TCandidate>? front;
+    public ObjectiveVector ReferencePoint { get; init; }
 
-    public double Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective)
+    public HyperVolumeAggregation(ObjectiveVector referencePoint)
     {
-        // The objective is the run's, so the front cannot be built before the first firing.
-        front ??= new HyperVolumeState<TCandidate>(referencePoint, objective);
-        front.AddPoints(readings);
-        return front.HyperVolume;
+        ReferencePoint = referencePoint;
+    }
+
+    public IAggregationInstance<EvaluatedCandidate<TCandidate>, double> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new ExecutionInstance(ReferencePoint);
+
+    private sealed class ExecutionInstance(ObjectiveVector referencePoint) : IAggregationInstance<EvaluatedCandidate<TCandidate>, double>
+    {
+        private HyperVolumeState<TCandidate>? front;
+
+        public double Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
+        {
+            front ??= new HyperVolumeState<TCandidate>(referencePoint, objective);
+            front.AddPoints(readings);
+            return front.HyperVolume;
+        }
     }
 }
 
@@ -64,18 +68,19 @@ public static class HyperVolumeTraces
         /// Traces the hypervolume of the Pareto front accumulated over everything the evaluator produces.
         /// </summary>
         /// <remarks>
-        /// The front is the aggregation's own state, so the recorded entries are plain numbers.
+        /// The front is the reduction's private state, so the recorded entries are plain numbers.
         /// </remarks>
         public static TraceAnalyzer<double> TraceHyperVolume<T, TS, TP>(
             ObjectiveVector referencePoint,
             IEvaluator<T, TS, TP> evaluator,
-            params IReadOnlyList<Clock> clocks)
+            IReadOnlyList<Clock>? clocks = null,
+            TraceRetention? retention = null)
             where TS : class, ISearchSpace<T>
             where TP : class, IProblem<T, TS> =>
             Analyzer.Trace(
+                evaluator,
                 new EvaluatedCandidatesFromEvaluationMeasurement<T, TS, TP>(),
                 new HyperVolumeAggregation<T>(referencePoint),
-                Anchor.At(evaluator),
-                clocks);
+                clocks, retention);
     }
 }

@@ -15,8 +15,9 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     where TSearchState : class, ISearchState
     where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
-    private readonly Dictionary<TrialAnalyzer<TAlgorithm>, ImmutableArray<IExecutionHook>> trialAnalyzers = new(ReferenceEqualityComparer.Instance);
-    private bool executionStarted;
+    private readonly Lock sync = new();
+    private readonly Dictionary<TrialAnalyzer<TAlgorithm>, ImmutableArray<IAnalyzer>> trialAnalyzers = new(ReferenceEqualityComparer.Instance);
+    private RunLifecycleState lifecycleState = RunLifecycleState.Preparing;
 
     public IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Experiment { get; }
 
@@ -26,18 +27,16 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
     public ImmutableArray<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>> Trials { get; }
 
-    public bool ExecutionStarted => executionStarted || Trials.Any(trial => trial.Run.ExecutionStarted);
-
-    public ExperimentRun(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> experiment, TProblem problem, IRandomNumberGenerator random)
-        : this(experiment, problem, random, [])
+    public RunLifecycleState LifecycleState
     {
+        get
+        {
+            lock (sync)
+                return lifecycleState;
+        }
     }
 
-    /// <summary>
-    /// Creates the run and gives every trial its own analyzer from each trial analyzer, the way a single run is given
-    /// its analyzers.
-    /// </summary>
-    public ExperimentRun(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> experiment, TProblem problem, IRandomNumberGenerator random, IReadOnlyList<TrialAnalyzer<TAlgorithm>> trialAnalyzers)
+    public ExperimentRun(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> experiment, TProblem problem, IRandomNumberGenerator random)
     {
         Experiment = experiment;
         Problem = problem;
@@ -49,7 +48,6 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
         var keys = new HashSet<TKey>();
         var trials = new List<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>>(cases.Length);
-        var perTrialAnalyzers = new List<IExecutionHook[]>(cases.Length);
         for (var index = 0; index < cases.Length; index++)
         {
             var experimentCase = cases[index];
@@ -57,28 +55,36 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
                 throw new InvalidOperationException($"Experiment trial key {experimentCase.Key} is not unique.");
 
             var trialRandom = experimentCase.RandomForkPath.Aggregate(random, static (current, forkKey) => current.Fork(forkKey));
-            var trialHooks = trialAnalyzers.Select(trialAnalyzer => trialAnalyzer.CreateFor(experimentCase.Algorithm)).ToArray();
-            perTrialAnalyzers.Add(trialHooks);
-            var algorithmRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState>(experimentCase.Algorithm, problem, trialRandom, trialHooks);
+            var algorithmRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState>(experimentCase.Algorithm, problem, trialRandom);
             trials.Add(new ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>(index, experimentCase.Key, experimentCase.Algorithm, algorithmRun, experimentCase.RandomForkPath));
         }
 
         Trials = trials.ToImmutableArray();
 
-        for (var index = 0; index < trialAnalyzers.Count; index++)
-        {
-            if (this.trialAnalyzers.ContainsKey(trialAnalyzers[index]))
-                throw new InvalidOperationException("The same trial analyzer cannot be attached more than once.");
+    }
 
-            this.trialAnalyzers.Add(trialAnalyzers[index], [.. perTrialAnalyzers.Select(perTrial => perTrial[index])]);
-        }
+    /// <summary>Creates and attaches one analyzer from this factory to every experiment trial.</summary>
+    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> AddTrialAnalyzer<TAnalyzer>(
+        TrialAnalyzer<TAlgorithm, TAnalyzer> trialAnalyzer)
+        where TAnalyzer : IAnalyzer
+    {
+        EnsureNotStarted();
+        if (trialAnalyzers.ContainsKey(trialAnalyzer))
+            throw new InvalidOperationException("The same trial analyzer cannot be attached more than once.");
+
+        ImmutableArray<IAnalyzer> analyzers = [.. Trials.Select(trial => trialAnalyzer.CreateFor(trial.Algorithm))];
+        for (var index = 0; index < Trials.Length; index++)
+            Trials[index].Run.AddAnalyzer(analyzers[index]);
+
+        trialAnalyzers.Add(trialAnalyzer, analyzers);
+        return this;
     }
 
     /// <summary>
     /// Gets each trial together with the analyzer that observed it. Read the collected data from the analyzer.
     /// </summary>
-    public ImmutableArray<TrialAnalysis<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAnalyzer>> GetAnalyzers<TOperator, TAnalyzer>(TrialAnalyzer<TAlgorithm, TOperator, TAnalyzer> trialAnalyzer)
-        where TAnalyzer : IExecutionHook
+    public ImmutableArray<TrialAnalysis<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAnalyzer>> GetAnalyzers<TAnalyzer>(TrialAnalyzer<TAlgorithm, TAnalyzer> trialAnalyzer)
+        where TAnalyzer : IAnalyzer
     {
         var analyzers = trialAnalyzers[trialAnalyzer];
 
@@ -95,6 +101,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     {
         var execution = PrepareCombinedExecution(initialState, cancellationToken);
         var scheduledExecution = ScheduleTrials(execution, concurrency ?? ExecutionConcurrency.Sequential(), null, cancellationToken);
+        _ = TrackCompletion(scheduledExecution.TrialCompletions, scheduledExecution.WorkersCompletion, cancellationToken);
         return scheduledExecution.TrialCompletions.Select((completion, index) => RequireFinalState(Trials[index], completion)).ToImmutableArray();
     }
 
@@ -105,19 +112,53 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         var scheduledExecution = ScheduleTrials(execution, concurrency, channel.Writer, stopSource.Token);
         try
         {
-            await foreach (var entry in channel.Reader.ReadAllAsync(cancellationToken))
+            await using var enumerator = channel.Reader.ReadAllAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
+            while (true)
             {
+                ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState> entry;
+                try
+                {
+                    if (!await enumerator.MoveNextAsync())
+                        break;
+                    entry = enumerator.Current;
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    TransitionFromRunning(RunLifecycleState.Canceled);
+                    throw;
+                }
+                catch
+                {
+                    TransitionFromRunning(RunLifecycleState.Failed);
+                    throw;
+                }
+
                 yield return entry;
             }
 
-            await scheduledExecution.WorkersCompletion;
-            cancellationToken.ThrowIfCancellationRequested();
-            ThrowTrialFailures(scheduledExecution.TrialCompletions);
+            try
+            {
+                await scheduledExecution.WorkersCompletion;
+                cancellationToken.ThrowIfCancellationRequested();
+                ThrowTrialFailures(scheduledExecution.TrialCompletions);
+                TransitionFromRunning(RunLifecycleState.Completed);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                TransitionFromRunning(RunLifecycleState.Canceled);
+                throw;
+            }
+            catch
+            {
+                TransitionFromRunning(RunLifecycleState.Failed);
+                throw;
+            }
         }
         finally
         {
             await stopSource.CancelAsync();
             await scheduledExecution.WorkersCompletion.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            TransitionFromRunning(RunLifecycleState.Stopped);
         }
     }
 
@@ -205,7 +246,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         return (trial, result.FinalState!);
     }
 
-    private static async Task FinishWorkers(Task[] workers, ImmutableArray<TaskCompletionSource<TrialExecutionResult>> completionSources, ChannelWriter<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>? progressWriter, CancellationToken cancellationToken)
+    private async Task FinishWorkers(Task[] workers, ImmutableArray<TaskCompletionSource<TrialExecutionResult>> completionSources, ChannelWriter<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>? progressWriter, CancellationToken cancellationToken)
     {
         Exception? workerFailure = null;
         try
@@ -215,6 +256,12 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         catch (Exception exception)
         {
             workerFailure = exception;
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            foreach (var trial in Trials)
+                await trial.Run.CancelAsync();
         }
 
         foreach (var completionSource in completionSources)
@@ -247,41 +294,89 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
     private void StartExecution()
     {
-        EnsureNotStarted();
-        executionStarted = true;
+        lock (sync)
+        {
+            EnsurePreparing();
+            if (Trials.Any(trial => trial.Run.LifecycleState != RunLifecycleState.Preparing))
+                throw new InvalidOperationException("An experiment run cannot start after one of its trials has been started directly.");
+            lifecycleState = RunLifecycleState.Running;
+        }
+    }
+
+    private void EnsurePreparing()
+    {
+        if (lifecycleState != RunLifecycleState.Preparing)
+        {
+            throw new InvalidOperationException($"An experiment run only accepts attachments and can only start while it is {RunLifecycleState.Preparing}; its current lifecycle state is {lifecycleState}.");
+        }
     }
 
     private void EnsureNotStarted()
     {
-        if (ExecutionStarted)
+        lock (sync)
+            EnsurePreparing();
+    }
+
+    private void TransitionFromRunning(RunLifecycleState next)
+    {
+        lock (sync)
         {
-            throw new InvalidOperationException("An experiment run can only be configured and executed once. Create a new run for another execution.");
+            if (lifecycleState == RunLifecycleState.Running)
+                lifecycleState = next;
         }
+    }
+
+    private async Task TrackCompletion(ImmutableArray<Task<TrialExecutionResult>> trialCompletions,
+        Task workersCompletion, CancellationToken cancellationToken)
+    {
+        await workersCompletion.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        if (cancellationToken.IsCancellationRequested)
+            TransitionFromRunning(RunLifecycleState.Canceled);
+        else if (trialCompletions.Any(completion => completion.IsFaulted))
+            TransitionFromRunning(RunLifecycleState.Failed);
+        else if (trialCompletions.Any(completion => completion.IsCanceled))
+            TransitionFromRunning(RunLifecycleState.Canceled);
+        else
+            TransitionFromRunning(RunLifecycleState.Completed);
     }
 
     private PreparedCombinedExecution PrepareCombinedExecution(TSearchState? initialState, CancellationToken cancellationToken)
     {
         StartExecution();
-        var preparedTrials = ImmutableArray.CreateBuilder<PreparedTrial>(Trials.Length);
-        for (var trialIndex = 0; trialIndex < Trials.Length; trialIndex++)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var trial = Trials[trialIndex];
-            try
+            var preparedTrials = ImmutableArray.CreateBuilder<PreparedTrial>(Trials.Length);
+            for (var trialIndex = 0; trialIndex < Trials.Length; trialIndex++)
             {
-                preparedTrials.Add(new PreparedTrialStream(trialIndex, trial.Run.Stream(initialState, cancellationToken)));
+                cancellationToken.ThrowIfCancellationRequested();
+                var trial = Trials[trialIndex];
+                try
+                {
+                    preparedTrials.Add(new PreparedTrialStream(trialIndex,
+                        trial.Run.StreamForTerminalCancellation(initialState, cancellationToken)));
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    preparedTrials.Add(new FailedPreparedTrial(trialIndex, new ExperimentTrialException<TKey>(trial.Key, exception)));
+                }
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                preparedTrials.Add(new FailedPreparedTrial(trialIndex, new ExperimentTrialException<TKey>(trial.Key, exception)));
-            }
-        }
 
-        return new PreparedCombinedExecution(preparedTrials.MoveToImmutable());
+            return new PreparedCombinedExecution(preparedTrials.MoveToImmutable());
+        }
+        catch (OperationCanceledException)
+        {
+            TransitionFromRunning(RunLifecycleState.Canceled);
+            throw;
+        }
+        catch
+        {
+            TransitionFromRunning(RunLifecycleState.Failed);
+            throw;
+        }
     }
 
     private abstract record PreparedTrial(int TrialIndex);

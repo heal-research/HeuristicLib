@@ -14,10 +14,11 @@ public interface IMeasurement<in TInput, out TValue>
     IReadOnlyList<TValue> Read(TInput input);
 }
 
-internal sealed record DelegateMeasurement<TInput, TValue>(Func<TInput, IReadOnlyList<TValue>> Measure)
+/// <summary>Runtime-only callback adapter. It has identity semantics and is not a serializable strategy.</summary>
+public sealed class DelegateMeasurement<TInput, TValue>(Func<TInput, IReadOnlyList<TValue>> measure)
     : IMeasurement<TInput, TValue>
 {
-    public IReadOnlyList<TValue> Read(TInput input) => Measure(input);
+    public IReadOnlyList<TValue> Read(TInput input) => measure(input);
 }
 
 /// <summary>
@@ -91,6 +92,16 @@ public sealed record OffspringMeasurement<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public IReadOnlyList<TCandidate> Read(CrossoverObservation<TCandidate, TSearchSpace, TProblem> observation)
-        => observation.Offspring;
+    public IReadOnlyList<TCandidate> Read(CrossoverObservation<TCandidate, TSearchSpace, TProblem> observation) =>
+        observation.Offspring;
+}
+
+public sealed record InterceptedObjectiveVectorsMeasurement<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : IMeasurement<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>, ObjectiveVector>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : PopulationState<TCandidate>
+{
+    public IReadOnlyList<ObjectiveVector> Read(InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>
+        [.. observation.State.Population.EvaluatedCandidates.Select(candidate => candidate.ObjectiveVector)];
 }

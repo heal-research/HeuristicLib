@@ -26,7 +26,7 @@ public interface IEncodingDefaults<TCandidate, TSearchSpace>
 /// The member is static so it can never enter a search space record's generated equality, and it takes the search
 /// space instance so a suggestion may depend on the values that describe the encoding.
 /// <para>
-/// Every call must return a new operator. Operators are matched by reference where they anchor an observation, so
+/// Every call must return a new operator. Observation sources are matched by reference, so
 /// handing out one shared instance would silently couple algorithms that took the same default.
 /// </para>
 /// <para>

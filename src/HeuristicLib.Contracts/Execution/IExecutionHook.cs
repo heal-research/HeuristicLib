@@ -1,17 +1,17 @@
 namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>
-/// Hooks itself into a run's execution graph at chosen anchors, before the graph is resolved.
+/// Adds behavior at chosen configurations in a run's execution graph, before the graph is resolved.
 /// </summary>
 /// <remarks>
 /// <para>
-/// A hook decorates the anchors it is interested in by calling <see cref="ExecutionInstanceResolverBuilder.Decorate"/>. It can
+/// A hook decorates the configurations it is interested in by calling <see cref="ExecutionInstanceResolverBuilder.Decorate"/>. It can
 /// declare decorations and cannot resolve anything, because observing a run must not participate in building it.
-/// Decorations compose, so several hooks may act on the same anchor without displacing one another.
+/// Decorations compose, so several hooks may act on the same configuration without displacing one another.
 /// </para>
 /// <para>
 /// Every decoration a hook declares sits outside every decoration the configuration declares, so that a wrapper which
-/// measures an operator never measures the hook observing it. Among hooks, the first installation at an anchor becomes
+/// measures an operator never measures the hook observing it. Among hooks, the first installation for a configuration becomes
 /// the innermost wrapper and therefore observes an operation first. A hook that depends on another one having already
 /// acted, such as a trace that reads its clocks, installs its dependencies before itself.
 /// </para>

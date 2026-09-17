@@ -23,11 +23,9 @@ public abstract class Clock
     /// Declares whatever keeps this clock's time current, if anything does.
     /// </summary>
     /// <remarks>
-    /// This runs exactly once, while the run builds its resolver and before anything executes, so a clock may also use
-    /// it to capture a starting reference. A clock whose source keeps the time current itself overrides nothing. A
-    /// trace installs its clocks before its own recorder, so what this declares observes a shared boundary first and
-    /// the time is already current when the trace captures its moment. Several traces may select one clock, so this
-    /// must be safe to call more than once.
+    /// Installation can occur in several resolver scopes and must not reset accumulated state. A clock whose source
+    /// keeps time current itself overrides nothing. Traces install clocks before retention observations, and Observe
+    /// deduplicates a shared clock's recorder at the same boundary within each scope.
     /// </remarks>
     public virtual void Install(ExecutionInstanceResolverBuilder builder)
     {
@@ -54,30 +52,12 @@ public abstract class Clock<TTime> : Clock
 }
 
 /// <summary>
-/// A clock whose time is kept current by the observations of one anchor.
+/// A clock whose time is kept current by observations from one configured source.
 /// </summary>
 /// <remarks>
-/// Derive from this rather than wiring an anchor by hand: it installs itself at the anchor it was given, so a clock of
+/// Derive from this rather than wiring an observation hook by hand: it installs itself at the source it was given, so a clock of
 /// your own is left with reading an observation and reporting the time.
 /// </remarks>
-public abstract class ObservingClock<TTime, TObservation> : Clock<TTime>, IObservationRecorder<TObservation>
-    where TObservation : Observation
-{
-    private readonly IAnchor<TObservation> anchor;
-
-    protected ObservingClock(IAnchor<TObservation> anchor)
-    {
-        this.anchor = anchor;
-    }
-
-    public sealed override void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(anchor, this);
-
-    /// <summary>
-    /// Advances this clock from one observation of its anchor.
-    /// </summary>
-    public abstract void Record(TObservation observation);
-}
-
 internal sealed class Moment
 {
     private readonly ImmutableDictionary<Clock, object> times;
@@ -109,17 +89,25 @@ internal sealed class Moment
 /// <remarks>
 /// A nested algorithm has its own iteration count, which is why the algorithm is named rather than inferred.
 /// </remarks>
-public sealed class IterationClock<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-    : ObservingClock<long, AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>>(Anchor.At(algorithm))
+public sealed class IterationClock<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : Clock<long>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
     private long latest;
+    private readonly IExecutionHook observationHook;
+
+    public IterationClock(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+    {
+        observationHook = new AlgorithmObservationHook<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, Record);
+    }
 
     protected override long ReadTime() => Interlocked.Read(ref latest);
 
-    public override void Record(AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>
+    public override void Install(ExecutionInstanceResolverBuilder builder) => builder.Install(observationHook);
+
+    private void Record(AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>
         Interlocked.Exchange(ref latest, observation.Iteration);
 }
 
@@ -130,33 +118,51 @@ public sealed class IterationClock<TCandidate, TSearchSpace, TProblem, TSearchSt
 /// This is the axis that makes runs of different algorithms comparable. Several evaluator boundaries may count
 /// different work, which is why the evaluator is named rather than inferred.
 /// </remarks>
-public sealed class EvaluationClock<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
-    : ObservingClock<long, EvaluatorObservation<TCandidate, TSearchSpace, TProblem>>(Anchor.At(evaluator))
+public sealed class EvaluationClock<TCandidate, TSearchSpace, TProblem>
+    : Clock<long>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     private long evaluations;
+    private readonly IExecutionHook observationHook;
+
+    public EvaluationClock(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
+    {
+        observationHook = new EvaluatorObservationHook<TCandidate, TSearchSpace, TProblem>(evaluator, Record);
+    }
 
     protected override long ReadTime() => Interlocked.Read(ref evaluations);
 
-    public override void Record(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation) =>
+    public override void Install(ExecutionInstanceResolverBuilder builder) => builder.Install(observationHook);
+
+    private void Record(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation) =>
         Interlocked.Add(ref evaluations, observation.ObjectiveVectors.Count);
 }
 
 /// <summary>
-/// Measures wall-clock time since the run started.
+/// Measures wall-clock time since this clock was first installed.
 /// </summary>
 public sealed class ElapsedTimeClock(TimeProvider timeProvider) : Clock<TimeSpan>
 {
+    private readonly Lock sync = new();
     private long startedAt;
+    private bool started;
 
     protected override TimeSpan ReadTime() => timeProvider.GetElapsedTime(Interlocked.Read(ref startedAt));
 
     /// <summary>
-    /// Captures the moment the run began. Nothing observes this clock, so installation is only where it starts.
+    /// Captures the first installation time. Later installations preserve that starting point.
     /// </summary>
-    public override void Install(ExecutionInstanceResolverBuilder builder) =>
-        Interlocked.CompareExchange(ref startedAt, timeProvider.GetTimestamp(), 0);
+    public override void Install(ExecutionInstanceResolverBuilder builder)
+    {
+        lock (sync)
+        {
+            if (started)
+                return;
+            startedAt = timeProvider.GetTimestamp();
+            started = true;
+        }
+    }
 }
 
 /// <summary>
@@ -188,7 +194,7 @@ public static class Clocks
             new(evaluator);
 
         /// <summary>
-        /// Creates a clock measuring wall-clock time since the run started.
+        /// Creates a clock measuring wall-clock time since its first installation.
         /// </summary>
         public static ElapsedTimeClock FromElapsedTime(TimeProvider timeProvider) => new(timeProvider);
     }

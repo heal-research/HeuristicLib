@@ -23,7 +23,7 @@ public sealed class FuncBestKnownObjectiveProvider<TCandidate, TSearchSpace, TPr
 
 /// <summary>
 /// Normalizes the objective vectors produced by the child evaluator against the best-known objective vector of a
-/// dynamic problem, refreshing that reference whenever the problem's epoch changes.
+/// dynamic problem, refreshing that reference when evaluation observes a new epoch.
 /// </summary>
 public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem>
     : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
@@ -55,12 +55,13 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
     protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
         new Instance(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy);
 
-    private sealed class Instance : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>, IDisposable
+    private sealed class Instance : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>
     {
         private readonly TProblem sourceProblem;
         private readonly IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider;
         private readonly RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy;
         private ObjectiveVector? bestKnown;
+        private int bestKnownEpoch = -1;
 
         public Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
             : base(childEvaluator)
@@ -68,8 +69,6 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
             this.sourceProblem = sourceProblem;
             this.bestKnownProvider = bestKnownProvider;
             this.zeroBestKnownPolicy = zeroBestKnownPolicy;
-            RefreshBestKnown(sourceProblem);
-            sourceProblem.OnEpochChange += OnEpochChange;
         }
 
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
@@ -77,18 +76,20 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
             if (!ReferenceEquals(problem, sourceProblem))
                 throw new InvalidOperationException("Dynamic relative quality evaluator instances can only evaluate the dynamic problem they were created for.");
 
-            var currentBestKnown = bestKnown ?? throw new InvalidOperationException("No best-known objective vector is available.");
-
-            return ChildEvaluator.Evaluate(candidates, random, searchSpace, problem)
+            var objectiveVectors = ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
+            // A deferred batch update is applied inside Evaluate. Read its reference afterwards, while that
+            // environment is still current, instead of retaining an event subscription to the problem.
+            if (bestKnownEpoch != problem.CurrentEpoch)
+            {
+                bestKnown = bestKnownProvider.GetBestKnown(problem);
+                bestKnownEpoch = problem.CurrentEpoch;
+            }
+            var currentBestKnown = bestKnown!;
+            return objectiveVectors
                 .Select(objectiveVector => RelativeQuality.Normalize(objectiveVector, currentBestKnown, zeroBestKnownPolicy))
                 .ToArray();
         }
 
-        public void Dispose() => sourceProblem.OnEpochChange -= OnEpochChange;
-
-        private void OnEpochChange(object? sender, int epoch) => RefreshBestKnown(sourceProblem);
-
-        private void RefreshBestKnown(TProblem problem) => bestKnown = bestKnownProvider.GetBestKnown(problem);
     }
 }
 

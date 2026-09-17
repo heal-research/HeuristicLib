@@ -20,24 +20,12 @@ public class CycleAlgorithmAnalysisTests
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), analysis1, analysis2);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAnalyzer(analysis1).AddAnalyzer(analysis2);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         analysis1.Result.ObjectiveValues.ShouldBe([1.0]);
         analysis2.Result.ObjectiveValues.ShouldBe([1.0]);
-    }
-
-
-
-
-
-    private static AlgorithmRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateRun(IExecutionHook analyzer)
-    {
-        var evaluator = new IncrementingEvaluator();
-        var problem = FuncProblem.Create(evaluateFunc: (int x) => x, encoding: DummySearchSpace<int>.Instance, objective: SingleObjective.Minimize);
-        var algorithm = new SingleStepAlgorithm(1, evaluator, new IdentityInterceptor<int, PopulationState<int>>());
-        return algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), analyzer);
     }
 
     private sealed record IncrementingEvaluator
@@ -98,11 +86,11 @@ public class CycleAlgorithmAnalysisTests
     }
 
     private sealed class EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator)
-        : IExecutionHook, IObservationRecorder<EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>>
+        : IAnalyzer
     {
         public ExecutionState Result { get; } = new();
 
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(Anchor.At(evaluator), this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, Record);
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);

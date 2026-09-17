@@ -15,7 +15,7 @@ A meta-algorithm splits into a configuration record and an execution instance, e
 ::: warning Never call CreateExecutionInstance on a child algorithm
 Always obtain a child algorithm's execution instance with `registry.Resolve(childAlgorithm)`. Calling `childAlgorithm.CreateExecutionInstance(registry)` yourself compiles, runs, and produces correct search states — and silently breaks observation.
 
-`ExecutionInstanceResolver.Resolve` is what consults the replacements an [analyzer](/guide/execution/observability-and-analysis) installed for the run. Bypassing it means any analyzer anchored on that child algorithm, or on an operator inside it, records nothing at all. There is no error and no warning; the result list is simply empty.
+`ExecutionInstanceResolver.Resolve` is what consults the replacements an [analyzer](/guide/execution/observability-and-analysis) installed for the run. Bypassing it means an analyzer observing that child algorithm, or an operator inside it, records nothing at all. There is no error and no warning; the result list is simply empty.
 
 The `HLib0001` analyzer does **not** catch this. It only inspects calls made inside a `CreateExecutionInstance` method, and a meta-algorithm that stores the registry and resolves its children lazily during the run is outside that window.
 :::
@@ -92,21 +92,23 @@ var exploit = geneticAlgorithm with { MutationRate = 0.05, MaximumGenerations = 
 var staged = new TwoStageAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem,
     PopulationState<RealVector>> { First = explore, Second = exploit };
 
+var wholeRun = staged.TracePopulationQuality();
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .TrackBestMedianWorst(out var wholeRun);
+    .AddAnalyzer(wholeRun);
 ```
 
 Because the children are resolved through the registry, either stage can also be observed on its own:
 
 ```csharp
-var exploreQuality = Analyzer.BestMedianWorst(explore);
+var exploreQuality = explore.TracePopulationQuality();
 
+var wholeRun = staged.TracePopulationQuality();
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .WithAnalyzer(exploreQuality)
-    .TrackBestMedianWorst(out var wholeRun);
+    .AddAnalyzer(exploreQuality)
+    .AddAnalyzer(wholeRun);
 ```
 
-`exploreQuality` then holds only the first stage's generations, and `wholeRun` holds every state the meta-algorithm yielded. Note that `explore` and `exploit` must be distinct objects for this to work, since an anchor is matched by reference.
+`exploreQuality` then holds only the first stage's generations, and `wholeRun` holds every state the meta-algorithm yielded. Note that `explore` and `exploit` must be distinct objects for this to work, since observation sources are matched by reference.
 
 ## Child registries
 
@@ -128,4 +130,4 @@ A meta-algorithm should:
 3. Pass the cancellation token to every child stream.
 4. Keep the configuration record immutable and store run data on the instance.
 
-Read [Observability and analysis](/guide/execution/observability-and-analysis) for what anchoring on a child algorithm means for the resulting series.
+Read [Observability and analysis](/guide/execution/observability-and-analysis) for what observing a child algorithm means for the resulting series.

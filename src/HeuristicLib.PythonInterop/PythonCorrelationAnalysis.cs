@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Numerics;
 using HEAL.HeuristicLib.Objectives;
@@ -74,6 +75,8 @@ public static class PythonCorrelationAnalysis
           new TestFunctionExperimentParameters
           {
               AlgorithmName = "nsga2",
+              // Reports prioritize the first objective; NSGA-II still uses Pareto ranking.
+              ObjectiveComparer = new LexicographicComparer(problem.Objective.Directions),
               Creator = new UniformDistributedCreator(),
               Crossover = new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithRate(0.9),
               Mutator = new PolynomialMutator().WithRate(0.9),

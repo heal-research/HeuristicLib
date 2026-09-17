@@ -9,6 +9,34 @@ namespace HEAL.HeuristicLib.Tests.Problems.Dynamic;
 public class DynamicAnalysisTests
 {
     [Fact]
+    public void RelativeQuality_RefreshesAfterDeferredBatchUpdatesWithoutSubscriptions()
+    {
+        var problem = new IntegerDynamicProblem(epochLength: 2);
+        var provider = new EpochBestKnown();
+        var evaluator = new ProblemEvaluator().WithDynamicRelativeQuality(problem, provider);
+        var instance = ExecutionInstanceResolver.Create().Resolve(evaluator);
+
+        instance.ShouldNotBeAssignableTo<IDisposable>();
+        instance.Evaluate([2, 2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+            .Select(value => value[0]).ShouldBe([1d, 1d]);
+        instance.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+            .Single()[0].ShouldBe(0);
+        instance.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+            .Single()[0].ShouldBe(0);
+        provider.Epochs.ShouldBe([0, 1]);
+    }
+
+    private sealed class EpochBestKnown : IBestKnownObjectiveProvider<int, IntegerSearchSpace, IntegerDynamicProblem>
+    {
+        public List<int> Epochs { get; } = [];
+        public ObjectiveVector GetBestKnown(IntegerDynamicProblem problem)
+        {
+            Epochs.Add(problem.CurrentEpoch);
+            return new ObjectiveVector(problem.CurrentEpoch + 1);
+        }
+    }
+
+    [Fact]
     public void BestPerEpoch_IsAnOrdinaryTraceReadAgainstTheEpochSchedule()
     {
         var problem = new IntegerDynamicProblem(epochLength: 2);
@@ -18,13 +46,12 @@ public class DynamicAnalysisTests
             [4]
         ]);
         var epoch = Clock.FromEpoch(problem);
-        var bestPerEpoch = Analyzer.Trace(
+        var bestPerEpoch = Analyzer.Trace(algorithm.Evaluator,
             observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors),
             Aggregate.Best<int>(),
-            Anchor.At(algorithm.Evaluator),
-            epoch);
+            [epoch]);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), bestPerEpoch);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAnalyzer(bestPerEpoch);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -45,7 +72,7 @@ public class DynamicAnalysisTests
         var epoch = Clock.FromEpoch(problem);
         var work = Analyzer.TraceEpochWork(algorithm.Evaluator, evaluations, epoch);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), work);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAnalyzer(work);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -83,7 +110,7 @@ public class DynamicAnalysisTests
             [4]
         ]);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), problem.CreateIterationUpdateHook(algorithm));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddExecutionHook(problem.CreateIterationUpdateHook(algorithm));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -141,7 +168,7 @@ public class DynamicAnalysisTests
     }
 
     [Fact]
-    public void BestBeforeChangePerformanceAnalysis_RecordsTheBestOfEveryCompletedEpoch()
+    public void BestBeforeChangePerformanceAnalyzer_RecordsTheBestOfEveryCompletedEpoch()
     {
         var problem = new IntegerDynamicProblem(epochLength: 2);
         var algorithm = new BatchEvaluationAlgorithm([
@@ -150,12 +177,12 @@ public class DynamicAnalysisTests
             [4]
         ]);
         var analysis =
-            new BestBeforeChangePerformanceAnalysis<int, IntegerSearchSpace, IntegerDynamicProblem>(
+            new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>(
                 problem,
                 [algorithm.Evaluator],
                 predictionEpochMultiplier: 2);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), analysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAnalyzer(analysis);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 

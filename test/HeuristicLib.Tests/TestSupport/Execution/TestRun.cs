@@ -5,7 +5,6 @@ internal sealed class TestRun : AlgorithmRun
     public static TestRun Instance { get; } = new();
 
     private TestRun()
-        : base([])
     {
     }
 }

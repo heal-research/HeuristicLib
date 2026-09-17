@@ -17,9 +17,6 @@ public static class AlgorithmExtensions
         public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun(TProblem problem, IRandomNumberGenerator random) =>
             new(algorithm, problem, random);
 
-        public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun(TProblem problem, IRandomNumberGenerator random, params IReadOnlyList<IExecutionHook> hooks) =>
-            new(algorithm, problem, random, hooks);
-
         public ExecutionStream<TSearchState> Stream(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default) =>
             algorithm.CreateRun(problem, random).Stream(initialState, ct);
 

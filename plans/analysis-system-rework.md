@@ -119,9 +119,9 @@ Reducing the readings of one firing is the common case, but some analyses carry 
 
 Not every firing should produce a sample, and the difference is currently hard-coded into separate types: `BestMedianWorstAnalysis` records at every firing while `BestPerEvaluationAnalysis` records only when the best improves. That is the same one-type-per-variation mistake as the clock problem, so retention belongs in the model as its own choice.
 
-At minimum the model must support recording at every firing, recording only when the value changes, recording every nth firing, and recording only the final firing.
+At minimum the model must support retention at every firing, retention only when the value changes, retention every nth firing, and retention only the final firing.
 
-This is also what makes expensive aggregations affordable. A similarity matrix per generation costs on the order of generations times population squared. Recording every tenth firing is the difference between a usable analyzer and one that must be labelled a memory hazard. The existing `StoreHistory` flag on `PopulationSimilarityAnalyzer` is a broken attempt at this concept and should be replaced by it rather than repaired.
+This is also what makes expensive aggregations affordable. A similarity matrix per generation costs on the order of generations times population squared. TraceRetention every tenth firing is the difference between a usable analyzer and one that must be labelled a memory hazard. The existing `StoreHistory` flag on `PopulationSimilarityAnalyzer` is a broken attempt at this concept and should be replaced by it rather than repaired.
 
 #### Transposition is a read concern, not a storage concern
 
@@ -222,7 +222,7 @@ analyzer observations.
 
 At a shared anchor, the observable wrapper creates an immutable observation before it dispatches analyzers. The observation
 contains intrinsic facts about that occurrence, such as the algorithm iteration number. The analyzer passes that observation
-to its selected clocks while capturing the moment. No clock observer or callback ordering is needed at
+to its selected clocks while capturing the moment. No clock observer or callback comparer is needed at
 that boundary. Cross-boundary retained values have their ordinary temporal meaning: the latest value observed before the
 entry. Built-in retained sources have an initial value, such as zero evaluations, so every selected clock is present
 in every moment.
@@ -778,7 +778,7 @@ The replacement should:
 
 Do not migrate these four types. Replace them with the composed form and keep a convenience entry point for the dominant case so that `TraceBestMedianWorst` stays a single line.
 
-The one behavior worth carrying over deliberately is the retention difference: recording only on improvement produces a much smaller series than recording at every boundary. That is a property of the aggregation and retention, not a reason for a separate analyzer type.
+The one behavior worth carrying over deliberately is the retention difference: retention only on improvement produces a much smaller series than retention at every boundary. That is a property of the aggregation and retention, not a reason for a separate analyzer type.
 
 ### Split full-history and current-window collection
 
@@ -798,7 +798,7 @@ Keep it Experimental until those semantics are settled.
 
 ### Defer Pareto and hypervolume promotion
 
-Fix the inaccessible Pareto result and wrong initial result immediately if the types remain public during migration. Do not finalize their replacement API until the objective-system rework defines dominance, objective directions and total ordering clearly.
+Fix the inaccessible Pareto result and wrong initial result immediately if the types remain public during migration. Do not finalize their replacement API until the objective-system rework defines dominance, objective directions and total comparer clearly.
 
 These analyzers should remain Experimental during that work.
 
@@ -1082,7 +1082,7 @@ Settled decisions, each with what was rejected and why. Reopen one only with new
 | --- | --- | --- |
 | No analyzer cleanup contract at all | A public registration lifetime with an `OnRelease` hook | The only analyzer needing cleanup was dynamic analysis, and only because of an event workaround. Removing the cause removes the need. The run's teardown of what it installed stays internal |
 | The dynamic problem owns its batch boundary and retains no batch | Publishing the finished batch as readable state on the problem; an event; a bookkeeping hook installed at the evaluator | A problem that evaluates a batch already has the boundary, so nothing needs installing and a run without analysis updates its environment like any other. Retaining the batch was a buffer built for one metric: the quality trace reads the evaluator's observation, and the staleness count is a counter on the epoch clock's source |
-| A deferred update is applied when the next batch begins | Applying it when the batch that crossed the boundary ends | Nothing reads the environment between those points, so the algorithm cannot tell, and the version therefore still names the batch just evaluated when an analysis observes the evaluator. Ordering between the update and the analyzers stops mattering |
+| A deferred update is applied when the next batch begins | Applying it when the batch that crossed the boundary ends | Nothing reads the environment between those points, so the algorithm cannot tell, and the version therefore still names the batch just evaluated when an analysis observes the evaluator. ObjectiveComparer between the update and the analyzers stops mattering |
 | `UpdatePolicy` names the boundary a due update waits for: `AfterEachEvaluation`, `AfterEachBatchEvaluation`, `AfterEachIteration` | `Asynchronous` and `AfterEvaluation`; splitting the policy across two enums | The old names did not say whether an update lands after one candidate or after the whole batch, and the glossary defines evaluation as one candidate, so `AfterEvaluation` read as the wrong one. `Asynchronous` was worse than unclear: in dynamic optimization it names change during an evaluation, which is not what the value did and not what the library supports. Two enums would multiply out combinations that contradict each other, because this is a single axis of coarseness. The second axis a caller does have is separate already: the epoch clock decides that an update is due, the policy decides how much finishes first |
 | `Clock<TTime>` is publicly derivable and every clock is offered as a `Clock.From...` extension | Keeping the hierarchy sealed with a lambda-carrying clock as the only way to add one | A domain clock is a normal thing to write, and sealing the base forced every one of them through a delegate that cannot be compared or serialized. A derived clock is a named type with named settings, and adding the factory as an extension means a clock defined anywhere is reached the same way |
 | The default update policy is `AfterEachEvaluation` | `AfterEachBatchEvaluation` | A batch is a HeuristicLib execution concept, so defaulting to it makes the library's own structure decide the semantics of a study. Per evaluation is what an epoch length counted in evaluations literally means, and a population spanning epochs is a studied setting rather than an accident |

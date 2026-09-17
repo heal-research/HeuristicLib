@@ -46,8 +46,8 @@ public class EncodingAndProblemDefaultSpecs
         var problem = new TravelingSalesmanProblem();
 
         var algorithm = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
-        var qualityAnalyzer = Analyzer.TraceBestMedianWorst(algorithm);
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), qualityAnalyzer);
+        var qualityAnalyzer = algorithm.TracePopulationCandidates();
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(qualityAnalyzer);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 

@@ -61,18 +61,17 @@ public class AutoEcPaperScenarioTests
             ModelObservationInterval = 10
         };
         var epoch = Clock.FromEpoch(problem);
-        var qualityCurve = Analyzer.Trace(
+        var qualityCurve = Analyzer.Trace(evaluator,
             observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors),
             Aggregate.Best<Permutation>(),
-            Anchor.At(evaluator),
-            epoch);
+            [epoch]);
         var bbcp =
-            new BestBeforeChangePerformanceAnalysis<Permutation, PermutationSearchSpace,
+            new BestBeforeChangePerformanceAnalyzer<Permutation, PermutationSearchSpace,
                 ActivatedTravelingSalesmanProblem>(
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123), qualityCurve, bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAnalyzer(qualityCurve).AddAnalyzer(bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -97,7 +96,7 @@ public class AutoEcPaperScenarioTests
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.15),
             new UniformOnePositionMutator());
-        // Typed for the concrete problem, because every decoration at one anchor must accept what the previous produces.
+        // Typed for the concrete problem, because every decoration for one configuration must accept what the previous produces.
         IEvaluator<RealVector, RealVectorSearchSpace, MovingPeaksProblem> evaluator = problem.CreateEvaluator();
 
         var racing = new DynamicRacingAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem,
@@ -116,17 +115,16 @@ public class AutoEcPaperScenarioTests
             ModelObservationInterval = 10
         };
         var epoch = Clock.FromEpoch(problem);
-        var qualityCurve = Analyzer.Trace(
+        var qualityCurve = Analyzer.Trace(evaluator,
             observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors),
             Aggregate.Best<RealVector>(),
-            Anchor.At(evaluator),
-            epoch);
+            [epoch]);
         var bbcp =
-            new BestBeforeChangePerformanceAnalysis<RealVector, RealVectorSearchSpace, MovingPeaksProblem>(
+            new BestBeforeChangePerformanceAnalyzer<RealVector, RealVectorSearchSpace, MovingPeaksProblem>(
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123), qualityCurve, bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAnalyzer(qualityCurve).AddAnalyzer(bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),

@@ -704,7 +704,7 @@ public class OperatorBudgetAlgorithmTests
         var analyzer = new EvaluationObservingAnalyzer(algorithm.Evaluator);
 
         algorithm.WithMaxEvaluatedCandidates(algorithm.Evaluator, maximumCandidates: 1000)
-                 .CreateRun(problem, RandomNumberGenerator.Create(42), analyzer)
+                 .CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(analyzer)
                  .Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         analyzer.ObservedCandidates.ShouldBeGreaterThan(0);
@@ -719,7 +719,7 @@ public class OperatorBudgetAlgorithmTests
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 3 };
-        var quality = Analyzer.TraceBestQuality(algorithm.Evaluator);
+        var quality = algorithm.Evaluator.TraceBestCandidateSoFar();
         var measuredOperators = new List<Type>();
 
         var budgeted = algorithm.WithMaxOperatorDuration(
@@ -732,7 +732,7 @@ public class OperatorBudgetAlgorithmTests
                 return observedOperator.MeasureEvaluatorDuration(duration, timeProvider);
             });
 
-        await budgeted.CreateRun(problem, RandomNumberGenerator.Create(42), quality)
+        await budgeted.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(quality)
                       .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         measuredOperators.ShouldHaveSingleItem();
@@ -749,15 +749,15 @@ public class OperatorBudgetAlgorithmTests
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 3 };
-        var withoutBudget = Analyzer.TraceBestQuality(algorithm.Evaluator);
-        var withBudget = Analyzer.TraceBestQuality(algorithm.Evaluator);
+        var withoutBudget = algorithm.Evaluator.TraceBestCandidateSoFar();
+        var withBudget = algorithm.Evaluator.TraceBestCandidateSoFar();
 
-        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42), withoutBudget)
+        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(withoutBudget)
                        .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         await algorithm
             .WithMaxEvaluatorDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), new AdvancingTimeProvider(TimeSpan.FromMilliseconds(1)))
-            .CreateRun(problem, RandomNumberGenerator.Create(42), withBudget)
+            .CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(withBudget)
             .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         withBudget.SampleCount.ShouldBe(withoutBudget.SampleCount);
@@ -788,11 +788,11 @@ public class OperatorBudgetAlgorithmTests
     /// when a budget algorithm decorates the same evaluator.
     /// </summary>
     private sealed class EvaluationObservingAnalyzer(IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> evaluator)
-        : IExecutionHook, IObservationRecorder<EvaluatorObservation<RealVector, RealVectorSearchSpace, TestFunctionProblem>>
+        : IAnalyzer
     {
         public int ObservedCandidates { get; private set; }
 
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(Anchor.At(evaluator), this);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, Record);
 
         public void Record(EvaluatorObservation<RealVector, RealVectorSearchSpace, TestFunctionProblem> observation) =>
             ObservedCandidates += observation.ObjectiveVectors.Count;

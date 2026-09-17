@@ -1,7 +1,9 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -25,6 +27,7 @@ public class ExperimentParameters<TCandidate, TSearchSpace> where TSearchSpace :
     public int Seed { get; set; }
     public ISelector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Selector { get; set; }
     public EvolutionStrategyType Strategy { get; set; } = EvolutionStrategyType.Plus;
+    public IComparer<ObjectiveVector>? ObjectiveComparer { get; init; }
     public bool TrackGenealogy { get; set; }
     public bool TrackPopulations { get; set; }
     public bool WithCrossover { get; set; }
@@ -46,6 +49,7 @@ public class ExperimentParameters<TCandidate, TSearchSpace> where TSearchSpace :
         Creator = parameters.Creator;
         Crossover = parameters.Crossover;
         Mutator = parameters.Mutator;
+        ObjectiveComparer = parameters.ObjectiveComparer;
         TrackGenealogy = parameters.TrackGenealogy;
         TrackPopulations = parameters.TrackPopulations;
     }

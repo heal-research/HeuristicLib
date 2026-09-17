@@ -54,9 +54,8 @@ public class ExperimentSpecs
             .AsGrid()
             .VaryBy([4, 8], (algorithm, maximumNeighbors) => algorithm with { MaxNeighbors = maximumNeighbors });
         var bestQuality = TrialAnalyzer.Create(
-            (HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem> algorithm) => algorithm.Evaluator,
-            evaluator => Analyzer.TraceBestQuality(evaluator));
-        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456), bestQuality);
+            (HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem> algorithm) => algorithm.Evaluator.TraceBestSoFar());
+        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456)).AddTrialAnalyzer(bestQuality);
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
         var analyses = run.GetAnalyzers(bestQuality);

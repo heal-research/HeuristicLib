@@ -22,11 +22,11 @@ public class ExperimentRunTests
     {
         var run = CreateRun();
 
-        run.ExecutionStarted.ShouldBeFalse();
+        run.LifecycleState.ShouldBe(RunLifecycleState.Preparing);
         _ = run.Stream(ExecutionConcurrency.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken);
 
-        run.ExecutionStarted.ShouldBeTrue();
-        run.Trials.ShouldAllBe(trial => trial.Run.ExecutionStarted);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Running);
+        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState == RunLifecycleState.Running);
         Should.Throw<InvalidOperationException>(() => run.Trials[0].Run.Stream(cancellationToken: TestContext.Current.CancellationToken));
     }
 
@@ -51,8 +51,8 @@ public class ExperimentRunTests
 
         _ = run.StartTrials(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.ExecutionStarted.ShouldBeTrue();
-        run.Trials.ShouldAllBe(trial => trial.Run.ExecutionStarted);
+        run.LifecycleState.ShouldNotBe(RunLifecycleState.Preparing);
+        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState != RunLifecycleState.Preparing);
         Should.Throw<InvalidOperationException>(() => run.StartTrials(cancellationToken: TestContext.Current.CancellationToken));
     }
 
@@ -63,7 +63,7 @@ public class ExperimentRunTests
 
         _ = run.Trials[0].Run.Stream(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.ExecutionStarted.ShouldBeTrue();
+        run.LifecycleState.ShouldBe(RunLifecycleState.Preparing);
         Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: TestContext.Current.CancellationToken));
         _ = run.Trials[1].Run.Stream(cancellationToken: TestContext.Current.CancellationToken);
     }
@@ -77,8 +77,31 @@ public class ExperimentRunTests
 
         Should.Throw<OperationCanceledException>(() => run.Stream(cancellationToken: cancellation.Token));
 
-        run.ExecutionStarted.ShouldBeTrue();
+        run.LifecycleState.ShouldBe(RunLifecycleState.Canceled);
         Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task CompleteAsync_ReportsCompletedLifecycle()
+    {
+        var run = CreateRun();
+
+        _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        run.LifecycleState.ShouldBe(RunLifecycleState.Completed);
+        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState == RunLifecycleState.Completed);
+    }
+
+    [Fact]
+    public async Task DisposingStreamEarly_ReportsStoppedLifecycle()
+    {
+        var run = CreateRun();
+
+        await using (var stream = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
+            .GetAsyncEnumerator(TestContext.Current.CancellationToken))
+            (await stream.MoveNextAsync()).ShouldBeTrue();
+
+        run.LifecycleState.ShouldBe(RunLifecycleState.Stopped);
     }
 
     private static RepeatedExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm> CreateExperiment() =>

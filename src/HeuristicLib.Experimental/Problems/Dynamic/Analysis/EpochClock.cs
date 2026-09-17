@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
@@ -18,11 +17,6 @@ public sealed class EpochClock<TCandidate, TSearchSpace>(DynamicProblem<TCandida
     public DynamicProblem<TCandidate, TSearchSpace> Problem { get; } = problem;
 
     protected override int ReadTime() => Problem.CurrentEpoch;
-
-    public override void Install(ExecutionInstanceResolverBuilder builder)
-    {
-        // The problem keeps its own environment version current.
-    }
 }
 
 public static class DynamicClocks

@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -7,9 +8,9 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 
 /// <summary>
-/// Reads what this analysis collected, without naming its anchor types.
+/// Reads what this analyzer collected, without naming its observation-source types.
 /// </summary>
-public interface IRankAnalysis<TCandidate> : IExecutionHook
+public interface IRankAnalyzer<TCandidate> : IAnalyzer
     where TCandidate : notnull
 {
     RankState<TCandidate> State { get; }
@@ -20,41 +21,49 @@ public interface IRankAnalysis<TCandidate> : IExecutionHook
 /// </summary>
 /// <remarks>
 /// This analyzer composes a genealogy analysis: it installs that analysis into a graph it owns and adds one observation
-/// of its own. That composition is the case a replacement authoring model still has to cover.
+/// of its own. Both observations share the same explicit objective ordering.
 /// </remarks>
-public sealed class RankAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> : IRankAnalysis<TCandidate>
+public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState> : IRankAnalyzer<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : PopulationState<TCandidate>
     where TCandidate : notnull
 {
-    private readonly GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> graphBuilder;
+    private readonly ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers;
+    private readonly ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> mutators;
     private readonly ImmutableArray<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithms;
 
     /// <param name="algorithms">
     /// Algorithms whose yielded populations close a generation, which is also where ranks are read. Without one the
     /// graph is still built, but no ranks are recorded.
     /// </param>
-    public RankAnalysis(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>>? crossovers = null,
+    public RankAnalyzer(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>>? crossovers = null,
                         IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>>? mutators = null,
                         IReadOnlyList<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>>? algorithms = null,
                         IEqualityComparer<TCandidate>? equality = null)
     {
+        if ((crossovers?.Count ?? 0) + (mutators?.Count ?? 0) + (algorithms?.Count ?? 0) == 0)
+            throw new ArgumentException("A rank analysis needs at least one crossover, mutator or algorithm to observe.");
         State = new RankState<TCandidate>(new GenealogyGraph<TCandidate>(equality ?? EqualityComparer<TCandidate>.Default));
-        graphBuilder = new GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(
-            State.Graph, crossovers, mutators, algorithms, saveSpace: false);
+        this.crossovers = (crossovers ?? []).ToImmutableArray();
+        this.mutators = (mutators ?? []).ToImmutableArray();
         this.algorithms = [.. algorithms ?? []];
     }
 
     public RankState<TCandidate> State { get; }
 
+    public IComparer<ObjectiveVector>? ObjectiveComparer { get; init; }
+
     public void Install(ExecutionInstanceResolverBuilder builder)
     {
         // Installed first, so the graph already contains this generation when the ranks over it are read.
+        var graphBuilder = new GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState>(
+            State.Graph, crossovers, mutators, algorithms, saveSpace: false)
+        { ObjectiveComparer = ObjectiveComparer };
         graphBuilder.Install(builder);
 
         foreach (var algorithm in algorithms)
-            builder.Observe(Anchor.At(algorithm), _ => RecordRanks(State));
+            builder.Observe(algorithm, _ => RecordRanks(State));
     }
 
     private static void RecordRanks(RankState<TCandidate> state)
@@ -75,12 +84,7 @@ public sealed class RankAnalysis<TCandidate, TSearchSpace, TProblem, TSearchStat
         }
     }
 
-    private sealed class Recorder(RankState<TCandidate> state)
-        : IObservationRecorder<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>>
-    {
-        public void Record(InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>
-            RecordRanks(state);
-    }
+
 }
 
 public class RankState<TCandidate> where TCandidate : notnull
@@ -103,13 +107,14 @@ public static class RankAnalysisTraces
     extension(Analyzer)
     {
         /// <summary>
-        /// Creates a rank analysis over the given anchors.
+        /// Creates a rank analyzer over the given observation sources.
         /// </summary>
-        public static RankAnalysis<T, TS, TP, TR> Rank<T, TS, TP, TR>(
+        public static RankAnalyzer<T, TS, TP, TR> Rank<T, TS, TP, TR>(
             ICrossover<T, TS, TP>? crossover = null,
             IMutator<T, TS, TP>? mutator = null,
             IAlgorithm<T, TS, TP, TR>? algorithm = null,
-            IEqualityComparer<T>? equality = null)
+            IEqualityComparer<T>? equality = null,
+            IComparer<ObjectiveVector>? objectiveComparer = null)
             where T : notnull
             where TS : class, ISearchSpace<T>
             where TP : class, IProblem<T, TS>
@@ -118,6 +123,7 @@ public static class RankAnalysisTraces
                 crossover is null ? null : (IReadOnlyList<ICrossover<T, TS, TP>>)[crossover],
                 mutator is null ? null : (IReadOnlyList<IMutator<T, TS, TP>>)[mutator],
                 algorithm is null ? null : (IReadOnlyList<IAlgorithm<T, TS, TP, TR>>)[algorithm],
-                equality);
+                equality)
+            { ObjectiveComparer = objectiveComparer };
     }
 }

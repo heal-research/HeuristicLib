@@ -17,11 +17,11 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 /// </para>
 /// <para>
 /// It is not a plain trace: besides the per-epoch series it maintains a fitted model and derives a prediction from it.
-/// Once analysis has an accumulator extension point, that fold is what this analyzer supplies to it instead of writing
-/// its own observation handling.
+/// It also merges several evaluator boundaries. These prediction and observation responsibilities remain specific
+/// to this analyzer.
 /// </para>
 /// </remarks>
-public sealed class BestBeforeChangePerformanceAnalysis<TCandidate, TSearchSpace, TProblem> : IExecutionHook
+public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace, TProblem> : IAnalyzer
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TCandidate, TSearchSpace>
 {
@@ -34,13 +34,13 @@ public sealed class BestBeforeChangePerformanceAnalysis<TCandidate, TSearchSpace
     private (EvaluatedCandidate<TCandidate> Best, int Epoch)? currentEpochBest;
     private double objectiveValueSum;
 
-    public BestBeforeChangePerformanceAnalysis(TProblem problem,
+    public BestBeforeChangePerformanceAnalyzer(TProblem problem,
                                                IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators,
                                                Func<ObjectiveVector, double>? objectiveValueSelector = null,
                                                int predictionEpochMultiplier = 10)
     {
         if (evaluators.Count == 0)
-            throw new ArgumentException("An analysis needs at least one anchor to observe.", nameof(evaluators));
+            throw new ArgumentException("An analyzer needs at least one observation source.", nameof(evaluators));
 
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(predictionEpochMultiplier);
         this.problem = problem;
@@ -73,7 +73,7 @@ public sealed class BestBeforeChangePerformanceAnalysis<TCandidate, TSearchSpace
     public void Install(ExecutionInstanceResolverBuilder builder)
     {
         foreach (var evaluator in evaluators)
-            builder.Observe(Anchor.At(evaluator), ReadBatch);
+            builder.Observe(evaluator, ReadBatch);
     }
 
     private void ReadBatch(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation)
