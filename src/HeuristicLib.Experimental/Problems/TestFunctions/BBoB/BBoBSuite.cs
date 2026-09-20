@@ -216,7 +216,7 @@ public static class BBoBSuite
 
             data.PeakValues[i] =
               (double)(i - 1) / (numberOfPeaks - 2) * (fitvalues[1] - fitvalues[0])
-              + fitvalues[0];
+                + fitvalues[0];
         }
 
         // 3) For each peak, generate a permutation over dimensions and compute arr_scales
@@ -433,8 +433,8 @@ public static class BBoBSuite
             rgrand[tmp] = aktseed;
 
             r[i] = aktrand == 0
-              ? 1e-99
-              : aktrand / 2.147483647e9; // exactly the same divisor as COCO
+                ? 1e-99
+                : aktrand / 2.147483647e9; // exactly the same divisor as COCO
         }
     }
 

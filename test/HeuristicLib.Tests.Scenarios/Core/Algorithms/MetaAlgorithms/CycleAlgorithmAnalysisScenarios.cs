@@ -87,34 +87,39 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
-    private sealed record SingleStepAlgorithm : Algorithm<SingleStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    private sealed record SingleStepAlgorithm : Algorithm<SingleStepAlgorithm, int, PopulationState<int>>
     {
         public int Candidate { get; }
 
-        public IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator { get; }
+        public IEvaluator<int> Evaluator { get; }
 
-        public IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; }
+        public IInterceptor<int> Interceptor { get; }
 
-        public SingleStepAlgorithm(int candidate, IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor)
+        public SingleStepAlgorithm(int candidate, IEvaluator<int> evaluator, IInterceptor<int> interceptor)
         {
             Candidate = candidate;
             Interceptor = interceptor;
             Evaluator = evaluator;
         }
 
-        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
-            new Instance(resolver.Resolve(Evaluator), resolver.Resolve(Interceptor), Candidate);
-
-        private sealed class Instance(IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor, int candidate)
-            : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
         {
-            private readonly IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator = evaluator;
+            var typed = resolver.For<int, TRunSearchSpace, TRunProblem, PopulationState<int>>();
+            return new Instance<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Interceptor), Candidate);
+        }
 
-            private readonly IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor = interceptor;
+        private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator, IInterceptorInstance<int, TSearchSpace, TProblem, PopulationState<int>> interceptor, int candidate)
+            : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
+        {
+            private readonly IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator = evaluator;
+
+            private readonly IInterceptorInstance<int, TSearchSpace, TProblem, PopulationState<int>> interceptor = interceptor;
 
             private readonly int candidate = candidate;
 
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 ct.ThrowIfCancellationRequested();
 
@@ -127,12 +132,12 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
-    private sealed class EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator)
+    private sealed class EvaluationTraceAnalysis(IEvaluator<int> evaluator)
         : IAnalyzer
     {
         public ExecutionState Result { get; } = new();
 
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, Record);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);
@@ -150,12 +155,12 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
-    private sealed class InterceptionTraceAnalysis(IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor)
+    private sealed class InterceptionTraceAnalysis(IInterceptor<int> interceptor)
         : IAnalyzer
     {
         public ExecutionState Result { get; } = new();
 
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(interceptor, Record);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(interceptor, Record);
 
         public void Record(InterceptorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> observation) =>
             Result.RecordObjectiveValue(observation.UntransformedState);

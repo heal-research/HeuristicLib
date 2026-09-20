@@ -65,11 +65,13 @@ The machine capacities are deliberately **not** part of the search space. A sear
 
 ## Write the problem
 
-Derive from `SingleSolutionProblem<TCandidate, TSearchSpace>` and implement one method. The base class handles batching several candidates for you.
+Derive from `SingleSolutionProblem<TSelf, TCandidate, TSearchSpace>` and implement one method. The base class handles batching several candidates for you.
+
+The first type argument is the problem's own type. That is the [curiously recurring pattern](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern): it lets the base class name the derived type in members that return or accept the problem, so a factory hands back a `ProductMixProblem` rather than something you have to cast. You write the class name twice and get nothing else to think about.
 
 ```csharp
 public sealed class ProductMixProblem(ProductionPlan plan)
-    : SingleSolutionProblem<IntegerVector, IntegerVectorSearchSpace>(
+    : SingleSolutionProblem<ProductMixProblem, IntegerVector, IntegerVectorSearchSpace>(
         SingleObjective.Maximize,
         new IntegerVectorSearchSpace(plan.Products.Length, 0, plan.MaximumBatchSize))
 {

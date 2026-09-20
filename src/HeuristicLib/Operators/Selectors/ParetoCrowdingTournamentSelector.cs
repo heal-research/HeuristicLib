@@ -23,8 +23,7 @@ public record ParetoCrowdingTournamentSelector<TCandidate>
 
 public static class ParetoCrowdingTournamentSelector
 {
-    public static ParetoCrowdingTournamentSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, bool dominateOnEqualities, int tournamentSize = 2)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(dominateOnEqualities) { TournamentSize = tournamentSize };
+    public static ParetoCrowdingTournamentSelector<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, bool dominateOnEqualities, int tournamentSize = 2) => new(dominateOnEqualities) { TournamentSize = tournamentSize };
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, bool dominateOnEqualities, int tournamentSize = 2)
     {

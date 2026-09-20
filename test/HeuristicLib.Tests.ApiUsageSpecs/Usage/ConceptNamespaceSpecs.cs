@@ -19,7 +19,7 @@ public sealed class ConceptNamespaceSpecs
     public void CandidateNamespaces_ExposeCandidatesSearchSpacesAndOperators()
     {
         new PermutationSearchSpace(3).Contains(new Permutation(0, 1, 2)).ShouldBeTrue();
-        new RealVectorSearchSpace(2, -1.0, 1.0).Contains(new RealVector(0.0, 0.5)).ShouldBeTrue();
+        new BoundedRealVectorSearchSpace(2, -1.0, 1.0).Contains(new RealVector(0.0, 0.5)).ShouldBeTrue();
         new IntegerVectorSearchSpace(2, -1, 1).Contains(new IntegerVector(0, 1)).ShouldBeTrue();
         new BoolVectorSearchSpace(2).Contains(new BoolVector(true, false)).ShouldBeTrue();
 

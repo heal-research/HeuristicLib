@@ -4,8 +4,8 @@ namespace HEAL.HeuristicLib.Numerics;
 /// What an operation is, independently of what it computes.
 /// </summary>
 /// <remarks>
-/// Every field applies to every operation, so none of them is optional. Kernels are not here because they differ by
-/// arity, and mixing arities into one type is what would make them optional.
+/// Every field applies to every operation, so none of them is optional. Kernels differ by arity and are looked up
+/// separately.
 /// </remarks>
 internal readonly record struct OperationInfo(
     Operation Operation,

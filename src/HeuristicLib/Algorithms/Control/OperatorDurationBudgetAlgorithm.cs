@@ -8,15 +8,15 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>
-    : Algorithm<OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>, TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperator>
+    : Algorithm<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperator>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
-    where TOperator : class, IOperator, IExecutionInstanceResolvable<IExecutionInstance>
+    where TOperator : class, IOperator
 {
-    public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
+    public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
     public required TOperator ObservedOperator { get; init; }
+
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
 
     /// <summary>
     /// Gets the factory that wraps the observed operator in a duration-measuring operator.
@@ -35,13 +35,13 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override OperatorDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver)
+    public override OperatorDurationBudgetAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
     {
         var duration = new ObservationDuration();
         var childResolver = resolver.CreateChildResolver(child =>
             child.Decorate(ObservedOperator, current => MeasuredOperatorFactory(current, duration, TimeProvider)));
 
-        return new(childResolver.Resolve(Algorithm), duration, MaximumDuration);
+        return new(childResolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
     }
 }
 

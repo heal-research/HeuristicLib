@@ -25,6 +25,5 @@ public sealed record AfterOperatorCountTerminator<TCandidate> : StatelessTermina
 
 public static class AfterOperatorCountTerminator
 {
-    public static AfterOperatorCountTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, ObservationCounter counter, int maximumCount)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(counter, maximumCount);
+    public static AfterOperatorCountTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, ObservationCounter counter, int maximumCount) => new(counter, maximumCount);
 }

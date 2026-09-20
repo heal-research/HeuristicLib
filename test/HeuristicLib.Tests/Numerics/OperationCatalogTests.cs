@@ -36,7 +36,7 @@ public sealed class OperationCatalogTests
     [Fact]
     public void EveryOperationExposesTheKernelsItsArityRequires()
     {
-        foreach (var info in OperationCatalog.All.ToArray())
+        foreach (var info in OperationCatalog.All)
         {
             switch (info.Arity)
             {
@@ -68,7 +68,7 @@ public sealed class OperationCatalogTests
     {
         var declared = OperationCatalog.All.Length;
         var highest = 0;
-        foreach (var info in OperationCatalog.All.ToArray())
+        foreach (var info in OperationCatalog.All)
             highest = Math.Max(highest, (int)info.Operation);
 
         (highest + 1).ShouldBeLessThanOrEqualTo(declared * 4);
@@ -91,7 +91,7 @@ public sealed class OperationCatalogTests
     [Fact]
     public void EveryOperationHasAName()
     {
-        foreach (var info in OperationCatalog.All.ToArray())
+        foreach (var info in OperationCatalog.All)
             info.Name.ShouldNotBeNullOrWhiteSpace();
     }
 
@@ -166,7 +166,7 @@ public sealed class OperationCatalogTests
     [Fact]
     public void OnlyBinaryOperationsUseInfixNotation()
     {
-        foreach (var info in OperationCatalog.All.ToArray())
+        foreach (var info in OperationCatalog.All)
         {
             if (info.Notation == OperationNotation.Infix)
                 info.Arity.ShouldBe(2, $"{info.Operation} is written between its operands.");

@@ -57,6 +57,5 @@ public sealed record StagnationTerminator<TCandidate>
 
 public static class StagnationTerminator
 {
-    public static StagnationTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, int stagnationThreshold = 20)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new() { StagnationThreshold = stagnationThreshold };
+    public static StagnationTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, int stagnationThreshold = 20) => new() { StagnationThreshold = stagnationThreshold };
 }

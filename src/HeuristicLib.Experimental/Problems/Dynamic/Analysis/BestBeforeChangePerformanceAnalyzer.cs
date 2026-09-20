@@ -23,11 +23,11 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 /// </remarks>
 public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace, TProblem> : IAnalyzer
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    where TProblem : class, IDynamicProblem<TCandidate, TSearchSpace>
 {
     private readonly Lock sync = new();
     private readonly List<BestBeforeChangePerformanceEntry<TCandidate>> bestBeforeChange = [];
-    private readonly ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators;
+    private readonly ImmutableArray<IEvaluator<TCandidate>> evaluators;
     private readonly Func<ObjectiveVector, double> objectiveValueSelector;
     private readonly OnlineWeibullCurveModel predictionModel = new(double.NaN);
     private readonly TProblem problem;
@@ -35,7 +35,7 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
     private double objectiveValueSum;
 
     public BestBeforeChangePerformanceAnalyzer(TProblem problem,
-                                               IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators,
+                                               IReadOnlyList<IEvaluator<TCandidate>> evaluators,
                                                Func<ObjectiveVector, double>? objectiveValueSelector = null,
                                                int predictionEpochMultiplier = 10)
     {
@@ -73,7 +73,7 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
     public void Install(ExecutionInstanceResolverBuilder builder)
     {
         foreach (var evaluator in evaluators)
-            builder.Observe(evaluator, ReadBatch);
+            builder.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, ReadBatch);
     }
 
     private void ReadBatch(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation)

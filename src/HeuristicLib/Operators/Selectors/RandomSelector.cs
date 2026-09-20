@@ -15,7 +15,7 @@ public record RandomSelector<TCandidate>
 
 public static class RandomSelector
 {
-    public static RandomSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem) where TSearchSpace : class, ISearchSpace<TCandidate> => new();
+    public static RandomSelector<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => new();
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random)
     {

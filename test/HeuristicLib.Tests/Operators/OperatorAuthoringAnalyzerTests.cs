@@ -82,7 +82,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               public sealed class State
               {
-                  public List<IMutator<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>> Children
+                  public List<IMutator<int>> Children
                       { get; } = new();
               }
 
@@ -161,7 +161,7 @@ public class OperatorAuthoringAnalyzerTests
     public async Task StatefulOperatorRule_UsesAuthoringShapeWithoutKnownBase()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
-          file abstract record CustomStatefulOperator<TState> : IOperator<CustomOperatorInstance>
+          file abstract record CustomStatefulOperator<TState> : IOperator
               where TState : class
           {
               protected abstract TState CreateInitialState();
@@ -281,7 +281,7 @@ public class OperatorAuthoringAnalyzerTests
     public async Task StatelessOperatorRule_UsesAuthoringShapeWithoutKnownBase()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record InvalidOperator : IOperator<InvalidOperator>, IOperatorInstance
+          file sealed record InvalidOperator : IOperator, IOperatorInstance
           {
               private int calls;
 
@@ -412,7 +412,7 @@ public class OperatorAuthoringAnalyzerTests
         var projectAssemblies = new[]
         {
             typeof(StatefulMutator<,>).Assembly.Location,
-            typeof(IMutator<,,>).Assembly.Location
+            typeof(IMutator<>).Assembly.Location
         }.Distinct().Select(static path => MetadataReference.CreateFromFile(path));
 
         var compilation = CSharpCompilation.Create(

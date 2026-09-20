@@ -6,7 +6,7 @@ public static class PermutationSearchSpaceRandomExtensions
 {
     extension(IRandomNumberGenerator random)
     {
-        public Permutation NextPermutation(PermutationSearchSpace searchSpace)
-          => random.NextPermutation(searchSpace.Length);
+        public Permutation NextPermutation(PermutationSearchSpace searchSpace) =>
+            random.NextPermutation(searchSpace.Length);
     }
 }

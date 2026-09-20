@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public sealed class InterpolatedQuadraticAssignmentProblem
-    : DynamicProblem<Permutation, PermutationSearchSpace>
+    : DynamicProblem<InterpolatedQuadraticAssignmentProblem, Permutation, PermutationSearchSpace>
 {
     private readonly QuadraticAssignmentProblemData a;
     private readonly double alphaStep;

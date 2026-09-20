@@ -97,8 +97,8 @@ public abstract class SymbolicExpressionGrammarBase
                 return result;
             }
             var state = SymbolConfigurations.TryGetValue(parent, out var config)
-              && config.AllowedChildSymbolsPerIndex.TryGetValue(argumentIndex, out var l)
-              && l.SelectMany(x => x.Flatten()).Contains(child);
+                && config.AllowedChildSymbolsPerIndex.TryGetValue(argumentIndex, out var l)
+                && l.SelectMany(x => x.Flatten()).Contains(child);
 
             cachedIsAllowedChildSymbolIndex.Add(key, state);
 
@@ -106,11 +106,11 @@ public abstract class SymbolicExpressionGrammarBase
         }
     }
 
-    public IEnumerable<Symbol> GetAllowedChildSymbols(Symbol parent)
-      => AllowedSymbols.Where(child => IsAllowedChildSymbol(parent, child));
+    public IEnumerable<Symbol> GetAllowedChildSymbols(Symbol parent) =>
+        AllowedSymbols.Where(child => IsAllowedChildSymbol(parent, child));
 
-    public IEnumerable<Symbol> GetAllowedChildSymbols(Symbol parent, int argumentIndex)
-      => AllowedSymbols.Where(child => IsAllowedChildSymbol(parent, child, argumentIndex));
+    public IEnumerable<Symbol> GetAllowedChildSymbols(Symbol parent, int argumentIndex) =>
+        AllowedSymbols.Where(child => IsAllowedChildSymbol(parent, child, argumentIndex));
 
     public virtual int GetMinimumSubtreeCount(Symbol symbol) => SymbolConfigurations[symbol].SymbolSubtreeCount.Item1;
 

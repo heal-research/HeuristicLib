@@ -36,7 +36,7 @@ Important properties:
 
 Explicit operator and algorithm instance creation methods receive the resolver. Ordinary creation methods should resolve their declared children eagerly. Meta algorithms, budget wrappers and other execution graph compositions may additionally create child resolvers, declare decorations or control execution instance reuse.
 
-Obtain every child, operator or algorithm through `Resolve(...)`. Calling `CreateExecutionInstance(...)` on a child configuration bypasses the replacement lookup that observation depends on, and does so silently: the search states are still correct, but analyzers observing that child, or any operator inside it, record nothing.
+Obtain every child, operator or algorithm through `Resolve(...)`. Calling `CreateExecutionInstance(...)` on a child configuration bypasses the decorations that observation depends on, and does so silently: the search states are still correct, but analyzers observing that child, or any operator inside it, record nothing.
 
 ## Decorations
 
@@ -48,7 +48,7 @@ Declaring and resolving are separate types. `ExecutionInstanceResolverBuilder` d
 var childResolver = resolver.CreateChildResolver(child =>
     child.Decorate(ObservedOperator, current => CountedOperatorFactory(current, counter)));
 
-return new(childResolver.Resolve(Algorithm), counter, MaximumCount);
+return new(childResolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
 ```
 
 Decorations compose rather than replace one another, and a child resolver's decorations apply on top of its ancestors'. Which one ends up innermost, and when two resolvers share one instance, follow rules worth understanding before writing meta-algorithms or observation plumbing: see [execution instance resolver](/contributing/architecture/execution-resolver).

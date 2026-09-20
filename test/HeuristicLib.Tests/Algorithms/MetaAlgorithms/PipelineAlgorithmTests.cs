@@ -12,7 +12,7 @@ public class PipelineAlgorithmTests
         var first = new AdditiveStepAlgorithm(1);
         var second = new AdditiveStepAlgorithm(2);
         var algorithms = new List<AdditiveStepAlgorithm> { first, second };
-        var pipeline = new PipelineAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithms);
+        var pipeline = new PipelineAlgorithm<AdditiveStepAlgorithm, int, PopulationState<int>>(algorithms);
 
         algorithms.Clear();
 
@@ -23,7 +23,7 @@ public class PipelineAlgorithmTests
     public void PipelineAlgorithm_RequiresAtLeastOneAlgorithm()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new PipelineAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([]));
+            new PipelineAlgorithm<AdditiveStepAlgorithm, int, PopulationState<int>>([]));
 
         exception.ParamName.ShouldBe("algorithms");
     }
@@ -80,8 +80,8 @@ public class PipelineAlgorithmTests
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
         var pipeline = algorithm.Then(algorithm);
         var resolver = ExecutionInstanceResolver.Create();
-        _ = resolver.Resolve(evaluator);
-        var pipelineInstance = resolver.Resolve(pipeline);
+        _ = resolver.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
+        var pipelineInstance = resolver.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(pipeline);
 
         var states = pipelineInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -100,12 +100,12 @@ public class PipelineAlgorithmTests
         }
     }
 
-    private sealed class EvaluationCountAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator)
+    private sealed class EvaluationCountAnalysis(IEvaluator<int> evaluator)
         : IAnalyzer
     {
         public Result AnalysisResult { get; } = new();
 
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, Record);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             AnalysisResult.Count += observation.Candidates.Count;

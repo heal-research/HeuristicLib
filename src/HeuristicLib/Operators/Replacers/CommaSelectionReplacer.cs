@@ -15,8 +15,7 @@ public sealed record CommaSelectionReplacer<TCandidate>
 
 public static class CommaSelectionReplacer
 {
-    public static CommaSelectionReplacer<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new();
+    public static CommaSelectionReplacer<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => new();
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count) =>
         offspringPopulation

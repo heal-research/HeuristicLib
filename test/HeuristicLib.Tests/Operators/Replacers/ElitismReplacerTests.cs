@@ -2,8 +2,12 @@ namespace HEAL.HeuristicLib.Tests.Operators.Replacers;
 
 public class ElitismReplacerTests
 {
+    /// <summary>
+    /// A nonpositive elite count retains nothing, and the requested count still bounds the result — the same rule
+    /// <see cref="ElitesExceedingRequestedCount_ReturnsExactlyRequestedCountAndNoOffspring"/> states from the other side.
+    /// </summary>
     [Fact]
-    public void NegativeElites_RetainsNoPreviousCandidatesAndRequestsAdditionalOffspring()
+    public void NegativeElites_RetainsNoPreviousCandidatesAndFillsTheRequestedCountFromOffspring()
     {
         var previous = new[]
         {
@@ -18,7 +22,7 @@ public class ElitismReplacerTests
 
         var result = ElitismReplacer.Replace(previous, offspring, SingleObjective.Minimize, count: 2, elites: -1);
 
-        result.Select(candidate => candidate.Candidate).ShouldBe(["offspring-1", "offspring-2", "offspring-3"]);
+        result.Select(candidate => candidate.Candidate).ShouldBe(["offspring-1", "offspring-2"]);
     }
 
     /// <summary>

@@ -23,9 +23,8 @@ public record SymbolicExpressionTreeSearchSpace : SearchSpace<SymbolicExpression
 
     public override bool Contains(SymbolicExpressionTree candidate)
     {
-        return candidate.Length <= TreeLength &&
-          candidate.Depth <= TreeDepth
-          && Grammar.Conforms(candidate)
-          ;
+        return candidate.Length <= TreeLength
+            && candidate.Depth <= TreeDepth
+            && Grammar.Conforms(candidate);
     }
 }

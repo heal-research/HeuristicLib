@@ -5,8 +5,10 @@ using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
+using HEAL.HeuristicLib.SearchSpaces;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
 namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
@@ -35,18 +37,18 @@ public class AutoEcPaperScenarioTests
         var metaSpace = CreateTspHyperParameterSearchSpace();
         var metaCreator = metaSpace.CombineCreators(
             new UniformDistributedCreator(),
-            new HEAL.HeuristicLib.Encodings.IntegerVectors.UniformDistributedCreator());
+            new Encodings.IntegerVectors.UniformDistributedCreator());
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.1),
             new UniformOnePositionMutator());
-        var evaluator = problem.CreateEvaluator().WithDynamicRelativeQuality(
+        var evaluator = problem.CreateEvaluator().ScaledToDynamicBestKnown(
             problem,
             new ActivatedTravelingSalesmanExactBestKnownProvider(
                 new ConcordeTravelingSalesmanExactSolver(concordePath)));
 
         var racing = new DynamicRacingAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem,
             PopulationState<Permutation>,
-            GeneticAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>>(
+            GeneticAlgorithm<Permutation>>(
             metaSpace,
             metaCreator,
             metaMutator,
@@ -92,15 +94,14 @@ public class AutoEcPaperScenarioTests
         var metaSpace = CreateHyperParameterSearchSpace();
         var metaCreator = metaSpace.CombineCreators(
             new UniformDistributedCreator(),
-            new HEAL.HeuristicLib.Encodings.IntegerVectors.UniformDistributedCreator());
+            new Encodings.IntegerVectors.UniformDistributedCreator());
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.15),
             new UniformOnePositionMutator());
-        // Typed for the concrete problem, because every decoration for one configuration must accept what the previous produces.
-        IEvaluator<RealVector, RealVectorSearchSpace, MovingPeaksProblem> evaluator = problem.CreateEvaluator();
+        var evaluator = problem.CreateEvaluator();
 
-        var racing = new DynamicRacingAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem,
-            PopulationState<RealVector>, GeneticAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem>>(
+        var racing = new DynamicRacingAlgorithm<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem,
+            PopulationState<RealVector>, GeneticAlgorithm<RealVector>>(
             metaSpace,
             metaCreator,
             metaMutator,
@@ -120,7 +121,7 @@ public class AutoEcPaperScenarioTests
             Aggregate.Best<RealVector>(),
             [epoch]);
         var bbcp =
-            new BestBeforeChangePerformanceAnalyzer<RealVector, RealVectorSearchSpace, MovingPeaksProblem>(
+            new BestBeforeChangePerformanceAnalyzer<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
                 problem,
                 [evaluator]);
 
@@ -138,12 +139,13 @@ public class AutoEcPaperScenarioTests
         double.IsFinite(bbcp.Performance).ShouldBeTrue();
     }
 
-    private static async Task<TSearchState> RunUntilEpochChanges<TCandidate, TSearchSpace, TSearchState>(
+    private static async Task<TSearchState> RunUntilEpochChanges<TProblem, TCandidate, TSearchSpace, TSearchState>(
         IAsyncEnumerable<TSearchState> stream,
-        DynamicProblem<TCandidate, TSearchSpace> problem,
+        DynamicProblem<TProblem, TCandidate, TSearchSpace> problem,
         int epochChanges,
         CancellationToken cancellationToken)
-        where TSearchSpace : class, HEAL.HeuristicLib.SearchSpaces.ISearchSpace<TCandidate>
+        where TProblem : Problem<TProblem, TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
         where TSearchState : class
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(epochChanges);
@@ -194,25 +196,25 @@ public class AutoEcPaperScenarioTests
             new EvaluationCountSchedule(30),
             UpdatePolicy.AfterEachBatchEvaluation);
 
-    private static CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
+    private static CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
         CreateHyperParameterSearchSpace() =>
-        new RealVectorSearchSpace(1, new RealVector(0.05), new RealVector(0.4))
-            .WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
+        new BoundedRealVectorSearchSpace(1, new RealVector(0.05), new RealVector(0.4))
+            .CombinedWith<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
                 new IntegerVectorSearchSpace(1, new IntegerVector(8), new IntegerVector(16)));
 
-    private static CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
+    private static CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
         CreateTspHyperParameterSearchSpace() =>
-        new RealVectorSearchSpace(1, new RealVector(0.01), new RealVector(0.2))
-            .WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
+        new BoundedRealVectorSearchSpace(1, new RealVector(0.01), new RealVector(0.2))
+            .CombinedWith<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
                 new IntegerVectorSearchSpace(1, new IntegerVector(20), new IntegerVector(60)));
 
-    private static GeneticAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>
+    private static GeneticAlgorithm<Permutation>
         CreatePermutationGa(
             ActivatedTravelingSalesmanProblem problem,
-            IEvaluator<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem> evaluator,
+            IEvaluator<Permutation> evaluator,
             CompositeGenotype<RealVector, IntegerVector> hyperParameters)
     {
-        return new GeneticAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>
+        return new GeneticAlgorithm<Permutation>
         {
             Creator = new RandomPermutationCreator(),
             Crossover = new EdgeRecombinationCrossover(),
@@ -225,12 +227,12 @@ public class AutoEcPaperScenarioTests
         };
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem> CreateGa(
+    private static GeneticAlgorithm<RealVector> CreateGa(
         MovingPeaksProblem problem,
-        IEvaluator<RealVector, RealVectorSearchSpace, MovingPeaksProblem> evaluator,
+        IEvaluator<RealVector> evaluator,
         CompositeGenotype<RealVector, IntegerVector> hyperParameters)
     {
-        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem>
+        return new GeneticAlgorithm<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new SimulatedBinaryCrossover(),

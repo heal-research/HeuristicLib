@@ -34,6 +34,5 @@ public sealed record AfterElapsedTimeTerminator<TCandidate>
 
 public static class AfterElapsedTimeTerminator
 {
-    public static AfterElapsedTimeTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, TimeSpan maximumElapsedTime, TimeProvider? timeProvider = null)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(maximumElapsedTime) { TimeProvider = timeProvider ?? TimeProvider.System };
+    public static AfterElapsedTimeTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, TimeSpan maximumElapsedTime, TimeProvider? timeProvider = null) => new(maximumElapsedTime) { TimeProvider = timeProvider ?? TimeProvider.System };
 }

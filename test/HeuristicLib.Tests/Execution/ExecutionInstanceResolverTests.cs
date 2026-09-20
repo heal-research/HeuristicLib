@@ -39,6 +39,25 @@ public class ExecutionInstanceResolverTests
         resolvable.CreateCount.ShouldBe(2);
     }
 
+    /// <summary>
+    /// Sharing only ever flows down the tree. An instance a child built stays with the child, so the parent resolving
+    /// the same configuration afterwards builds its own.
+    /// </summary>
+    [Fact]
+    public void AParent_NeverSeesAnInstanceItsChildBuilt()
+    {
+        var original = new CountingResolvable("original");
+        var parent = ExecutionInstanceResolver.Create(builder => Wrap(builder, original, "parent"));
+        var child = parent.CreateChildResolver();
+        var childInstance = child.Resolve(original);
+
+        var parentInstance = parent.Resolve(original);
+
+        parentInstance.ShouldNotBeSameAs(childInstance);
+        child.Resolve(original).ShouldBeSameAs(childInstance);
+        original.CreateCount.ShouldBe(2);
+    }
+
     // ---------- Sharing with decorations ----------
 
     /// <summary>
@@ -273,6 +292,65 @@ public class ExecutionInstanceResolverTests
         resolver.Resolve(original).Name.ShouldBe("declared(original)");
     }
 
+    // ---------- Resolving through a create function ----------
+
+    /// <summary>
+    /// A configuration whose instance type depends on the run cannot create itself, so the caller passes the creation
+    /// step. The decorations still apply, each link created through that step.
+    /// </summary>
+    [Fact]
+    public void ResolvingThroughACreateFunction_AppliesTheDecorationsBeforeCreating()
+    {
+        var original = new RunTypedResolvable("original");
+        var resolver = ExecutionInstanceResolver.Create(builder =>
+        {
+            builder.Decorate<IRunTypedResolvable>(original, current => new RunTypedWrapper("inner", current));
+            builder.Decorate<IRunTypedResolvable>(original, current => new RunTypedWrapper("outer", current));
+        });
+
+        var resolved = ResolveRunTyped(resolver, original);
+
+        resolved.Name.ShouldBe("outer(inner(original))");
+        resolver.CreateChildResolver().Resolve(original, static (target, childResolver) => target.Create(childResolver)).ShouldBeSameAs(resolved);
+        original.CreateCount.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// A resolver serves one run, so asking for a held instance as another type means the caller resolves over a
+    /// different search space or problem. That is reported rather than cast.
+    /// </summary>
+    [Fact]
+    public void AnInstanceHeldAsAnotherType_IsReportedRatherThanCast()
+    {
+        var resolvable = new RunTypedResolvable("instance");
+        var resolver = ExecutionInstanceResolver.Create();
+        ResolveRunTyped(resolver, resolvable);
+
+        var exception = Should.Throw<InvalidOperationException>(() =>
+            resolver.CreateChildResolver().Resolve(resolvable, static (_, _) => new OtherInstance()));
+
+        exception.Message.ShouldBe(
+            "This resolver already holds a NamedInstance for RunTypedResolvable, which is not a OtherInstance. " +
+            "A resolver serves one run, so resolve over a second search space or problem in its own resolver.");
+    }
+
+    /// <summary>
+    /// Every link of a chain is created through the caller's creation step, so a decoration must produce what that
+    /// step accepts.
+    /// </summary>
+    [Fact]
+    public void ADecorationTheCreateFunctionCannotAccept_IsReported()
+    {
+        var original = new RunTypedResolvable("original");
+        var resolver = ExecutionInstanceResolver.Create(builder =>
+            builder.Decorate<IExecutionInstanceResolvable>(original, _ => new CountingResolvable("foreign")));
+
+        var exception = Should.Throw<InvalidOperationException>(() => ResolveRunTyped(resolver, original));
+
+        exception.Message.ShouldBe(
+            "CountingResolvable was declared to decorate RunTypedResolvable, but it is not a IRunTypedResolvable and cannot stand in for it.");
+    }
+
     // ---------- Test doubles ----------
 
     private static void Wrap(ExecutionInstanceResolverBuilder builder, IExecutionInstanceResolvable<INamedInstance> anchor, string label) =>
@@ -304,6 +382,34 @@ public class ExecutionInstanceResolverTests
     {
         public INamedInstance CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
             new NamedInstance($"{label}({resolver.Resolve(inner).Name})");
+    }
+
+    private sealed class OtherInstance : IExecutionInstance;
+
+    /// <summary>Stands in for a role configuration: resolvable, but not able to create itself without its caller.</summary>
+    private interface IRunTypedResolvable : IExecutionInstanceResolvable
+    {
+        INamedInstance Create(ExecutionInstanceResolver resolver);
+    }
+
+    private static INamedInstance ResolveRunTyped(ExecutionInstanceResolver resolver, IRunTypedResolvable resolvable) =>
+        resolver.Resolve(resolvable, static (target, targetResolver) => target.Create(targetResolver));
+
+    private sealed class RunTypedResolvable(string name) : IRunTypedResolvable
+    {
+        public int CreateCount { get; private set; }
+
+        public INamedInstance Create(ExecutionInstanceResolver resolver)
+        {
+            CreateCount++;
+            return new NamedInstance(name);
+        }
+    }
+
+    private sealed class RunTypedWrapper(string label, IRunTypedResolvable inner) : IRunTypedResolvable
+    {
+        public INamedInstance Create(ExecutionInstanceResolver resolver) =>
+            new NamedInstance($"{label}({ResolveRunTyped(resolver, inner).Name})");
     }
 
     private sealed class DecoratingHook<TInstance>(

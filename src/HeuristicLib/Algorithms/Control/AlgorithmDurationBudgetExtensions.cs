@@ -1,22 +1,17 @@
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
-
 namespace HEAL.HeuristicLib.Algorithms;
 
 public static class AlgorithmDurationBudgetExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> WithMaxAlgorithmDuration(
+        public AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration(
             TimeSpan maximumDuration)
         {
-            return algorithm.WithMaxAlgorithmDuration(maximumDuration, TimeProvider.System);
+            return algorithm.LimitedToDuration(maximumDuration, TimeProvider.System);
         }
 
-        public AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> WithMaxAlgorithmDuration(
+        public AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration(
             TimeSpan maximumDuration,
             TimeProvider timeProvider)
         {

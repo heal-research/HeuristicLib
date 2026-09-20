@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Objectives;
 namespace HEAL.HeuristicLib.Problems.MachineLearning.Legacy;
 
 public class SymbolicRegressionProblem :
-  RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
+  RegressionProblem<SymbolicRegressionProblem, RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
 {
     public SymbolicRegressionProblem(RegressionProblemData data, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
       this(data, objective, GetDefaultComparer(objective), new SymbolicExpressionTreeSearchSpace(new SimpleSymbolicExpressionGrammar()))
@@ -55,6 +55,6 @@ public class SymbolicRegressionProblem :
 
     private static IComparer<ObjectiveVector>
       GetDefaultComparer(ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) => objective.Count == 1
-      ? new SingleObjectiveComparer(objective.Single().Direction)
-      : new LexicographicComparer(objective.Select(x => x.Direction).ToArray());
+        ? new SingleObjectiveComparer(objective.Single().Direction)
+        : new LexicographicComparer(objective.Select(x => x.Direction).ToArray());
 }

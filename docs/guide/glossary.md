@@ -546,9 +546,9 @@ See also: Configuration graph, Execution instance, Run.
 
 Status: `Canonical`
 
-An execution instance registry resolves configurations to execution instances during a run.
+An execution instance resolver resolves configurations to execution instances during a run.
 
-The registry controls execution-instance identity and sharing. Explicit operator and algorithm instance creation methods receive the registry and normally resolve their declared children eagerly. Execution graph compositions may additionally create child registries, register replacements or control instance reuse.
+The resolver controls execution-instance identity and sharing. Explicit operator and algorithm instance creation methods receive the resolver and normally resolve their declared children eagerly. Execution graph compositions may additionally create child resolvers, declare decorations for them or control instance reuse. Decorations are declared on an `ExecutionInstanceResolverBuilder` before the resolver resolves anything.
 
 See also: Configuration, Execution graph, Execution instance, Run.
 
@@ -702,7 +702,7 @@ Status: `Canonical`
 
 An experiment trial is one materialized algorithm configuration and algorithm run within an experiment run.
 
-Each trial has a deterministic typed key, its own algorithm run, its own execution registry and its own random number generator fork. Trials do not pass search states or analyzer state to one another.
+Each trial has a deterministic typed key, its own algorithm run, its own execution instance resolver and its own random number generator fork. Trials do not pass search states or analyzer state to one another.
 
 See also: Algorithm, Experiment, Run.
 

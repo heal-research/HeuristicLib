@@ -131,7 +131,7 @@ A trial analyzer factory receives the concrete trial algorithm. Create any clock
 
 ```csharp
 var quality = TrialAnalyzer.Create(
-    (GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> trial) =>
+    (GeneticAlgorithm<RealVector> trial) =>
         trial.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
 var run = algorithm.Repeat(2).CreateRun(problem, random)
     .AddTrialAnalyzer(quality);

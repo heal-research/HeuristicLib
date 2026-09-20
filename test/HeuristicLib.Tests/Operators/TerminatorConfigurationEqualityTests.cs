@@ -11,7 +11,7 @@ public class TerminatorConfigurationEqualityTests
     {
         var child = new ThresholdTerminator(1);
 
-        child.CountTerminatorCalls(new ObservationCounter()).ChildTerminator.ShouldBeSameAs(child);
+        child.CountCalls(new ObservationCounter()).ChildTerminator.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -19,8 +19,8 @@ public class TerminatorConfigurationEqualityTests
     {
         var first = new ThresholdTerminator(1);
         var second = new ThresholdTerminator(2);
-        var children = new List<ITerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>> { first, second };
-        var left = new AnyTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>(children);
+        var children = new List<ITerminator<int>> { first, second };
+        var left = new AnyTerminator<int>(children);
 
         children.Clear();
         var equal = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(2));
@@ -36,14 +36,24 @@ public class TerminatorConfigurationEqualityTests
     public void NestedComposition_WithEqualParts_IsEqual()
     {
         var counter = new ObservationCounter();
-        var left = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(2)).CountTerminatorCalls(counter);
-        var equal = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(2)).CountTerminatorCalls(counter);
-        var different = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(3)).CountTerminatorCalls(counter);
+        var left = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(2)).CountCalls(counter);
+        var equal = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(2)).CountCalls(counter);
+        var different = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(3)).CountCalls(counter);
 
         left.ShouldBe(equal);
         left.ShouldNotBe(different);
     }
 
+    [Fact]
+    public void WrappingConcerns_IncludeChildAndSettingsInEquality()
+    {
+        var counter = new ObservationCounter();
+        var duration = new ObservationDuration();
+
+        new ThresholdTerminator(1).CountCalls(counter).ShouldBe(new ThresholdTerminator(1).CountCalls(counter));
+        new ThresholdTerminator(1).MeasureDuration(duration, TimeProvider.System).ShouldBe(new ThresholdTerminator(1).MeasureDuration(duration, TimeProvider.System));
+        new ThresholdTerminator(1).CountCalls(counter).ShouldNotBe(new ThresholdTerminator(2).CountCalls(counter));
+    }
 
     [Fact]
     public void StagnationTerminator_SupportsWithReconfiguration()

@@ -6,4 +6,4 @@ public interface IRoarNetSolution<out TG> : Solution
     double? LowerBound { get; }
     double? ObjectiveValue { get; }
     IRoarNetSolution<TG> Copy();
-};
+}

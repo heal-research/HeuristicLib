@@ -9,8 +9,8 @@ public class RefinerCompositionTests
     [Fact]
     public void PipelineRefiner_AppliesChildRefinersInConfiguredOrder()
     {
-        var addThenDouble = PipelineRefiner.Create(AddOffset(1), Multiply(2)).CreateExecutionInstance();
-        var doubleThenAdd = PipelineRefiner.Create(Multiply(2), AddOffset(1)).CreateExecutionInstance();
+        var addThenDouble = PipelineRefiner.Create(AddOffset(1), Multiply(2)).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
+        var doubleThenAdd = PipelineRefiner.Create(Multiply(2), AddOffset(1)).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
 
         Refine(addThenDouble, 3).ShouldBe([8]);
         Refine(doubleThenAdd, 3).ShouldBe([7]);
@@ -20,7 +20,7 @@ public class RefinerCompositionTests
     public void PipelineRefiner_AppliesARepeatedStageEveryTimeItAppears()
     {
         var simplify = AddOffset(1);
-        var instance = PipelineRefiner.Create(simplify, Multiply(2), simplify).CreateExecutionInstance();
+        var instance = PipelineRefiner.Create(simplify, Multiply(2), simplify).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
 
         Refine(instance, 3).ShouldBe([9]);
     }
@@ -28,7 +28,7 @@ public class RefinerCompositionTests
     [Fact]
     public void PipelineRefiner_WithoutChildRefiners_ReturnsCandidatesUnchanged()
     {
-        var instance = PipelineRefiner.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().CreateExecutionInstance();
+        var instance = PipelineRefiner.Create<int>().CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
 
         Refine(instance, 3, 4).ShouldBe([3, 4]);
     }
@@ -37,7 +37,7 @@ public class RefinerCompositionTests
     public void IteratedRefiner_AppliesTheChildRefinerOncePerIteration()
     {
         var counter = new ObservationCounter();
-        var instance = AddOffset(1).CountRefinerCalls(counter).AsIterated(4).CreateExecutionInstance();
+        var instance = AddOffset(1).CountCalls(counter).AsIterated(4).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
 
         Refine(instance, 3).ShouldBe([7]);
         counter.CurrentCount.ShouldBe(4);
@@ -48,7 +48,7 @@ public class RefinerCompositionTests
     {
         var refiner = AddOffset(1).AsIterated(0);
 
-        Should.Throw<InvalidOperationException>(() => refiner.CreateExecutionInstance());
+        Should.Throw<InvalidOperationException>(() => refiner.CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create()));
     }
 
     [Fact]
@@ -64,9 +64,9 @@ public class RefinerCompositionTests
     [Fact]
     public void ChooseOneRefiner_WithoutChildRefiners_ThrowsWhenCreatingTheExecutionInstance()
     {
-        var refiner = ChooseOneRefiner.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
+        var refiner = ChooseOneRefiner.Create<int>();
 
-        Should.Throw<InvalidOperationException>(() => refiner.CreateExecutionInstance());
+        Should.Throw<InvalidOperationException>(() => refiner.CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create()));
     }
 
     [Fact]
@@ -74,13 +74,13 @@ public class RefinerCompositionTests
     {
         var refiner = ChooseOneRefiner.Create([AddOffset(1), Multiply(2)], [1.0]);
 
-        Should.Throw<InvalidOperationException>(() => refiner.CreateExecutionInstance());
+        Should.Throw<InvalidOperationException>(() => refiner.CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create()));
     }
 
     [Fact]
     public void ChooseOneRefiner_WithZeroWeightForAChild_NeverSelectsThatChild()
     {
-        var instance = ChooseOneRefiner.Create([AddOffset(1), Multiply(2)], [1.0, 0.0]).CreateExecutionInstance();
+        var instance = ChooseOneRefiner.Create([AddOffset(1), Multiply(2)], [1.0, 0.0]).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
 
         Refine(instance, 3, 3, 3, 3).ShouldBe([4, 4, 4, 4]);
     }
@@ -88,7 +88,7 @@ public class RefinerCompositionTests
     [Fact]
     public void WithRate_OfZero_LeavesEveryCandidateUnchanged()
     {
-        var instance = AddOffset(1).WithRate(0.0).CreateExecutionInstance();
+        var instance = AddOffset(1).AppliedAtRate(0.0).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
 
         Refine(instance, 3, 4, 5).ShouldBe([3, 4, 5]);
     }
@@ -103,7 +103,7 @@ public class RefinerCompositionTests
     public void CountRefinedCandidates_CountsEveryReturnedCandidate()
     {
         var counter = new ObservationCounter();
-        var instance = AddOffset(1).CountRefinedCandidates(counter).CreateExecutionInstance();
+        var instance = AddOffset(1).CountCandidates(counter).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
 
         Refine(instance, 3, 4, 5);
 
@@ -114,7 +114,7 @@ public class RefinerCompositionTests
     public void CountRefinerCalls_DoesNotIncrementWhenRefinementThrows()
     {
         var counter = new ObservationCounter();
-        var instance = new ThrowingRefiner().CountRefinerCalls(counter).CreateExecutionInstance();
+        var instance = new ThrowingRefiner().CountCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
 
         Should.Throw<InvalidOperationException>(() => Refine(instance, 3));
 
@@ -126,7 +126,7 @@ public class RefinerCompositionTests
     {
         var duration = new ObservationDuration();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var instance = new ThrowingRefiner().MeasureRefinerDuration(duration, timeProvider).CreateExecutionInstance();
+        var instance = new ThrowingRefiner().MeasureDuration(duration, timeProvider).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
 
         Should.Throw<InvalidOperationException>(() => Refine(instance, 3));
 
@@ -136,9 +136,9 @@ public class RefinerCompositionTests
     [Fact]
     public void IteratedRefiner_WithOneIteration_MatchesTheBareRefiner()
     {
-        var iterated = AddOffset(1).AsIterated(1).CreateExecutionInstance();
+        var iterated = AddOffset(1).AsIterated(1).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
 
-        Refine(iterated, 3, 4).ShouldBe(Refine(AddOffset(1).CreateExecutionInstance(), 3, 4));
+        Refine(iterated, 3, 4).ShouldBe(Refine(AddOffset(1).CreateExecutionInstance(ExecutionInstanceResolver.Create()), 3, 4));
     }
 
     // Instrumentation reports what its own position sees, so the same counter says something different inside an
@@ -148,8 +148,8 @@ public class RefinerCompositionTests
     {
         var inside = new ObservationCounter();
         var around = new ObservationCounter();
-        var insideInstance = AddOffset(1).CountRefinerCalls(inside).AsIterated(3).CreateExecutionInstance();
-        var aroundInstance = AddOffset(1).AsIterated(3).CountRefinerCalls(around).CreateExecutionInstance();
+        var insideInstance = AddOffset(1).CountCalls(inside).AsIterated(3).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
+        var aroundInstance = AddOffset(1).AsIterated(3).CountCalls(around).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
 
         Refine(insideInstance, 3).ShouldBe([6]);
         Refine(aroundInstance, 3).ShouldBe([6]);
@@ -163,9 +163,9 @@ public class RefinerCompositionTests
     {
         var counter = new ObservationCounter();
         var instance = PipelineRefiner.Create(
-                AddOffset(1).CountRefinedCandidates(counter),
+                AddOffset(1).CountCandidates(counter),
                 Multiply(2).AsIterated(2))
-            .CreateExecutionInstance();
+            .CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
 
         Refine(instance, 3).ShouldBe([16]);
         counter.CurrentCount.ShouldBe(1);
@@ -177,8 +177,8 @@ public class RefinerCompositionTests
         var refiner = ChooseOneRefiner.Create([AddOffset(1), Multiply(2)], [1.0, 1.0]);
         var candidates = new[] { 3, 3, 3, 3, 3, 3, 3, 3 };
 
-        var first = refiner.CreateExecutionInstance().Refine(candidates, RandomNumberGenerator.Create(7), DummySearchSpace<int>.Instance, CreateProblem());
-        var second = refiner.CreateExecutionInstance().Refine(candidates, RandomNumberGenerator.Create(7), DummySearchSpace<int>.Instance, CreateProblem());
+        var first = refiner.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create()).Refine(candidates, RandomNumberGenerator.Create(7), DummySearchSpace<int>.Instance, CreateProblem());
+        var second = refiner.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create()).Refine(candidates, RandomNumberGenerator.Create(7), DummySearchSpace<int>.Instance, CreateProblem());
 
         second.ShouldBe(first);
         // Both children are actually reachable, or the comparison above would be vacuous.
@@ -188,7 +188,7 @@ public class RefinerCompositionTests
     [Fact]
     public void WithRate_OfOne_RefinesEveryCandidate()
     {
-        var instance = AddOffset(1).WithRate(1.0).CreateExecutionInstance();
+        var instance = AddOffset(1).AppliedAtRate(1.0).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ExecutionInstanceResolver.Create());
 
         Refine(instance, 3, 4, 5).ShouldBe([4, 5, 6]);
     }

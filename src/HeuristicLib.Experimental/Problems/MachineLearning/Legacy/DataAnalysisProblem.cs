@@ -4,10 +4,11 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.MachineLearning.Legacy;
 
-public abstract class DataAnalysisProblem<TProblemData, TCandidate, TSearchSpace>(TProblemData problemData, ObjectiveDirections objective, TSearchSpace encoding)
-  : SingleSolutionProblem<TCandidate, TSearchSpace>(objective, encoding)
-  where TProblemData : DataAnalysisProblemData
-  where TSearchSpace : class, ISearchSpace<TCandidate>
+public abstract class DataAnalysisProblem<TSelf, TProblemData, TCandidate, TSearchSpace>(TProblemData problemData, ObjectiveDirections objective, TSearchSpace encoding)
+    : SingleSolutionProblem<TSelf, TCandidate, TSearchSpace>(objective, encoding)
+    where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
+    where TProblemData : DataAnalysisProblemData
+    where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public virtual TProblemData ProblemData
     {

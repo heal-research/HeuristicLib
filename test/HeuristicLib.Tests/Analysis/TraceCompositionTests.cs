@@ -5,6 +5,7 @@ using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
+using HEAL.HeuristicLib.SearchSpaces;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
 namespace HEAL.HeuristicLib.Tests.Analysis;
@@ -92,9 +93,9 @@ public class TraceCompositionTests
         public void Install(ExecutionInstanceResolverBuilder builder) => throw new InvalidOperationException("Installation failed.");
     }
 
-    private sealed record FailingCreator : ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private sealed record FailingCreator : Creator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        public override ICreatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
             throw new InvalidOperationException("Resolution failed.");
     }
 
@@ -152,10 +153,10 @@ public class TraceCompositionTests
     [Fact]
     public void CommonMeasurements_AreSerializableValueObjects()
     {
-        var measurement = new ObjectiveVectorsMeasurement<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>();
+        var measurement = new ObjectiveVectorsMeasurement<RealVector, PopulationState<RealVector>>();
 
         var json = System.Text.Json.JsonSerializer.Serialize(measurement);
-        var roundTrip = System.Text.Json.JsonSerializer.Deserialize<ObjectiveVectorsMeasurement<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>>(json);
+        var roundTrip = System.Text.Json.JsonSerializer.Deserialize<ObjectiveVectorsMeasurement<RealVector, PopulationState<RealVector>>>(json);
 
         roundTrip.ShouldBe(measurement);
     }
@@ -167,7 +168,7 @@ public class TraceCompositionTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var iterations = Clock.FromIterations(algorithm);
         var quality = Analyzer.Trace(algorithm,
-            new ObjectiveVectorsMeasurement<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(),
+            new ObjectiveVectorsMeasurement<RealVector, PopulationState<RealVector>>(),
             Aggregate.BestMedianWorst(),
             [iterations]);
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(quality);
@@ -242,7 +243,7 @@ public class TraceCompositionTests
     [Fact]
     public void CrossoverMeasurementsUseTheTypedObservation()
     {
-        typeof(IMeasurement<CrossoverObservation<RealVector, RealVectorSearchSpace, TestFunctionProblem>, double>)
+        typeof(IMeasurement<CrossoverObservation<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>, double>)
             .IsAssignableFrom(typeof(OffspringCountMeasurement)).ShouldBeTrue();
 
         // This is intentionally absent because it must not compile:
@@ -250,10 +251,10 @@ public class TraceCompositionTests
     }
 
     private sealed record OffspringCountMeasurement
-        : IMeasurement<CrossoverObservation<RealVector, RealVectorSearchSpace, TestFunctionProblem>, double>
+        : IMeasurement<CrossoverObservation<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>, double>
     {
         public IReadOnlyList<double> Read(
-            CrossoverObservation<RealVector, RealVectorSearchSpace, TestFunctionProblem> observation) =>
+            CrossoverObservation<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> observation) =>
             [observation.Offspring.Count];
     }
 
@@ -265,7 +266,7 @@ public class TraceCompositionTests
 
         var shortcut = algorithm.TracePopulationCandidates();
         var composed = Analyzer.Trace(algorithm,
-            new EvaluatedCandidatesMeasurement<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(),
+            new EvaluatedCandidatesMeasurement<RealVector, PopulationState<RealVector>>(),
             Aggregate.BestMedianWorst<RealVector>());
 
         shortcut.ShouldBeAssignableTo<TraceAnalyzer<BestMedianWorstEntry<RealVector>>>();
@@ -342,7 +343,7 @@ public class TraceCompositionTests
         {
             Interceptor = new TruncatingInterceptor(KeptCandidates: 5)
         };
-        var kept = Analyzer.Trace(algorithm.Interceptor!,
+        var kept = Analyzer.Trace<RealVector, PopulationState<RealVector>, double, MinMeanMax>(algorithm.Interceptor!,
             observation => (IReadOnlyList<double>)[observation.State.Population.EvaluatedCandidates.Count],
             Aggregate.MinMeanMax());
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(kept);
@@ -362,7 +363,7 @@ public class TraceCompositionTests
         {
             Interceptor = new TruncatingInterceptor(KeptCandidates: 5)
         };
-        var removed = Analyzer.Trace(algorithm.Interceptor!,
+        var removed = Analyzer.Trace<RealVector, PopulationState<RealVector>, double, MinMeanMax>(algorithm.Interceptor!,
             observation => (IReadOnlyList<double>)
             [
                 observation.UntransformedState.Population.EvaluatedCandidates.Count -
@@ -482,7 +483,7 @@ public class TraceCompositionTests
     }
 
     /// <summary>
-    /// A clock over a boundary is written by deriving from <see cref="ObservingClock{TTime, TObservation}"/>, which
+    /// A clock over a boundary is written by deriving from <see cref="Clock{TTime}"/> and observing its source, which
     /// leaves the clock with reading an observation and reporting the time.
     /// </summary>
     [Fact]
@@ -500,7 +501,7 @@ public class TraceCompositionTests
         quality.By(crossoverCalls).Select(point => point.Time).ShouldBe([0L, 1L, 2L]);
     }
 
-    private sealed class CrossoverCallClock(ICrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem> crossover)
+    private sealed class CrossoverCallClock(ICrossover<RealVector> crossover)
         : Clock<long>
     {
         private long calls;
@@ -511,7 +512,7 @@ public class TraceCompositionTests
             builder.Observe(crossover, _ => Interlocked.Increment(ref calls));
     }
 
-    private sealed class CreatorCountAnalyzer(ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> creator)
+    private sealed class CreatorCountAnalyzer(ICreator<RealVector> creator)
         : IAnalyzer
     {
         public int CreatedCandidates { get; private set; }
@@ -521,25 +522,27 @@ public class TraceCompositionTests
     }
 
     private sealed class CreatorObservationHook(
-        ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> creator,
+        ICreator<RealVector> creator,
         Action<int> observe) : IExecutionHook
     {
         public void Install(ExecutionInstanceResolverBuilder builder) =>
             builder.Decorate(creator, current => new ObservingCreator(current, observe));
     }
 
-    private sealed class ObservingCreator(
-        ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> child,
-        Action<int> observe) : ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private sealed record ObservingCreator(
+        ICreator<RealVector> Child,
+        Action<int> Observe) : WrappingCreator<RealVector>(Child)
     {
-        public ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
-            new Instance(resolver.Resolve(child), observe);
+        protected override ICreatorInstance<RealVector, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICreatorInstance<RealVector, TRunSearchSpace, TRunProblem> childCreator) =>
+            new Instance<TRunSearchSpace, TRunProblem>(childCreator, Observe);
 
-        private sealed class Instance(
-            ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childCreator,
-            Action<int> observe) : ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Instance<TSearchSpace, TProblem>(
+            ICreatorInstance<RealVector, TSearchSpace, TProblem> childCreator,
+            Action<int> observe) : ICreatorInstance<RealVector, TSearchSpace, TProblem>
+            where TSearchSpace : class, ISearchSpace<RealVector>
+            where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
-            public IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+            public IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
             {
                 var candidates = childCreator.Create(count, random, searchSpace, problem);
                 observe(candidates.Count);
@@ -558,10 +561,10 @@ public class TraceCompositionTests
     public async Task RankingAggregation_TakesItsOrderingFromTheRun(bool maximize)
     {
         var objective = maximize ? SingleObjective.Maximize : SingleObjective.Minimize;
-        var searchSpace = new RealVectorSearchSpace(length: 2, minimum: -5.12, maximum: 5.12);
-        var problem = new FuncProblem<RealVector, RealVectorSearchSpace>(
+        var searchSpace = new BoundedRealVectorSearchSpace(length: 2, minimum: -5.12, maximum: 5.12);
+        var problem = new FuncProblem<RealVector, BoundedRealVectorSearchSpace>(
             static (RealVector candidate) => candidate[0], searchSpace, objective);
-        var algorithm = new GeneticAlgorithm<RealVector, RealVectorSearchSpace, FuncProblem<RealVector, RealVectorSearchSpace>>
+        var algorithm = new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 16,
             MaximumGenerations = 2,
@@ -596,7 +599,7 @@ public class TraceCompositionTests
 
     private static TestFunctionProblem CreateProblem() => new(new RastriginFunction(dimension: 4));
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(
+    private static GeneticAlgorithm<RealVector> CreateAlgorithm(
         TestFunctionProblem problem, int maximumGenerations) =>
         new()
         {

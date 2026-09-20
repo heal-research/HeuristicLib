@@ -96,13 +96,13 @@ public class AnalysisSpecs
         return new TestFunctionProblem(new RastriginFunction(dimension));
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private static GeneticAlgorithm<RealVector>
         CreateSimpleGeneticAlgorithm(
             TestFunctionProblem problem,
             IdentityInterceptor<RealVector, PopulationState<RealVector>> interceptor,
             int maximumGenerations)
     {
-        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        return new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 16,
             MaximumGenerations = maximumGenerations,

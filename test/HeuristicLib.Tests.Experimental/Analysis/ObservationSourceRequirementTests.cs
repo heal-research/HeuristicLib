@@ -16,7 +16,7 @@ public class ObservationSourceRequirementTests
     public void RequiredSources_RejectAnEmptyCollection()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new ParetoFrontAnalyzer<RealVector, RealVectorSearchSpace, TestFunctionProblem>(
+            new ParetoFrontAnalyzer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(
                 SingleObjective.Minimize,
                 new ObjectiveVector(1.0),
                 []));
@@ -28,7 +28,7 @@ public class ObservationSourceRequirementTests
     public void SingleSource_NeedsNoCollectionCeremony()
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 2));
-        var algorithm = new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 4,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -50,7 +50,7 @@ public class ObservationSourceRequirementTests
     public void GenealogyAnalyzer_NeedsAtLeastOneSourceOfAnyKind()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new GenealogyAnalyzer<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>());
+            new GenealogyAnalyzer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>());
 
         exception.Message.ShouldContain("at least one crossover, mutator or algorithm");
     }
@@ -59,7 +59,7 @@ public class ObservationSourceRequirementTests
     public void GenealogyAnalyzer_AcceptsAnyOneKindOnItsOwn()
     {
         // Without an interceptor the graph still records descent, it just gains no generational structure.
-        var withCrossoverOnly = new GenealogyAnalyzer<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
+        var withCrossoverOnly = new GenealogyAnalyzer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
             crossovers: [new SinglePointCrossover()]);
 
         withCrossoverOnly.Graph.ShouldNotBeNull();

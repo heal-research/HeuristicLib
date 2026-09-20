@@ -17,7 +17,7 @@ public interface IProblem
 }
 
 public interface IProblem<TCandidate, out TSearchSpace> : IProblem
-  where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     TSearchSpace SearchSpace { get; }
 

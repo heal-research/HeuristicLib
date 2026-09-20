@@ -22,7 +22,7 @@ public sealed class LaggedVariableTreeNode : VariableTreeNodeBase
     public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor)
     {
         base.ShakeLocalParameters(random, shakingFactor);
-        Lag = System.Math.Min(Symbol.MaxLag, System.Math.Max(Symbol.MinLag, Lag + random.NextInt(-1, 2)));
+        Lag = Math.Min(Symbol.MaxLag, Math.Max(Symbol.MinLag, Lag + random.NextInt(-1, 2)));
     }
 
     public override SymbolicExpressionTreeNode Clone() => new LaggedVariableTreeNode(this);

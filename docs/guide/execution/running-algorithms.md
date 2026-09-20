@@ -51,7 +51,7 @@ Both forms represent a new run. Do not call one after the other expecting the se
 
 ## Stopping budgets
 
-Prefer an algorithm's own budget for normal configuration. A genetic algorithm exposes `MaximumGenerations`. Other algorithms may use iterations, evaluations or a domain specific condition.
+Prefer an algorithm's own budget for normal configuration. A genetic algorithm exposes `MaximumGenerations`, which defaults to `GeneticAlgorithmDefaults.MaximumGenerations` (1000) rather than to no limit; set it to `null` for a run that should end on a terminator alone. Other algorithms may use iterations, evaluations or a domain specific condition.
 
 External wrappers are useful when an experiment must impose the same budget across algorithms that expose different controls. When comparing methods, evaluation count is often fairer than generation count because one generation can perform very different amounts of work.
 

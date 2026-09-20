@@ -25,6 +25,5 @@ public sealed record AfterOperatorDurationTerminator<TCandidate> : StatelessTerm
 
 public static class AfterOperatorDurationTerminator
 {
-    public static AfterOperatorDurationTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, ObservationDuration duration, TimeSpan maximumDuration)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(duration, maximumDuration);
+    public static AfterOperatorDurationTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, ObservationDuration duration, TimeSpan maximumDuration) => new(duration, maximumDuration);
 }

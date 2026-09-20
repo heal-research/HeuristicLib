@@ -14,8 +14,7 @@ public record NoChangeRefiner<TCandidate> : SingleCandidateRefiner<TCandidate>
 
 public static class NoChangeRefiner
 {
-    public static NoChangeRefiner<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => NoChangeRefiner<TCandidate>.Instance;
+    public static NoChangeRefiner<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => NoChangeRefiner<TCandidate>.Instance;
 
     public static TCandidate Refine<TCandidate>(TCandidate candidate, IRandomNumberGenerator random) => candidate;
 }

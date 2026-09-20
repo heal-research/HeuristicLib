@@ -1,6 +1,4 @@
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
@@ -12,6 +10,9 @@ public static class NSGA2Defaults
 {
     public const int PopulationSize = 100;
 
+    /// <inheritdoc cref="GeneticAlgorithmDefaults.MaximumGenerations"/>
+    public const int MaximumGenerations = GeneticAlgorithmDefaults.MaximumGenerations;
+
     public const double MutationRate = GeneticAlgorithmDefaults.MutationRate;
 
     /// <summary>
@@ -20,18 +21,12 @@ public static class NSGA2Defaults
     /// </summary>
     public const bool DominateOnEquals = true;
 
-    public static ISelector<TCandidate, TSearchSpace, TProblem> Selector<TCandidate, TSearchSpace, TProblem>()
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static ISelector<TCandidate> Selector<TCandidate>() =>
         new ParetoCrowdingTournamentSelector<TCandidate>(DominateOnEquals);
 
-    public static IReplacer<TCandidate, TSearchSpace, TProblem> Replacer<TCandidate, TSearchSpace, TProblem>()
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static IReplacer<TCandidate> Replacer<TCandidate>() =>
         new ParetoCrowdingReplacer<TCandidate>(DominateOnEquals);
 
-    public static IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator<TCandidate, TSearchSpace, TProblem>()
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+    public static IEvaluator<TCandidate> Evaluator<TCandidate>() =>
+        new ProblemEvaluator<TCandidate>();
 }

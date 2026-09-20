@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Data;
+
 namespace HEAL.HeuristicLib.MachineLearning;
 
 public abstract class SupervisedData<TTarget>

@@ -54,14 +54,14 @@ internal static class DifferentiableExpressionCompiler
             if (childIndex < 0 || childIndex >= frame.Point.Node.Arity)
                 throw new ArgumentOutOfRangeException(nameof(childIndex));
 
-            if (frame.ChildValues[childIndex] is { } childValue)
+            var childValue = frame.ChildValues[childIndex];
+            if (childValue is not null)
             {
-                valueStack.Add(childValue);
+                valueStack.Add(childValue.Value);
                 return;
             }
 
-            childValue = Lower(frame.Point.Child(childIndex));
-            frame.ChildValues[childIndex] = childValue;
+            frame.ChildValues[childIndex] = Lower(frame.Point.Child(childIndex));
         }
 
         public void EmitVariable(string name)

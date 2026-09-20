@@ -13,8 +13,8 @@ public class DynamicAnalysisTests
     {
         var problem = new IntegerDynamicProblem(epochLength: 2);
         var provider = new EpochBestKnown();
-        var evaluator = new ProblemEvaluator().WithDynamicRelativeQuality(problem, provider);
-        var instance = ExecutionInstanceResolver.Create().Resolve(evaluator);
+        var evaluator = new ProblemEvaluator().ScaledToDynamicBestKnown(problem, provider);
+        var instance = ExecutionInstanceResolver.Create().Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(evaluator);
 
         instance.ShouldNotBeAssignableTo<IDisposable>();
         instance.Evaluate([2, 2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
@@ -219,7 +219,7 @@ public class DynamicAnalysisTests
         public bool Contains(int candidate) => true;
     }
 
-    private sealed class IntegerDynamicProblem : DynamicProblem<int, IntegerSearchSpace>
+    private sealed class IntegerDynamicProblem : DynamicProblem<IntegerDynamicProblem, int, IntegerSearchSpace>
     {
         public IntegerDynamicProblem(int epochLength, UpdatePolicy updatePolicy = UpdatePolicy.AfterEachBatchEvaluation)
             : this(new EvaluationCountSchedule(epochLength), updatePolicy)
@@ -259,11 +259,11 @@ public class DynamicAnalysisTests
     private sealed record BatchEvaluationAlgorithm(IReadOnlyList<IReadOnlyList<int>> Batches)
         : Algorithm<BatchEvaluationAlgorithm, int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
     {
-        public IEvaluator<int, IntegerSearchSpace, IntegerDynamicProblem> Evaluator { get; } = new ProblemEvaluator();
+        public IEvaluator<int> Evaluator { get; } = new ProblemEvaluator();
 
         public override AlgorithmInstance<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
             CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
-            new Instance(resolver.Resolve(Evaluator), Batches);
+            new Instance(resolver.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(Evaluator), Batches);
 
         private sealed class Instance(
             IEvaluatorInstance<int, IntegerSearchSpace, IntegerDynamicProblem> evaluator,

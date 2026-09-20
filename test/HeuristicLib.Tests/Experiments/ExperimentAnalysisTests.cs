@@ -90,14 +90,14 @@ public class ExperimentAnalysisTests
     }
 
     private sealed class OrderedEvaluationAnalyzer(
-        IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator,
+        IEvaluator<int> evaluator,
         int marker,
         List<int> invocationOrder)
         : IAnalyzer
     {
         public EvaluationResult Result { get; } = new();
 
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe(evaluator, Record);
+        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation)
         {

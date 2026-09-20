@@ -21,9 +21,9 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
     where TCandidate : notnull
 {
     private readonly bool saveSpace;
-    private readonly ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers;
-    private readonly ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> mutators;
-    private readonly ImmutableArray<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithms;
+    private readonly ImmutableArray<ICrossover<TCandidate>> crossovers;
+    private readonly ImmutableArray<IMutator<TCandidate>> mutators;
+    private readonly ImmutableArray<IAlgorithm<TCandidate, TSearchState>> algorithms;
 
     /// <param name="crossovers">Crossovers whose offspring become graph edges from two parents.</param>
     /// <param name="mutators">Mutators whose offspring become graph edges from one parent.</param>
@@ -31,9 +31,15 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
     /// Algorithms whose yielded populations close a generation. Without one the graph still records descent, it just
     /// has no generational structure.
     /// </param>
-    public GenealogyAnalyzer(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>>? crossovers = null,
-                             IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>>? mutators = null,
-                             IReadOnlyList<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>>? algorithms = null,
+    /// <param name="equality">
+    /// Decides which candidates are the same graph node. Defaults to <see cref="EqualityComparer{T}.Default"/>.
+    /// </param>
+    /// <param name="saveSpace">
+    /// Keeps parent links for the latest generation only, discarding older generations as each new one closes.
+    /// </param>
+    public GenealogyAnalyzer(IReadOnlyList<ICrossover<TCandidate>>? crossovers = null,
+                             IReadOnlyList<IMutator<TCandidate>>? mutators = null,
+                             IReadOnlyList<IAlgorithm<TCandidate, TSearchState>>? algorithms = null,
                              IEqualityComparer<TCandidate>? equality = null,
                              bool saveSpace = false)
         : this(new GenealogyGraph<TCandidate>(equality ?? EqualityComparer<TCandidate>.Default), crossovers, mutators, algorithms, saveSpace)
@@ -45,9 +51,9 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
     /// publishing a different result.
     /// </summary>
     internal GenealogyAnalyzer(GenealogyGraph<TCandidate> graph,
-                               IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>>? crossovers,
-                               IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>>? mutators,
-                               IReadOnlyList<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>>? algorithms,
+                               IReadOnlyList<ICrossover<TCandidate>>? crossovers,
+                               IReadOnlyList<IMutator<TCandidate>>? mutators,
+                               IReadOnlyList<IAlgorithm<TCandidate, TSearchState>>? algorithms,
                                bool saveSpace)
     {
         if ((crossovers?.Count ?? 0) + (mutators?.Count ?? 0) + (algorithms?.Count ?? 0) == 0)
@@ -66,14 +72,16 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
 
     public void Install(ExecutionInstanceResolverBuilder builder)
     {
+        var typed = builder.For<TCandidate, TSearchSpace, TProblem>();
+
         foreach (var crossover in crossovers)
-            builder.Observe(crossover, observation => AfterCross(observation.Offspring, observation.Parents));
+            typed.Observe(crossover, observation => AfterCross(observation.Offspring, observation.Parents));
 
         foreach (var mutator in mutators)
-            builder.Observe(mutator, observation => AfterMutate(observation.Offspring, observation.Parents));
+            typed.Observe(mutator, observation => AfterMutate(observation.Offspring, observation.Parents));
 
         foreach (var algorithm in algorithms)
-            builder.Observe(algorithm, observation => CloseGeneration(observation.State, observation.Problem));
+            typed.Observe(algorithm, observation => CloseGeneration(observation.State, observation.Problem));
     }
 
     private void AfterCross(IReadOnlyList<TCandidate> offspring, IReadOnlyList<Parents<TCandidate>> parents)
@@ -104,21 +112,19 @@ public static class GenealogyAnalysisTraces
         /// <summary>
         /// Creates a genealogy analyzer over the given observation sources.
         /// </summary>
-        public static GenealogyAnalyzer<T, TS, TP, TR> Genealogy<T, TS, TP, TR>(
-            ICrossover<T, TS, TP>? crossover = null,
-            IMutator<T, TS, TP>? mutator = null,
-            IAlgorithm<T, TS, TP, TR>? algorithm = null,
+        public static GenealogyAnalyzer<T, ISearchSpace<T>, IProblem<T, ISearchSpace<T>>, TR> Genealogy<T, TR>(
+            ICrossover<T>? crossover = null,
+            IMutator<T>? mutator = null,
+            IAlgorithm<T, TR>? algorithm = null,
             IEqualityComparer<T>? equality = null,
             bool saveSpace = false,
             IComparer<ObjectiveVector>? objectiveComparer = null)
             where T : notnull
-            where TS : class, ISearchSpace<T>
-            where TP : class, IProblem<T, TS>
             where TR : PopulationState<T> =>
             new(
-                crossover is null ? null : (IReadOnlyList<ICrossover<T, TS, TP>>)[crossover],
-                mutator is null ? null : (IReadOnlyList<IMutator<T, TS, TP>>)[mutator],
-                algorithm is null ? null : (IReadOnlyList<IAlgorithm<T, TS, TP, TR>>)[algorithm],
+                crossover is null ? null : (IReadOnlyList<ICrossover<T>>)[crossover],
+                mutator is null ? null : (IReadOnlyList<IMutator<T>>)[mutator],
+                algorithm is null ? null : (IReadOnlyList<IAlgorithm<T, TR>>)[algorithm],
                 equality,
                 saveSpace)
             { ObjectiveComparer = objectiveComparer };

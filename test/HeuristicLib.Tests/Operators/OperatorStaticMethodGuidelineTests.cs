@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
@@ -16,7 +17,7 @@ public class OperatorStaticMethodGuidelineTests
         var objective = CreateSingleObjective();
 
         var viaInstance = new TournamentSelector<int>(tournamentSize: 3)
-          .Select(population, objective, count: 4, RandomNumberGenerator.Create(123));
+            .Select(population, objective, count: 4, RandomNumberGenerator.Create(123));
         var viaStatic = TournamentSelector.Select(population, objective, count: 4, RandomNumberGenerator.Create(123), tournamentSize: 3);
 
         viaStatic.ShouldBe(viaInstance);
@@ -35,7 +36,7 @@ public class OperatorStaticMethodGuidelineTests
         var objective = CreateBiObjective();
 
         var viaInstance = new ParetoCrowdingTournamentSelector<int>(dominateOnEqualities: false) { TournamentSize = 3 }
-          .Select(population, objective, count: 4, RandomNumberGenerator.Create(456));
+            .Select(population, objective, count: 4, RandomNumberGenerator.Create(456));
         var viaStatic = ParetoCrowdingTournamentSelector.Select(population, objective, count: 4, RandomNumberGenerator.Create(456), dominateOnEqualities: false, tournamentSize: 3);
 
         viaStatic.ShouldBe(viaInstance);
@@ -79,9 +80,9 @@ public class OperatorStaticMethodGuidelineTests
     public void EdgeRecombinationCrossover_StaticMethodProducesPermutation()
     {
         var child = EdgeRecombinationCrossover.Cross(
-          new Permutation(0, 1, 2, 3),
-          new Permutation(0, 2, 1, 3),
-          RandomNumberGenerator.Create(789));
+            new Permutation(0, 1, 2, 3),
+            new Permutation(0, 2, 1, 3),
+            RandomNumberGenerator.Create(789));
 
         child.Order().ToArray().ShouldBe([0, 1, 2, 3]);
     }
@@ -89,7 +90,7 @@ public class OperatorStaticMethodGuidelineTests
     [Fact]
     public void ChangedOperatorRecords_ExposeOnlyImmutableConfigurationProperties()
     {
-        AssertImmutableDeclaredProperties(typeof(Encodings.RealVectors.NormalDistributedCreator));
+        AssertImmutableDeclaredProperties(typeof(NormalDistributedCreator));
         AssertImmutableDeclaredProperties(typeof(Encodings.IntegerVectors.NormalDistributedCreator));
         AssertImmutableDeclaredProperties(typeof(BalancedTreeCreator));
         AssertImmutableDeclaredProperties(typeof(SelfAdaptiveSimulatedBinaryCrossover));
@@ -111,11 +112,11 @@ public class OperatorStaticMethodGuidelineTests
         ];
     }
 
-    private static ObjectiveDirections CreateSingleObjective()
-      => new([ObjectiveDirection.Minimize], Comparer<ObjectiveVector>.Create((left, right) => left[0].CompareTo(right[0])));
+    private static ObjectiveDirections CreateSingleObjective() =>
+        new([ObjectiveDirection.Minimize], Comparer<ObjectiveVector>.Create((left, right) => left[0].CompareTo(right[0])));
 
-    private static ObjectiveDirections CreateBiObjective()
-      => new(
+    private static ObjectiveDirections CreateBiObjective() =>
+        new(
         [ObjectiveDirection.Minimize, ObjectiveDirection.Minimize],
         Comparer<ObjectiveVector>.Create((left, right) =>
         {
@@ -124,30 +125,30 @@ public class OperatorStaticMethodGuidelineTests
         }));
 
     private sealed class DummyProblem<TCandidate>(ISearchSpace<TCandidate> searchSpace, ObjectiveDirections objective)
-      : IProblem<TCandidate, ISearchSpace<TCandidate>>
+        : IProblem<TCandidate, ISearchSpace<TCandidate>>
     {
         public ISearchSpace<TCandidate> SearchSpace { get; } = searchSpace;
         public ObjectiveDirections Objective { get; } = objective;
 
-        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
-          => throw new NotSupportedException();
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) =>
+            throw new NotSupportedException();
     }
 
     private sealed class CaseInsensitiveStringComparer : IEqualityComparer<string>
     {
         public static readonly CaseInsensitiveStringComparer Instance = new();
 
-        public bool Equals(string? x, string? y)
-          => StringComparer.OrdinalIgnoreCase.Equals(x, y);
+        public bool Equals(string? x, string? y) =>
+            StringComparer.OrdinalIgnoreCase.Equals(x, y);
 
-        public int GetHashCode(string obj)
-          => StringComparer.OrdinalIgnoreCase.GetHashCode(obj);
+        public int GetHashCode(string obj) =>
+            StringComparer.OrdinalIgnoreCase.GetHashCode(obj);
     }
 
     private static void AssertImmutableDeclaredProperties(Type type)
     {
         var mutableProperties = type
-                                .GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly)
+                                .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
                                 .Where(property => property.SetMethod is not null && !IsInitOnly(property))
                                 .Select(property => property.Name)
                                 .ToArray();
@@ -155,7 +156,7 @@ public class OperatorStaticMethodGuidelineTests
         mutableProperties.ShouldBeEmpty();
     }
 
-    private static bool IsInitOnly(System.Reflection.PropertyInfo property)
+    private static bool IsInitOnly(PropertyInfo property)
     {
         return property.SetMethod?.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)) == true;
     }

@@ -66,7 +66,7 @@ public sealed class BatchedDifferentiationTests
             var first = builder.Parameter();
             var second = builder.Parameter();
             return Apply(builder, operation, builder.Multiply(first, x), builder.Multiply(second, y));
-        }, [new double[] { 0.2, 0.4, 0.6, 0.8, 1.0 }, new double[] { 1.1, 1.2, 1.3, 1.4, 1.5 }], [0.7, 1.3]);
+        }, [new[] { 0.2, 0.4, 0.6, 0.8, 1.0 }, new[] { 1.1, 1.2, 1.3, 1.4, 1.5 }], [0.7, 1.3]);
     }
 
     [Theory]
@@ -80,7 +80,7 @@ public sealed class BatchedDifferentiationTests
             var first = builder.Parameter();
             var second = builder.Parameter();
             return Apply(builder, operation, builder.Multiply(first, x), second);
-        }, [new double[] { 0.2, 0.4, 0.6, 0.8, 1.0 }], [0.7, 1.3]);
+        }, [new[] { 0.2, 0.4, 0.6, 0.8, 1.0 }], [0.7, 1.3]);
     }
 
     [Theory]
@@ -94,7 +94,7 @@ public sealed class BatchedDifferentiationTests
             var first = builder.Parameter();
             var second = builder.Parameter();
             return Apply(builder, operation, first, builder.Multiply(second, x));
-        }, [new double[] { 0.2, 0.4, 0.6, 0.8, 1.0 }], [0.7, 1.3]);
+        }, [new[] { 0.2, 0.4, 0.6, 0.8, 1.0 }], [0.7, 1.3]);
     }
 
     [Theory]
@@ -107,7 +107,7 @@ public sealed class BatchedDifferentiationTests
             var x = builder.Input();
             var parameter = builder.Parameter();
             return Apply(builder, operation, builder.Add(builder.Multiply(parameter, x), builder.Constant(1.0)));
-        }, [new double[] { 0.1, 0.2, 0.3, 0.4, 0.5 }], [0.7]);
+        }, [new[] { 0.1, 0.2, 0.3, 0.4, 0.5 }], [0.7]);
     }
 
     [Fact]

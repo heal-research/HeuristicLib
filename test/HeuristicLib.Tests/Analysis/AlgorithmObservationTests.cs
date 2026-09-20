@@ -159,7 +159,7 @@ public class AlgorithmObservationTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var iterations = Clock.FromIterations(algorithm);
         var quality = Analyzer.Trace(algorithm,
-            new ObjectiveVectorsMeasurement<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(),
+            new ObjectiveVectorsMeasurement<RealVector, PopulationState<RealVector>>(),
             Aggregate.BestMedianWorst(),
             [iterations]);
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(quality);
@@ -260,7 +260,7 @@ public class AlgorithmObservationTests
 
     private static TestFunctionProblem CreateProblem() => new(new RastriginFunction(dimension: 4));
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(
+    private static GeneticAlgorithm<RealVector> CreateAlgorithm(
         TestFunctionProblem problem, int maximumGenerations) =>
         new()
         {

@@ -18,19 +18,20 @@ namespace HEAL.HeuristicLib.Execution;
 /// recreate their execution instances.
 /// </para>
 /// <para>
-/// The resolution rules are documented on <see cref="Resolve"/>.
+/// The resolution rules are documented on
+/// <see cref="Resolve{TResolvable, TExecutionInstance}(TResolvable, Func{TResolvable, ExecutionInstanceResolver, TExecutionInstance})"/>.
 /// </para>
 /// </remarks>
 public sealed class ExecutionInstanceResolver
 {
     private readonly ExecutionInstanceResolver? parent;
-    private readonly ImmutableDictionary<IExecutionInstanceResolvable<IExecutionInstance>, ImmutableArray<Decoration>> decorations;
-    private readonly Dictionary<IExecutionInstanceResolvable<IExecutionInstance>, IExecutionInstance> instances = new(ReferenceEqualityComparer.Instance);
-    private readonly Dictionary<IExecutionInstanceResolvable<IExecutionInstance>, IExecutionInstance> underConstruction = new(ReferenceEqualityComparer.Instance);
+    private readonly ImmutableDictionary<IExecutionInstanceResolvable, ImmutableArray<Decoration>> decorations;
+    private readonly Dictionary<IExecutionInstanceResolvable, IExecutionInstance> instances = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IExecutionInstanceResolvable, IExecutionInstance> underConstruction = new(ReferenceEqualityComparer.Instance);
 
     internal ExecutionInstanceResolver(
         ExecutionInstanceResolver? parent,
-        ImmutableDictionary<IExecutionInstanceResolvable<IExecutionInstance>, ImmutableArray<Decoration>> decorations)
+        ImmutableDictionary<IExecutionInstanceResolvable, ImmutableArray<Decoration>> decorations)
     {
         this.parent = parent;
         this.decorations = decorations;
@@ -97,8 +98,19 @@ public sealed class ExecutionInstanceResolver
     /// A newly built instance is stored here rather than hoisted to the ancestor that owns the decorations. Hoisting
     /// would let sibling resolvers share, which is precisely what recreating execution instances must not do.
     /// </para>
+    /// <para>
+    /// <paramref name="create"/> performs every creation step: first for the resolvable passed in, then for each
+    /// decoration of it, innermost first. Every decoration therefore has to produce a <typeparamref name="TResolvable"/>.
+    /// Pass a <see langword="static"/> lambda, so the compiler caches the delegate instead of allocating one per
+    /// resolution.
+    /// </para>
+    /// <para>
+    /// A resolver serves one execution, so an instance of another type found here was built for a different search
+    /// space or problem. That is reported rather than cast.
+    /// </para>
     /// </remarks>
-    public TExecutionInstance Resolve<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable)
+    public TExecutionInstance Resolve<TResolvable, TExecutionInstance>(TResolvable resolvable, Func<TResolvable, ExecutionInstanceResolver, TExecutionInstance> create)
+        where TResolvable : class, IExecutionInstanceResolvable
         where TExecutionInstance : class, IExecutionInstance
     {
         for (var resolver = this; resolver is not null; resolver = resolver.parent)
@@ -106,25 +118,38 @@ public sealed class ExecutionInstanceResolver
             // A resolvable currently being wrapped answers with the instance built so far, so that a decoration
             // resolving what it wraps receives that rather than starting the chain again.
             if (resolver.underConstruction.TryGetValue(resolvable, out var partial))
-                return (TExecutionInstance)partial;
+                return RequireInstanceOf<TExecutionInstance>(resolvable, partial);
 
             if (resolver.instances.TryGetValue(resolvable, out var resolved))
-                return (TExecutionInstance)resolved;
+                return RequireInstanceOf<TExecutionInstance>(resolvable, resolved);
 
             if (resolver.decorations.ContainsKey(resolvable))
                 break;
         }
 
-        var instance = Build(resolvable);
+        var instance = Build(resolvable, create);
         instances.Add(resolvable, instance);
-        return (TExecutionInstance)instance;
+        return instance;
     }
+
+    /// <summary>
+    /// Resolves a configuration that creates its own execution instance.
+    /// </summary>
+    /// <remarks>
+    /// Convenience over
+    /// <see cref="Resolve{TResolvable, TExecutionInstance}(TResolvable, Func{TResolvable, ExecutionInstanceResolver, TExecutionInstance})"/>,
+    /// which documents the resolution rules.
+    /// </remarks>
+    public TExecutionInstance Resolve<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable)
+        where TExecutionInstance : class, IExecutionInstance =>
+        Resolve(resolvable, static (target, resolver) => target.CreateExecutionInstance(resolver));
 
     /// <summary>
     /// Resolves an operator that may be absent, returning <see langword="null"/> when it is.
     /// </summary>
     /// <remarks>
-    /// Use this for optional slots such as a terminator or a refiner. <see cref="Resolve"/> stays strict, so passing a
+    /// Use this for optional slots such as a terminator or a refiner.
+    /// <see cref="Resolve{TExecutionInstance}(IExecutionInstanceResolvable{TExecutionInstance})"/> stays strict, so passing a
     /// possibly-null operator to it is a compile-time error rather than a null instance discovered later.
     /// </remarks>
     [return: NotNullIfNotNull(nameof(resolvable))]
@@ -142,7 +167,7 @@ public sealed class ExecutionInstanceResolver
     /// first decoration declared binds tightest and therefore observes first, which is what lets a trace install the
     /// clocks it reads before installing itself.
     /// </remarks>
-    private ImmutableArray<Decoration> Chain(IExecutionInstanceResolvable<IExecutionInstance> resolvable)
+    private ImmutableArray<Decoration> Chain(IExecutionInstanceResolvable resolvable)
     {
         var gathered = new List<(Decoration Decoration, int Depth)>();
         for (var resolver = this; resolver is not null; resolver = resolver.parent)
@@ -172,24 +197,26 @@ public sealed class ExecutionInstanceResolver
     /// therefore published as under construction while the chain is built, so the wrapper receives the instance already
     /// created for its child instead of rebuilding the chain from the start.
     /// </remarks>
-    private IExecutionInstance Build(IExecutionInstanceResolvable<IExecutionInstance> resolvable)
+    private TExecutionInstance Build<TResolvable, TExecutionInstance>(TResolvable resolvable, Func<TResolvable, ExecutionInstanceResolver, TExecutionInstance> create)
+        where TResolvable : class, IExecutionInstanceResolvable
+        where TExecutionInstance : class, IExecutionInstance
     {
         var chain = Chain(resolvable);
         if (chain.IsEmpty)
-            return resolvable.CreateExecutionInstance(this);
+            return create(resolvable, this);
 
-        var links = new List<IExecutionInstanceResolvable<IExecutionInstance>>(chain.Length + 1);
+        var links = new List<IExecutionInstanceResolvable>(chain.Length + 1);
         try
         {
             var current = resolvable;
-            var instance = resolvable.CreateExecutionInstance(this);
+            var instance = create(resolvable, this);
             underConstruction.Add(current, instance);
             links.Add(current);
 
             foreach (var decoration in chain)
             {
-                current = decoration.Apply(current);
-                instance = current.CreateExecutionInstance(this);
+                current = RequireStandIn(resolvable, decoration.Apply(current));
+                instance = create(current, this);
                 underConstruction.Add(current, instance);
                 links.Add(current);
             }
@@ -201,6 +228,40 @@ public sealed class ExecutionInstanceResolver
             foreach (var link in links)
                 underConstruction.Remove(link);
         }
+    }
+
+    /// <summary>
+    /// Returns a decoration's result as the type the caller creates from, or explains why it cannot stand in for the
+    /// resolvable it decorates.
+    /// </summary>
+    private static TResolvable RequireStandIn<TResolvable>(TResolvable resolvable, IExecutionInstanceResolvable decorated)
+        where TResolvable : class, IExecutionInstanceResolvable
+    {
+        if (decorated is not TResolvable typed)
+        {
+            throw new InvalidOperationException(
+                $"{ExecutionSignature.Name(decorated.GetType())} was declared to decorate {ExecutionSignature.Name(resolvable.GetType())}, but it is not a {ExecutionSignature.Name(typeof(TResolvable))} and cannot stand in for it.");
+        }
+
+        return typed;
+    }
+
+    /// <summary>
+    /// Returns an instance already held here as the type the caller asked for, or explains why it is not that type.
+    /// </summary>
+    /// <remarks>A resolver serves one run, so finding an instance of another type here means it was built for a
+    /// different search space or problem.</remarks>
+    private static TExecutionInstance RequireInstanceOf<TExecutionInstance>(IExecutionInstanceResolvable resolvable, IExecutionInstance instance)
+        where TExecutionInstance : class, IExecutionInstance
+    {
+        if (instance is not TExecutionInstance cached)
+        {
+            throw new InvalidOperationException(
+                $"This resolver already holds a {ExecutionSignature.Name(instance.GetType())} for {ExecutionSignature.Name(resolvable.GetType())}, which is not a {ExecutionSignature.Name(typeof(TExecutionInstance))}. " +
+                "A resolver serves one run, so resolve over a second search space or problem in its own resolver.");
+        }
+
+        return cached;
     }
 }
 
@@ -215,7 +276,7 @@ public sealed class ExecutionInstanceResolver
 public sealed class ExecutionInstanceResolverBuilder
 {
     private readonly ExecutionInstanceResolver? parent;
-    private readonly Dictionary<IExecutionInstanceResolvable<IExecutionInstance>, List<Decoration>> decorations = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IExecutionInstanceResolvable, List<Decoration>> decorations = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<IExecutionHook> installedHooks = new(ReferenceEqualityComparer.Instance);
     private DecorationOrigin origin = DecorationOrigin.Configuration;
     private int declared;
@@ -234,7 +295,7 @@ public sealed class ExecutionInstanceResolverBuilder
     /// decoration twice stacks it twice.
     /// </remarks>
     public ExecutionInstanceResolverBuilder Decorate<TResolvable>(TResolvable resolvable, Func<TResolvable, TResolvable> decorate)
-        where TResolvable : class, IExecutionInstanceResolvable<IExecutionInstance>
+        where TResolvable : class, IExecutionInstanceResolvable
     {
         if (!decorations.TryGetValue(resolvable, out var declaredHere))
         {
@@ -274,7 +335,7 @@ public sealed class ExecutionInstanceResolverBuilder
 
     internal ExecutionInstanceResolver Build()
     {
-        var frozen = ImmutableDictionary.CreateBuilder<IExecutionInstanceResolvable<IExecutionInstance>, ImmutableArray<Decoration>>(ReferenceEqualityComparer.Instance);
+        var frozen = ImmutableDictionary.CreateBuilder<IExecutionInstanceResolvable, ImmutableArray<Decoration>>(ReferenceEqualityComparer.Instance);
         foreach (var (resolvable, declaredHere) in decorations)
             frozen.Add(resolvable, [.. declaredHere]);
 
@@ -300,21 +361,21 @@ public enum DecorationOrigin
 internal abstract class Decoration
 {
     /// <summary>Gets the empty declaration set, shared by every resolver that declares nothing.</summary>
-    internal static ImmutableDictionary<IExecutionInstanceResolvable<IExecutionInstance>, ImmutableArray<Decoration>> None { get; } =
-        ImmutableDictionary.Create<IExecutionInstanceResolvable<IExecutionInstance>, ImmutableArray<Decoration>>(ReferenceEqualityComparer.Instance);
+    internal static ImmutableDictionary<IExecutionInstanceResolvable, ImmutableArray<Decoration>> None { get; } =
+        ImmutableDictionary.Create<IExecutionInstanceResolvable, ImmutableArray<Decoration>>(ReferenceEqualityComparer.Instance);
 
     public required DecorationOrigin Origin { get; init; }
 
     /// <summary>Gets the position among the decorations declared by one builder, counted across all resolvables.</summary>
     public required int Sequence { get; init; }
 
-    public abstract IExecutionInstanceResolvable<IExecutionInstance> Apply(IExecutionInstanceResolvable<IExecutionInstance> current);
+    public abstract IExecutionInstanceResolvable Apply(IExecutionInstanceResolvable current);
 }
 
 internal sealed class Decoration<TResolvable>(Func<TResolvable, TResolvable> decorate) : Decoration
-    where TResolvable : class, IExecutionInstanceResolvable<IExecutionInstance>
+    where TResolvable : class, IExecutionInstanceResolvable
 {
-    public override IExecutionInstanceResolvable<IExecutionInstance> Apply(IExecutionInstanceResolvable<IExecutionInstance> current)
+    public override IExecutionInstanceResolvable Apply(IExecutionInstanceResolvable current)
     {
         if (current is not TResolvable typed)
         {

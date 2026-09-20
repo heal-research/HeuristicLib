@@ -10,8 +10,7 @@ namespace HEAL.HeuristicLib.Tests.Scenarios.GenealogyAnalysis;
 public class GenealogyGraphTests
 {
     private static
-        ChooseOneMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace,
-            IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
+        ChooseOneMutator<SymbolicExpressionTree> CreateSymRegAllMutator()
     {
         var symRegAllMutator = ChooseOneMutator.Create(
             new ChangeNodeTypeManipulation(),
@@ -31,7 +30,7 @@ public class GenealogyGraphTests
         var problem = CreateTestSymbolicRegressionProblem();
 
         //ga.RandomSeed = AlgorithmRandomSeed;
-        var ga = new GeneticAlgorithm<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>
+        var ga = new GeneticAlgorithm<SymbolicExpressionTree>
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover(),
@@ -53,7 +52,7 @@ public class GenealogyGraphTests
         var ares = analysis.Snapshot();
 
         ares.Count.ShouldBe(6);
-        res.Population.EvaluatedCandidates.Count().ShouldBe(8);
+        res.Population.EvaluatedCandidates.Count.ShouldBe(8);
         res.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate))
            .ShouldBeTrue();
         res.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
@@ -67,7 +66,7 @@ public class GenealogyGraphTests
 
         const int gens = 6;
         const int popsize = 6;
-        var algorithm = new GeneticAlgorithm<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>
+        var algorithm = new GeneticAlgorithm<SymbolicExpressionTree>
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover(),
@@ -109,7 +108,7 @@ public class GenealogyGraphTests
     public void GenealogyGraphOnLocalSearch()
     {
         var problem = CreateTestSymbolicRegressionProblem();
-        var algorithm = new HillClimber<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>
+        var algorithm = new HillClimber<SymbolicExpressionTree>
         {
             Creator = new ProbabilisticTreeCreator(),
             Mutator = CreateSymRegAllMutator()
@@ -119,7 +118,7 @@ public class GenealogyGraphTests
                 IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>,
                 SingleSolutionState<SymbolicExpressionTree>>(
                 mutators: [algorithm.Mutator], algorithms: [algorithm]);
-        var run = algorithm.WithMaxIterations(8).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).AddAnalyzer(genealogy);
+        var run = algorithm.TerminatedAfterIterations(8).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).AddAnalyzer(genealogy);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         var gres = genealogy.Graph;
         res.Population.EvaluatedCandidates.ShouldHaveSingleItem();
@@ -138,7 +137,7 @@ public class GenealogyGraphTests
         const int populationSize = 6;
         const int maximumIterations = 4;
         const double mutationRate = 0.05;
-        var algorithm = new NSGA2<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>
+        var algorithm = new NSGA2<SymbolicExpressionTree>
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover(),

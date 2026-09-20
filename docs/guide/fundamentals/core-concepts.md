@@ -47,7 +47,7 @@ HeuristicLib separates the optimization problem from the search method. Reuse th
 
 A candidate is one proposed solution. Its type represents the shape of the answer, such as `RealVector`, `IntegerVector`, `BoolVector` or `Permutation`.
 
-The search space owns validity rules for that type. A `RealVectorSearchSpace` can specify length and bounds. Operators use that information when creating or modifying candidates.
+The search space owns validity rules for that type. A `BoundedRealVectorSearchSpace` can specify length and bounds. Operators use that information when creating or modifying candidates.
 
 Read [Search spaces](/guide/fundamentals/search-spaces) for the built-in choices.
 

@@ -11,10 +11,10 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 /// one this reads the version that scored that batch. An analysis observing the evaluator therefore records the
 /// environment its readings were made against, with no ordering to arrange.
 /// </remarks>
-public sealed class EpochClock<TCandidate, TSearchSpace>(DynamicProblem<TCandidate, TSearchSpace> problem) : Clock<int>
+public sealed class EpochClock<TCandidate, TSearchSpace>(IDynamicProblem<TCandidate, TSearchSpace> problem) : Clock<int>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public DynamicProblem<TCandidate, TSearchSpace> Problem { get; } = problem;
+    public IDynamicProblem<TCandidate, TSearchSpace> Problem { get; } = problem;
 
     protected override int ReadTime() => Problem.CurrentEpoch;
 }
@@ -26,7 +26,7 @@ public static class DynamicClocks
         /// <summary>
         /// Creates a clock reading a dynamic problem's environment version.
         /// </summary>
-        public static EpochClock<TCandidate, TSearchSpace> FromEpoch<TCandidate, TSearchSpace>(DynamicProblem<TCandidate, TSearchSpace> problem)
+        public static EpochClock<TCandidate, TSearchSpace> FromEpoch<TCandidate, TSearchSpace>(IDynamicProblem<TCandidate, TSearchSpace> problem)
             where TSearchSpace : class, ISearchSpace<TCandidate> =>
             new(problem);
     }

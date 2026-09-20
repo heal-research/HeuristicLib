@@ -27,12 +27,11 @@ public static class EpochWorkTrace
         /// Read it with <see cref="EpochWorkTrace.PerEpoch"/>. The two clocks are what carry the information: the
         /// evaluation count says how much work happened, and the environment version says what scored it.
         /// </remarks>
-        public static TraceAnalyzer<int> TraceEpochWork<TCandidate, TSearchSpace, TProblem>(
-            IEvaluator<TCandidate, TSearchSpace, TProblem> at,
+        public static TraceAnalyzer<int> TraceEpochWork<TCandidate, TSearchSpace>(
+            IEvaluator<TCandidate> at,
             Clock<long> evaluations,
             EpochClock<TCandidate, TSearchSpace> epoch)
-            where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : DynamicProblem<TCandidate, TSearchSpace> =>
+            where TSearchSpace : class, ISearchSpace<TCandidate> =>
             Analyzer.Trace(
                 at,
                 observation => new[] { observation.ObjectiveVectors.Count },
@@ -56,6 +55,9 @@ public static class EpochWorkTrace
     /// is reported like any other, but nothing has closed it, so its counts are only what happened so far.
     /// </para>
     /// </remarks>
+    /// <param name="trace">The trace created by <c>Analyzer.TraceEpochWork</c>.</param>
+    /// <param name="evaluations">The evaluation clock the trace was created with.</param>
+    /// <param name="epoch">The epoch clock the trace was created with.</param>
     /// <param name="evaluationsPerEpoch">
     /// The evaluations one epoch is paced by, from <see cref="EvaluationCountSchedule.EvaluationsPerEpoch"/>.
     /// </param>

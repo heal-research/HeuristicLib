@@ -70,16 +70,14 @@ public static class HyperVolumeTraces
         /// <remarks>
         /// The front is the reduction's private state, so the recorded entries are plain numbers.
         /// </remarks>
-        public static TraceAnalyzer<double> TraceHyperVolume<T, TS, TP>(
+        public static TraceAnalyzer<double> TraceHyperVolume<T>(
             ObjectiveVector referencePoint,
-            IEvaluator<T, TS, TP> evaluator,
+            IEvaluator<T> evaluator,
             IReadOnlyList<Clock>? clocks = null,
-            TraceRetention? retention = null)
-            where TS : class, ISearchSpace<T>
-            where TP : class, IProblem<T, TS> =>
+            TraceRetention? retention = null) =>
             Analyzer.Trace(
                 evaluator,
-                new EvaluatedCandidatesFromEvaluationMeasurement<T, TS, TP>(),
+                new EvaluatedCandidatesFromEvaluationMeasurement<T>(),
                 new HyperVolumeAggregation<T>(referencePoint),
                 clocks, retention);
     }

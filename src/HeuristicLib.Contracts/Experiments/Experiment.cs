@@ -1,15 +1,11 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Experiments;
 
-public abstract record Experiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>
-    : IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public abstract record Experiment<TCandidate, TAlgorithm, TSearchState, TKey>
+    : IExperiment<TCandidate, TAlgorithm, TSearchState, TKey>
+    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
-    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     public abstract ImmutableArray<ExperimentCase<TAlgorithm, TKey>> MaterializeCases();
 }

@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 namespace HEAL.HeuristicLib.Problems.MachineLearning.Legacy;
 
 public class RegressionProblemData(Dataset dataset, string targetVariable, IEnumerable<string>? allowedInputVariables = null, Range? trainingRange = null)
-  : DataAnalysisProblemData(dataset, allowedInputVariables ?? dataset.GetVariableNames().Except([targetVariable]), trainingRange)
+    : DataAnalysisProblemData(dataset, allowedInputVariables ?? dataset.GetVariableNames().Except([targetVariable]), trainingRange)
 {
     private readonly ConcurrentDictionary<PartitionType, double[]> cachedTargets = [];
 

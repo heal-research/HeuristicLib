@@ -17,8 +17,7 @@ internal delegate void UnaryAdjointKernel(ReadOnlySpan<double> upstream, Operand
 internal delegate void BinaryAdjointKernel(ReadOnlySpan<double> upstream, Operand left, Operand right, Operand result, Span<double> leftAdjoints, bool leftIsActive, Span<double> rightAdjoints, bool rightIsActive, ScratchSpans scratch);
 
 /// <remarks>
-/// Both shapes always exist, because a unary operation is required to declare both. The delegates are handles to the
-/// operation's static methods, which is what lets a table hold them.
+/// Both shapes always exist, because a unary operation is required to declare both.
 /// </remarks>
 internal readonly record struct UnaryOperationKernels(
     UnaryScalarKernel Scalar,

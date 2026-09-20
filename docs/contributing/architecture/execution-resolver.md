@@ -37,7 +37,7 @@ A resolver is obtained by declaring what it decorates. A meta-algorithm that nee
 var childResolver = resolver.CreateChildResolver(child =>
     child.Decorate(ObservedOperator, current => CountedOperatorFactory(current, counter)));
 
-return new(childResolver.Resolve(Algorithm), counter, MaximumCount);
+return new(childResolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
 ```
 
 `ExecutionInstanceResolver.Create(declare)` does the same for the root. Both take a callback, so the builder never outlives the declaration it belongs to and cannot be reached once resolving starts.
@@ -45,6 +45,23 @@ return new(childResolver.Resolve(Algorithm), counter, MaximumCount);
 **Why the split.** With one type carrying both operations, decorating something already resolved was accepted and then silently ignored — the instance cache answered first and never consulted decorations again. Reordering a decoration after a resolve disabled a budget with no exception and no failing test. Separate types, handed out only inside a declaration callback, make that impossible to write rather than an error to detect.
 
 `ExecutionInstanceResolver.Create()` and `CreateChildResolver()` take no callback, for the common case of a resolver that declares nothing.
+
+## What a resolver resolves
+
+Anything implementing `IExecutionInstanceResolvable` can be resolved. Decorations, the instance cache and `Decorate` all key on that non-generic interface, by reference.
+
+Role configurations such as `IMutator<TCandidate>` name only their candidate. Their execution instance type exists only once a run's search space and problem are known, so they cannot create an instance on their own. The primary entry point therefore takes the creation step as an argument:
+
+```csharp
+resolver.Resolve(mutator, static (target, childResolver) =>
+    target.CreateExecutionInstance<TSearchSpace, TProblem>(childResolver));
+```
+
+The role extensions wrap exactly that call, so an author writes `resolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(Mutator)`, or binds the types once with `resolver.For<TCandidate, TRunSearchSpace, TRunProblem>()` and resolves every slot through the returned `TypedExecutionResolver` without type arguments. A configuration whose instance type is fixed implements `IExecutionInstanceResolvable<TExecutionInstance>` and resolves through the convenience `Resolve(resolvable)`; `ResolveOptional` does the same for an optional slot.
+
+The creation step runs for the resolvable and then once for each decoration, innermost first, so every decoration must produce the same role type as the configuration it wraps.
+
+A resolver serves one run, and therefore one execution signature. An instance found in the cache that is not the requested type was built for a different search space or problem; resolution reports that instead of casting. Whether a configuration was written for the run's types is one question, answered by `IExecutionInstanceResolvable.Fits(ExecutionSignature)` from type arguments alone, so pre-flight validation can ask it before anything is built. The authoring bases apply the same rule when they bridge to the run's types, and an observation applies it when it is resolved; a configuration that does not fit fails with `ExecutionSignature.Mismatch`, which names the types it was written for and the run's.
 
 ## Decorations
 
@@ -83,7 +100,7 @@ Each decoration records its **origin**, which is a fact about who installed it r
 <line x1="406" y1="80" x2="424" y2="96" stroke="var(--vp-c-danger-1,#b8272c)" stroke-width="2"/>
 <line x1="424" y1="80" x2="406" y2="96" stroke="var(--vp-c-danger-1,#b8272c)" stroke-width="2"/>
 <text x="415" y="72" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--vp-c-danger-1,#b8272c)">stop</text>
-<text x="20" y="158" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11.5" letter-spacing="0.09em" fill="var(--vp-c-text-3,#8e8e93)">AT EACH REGISTRY, IN ORDER</text>
+<text x="20" y="158" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11.5" letter-spacing="0.09em" fill="var(--vp-c-text-3,#8e8e93)">AT EACH RESOLVER, IN ORDER</text>
 <rect x="20" y="176" width="580" height="48" rx="5" fill="none" stroke="var(--vp-c-divider,#c2c2c4)"/>
 <text x="38" y="206" font-size="13" fill="currentColor">1 · is r under construction here?</text>
 <text x="582" y="206" text-anchor="end" font-size="12" fill="var(--vp-c-text-3,#8e8e93)">return the partial</text>

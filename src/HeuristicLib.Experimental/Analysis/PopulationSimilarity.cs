@@ -94,34 +94,30 @@ public static class PopulationSimilarityTraces
         /// <summary>
         /// Traces the pairwise similarity of every population the algorithm yields, matrix included.
         /// </summary>
-        public static TraceAnalyzer<PopulationSimilarity> TracePopulationSimilarity<T, TS, TP, TR>(
+        public static TraceAnalyzer<PopulationSimilarity> TracePopulationSimilarity<T, TR>(
             ICandidateSimilarityCalculator<T> candidateSimilarity,
-            IAlgorithm<T, TS, TP, TR> algorithm,
+            IAlgorithm<T, TR> algorithm,
             IReadOnlyList<Clock>? clocks = null,
             TraceRetention? retention = null)
-            where TS : class, ISearchSpace<T>
-            where TP : class, IProblem<T, TS>
             where TR : PopulationState<T> =>
             Analyzer.Trace(
                 algorithm,
-                new EvaluatedCandidatesMeasurement<T, TS, TP, TR>(),
+                new EvaluatedCandidatesMeasurement<T, TR>(),
                 new PopulationSimilarityAggregation<T>(candidateSimilarity),
                 clocks, retention);
 
         /// <summary>
         /// Traces the smallest, mean and largest average pairwise similarity of every population the algorithm yields.
         /// </summary>
-        public static TraceAnalyzer<MinMeanMax> TraceAverageSimilarity<T, TS, TP, TR>(
+        public static TraceAnalyzer<MinMeanMax> TraceAverageSimilarity<T, TR>(
             ICandidateSimilarityCalculator<T> candidateSimilarity,
-            IAlgorithm<T, TS, TP, TR> algorithm,
+            IAlgorithm<T, TR> algorithm,
             IReadOnlyList<Clock>? clocks = null,
             TraceRetention? retention = null)
-            where TS : class, ISearchSpace<T>
-            where TP : class, IProblem<T, TS>
             where TR : PopulationState<T> =>
             Analyzer.Trace(
                 algorithm,
-                new EvaluatedCandidatesMeasurement<T, TS, TP, TR>(),
+                new EvaluatedCandidatesMeasurement<T, TR>(),
                 new AverageSimilarityAggregation<T>(candidateSimilarity),
                 clocks, retention);
     }

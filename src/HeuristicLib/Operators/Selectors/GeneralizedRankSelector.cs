@@ -14,8 +14,7 @@ public record GeneralizedRankSelector<TCandidate>(double Pressure) : StatelessSe
 
 public static class GeneralizedRankSelector
 {
-    public static GeneralizedRankSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, double pressure)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(pressure);
+    public static GeneralizedRankSelector<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, double pressure) => new(pressure);
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, double pressure)
     {

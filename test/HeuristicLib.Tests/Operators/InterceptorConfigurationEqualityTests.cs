@@ -11,7 +11,7 @@ public class InterceptorConfigurationEqualityTests
     {
         var child = new OffsetInterceptor(1);
 
-        child.CountInterceptorCalls(new ObservationCounter()).ChildInterceptor.ShouldBeSameAs(child);
+        child.CountCalls(new ObservationCounter()).ChildInterceptor.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -19,8 +19,8 @@ public class InterceptorConfigurationEqualityTests
     {
         var first = new OffsetInterceptor(1);
         var second = new OffsetInterceptor(2);
-        var children = new List<IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>> { first, second };
-        var left = new PipelineInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>(children);
+        var children = new List<IInterceptor<int>> { first, second };
+        var left = new PipelineInterceptor<int>(children);
 
         children.Clear();
         var equal = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2));
@@ -36,15 +36,24 @@ public class InterceptorConfigurationEqualityTests
     public void NestedComposition_WithEqualParts_IsEqual()
     {
         var counter = new ObservationCounter();
-        var left = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2)).CountInterceptorCalls(counter);
-        var equal = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2)).CountInterceptorCalls(counter);
-        var different = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(3)).CountInterceptorCalls(counter);
+        var left = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2)).CountCalls(counter);
+        var equal = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2)).CountCalls(counter);
+        var different = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(3)).CountCalls(counter);
 
         left.ShouldBe(equal);
         left.ShouldNotBe(different);
     }
 
+    [Fact]
+    public void WrappingConcerns_IncludeChildAndSettingsInEquality()
+    {
+        var counter = new ObservationCounter();
+        var duration = new ObservationDuration();
 
+        new OffsetInterceptor(1).CountCalls(counter).ShouldBe(new OffsetInterceptor(1).CountCalls(counter));
+        new OffsetInterceptor(1).MeasureDuration(duration, TimeProvider.System).ShouldBe(new OffsetInterceptor(1).MeasureDuration(duration, TimeProvider.System));
+        new OffsetInterceptor(1).CountCalls(counter).ShouldNotBe(new OffsetInterceptor(2).CountCalls(counter));
+    }
 
     private sealed record TestState(int Value) : SearchState;
 

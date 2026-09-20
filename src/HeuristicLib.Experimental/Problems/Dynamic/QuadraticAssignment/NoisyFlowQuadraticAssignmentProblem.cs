@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public sealed class NoisyFlowQuadraticAssignmentProblem
-    : DynamicProblem<Permutation, PermutationSearchSpace>
+    : DynamicProblem<NoisyFlowQuadraticAssignmentProblem, Permutation, PermutationSearchSpace>
 {
     private readonly QuadraticAssignmentProblemData baseProblemData;
 

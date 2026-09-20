@@ -7,14 +7,14 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public class EmptyMetaOptProblem : IProblem<CompositeGenotype<RealVector, IntegerVector>, CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>>
+public class EmptyMetaOptProblem : IProblem<CompositeGenotype<RealVector, IntegerVector>, CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>>
 {
-    public EmptyMetaOptProblem(CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace> searchSpace)
+    public EmptyMetaOptProblem(CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace> searchSpace)
     {
         SearchSpace = searchSpace;
     }
 
-    public CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace> SearchSpace { get; }
+    public CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace> SearchSpace { get; }
 
     public ObjectiveDirections Objective => throw new NotSupportedException("The empty meta optimization problem has no objective.");
 

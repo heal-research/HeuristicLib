@@ -22,8 +22,7 @@ public sealed record TargetTerminator<TCandidate>
 
 public static class TargetTerminator
 {
-    public static TargetTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, ObjectiveVector target)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(target);
+    public static TargetTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, ObjectiveVector target) => new(target);
 
     public static bool IsTerminalState<TCandidate>(PopulationState<TCandidate> state, IProblem<TCandidate, ISearchSpace<TCandidate>> problem, ObjectiveVector target)
     {

@@ -21,7 +21,7 @@ public class DesiredAnalysisSpecs
         var secondAlgorithm = CreateAlgorithm(problem);
         var combined = Analyzer.Trace(
             [firstAlgorithm, secondAlgorithm],
-            new ObjectiveVectorsMeasurement<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(),
+            new ObjectiveVectorsMeasurement<RealVector, PopulationState<RealVector>>(),
             Aggregate.BestSoFar());
 
         await firstAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(combined)
@@ -75,7 +75,7 @@ public class DesiredAnalysisSpecs
         var problem = new TestFunctionProblem(new RastriginFunction(4));
         var algorithm = CreateAlgorithm(problem);
         var quality = TrialAnalyzer.Create(
-            (GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> trial) =>
+            (GeneticAlgorithm<RealVector> trial) =>
                 trial.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
         var run = algorithm.Repeat(2).CreateRun(problem, RandomNumberGenerator.Create(42)).AddTrialAnalyzer(quality);
 
@@ -86,7 +86,7 @@ public class DesiredAnalysisSpecs
         results.ShouldAllBe(result => result.Analyzer.SampleCount == 4);
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(TestFunctionProblem problem) =>
+    private static GeneticAlgorithm<RealVector> CreateAlgorithm(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = 16,

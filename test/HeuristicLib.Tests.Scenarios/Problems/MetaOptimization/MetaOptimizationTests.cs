@@ -27,14 +27,14 @@ public class MetaOptimizationTests
         //build meta problem (test some mutators
         var b = new MetaOptimizationProblemExamples.MetaOptimizationSearchSpaceBuilder();
         var mutatorExtractor = b.AddChoiceParameter(
-            new Mutator<RealVector, RealVectorSearchSpace>[] {
+            new Mutator<RealVector, BoundedRealVectorSearchSpace>[] {
                 new GaussianMutator(0.5, 0.5),
                 new GaussianMutator(0.5, 1),
                 new PolynomialMutator(),
                 new PolynomialMutator { AtLeastOnce = true }
             });
         var metaSpace = b.Build();
-        var metaProblem = problem.AsMetaProblem(metaSpace, x =>
+        var metaProblem = problem.AsMetaProblem<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(metaSpace, x =>
         {
             var alg = ga with { Mutator = mutatorExtractor(x) };
             return alg with { MaximumGenerations = 1000 / alg.PopulationSize }; // now with fancy cross dependent parameters
@@ -52,14 +52,14 @@ public class MetaOptimizationTests
         hc = hc with
         {
             Evaluator = hc.Evaluator
-                          .AsRepeated(11, ObjectiveVectorAggregation.Median)
-                          .WithCache()
+                .AsRepeated(11, ObjectiveVectorAggregation.Median)
+                .Cached()
         };
 
         //run meta alg
         var finalState = hc
-          .WithMaxIterations(5)
-          .Complete(metaProblem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+            .TerminatedAfterIterations(5)
+            .Complete(metaProblem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         metaProblem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
         finalState.EvaluatedCandidate.ObjectiveVector.Count.ShouldBe(1);

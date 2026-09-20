@@ -89,25 +89,23 @@ internal sealed class Moment
 /// <remarks>
 /// A nested algorithm has its own iteration count, which is why the algorithm is named rather than inferred.
 /// </remarks>
-public sealed class IterationClock<TCandidate, TSearchSpace, TProblem, TSearchState>
+public sealed class IterationClock<TCandidate, TSearchState>
     : Clock<long>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
     private long latest;
     private readonly IExecutionHook observationHook;
 
-    public IterationClock(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+    public IterationClock(IAlgorithm<TCandidate, TSearchState> algorithm)
     {
-        observationHook = new AlgorithmObservationHook<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, Record);
+        observationHook = new AlgorithmObservationHook<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>(algorithm, Record);
     }
 
     protected override long ReadTime() => Interlocked.Read(ref latest);
 
     public override void Install(ExecutionInstanceResolverBuilder builder) => builder.Install(observationHook);
 
-    private void Record(AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>
+    private void Record(AlgorithmObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> observation) =>
         Interlocked.Exchange(ref latest, observation.Iteration);
 }
 
@@ -118,24 +116,22 @@ public sealed class IterationClock<TCandidate, TSearchSpace, TProblem, TSearchSt
 /// This is the axis that makes runs of different algorithms comparable. Several evaluator boundaries may count
 /// different work, which is why the evaluator is named rather than inferred.
 /// </remarks>
-public sealed class EvaluationClock<TCandidate, TSearchSpace, TProblem>
+public sealed class EvaluationClock<TCandidate>
     : Clock<long>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     private long evaluations;
     private readonly IExecutionHook observationHook;
 
-    public EvaluationClock(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
+    public EvaluationClock(IEvaluator<TCandidate> evaluator)
     {
-        observationHook = new EvaluatorObservationHook<TCandidate, TSearchSpace, TProblem>(evaluator, Record);
+        observationHook = new EvaluatorObservationHook<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(evaluator, Record);
     }
 
     protected override long ReadTime() => Interlocked.Read(ref evaluations);
 
     public override void Install(ExecutionInstanceResolverBuilder builder) => builder.Install(observationHook);
 
-    private void Record(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation) =>
+    private void Record(EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> observation) =>
         Interlocked.Add(ref evaluations, observation.ObjectiveVectors.Count);
 }
 
@@ -179,18 +175,14 @@ public static class Clocks
         /// <summary>
         /// Creates a clock counting the iterations of one chosen algorithm.
         /// </summary>
-        public static IterationClock<TCandidate, TSearchSpace, TProblem, TSearchState> FromIterations<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-            where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        public static IterationClock<TCandidate, TSearchState> FromIterations<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
             where TSearchState : class, ISearchState =>
             new(algorithm);
 
         /// <summary>
         /// Creates a clock counting the candidates one chosen evaluator has evaluated.
         /// </summary>
-        public static EvaluationClock<TCandidate, TSearchSpace, TProblem> FromEvaluations<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
-            where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        public static EvaluationClock<TCandidate> FromEvaluations<TCandidate>(IEvaluator<TCandidate> evaluator) =>
             new(evaluator);
 
         /// <summary>

@@ -123,13 +123,13 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     where TSearchState : class, ISearchState
 {
     private IAsyncEnumerator<TSearchState>? execution;
-    public IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; }
+    public IAlgorithm<TCandidate, TSearchState> Algorithm { get; }
 
     public TProblem Problem { get; }
 
     public IRandomNumberGenerator Random { get; }
 
-    public AlgorithmRun(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random)
+    public AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random)
     {
         Algorithm = algorithm;
         Problem = problem;
@@ -166,7 +166,7 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
 
             if (execution is null)
             {
-                var algorithmInstance = resolver.Resolve(Algorithm);
+                var algorithmInstance = resolver.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
                 var executionCancellation = cancellationTerminatesRun ? cancellationToken : CancellationToken.None;
                 execution = algorithmInstance.RunStreamingAsync(Problem, Random, initialState, executionCancellation)
                                              .GetAsyncEnumerator(executionCancellation);

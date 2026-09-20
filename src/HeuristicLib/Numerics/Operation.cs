@@ -6,18 +6,13 @@ namespace HEAL.HeuristicLib.Numerics;
 /// </summary>
 /// <remarks>
 /// <para>
-/// One identity is shared by every consumer — expression compilation and interpretation, automatic differentiation,
-/// and any later backend — so that an operation is named once rather than once per engine. Behavior is not stored
-/// here: the instruction stream is data, and what each operation computes belongs to its operation type.
+/// Behavior is not stored here: the instruction stream is data, and what each operation computes belongs to its
+/// operation type.
 /// </para>
 /// <para>
 /// Values are a compatibility contract. Genotypes are persistable and store symbols, and a separately compiled
 /// device kernel would switch on these numbers, so values are appended and never reordered or reused. A retired
 /// operation leaves its value permanently unused rather than freeing it.
-/// </para>
-/// <para>
-/// The width is <see langword="ushort"/> rather than <see langword="byte"/> because values are never reused, so the
-/// space only ever grows, and because it costs nothing: an instruction pads to the same size either way.
 /// </para>
 /// </remarks>
 public enum Operation : ushort

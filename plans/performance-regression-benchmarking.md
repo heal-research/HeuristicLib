@@ -37,7 +37,7 @@ BenchmarkDotNet addresses the mechanics of measurement. It builds optimized code
 
 ## Measurement architecture
 
-Add a console project at `benchmark/HeuristicLib.Benchmarks` and include it in `HEAL.HeuristicLib.sln`. The project targets the repository's primary .NET target and references the core library. It references the experimental library only for benchmark cases that require it.
+Add a console project at `benchmark/HeuristicLib.Benchmarks` and include it in `HEAL.HeuristicLib.slnx`. The project targets the repository's primary .NET target and references the core library. It references the experimental library only for benchmark cases that require it.
 
 The project references:
 

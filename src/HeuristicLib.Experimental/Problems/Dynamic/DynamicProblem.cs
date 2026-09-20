@@ -14,14 +14,16 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 /// <remarks>
 /// The environment advances in epochs counted in evaluations, and <see cref="UpdatePolicy"/> decides how much work
 /// finishes before a due update is applied. Batching a problem's own evaluation is what gives it those boundaries, which
-/// is why this does not inherit the batching of <see cref="SingleSolutionProblem{TCandidate, TSearchSpace}"/>. One
+/// is why this does not inherit the batching of <see cref="SingleSolutionProblem{TSelf, TCandidate, TSearchSpace}"/>. One
 /// evaluation is always scored by exactly one environment: an update waits behind the evaluations in flight, and the
 /// ones that follow wait behind it.
 /// </remarks>
-public abstract class DynamicProblem<TCandidate, TSearchSpace> :
-    Problem<TCandidate, TSearchSpace>,
+public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
+    Problem<TSelf, TCandidate, TSearchSpace>,
     IDynamicProblem<TCandidate, TSearchSpace>,
+    IUpdateRequestable,
     IDisposable
+    where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     private readonly ReaderWriterLockSlim rwLock = new();
@@ -126,10 +128,9 @@ public abstract class DynamicProblem<TCandidate, TSearchSpace> :
     /// Only <see cref="UpdatePolicy.AfterEachIteration"/> needs this, because an iteration belongs to an algorithm
     /// rather than to the problem. Every other policy needs nothing installed.
     /// </remarks>
-    public IExecutionHook CreateIterationUpdateHook<TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    public IExecutionHook CreateIterationUpdateHook<TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState =>
-        new IterationUpdateHook<TCandidate, TSearchSpace, TProblem, TSearchState>(this, algorithm);
+        new IterationUpdateHook<TSelf, TCandidate, TSearchSpace, TSearchState>(this, algorithm);
 
     internal void CompleteIteration()
     {
@@ -171,6 +172,8 @@ public abstract class DynamicProblem<TCandidate, TSearchSpace> :
             EpochSchedule.Restart();
         }
     }
+
+    void IUpdateRequestable.RequestUpdate() => RequestUpdate();
 
 
     /// <summary>
@@ -242,16 +245,27 @@ public abstract class DynamicProblem<TCandidate, TSearchSpace> :
 }
 
 /// <summary>
+/// Lets this assembly make an update due on a dynamic problem it knows only through <see cref="IDynamicProblem{TCandidate, TSearchSpace}"/>.
+/// </summary>
+/// <remarks>
+/// Internal for the reason <c>RequestUpdate</c> is: when the environment advances is the schedule's decision.
+/// </remarks>
+internal interface IUpdateRequestable
+{
+    void RequestUpdate();
+}
+
+/// <summary>
 /// Applies a dynamic problem's deferred updates at an algorithm's iteration boundary.
 /// </summary>
-internal sealed class IterationUpdateHook<TCandidate, TSearchSpace, TProblem, TSearchState>(
-    DynamicProblem<TCandidate, TSearchSpace> problem,
-    IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+internal sealed class IterationUpdateHook<TSelf, TCandidate, TSearchSpace, TSearchState>(
+    DynamicProblem<TSelf, TCandidate, TSearchSpace> problem,
+    IAlgorithm<TCandidate, TSearchState> algorithm)
     : IExecutionHook
+    where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
     public void Install(ExecutionInstanceResolverBuilder builder) =>
-        builder.Observe(algorithm, _ => problem.CompleteIteration());
+        builder.Observe<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>(algorithm, _ => problem.CompleteIteration());
 }

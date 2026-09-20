@@ -17,7 +17,7 @@ public class PythonInterOptEquationScoring(
     ObjectiveDirections objective,
     ExpressionTreeSearchSpace searchSpace,
     Func<ExpressionTree, ObjectiveVector, double[]> score)
-    : SingleSolutionProblem<ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
+    : SingleSolutionProblem<PythonInterOptEquationScoring, ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
 {
     private sealed record InnerProblemParameterFittingRefiner(NumericParameterFittingRefiner ChildRefiner)
         : SingleCandidateRefiner<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>
@@ -67,7 +67,7 @@ public class PythonInterOptEquationScoring(
             Metrics.PearsonR2.ToFinite(),
             searchSpace,
             useLinearScaling);
-        var directions = new ObjectiveDirection[]
+        var directions = new[]
         {
             ObjectiveDirection.Maximize, // combined score, overridden by score
             ObjectiveDirection.Maximize, // Pearson R2
@@ -88,11 +88,11 @@ public class PythonInterOptEquationScoring(
 
     public static Population<ExpressionTree> RunDefault(PythonInterOptEquationScoring problem, int seed = 42)
     {
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>
+        var algorithm = new GeneticAlgorithm<ExpressionTree>
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover { InternalNodeProbability = 0.9 },
-            Mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>(
+            Mutator = new ChooseOneMutator<ExpressionTree>(
                 [.. SymbolicExpressionMutators.Default]),
             MutationRate = 0.1,
             Selector = new TournamentSelector<ExpressionTree>(4),

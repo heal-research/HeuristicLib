@@ -12,8 +12,8 @@ public sealed class Number : Symbol
         MaxValue = 20.0;
     }
 
-    public override SymbolicExpressionTreeNode CreateTreeNode()
-      => new NumberTreeNode(this);
+    public override SymbolicExpressionTreeNode CreateTreeNode() =>
+        new NumberTreeNode(this);
 
     public NumberTreeNode CreateTreeNode(double number) => new(this) { Value = number };
 

@@ -17,9 +17,9 @@ public sealed class ParetoFrontAnalyzer<T, TS, TP> : IAnalyzer
     where TS : class, ISearchSpace<T>
     where TP : class, IProblem<T, TS>
 {
-    private readonly ImmutableArray<IEvaluator<T, TS, TP>> evaluators;
+    private readonly ImmutableArray<IEvaluator<T>> evaluators;
 
-    public ParetoFrontAnalyzer(ObjectiveDirections problemObjective, ObjectiveVector referencePoint, params IReadOnlyList<IEvaluator<T, TS, TP>> evaluators)
+    public ParetoFrontAnalyzer(ObjectiveDirections problemObjective, ObjectiveVector referencePoint, params IReadOnlyList<IEvaluator<T>> evaluators)
     {
         if (evaluators.Count == 0)
             throw new ArgumentException("An analyzer needs at least one observation source.", nameof(evaluators));
@@ -33,7 +33,7 @@ public sealed class ParetoFrontAnalyzer<T, TS, TP> : IAnalyzer
     public void Install(ExecutionInstanceResolverBuilder builder)
     {
         foreach (var evaluator in evaluators)
-            builder.Observe(evaluator, Record);
+            builder.Observe<T, TS, TP>(evaluator, Record);
     }
 
     private void Record(EvaluatorObservation<T, TS, TP> observation) =>

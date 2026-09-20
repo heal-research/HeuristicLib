@@ -11,12 +11,21 @@ Algorithms and operators remain unaware of analysis. The analysis layer turns a 
 ```csharp
 public void Install(ExecutionInstanceResolverBuilder builder)
 {
-    builder.Observe(firstEvaluator, RecordFirst);
-    builder.Observe(secondEvaluator, RecordSecond);
+    var typed = builder.For<TCandidate, TSearchSpace, TProblem>();
+    typed.Observe(firstEvaluator, RecordFirst);
+    typed.Observe(secondEvaluator, RecordSecond);
 }
 ```
 
 The selected algorithm or operator is the boundary identity; no separate anchor object is needed. Built-in overloads cover algorithms, evaluators, crossovers, mutators and interceptors. Each receives a typed observation value after the underlying operation completes. Different sources may use different callbacks, and several sources may feed one analyzer.
+
+A configuration such as `IEvaluator<TCandidate>` names only its candidate, while the observation hands the callback the search space and problem the operation ran with. Those types are named in one of three spellings of the same mechanism:
+
+- `builder.For<TCandidate, TSearchSpace, TProblem>()` names them once for an analyzer, as above, and its `Observe` accepts method groups typed at them. `For<TCandidate, TSearchSpace, TProblem, TSearchState>()` also names the search state, which interceptor observations need.
+- `builder.Observe<TCandidate, TSearchSpace, TProblem>(source, callback)` names them at one call.
+- `builder.Observe(source, observation => …)` names nothing. An implicitly typed lambda binds to the overload typed at `ISearchSpace<TCandidate>` and `IProblem<TCandidate, ISearchSpace<TCandidate>>`, and at `ISearchState` for an interceptor, which suits callbacks that read only candidates, objective vectors or states.
+
+Named types are checked against the run when the observation is resolved, applying the same rule as the operator authoring bases, so a run over other types fails with `ExecutionSignature.Mismatch` instead of casting. The interface-typed overload fits every run over the candidate.
 
 Each `Observe` call creates a private runtime hook. These hook and wrapper classes may retain delegates because they are runtime identity objects rather than records or serializable configuration. Installing the same exact hook object twice in one resolver has no additional effect. Distinct hooks compose in declaration order.
 

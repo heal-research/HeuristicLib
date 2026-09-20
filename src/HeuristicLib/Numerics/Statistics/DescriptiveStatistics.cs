@@ -37,7 +37,7 @@ public static class DescriptiveStatistics
         if (values.IsEmpty)
             return default;
 
-        var mean = DescriptiveStatistics.Mean(values);
+        var mean = Mean(values);
         var meanVector = new Vector<double>(mean);
         var secondCentralMomentSumVector = Vector<double>.Zero;
         var index = 0;
@@ -63,7 +63,7 @@ public static class DescriptiveStatistics
         if (values.IsEmpty)
             return default;
 
-        var mean = DescriptiveStatistics.Mean(values);
+        var mean = Mean(values);
         var meanVector = new Vector<double>(mean);
         var secondCentralMomentSumVector = Vector<double>.Zero;
         var thirdCentralMomentSumVector = Vector<double>.Zero;
@@ -102,8 +102,8 @@ public static class DescriptiveStatistics
         if (xValues.IsEmpty)
             return default;
 
-        var meanX = DescriptiveStatistics.Mean(xValues);
-        var meanY = DescriptiveStatistics.Mean(yValues);
+        var meanX = Mean(xValues);
+        var meanY = Mean(yValues);
         var meanXVector = new Vector<double>(meanX);
         var meanYVector = new Vector<double>(meanY);
         var secondCentralMomentSumXVector = Vector<double>.Zero;

@@ -35,7 +35,6 @@ var algorithm = GeneticAlgorithm.Create(
     new UniformDistributedCreator(),
     new AlphaBetaBlendCrossover { Alpha = 0.7 },
     new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
-    selector: TournamentSelector.For(problem, tournamentSize: 2),
     populationSize: 200,
     maximumGenerations: 500,
     mutationRate: 0.2);
@@ -71,7 +70,7 @@ Seed `123` reproduces exactly these numbers. A heuristic search does not guarant
 | Part                    | Role in this example                              |
 | ----------------------- | ------------------------------------------------- |
 | `TestFunctionProblem`   | Evaluates each vector with the Rastrigin function |
-| `RealVectorSearchSpace` | Defines the dimension and valid numeric bounds    |
+| `BoundedRealVectorSearchSpace` | Defines the dimension and valid numeric bounds    |
 | `GeneticAlgorithm`      | Controls the population and generation loop       |
 | Creator                 | Produces the initial candidate vectors            |
 | Crossover and mutator   | Produce variation from selected candidates        |
@@ -131,7 +130,7 @@ using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 
-var space = new RealVectorSearchSpace(
+var space = new BoundedRealVectorSearchSpace(
     length: 2,
     minimum: [-5.0],
     maximum: [5.0]);

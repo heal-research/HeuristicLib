@@ -16,7 +16,7 @@ public class RefinerBatchSemanticsTests
 
         foreach (var (name, topology) in PassThroughTopologies())
         {
-            var refined = topology.CreateExecutionInstance().Refine(population, RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
+            var refined = topology.CreateExecutionInstance<DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ExecutionInstanceResolver.Create()).Refine(population, RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
 
             refined.Count.ShouldBe(population.Length, name);
             for (var index = 0; index < population.Length; index++)
@@ -30,8 +30,8 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void PipelineRefiner_PassesAResizedPopulationToTheNextStage()
     {
-        var instance = PipelineRefiner.Create<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(new DropLastRefiner(), new AddOffsetRefiner(1))
-            .CreateExecutionInstance();
+        var instance = PipelineRefiner.Create(new DropLastRefiner(), new AddOffsetRefiner(1))
+            .CreateExecutionInstance<DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ExecutionInstanceResolver.Create());
 
         Refine(instance, 1, 2, 3).Select(individual => individual.Value).ShouldBe([2, 3]);
     }
@@ -39,7 +39,7 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void IteratedRefiner_ResizesThePopulationOncePerIteration()
     {
-        var instance = new DropLastRefiner().AsIterated(2).CreateExecutionInstance();
+        var instance = new DropLastRefiner().AsIterated(2).CreateExecutionInstance<DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ExecutionInstanceResolver.Create());
 
         Refine(instance, 1, 2, 3, 4).Select(individual => individual.Value).ShouldBe([1, 2]);
     }
@@ -49,8 +49,8 @@ public class RefinerBatchSemanticsTests
     {
         var counter = new ObservationCounter();
         var instance = new DropLastRefiner()
-            .CountRefinedCandidates(counter)
-            .CreateExecutionInstance();
+            .CountCandidates(counter)
+            .CreateExecutionInstance<DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ExecutionInstanceResolver.Create());
 
         Refine(instance, 1, 2, 3);
 
@@ -62,25 +62,25 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void ChooseOneRefiner_RequiresOneResultPerCandidateAssignedToAChild()
     {
-        var instance = ChooseOneRefiner.Create<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(new DropLastRefiner())
-            .CreateExecutionInstance();
+        var instance = ChooseOneRefiner.Create(new DropLastRefiner())
+            .CreateExecutionInstance<DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ExecutionInstanceResolver.Create());
 
         Should.Throw<InvalidOperationException>(() => Refine(instance, 1, 2, 3));
     }
 
-    private static IEnumerable<(string Name, IRefiner<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>> Topology)> PassThroughTopologies()
+    private static IEnumerable<(string Name, IRefiner<Individual> Topology)> PassThroughTopologies()
     {
         var noChange = NoChangeRefiner<Individual>.Instance;
 
         yield return ("no change", noChange);
-        yield return ("pipeline", PipelineRefiner.Create<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(noChange, noChange));
-        yield return ("empty pipeline", PipelineRefiner.Create<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>());
+        yield return ("pipeline", PipelineRefiner.Create(noChange, noChange));
+        yield return ("empty pipeline", PipelineRefiner.Create<Individual>());
         yield return ("iterated", noChange.AsIterated(3));
-        yield return ("choose one", ChooseOneRefiner.Create<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(noChange));
-        yield return ("rate limited", new AddOffsetRefiner(1).WithRate(0.0));
-        yield return ("counting", noChange.CountRefinedCandidates(new ObservationCounter()));
-        yield return ("duration measuring", noChange.MeasureRefinerDuration(new ObservationDuration()));
-        yield return ("improvement checking", noChange.WithImprovementCheck());
+        yield return ("choose one", ChooseOneRefiner.Create(noChange));
+        yield return ("rate limited", new AddOffsetRefiner(1).AppliedAtRate(0.0));
+        yield return ("counting", noChange.CountCandidates(new ObservationCounter()));
+        yield return ("duration measuring", noChange.MeasureDuration(new ObservationDuration()));
+        yield return ("improvement checking", noChange.CheckedForImprovement());
         yield return ("single candidate", new IdentityRefiner());
     }
 
@@ -88,7 +88,7 @@ public class RefinerBatchSemanticsTests
         instance.Refine([.. values.Select(value => new Individual(value))], RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
 
     private static readonly FuncProblem<Individual, DummySearchSpace<Individual>> Problem =
-        FuncProblem.Create(static (Individual individual) => (double)individual.Value, DummySearchSpace<Individual>.Instance, SingleObjective.Minimize);
+        FuncProblem.Create(static (Individual individual) => individual.Value, DummySearchSpace<Individual>.Instance, SingleObjective.Minimize);
 
     private sealed record Individual(int Value);
 

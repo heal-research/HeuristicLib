@@ -15,8 +15,7 @@ public record SelectFirstParentCrossover<TCandidate>
 
 public static class SelectFirstParentCrossover
 {
-    public static SelectFirstParentCrossover<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => SelectFirstParentCrossover<TCandidate>.Instance;
+    public static SelectFirstParentCrossover<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => SelectFirstParentCrossover<TCandidate>.Instance;
 
     public static TCandidate Cross<TCandidate>(Parents<TCandidate> parents, IRandomNumberGenerator random) => parents.Parent1;
 }

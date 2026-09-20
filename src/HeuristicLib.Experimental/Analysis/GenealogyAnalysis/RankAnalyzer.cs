@@ -29,17 +29,22 @@ public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchStat
     where TSearchState : PopulationState<TCandidate>
     where TCandidate : notnull
 {
-    private readonly ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers;
-    private readonly ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> mutators;
-    private readonly ImmutableArray<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithms;
+    private readonly ImmutableArray<ICrossover<TCandidate>> crossovers;
+    private readonly ImmutableArray<IMutator<TCandidate>> mutators;
+    private readonly ImmutableArray<IAlgorithm<TCandidate, TSearchState>> algorithms;
 
+    /// <param name="crossovers">Crossovers whose offspring become graph edges from two parents.</param>
+    /// <param name="mutators">Mutators whose offspring become graph edges from one parent.</param>
     /// <param name="algorithms">
     /// Algorithms whose yielded populations close a generation, which is also where ranks are read. Without one the
     /// graph is still built, but no ranks are recorded.
     /// </param>
-    public RankAnalyzer(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>>? crossovers = null,
-                        IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>>? mutators = null,
-                        IReadOnlyList<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>>? algorithms = null,
+    /// <param name="equality">
+    /// Decides which candidates are the same graph node. Defaults to <see cref="EqualityComparer{T}.Default"/>.
+    /// </param>
+    public RankAnalyzer(IReadOnlyList<ICrossover<TCandidate>>? crossovers = null,
+                        IReadOnlyList<IMutator<TCandidate>>? mutators = null,
+                        IReadOnlyList<IAlgorithm<TCandidate, TSearchState>>? algorithms = null,
                         IEqualityComparer<TCandidate>? equality = null)
     {
         if ((crossovers?.Count ?? 0) + (mutators?.Count ?? 0) + (algorithms?.Count ?? 0) == 0)
@@ -109,20 +114,18 @@ public static class RankAnalysisTraces
         /// <summary>
         /// Creates a rank analyzer over the given observation sources.
         /// </summary>
-        public static RankAnalyzer<T, TS, TP, TR> Rank<T, TS, TP, TR>(
-            ICrossover<T, TS, TP>? crossover = null,
-            IMutator<T, TS, TP>? mutator = null,
-            IAlgorithm<T, TS, TP, TR>? algorithm = null,
+        public static RankAnalyzer<T, ISearchSpace<T>, IProblem<T, ISearchSpace<T>>, TR> Rank<T, TR>(
+            ICrossover<T>? crossover = null,
+            IMutator<T>? mutator = null,
+            IAlgorithm<T, TR>? algorithm = null,
             IEqualityComparer<T>? equality = null,
             IComparer<ObjectiveVector>? objectiveComparer = null)
             where T : notnull
-            where TS : class, ISearchSpace<T>
-            where TP : class, IProblem<T, TS>
             where TR : PopulationState<T> =>
             new(
-                crossover is null ? null : (IReadOnlyList<ICrossover<T, TS, TP>>)[crossover],
-                mutator is null ? null : (IReadOnlyList<IMutator<T, TS, TP>>)[mutator],
-                algorithm is null ? null : (IReadOnlyList<IAlgorithm<T, TS, TP, TR>>)[algorithm],
+                crossover is null ? null : (IReadOnlyList<ICrossover<T>>)[crossover],
+                mutator is null ? null : (IReadOnlyList<IMutator<T>>)[mutator],
+                algorithm is null ? null : (IReadOnlyList<IAlgorithm<T, TR>>)[algorithm],
                 equality)
             { ObjectiveComparer = objectiveComparer };
     }

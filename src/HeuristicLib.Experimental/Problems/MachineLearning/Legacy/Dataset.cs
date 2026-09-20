@@ -18,7 +18,7 @@ public abstract class Dataset
     /// <param name="variableNames">The names of the variables in the dataset</param>
     /// <param name="variableValues">The values for the variables (column-oriented storage). Values are not cloned!</param>
     protected Dataset(IEnumerable<string> variableNames, IEnumerable<IList> variableValues)
-      : this(variableNames, variableValues, true)
+        : this(variableNames, variableValues, true)
     {
     }
 

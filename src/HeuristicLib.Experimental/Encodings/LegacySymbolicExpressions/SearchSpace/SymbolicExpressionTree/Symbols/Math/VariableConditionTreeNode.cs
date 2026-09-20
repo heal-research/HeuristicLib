@@ -7,7 +7,7 @@ public sealed class VariableConditionTreeNode : SymbolicExpressionTreeNode
 {
 
     private VariableConditionTreeNode(VariableConditionTreeNode original)
-      : base(original)
+        : base(original)
     {
         Threshold = original.Threshold;
         VariableName = original.VariableName;

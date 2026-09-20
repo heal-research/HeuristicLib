@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -29,7 +30,7 @@ public class AnalysisUsabilityTests
         var secondEvaluator = new ManualEvaluator();
         var trace = Analyzer.Trace(
             [firstEvaluator, secondEvaluator],
-            new ObjectiveVectorsFromEvaluationMeasurement<int, DummySearchSpace<int>, TestProblem>(),
+            new ObjectiveVectorsFromEvaluationMeasurement<int>(),
             new CountAggregation());
         var resolver = Install(trace);
 
@@ -103,7 +104,7 @@ public class AnalysisUsabilityTests
         });
 
     private static void Evaluate(ExecutionInstanceResolver resolver, ManualEvaluator evaluator, params int[] candidates) =>
-        resolver.Resolve(evaluator).Evaluate(candidates, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, TestProblem.Instance);
+        resolver.Resolve<int, DummySearchSpace<int>, TestProblem>(evaluator).Evaluate(candidates, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, TestProblem.Instance);
 
     private sealed class SeparateEvaluatorAnalyzer(ManualEvaluator first, ManualEvaluator second) : IAnalyzer
     {
@@ -117,9 +118,9 @@ public class AnalysisUsabilityTests
         }
     }
 
-    private sealed class ManualEvaluator : IEvaluator<int, DummySearchSpace<int>, TestProblem>
+    private sealed record ManualEvaluator : Evaluator<int, DummySearchSpace<int>, TestProblem>
     {
-        public IEvaluatorInstance<int, DummySearchSpace<int>, TestProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new Instance();
+        public override IEvaluatorInstance<int, DummySearchSpace<int>, TestProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new Instance();
 
         private sealed class Instance : IEvaluatorInstance<int, DummySearchSpace<int>, TestProblem>
         {

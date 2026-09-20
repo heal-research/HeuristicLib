@@ -8,15 +8,15 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>
-    : Algorithm<OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator>, TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record OperatorBudgetAlgorithm<TCandidate, TSearchState, TOperator>
+    : Algorithm<OperatorBudgetAlgorithm<TCandidate, TSearchState, TOperator>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
-    where TOperator : class, IOperator, IExecutionInstanceResolvable<IExecutionInstance>
+    where TOperator : class, IOperator
 {
-    public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
+    public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
     public required TOperator ObservedOperator { get; init; }
+
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
 
     /// <summary>
     /// Gets the factory that wraps the observed operator in a counting operator.
@@ -34,13 +34,13 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearc
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public int MaximumCount { get; init; }
 
-    public override OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver)
+    public override OperatorBudgetAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
     {
         var counter = new ObservationCounter();
         var childResolver = resolver.CreateChildResolver(child =>
             child.Decorate(ObservedOperator, current => CountedOperatorFactory(current, counter)));
 
-        return new(childResolver.Resolve(Algorithm), counter, MaximumCount);
+        return new(childResolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
     }
 }
 

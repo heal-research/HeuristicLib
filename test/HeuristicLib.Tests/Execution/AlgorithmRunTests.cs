@@ -1,5 +1,5 @@
-using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
