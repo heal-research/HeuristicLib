@@ -70,18 +70,19 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
 
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; init; }
 
-    public void Install(ExecutionInstanceResolverBuilder builder)
+    public void Install(ResolutionScopeBuilder builder)
     {
-        var typed = builder.For<TCandidate, TSearchSpace, TProblem>();
-
         foreach (var crossover in crossovers)
-            typed.Observe(crossover, observation => AfterCross(observation.Offspring, observation.Parents));
+            builder.Observe<TCandidate, TSearchSpace, TProblem>(
+                crossover, observation => AfterCross(observation.Offspring, observation.Parents));
 
         foreach (var mutator in mutators)
-            typed.Observe(mutator, observation => AfterMutate(observation.Offspring, observation.Parents));
+            builder.Observe<TCandidate, TSearchSpace, TProblem>(
+                mutator, observation => AfterMutate(observation.Offspring, observation.Parents));
 
         foreach (var algorithm in algorithms)
-            typed.Observe(algorithm, observation => CloseGeneration(observation.State, observation.Problem));
+            builder.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(
+                algorithm, observation => CloseGeneration(observation.State, observation.Problem));
     }
 
     private void AfterCross(IReadOnlyList<TCandidate> offspring, IReadOnlyList<Parents<TCandidate>> parents)

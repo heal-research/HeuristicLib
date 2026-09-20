@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Analysis;
 
 public sealed record BestSoFarAggregation : IAggregation<ObjectiveVector, ObjectiveVector>
 {
-    public IAggregationInstance<ObjectiveVector, ObjectiveVector> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new ExecutionInstance();
+    public IAggregationInstance<ObjectiveVector, ObjectiveVector> CreateExecutionInstance(ResolutionScope scope) => new ExecutionInstance();
 
     private sealed class ExecutionInstance : IAggregationInstance<ObjectiveVector, ObjectiveVector>
     {
@@ -24,7 +24,7 @@ public sealed record BestSoFarAggregation : IAggregation<ObjectiveVector, Object
 
 public sealed record BestCandidateSoFarAggregation<TCandidate> : IAggregation<EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>>
 {
-    public IAggregationInstance<EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new ExecutionInstance();
+    public IAggregationInstance<EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>> CreateExecutionInstance(ResolutionScope scope) => new ExecutionInstance();
 
     private sealed class ExecutionInstance : IAggregationInstance<EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>>
     {

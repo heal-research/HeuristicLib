@@ -1,8 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Analysis;
 
@@ -45,7 +43,7 @@ public sealed record HyperVolumeAggregation<TCandidate> : IAggregation<Evaluated
         ReferencePoint = referencePoint;
     }
 
-    public IAggregationInstance<EvaluatedCandidate<TCandidate>, double> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new ExecutionInstance(ReferencePoint);
+    public IAggregationInstance<EvaluatedCandidate<TCandidate>, double> CreateExecutionInstance(ResolutionScope scope) => new ExecutionInstance(ReferencePoint);
 
     private sealed class ExecutionInstance(ObjectiveVector referencePoint) : IAggregationInstance<EvaluatedCandidate<TCandidate>, double>
     {

@@ -10,14 +10,14 @@ A meta-algorithm coordinates child algorithms rather than operators. It is still
 
 A meta-algorithm splits into a configuration record and an execution instance, exactly as an ordinary algorithm does. Child algorithms are configuration objects held by the record. Their execution instances belong to the meta-algorithm's instance.
 
-## Resolve child algorithms through the resolver
+## Resolve child algorithms through the scope
 
 ::: warning Never call CreateExecutionInstance on a child algorithm
-Always obtain a child algorithm's execution instance with `resolver.Resolve(childAlgorithm)`. Calling `childAlgorithm.CreateExecutionInstance(resolver)` yourself compiles, runs, and produces correct search states — and silently breaks observation.
+Always obtain a child algorithm's execution instance with `scope.Resolve(childAlgorithm)`. Calling `childAlgorithm.CreateExecutionInstance(scope)` yourself compiles, runs, and produces correct search states — and silently breaks observation.
 
-`ExecutionInstanceResolver.Resolve` is what applies the decorations an [analyzer](/guide/execution/observability-and-analysis) installed for the run. Bypassing it means an analyzer observing that child algorithm, or an operator inside it, records nothing at all. There is no error and no warning; the result list is simply empty.
+`ResolutionScope.Resolve` is what applies the decorations an [analyzer](/guide/execution/observability-and-analysis) installed for the run. Bypassing it means an analyzer observing that child algorithm, or an operator inside it, records nothing at all. There is no error and no warning; the result list is simply empty.
 
-The `HLib0001` analyzer does **not** catch this. It only inspects calls made inside a `CreateExecutionInstance` method, and a meta-algorithm that stores the resolver and resolves its children lazily during the run is outside that window.
+The `HLib0001` analyzer does **not** catch this. It only inspects calls made inside a `CreateExecutionInstance` method, and a meta-algorithm that stores the scope and resolves its children lazily during the run is outside that window.
 :::
 
 The same rule applies to operators. Resolve every child once, while creating the instance, and pass the resolved instances to it.
@@ -43,9 +43,9 @@ public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
     public required IAlgorithm<TCandidate, TSearchState> Second { get; init; }
 
     public override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>
-        CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+        CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
-        var typed = resolver.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
+        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
 
         return new Instance<TRunSearchSpace, TRunProblem>(typed.Resolve(First), typed.Resolve(Second));
     }
@@ -82,10 +82,10 @@ public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
 
 Three details carry the design:
 
-- **Both children are resolved in `CreateExecutionInstance`**, not during the run. That is where the resolver is available and where decorations are applied.
+- **Both children are resolved in `CreateExecutionInstance`**, not during the run. That is where the scope is available and where decorations are applied.
 - **The last state of the first stage becomes the initial state of the second.** Nothing converts between them, because both stages are declared over the same `TSearchState`.
 - **Each stage gets its own random stream** through `random.Fork(index)`. Forking by a stable index keeps the stages independent and the run reproducible.
-- **The stages are named by candidate and state only.** `IAlgorithm<TCandidate, TSearchState>` accepts any algorithm over that candidate producing that state, whatever search space or problem it was written for. The run supplies those, which arrive as the method type arguments `TRunSearchSpace` and `TRunProblem` on `CreateExecutionInstance` and are threaded into the nested instance class. Binding the types once with `resolver.For<...>()` is what keeps the two `Resolve` calls free of type arguments.
+- **The stages are named by candidate and state only.** `IAlgorithm<TCandidate, TSearchState>` accepts any algorithm over that candidate producing that state, whatever search space or problem it was written for. The run supplies those, which arrive as the method type arguments `TRunSearchSpace` and `TRunProblem` on `CreateExecutionInstance` and are threaded into the nested instance class. Binding the types once with `scope.For<...>()` is what keeps the two `Resolve` calls free of type arguments.
 
 Use it by naming the two stages:
 
@@ -108,7 +108,7 @@ var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
 
 Two type arguments, not four. The search space and the problem are supplied by `CreateRun`, so the same `staged` value composes stages written for any real vector problem.
 
-Because the children are resolved through the resolver, either stage can also be observed on its own:
+Because the children are resolved through the scope, either stage can also be observed on its own:
 
 ```csharp
 var exploreQuality = explore.TracePopulationQuality();
@@ -121,18 +121,18 @@ var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
 
 `exploreQuality` then holds only the first stage's generations, and `wholeRun` holds every state the meta-algorithm yielded. Note that `explore` and `exploit` must be distinct objects for this to work, since observation sources are matched by reference.
 
-## Child resolvers
+## Child scopes
 
-Resolve a child once per instance when the child should keep its state for the whole run. When a child needs a fresh execution instance per pass — as `CycleAlgorithm` does for each cycle — create a child resolver and resolve against that:
+Resolve a child once per instance when the child should keep its state for the whole run. When a child needs a fresh execution instance per pass — as `CycleAlgorithm` does for each cycle — create a child scope and resolve against that:
 
 ```csharp
-var childResolver = resolver.CreateChildResolver();
-var instance = childResolver.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm);
+var childScope = scope.CreateChildScope();
+var instance = childScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm);
 ```
 
-The resolver itself has no type arguments, so it cannot infer the four the resolution needs and the call names them. Where several children are resolved against the same child resolver, bind it once with `childResolver.For<TCandidate, TSearchSpace, TProblem, TSearchState>()` and the individual `Resolve` calls need no type arguments at all. Both spellings reach the same resolution; the typed resolver only saves the repetition.
+The scope itself has no type arguments, so it cannot infer the four the resolution needs and the call names them. Where several children are resolved against the same child scope, bind it once with `childScope.For<TCandidate, TSearchSpace, TProblem, TSearchState>()` and the individual `Resolve` calls need no type arguments at all. Both spellings reach the same resolution; the typed scope only saves the repetition.
 
-A child resolver applies its parent's decorations, so observation still works. Calling `CreateExecutionInstance` with the child resolver does not, for the reason in the warning above.
+A child scope applies its parent's decorations, so observation still works. Calling `CreateExecutionInstance` with the child scope does not, for the reason in the warning above.
 
 ## Preserve run behavior
 

@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
-using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
@@ -32,7 +31,7 @@ public class TraceCompositionTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 1);
         var trace = algorithm.TracePopulationQuality();
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(trace).AddExecutionHook(new FailingHook());
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(trace).AddExecutionModule(new FailingModule());
         Should.Throw<InvalidOperationException>(() => run.Stream());
         run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
         trace.Snapshot().ShouldBeEmpty();
@@ -88,14 +87,14 @@ public class TraceCompositionTests
         trace.SampleCount.ShouldBe(3);
     }
 
-    private sealed class FailingHook : IExecutionHook
+    private sealed class FailingModule : IExecutionModule
     {
-        public void Install(ExecutionInstanceResolverBuilder builder) => throw new InvalidOperationException("Installation failed.");
+        public void Install(ResolutionScopeBuilder builder) => throw new InvalidOperationException("Installation failed.");
     }
 
     private sealed record FailingCreator : Creator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ICreatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+        public override ICreatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ResolutionScope scope) =>
             throw new InvalidOperationException("Resolution failed.");
     }
 
@@ -467,7 +466,7 @@ public class TraceCompositionTests
         best.By(evaluations).Select(point => point.Time).ShouldBeInOrder();
     }
 
-    /// <summary>A custom analyzer can install a hook for an execution boundary the library does not observe.</summary>
+    /// <summary>A custom analyzer can install a module for an execution boundary the library does not observe.</summary>
     [Fact]
     public async Task CustomAnalyzer_ObservesABoundaryTheLibraryDoesNotCover()
     {
@@ -508,7 +507,7 @@ public class TraceCompositionTests
 
         protected override long ReadTime() => Interlocked.Read(ref calls);
 
-        public override void Install(ExecutionInstanceResolverBuilder builder) =>
+        public override void Install(ResolutionScopeBuilder builder) =>
             builder.Observe(crossover, _ => Interlocked.Increment(ref calls));
     }
 
@@ -517,15 +516,15 @@ public class TraceCompositionTests
     {
         public int CreatedCandidates { get; private set; }
 
-        public void Install(ExecutionInstanceResolverBuilder builder) =>
-            builder.Install(new CreatorObservationHook(creator, count => CreatedCandidates += count));
+        public void Install(ResolutionScopeBuilder builder) =>
+            builder.Install(new CreatorObservationModule(creator, count => CreatedCandidates += count));
     }
 
-    private sealed class CreatorObservationHook(
+    private sealed class CreatorObservationModule(
         ICreator<RealVector> creator,
-        Action<int> observe) : IExecutionHook
+        Action<int> observe) : IExecutionModule
     {
-        public void Install(ExecutionInstanceResolverBuilder builder) =>
+        public void Install(ResolutionScopeBuilder builder) =>
             builder.Decorate(creator, current => new ObservingCreator(current, observe));
     }
 

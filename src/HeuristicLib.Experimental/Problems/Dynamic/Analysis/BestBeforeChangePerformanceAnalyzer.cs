@@ -70,7 +70,7 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
     }
     private double prediction = double.NaN;
 
-    public void Install(ExecutionInstanceResolverBuilder builder)
+    public void Install(ResolutionScopeBuilder builder)
     {
         foreach (var evaluator in evaluators)
             builder.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, ReadBatch);

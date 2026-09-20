@@ -1,5 +1,3 @@
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -26,7 +24,7 @@ public static partial class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         CreateAggregating<IEvaluator<TCandidate>, EvaluatorObservation<TCandidate, TSearchSpace, TProblem>, TProblem, TValue, TResult>(evaluators, measurement, aggregation,
-            static (source, record) => new EvaluatorObservationHook<TCandidate, TSearchSpace, TProblem>(source, record),
+            static (source, record) => new EvaluatorObservationModule<TCandidate, TSearchSpace, TProblem>(source, record),
             clocks, retention, objectiveComparer);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TValue, TResult>(
@@ -54,7 +52,7 @@ public static partial class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         CreateProjected(evaluators, value,
-            static (source, record) => new EvaluatorObservationHook<TCandidate, TSearchSpace, TProblem>(source, record),
+            static (source, record) => new EvaluatorObservationModule<TCandidate, TSearchSpace, TProblem>(source, record),
             clocks, retention);
 
     // Observes at the interface search space and problem, so an implicitly typed lambda needs no type arguments.
@@ -78,6 +76,6 @@ public static partial class Analyzer
         Func<EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>, TResult> value,
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null) =>
         CreateProjected(evaluators, value,
-            static (source, record) => new EvaluatorObservationHook<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(source, record),
+            static (source, record) => new EvaluatorObservationModule<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(source, record),
             clocks, retention);
 }

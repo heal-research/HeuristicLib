@@ -37,9 +37,9 @@ public record NSGA2<TCandidate>
     /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
     public int? MaximumGenerations { get; init; } = NSGA2Defaults.MaximumGenerations;
 
-    protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>? resolvedInterceptor)
+    protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
-        var typed = resolver.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
         return new Instance<TRunSearchSpace, TRunProblem>(resolvedInterceptor, typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover),
             typed.Resolve(MutationRate >= 1.0 ? Mutator : Mutator.AppliedAtRate(MutationRate)), typed.Resolve(Selector),
             typed.Resolve(Replacer), typed.ResolveOptional(Refiner), PopulationSize, MaximumGenerations);

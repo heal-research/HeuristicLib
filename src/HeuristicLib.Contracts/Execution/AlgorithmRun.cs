@@ -11,9 +11,9 @@ public abstract class AlgorithmRun
     private readonly Lock sync = new();
     private readonly List<IAnalyzer> analyzers = [];
     private readonly HashSet<IAnalyzer> analyzerSet = new(ReferenceEqualityComparer.Instance);
-    private readonly List<IExecutionHook> hooks = [];
-    private readonly HashSet<IExecutionHook> hookSet = new(ReferenceEqualityComparer.Instance);
-    private ExecutionInstanceResolver? resolver;
+    private readonly List<IExecutionModule> modules = [];
+    private readonly HashSet<IExecutionModule> moduleSet = new(ReferenceEqualityComparer.Instance);
+    private ResolutionScope? scope;
 
     public RunLifecycleState LifecycleState { get; private set; } = RunLifecycleState.Preparing;
 
@@ -31,17 +31,17 @@ public abstract class AlgorithmRun
         }
     }
 
-    protected void Add(IExecutionHook hook)
+    protected void Add(IExecutionModule module)
     {
         lock (sync)
         {
             EnsurePreparing();
-            if (hookSet.Add(hook))
-                hooks.Add(hook);
+            if (moduleSet.Add(module))
+                modules.Add(module);
         }
     }
 
-    protected ExecutionInstanceResolver? BeginExecutionSegment()
+    protected ResolutionScope? BeginExecutionSegment()
     {
         lock (sync)
         {
@@ -55,21 +55,21 @@ public abstract class AlgorithmRun
             if (LifecycleState == RunLifecycleState.Paused)
             {
                 LifecycleState = RunLifecycleState.Running;
-                return resolver!;
+                return scope!;
             }
 
             LifecycleState = RunLifecycleState.Running;
 
             try
             {
-                resolver = ExecutionInstanceResolver.Create(builder =>
+                scope = ResolutionScope.Create(builder =>
                 {
                     foreach (var analyzer in analyzers)
                         analyzer.Install(builder);
-                    foreach (var hook in hooks)
-                        builder.Install(hook);
+                    foreach (var module in modules)
+                        builder.Install(module);
                 });
-                return resolver;
+                return scope;
             }
             catch (OperationCanceledException)
             {
@@ -142,9 +142,9 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         return this;
     }
 
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AddExecutionHook(IExecutionHook hook)
+    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AddExecutionModule(IExecutionModule module)
     {
-        Add(hook);
+        Add(module);
         return this;
     }
 
@@ -160,13 +160,13 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     {
         try
         {
-            var resolver = BeginExecutionSegment();
-            if (resolver is null)
+            var scope = BeginExecutionSegment();
+            if (scope is null)
                 return new(AsyncEnumerable.Empty<TSearchState>());
 
             if (execution is null)
             {
-                var algorithmInstance = resolver.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
+                var algorithmInstance = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
                 var executionCancellation = cancellationTerminatesRun ? cancellationToken : CancellationToken.None;
                 execution = algorithmInstance.RunStreamingAsync(Problem, Random, initialState, executionCancellation)
                                              .GetAsyncEnumerator(executionCancellation);

@@ -131,8 +131,8 @@ export default defineConfig({
                             link: "/contributing/architecture/execution-instances",
                         },
                         {
-                            text: "Execution instance resolver",
-                            link: "/contributing/architecture/execution-resolver",
+                            text: "Instance resolution",
+                            link: "/contributing/architecture/instance-resolution",
                         },
                         {
                             text: "Operator implementation",

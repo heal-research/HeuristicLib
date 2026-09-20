@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Analysis;
 
 public static class CrossoverObservations
 {
-    extension(ExecutionInstanceResolverBuilder builder)
+    extension(ResolutionScopeBuilder builder)
     {
         /// <summary>Observes every call to one chosen crossover.</summary>
         /// <remarks>
@@ -20,7 +20,7 @@ public static class CrossoverObservations
             Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> observe)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            builder.Install(new CrossoverObservationHook<TCandidate, TSearchSpace, TProblem>(crossover, observe));
+            builder.Install(new CrossoverObservationModule<TCandidate, TSearchSpace, TProblem>(crossover, observe));
 
         /// <summary>Observes every call to one chosen crossover, for an observer that reads no particular search space or problem.</summary>
         /// <remarks>
@@ -32,23 +32,15 @@ public static class CrossoverObservations
             Action<CrossoverObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> observe) =>
             builder.Observe<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(crossover, observe);
     }
-
-    extension<TCandidate, TSearchSpace, TProblem>(TypedObservationBuilder<TCandidate, TSearchSpace, TProblem> builder)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        public void Observe(ICrossover<TCandidate> crossover, Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> observe) =>
-            builder.Builder.Observe<TCandidate, TSearchSpace, TProblem>(crossover, observe);
-    }
 }
 
-internal sealed class CrossoverObservationHook<TCandidate, TSearchSpace, TProblem>(
+internal sealed class CrossoverObservationModule<TCandidate, TSearchSpace, TProblem>(
     ICrossover<TCandidate> crossover,
-    Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> observe) : IExecutionHook
+    Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> observe) : IExecutionModule
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public void Install(ExecutionInstanceResolverBuilder builder) =>
+    public void Install(ResolutionScopeBuilder builder) =>
         builder.Decorate(crossover, current => new ObservingCrossover<TCandidate, TSearchSpace, TProblem>(crossover, current, observe));
 }
 
@@ -63,12 +55,12 @@ internal sealed class ObservingCrossover<TCandidate, TSearchSpace, TProblem>(
     public bool Fits(ExecutionSignature execution) =>
         ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(childCrossover);
 
-    public ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+    public ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return new Instance<TRunSearchSpace, TRunProblem>(observedCrossover, resolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childCrossover), observe);
+        return new Instance<TRunSearchSpace, TRunProblem>(observedCrossover, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childCrossover), observe);
     }
 
     private sealed class Instance<TRunSearchSpace, TRunProblem>(

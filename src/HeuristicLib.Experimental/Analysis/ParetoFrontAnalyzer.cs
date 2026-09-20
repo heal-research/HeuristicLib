@@ -30,7 +30,7 @@ public sealed class ParetoFrontAnalyzer<T, TS, TP> : IAnalyzer
 
     public ParetoState<T> Front { get; }
 
-    public void Install(ExecutionInstanceResolverBuilder builder)
+    public void Install(ResolutionScopeBuilder builder)
     {
         foreach (var evaluator in evaluators)
             builder.Observe<T, TS, TP>(evaluator, Record);

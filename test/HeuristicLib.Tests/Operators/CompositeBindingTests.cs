@@ -28,7 +28,7 @@ public class CompositeBindingTests
         var composite = new LeafLadderTransformedCreator(new UniformDistributedCreator(searchSpace));
 
         var failure = Should.Throw<InvalidOperationException>(() =>
-            ExecutionInstanceResolver.Create()
+            ResolutionScope.Create()
                 .Resolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(composite));
 
         failure.Message.ShouldContain(nameof(UniformDistributedCreator));
@@ -44,7 +44,7 @@ public class CompositeBindingTests
         var searchSpace = new BoundedRealVectorSearchSpace(3, -1.0, 1.0);
         var composite = new AgnosticTransformedCreator(new UniformDistributedCreator(searchSpace));
 
-        var instance = ExecutionInstanceResolver.Create()
+        var instance = ResolutionScope.Create()
             .Resolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(composite);
 
         instance.ShouldNotBeNull();
@@ -54,8 +54,8 @@ public class CompositeBindingTests
     private sealed record LeafLadderTransformedCreator(ICreator<RealVector> Source) : Creator<RealVector>
     {
         public override ICreatorInstance<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
-            CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
-            new Instance(resolver.Resolve<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(Source));
+            CreateExecutionInstance(ResolutionScope scope) =>
+            new Instance(scope.Resolve<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(Source));
 
         private sealed class Instance(ICreatorInstance<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> source)
             : CreatorInstance<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
@@ -68,10 +68,10 @@ public class CompositeBindingTests
     /// <summary>How to write it: the run's types are method type arguments, so they reach the child.</summary>
     private sealed record AgnosticTransformedCreator(ICreator<RealVector> Source) : ICreator<RealVector>
     {
-        public ICreatorInstance<RealVector, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+        public ICreatorInstance<RealVector, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
             where TRunSearchSpace : class, ISearchSpace<RealVector>
             where TRunProblem : class, IProblem<RealVector, TRunSearchSpace> =>
-            new Instance<TRunSearchSpace, TRunProblem>(resolver.Resolve<RealVector, TRunSearchSpace, TRunProblem>(Source));
+            new Instance<TRunSearchSpace, TRunProblem>(scope.Resolve<RealVector, TRunSearchSpace, TRunProblem>(Source));
 
         private sealed class Instance<TSearchSpace, TProblem>(ICreatorInstance<RealVector, TSearchSpace, TProblem> source)
             : CreatorInstance<RealVector, TSearchSpace, TProblem>

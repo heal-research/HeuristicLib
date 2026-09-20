@@ -26,11 +26,11 @@ public abstract record MultiTerminator<TCandidate>
     /// Resolves each child over the run's search space and problem and hands them to <see
     /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
     /// </summary>
-    public ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceResolver resolver)
+    public ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState =>
-        CombineExecutionInstances([.. ChildTerminators.Select(child => resolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(child))]);
+        CombineExecutionInstances([.. ChildTerminators.Select(child => scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(child))]);
 
     /// <summary>Combines the children's execution instances into this operator's own.</summary>
     protected abstract ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CombineExecutionInstances<TRunSearchSpace, TRunProblem, TRunSearchState>(ImmutableArray<ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> childTerminators)

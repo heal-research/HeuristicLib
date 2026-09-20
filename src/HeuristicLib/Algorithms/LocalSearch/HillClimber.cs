@@ -21,9 +21,9 @@ public record HillClimber<TCandidate>
     public int MaxNeighbors { get; init; } = HillClimberDefaults.MaxNeighbors;
     public int BatchSize { get; init; } = HillClimberDefaults.BatchSize;
 
-    protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor)
+    protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor)
     {
-        var typed = resolver.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
         return new Instance<TRunSearchSpace, TRunProblem>(resolvedInterceptor, typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Mutator), typed.ResolveOptional(Refiner), Direction, MaxNeighbors, BatchSize);
     }
 

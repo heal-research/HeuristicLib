@@ -22,7 +22,7 @@ public enum UpdatePolicy
 
     /// <summary>
     /// After one iteration of the algorithm named by
-    /// <see cref="DynamicProblem{TSelf, TCandidate, TSearchSpace}.CreateIterationUpdateHook"/>, which this policy needs.
+    /// <see cref="DynamicProblem{TSelf, TCandidate, TSearchSpace}.CreateIterationUpdateModule"/>, which this policy needs.
     /// </summary>
     AfterEachIteration
 }

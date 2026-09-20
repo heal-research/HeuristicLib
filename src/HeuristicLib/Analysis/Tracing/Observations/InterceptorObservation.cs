@@ -20,7 +20,7 @@ public sealed record InterceptorObservation<TCandidate, TSearchSpace, TProblem, 
 
 public static class InterceptorObservations
 {
-    extension(ExecutionInstanceResolverBuilder builder)
+    extension(ResolutionScopeBuilder builder)
     {
         /// <summary>Observes every call to one chosen interceptor.</summary>
         /// <remarks>
@@ -34,7 +34,7 @@ public static class InterceptorObservations
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            builder.Install(new InterceptorObservationHook<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, observe));
+            builder.Install(new InterceptorObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, observe));
 
         /// <summary>
         /// Observes every call to one chosen interceptor, for an observer that reads no particular search space, problem
@@ -50,27 +50,16 @@ public static class InterceptorObservations
             Action<InterceptorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>> observe) =>
             builder.Observe<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>(interceptor, observe);
     }
-
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(TypedObservationBuilder<TCandidate, TSearchSpace, TProblem, TSearchState> builder)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState
-    {
-        public void Observe(
-            IInterceptor<TCandidate> interceptor,
-            Action<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe) =>
-            builder.Builder.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, observe);
-    }
 }
 
-internal sealed class InterceptorObservationHook<TCandidate, TSearchSpace, TProblem, TSearchState>(
+internal sealed class InterceptorObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(
     IInterceptor<TCandidate> interceptor,
-    Action<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe) : IExecutionHook
+    Action<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe) : IExecutionModule
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public void Install(ExecutionInstanceResolverBuilder builder) =>
+    public void Install(ResolutionScopeBuilder builder) =>
         builder.Decorate(interceptor, current => new ObservingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, current, observe));
 }
 
@@ -86,14 +75,14 @@ internal sealed class ObservingInterceptor<TCandidate, TSearchSpace, TProblem, T
     public bool Fits(ExecutionSignature execution) =>
         ObservationSignature.Fits<TSearchSpace, TProblem, TSearchState>(execution) && execution.Fits(childInterceptor);
 
-    public IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceResolver resolver)
+    public IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TSearchState, TRunSearchSpace, TRunProblem, TRunSearchState>(this);
         return new Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            observedInterceptor, resolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor), observe);
+            observedInterceptor, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor), observe);
     }
 
     private sealed class Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(

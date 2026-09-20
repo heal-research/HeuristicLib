@@ -31,8 +31,8 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override CycleAlgorithmInstance<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver) =>
-        new(resolver, Algorithms, MaximumCycles, NewExecutionInstancesPerCycle);
+    public override CycleAlgorithmInstance<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope) =>
+        new(scope, Algorithms, MaximumCycles, NewExecutionInstancesPerCycle);
 }
 
 public static class CycleAlgorithm
@@ -80,16 +80,16 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
     where TSearchState : class, ISearchState
     where TAlgorithm : IAlgorithm<TCandidate, TSearchState>
 {
-    private readonly ExecutionInstanceResolver resolver;
+    private readonly ResolutionScope scope;
     protected readonly ImmutableArray<TAlgorithm> Algorithms;
     protected readonly int? MaximumCycles;
     protected readonly bool NewExecutionInstancesPerCycle;
 
     private readonly Dictionary<IAlgorithm<TCandidate>, IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithmInstances;
 
-    public CycleAlgorithmInstance(ExecutionInstanceResolver resolver, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle)
+    public CycleAlgorithmInstance(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle)
     {
-        this.resolver = resolver;
+        this.scope = scope;
         Algorithms = algorithms.ToImmutableArray();
         MaximumCycles = maximumCycles;
         NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle;
@@ -149,5 +149,5 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
     }
 
     private IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateChildAlgorithmInstance(TAlgorithm algorithm) =>
-        resolver.CreateChildResolver().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+        scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 }

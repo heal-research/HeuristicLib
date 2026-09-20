@@ -12,7 +12,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public interface ITerminator<TCandidate> : IOperator
 {
-    ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceResolver resolver)
+    ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState;
@@ -27,21 +27,21 @@ public interface ITerminatorInstance<TCandidate, in TSearchSpace, in TProblem, i
     bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem);
 }
 
-public static class TerminatorResolverExtensions
+public static class TerminatorResolutionExtensions
 {
-    extension(ExecutionInstanceResolver resolver)
+    extension(ResolutionScope scope)
     {
         public ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate> terminator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            resolver.Resolve(terminator, static (creationTarget, childResolver) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem, TSearchState>(childResolver));
+            scope.Resolve(terminator, static (creationTarget, childScope) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem, TSearchState>(childScope));
 
         public ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate>? terminator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            terminator is null ? null : resolver.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
+            terminator is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem, TSearchState>(
             ITerminator<TCandidate> terminator,
@@ -53,7 +53,7 @@ public static class TerminatorResolverExtensions
         {
             try
             {
-                instance = resolver.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
+                instance = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
                 reason = null;
                 return true;
             }
@@ -66,21 +66,21 @@ public static class TerminatorResolverExtensions
         }
     }
 
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(TypedExecutionResolver<TCandidate, TSearchSpace, TProblem, TSearchState> resolver)
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
         public ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve(ITerminator<TCandidate> terminator) =>
-            resolver.Resolver.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
+            scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
 
         public ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional(ITerminator<TCandidate>? terminator) =>
-            terminator is null ? null : resolver.Resolver.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
+            terminator is null ? null : scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
 
         public bool TryResolve(
             ITerminator<TCandidate> terminator,
             [NotNullWhen(true)] out ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? instance,
             [NotNullWhen(false)] out string? reason) =>
-            resolver.Resolver.TryResolve(terminator, out instance, out reason);
+            scope.Scope.TryResolve(terminator, out instance, out reason);
     }
 }

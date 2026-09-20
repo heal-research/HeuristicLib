@@ -1,6 +1,6 @@
-# Execution instance resolver
+# Instance resolution
 
-This page documents how the resolver turns a configuration graph into an execution graph, and why the lookup works the way it does. It matters because observation, budgets, racing and per-cycle instance freshness all rest on these rules, and several plausible-looking alternatives break one of them silently.
+This page documents how a configuration graph becomes an execution graph, and why the lookup works the way it does. It matters because observation, budgets, racing and per-cycle instance freshness all rest on these rules, and several plausible-looking alternatives break one of them silently.
 
 For the surrounding concepts, read [configuration vs execution instances](/contributing/architecture/execution-instances) first.
 
@@ -10,79 +10,79 @@ Declaring decorations and resolving instances are separate types, not separate m
 
 <!-- prettier-ignore -->
 <figure>
-<svg viewBox="0 0 620 372" role="img" aria-label="The builder declares decorations and cannot resolve; Build hands back a resolver that resolves and cannot declare; CreateChildResolver opens a declaration phase for a child." style="width:100%;height:auto">
+<svg viewBox="0 0 620 372" role="img" aria-label="The builder declares decorations and cannot resolve; Build hands back a scope that resolves and cannot declare; CreateChildScope opens a declaration phase for a child." style="width:100%;height:auto">
 <defs><marker id="reg-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
 <rect x="50" y="36" width="520" height="112" rx="6" fill="var(--vp-c-bg-soft,#f6f6f7)" stroke="var(--vp-c-divider,#c2c2c4)"/>
-<text x="68" y="64" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" font-weight="600" fill="var(--vp-c-brand-1,#3451b2)">ExecutionInstanceResolverBuilder</text>
+<text x="68" y="64" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" font-weight="600" fill="var(--vp-c-brand-1,#3451b2)">ResolutionScopeBuilder</text>
 <text x="68" y="92" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">.Decorate(…)</text>
-<text x="68" y="114" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">.Install(hook)</text>
+<text x="68" y="114" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">.Install(module)</text>
 <text x="68" y="138" font-size="12.5" fill="var(--vp-c-text-3,#8e8e93)">declares · cannot resolve</text>
 <line x1="310" y1="150" x2="310" y2="190" stroke="currentColor" stroke-width="1.4" marker-end="url(#reg-a1)"/>
 <text x="324" y="176" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="var(--vp-c-brand-1,#3451b2)">declare(builder)</text>
 <rect x="50" y="196" width="520" height="134" rx="6" fill="var(--vp-c-bg-soft,#f6f6f7)" stroke="var(--vp-c-divider,#c2c2c4)"/>
-<text x="68" y="224" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" font-weight="600" fill="var(--vp-c-brand-1,#3451b2)">ExecutionInstanceResolver</text>
+<text x="68" y="224" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" font-weight="600" fill="var(--vp-c-brand-1,#3451b2)">ResolutionScope</text>
 <text x="68" y="252" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">.Resolve(…)</text>
-<text x="68" y="274" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">.CreateChildResolver()</text>
-<text x="68" y="296" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">.CreateChildResolver(…)</text>
+<text x="68" y="274" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">.CreateChildScope()</text>
+<text x="68" y="296" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">.CreateChildScope(…)</text>
 <text x="68" y="320" font-size="12.5" fill="var(--vp-c-text-3,#8e8e93)">resolves · cannot declare</text>
 <path d="M570 296 H 596 V 92 H 576" fill="none" stroke="var(--vp-c-text-3,#8e8e93)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#reg-a1)"/>
-<text x="310" y="356" text-anchor="middle" font-size="12.5" fill="var(--vp-c-text-3,#8e8e93)">CreateChildResolver(…) opens a declaration phase for a child</text>
+<text x="310" y="356" text-anchor="middle" font-size="12.5" fill="var(--vp-c-text-3,#8e8e93)">CreateChildScope(…) opens a declaration phase for a child</text>
 </svg>
 <figcaption>The two phases, and the one way back into declaration.</figcaption>
 </figure>
 
-A resolver is obtained by declaring what it decorates. A meta-algorithm that needs decorations of its own declares them for a child:
+A scope is obtained by declaring what it decorates. A meta-algorithm that needs decorations of its own declares them for a child:
 
 ```csharp
-var childResolver = resolver.CreateChildResolver(child =>
+var childScope = scope.CreateChildScope(child =>
     child.Decorate(ObservedOperator, current => CountedOperatorFactory(current, counter)));
 
-return new(childResolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
+return new(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
 ```
 
-`ExecutionInstanceResolver.Create(declare)` does the same for the root. Both take a callback, so the builder never outlives the declaration it belongs to and cannot be reached once resolving starts.
+`ResolutionScope.Create(declare)` does the same for the root. Both take a callback, so the builder never outlives the declaration it belongs to and cannot be reached once resolving starts.
 
 **Why the split.** With one type carrying both operations, decorating something already resolved was accepted and then silently ignored — the instance cache answered first and never consulted decorations again. Reordering a decoration after a resolve disabled a budget with no exception and no failing test. Separate types, handed out only inside a declaration callback, make that impossible to write rather than an error to detect.
 
-`ExecutionInstanceResolver.Create()` and `CreateChildResolver()` take no callback, for the common case of a resolver that declares nothing.
+`ResolutionScope.Create()` and `CreateChildScope()` take no callback, for the common case of a scope that declares nothing.
 
-## What a resolver resolves
+## What a scope resolves
 
-Anything implementing `IExecutionInstanceResolvable` can be resolved. Decorations, the instance cache and `Decorate` all key on that non-generic interface, by reference.
+Anything implementing `IExecutionConfiguration` can be resolved. Decorations, the instance cache and `Decorate` all key on that non-generic interface, by reference.
 
 Role configurations such as `IMutator<TCandidate>` name only their candidate. Their execution instance type exists only once a run's search space and problem are known, so they cannot create an instance on their own. The primary entry point therefore takes the creation step as an argument:
 
 ```csharp
-resolver.Resolve(mutator, static (target, childResolver) =>
-    target.CreateExecutionInstance<TSearchSpace, TProblem>(childResolver));
+scope.Resolve(mutator, static (target, childScope) =>
+    target.CreateExecutionInstance<TSearchSpace, TProblem>(childScope));
 ```
 
-The role extensions wrap exactly that call, so an author writes `resolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(Mutator)`, or binds the types once with `resolver.For<TCandidate, TRunSearchSpace, TRunProblem>()` and resolves every slot through the returned `TypedExecutionResolver` without type arguments. A configuration whose instance type is fixed implements `IExecutionInstanceResolvable<TExecutionInstance>` and resolves through the convenience `Resolve(resolvable)`; `ResolveOptional` does the same for an optional slot.
+The role extensions wrap exactly that call, so an author writes `scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(Mutator)`, or binds the types once with `scope.For<TCandidate, TRunSearchSpace, TRunProblem>()` and resolves every slot through the returned `ResolutionScope` without type arguments. A configuration whose instance type is fixed implements `IExecutionConfiguration<TExecutionInstance>` and resolves through the convenience `Resolve(configuration)`; `ResolveOptional` does the same for an optional slot.
 
-The creation step runs for the resolvable and then once for each decoration, innermost first, so every decoration must produce the same role type as the configuration it wraps.
+The creation step runs for the configuration and then once for each decoration, innermost first, so every decoration must produce the same role type as the configuration it wraps.
 
-A resolver serves one run, and therefore one execution signature. An instance found in the cache that is not the requested type was built for a different search space or problem; resolution reports that instead of casting. Whether a configuration was written for the run's types is one question, answered by `IExecutionInstanceResolvable.Fits(ExecutionSignature)` from type arguments alone, so pre-flight validation can ask it before anything is built. The authoring bases apply the same rule when they bridge to the run's types, and an observation applies it when it is resolved; a configuration that does not fit fails with `ExecutionSignature.Mismatch`, which names the types it was written for and the run's.
+A scope serves one run, and therefore one execution signature. An instance found in the cache that is not the requested type was built for a different search space or problem; resolution reports that instead of casting. Whether a configuration was written for the run's types is one question, answered by `IExecutionConfiguration.Fits(ExecutionSignature)` from type arguments alone, so pre-flight validation can ask it before anything is built. The authoring bases apply the same rule when they bridge to the run's types, and an observation applies it when it is resolved; a configuration that does not fit fails with `ExecutionSignature.Mismatch`, which names the types it was written for and the run's.
 
 ## Decorations
 
-A decoration wraps whatever the resolver resolves for one configuration object. Decorations **compose**: several for one configuration all apply, and a child resolver's decorations apply on top of its ancestors' rather than replacing them.
+A decoration wraps whatever the scope resolves for one configuration object. Decorations **compose**: several for one configuration all apply, and a child scope's decorations apply on top of its ancestors' rather than replacing them.
 
 Each decoration records its **origin**, which is a fact about who installed it rather than something it claims:
 
 | Origin          | Declared by                                                      |
 | --------------- | ---------------------------------------------------------------- |
 | `Configuration` | the configuration being executed — a budget, a racing wrapper    |
-| `Hook`          | an `IExecutionHook` installed on the run — an analyzer, a logger |
+| `Module`          | an `IExecutionModule` installed on the run — an analyzer, a logger |
 
-`ExecutionInstanceResolverBuilder.Install(hook)` stamps `Hook` for the duration of the call, so a hook cannot present itself as configuration.
+`ResolutionScopeBuilder.Install(module)` stamps `Module` for the duration of the call, so a module cannot present itself as configuration.
 
 ## The lookup
 
-`Resolve(r)` walks from the resolving resolver towards the root, asking three questions at each one, and builds if the walk finds nothing.
+`Resolve(r)` walks from the resolving scope towards the root, asking three questions at each one, and builds if the walk finds nothing.
 
 <!-- prettier-ignore -->
 <figure>
-<svg viewBox="0 0 620 496" role="img" aria-label="The walk goes from the resolving resolver towards the root and stops at the first resolver declaring a decoration. At each resolver three questions are asked in order: under construction, instance held, declares decorations." style="width:100%;height:auto">
+<svg viewBox="0 0 620 496" role="img" aria-label="The walk goes from the resolving scope towards the root and stops at the first scope declaring a decoration. At each scope three questions are asked in order: under construction, instance held, declares decorations." style="width:100%;height:auto">
 <defs><marker id="reg-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
 <text x="20" y="32" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11.5" letter-spacing="0.09em" fill="var(--vp-c-text-3,#8e8e93)">THE WALK</text>
 <rect x="20" y="56" width="160" height="62" rx="5" fill="var(--vp-c-bg-soft,#f6f6f7)" stroke="currentColor" stroke-width="1.4"/>
@@ -100,7 +100,7 @@ Each decoration records its **origin**, which is a fact about who installed it r
 <line x1="406" y1="80" x2="424" y2="96" stroke="var(--vp-c-danger-1,#b8272c)" stroke-width="2"/>
 <line x1="424" y1="80" x2="406" y2="96" stroke="var(--vp-c-danger-1,#b8272c)" stroke-width="2"/>
 <text x="415" y="72" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--vp-c-danger-1,#b8272c)">stop</text>
-<text x="20" y="158" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11.5" letter-spacing="0.09em" fill="var(--vp-c-text-3,#8e8e93)">AT EACH RESOLVER, IN ORDER</text>
+<text x="20" y="158" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11.5" letter-spacing="0.09em" fill="var(--vp-c-text-3,#8e8e93)">AT EACH SCOPE, IN ORDER</text>
 <rect x="20" y="176" width="580" height="48" rx="5" fill="none" stroke="var(--vp-c-divider,#c2c2c4)"/>
 <text x="38" y="206" font-size="13" fill="currentColor">1 · is r under construction here?</text>
 <text x="582" y="206" text-anchor="end" font-size="12" fill="var(--vp-c-text-3,#8e8e93)">return the partial</text>
@@ -113,23 +113,23 @@ Each decoration records its **origin**, which is a fact about who installed it r
 <rect x="20" y="362" width="580" height="58" rx="5" fill="var(--vp-c-bg-soft,#f6f6f7)" stroke="var(--vp-c-brand-1,#3451b2)" stroke-width="1.4"/>
 <text x="38" y="387" font-size="13" font-weight="600" fill="var(--vp-c-brand-1,#3451b2)">otherwise</text>
 <text x="38" y="409" font-size="12.5" fill="currentColor">build from the chain that applies at X, and store it at X</text>
-<text x="20" y="452" font-size="12.5" fill="var(--vp-c-text-3,#8e8e93)">2 before 3: a resolver's own instance already includes its own decorations.</text>
+<text x="20" y="452" font-size="12.5" fill="var(--vp-c-text-3,#8e8e93)">2 before 3: a scope's own instance already includes its own decorations.</text>
 <text x="20" y="474" font-size="12.5" fill="var(--vp-c-text-3,#8e8e93)">3 makes 2 sound: reaching an ancestor without stopping proves the chains match.</text>
 </svg>
-<figcaption>The walk, and the three questions asked at every resolver along it.</figcaption>
+<figcaption>The walk, and the three questions asked at every scope along it.</figcaption>
 </figure>
 
 No runtime chain comparison is needed. The walk establishes the equality structurally: if it never stopped, the chains are the same by construction.
 
 ## When two resolves share an instance
 
-> Two resolvers share an instance of `r` exactly when the decorations applying to them are identical.
+> Two scopes share an instance of `r` exactly when the decorations applying to them are identical.
 
 A decoration does not by itself prevent reuse. Only a _difference_ in decorations does.
 
 <!-- prettier-ignore -->
 <figure>
-<svg viewBox="0 0 620 364" role="img" aria-label="A child that declares no decoration of its own reuses the parent's decorated instance; a child that adds one builds its own. Two sibling resolvers never share with each other." style="width:100%;height:auto">
+<svg viewBox="0 0 620 364" role="img" aria-label="A child that declares no decoration of its own reuses the parent's decorated instance; a child that adds one builds its own. Two sibling scopes never share with each other." style="width:100%;height:auto">
 <defs><marker id="reg-a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--vp-c-text-3,#8e8e93)"/></marker></defs>
 <rect x="170" y="28" width="280" height="88" rx="6" fill="var(--vp-c-bg-soft,#f6f6f7)" stroke="var(--vp-c-brand-1,#3451b2)" stroke-width="1.5"/>
 <text x="310" y="54" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">parent</text>
@@ -174,11 +174,11 @@ Decorations are sorted innermost to outermost by three keys, in this order:
 
 | Key               | Rule                      | Reason                                                        |
 | ----------------- | ------------------------- | ------------------------------------------------------------- |
-| 1. Origin         | configuration before hook | a wrapper that measures must never measure the observer       |
-| 2. Resolver depth | deeper before shallower   | the most local budget is the least disturbed                  |
+| 1. Origin         | configuration before module | a wrapper that measures must never measure the observer       |
+| 2. Scope depth | deeper before shallower   | the most local budget is the least disturbed                  |
 | 3. Install order  | earlier before later      | a trace installs the clocks it reads before installing itself |
 
-Origin outranks depth: configuration declared in an ancestor still binds tighter than a hook declared below it.
+Origin outranks depth: configuration declared in an ancestor still binds tighter than a module declared below it.
 
 ### Why origin comes first
 
@@ -190,7 +190,7 @@ try { return ChildEvaluator.Evaluate(...); }
 finally { duration.AddDuration(timeProvider.GetElapsedTime(startTimestamp)); }
 ```
 
-Hooks are installed when the run is created, before anything resolves; configuration decorations are installed during resolution. Ordering purely by install time therefore puts every hook _inside_ every configuration wrapper.
+Modules are installed when the run is created, before anything resolves; configuration decorations are installed during resolution. Ordering purely by install time therefore puts every module _inside_ every configuration wrapper.
 
 <!-- prettier-ignore -->
 <figure>
@@ -231,7 +231,7 @@ Two nested duration budgets on one operator, an outer 10s and an inner 2s. Which
 
 ## Building the chain
 
-A decoration produces a _resolvable_, and that wrapper resolves what it wraps through the resolver, so building a chain is re-entrant. Each link is published as **under construction** while the chain is built, so a wrapper receives the instance already created for its child instead of starting over.
+A decoration produces a _configuration_, and that wrapper resolves what it wraps through the scope, so building a chain is re-entrant. Each link is published as **under construction** while the chain is built, so a wrapper receives the instance already created for its child instead of starting over.
 
 <!-- prettier-ignore -->
 <figure>
@@ -262,7 +262,7 @@ Each rule above exists because a simpler-looking rule fails somewhere:
 
 | Alternative rule                                          | What it breaks                                                                                  |
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Nearest resolver's decorations win, ignore ancestors      | An analyzer at the root vanishes as soon as any child resolver decorates the same configuration |
+| Nearest scope's decorations win, ignore ancestors      | An analyzer at the root vanishes as soon as any child scope decorates the same configuration |
 | Check ancestor instances before decorations               | A child's own decoration is skipped — a budget resolves an undecorated operator and never fires |
 | Check decorations before ancestor instances, always build | Parent and child build two identical decorated instances and split any state they hold          |
 | Hoist new instances to the ancestor owning the chain      | Siblings start sharing, so recreating execution instances per cycle stops working               |

@@ -54,8 +54,8 @@ public class RoleBindingTests
     /// The typed form is the same check with the binding named once, so it must agree with the untyped form.
     /// </summary>
     /// <remarks>
-    /// All nine have one, including the two state-aware roles: their resolver carries the search state as a fourth
-    /// type argument and derives from the triple resolver, so one object serves every role an algorithm resolves and
+    /// All nine have one, including the two state-aware roles: their scope carries the search state as a fourth
+    /// type argument and derives from the triple scope, so one object serves every role an algorithm resolves and
     /// no call site names anything.
     /// </remarks>
     [Theory]
@@ -63,45 +63,45 @@ public class RoleBindingTests
     public void TheTypedForm_AgreesWithTheUntypedForm(string role)
     {
         var throughUntyped = TryResolve(role, typeof(IProblem<RealVector, BoundedRealVectorSearchSpace>));
-        var throughTyped = TryResolve(role, typeof(IProblem<RealVector, BoundedRealVectorSearchSpace>), viaTypedResolver: true);
+        var throughTyped = TryResolve(role, typeof(IProblem<RealVector, BoundedRealVectorSearchSpace>), viaTypedScope: true);
 
         throughTyped.Instance.ShouldBe(throughUntyped.Instance);
         throughTyped.Reason.ShouldBe(throughUntyped.Reason);
 
-        TryResolve(role, typeof(TestFunctionProblem), viaTypedResolver: true).Instance.ShouldNotBeNull();
+        TryResolve(role, typeof(TestFunctionProblem), viaTypedScope: true).Instance.ShouldNotBeNull();
     }
 
     /// <summary>Calls the role's own <c>TryResolve</c> reflectively, so the test is the same for all nine.</summary>
-    private static (object? Instance, string? Reason) TryResolve(string role, Type problem, bool viaTypedResolver = false)
+    private static (object? Instance, string? Reason) TryResolve(string role, Type problem, bool viaTypedScope = false)
     {
         var extensions = typeof(IMutator<>).Assembly
-            .GetType($"HEAL.HeuristicLib.Operators.{role}ResolverExtensions")!;
+            .GetType($"HEAL.HeuristicLib.Operators.{role}ResolutionExtensions")!;
 
         var stateAware = role is "Terminator" or "Interceptor";
         Type[] typeArguments = stateAware
             ? [typeof(RealVector), typeof(BoundedRealVectorSearchSpace), problem, typeof(SingleSolutionState<RealVector>)]
             : [typeof(RealVector), typeof(BoundedRealVectorSearchSpace), problem];
 
-        var resolver = ExecutionInstanceResolver.Create();
-        object receiver = resolver;
+        var scope = ResolutionScope.Create();
+        object receiver = scope;
 
-        if (viaTypedResolver)
+        if (viaTypedScope)
         {
             // An extension block's own type parameters are merged into the emitted static method, so the typed
             // form takes the same type arguments reflectively even though a C# call site names none of them. A
-            // state-aware role's resolver carries the state too, which is the whole reason it takes four.
-            var forMethod = typeof(TypedExecutionResolverExtensions)
+            // state-aware role's scope carries the state too, which is the whole reason it takes four.
+            var forMethod = typeof(ResolutionScopeExtensions)
                 .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .Single(method => method.Name == nameof(TypedExecutionResolverExtensions.For)
+                .Single(method => method.Name == nameof(ResolutionScopeExtensions.For)
                     && method.GetGenericArguments().Length == typeArguments.Length)
                 .MakeGenericMethod(typeArguments);
-            receiver = forMethod.Invoke(null, [resolver])!;
+            receiver = forMethod.Invoke(null, [scope])!;
         }
 
         var tryResolve = extensions
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Single(method => method.Name == "TryResolve"
-                && method.GetParameters()[0].ParameterType.Name.StartsWith(viaTypedResolver ? "TypedExecutionResolver" : nameof(ExecutionInstanceResolver), StringComparison.Ordinal))
+                && method.GetParameters()[0].ParameterType.IsGenericType == viaTypedScope)
             .MakeGenericMethod(typeArguments);
         var arguments = new[] { receiver, BoundOperators[role], null, null };
         tryResolve.Invoke(null, arguments);

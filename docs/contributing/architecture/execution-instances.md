@@ -24,17 +24,17 @@ That separation is still useful internally for:
 - sharing the same execution instance when the same configuration object is reused in one run
 - giving meta-algorithms control over whether execution state resets or persists
 
-## `ExecutionInstanceResolver`
+## `ResolutionScope`
 
-`ExecutionInstanceResolver` builds an execution graph from the configuration graph.
+`ResolutionScope` builds an execution graph from the configuration graph.
 
 Important properties:
 
 - resolution is by configuration object reference
-- the same configuration object resolves to the same execution instance within one resolver
-- different runs can use different resolvers and therefore different execution graphs
+- the same configuration object resolves to the same execution instance within one scope
+- different runs can use different scopes and therefore different execution graphs
 
-Explicit operator and algorithm instance creation methods receive the resolver. Ordinary creation methods should resolve their declared children eagerly. Meta algorithms, budget wrappers and other execution graph compositions may additionally create child resolvers, declare decorations or control execution instance reuse.
+Explicit operator and algorithm instance creation methods receive the scope. Ordinary creation methods should resolve their declared children eagerly. Meta algorithms, budget wrappers and other execution graph compositions may additionally create child scopes, declare decorations or control execution instance reuse.
 
 Obtain every child, operator or algorithm through `Resolve(...)`. Calling `CreateExecutionInstance(...)` on a child configuration bypasses the decorations that observation depends on, and does so silently: the search states are still correct, but analyzers observing that child, or any operator inside it, record nothing.
 
@@ -42,16 +42,16 @@ Obtain every child, operator or algorithm through `Resolve(...)`. Calling `Creat
 
 Advanced execution plumbing can declare that a configuration is wrapped before it is ever resolved. A budget wraps the operator it limits, and an analyzer wraps the operator it observes.
 
-Declaring and resolving are separate types. `ExecutionInstanceResolverBuilder` declares decorations and cannot resolve; the `ExecutionInstanceResolver` it produces resolves and cannot declare. A resolver opens a declaration phase for a child with `CreateChildResolver(...)`:
+Declaring and resolving are separate types. `ResolutionScopeBuilder` declares decorations and cannot resolve; the `ResolutionScope` it produces resolves and cannot declare. A scope opens a declaration phase for a child with `CreateChildScope(...)`:
 
 ```csharp
-var childResolver = resolver.CreateChildResolver(child =>
+var childScope = scope.CreateChildScope(child =>
     child.Decorate(ObservedOperator, current => CountedOperatorFactory(current, counter)));
 
-return new(childResolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
+return new(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
 ```
 
-Decorations compose rather than replace one another, and a child resolver's decorations apply on top of its ancestors'. Which one ends up innermost, and when two resolvers share one instance, follow rules worth understanding before writing meta-algorithms or observation plumbing: see [execution instance resolver](/contributing/architecture/execution-resolver).
+Decorations compose rather than replace one another, and a child scope's decorations apply on top of its ancestors'. Which one ends up innermost, and when two scopes share one instance, follow rules worth understanding before writing meta-algorithms or observation plumbing: see [instance resolution](/contributing/architecture/instance-resolution).
 
 Most users should not declare decorations directly. They are intended for meta-algorithms, observation installation and other advanced execution infrastructure.
 
@@ -70,9 +70,9 @@ This gives one-time resolution cost per execution instance and avoids per-call d
 
 A role specific stateful operator base creates one state object whenever it creates an execution instance. `CreateInitialState()` must return a fresh object for every invocation.
 
-Resolver identity determines state sharing. Resolving the same configuration object repeatedly through one resolver returns the same execution instance and state. Independent resolvers create independent instances and state objects. A child resolver may reuse an instance from its parent, so it also reuses that instance's state.
+Scope identity determines state sharing. Resolving the same configuration object repeatedly through one scope returns the same execution instance and state. Independent scopes create independent instances and state objects. A child scope may reuse an instance from its parent, so it also reuses that instance's state.
 
-A child resolver inherits its ancestors' decorations and may reuse instances already resolved by its parent — it does so exactly when it adds no decoration of its own, so that the parent's instance is what the child would have built anyway. Sibling resolvers never share. Runtime composing meta algorithms resolve each child algorithm through a freshly created child resolver rather than through the parent. This gives each requested stage or cycle a new algorithm instance without preventing intentional sharing of operator configurations from the parent execution graph, and because the child resolver inherits its parent's decorations, observation keeps working. Resolve through the child resolver; do not call `CreateExecutionInstance(...)` on the child configuration.
+A child scope inherits its ancestors' decorations and may reuse instances already resolved by its parent — it does so exactly when it adds no decoration of its own, so that the parent's instance is what the child would have built anyway. Sibling scopes never share. Runtime composing meta algorithms resolve each child algorithm through a freshly created child scope rather than through the parent. This gives each requested stage or cycle a new algorithm instance without preventing intentional sharing of operator configurations from the parent execution graph, and because the child scope inherits its parent's decorations, observation keeps working. Resolve through the child scope; do not call `CreateExecutionInstance(...)` on the child configuration.
 
 Stateful operator calls are not inherently thread safe. An operator may use ordinary mutable state, but concurrent use is valid only when the owning execution path provides suitable synchronization or the state implementation is itself safe for concurrent access.
 
@@ -91,6 +91,6 @@ Every algorithm uses an authored execution instance. Ordinary operators can inst
 ## Related pages
 
 - [Algorithms](/guide/fundamentals/algorithms)
-- [Execution instance resolver](/contributing/architecture/execution-resolver)
+- [Instance resolution](/contributing/architecture/instance-resolution)
 - [Operator implementation](/contributing/architecture/operator-implementation)
 - [Running algorithms](/guide/execution/running-algorithms)

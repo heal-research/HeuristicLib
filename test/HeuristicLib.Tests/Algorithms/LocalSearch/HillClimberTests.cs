@@ -53,7 +53,7 @@ public class HillClimberTests
         : ICreator<int>,
         ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public ICreatorInstance<int, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+        public ICreatorInstance<int, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
             where TRunSearchSpace : class, ISearchSpace<int>
             where TRunProblem : class, IProblem<int, TRunSearchSpace> =>
             (ICreatorInstance<int, TRunSearchSpace, TRunProblem>)(object)this;
@@ -70,7 +70,7 @@ public class HillClimberTests
         : IMutator<int>,
         IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public IMutatorInstance<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ExecutionInstanceResolver resolver)
+        public IMutatorInstance<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ResolutionScope scope)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace> =>
             (IMutatorInstance<int, TSearchSpace, TProblem>)CreateBoundInstance();

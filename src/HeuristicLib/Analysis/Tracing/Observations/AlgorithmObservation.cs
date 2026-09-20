@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Analysis;
 
 public static class AlgorithmObservations
 {
-    extension(ExecutionInstanceResolverBuilder builder)
+    extension(ResolutionScopeBuilder builder)
     {
         /// <summary>Observes every search state yielded by one chosen algorithm.</summary>
         /// <remarks>
@@ -23,7 +23,7 @@ public static class AlgorithmObservations
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            builder.Install(new AlgorithmObservationHook<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, observe));
+            builder.Install(new AlgorithmObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, observe));
 
         /// <summary>
         /// Observes every search state yielded by one chosen algorithm, for an observer that reads no particular search
@@ -39,28 +39,16 @@ public static class AlgorithmObservations
             where TSearchState : class, ISearchState =>
             builder.Observe<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>(algorithm, observe);
     }
-
-    extension<TCandidate, TSearchSpace, TProblem>(TypedObservationBuilder<TCandidate, TSearchSpace, TProblem> builder)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        /// <remarks>The search state is inferred from the algorithm.</remarks>
-        public void Observe<TSearchState>(
-            IAlgorithm<TCandidate, TSearchState> algorithm,
-            Action<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe)
-            where TSearchState : class, ISearchState =>
-            builder.Builder.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, observe);
-    }
 }
 
-internal sealed class AlgorithmObservationHook<TCandidate, TSearchSpace, TProblem, TSearchState>(
+internal sealed class AlgorithmObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(
     IAlgorithm<TCandidate, TSearchState> algorithm,
-    Action<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe) : IExecutionHook
+    Action<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe) : IExecutionModule
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public void Install(ExecutionInstanceResolverBuilder builder) =>
+    public void Install(ResolutionScopeBuilder builder) =>
         builder.Decorate(algorithm, current => new ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, current, observe));
 }
 
@@ -76,11 +64,11 @@ internal sealed record ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TS
     public override bool Fits(ExecutionSignature execution) =>
         base.Fits(execution) && ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(ChildAlgorithm);
 
-    public override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+    public override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
         return new Instance<TRunSearchSpace, TRunProblem>(
-            ObservedAlgorithm, resolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(ChildAlgorithm), Observe);
+            ObservedAlgorithm, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(ChildAlgorithm), Observe);
     }
 
     private sealed class Instance<TRunSearchSpace, TRunProblem>(

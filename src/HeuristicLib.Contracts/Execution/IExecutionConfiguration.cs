@@ -1,9 +1,9 @@
 namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>
-/// A configuration the <see cref="ExecutionInstanceResolver"/> can resolve into an execution instance.
+/// A configuration the <see cref="ResolutionScope"/> can resolve into an execution instance.
 /// </summary>
-public interface IExecutionInstanceResolvable
+public interface IExecutionConfiguration
 {
     /// <summary>
     /// Whether this configuration, and everything it resolves under the same signature, was written for
@@ -17,7 +17,7 @@ public interface IExecutionInstanceResolvable
     /// later.
     /// <para>
     /// A composition that passes its signature through to its children answers for them with
-    /// <see cref="ExecutionSignature.Fits(ReadOnlySpan{IExecutionInstanceResolvable})"/>. One that adapts them does
+    /// <see cref="ExecutionSignature.Fits(ReadOnlySpan{IExecutionConfiguration})"/>. One that adapts them does
     /// not, and needs no code to say so.
     /// </para>
     /// </remarks>
@@ -31,13 +31,13 @@ public interface IExecutionInstanceResolvable
 /// <remarks>
 /// Role configurations such as mutators are not of this kind: their instance type depends on the run's search space
 /// and problem, so they are resolved through
-/// <see cref="ExecutionInstanceResolver.Resolve{TResolvable, TExecutionInstance}(TResolvable, Func{TResolvable, ExecutionInstanceResolver, TExecutionInstance})"/>
+/// <see cref="ResolutionScope.Resolve{TConfiguration, TExecutionInstance}(TConfiguration, Func{TConfiguration, ResolutionScope, TExecutionInstance})"/>
 /// instead.
 /// </remarks>
-public interface IExecutionInstanceResolvable<out TExecutionInstance> : IExecutionInstanceResolvable
+public interface IExecutionConfiguration<out TExecutionInstance> : IExecutionConfiguration
   where TExecutionInstance : IExecutionInstance
 {
-    TExecutionInstance CreateExecutionInstance(ExecutionInstanceResolver resolver);
+    TExecutionInstance CreateExecutionInstance(ResolutionScope scope);
 }
 
 public interface IExecutionInstance;

@@ -18,7 +18,7 @@ public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
     ICreatorInstance<TG, TS, TP> RandomCreator,
     ICreatorInstance<TG, TS, TP> HeuristicCreator,
     IRandomNumberGenerator Rng,
-    ExecutionInstanceResolver Registry) : IRoarNetOperationsProblem<TG, TS, TP>
+    ResolutionScope Registry) : IRoarNetOperationsProblem<TG, TS, TP>
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
 {
@@ -33,7 +33,7 @@ public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
         ICreator<TG> RandomCreator,
         ICreator<TG> HeuristicCreator,
         IRandomNumberGenerator Rng,
-        ExecutionInstanceResolver Registry) : this(
+        ResolutionScope Registry) : this(
         Problem,
         Registry.Resolve<TG, TS, TP>(Evaluator),
         Registry.Resolve<TG, TS, TP>(BoundsEvaluator),

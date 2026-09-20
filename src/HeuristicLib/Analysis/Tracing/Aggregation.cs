@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Analysis;
 
 /// <summary>Reusable configuration for aggregating observations, optionally accumulating across them.</summary>
 public interface IAggregation<TValue, TResult>
-    : IExecutionInstanceResolvable<IAggregationInstance<TValue, TResult>>;
+    : IExecutionConfiguration<IAggregationInstance<TValue, TResult>>;
 
 /// <summary>Aggregates readings into an immutable result. Mutable history belongs to this instance.</summary>
 public interface IAggregationInstance<in TValue, out TResult> : IExecutionInstance
@@ -16,7 +16,7 @@ public interface IAggregationInstance<in TValue, out TResult> : IExecutionInstan
 /// <summary>A value strategy without mutable execution state. Resolution returns the strategy itself.</summary>
 public abstract record StatelessAggregation<TValue, TResult> : IAggregation<TValue, TResult>, IAggregationInstance<TValue, TResult>
 {
-    public IAggregationInstance<TValue, TResult> CreateExecutionInstance(ExecutionInstanceResolver resolver) => this;
+    public IAggregationInstance<TValue, TResult> CreateExecutionInstance(ResolutionScope scope) => this;
     public abstract TResult Aggregate(IReadOnlyList<TValue> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null);
 }
 

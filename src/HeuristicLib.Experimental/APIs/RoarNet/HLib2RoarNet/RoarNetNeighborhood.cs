@@ -12,15 +12,15 @@ namespace HEAL.HeuristicLib.APIs.RoarNet;
 public readonly struct RoarNetNeighborhood<TG, TS, TP, TM1>(
     INeighborhood<TG, TM1> neighborhood,
     IRoarNetOperationsProblem<TG, TS, TP> problem,
-    ExecutionInstanceResolver resolver,
+    ResolutionScope scope,
     IRandomNumberGenerator rng)
     : IRoarNetNeighborhood<TG>
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
 {
-    private readonly IMoveApplierInstance<TG, TS, TP, TM1> applier = resolver.For<TG, TS, TP>().Resolve(neighborhood.MoveApplier);
-    private readonly IMoveCreatorInstance<TG, TS, TP, TM1> creator = resolver.For<TG, TS, TP>().Resolve(neighborhood.MoveCreator);
-    private readonly IMoveEvaluatorInstance<TG, TS, TP, TM1> evaluator = resolver.For<TG, TS, TP>().Resolve(neighborhood.MoveEvaluator);
+    private readonly IMoveApplierInstance<TG, TS, TP, TM1> applier = scope.For<TG, TS, TP>().Resolve(neighborhood.MoveApplier);
+    private readonly IMoveCreatorInstance<TG, TS, TP, TM1> creator = scope.For<TG, TS, TP>().Resolve(neighborhood.MoveCreator);
+    private readonly IMoveEvaluatorInstance<TG, TS, TP, TM1> evaluator = scope.For<TG, TS, TP>().Resolve(neighborhood.MoveEvaluator);
 
     private IRoarNetMove<TG> MakeMove(TM1 move) =>
         new RoarNetMove<TG, TS, TP, TM1>(move, this);

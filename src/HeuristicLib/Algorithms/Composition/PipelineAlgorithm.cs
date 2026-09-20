@@ -23,8 +23,8 @@ public record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override PipelineAlgorithmInstance<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver) =>
-        new(resolver, Algorithms);
+    public override PipelineAlgorithmInstance<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope) =>
+        new(scope, Algorithms);
 }
 
 public static class PipelineAlgorithm
@@ -64,12 +64,12 @@ public class PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TPr
     where TSearchState : class, ISearchState
     where TAlgorithm : IAlgorithm<TCandidate, TSearchState>
 {
-    private readonly ExecutionInstanceResolver resolver;
+    private readonly ResolutionScope scope;
     protected readonly ImmutableArray<TAlgorithm> Algorithms;
 
-    public PipelineAlgorithmInstance(ExecutionInstanceResolver resolver, IReadOnlyList<TAlgorithm> algorithms)
+    public PipelineAlgorithmInstance(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms)
     {
-        this.resolver = resolver;
+        this.scope = scope;
         Algorithms = algorithms.ToImmutableArray();
     }
 
@@ -81,8 +81,8 @@ public class PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TPr
         {
             ct.ThrowIfCancellationRequested();
             var algRng = random.Fork(index);
-            var childResolver = resolver.CreateChildResolver();
-            var algorithmInstance = childResolver.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+            var childScope = scope.CreateChildScope();
+            var algorithmInstance = childScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 
             await foreach (var newState in algorithmInstance.RunStreamingAsync(problem, algRng, state, ct))
             {

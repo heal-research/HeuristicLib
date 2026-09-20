@@ -210,7 +210,7 @@ public class PythonGenealogyAnalysis
         }
     }
 
-    private interface IHookSet<TCandidate>
+    private interface IModuleSet<TCandidate>
         where TCandidate : notnull
     {
         ExperimentResult<TCandidate> ToExperimentResult(AlgorithmRun run);
@@ -223,7 +223,7 @@ public class PythonGenealogyAnalysis
         TraceAnalyzer<EvaluatedCandidate<TCandidate>> QualityCurve,
         TraceAnalyzer<IReadOnlyList<EvaluatedCandidate<TCandidate>>>? AllPopulations,
         IAnalyzer? CallbackAnalyzer)
-        : IHookSet<TCandidate>
+        : IModuleSet<TCandidate>
         where TCandidate : notnull
     {
         public ExperimentResult<TCandidate> ToExperimentResult(AlgorithmRun run)
@@ -308,7 +308,7 @@ public class PythonGenealogyAnalysis
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : PopulationState<TCandidate>, ISearchState
     {
-        public void Install(ExecutionInstanceResolverBuilder builder) =>
+        public void Install(ResolutionScopeBuilder builder) =>
             builder.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, Record);
 
         public void Record(AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>

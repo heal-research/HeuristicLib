@@ -63,11 +63,11 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     /// </remarks>
     public IImprovementCriterion Criterion { get; init; } = ImprovementChecking.Default;
 
-    public IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+    public IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        var typed = resolver.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
         return new Instance<TRunSearchSpace, TRunProblem>(typed.Resolve(Refiner), typed.Resolve(Evaluator), Criterion);
     }
 

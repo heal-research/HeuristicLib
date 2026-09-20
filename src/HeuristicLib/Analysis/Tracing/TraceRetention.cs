@@ -3,12 +3,12 @@ using HEAL.HeuristicLib.Execution;
 namespace HEAL.HeuristicLib.Analysis;
 
 /// <summary>Reusable trace-retention configuration. Selects which aggregated observations a trace keeps.</summary>
-public abstract record TraceRetention : IExecutionInstanceResolvable<ITraceRetentionInstance>
+public abstract record TraceRetention : IExecutionConfiguration<ITraceRetentionInstance>
 {
     public static TraceRetention EveryObservation() => new EveryObservationRetention();
     public static TraceRetention EveryNth(int interval) => new EveryNthRetention(interval);
     public static TraceRetention OnChange() => new OnChangeRetention();
-    public abstract ITraceRetentionInstance CreateExecutionInstance(ExecutionInstanceResolver resolver);
+    public abstract ITraceRetentionInstance CreateExecutionInstance(ResolutionScope scope);
 }
 
 /// <summary>Retention state for one trace.</summary>
@@ -19,7 +19,7 @@ public interface ITraceRetentionInstance : IExecutionInstance
 
 public sealed record EveryObservationRetention : TraceRetention, ITraceRetentionInstance
 {
-    public override ITraceRetentionInstance CreateExecutionInstance(ExecutionInstanceResolver resolver) => this;
+    public override ITraceRetentionInstance CreateExecutionInstance(ResolutionScope scope) => this;
     public bool ShouldRetain<T>(T value) => true;
 }
 
@@ -32,7 +32,7 @@ public sealed record EveryNthRetention : TraceRetention
         Interval = interval;
     }
 
-    public override ITraceRetentionInstance CreateExecutionInstance(ExecutionInstanceResolver resolver)
+    public override ITraceRetentionInstance CreateExecutionInstance(ResolutionScope scope)
     {
         if (Interval <= 0)
             throw new InvalidOperationException("The retention interval must be positive.");
@@ -49,7 +49,7 @@ public sealed record EveryNthRetention : TraceRetention
 /// <summary>Records the first value and subsequent changes according to the value's default equality.</summary>
 public sealed record OnChangeRetention : TraceRetention
 {
-    public override ITraceRetentionInstance CreateExecutionInstance(ExecutionInstanceResolver resolver) => new ExecutionInstance();
+    public override ITraceRetentionInstance CreateExecutionInstance(ResolutionScope scope) => new ExecutionInstance();
 
     private sealed class ExecutionInstance : ITraceRetentionInstance
     {

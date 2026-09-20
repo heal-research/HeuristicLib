@@ -18,7 +18,7 @@ public static class AlgorithmValidationExtensions
         /// An operator may declare an invariant the search space contradicts, or may not have been written for this
         /// run's search space, problem and search state at all.
         /// <para>
-        /// Both are decided from what the configuration graph declares. Nothing is constructed and no resolver is
+        /// Both are decided from what the configuration graph declares. Nothing is constructed and no scope is
         /// touched, so validating costs nothing that the run then repeats, and the answer covers children a run would
         /// only resolve once it is under way.
         /// </para>

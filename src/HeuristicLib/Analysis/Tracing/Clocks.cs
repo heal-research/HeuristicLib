@@ -23,11 +23,11 @@ public abstract class Clock
     /// Declares whatever keeps this clock's time current, if anything does.
     /// </summary>
     /// <remarks>
-    /// Installation can occur in several resolver scopes and must not reset accumulated state. A clock whose source
+    /// Installation can occur in several scope scopes and must not reset accumulated state. A clock whose source
     /// keeps time current itself overrides nothing. Traces install clocks before retention observations, and Observe
     /// deduplicates a shared clock's recorder at the same boundary within each scope.
     /// </remarks>
-    public virtual void Install(ExecutionInstanceResolverBuilder builder)
+    public virtual void Install(ResolutionScopeBuilder builder)
     {
     }
 }
@@ -55,7 +55,7 @@ public abstract class Clock<TTime> : Clock
 /// A clock whose time is kept current by observations from one configured source.
 /// </summary>
 /// <remarks>
-/// Derive from this rather than wiring an observation hook by hand: it installs itself at the source it was given, so a clock of
+/// Derive from this rather than wiring an observation module by hand: it installs itself at the source it was given, so a clock of
 /// your own is left with reading an observation and reporting the time.
 /// </remarks>
 internal sealed class Moment
@@ -94,16 +94,16 @@ public sealed class IterationClock<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
     private long latest;
-    private readonly IExecutionHook observationHook;
+    private readonly IExecutionModule observationModule;
 
     public IterationClock(IAlgorithm<TCandidate, TSearchState> algorithm)
     {
-        observationHook = new AlgorithmObservationHook<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>(algorithm, Record);
+        observationModule = new AlgorithmObservationModule<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>(algorithm, Record);
     }
 
     protected override long ReadTime() => Interlocked.Read(ref latest);
 
-    public override void Install(ExecutionInstanceResolverBuilder builder) => builder.Install(observationHook);
+    public override void Install(ResolutionScopeBuilder builder) => builder.Install(observationModule);
 
     private void Record(AlgorithmObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> observation) =>
         Interlocked.Exchange(ref latest, observation.Iteration);
@@ -120,16 +120,16 @@ public sealed class EvaluationClock<TCandidate>
     : Clock<long>
 {
     private long evaluations;
-    private readonly IExecutionHook observationHook;
+    private readonly IExecutionModule observationModule;
 
     public EvaluationClock(IEvaluator<TCandidate> evaluator)
     {
-        observationHook = new EvaluatorObservationHook<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(evaluator, Record);
+        observationModule = new EvaluatorObservationModule<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(evaluator, Record);
     }
 
     protected override long ReadTime() => Interlocked.Read(ref evaluations);
 
-    public override void Install(ExecutionInstanceResolverBuilder builder) => builder.Install(observationHook);
+    public override void Install(ResolutionScopeBuilder builder) => builder.Install(observationModule);
 
     private void Record(EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> observation) =>
         Interlocked.Add(ref evaluations, observation.ObjectiveVectors.Count);
@@ -149,7 +149,7 @@ public sealed class ElapsedTimeClock(TimeProvider timeProvider) : Clock<TimeSpan
     /// <summary>
     /// Captures the first installation time. Later installations preserve that starting point.
     /// </summary>
-    public override void Install(ExecutionInstanceResolverBuilder builder)
+    public override void Install(ResolutionScopeBuilder builder)
     {
         lock (sync)
         {

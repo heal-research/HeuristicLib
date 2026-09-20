@@ -12,11 +12,11 @@ namespace HEAL.HeuristicLib.Operators;
 public record TransformedCreator<TCandidate>(ICreator<TCandidate> SourceCreator, IMutator<TCandidate> TransformationMutator)
     : ICreator<TCandidate>
 {
-    public ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+    public ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        var typed = resolver.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
         return new Instance<TRunSearchSpace, TRunProblem>(typed.Resolve(SourceCreator), typed.Resolve(TransformationMutator));
     }
 

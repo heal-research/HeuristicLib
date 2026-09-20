@@ -1,15 +1,15 @@
 # Analyzer architecture
 
-An analyzer is a stateful, first-class run component. It owns its collected data and exposes typed reads directly. It implements `IAnalyzer.Install(ExecutionInstanceResolverBuilder)` to declare the execution observations it needs. An analyzer is not an execution hook, although its installation can create and install any number of hooks.
+An analyzer is a stateful, first-class run component. It owns its collected data and exposes typed reads directly. It implements `IAnalyzer.Install(ResolutionScopeBuilder)` to declare the execution observations it needs. An analyzer is not an execution module, although its installation can create and install any number of modules.
 
-`AlgorithmRun` accepts analyzers and hooks while its lifecycle is `Preparing`. Starting it freezes those attachments, installs them, and resolves the execution graph. The run does not own analyzer disposal and does not provide a result lookup service. Reusing one analyzer on several runs intentionally combines its results.
+`AlgorithmRun` accepts analyzers and modules while its lifecycle is `Preparing`. Starting it freezes those attachments, installs them, and resolves the execution graph. The run does not own analyzer disposal and does not provide a result lookup service. Reusing one analyzer on several runs intentionally combines its results.
 
 ## Observation boundaries
 
-Algorithms and operators remain unaware of analysis. The analysis layer turns a selected configuration into an observable runtime wrapper through typed `ExecutionInstanceResolverBuilder.Observe` overloads:
+Algorithms and operators remain unaware of analysis. The analysis layer turns a selected configuration into an observable runtime wrapper through typed `ResolutionScopeBuilder.Observe` overloads:
 
 ```csharp
-public void Install(ExecutionInstanceResolverBuilder builder)
+public void Install(ResolutionScopeBuilder builder)
 {
     var typed = builder.For<TCandidate, TSearchSpace, TProblem>();
     typed.Observe(firstEvaluator, RecordFirst);
@@ -27,17 +27,17 @@ A configuration such as `IEvaluator<TCandidate>` names only its candidate, while
 
 Named types are checked against the run when the observation is resolved, applying the same rule as the operator authoring bases, so a run over other types fails with `ExecutionSignature.Mismatch` instead of casting. The interface-typed overload fits every run over the candidate.
 
-Each `Observe` call creates a private runtime hook. These hook and wrapper classes may retain delegates because they are runtime identity objects rather than records or serializable configuration. Installing the same exact hook object twice in one resolver has no additional effect. Distinct hooks compose in declaration order.
+Each `Observe` call creates a private runtime module. These module and wrapper classes may retain delegates because they are runtime identity objects rather than records or serializable configuration. Installing the same exact module object twice in one scope has no additional effect. Distinct modules compose in declaration order.
 
-Configuration decorations remain inside hook decorations. Among hooks, earlier declarations observe completed operations first. A trace therefore installs its clocks before its own observation hooks.
+Configuration decorations remain inside module decorations. Among modules, earlier declarations observe completed operations first. A trace therefore installs its clocks before its own observation modules.
 
 ## Trace analyzers
 
 `TraceAnalyzer<T>` is the standard tracing subsystem. It combines one or several compatible observation sources, measurement, aggregation, retention, clocks, immutable trace entries and synchronization. A trace requires at least one source and ignores repeated references to the same source.
 
-Named measurements are immutable value strategies. Delegate measurements and scalar projections are runtime-only adapters with identity semantics. Public trace construction never exposes an execution resolver.
+Named measurements are immutable value strategies. Delegate measurements and scalar projections are runtime-only adapters with identity semantics. Public trace construction never exposes an execution scope.
 
-Aggregation and retention use `IExecutionInstanceResolvable<T>` and `IExecutionInstance`, the same foundation as algorithms and operators. Their configuration objects are reusable and their execution instances own mutable state. A trace privately resolves those strategies, so separate traces always receive separate state. Combining several sources in one trace is the public way to share an accumulator and result sink.
+Aggregation and retention use `IExecutionConfiguration<T>` and `IExecutionInstance`, the same foundation as algorithms and operators. Their configuration objects are reusable and their execution instances own mutable state. A trace privately resolves those strategies, so separate traces always receive separate state. Combining several sources in one trace is the public way to share an accumulator and result sink.
 
 `IAggregation<TValue, TResult>` covers both per-observation summaries and accumulation across observations. `StatelessAggregation<TValue, TResult>` returns itself when resolved. Stateful configurations such as `BestSoFarAggregation` create private mutable execution instances. There is no separate reducer role.
 

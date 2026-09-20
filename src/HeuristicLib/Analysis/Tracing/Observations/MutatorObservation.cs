@@ -17,7 +17,7 @@ public sealed record MutatorObservation<TCandidate, TSearchSpace, TProblem>(
 
 public static class MutatorObservations
 {
-    extension(ExecutionInstanceResolverBuilder builder)
+    extension(ResolutionScopeBuilder builder)
     {
         /// <summary>Observes every call to one chosen mutator.</summary>
         /// <remarks>
@@ -29,7 +29,7 @@ public static class MutatorObservations
             Action<MutatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            builder.Install(new MutatorObservationHook<TCandidate, TSearchSpace, TProblem>(mutator, observe));
+            builder.Install(new MutatorObservationModule<TCandidate, TSearchSpace, TProblem>(mutator, observe));
 
         /// <summary>Observes every call to one chosen mutator, for an observer that reads no particular search space or problem.</summary>
         /// <remarks>
@@ -41,23 +41,15 @@ public static class MutatorObservations
             Action<MutatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> observe) =>
             builder.Observe<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(mutator, observe);
     }
-
-    extension<TCandidate, TSearchSpace, TProblem>(TypedObservationBuilder<TCandidate, TSearchSpace, TProblem> builder)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        public void Observe(IMutator<TCandidate> mutator, Action<MutatorObservation<TCandidate, TSearchSpace, TProblem>> observe) =>
-            builder.Builder.Observe<TCandidate, TSearchSpace, TProblem>(mutator, observe);
-    }
 }
 
-internal sealed class MutatorObservationHook<TCandidate, TSearchSpace, TProblem>(
+internal sealed class MutatorObservationModule<TCandidate, TSearchSpace, TProblem>(
     IMutator<TCandidate> mutator,
-    Action<MutatorObservation<TCandidate, TSearchSpace, TProblem>> observe) : IExecutionHook
+    Action<MutatorObservation<TCandidate, TSearchSpace, TProblem>> observe) : IExecutionModule
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public void Install(ExecutionInstanceResolverBuilder builder) =>
+    public void Install(ResolutionScopeBuilder builder) =>
         builder.Decorate(mutator, current => new ObservingMutator<TCandidate, TSearchSpace, TProblem>(mutator, current, observe));
 }
 
@@ -72,12 +64,12 @@ internal sealed class ObservingMutator<TCandidate, TSearchSpace, TProblem>(
     public bool Fits(ExecutionSignature execution) =>
         ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(childMutator);
 
-    public IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+    public IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return new Instance<TRunSearchSpace, TRunProblem>(observedMutator, resolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childMutator), observe);
+        return new Instance<TRunSearchSpace, TRunProblem>(observedMutator, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childMutator), observe);
     }
 
     private sealed class Instance<TRunSearchSpace, TRunProblem>(

@@ -1,5 +1,3 @@
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -26,7 +24,7 @@ public static partial class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         CreateAggregating<ICrossover<TCandidate>, CrossoverObservation<TCandidate, TSearchSpace, TProblem>, TProblem, TValue, TResult>(crossovers, measurement, aggregation,
-            static (source, record) => new CrossoverObservationHook<TCandidate, TSearchSpace, TProblem>(source, record),
+            static (source, record) => new CrossoverObservationModule<TCandidate, TSearchSpace, TProblem>(source, record),
             clocks, retention, objectiveComparer);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TValue, TResult>(
@@ -64,7 +62,7 @@ public static partial class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         CreateProjected(crossovers, value,
-            static (source, record) => new CrossoverObservationHook<TCandidate, TSearchSpace, TProblem>(source, record),
+            static (source, record) => new CrossoverObservationModule<TCandidate, TSearchSpace, TProblem>(source, record),
             clocks, retention);
 
     // Observes at the interface search space and problem, so an implicitly typed lambda needs no type arguments.
@@ -96,6 +94,6 @@ public static partial class Analyzer
         Func<CrossoverObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>, TResult> value,
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null) =>
         CreateProjected(crossovers, value,
-            static (source, record) => new CrossoverObservationHook<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(source, record),
+            static (source, record) => new CrossoverObservationModule<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(source, record),
             clocks, retention);
 }

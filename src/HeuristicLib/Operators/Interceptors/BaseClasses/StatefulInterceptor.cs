@@ -22,7 +22,7 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TProblem, T
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    public sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TState> interceptor, TState state)
         : InterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
@@ -42,7 +42,7 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TSearchStat
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    public sealed override IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutionInstance(ResolutionScope scope) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulInterceptor<TCandidate, TSearchSpace, TSearchState, TState> interceptor, TState state)
         : InterceptorInstance<TCandidate, TSearchSpace, TSearchState>
@@ -61,7 +61,7 @@ public abstract record StatefulInterceptor<TCandidate, TSearchState, TState>
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random);
 
-    public sealed override IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    public sealed override IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutionInstance(ResolutionScope scope) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulInterceptor<TCandidate, TSearchState, TState> interceptor, TState state)
         : InterceptorInstance<TCandidate, TSearchState>

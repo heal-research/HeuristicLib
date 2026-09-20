@@ -13,7 +13,7 @@ namespace HEAL.HeuristicLib.Analyzers.CodeFixes;
 public sealed class CreateExecutionInstanceCodeFixProvider : CodeFixProvider
 {
     private const string EquivalenceKey = nameof(CreateExecutionInstanceCodeFixProvider);
-    private const string ExecutionInstanceResolverTypeName = "ExecutionInstanceResolver";
+    private const string ResolutionScopeTypeName = "ResolutionScope";
 
     public override ImmutableArray<string> FixableDiagnosticIds
       => [CreateExecutionInstanceAnalyzer.DiagnosticId];
@@ -40,7 +40,7 @@ public sealed class CreateExecutionInstanceCodeFixProvider : CodeFixProvider
 
         context.RegisterCodeFix(
           CodeAction.Create(
-            title: "Replace with resolver.Resolve(...)",
+            title: "Replace with scope.Resolve(...)",
             createChangedDocument: c => ReplaceWithResolveAsync(context.Document, invocation, c),
             equivalenceKey: EquivalenceKey),
           diagnostic);
@@ -71,7 +71,7 @@ public sealed class CreateExecutionInstanceCodeFixProvider : CodeFixProvider
             return document;
 
         var registryParamName = containingMethodSymbol.Parameters
-          .FirstOrDefault(p => string.Equals(p.Type.Name, ExecutionInstanceResolverTypeName, StringComparison.Ordinal))
+          .FirstOrDefault(p => string.Equals(p.Type.Name, ResolutionScopeTypeName, StringComparison.Ordinal))
           ?.Name;
 
         if (string.IsNullOrWhiteSpace(registryParamName))

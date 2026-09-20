@@ -6,6 +6,10 @@ revisits, including deleting `IAnalyzer`, introducing anchors and treating analy
 
 The accepted [analysis usability follow-up](analysis-usability-follow-up.md) now owns the next implementation sequence. It supersedes remaining sequencing and conflicting recommendations below, including deleting named measurements, replacing trial results with tuples, and deferring the documentation rewrite. This document records the first simplification and its earlier proposals.
 
+Type names below predate the resolution-scope rename: `ExecutionInstanceResolver` is now `ResolutionScope`,
+`ExecutionInstanceResolverBuilder` is now `ResolutionScopeBuilder`, and `IExecutionHook` is now `IExecutionModule`.
+The text is left as written.
+
 ## Summary
 
 The analysis rework in [analysis-system-rework.md](analysis-system-rework.md) landed the right model: analysis data belongs to one run, observations attach at declared anchors, and a trace composes from a measurement, an aggregation, a retention and a set of clocks. That model is sound and this plan does not reopen it.

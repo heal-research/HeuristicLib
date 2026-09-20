@@ -35,7 +35,7 @@ public record GaussianMutator
     /// The instance offers an adaptable strength, which an algorithm reaches by testing for
     /// <see cref="IAdaptableMutationStrengthInstance{TCandidate,TSearchSpace,TProblem}"/>.
     /// </summary>
-    public override IMutatorInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+    public override IMutatorInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> CreateExecutionInstance(ResolutionScope scope) =>
         new Instance(MutationRate, MutationStrength);
 
     private sealed class Instance(double mutationRate, double mutationStrength)

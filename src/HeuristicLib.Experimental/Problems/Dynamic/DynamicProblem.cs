@@ -2,7 +2,6 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -122,15 +121,15 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     protected abstract ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, int epoch);
 
     /// <summary>
-    /// Creates the hook that applies deferred updates at an algorithm's iteration boundary. Pass it to run creation.
+    /// Creates the module that applies deferred updates at an algorithm's iteration boundary. Pass it to run creation.
     /// </summary>
     /// <remarks>
     /// Only <see cref="UpdatePolicy.AfterEachIteration"/> needs this, because an iteration belongs to an algorithm
     /// rather than to the problem. Every other policy needs nothing installed.
     /// </remarks>
-    public IExecutionHook CreateIterationUpdateHook<TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
+    public IExecutionModule CreateIterationUpdateModule<TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState =>
-        new IterationUpdateHook<TSelf, TCandidate, TSearchSpace, TSearchState>(this, algorithm);
+        new IterationUpdateModule<TSelf, TCandidate, TSearchSpace, TSearchState>(this, algorithm);
 
     internal void CompleteIteration()
     {
@@ -258,14 +257,14 @@ internal interface IUpdateRequestable
 /// <summary>
 /// Applies a dynamic problem's deferred updates at an algorithm's iteration boundary.
 /// </summary>
-internal sealed class IterationUpdateHook<TSelf, TCandidate, TSearchSpace, TSearchState>(
+internal sealed class IterationUpdateModule<TSelf, TCandidate, TSearchSpace, TSearchState>(
     DynamicProblem<TSelf, TCandidate, TSearchSpace> problem,
     IAlgorithm<TCandidate, TSearchState> algorithm)
-    : IExecutionHook
+    : IExecutionModule
     where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TSearchState : class, ISearchState
 {
-    public void Install(ExecutionInstanceResolverBuilder builder) =>
+    public void Install(ResolutionScopeBuilder builder) =>
         builder.Observe<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>(algorithm, _ => problem.CompleteIteration());
 }

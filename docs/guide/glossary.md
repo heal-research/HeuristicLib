@@ -542,15 +542,39 @@ A run may contain more than one execution graph over time, for example when meta
 
 See also: Configuration graph, Execution instance, Run.
 
-### Execution instance resolver
+### Resolution scope
 
 Status: `Canonical`
 
-An execution instance resolver resolves configurations to execution instances during a run.
+A resolution scope resolves configurations to execution instances during a run.
 
-The resolver controls execution-instance identity and sharing. Explicit operator and algorithm instance creation methods receive the resolver and normally resolve their declared children eagerly. Execution graph compositions may additionally create child resolvers, declare decorations for them or control instance reuse. Decorations are declared on an `ExecutionInstanceResolverBuilder` before the resolver resolves anything.
+The scope controls execution-instance identity and sharing. Explicit operator and algorithm instance creation methods receive the scope and normally resolve their declared children eagerly. Execution graph compositions may additionally create child scopes, declare decorations for them or control instance reuse. Decorations are declared on a `ResolutionScopeBuilder` before the scope resolves anything.
 
-See also: Configuration, Execution graph, Execution instance, Run.
+See also: Configuration, Decoration chain, Execution graph, Execution instance, Execution module, Run.
+
+### Decoration chain
+
+Status: `Canonical`
+
+A decoration chain is the ordered set of decorations that apply to one configuration at one resolution scope: every decoration declared by that scope or any of its ancestors, and no others.
+
+The chain decides execution-instance sharing. Two scopes resolve the same execution instance when, and only when, their decoration chains for that configuration are identical. A decoration does not by itself prevent reuse; only a difference in chains does. Sibling scopes never share, which is what expresses per-cycle freshness in meta-algorithms that recreate their execution instances.
+
+Within a chain, decorations declared by an execution module sit outside those declared by the configuration, and a deeper scope's decorations bind more tightly than a shallower one's.
+
+See also: Configuration, Execution instance, Execution module, Resolution scope.
+
+### Execution module
+
+Status: `Canonical`
+
+An execution module adds behavior at chosen configurations in a run's execution graph, before the graph is resolved, represented by `IExecutionModule`.
+
+A module declares its decorations on a `ResolutionScopeBuilder` and resolves nothing itself, so it cannot participate in building the graph it decorates. Run-level additions wrap configuration-level ones, so a module always sees the fully configured operator.
+
+Analyzers are the common kind of module, but the contract is not analysis specific. Writing to a log, reporting progress, advancing a dynamic problem at an iteration boundary and bridging to another runtime are equally valid modules.
+
+See also: Analyzer, Configuration, Decoration chain, Observation, Resolution scope, Run.
 
 ### Random number generator (RNG)
 
@@ -570,7 +594,7 @@ A value array is an immutable ordered collection that compares by its elements r
 
 Configurations use a value array for every retained ordered collection, such as child operators, pipeline stages or weights, so that structurally identical configurations compare equal without an equality attribute or a hand-written comparison. An `ImmutableArray<T>` compares by underlying array reference and must not be used for collection state that participates in equality. Execution instances keep `ImmutableArray<T>`, because they are resolved by reference identity and never compared structurally.
 
-See also: Child operator, Configuration, Execution instance, Execution instance resolver.
+See also: Child operator, Configuration, Execution instance, Resolution scope.
 
 ### Execution concurrency
 
@@ -702,7 +726,7 @@ Status: `Canonical`
 
 An experiment trial is one materialized algorithm configuration and algorithm run within an experiment run.
 
-Each trial has a deterministic typed key, its own algorithm run, its own execution instance resolver and its own random number generator fork. Trials do not pass search states or analyzer state to one another.
+Each trial has a deterministic typed key, its own algorithm run, its own resolution scope and its own random number generator fork. Trials do not pass search states or analyzer state to one another.
 
 See also: Algorithm, Experiment, Run.
 

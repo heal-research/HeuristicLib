@@ -21,7 +21,7 @@ public abstract record StatefulTerminator<TCandidate, TSearchSpace, TProblem, TS
 
     protected abstract bool IsTerminalState(TSearchState searchState, TState state, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulTerminator<TCandidate, TSearchSpace, TProblem, TSearchState, TState> terminator, TState executionState)
         : TerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
@@ -41,7 +41,7 @@ public abstract record StatefulTerminator<TCandidate, TSearchSpace, TSearchState
 
     protected abstract bool IsTerminalState(TSearchState searchState, TState state, TSearchSpace searchSpace);
 
-    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutionInstance(ResolutionScope scope) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulTerminator<TCandidate, TSearchSpace, TSearchState, TState> terminator, TState executionState)
         : TerminatorInstance<TCandidate, TSearchSpace, TSearchState>
@@ -60,7 +60,7 @@ public abstract record StatefulTerminator<TCandidate, TSearchState, TState>
 
     protected abstract bool IsTerminalState(TSearchState searchState, TState state);
 
-    public sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    public sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutionInstance(ResolutionScope scope) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulTerminator<TCandidate, TSearchState, TState> terminator, TState executionState)
         : TerminatorInstance<TCandidate, TSearchState>
@@ -77,7 +77,7 @@ public abstract record StatefulTerminator<TCandidate, TState>
 
     protected abstract bool IsTerminalState(TState state);
 
-    public sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    public sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> CreateExecutionInstance(ResolutionScope scope) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulTerminator<TCandidate, TState> terminator, TState executionState)
         : TerminatorInstance<TCandidate>

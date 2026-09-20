@@ -1,5 +1,10 @@
 # Migrating the analysis overhaul onto dev
 
+Type names below predate the resolution-scope rename: `ExecutionInstanceResolver` and `TypedExecutionResolver` are now
+`ResolutionScope` at different arities, `ExecutionInstanceResolverBuilder` is now `ResolutionScopeBuilder`,
+`IExecutionInstanceResolvable` is now `IExecutionConfiguration`, `IExecutionHook` is now `IExecutionModule`, and
+`TypedObservationBuilder` was deleted. The text is left as written.
+
 ## Summary
 
 `analysis-overhaul` and `dev` diverged at `9b44006a`. Both reworked the execution-instance resolution contract,

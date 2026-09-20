@@ -13,7 +13,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public interface IInterceptor<TCandidate> : IOperator
 {
-    IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceResolver resolver)
+    IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState;
@@ -28,21 +28,21 @@ public interface IInterceptorInstance<TCandidate, in TSearchSpace, in TProblem, 
     TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-public static class InterceptorResolverExtensions
+public static class InterceptorResolutionExtensions
 {
-    extension(ExecutionInstanceResolver resolver)
+    extension(ResolutionScope scope)
     {
         public IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate> interceptor)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            resolver.Resolve(interceptor, static (creationTarget, childResolver) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem, TSearchState>(childResolver));
+            scope.Resolve(interceptor, static (creationTarget, childScope) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem, TSearchState>(childScope));
 
         public IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate>? interceptor)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            interceptor is null ? null : resolver.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor);
+            interceptor is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem, TSearchState>(
             IInterceptor<TCandidate> interceptor,
@@ -54,7 +54,7 @@ public static class InterceptorResolverExtensions
         {
             try
             {
-                instance = resolver.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor);
+                instance = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor);
                 reason = null;
                 return true;
             }
@@ -67,21 +67,21 @@ public static class InterceptorResolverExtensions
         }
     }
 
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(TypedExecutionResolver<TCandidate, TSearchSpace, TProblem, TSearchState> resolver)
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
         public IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve(IInterceptor<TCandidate> interceptor) =>
-            resolver.Resolver.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor);
+            scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor);
 
         public IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional(IInterceptor<TCandidate>? interceptor) =>
-            interceptor is null ? null : resolver.Resolver.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor);
+            interceptor is null ? null : scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor);
 
         public bool TryResolve(
             IInterceptor<TCandidate> interceptor,
             [NotNullWhen(true)] out IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? instance,
             [NotNullWhen(false)] out string? reason) =>
-            resolver.Resolver.TryResolve(interceptor, out instance, out reason);
+            scope.Scope.TryResolve(interceptor, out instance, out reason);
     }
 }

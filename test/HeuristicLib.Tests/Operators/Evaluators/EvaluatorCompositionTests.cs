@@ -11,8 +11,8 @@ public class EvaluatorCompositionTests
     {
         var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountCalls(counter).Cached();
-        var firstInstance = ExecutionInstanceResolver.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
-        var secondInstance = ExecutionInstanceResolver.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var firstInstance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var secondInstance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         firstInstance.Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -27,8 +27,8 @@ public class EvaluatorCompositionTests
     {
         var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountCandidates(counter).LimitEvaluations(2, enforceLimitWithinBatch: true);
-        var firstInstance = ExecutionInstanceResolver.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
-        var secondInstance = ExecutionInstanceResolver.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var firstInstance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var secondInstance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         var limited = firstInstance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -43,7 +43,7 @@ public class EvaluatorCompositionTests
     {
         var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountCalls(counter).AsRepeated(2, ObjectiveVectorAggregation.Mean);
-        var instance = ExecutionInstanceResolver.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -55,7 +55,7 @@ public class EvaluatorCompositionTests
     public void RelativeQualityEvaluator_NormalizesElementwise()
     {
         var evaluator = CreateEvaluator().ScaledToBestKnown(new ObjectiveVector(2.0, -4.0));
-        var instance = ExecutionInstanceResolver.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = new FuncProblem<int, DummySearchSpace<int>>(
             static candidate => new ObjectiveVector(candidate, -2.0 * candidate),
             DummySearchSpace<int>.Instance,
@@ -71,7 +71,7 @@ public class EvaluatorCompositionTests
     {
         var evaluator = CreateEvaluator().ScaledToBestKnown(new ObjectiveVector(0.0),
             RelativeQualityZeroBestKnownPolicy.Difference);
-        var instance = ExecutionInstanceResolver.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         var result = instance.Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

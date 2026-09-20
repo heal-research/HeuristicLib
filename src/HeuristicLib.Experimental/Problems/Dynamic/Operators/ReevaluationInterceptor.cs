@@ -23,9 +23,9 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
         SourceProblem = sourceProblem;
     }
 
-    public override InterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceResolver resolver)
+    public override InterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope)
     {
-        var instance = new Instance(resolver.Resolve<TCandidate, TSearchSpace, TProblem>(Evaluator));
+        var instance = new Instance(scope.Resolve<TCandidate, TSearchSpace, TProblem>(Evaluator));
 
         // The subscription lifetime is shared with DynamicCachingEvaluator and requires a common lifecycle design.
         SourceProblem.OnEpochChange += (_, _) => instance.RequestReevaluation();

@@ -25,11 +25,11 @@ public abstract record MultiSelector<TCandidate>
     /// Resolves each child over the run's search space and problem and hands them to <see
     /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
-    public ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+    public ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        var typed = resolver.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
         return CombineExecutionInstances([.. ChildSelectors.Select(child => typed.Resolve(child))]);
     }
 

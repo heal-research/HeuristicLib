@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators;
 
 public interface ISelector<TCandidate> : IOperator
 {
-    ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+    ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
@@ -22,19 +22,19 @@ public interface ISelectorInstance<TCandidate, in TSearchSpace, in TProblem>
     IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-public static class SelectorResolverExtensions
+public static class SelectorResolutionExtensions
 {
-    extension(ExecutionInstanceResolver resolver)
+    extension(ResolutionScope scope)
     {
         public ISelectorInstance<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate> selector)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            resolver.Resolve(selector, static (creationTarget, childResolver) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childResolver));
+            scope.Resolve(selector, static (creationTarget, childScope) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childScope));
 
         public ISelectorInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate>? selector)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            selector is null ? null : resolver.Resolve<TCandidate, TSearchSpace, TProblem>(selector);
+            selector is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem>(selector);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem>(
             ISelector<TCandidate> selector,
@@ -45,7 +45,7 @@ public static class SelectorResolverExtensions
         {
             try
             {
-                instance = resolver.Resolve<TCandidate, TSearchSpace, TProblem>(selector);
+                instance = scope.Resolve<TCandidate, TSearchSpace, TProblem>(selector);
                 reason = null;
                 return true;
             }
@@ -58,20 +58,20 @@ public static class SelectorResolverExtensions
         }
     }
 
-    extension<TCandidate, TSearchSpace, TProblem>(TypedExecutionResolver<TCandidate, TSearchSpace, TProblem> resolver)
+    extension<TCandidate, TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public ISelectorInstance<TCandidate, TSearchSpace, TProblem> Resolve(ISelector<TCandidate> selector) =>
-            resolver.Resolver.Resolve<TCandidate, TSearchSpace, TProblem>(selector);
+            scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(selector);
 
         public ISelectorInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional(ISelector<TCandidate>? selector) =>
-            selector is null ? null : resolver.Resolve(selector);
+            selector is null ? null : scope.Resolve(selector);
 
         public bool TryResolve(
             ISelector<TCandidate> selector,
             [NotNullWhen(true)] out ISelectorInstance<TCandidate, TSearchSpace, TProblem>? instance,
             [NotNullWhen(false)] out string? reason) =>
-            resolver.Resolver.TryResolve(selector, out instance, out reason);
+            scope.Scope.TryResolve(selector, out instance, out reason);
     }
 }

@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -14,7 +13,7 @@ public class DynamicAnalysisTests
         var problem = new IntegerDynamicProblem(epochLength: 2);
         var provider = new EpochBestKnown();
         var evaluator = new ProblemEvaluator().ScaledToDynamicBestKnown(problem, provider);
-        var instance = ExecutionInstanceResolver.Create().Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(evaluator);
+        var instance = ResolutionScope.Create().Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(evaluator);
 
         instance.ShouldNotBeAssignableTo<IDisposable>();
         instance.Evaluate([2, 2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
@@ -110,7 +109,7 @@ public class DynamicAnalysisTests
             [4]
         ]);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddExecutionHook(problem.CreateIterationUpdateHook(algorithm));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddExecutionModule(problem.CreateIterationUpdateModule(algorithm));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -262,8 +261,8 @@ public class DynamicAnalysisTests
         public IEvaluator<int> Evaluator { get; } = new ProblemEvaluator();
 
         public override AlgorithmInstance<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
-            CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
-            new Instance(resolver.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(Evaluator), Batches);
+            CreateExecutionInstance(ResolutionScope scope) =>
+            new Instance(scope.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(Evaluator), Batches);
 
         private sealed class Instance(
             IEvaluatorInstance<int, IntegerSearchSpace, IntegerDynamicProblem> evaluator,

@@ -38,7 +38,7 @@ Observation sources match configurations by reference. A copied configuration is
 
 ## Ownership and reads
 
-A run accepts analyzers through `AddAnalyzer` and independent execution behavior through `AddExecutionHook` while its lifecycle is `Preparing`. It installs both when execution starts, before resolving the execution graph. Create fresh analyzers and clocks for independent results. You may reuse them across runs when combined history or cumulative counts are intentional. Installation does not reset their state.
+A run accepts analyzers through `AddAnalyzer` and independent execution behavior through `AddExecutionModule` while its lifecycle is `Preparing`. It installs both when execution starts, before resolving the execution graph. Create fresh analyzers and clocks for independent results. You may reuse them across runs when combined history or cumulative counts are intentional. Installation does not reset their state.
 
 `LifecycleState` reports whether a run is `Preparing`, `Running`, `Paused`, `Completed`, `Canceled`, `Failed` or `Stopped`. Calling an execution entry point freezes its attachments. Each returned execution stream has one consumer. The run itself can continue through a later `Stream()` call after the consumer stops at a yielded root-algorithm state.
 
@@ -74,7 +74,7 @@ var quality = Analyzer.Trace(
 
 Named measurements provide reusable value strategies with type inference from the source. Runtime-only delegates provide local projections and have no value-equality or serialization contract.
 
-`IAggregation<TValue, TResult>` is a configuration that resolves to `IAggregationInstance<TValue, TResult>`, using the same execution-instance system as algorithms and operators. `Aggregate.Best()` summarizes each observation; `Aggregate.BestSoFar()` accumulates across observations. Custom aggregations implement `CreateExecutionInstance(resolver)` and put mutable state on their execution instance. They must publish immutable results.
+`IAggregation<TValue, TResult>` is a configuration that resolves to `IAggregationInstance<TValue, TResult>`, using the same execution-instance system as algorithms and operators. `Aggregate.Best()` summarizes each observation; `Aggregate.BestSoFar()` accumulates across observations. Custom aggregations implement `CreateExecutionInstance(scope)` and put mutable state on their execution instance. They must publish immutable results.
 
 A trace privately resolves its aggregation and retention strategies. To collect several compatible sources into one accumulator and result sink, create one combined trace:
 

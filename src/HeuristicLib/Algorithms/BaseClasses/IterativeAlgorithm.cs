@@ -17,14 +17,14 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
 
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Interceptor);
 
-    public override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+    public override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
-        var typed = resolver.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
-        return CreateExecutionInstance(resolver, typed.ResolveOptional(Interceptor));
+        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
+        return CreateExecutionInstance(scope, typed.ResolveOptional(Interceptor));
     }
 
     protected abstract IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(
-        ExecutionInstanceResolver resolver,
+        ResolutionScope scope,
         IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>? resolvedInterceptor)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
@@ -46,7 +46,7 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProb
     where TSearchState : class, ISearchState
 {
     protected abstract IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(
-        ExecutionInstanceResolver resolver,
+        ResolutionScope scope,
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor);
 
     public override bool Fits(ExecutionSignature execution) =>
@@ -54,7 +54,7 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProb
         && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
         && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    public sealed override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+    public sealed override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
         // Asked before the interceptor is resolved, so a mismatch costs no resolution at all.
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
@@ -65,14 +65,14 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProb
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        var typed = resolver.For<TCandidate, TSearchSpace, TProblem, TSearchState>();
-        var bound = CreateExecutionInstance(resolver, typed.ResolveOptional(Interceptor));
+        var typed = scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>();
+        var bound = CreateExecutionInstance(scope, typed.ResolveOptional(Interceptor));
 
         return (IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>)bound;
     }
 
     protected sealed override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(
-        ExecutionInstanceResolver resolver,
+        ResolutionScope scope,
         IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>? resolvedInterceptor) =>
         throw new NotSupportedException("A bound algorithm builds its instance through its own creation method.");
 }

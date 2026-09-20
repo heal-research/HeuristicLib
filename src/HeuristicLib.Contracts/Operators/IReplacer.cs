@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators;
 
 public interface IReplacer<TCandidate> : IOperator
 {
-    IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+    IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
@@ -25,19 +25,19 @@ public interface IReplacerInstance<TCandidate, in TSearchSpace, in TProblem>
       IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-public static class ReplacerResolverExtensions
+public static class ReplacerResolutionExtensions
 {
-    extension(ExecutionInstanceResolver resolver)
+    extension(ResolutionScope scope)
     {
         public IReplacerInstance<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate> replacer)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            resolver.Resolve(replacer, static (creationTarget, childResolver) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childResolver));
+            scope.Resolve(replacer, static (creationTarget, childScope) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childScope));
 
         public IReplacerInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate>? replacer)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            replacer is null ? null : resolver.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
+            replacer is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem>(
             IReplacer<TCandidate> replacer,
@@ -48,7 +48,7 @@ public static class ReplacerResolverExtensions
         {
             try
             {
-                instance = resolver.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
+                instance = scope.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
                 reason = null;
                 return true;
             }
@@ -61,20 +61,20 @@ public static class ReplacerResolverExtensions
         }
     }
 
-    extension<TCandidate, TSearchSpace, TProblem>(TypedExecutionResolver<TCandidate, TSearchSpace, TProblem> resolver)
+    extension<TCandidate, TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public IReplacerInstance<TCandidate, TSearchSpace, TProblem> Resolve(IReplacer<TCandidate> replacer) =>
-            resolver.Resolver.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
+            scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
 
         public IReplacerInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IReplacer<TCandidate>? replacer) =>
-            replacer is null ? null : resolver.Resolve(replacer);
+            replacer is null ? null : scope.Resolve(replacer);
 
         public bool TryResolve(
             IReplacer<TCandidate> replacer,
             [NotNullWhen(true)] out IReplacerInstance<TCandidate, TSearchSpace, TProblem>? instance,
             [NotNullWhen(false)] out string? reason) =>
-            resolver.Resolver.TryResolve(replacer, out instance, out reason);
+            scope.Scope.TryResolve(replacer, out instance, out reason);
     }
 }

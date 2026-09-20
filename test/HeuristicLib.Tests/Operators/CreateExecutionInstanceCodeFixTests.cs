@@ -41,12 +41,12 @@ public class CreateExecutionInstanceCodeFixTests
           {
               public required IMutator<int> Child { get; init; }
 
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
-                  Child.CreateExecutionInstance<SS, P>(resolver);
+              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  Child.CreateExecutionInstance<SS, P>(scope);
           }
           """);
 
-        fixedSource.ShouldContain("resolver.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(Child)");
+        fixedSource.ShouldContain("scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(Child)");
         await AssertCompilesWithoutDiagnosticAsync(fixedSource);
     }
 
@@ -57,7 +57,7 @@ public class CreateExecutionInstanceCodeFixTests
         var fixedSource = await ApplyFixAsync(Preamble + """
           file sealed record ChildMutator : Mutator<int>
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
                   new Instance();
 
               private sealed class Instance : MutatorInstance<int, SS, P>
@@ -70,12 +70,12 @@ public class CreateExecutionInstanceCodeFixTests
           {
               public required ChildMutator Child { get; init; }
 
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
-                  Child.CreateExecutionInstance(resolver);
+              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  Child.CreateExecutionInstance(scope);
           }
           """);
 
-        fixedSource.ShouldContain("resolver.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(Child)");
+        fixedSource.ShouldContain("scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(Child)");
         await AssertCompilesWithoutDiagnosticAsync(fixedSource);
     }
 

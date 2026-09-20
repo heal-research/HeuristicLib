@@ -32,7 +32,7 @@ public readonly record struct ExecutionSignature(Type SearchSpace, Type Problem,
     /// default, is what makes such a composition a boundary of the check. It may check them against the inner
     /// signature instead.
     /// </remarks>
-    public bool Fits(params ReadOnlySpan<IExecutionInstanceResolvable?> configurations)
+    public bool Fits(params ReadOnlySpan<IExecutionConfiguration?> configurations)
     {
         foreach (var configuration in configurations)
         {

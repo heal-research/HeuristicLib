@@ -85,8 +85,8 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         var metadataNames = new[]
         {
             "HEAL.HeuristicLib.Execution.IExecutionInstance",
-            "HEAL.HeuristicLib.Execution.IExecutionInstanceResolvable",
-            "HEAL.HeuristicLib.Execution.ExecutionInstanceResolver",
+            "HEAL.HeuristicLib.Execution.IExecutionConfiguration",
+            "HEAL.HeuristicLib.Execution.ResolutionScope",
             "HEAL.HeuristicLib.Operators.IOperator"
         };
 

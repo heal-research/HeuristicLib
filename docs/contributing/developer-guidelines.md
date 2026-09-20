@@ -114,9 +114,9 @@ Configurations own immutable settings and child configurations. Execution instan
 
 Search states are public progress values. Do not use them to carry private counters, caches or other execution data.
 
-### § 4.3 Resolve declared children through the execution instance resolver
+### § 4.3 Resolve declared children through the resolution scope
 
-Creation methods receive the full `ExecutionInstanceResolver`. Resolve declared children during instance creation. Retain the resolver only for child resolvers, decorations or delayed child algorithm creation. Do not add another resolver abstraction.
+Creation methods receive the full `ResolutionScope`. Resolve declared children during instance creation. Retain the scope only for child scopes, decorations or delayed child algorithm creation. Do not add another scope abstraction.
 
 ### § 4.4 Expose one execution instance factory
 
@@ -329,7 +329,7 @@ Benchmark locally when a change presents a performance risk and report the numbe
 Make intended use easy and misuse difficult.
 
 - Use descriptive names. Documentation does not excuse an unclear API.
-- Public authoring bases expose required constructors, state and hooks as `protected`, not `private protected`. Otherwise do not present the type as an authoring base.
+- Public authoring bases expose required constructors, state and modules as `protected`, not `private protected`. Otherwise do not present the type as an authoring base.
 - Keep related abstractions and operator roles structurally consistent.
 - Make defaults, side effects and potentially expensive behavior visible.
 - Do not give a nullable operator slot a non-null default. `null` would then mean both "not supplied, use the default" and "deliberately absent", and a caller could no longer express the second. Either the slot stays nullable and absence is its default, or it becomes non-nullable with a no-op implementation as the default, such as an identity interceptor. A nullable _parameter_ on a factory is unaffected: it means "not supplied" for a slot that cannot itself be null.
@@ -448,8 +448,8 @@ adding one role silently obliges members for every value of some other dimension
 name the axes it varies over and check that a role author can enumerate all of them.
 
 Two receivers for the same operation are not a second axis when one is defined in terms of the other.
-`resolver.Resolve<TCandidate, TSearchSpace, TProblem>(config)` is canonical — the resolver is generic-less and cannot
-infer the triple. `typed.Resolve(config)` goes through a `TypedExecutionResolver` that already knows the triple, infers
+`scope.Resolve<TCandidate, TSearchSpace, TProblem>(config)` is canonical — the scope is generic-less and cannot
+infer the triple. `typed.Resolve(config)` goes through a `ResolutionScope` that already knows the triple, infers
 everything and relays to the canonical form. One mechanism, two spellings; keep both.
 
 Whatever the declaration count, the call site stays minimal: `typed.Resolve(config)` or

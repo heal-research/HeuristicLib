@@ -10,7 +10,7 @@ public abstract class TraceAnalyzer<TResult> : IAnalyzer
     private readonly List<TraceEntry<TResult>> entries = [];
     private readonly ImmutableArray<Clock> clocks;
     private readonly ITraceRetentionInstance retention;
-    private ImmutableArray<IExecutionHook> observationHooks = [];
+    private ImmutableArray<IExecutionModule> observationModules = [];
 
     protected TraceAnalyzer(ITraceRetentionInstance retention, IReadOnlyList<Clock> clocks)
     {
@@ -46,20 +46,20 @@ public abstract class TraceAnalyzer<TResult> : IAnalyzer
         }
     }
 
-    internal void SetObservationHooks(IEnumerable<IExecutionHook> hooks)
+    internal void SetObservationModules(IEnumerable<IExecutionModule> modules)
     {
-        if (!observationHooks.IsEmpty)
+        if (!observationModules.IsEmpty)
             throw new InvalidOperationException("A trace analyzer's observation sources can only be assigned once.");
-        observationHooks = [.. hooks];
+        observationModules = [.. modules];
     }
 
     /// <summary>Installs clocks before observations. Installation never resets collected state.</summary>
-    public void Install(ExecutionInstanceResolverBuilder builder)
+    public void Install(ResolutionScopeBuilder builder)
     {
         foreach (var clock in clocks)
             clock.Install(builder);
-        foreach (var hook in observationHooks)
-            builder.Install(hook);
+        foreach (var module in observationModules)
+            builder.Install(module);
     }
 }
 

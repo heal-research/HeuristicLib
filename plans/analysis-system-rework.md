@@ -1,5 +1,8 @@
 # Analysis system rework
 
+Type names below predate the resolution-scope rename: `IExecutionHook` is now `IExecutionModule`. The text is left as
+written.
+
 ## Summary
 
 HeuristicLib has a sound central idea for analysis: analysis data belongs to one run and observations attach to algorithm or operator boundaries through the execution registry. The current implementation proves that model with algorithm quality curves, operator traces, nested meta-algorithms and experiment trials.

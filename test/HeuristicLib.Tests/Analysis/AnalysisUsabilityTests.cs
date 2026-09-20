@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Analysis;
@@ -14,10 +13,10 @@ public class AnalysisUsabilityTests
         var retention = TraceRetention.EveryNth(2);
         var first = Analyzer.Trace(evaluator, observation => observation.ObjectiveVectors[0][0], retention: retention);
         var second = Analyzer.Trace(evaluator, observation => observation.ObjectiveVectors[0][0], retention: retention);
-        var resolver = Install(first, second);
+        var scope = Install(first, second);
 
         foreach (var candidate in Enumerable.Range(1, 5))
-            Evaluate(resolver, evaluator, candidate);
+            Evaluate(scope, evaluator, candidate);
 
         first.Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
         second.Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
@@ -32,10 +31,10 @@ public class AnalysisUsabilityTests
             [firstEvaluator, secondEvaluator],
             new ObjectiveVectorsFromEvaluationMeasurement<int>(),
             new CountAggregation());
-        var resolver = Install(trace);
+        var scope = Install(trace);
 
-        Evaluate(resolver, firstEvaluator, 1, 2);
-        Evaluate(resolver, secondEvaluator, 3, 4);
+        Evaluate(scope, firstEvaluator, 1, 2);
+        Evaluate(scope, secondEvaluator, 3, 4);
 
         trace.Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
     }
@@ -46,47 +45,47 @@ public class AnalysisUsabilityTests
         var firstEvaluator = new ManualEvaluator();
         var secondEvaluator = new ManualEvaluator();
         var analyzer = new SeparateEvaluatorAnalyzer(firstEvaluator, secondEvaluator);
-        var resolver = Install(analyzer);
+        var scope = Install(analyzer);
 
-        Evaluate(resolver, firstEvaluator, 1, 2);
-        Evaluate(resolver, secondEvaluator, 3, 4, 5);
+        Evaluate(scope, firstEvaluator, 1, 2);
+        Evaluate(scope, secondEvaluator, 3, 4, 5);
 
         analyzer.FirstCandidates.ShouldBe(2);
         analyzer.SecondCandidates.ShouldBe(3);
     }
 
     [Fact]
-    public void SharedClock_IsInstalledOncePerResolver()
+    public void SharedClock_IsInstalledOncePerScope()
     {
         var evaluator = new ManualEvaluator();
         var clock = Clock.FromEvaluations(evaluator);
         var first = Analyzer.Trace(evaluator, observation => observation.ObjectiveVectors.Count, clocks: [clock, clock]);
         var second = Analyzer.Trace(evaluator, observation => observation.ObjectiveVectors.Count, clocks: [clock]);
-        var resolver = Install(first, second);
+        var scope = Install(first, second);
 
-        Evaluate(resolver, evaluator, 1, 2);
-        Evaluate(resolver, evaluator, 3, 4, 5);
+        Evaluate(scope, evaluator, 1, 2);
+        Evaluate(scope, evaluator, 3, 4, 5);
 
         first.By(clock).Select(point => point.Time).ShouldBe([2L, 5L]);
         second.By(clock).Select(point => point.Time).ShouldBe([2L, 5L]);
     }
 
     [Fact]
-    public void Resolver_UsesConfigurationIdentityForAggregationAndRetention()
+    public void Scope_UsesConfigurationIdentityForAggregationAndRetention()
     {
-        var resolver = ExecutionInstanceResolver.Create();
+        var scope = ResolutionScope.Create();
         var aggregation = Aggregate.BestSoFar();
-        resolver.Resolve(aggregation).ShouldBeSameAs(resolver.Resolve(aggregation));
-        resolver.Resolve(aggregation).ShouldNotBeSameAs(resolver.Resolve(Aggregate.BestSoFar()));
+        scope.Resolve(aggregation).ShouldBeSameAs(scope.Resolve(aggregation));
+        scope.Resolve(aggregation).ShouldNotBeSameAs(scope.Resolve(Aggregate.BestSoFar()));
         var retention = TraceRetention.EveryNth(2);
-        resolver.Resolve(retention).ShouldBeSameAs(resolver.Resolve(retention));
-        resolver.Resolve(retention).ShouldNotBeSameAs(ExecutionInstanceResolver.Create().Resolve(retention));
+        scope.Resolve(retention).ShouldBeSameAs(scope.Resolve(retention));
+        scope.Resolve(retention).ShouldNotBeSameAs(ResolutionScope.Create().Resolve(retention));
     }
 
     [Fact]
     public void RetentionOnChange_HandlesNullAndUsesTypedEquality()
     {
-        var retention = ExecutionInstanceResolver.Create().Resolve(TraceRetention.OnChange());
+        var retention = ResolutionScope.Create().Resolve(TraceRetention.OnChange());
         retention.ShouldRetain<string?>(null).ShouldBeTrue();
         retention.ShouldRetain<string?>(null).ShouldBeFalse();
         retention.ShouldRetain("value").ShouldBeTrue();
@@ -96,22 +95,22 @@ public class AnalysisUsabilityTests
         retention.ShouldRetain(0).ShouldBeFalse();
     }
 
-    private static ExecutionInstanceResolver Install(params IAnalyzer[] analyzers) =>
-        ExecutionInstanceResolver.Create(builder =>
+    private static ResolutionScope Install(params IAnalyzer[] analyzers) =>
+        ResolutionScope.Create(builder =>
         {
             foreach (var analyzer in analyzers)
                 analyzer.Install(builder);
         });
 
-    private static void Evaluate(ExecutionInstanceResolver resolver, ManualEvaluator evaluator, params int[] candidates) =>
-        resolver.Resolve<int, DummySearchSpace<int>, TestProblem>(evaluator).Evaluate(candidates, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, TestProblem.Instance);
+    private static void Evaluate(ResolutionScope scope, ManualEvaluator evaluator, params int[] candidates) =>
+        scope.Resolve<int, DummySearchSpace<int>, TestProblem>(evaluator).Evaluate(candidates, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, TestProblem.Instance);
 
     private sealed class SeparateEvaluatorAnalyzer(ManualEvaluator first, ManualEvaluator second) : IAnalyzer
     {
         public int FirstCandidates { get; private set; }
         public int SecondCandidates { get; private set; }
 
-        public void Install(ExecutionInstanceResolverBuilder builder)
+        public void Install(ResolutionScopeBuilder builder)
         {
             builder.Observe(first, observation => FirstCandidates += observation.Candidates.Count);
             builder.Observe(second, observation => SecondCandidates += observation.Candidates.Count);
@@ -120,7 +119,7 @@ public class AnalysisUsabilityTests
 
     private sealed record ManualEvaluator : Evaluator<int, DummySearchSpace<int>, TestProblem>
     {
-        public override IEvaluatorInstance<int, DummySearchSpace<int>, TestProblem> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new Instance();
+        public override IEvaluatorInstance<int, DummySearchSpace<int>, TestProblem> CreateExecutionInstance(ResolutionScope scope) => new Instance();
 
         private sealed class Instance : IEvaluatorInstance<int, DummySearchSpace<int>, TestProblem>
         {
@@ -141,7 +140,7 @@ public class AnalysisUsabilityTests
 
     private sealed record CountAggregation : IAggregation<ObjectiveVector, int>
     {
-        public IAggregationInstance<ObjectiveVector, int> CreateExecutionInstance(ExecutionInstanceResolver resolver) => new Instance();
+        public IAggregationInstance<ObjectiveVector, int> CreateExecutionInstance(ResolutionScope scope) => new Instance();
 
         private sealed class Instance : IAggregationInstance<ObjectiveVector, int>
         {

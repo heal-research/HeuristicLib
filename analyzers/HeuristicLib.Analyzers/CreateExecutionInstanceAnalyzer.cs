@@ -12,12 +12,12 @@ public sealed class CreateExecutionInstanceAnalyzer : DiagnosticAnalyzer
     public const string DiagnosticId = "HLib0001";
 
     private const string CreateExecutionInstanceMethodName = "CreateExecutionInstance";
-    private const string ExecutionInstanceResolverTypeName = "ExecutionInstanceResolver";
+    private const string ResolutionScopeTypeName = "ResolutionScope";
 
     private static readonly DiagnosticDescriptor Rule = new(
       id: DiagnosticId,
       title: "Do not call CreateExecutionInstance directly",
-      messageFormat: "Do not call CreateExecutionInstance directly inside CreateExecutionInstance. Use ExecutionInstanceResolver.Resolve(...) instead.",
+      messageFormat: "Do not call CreateExecutionInstance directly inside CreateExecutionInstance. Use ResolutionScope.Resolve(...) instead.",
       category: "Architecture",
       defaultSeverity: DiagnosticSeverity.Error,
       isEnabledByDefault: true
@@ -48,8 +48,8 @@ public sealed class CreateExecutionInstanceAnalyzer : DiagnosticAnalyzer
         if (!IsCreationMethod(containingMethodSymbol))
             return;
 
-        // Only if this CreateExecutionInstance has an ExecutionInstanceResolver parameter (name doesn't matter).
-        if (!containingMethodSymbol.Parameters.Any(IsExecutionInstanceResolverParameter))
+        // Only if this CreateExecutionInstance has a ResolutionScope parameter (name doesn't matter).
+        if (!containingMethodSymbol.Parameters.Any(IsResolutionScopeParameter))
             return;
 
         var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken);
@@ -64,7 +64,7 @@ public sealed class CreateExecutionInstanceAnalyzer : DiagnosticAnalyzer
             return;
 
         // Type parameters are not value parameters, so a generic creation method matches this shape too.
-        if (targetMethod.Parameters.Length != 1 || !IsExecutionInstanceResolverParameter(targetMethod.Parameters[0]))
+        if (targetMethod.Parameters.Length != 1 || !IsResolutionScopeParameter(targetMethod.Parameters[0]))
             return;
 
         // Reaching its own overload through this, base, or an implicit receiver is how a bridge works, not a bypass.
@@ -97,8 +97,8 @@ public sealed class CreateExecutionInstanceAnalyzer : DiagnosticAnalyzer
         };
     }
 
-    private static bool IsExecutionInstanceResolverParameter(IParameterSymbol parameter)
+    private static bool IsResolutionScopeParameter(IParameterSymbol parameter)
     {
-        return string.Equals(parameter.Type.Name, ExecutionInstanceResolverTypeName, StringComparison.Ordinal);
+        return string.Equals(parameter.Type.Name, ResolutionScopeTypeName, StringComparison.Ordinal);
     }
 }

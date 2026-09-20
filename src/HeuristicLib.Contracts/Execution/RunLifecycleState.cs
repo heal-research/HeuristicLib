@@ -3,7 +3,7 @@ namespace HEAL.HeuristicLib.Execution;
 /// <summary>Describes the lifecycle of one prepared and subsequently executed run.</summary>
 public enum RunLifecycleState
 {
-    /// <summary>The run accepts analyzers and execution hooks.</summary>
+    /// <summary>The run accepts analyzers and execution modules.</summary>
     Preparing,
 
     /// <summary>An execution entry point has started and the run's composition is frozen.</summary>

@@ -526,7 +526,7 @@ public class OperatorInstrumentationTests
         var counter = new ObservationCounter();
         var interceptor = new AddOneInterceptor().CountCalls(counter);
         interceptor.Counter.ShouldBeSameAs(counter);
-        var instance = interceptor.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ExecutionInstanceResolver.Create());
+        var instance = interceptor.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
         instance.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -543,7 +543,7 @@ public class OperatorInstrumentationTests
         var interceptor = new AddOneInterceptor().MeasureDuration(duration, timeProvider);
         interceptor.Duration.ShouldBeSameAs(duration);
         interceptor.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = interceptor.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ExecutionInstanceResolver.Create());
+        var instance = interceptor.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
         instance.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -556,7 +556,7 @@ public class OperatorInstrumentationTests
     public void CountInterceptorCalls_DoesNotCountFailedCall()
     {
         var counter = new ObservationCounter();
-        var instance = new ThrowingInterceptor().CountCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ExecutionInstanceResolver.Create());
+        var instance = new ThrowingInterceptor().CountCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
@@ -568,7 +568,7 @@ public class OperatorInstrumentationTests
     public void MeasureInterceptorDuration_RecordsFailedCall()
     {
         var duration = new ObservationDuration();
-        var instance = new ThrowingInterceptor().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ExecutionInstanceResolver.Create());
+        var instance = new ThrowingInterceptor().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
@@ -582,7 +582,7 @@ public class OperatorInstrumentationTests
         var counter = new ObservationCounter();
         var terminator = new NeverTerminalStateTerminator().CountCalls(counter);
         terminator.Counter.ShouldBeSameAs(counter);
-        var instance = terminator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ExecutionInstanceResolver.Create());
+        var instance = terminator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
         instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
@@ -599,7 +599,7 @@ public class OperatorInstrumentationTests
         var terminator = new NeverTerminalStateTerminator().MeasureDuration(duration, timeProvider);
         terminator.Duration.ShouldBeSameAs(duration);
         terminator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = terminator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ExecutionInstanceResolver.Create());
+        var instance = terminator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
         instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
@@ -612,7 +612,7 @@ public class OperatorInstrumentationTests
     public void CountTerminatorCalls_DoesNotCountFailedCall()
     {
         var counter = new ObservationCounter();
-        var instance = new ThrowingTerminator().CountCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ExecutionInstanceResolver.Create());
+        var instance = new ThrowingTerminator().CountCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
@@ -624,7 +624,7 @@ public class OperatorInstrumentationTests
     public void MeasureTerminatorDuration_RecordsFailedCall()
     {
         var duration = new ObservationDuration();
-        var instance = new ThrowingTerminator().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ExecutionInstanceResolver.Create());
+        var instance = new ThrowingTerminator().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
@@ -693,7 +693,7 @@ public class OperatorInstrumentationTests
     private sealed class CallbackMutator(MutateCallback callback)
         : IMutator<int>
     {
-        public IMutatorInstance<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ExecutionInstanceResolver resolver)
+        public IMutatorInstance<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ResolutionScope scope)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace> =>
             (IMutatorInstance<int, TSearchSpace, TProblem>)CreateBoundInstance();
@@ -879,51 +879,51 @@ public class OperatorInstrumentationTests
 /// </summary>
 file static class OperatorResolution
 {
-    extension(ExecutionInstanceResolver resolver)
+    extension(ResolutionScope scope)
     {
         public ICreatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCreator(ICreator<int> creator) =>
-            resolver.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator);
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator);
 
         public ICrossoverInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCrossover(ICrossover<int> crossover) =>
-            resolver.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover);
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover);
 
         public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IMutator<int> mutator) =>
-            resolver.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
 
         public ISelectorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveSelector(ISelector<int> selector) =>
-            resolver.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
 
         public IReplacerInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveReplacer(IReplacer<int> replacer) =>
-            resolver.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(replacer);
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(replacer);
     }
 
     extension(ICreator<int> creator)
     {
         public ICreatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCreatorInstance() =>
-            ExecutionInstanceResolver.Create().ResolveCreator(creator);
+            ResolutionScope.Create().ResolveCreator(creator);
     }
 
     extension(ICrossover<int> crossover)
     {
         public ICrossoverInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCrossoverInstance() =>
-            ExecutionInstanceResolver.Create().ResolveCrossover(crossover);
+            ResolutionScope.Create().ResolveCrossover(crossover);
     }
 
     extension(IMutator<int> mutator)
     {
         public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateMutatorInstance() =>
-            ExecutionInstanceResolver.Create().ResolveMutator(mutator);
+            ResolutionScope.Create().ResolveMutator(mutator);
     }
 
     extension(ISelector<int> selector)
     {
         public ISelectorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateSelectorInstance() =>
-            ExecutionInstanceResolver.Create().ResolveSelector(selector);
+            ResolutionScope.Create().ResolveSelector(selector);
     }
 
     extension(IReplacer<int> replacer)
     {
         public IReplacerInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateReplacerInstance() =>
-            ExecutionInstanceResolver.Create().ResolveReplacer(replacer);
+            ResolutionScope.Create().ResolveReplacer(replacer);
     }
 }

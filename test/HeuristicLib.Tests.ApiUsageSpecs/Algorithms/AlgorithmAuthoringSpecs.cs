@@ -96,7 +96,7 @@ public class AlgorithmAuthoringSpecs
             Interceptor = interceptor
         };
 
-        var registry = ExecutionInstanceResolver.Create();
+        var registry = ResolutionScope.Create();
 
         _ = registry.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(algorithm);
 
@@ -110,7 +110,7 @@ public class AlgorithmAuthoringSpecs
 
     /// <summary>
     /// Algorithm configurations expose <c>CreateExecutionInstance</c> publicly, exactly as operator role bases do, so
-    /// a deliberate caller does not need an interface cast. The resolver-only overload is the public one; the
+    /// a deliberate caller does not need an interface cast. The scope-only overload is the public one; the
     /// post-resolution overload that also receives the resolved interceptor stays protected for authors.
     /// </summary>
     [Fact]
@@ -118,10 +118,10 @@ public class AlgorithmAuthoringSpecs
     {
         var algorithm = new SingleCreateAlgorithm { Creator = new CountingCreator() };
 
-        var instance = algorithm.CreateExecutionInstance<BoundedRealVectorSearchSpace, TestFunctionProblem>(ExecutionInstanceResolver.Create());
+        var instance = algorithm.CreateExecutionInstance<BoundedRealVectorSearchSpace, TestFunctionProblem>(ResolutionScope.Create());
 
         instance.ShouldBeAssignableTo<IterativeAlgorithmInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>();
-        typeof(SingleCreateAlgorithm).GetMethod("CreateExecutionInstance", [typeof(ExecutionInstanceResolver)]).ShouldNotBeNull();
+        typeof(SingleCreateAlgorithm).GetMethod("CreateExecutionInstance", [typeof(ResolutionScope)]).ShouldNotBeNull();
     }
 
     private sealed record SingleCreateAlgorithm
@@ -130,10 +130,10 @@ public class AlgorithmAuthoringSpecs
         public required ICreator<RealVector> Creator { get; init; }
         public IEvaluator<RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
-        protected override IterativeAlgorithmInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(ExecutionInstanceResolver resolver,
+        protected override IterativeAlgorithmInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(ResolutionScope scope,
             IInterceptorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
         {
-            return new Instance(resolvedInterceptor, resolver.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Creator), resolver.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Evaluator));
+            return new Instance(resolvedInterceptor, scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Creator), scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Evaluator));
         }
 
         private sealed class Instance(
@@ -158,10 +158,10 @@ public class AlgorithmAuthoringSpecs
         public required ICreator<RealVector> Creator { get; init; }
         public IEvaluator<RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
-        protected override IterativeAlgorithmInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(ExecutionInstanceResolver resolver,
+        protected override IterativeAlgorithmInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(ResolutionScope scope,
             IInterceptorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
         {
-            return new Instance(resolvedInterceptor, resolver.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Creator), resolver.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Evaluator));
+            return new Instance(resolvedInterceptor, scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Creator), scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Evaluator));
         }
 
         private sealed class Instance(
@@ -237,7 +237,7 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionInstancesCreated { get; private set; }
         public int CreateCalls { get; private set; }
 
-        public ICreatorInstance<RealVector, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+        public ICreatorInstance<RealVector, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
             where TRunSearchSpace : class, ISearchSpace<RealVector>
             where TRunProblem : class, IProblem<RealVector, TRunSearchSpace>
         {
@@ -264,7 +264,7 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionInstancesCreated { get; private set; }
         public int EvaluateCalls { get; private set; }
 
-        public IEvaluatorInstance<RealVector, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+        public IEvaluatorInstance<RealVector, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
             where TRunSearchSpace : class, ISearchSpace<RealVector>
             where TRunProblem : class, IProblem<RealVector, TRunSearchSpace>
         {
@@ -293,7 +293,7 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionInstancesCreated { get; private set; }
         public int TransformCalls { get; private set; }
 
-        public IInterceptorInstance<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceResolver resolver)
+        public IInterceptorInstance<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
             where TRunSearchSpace : class, ISearchSpace<RealVector>
             where TRunProblem : class, IProblem<RealVector, TRunSearchSpace>
             where TRunSearchState : class, ISearchState

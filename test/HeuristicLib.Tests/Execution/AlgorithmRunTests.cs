@@ -64,7 +64,7 @@ public class AlgorithmRunTests
 
     private sealed class BlindAnalyzer : IAnalyzer
     {
-        public void Install(ExecutionInstanceResolverBuilder builder)
+        public void Install(ResolutionScopeBuilder builder)
         {
         }
     }
@@ -76,7 +76,7 @@ public class AlgorithmRunTests
         : Algorithm<SequenceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
         public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
-            CreateExecutionInstance(ExecutionInstanceResolver resolver) => new Instance();
+            CreateExecutionInstance(ResolutionScope scope) => new Instance();
 
         private sealed class Instance
             : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>

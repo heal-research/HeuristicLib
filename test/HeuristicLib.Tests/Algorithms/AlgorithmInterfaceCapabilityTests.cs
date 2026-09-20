@@ -29,7 +29,7 @@ public class AlgorithmInterfaceCapabilityTests
 
     [Theory]
     [InlineData("new List<IAlgorithm<Permutation>> { algorithm }")]
-    [InlineData("ExecutionInstanceResolver.Create().Resolve<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, PopulationState<Permutation>>(held)")]
+    [InlineData("ResolutionScope.Create().Resolve<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, PopulationState<Permutation>>(held)")]
     public void ErasedSurface_IsReachableFromBothForms(string expression)
     {
         Compiles("IAlgorithm<Permutation, PopulationState<Permutation>>", expression).ShouldBeTrue();

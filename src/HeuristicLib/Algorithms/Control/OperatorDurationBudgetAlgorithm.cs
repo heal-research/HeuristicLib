@@ -35,13 +35,13 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override OperatorDurationBudgetAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+    public override OperatorDurationBudgetAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
         var duration = new ObservationDuration();
-        var childResolver = resolver.CreateChildResolver(child =>
+        var childScope = scope.CreateChildScope(child =>
             child.Decorate(ObservedOperator, current => MeasuredOperatorFactory(current, duration, TimeProvider)));
 
-        return new(childResolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
+        return new(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
     }
 }
 

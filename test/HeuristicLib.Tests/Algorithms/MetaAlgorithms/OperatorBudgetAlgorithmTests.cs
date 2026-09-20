@@ -778,7 +778,7 @@ public class OperatorBudgetAlgorithmTests
     {
         public int ObservedCandidates { get; private set; }
 
-        public void Install(ExecutionInstanceResolverBuilder builder) => builder.Observe<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator, Record);
+        public void Install(ResolutionScopeBuilder builder) => builder.Observe<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator, Record);
 
         public void Record(EvaluatorObservation<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> observation) =>
             ObservedCandidates += observation.ObjectiveVectors.Count;

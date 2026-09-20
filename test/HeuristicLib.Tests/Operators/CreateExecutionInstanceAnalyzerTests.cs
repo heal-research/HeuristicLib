@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace HEAL.HeuristicLib.Tests.Operators;
 
 /// <summary>
-/// HLib0001 is the only mechanical enforcement of resolution going through the resolver, and it identifies what it
+/// HLib0001 is the only mechanical enforcement of resolution going through the scope, and it identifies what it
 /// guards by two literal names. A rename would disable it silently: the build reports a false positive loudly, but
 /// nothing reports it ceasing to fire. These specs are that missing report.
 /// </summary>
@@ -38,8 +38,8 @@ public class CreateExecutionInstanceAnalyzerTests
           {
               public required IMutator<int> Child { get; init; }
 
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
-                  Child.CreateExecutionInstance<SS, P>(resolver);
+              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  Child.CreateExecutionInstance<SS, P>(scope);
           }
           """);
 
@@ -53,7 +53,7 @@ public class CreateExecutionInstanceAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
           file sealed record ChildMutator : Mutator<int>
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
                   new Instance();
 
               private sealed class Instance : MutatorInstance<int, SS, P>
@@ -66,8 +66,8 @@ public class CreateExecutionInstanceAnalyzerTests
           {
               public required ChildMutator Child { get; init; }
 
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
-                  Child.CreateExecutionInstance(resolver);
+              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  Child.CreateExecutionInstance(scope);
           }
           """);
 
@@ -82,8 +82,8 @@ public class CreateExecutionInstanceAnalyzerTests
           {
               public required IMutator<int> Child { get; init; }
 
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
-                  resolver.Resolve<int, SS, P>(Child);
+              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  scope.Resolve<int, SS, P>(Child);
           }
           """);
 
@@ -92,7 +92,7 @@ public class CreateExecutionInstanceAnalyzerTests
 
     /// <remarks>
     /// The rule is about nesting, not about the call. A caller that is not itself building an execution graph has no
-    /// resolver to resolve through, so direct creation is the only spelling available to it.
+    /// scope to resolve through, so direct creation is the only spelling available to it.
     /// </remarks>
     [Fact]
     public async Task DoesNotReport_WhenTheCallSiteIsNotItselfACreationMethod()
@@ -100,7 +100,7 @@ public class CreateExecutionInstanceAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
           file sealed record ChildMutator : Mutator<int>
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
                   new Instance();
 
               private sealed class Instance : MutatorInstance<int, SS, P>
@@ -112,7 +112,7 @@ public class CreateExecutionInstanceAnalyzerTests
           file static class DeliberateCaller
           {
               public static IMutatorInstance<int, SS, P> Create(ChildMutator mutator) =>
-                  mutator.CreateExecutionInstance(ExecutionInstanceResolver.Create());
+                  mutator.CreateExecutionInstance(ResolutionScope.Create());
           }
           """);
 
@@ -125,10 +125,10 @@ public class CreateExecutionInstanceAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
           file sealed record DelegatingMutator : Mutator<int>
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
-                  CreateExecutionInstance(resolver, 1);
+              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  CreateExecutionInstance(scope, 1);
 
-              private IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver, int unused) =>
+              private IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope, int unused) =>
                   new Instance();
 
               private sealed class Instance : MutatorInstance<int, SS, P>
@@ -151,7 +151,7 @@ public class CreateExecutionInstanceAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
           file sealed record ChildMutator : Mutator<int>
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
                   new Instance();
 
               private sealed class Instance : MutatorInstance<int, SS, P>
@@ -164,8 +164,8 @@ public class CreateExecutionInstanceAnalyzerTests
           {
               public required ChildMutator Child { get; init; }
 
-              IMutatorInstance<int, TRunSearchSpace, TRunProblem> IMutator<int>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver) =>
-                  (IMutatorInstance<int, TRunSearchSpace, TRunProblem>)Child.CreateExecutionInstance(resolver);
+              IMutatorInstance<int, TRunSearchSpace, TRunProblem> IMutator<int>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope) =>
+                  (IMutatorInstance<int, TRunSearchSpace, TRunProblem>)Child.CreateExecutionInstance(scope);
           }
           """);
 
@@ -173,7 +173,7 @@ public class CreateExecutionInstanceAnalyzerTests
     }
 
     /// <remarks>
-    /// A derived operator asking its base for an instance has no other spelling — <c>resolver.Resolve(this)</c> would
+    /// A derived operator asking its base for an instance has no other spelling — <c>scope.Resolve(this)</c> would
     /// resolve back to itself.
     /// </remarks>
     [Fact]
@@ -182,7 +182,7 @@ public class CreateExecutionInstanceAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
           file abstract record BaseMutator : Mutator<int>
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
+              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
                   new Instance();
 
               private sealed class Instance : MutatorInstance<int, SS, P>
@@ -193,8 +193,8 @@ public class CreateExecutionInstanceAnalyzerTests
 
           file sealed record DerivedMutator : BaseMutator
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
-                  base.CreateExecutionInstance(resolver);
+              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  base.CreateExecutionInstance(scope);
           }
           """);
 
@@ -210,8 +210,8 @@ public class CreateExecutionInstanceAnalyzerTests
           {
               public RecursiveMutator? Child { get; init; }
 
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ExecutionInstanceResolver resolver) =>
-                  Child is null ? new Instance() : Child.CreateExecutionInstance(resolver);
+              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  Child is null ? new Instance() : Child.CreateExecutionInstance(scope);
 
               private sealed class Instance : MutatorInstance<int, SS, P>
               {

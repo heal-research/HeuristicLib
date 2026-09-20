@@ -59,7 +59,7 @@ public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchStat
 
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; init; }
 
-    public void Install(ExecutionInstanceResolverBuilder builder)
+    public void Install(ResolutionScopeBuilder builder)
     {
         // Installed first, so the graph already contains this generation when the ranks over it are read.
         var graphBuilder = new GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState>(

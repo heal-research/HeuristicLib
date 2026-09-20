@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Numerics;
 using HEAL.HeuristicLib.Objectives;

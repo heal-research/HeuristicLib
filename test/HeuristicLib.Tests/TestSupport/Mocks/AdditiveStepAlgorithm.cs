@@ -9,8 +9,8 @@ public sealed record AdditiveStepAlgorithm(int Increment)
 {
     public IEvaluator<int> Evaluator { get; init; } = new ProblemEvaluator<int>();
 
-    public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver) =>
-        new Instance<TRunSearchSpace, TRunProblem>(resolver.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator), Increment);
+    public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope) =>
+        new Instance<TRunSearchSpace, TRunProblem>(scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator), Increment);
 
     private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator, int increment)
         : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>

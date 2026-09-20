@@ -18,7 +18,7 @@ public sealed record EvaluatorObservation<TCandidate, TSearchSpace, TProblem>(
 
 public static class EvaluatorObservations
 {
-    extension(ExecutionInstanceResolverBuilder builder)
+    extension(ResolutionScopeBuilder builder)
     {
         /// <summary>Observes every call to one chosen evaluator.</summary>
         /// <remarks>
@@ -30,7 +30,7 @@ public static class EvaluatorObservations
             Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            builder.Install(new EvaluatorObservationHook<TCandidate, TSearchSpace, TProblem>(evaluator, observe));
+            builder.Install(new EvaluatorObservationModule<TCandidate, TSearchSpace, TProblem>(evaluator, observe));
 
         /// <summary>Observes every call to one chosen evaluator, for an observer that reads no particular search space or problem.</summary>
         /// <remarks>
@@ -42,23 +42,15 @@ public static class EvaluatorObservations
             Action<EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> observe) =>
             builder.Observe<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(evaluator, observe);
     }
-
-    extension<TCandidate, TSearchSpace, TProblem>(TypedObservationBuilder<TCandidate, TSearchSpace, TProblem> builder)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        public void Observe(IEvaluator<TCandidate> evaluator, Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe) =>
-            builder.Builder.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, observe);
-    }
 }
 
-internal sealed class EvaluatorObservationHook<TCandidate, TSearchSpace, TProblem>(
+internal sealed class EvaluatorObservationModule<TCandidate, TSearchSpace, TProblem>(
     IEvaluator<TCandidate> evaluator,
-    Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe) : IExecutionHook
+    Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe) : IExecutionModule
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public void Install(ExecutionInstanceResolverBuilder builder) =>
+    public void Install(ResolutionScopeBuilder builder) =>
         builder.Decorate(evaluator, current => new ObservingEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, current, observe));
 }
 
@@ -73,12 +65,12 @@ internal sealed class ObservingEvaluator<TCandidate, TSearchSpace, TProblem>(
     public bool Fits(ExecutionSignature execution) =>
         ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(childEvaluator);
 
-    public IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+    public IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return new Instance<TRunSearchSpace, TRunProblem>(observedEvaluator, resolver.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childEvaluator), observe);
+        return new Instance<TRunSearchSpace, TRunProblem>(observedEvaluator, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childEvaluator), observe);
     }
 
     private sealed class Instance<TRunSearchSpace, TRunProblem>(

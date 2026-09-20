@@ -368,7 +368,7 @@ This is a known limitation. Avoid wrapping an adaptive mutator when the evolutio
 
 Compositions whose role receives an explicit random number generator invoke children in the order defined by their policy. Random draw order is therefore part of reproducible behavior. Adding, removing or reordering child operators may change later random draws even when the same root seed is used. Interceptors and terminators do not receive a random number generator, so their built in compositions are deterministic with respect to child ordering unless a child depends on some other explicit input or external resource.
 
-Child configurations are resolved once for each composition execution instance. Reusing the same child configuration elsewhere through the same execution instance resolver reuses the same child execution instance and its execution data.
+Child configurations are resolved once for each composition execution instance. Reusing the same child configuration elsewhere through the same resolution scope reuses the same child execution instance and its execution data.
 
 See [Reproducible randomness](/guide/execution/randomness) and [Running algorithms](/guide/execution/running-algorithms) for the underlying models.
 

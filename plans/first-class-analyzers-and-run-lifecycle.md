@@ -7,6 +7,10 @@ This plan supersedes the analyzer ownership, anchor, resolver-sharing and run-at
 implemented revision. The earlier [analysis API simplification](analysis-api-simplification.md) records the first
 simplification pass.
 
+Type names below predate the resolution-scope rename: `ExecutionInstanceResolver` is now `ResolutionScope`,
+`ExecutionInstanceResolverBuilder` is now `ResolutionScopeBuilder`, and `IExecutionHook` is now `IExecutionModule`.
+The text is left as written.
+
 ## Working agreement
 
 The user reviews by staging files. Do not stage, unstage, reset the index or commit. Preserve their working edits and

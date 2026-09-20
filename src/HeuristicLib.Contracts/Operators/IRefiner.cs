@@ -24,7 +24,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public interface IRefiner<TCandidate> : IOperator
 {
-    IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceResolver resolver)
+    IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
@@ -37,19 +37,19 @@ public interface IRefinerInstance<TCandidate, in TSearchSpace, in TProblem>
     IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-public static class RefinerResolverExtensions
+public static class RefinerResolutionExtensions
 {
-    extension(ExecutionInstanceResolver resolver)
+    extension(ResolutionScope scope)
     {
         public IRefinerInstance<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate> refiner)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            resolver.Resolve(refiner, static (creationTarget, childResolver) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childResolver));
+            scope.Resolve(refiner, static (creationTarget, childScope) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childScope));
 
         public IRefinerInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate>? refiner)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            refiner is null ? null : resolver.Resolve<TCandidate, TSearchSpace, TProblem>(refiner);
+            refiner is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem>(refiner);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem>(
             IRefiner<TCandidate> refiner,
@@ -60,7 +60,7 @@ public static class RefinerResolverExtensions
         {
             try
             {
-                instance = resolver.Resolve<TCandidate, TSearchSpace, TProblem>(refiner);
+                instance = scope.Resolve<TCandidate, TSearchSpace, TProblem>(refiner);
                 reason = null;
                 return true;
             }
@@ -73,20 +73,20 @@ public static class RefinerResolverExtensions
         }
     }
 
-    extension<TCandidate, TSearchSpace, TProblem>(TypedExecutionResolver<TCandidate, TSearchSpace, TProblem> resolver)
+    extension<TCandidate, TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public IRefinerInstance<TCandidate, TSearchSpace, TProblem> Resolve(IRefiner<TCandidate> refiner) =>
-            resolver.Resolver.Resolve<TCandidate, TSearchSpace, TProblem>(refiner);
+            scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(refiner);
 
         public IRefinerInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IRefiner<TCandidate>? refiner) =>
-            refiner is null ? null : resolver.Resolve(refiner);
+            refiner is null ? null : scope.Resolve(refiner);
 
         public bool TryResolve(
             IRefiner<TCandidate> refiner,
             [NotNullWhen(true)] out IRefinerInstance<TCandidate, TSearchSpace, TProblem>? instance,
             [NotNullWhen(false)] out string? reason) =>
-            resolver.Resolver.TryResolve(refiner, out instance, out reason);
+            scope.Scope.TryResolve(refiner, out instance, out reason);
     }
 }

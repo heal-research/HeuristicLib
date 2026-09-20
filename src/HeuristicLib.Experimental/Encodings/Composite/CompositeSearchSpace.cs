@@ -40,13 +40,13 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     public record Creator(ICreator<T1> Operator1, ICreator<T2> Operator2)
         : ICreator<CompositeGenotype<T1, T2>>
     {
-        public ICreatorInstance<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ExecutionInstanceResolver resolver)
+        public ICreatorInstance<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ResolutionScope scope)
             where TSearchSpace : class, ISearchSpace<CompositeGenotype<T1, T2>>
             where TProblem : class, IProblem<CompositeGenotype<T1, T2>, TSearchSpace>
         {
             var instance = new Instance(
-                resolver.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
-                resolver.Resolve<T2, TS2, IProblem<T2, TS2>>(Operator2));
+                scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
+                scope.Resolve<T2, TS2, IProblem<T2, TS2>>(Operator2));
 
             if (instance is not ICreatorInstance<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> typed)
             {
@@ -78,13 +78,13 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     public record Crossover(ICrossover<T1> Operator1, ICrossover<T2> Operator2)
         : ICrossover<CompositeGenotype<T1, T2>>
     {
-        public ICrossoverInstance<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ExecutionInstanceResolver resolver)
+        public ICrossoverInstance<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ResolutionScope scope)
             where TSearchSpace : class, ISearchSpace<CompositeGenotype<T1, T2>>
             where TProblem : class, IProblem<CompositeGenotype<T1, T2>, TSearchSpace>
         {
             var instance = new Instance(
-                resolver.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
-                resolver.Resolve<T2, TS2, IProblem<T2, TS2>>(Operator2));
+                scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
+                scope.Resolve<T2, TS2, IProblem<T2, TS2>>(Operator2));
 
             if (instance is not ICrossoverInstance<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> typed)
             {
@@ -121,13 +121,13 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     {
         public bool All { get; init; } = true;
 
-        public IMutatorInstance<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ExecutionInstanceResolver resolver)
+        public IMutatorInstance<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ResolutionScope scope)
             where TSearchSpace : class, ISearchSpace<CompositeGenotype<T1, T2>>
             where TProblem : class, IProblem<CompositeGenotype<T1, T2>, TSearchSpace>
         {
             var instance = new Instance(
-                resolver.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
-                resolver.Resolve<T2, TS2, IProblem<T2, TS2>>(Operator2),
+                scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
+                scope.Resolve<T2, TS2, IProblem<T2, TS2>>(Operator2),
                 All);
 
             if (instance is not IMutatorInstance<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> typed)

@@ -1,8 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Analysis;
 
@@ -26,7 +24,7 @@ public interface ICandidateSimilarityCalculator<TCandidate>
 public sealed class PopulationSimilarityAggregation<TCandidate>(ICandidateSimilarityCalculator<TCandidate> candidateSimilarity)
     : IAggregation<EvaluatedCandidate<TCandidate>, PopulationSimilarity>, IAggregationInstance<EvaluatedCandidate<TCandidate>, PopulationSimilarity>
 {
-    public IAggregationInstance<EvaluatedCandidate<TCandidate>, PopulationSimilarity> CreateExecutionInstance(ExecutionInstanceResolver resolver) => this;
+    public IAggregationInstance<EvaluatedCandidate<TCandidate>, PopulationSimilarity> CreateExecutionInstance(ResolutionScope scope) => this;
 
     public PopulationSimilarity Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
     {
@@ -81,7 +79,7 @@ public sealed class AverageSimilarityAggregation<TCandidate>(ICandidateSimilarit
 {
     private readonly PopulationSimilarityAggregation<TCandidate> full = new(candidateSimilarity);
 
-    public IAggregationInstance<EvaluatedCandidate<TCandidate>, MinMeanMax> CreateExecutionInstance(ExecutionInstanceResolver resolver) => this;
+    public IAggregationInstance<EvaluatedCandidate<TCandidate>, MinMeanMax> CreateExecutionInstance(ResolutionScope scope) => this;
 
     public MinMeanMax Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null) =>
         full.Aggregate(readings, objective, objectiveComparer).Average;

@@ -154,7 +154,7 @@ public sealed class NumericParameterFittingRefinerTests
 
         var instance = new NumericParameterFittingRefiner { MaximumIterations = 100 }
             .CheckedForImprovement()
-            .CreateExecutionInstance<ExpressionTreeSearchSpace, SymbolicRegressionProblem>(ExecutionInstanceResolver.Create());
+            .CreateExecutionInstance<ExpressionTreeSearchSpace, SymbolicRegressionProblem>(ResolutionScope.Create());
 
         var refined = instance.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
@@ -169,7 +169,7 @@ public sealed class NumericParameterFittingRefinerTests
 
         var instance = new NumericParameterFittingRefiner { MaximumIterations = 100 }
             .CheckedForImprovement()
-            .CreateExecutionInstance<ExpressionTreeSearchSpace, SymbolicRegressionProblem>(ExecutionInstanceResolver.Create());
+            .CreateExecutionInstance<ExpressionTreeSearchSpace, SymbolicRegressionProblem>(ResolutionScope.Create());
 
         var refined = instance.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
@@ -185,7 +185,7 @@ public sealed class NumericParameterFittingRefinerTests
         var fittable = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
         var refined = new NumericParameterFittingRefiner { MaximumIterations = 100 }
-            .CreateExecutionInstance(ExecutionInstanceResolver.Create())
+            .CreateExecutionInstance(ResolutionScope.Create())
             .Refine([unsolvable, fittable], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
         refined[0].ShouldBeSameAs(unsolvable);
