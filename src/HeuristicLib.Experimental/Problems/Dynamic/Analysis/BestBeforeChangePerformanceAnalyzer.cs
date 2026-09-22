@@ -12,8 +12,8 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This analyzer holds its own data and is used for one run. It reads the evaluator's own observation and the problem's
-/// environment version, so it neither subscribes to anything nor needs cleanup.
+/// This analyzer holds its own data. It reads the evaluator's own observation and the problem's environment version, so
+/// it neither subscribes to anything nor needs cleanup.
 /// </para>
 /// <para>
 /// It is not a trace, because what it records per epoch is the best of an epoch that has ended, which is only known

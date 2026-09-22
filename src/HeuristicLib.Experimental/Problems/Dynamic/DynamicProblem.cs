@@ -11,8 +11,8 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 /// A problem whose environment changes while the run searches it.
 /// </summary>
 /// <remarks>
-/// The environment advances in epochs counted in evaluations, and <see cref="UpdatePolicy"/> decides how much work
-/// finishes before a due update is applied. Batching a problem's own evaluation is what gives it those boundaries, which
+/// The environment advances in epochs its <see cref="IEpochSchedule"/> decides, and <see cref="UpdatePolicy"/> decides how
+/// much work finishes before a due update is applied. Batching a problem's own evaluation is what gives it those boundaries, which
 /// is why this does not inherit the batching of <see cref="SingleSolutionProblem{TSelf, TCandidate, TSearchSpace}"/>. One
 /// evaluation is always scored by exactly one environment: an update waits behind the evaluations in flight, and the
 /// ones that follow wait behind it.

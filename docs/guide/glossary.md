@@ -671,6 +671,16 @@ Status: `Canonical`
 
 Trace retention decides what a trace does with an aggregated observation: append it as a new entry, store it over the entry before it, or drop it. `TraceRetention` is an object that holds whatever counting or remembering its policy needs, so each trace is given its own. Retention happens after measurement and aggregation and never skips that work. A policy that appends or drops leaves stored entries untouched; `TraceRetention.LatestOnly()` replaces, so a trace using it keeps one entry rather than a history.
 
+### Measurement
+
+Status: `Canonical`
+
+A measurement is what a trace reads from one observation, such as the objective vectors of a population or the offspring of a crossover. It receives the typed observation of the boundary it observes and returns the readings an aggregation then summarizes.
+
+A named measurement is an immutable value strategy implementing `IMeasurement<TInput, TValue>`, usually reached through `Measurement`. A delegate passed to `Analyzer.Trace` is a runtime-only projection with identity semantics and no value-equality or serialization contract.
+
+See also: Aggregation, Observation, Trace.
+
 ### Aggregation
 
 Status: `Canonical`

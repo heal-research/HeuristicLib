@@ -1,6 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
-using HEAL.HeuristicLib.Objectives;
 
 namespace HEAL.HeuristicLib.Tests.Analysis;
 

@@ -31,9 +31,13 @@ Each `Observe` call creates a private runtime module. These module and wrapper c
 
 Configuration decorations remain inside module decorations. Among modules, earlier declarations observe completed operations first. A trace therefore installs its clocks before its own observation modules.
 
+An operator that nothing observes is resolved without a wrapper, so a run without analyzers takes the ordinary operator path unchanged. Observation only reads, and analysis never steers the search. An operator that adapts to its own measured success is control flow: it reads instrumentation, as budgets and terminators read an operator counter, rather than an analyzer.
+
 ## Trace analyzers
 
 `TraceAnalyzer<T>` is the standard tracing subsystem. It combines one or several compatible observation sources, measurement, aggregation, retention, clocks, immutable trace entries and synchronization. A trace requires at least one source and ignores repeated references to the same source.
+
+Almost every analysis users ask for is the same act: at a boundary, read something, summarize it, and file the summary under the clocks of that moment. A trace therefore composes independent choices instead of shipping one analyzer type per metric. HeuristicLab ended up with `BestAverageWorstQualityAnalyzer`, `QualityPerEvaluationsAnalyzer` and `QualityPerClockAnalyzer` for one metric because the time axis was part of each type. Here every clock a trace selects is recorded on every entry, so one trace is read against iterations, evaluations or elapsed time without a second run. No clock is added automatically, because observing a source costs something and a run with nested algorithms or several evaluators has no single obvious iteration or evaluation count.
 
 Named measurements are immutable value strategies. Delegate measurements and scalar projections are runtime-only adapters with identity semantics. Public trace construction never exposes an execution scope.
 
@@ -55,9 +59,23 @@ Neither retention nor clocks apply to it. There is nothing to store apart from w
 
 Observations carry the concrete problem used by the operation. Ranking uses that problem's objective unless the trace was given an `IComparer<ObjectiveVector>`. Comparers and `RequireTotalOrder` belong to the objective system. No implicit lexicographic fallback is supplied.
 
+An observation carries the problem because every observed operation is called with it. It does not carry the objective or a comparer: what the run optimizes is not part of what happened at the boundary, and a trace handed an objective when it is composed could rank by one the run does not use.
+
 A trace serializes measurement, aggregation, retention and publication. Built-in traces can safely observe several sources concurrently. Custom analyzers that may be installed on concurrently executing runs are responsible for synchronizing their own state.
 
-Entries contain immutable results. `Latest` and `SampleCount` do not allocate; `Snapshot()` and `By(clock)` return stable copies. Stopping, cancelling or failing a run leaves collected results available. An analyzer has no global completion state because another run may still use it.
+The lock is not there for batch parallelism: an observation of one source arrives on the thread that called the operator, so it is never delivered twice. It is what lets a caller read a trace while the run writes, and what keeps one analyzer consistent when runs sharing it execute at the same time. The store is an ordinary list under that lock, copied when a snapshot or projection is taken. The alternatives measured against it are recorded in the developer backlog.
+
+Entries contain immutable results. `Latest` and `SampleCount` do not allocate; `Snapshot()` and `By(clock)` return stable copies. Stopping, cancelling or failing a run leaves collected results available, so there is no separate result type for an unfinished run. An analyzer has no global completion state because another run may still use it.
+
+Analyzers have no disposal contract. What an analyzer installs lives in the run's resolution scope, so nothing it acquires outlives the run.
+
+## Naming and placement
+
+A stateful object that collects data is named `...Analyzer`, such as `GenealogyAnalyzer` or `ParetoFrontAnalyzer`. The immutable values it publishes are entries, snapshots or result records, never `...Analyzer`.
+
+Ready-made traces are extension methods on the configuration they observe, named `Trace...`, as in `algorithm.TracePopulationQuality()` or `algorithm.Evaluator.TraceBestSoFar()`, and grouped in a static class ending in `Traces`. User-facing shortcuts take the observed configuration itself. A run-level shortcut such as `run.TracePopulationCandidates(out var analyzer)` observes the run's root algorithm unless a nested one is named.
+
+The main package ships only the traces every algorithm can use. A trace specific to an encoding or a problem family lives beside what it measures, and one whose semantics are still unsettled, such as Pareto front and hypervolume analysis awaiting the objective-system rework, stays in the Experimental package under the rules of § 9.6 of the [developer guidelines](/contributing/developer-guidelines).
 
 ## Run lifecycle
 

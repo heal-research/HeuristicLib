@@ -9,7 +9,9 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 /// <remarks>
 /// The problem applies a deferred update when the next unit of work begins, so between an evaluated batch and the next
 /// one this reads the version that scored that batch. An analysis observing the evaluator therefore records the
-/// environment its readings were made against, with no ordering to arrange.
+/// environment its readings were made against, with no ordering to arrange. Under
+/// <see cref="UpdatePolicy.AfterEachEvaluation"/> one batch can span several versions, and this reads the one that
+/// scored its last candidate; the versions of earlier candidates are not recorded.
 /// </remarks>
 public sealed class EpochClock<TCandidate, TSearchSpace>(IDynamicProblem<TCandidate, TSearchSpace> problem) : Clock<int>
     where TSearchSpace : class, ISearchSpace<TCandidate>

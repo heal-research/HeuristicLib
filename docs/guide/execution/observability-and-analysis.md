@@ -16,6 +16,21 @@ var best = quality.RequireLatestValue().Best;
 
 An algorithm observation captures each search state it yields, after its interceptors have transformed that state. No placeholder interceptor is needed. For simple progress logging, consuming `algorithm.Stream(problem, random)` directly is also sufficient.
 
+## Choose the right tool
+
+An analyzer is one of several ways to see what a run does. Pick by what you need:
+
+| Need | Use |
+| --- | --- |
+| Look at every state the algorithm yields | `algorithm.Stream(problem, random)` |
+| Only the final state | `algorithm.CompleteAsync(problem, random)` |
+| Typed data from chosen boundaries, such as a quality curve or an operator's offspring | An analyzer attached with `AddAnalyzer` |
+| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An execution module attached with `AddExecutionModule` |
+| A count or duration that stops or limits the run | Instrumentation such as `CountCandidates` or `LimitedToEvaluatedCandidates`, read by terminators and budgets |
+| The same analysis for every experiment trial | A trial analyzer, see [Experiments](/guide/execution/experiments) |
+
+Analyzers only read. Nothing an analyzer records changes what the algorithm does next.
+
 ## Choose a boundary and a clock
 
 An evaluator observation captures one completed evaluator call, including the whole batch. An algorithm observation captures a yielded state. A nested algorithm is a separate observation boundary.
