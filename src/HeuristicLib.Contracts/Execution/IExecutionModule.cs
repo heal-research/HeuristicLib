@@ -18,9 +18,9 @@ namespace HEAL.HeuristicLib.Execution;
 /// another one having already acted, such as a trace that reads its clocks, installs its dependencies before itself.
 /// </para>
 /// <para>
-/// Analyzers are the common kind of module, but nothing about this contract is analysis specific. Writing to a log,
-/// reporting progress, advancing a dynamic problem at an iteration boundary or bridging to another runtime are equally
-/// valid modules.
+/// Analyzers install most of the modules a run sees, but nothing about this contract is analysis specific. Writing to a
+/// log, reporting progress, advancing a dynamic problem at an iteration boundary or bridging to another runtime are
+/// equally valid modules.
 /// </para>
 /// </remarks>
 public interface IExecutionModule

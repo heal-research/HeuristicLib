@@ -274,13 +274,6 @@ public class TraceCompositionTests
     }
 
     [Fact]
-    public void MeasurementsAndAggregations_CompareStructurally()
-    {
-        Aggregate.BestMedianWorst().ShouldBe(Aggregate.BestMedianWorst());
-        Aggregate.MinMeanMax().ShouldBe(Aggregate.MinMeanMax());
-    }
-
-    [Fact]
     public async Task SeparateCompositions_CollectIndependently()
     {
         var problem = CreateProblem();
@@ -442,6 +435,27 @@ public class TraceCompositionTests
 
         // The population size never changes, so only the first firing is kept.
         populationSize.SampleCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task LatestOnlyRetention_KeepsOneEntryCarryingTheMomentOfItsOwnObservation()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem, maximumGenerations: 6);
+        var iterations = Clock.FromIterations(algorithm);
+        var current = Analyzer.Trace(algorithm,
+            observation => (IReadOnlyList<double>)[observation.Iteration],
+            Aggregate.MinMeanMax(),
+            clocks: [iterations],
+            retention: TraceRetention.LatestOnly());
+
+        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(current)
+                       .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Every firing replaced the one before it, so the trace holds the last one and its own moment.
+        current.SampleCount.ShouldBe(1);
+        current.RequireLatestValue().Max.ShouldBe(6d);
+        current.By(iterations).Select(point => point.Time).ShouldBe([6L]);
     }
 
     [Fact]

@@ -7,12 +7,11 @@ namespace HEAL.HeuristicLib.Tests.Analysis;
 public class AnalysisUsabilityTests
 {
     [Fact]
-    public void SharedRetentionConfiguration_CreatesIndependentTraceState()
+    public void SeparateRetentionObjects_CountIndependently()
     {
         var evaluator = new ManualEvaluator();
-        var retention = TraceRetention.EveryNth(2);
-        var first = Analyzer.Trace(evaluator, observation => observation.ObjectiveVectors[0][0], retention: retention);
-        var second = Analyzer.Trace(evaluator, observation => observation.ObjectiveVectors[0][0], retention: retention);
+        var first = Analyzer.Trace(evaluator, observation => observation.ObjectiveVectors[0][0], retention: TraceRetention.EveryNth(2));
+        var second = Analyzer.Trace(evaluator, observation => observation.ObjectiveVectors[0][0], retention: TraceRetention.EveryNth(2));
         var scope = Install(first, second);
 
         foreach (var candidate in Enumerable.Range(1, 5))
@@ -20,6 +19,27 @@ public class AnalysisUsabilityTests
 
         first.Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
         second.Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
+    }
+
+    /// <summary>
+    /// A retention holds its own counting, so handing one object to two traces couples them. The factories return a
+    /// fresh retention per call, which is why the ordinary inline use is independent.
+    /// </summary>
+    [Fact]
+    public void OneRetentionObjectSharedByTwoTraces_SharesItsCounting()
+    {
+        var evaluator = new ManualEvaluator();
+        var shared = TraceRetention.EveryNth(2);
+        var first = Analyzer.Trace(evaluator, observation => observation.ObjectiveVectors[0][0], retention: shared);
+        var second = Analyzer.Trace(evaluator, observation => observation.ObjectiveVectors[0][0], retention: shared);
+        var scope = Install(first, second);
+
+        foreach (var candidate in Enumerable.Range(1, 5))
+            Evaluate(scope, evaluator, candidate);
+
+        // Every firing asks the one counter twice, so the second trace takes every entry and the first takes none.
+        first.Snapshot().ShouldBeEmpty();
+        second.Snapshot().Select(entry => entry.Value).ShouldBe([1, 2, 3, 4, 5]);
     }
 
     [Fact]
@@ -71,28 +91,37 @@ public class AnalysisUsabilityTests
     }
 
     [Fact]
-    public void Scope_UsesConfigurationIdentityForAggregationAndRetention()
+    public void RetentionOnChange_HandlesNullAndUsesTypedEquality()
     {
-        var scope = ResolutionScope.Create();
-        var aggregation = Aggregate.BestSoFar();
-        scope.Resolve(aggregation).ShouldBeSameAs(scope.Resolve(aggregation));
-        scope.Resolve(aggregation).ShouldNotBeSameAs(scope.Resolve(Aggregate.BestSoFar()));
-        var retention = TraceRetention.EveryNth(2);
-        scope.Resolve(retention).ShouldBeSameAs(scope.Resolve(retention));
-        scope.Resolve(retention).ShouldNotBeSameAs(ResolutionScope.Create().Resolve(retention));
+        var retention = TraceRetention.OnChange();
+        retention.Decide<string?>(null).ShouldBe(RetentionDecision.Append);
+        retention.Decide<string?>(null).ShouldBe(RetentionDecision.Skip);
+        retention.Decide("value").ShouldBe(RetentionDecision.Append);
+        retention.Decide("value").ShouldBe(RetentionDecision.Skip);
+        retention.Decide<string?>(null).ShouldBe(RetentionDecision.Append);
+        retention.Decide(0).ShouldBe(RetentionDecision.Append);
+        retention.Decide(0).ShouldBe(RetentionDecision.Skip);
     }
 
     [Fact]
-    public void RetentionOnChange_HandlesNullAndUsesTypedEquality()
+    public void RetentionOnChange_CanBeGivenAComparer()
     {
-        var retention = ResolutionScope.Create().Resolve(TraceRetention.OnChange());
-        retention.ShouldRetain<string?>(null).ShouldBeTrue();
-        retention.ShouldRetain<string?>(null).ShouldBeFalse();
-        retention.ShouldRetain("value").ShouldBeTrue();
-        retention.ShouldRetain("value").ShouldBeFalse();
-        retention.ShouldRetain<string?>(null).ShouldBeTrue();
-        retention.ShouldRetain(0).ShouldBeTrue();
-        retention.ShouldRetain(0).ShouldBeFalse();
+        var retention = TraceRetention.OnChange(StringComparer.OrdinalIgnoreCase);
+        retention.Decide("value").ShouldBe(RetentionDecision.Append);
+        retention.Decide("VALUE").ShouldBe(RetentionDecision.Skip);
+        retention.Decide("other").ShouldBe(RetentionDecision.Append);
+    }
+
+    [Fact]
+    public void ARetentionReturningAnUnknownDecision_FailsWhereItIsUsed()
+    {
+        var evaluator = new ManualEvaluator();
+        var trace = Analyzer.Trace(evaluator, observation => observation.ObjectiveVectors[0][0],
+            retention: new UnknownDecisionRetention());
+        var scope = Install(trace);
+
+        var exception = Should.Throw<InvalidOperationException>(() => Evaluate(scope, evaluator, 1));
+        exception.Message.ShouldContain("unknown decision");
     }
 
     private static ResolutionScope Install(params IAnalyzer[] analyzers) =>
@@ -138,15 +167,15 @@ public class AnalysisUsabilityTests
             [.. candidates.Select(candidate => new ObjectiveVector(candidate))];
     }
 
-    private sealed record CountAggregation : IAggregation<ObjectiveVector, int>
+    private sealed class UnknownDecisionRetention : TraceRetention
     {
-        public IAggregationInstance<ObjectiveVector, int> CreateExecutionInstance(ResolutionScope scope) => new Instance();
+        public override RetentionDecision Decide<T>(T value) => (RetentionDecision)99;
+    }
 
-        private sealed class Instance : IAggregationInstance<ObjectiveVector, int>
-        {
-            private int count;
-            public int Aggregate(IReadOnlyList<ObjectiveVector> readings, ObjectiveDirections objective,
-                IComparer<ObjectiveVector>? objectiveComparer = null) => count += readings.Count;
-        }
+    private sealed class CountAggregation : IAggregation<ObjectiveVector, int>
+    {
+        private int count;
+        public int Aggregate(IReadOnlyList<ObjectiveVector> readings, ObjectiveDirections objective,
+            IComparer<ObjectiveVector>? objectiveComparer = null) => count += readings.Count;
     }
 }

@@ -65,7 +65,7 @@ public abstract class AlgorithmRun
                 scope = ResolutionScope.Create(builder =>
                 {
                     foreach (var analyzer in analyzers)
-                        analyzer.Install(builder);
+                        builder.DeclareAsModule(analyzer.Install);
                     foreach (var module in modules)
                         builder.Install(module);
                 });

@@ -572,7 +572,7 @@ An execution module adds behavior at chosen configurations in a run's execution 
 
 A module declares its decorations on a `ResolutionScopeBuilder` and resolves nothing itself, so it cannot participate in building the graph it decorates. Run-level additions wrap configuration-level ones, so a module always sees the fully configured operator.
 
-Analyzers are the common kind of module, but the contract is not analysis specific. Writing to a log, reporting progress, advancing a dynamic problem at an iteration boundary and bridging to another runtime are equally valid modules.
+Analyzers install most of the modules a run sees, but the contract is not analysis specific. Writing to a log, reporting progress, advancing a dynamic problem at an iteration boundary and bridging to another runtime are equally valid modules.
 
 See also: Analyzer, Configuration, Decoration chain, Observation, Resolution scope, Run.
 
@@ -616,13 +616,13 @@ Status: `Canonical`
 
 An analyzer is a stateful object that records or derives information from selected execution boundaries.
 
-The caller creates an analyzer for selected algorithm or operator sources, clocks and analysis behavior. A trace resolves aggregation and retention configurations into private execution instances. The run installs observations when execution starts, before materializing the execution graph. Reusing an analyzer across runs intentionally combines its history. The analyzer exposes typed reads during and after execution.
+The caller creates an analyzer for selected algorithm or operator sources, clocks and analysis behavior. A trace owns its aggregation and retention objects, which are never resolved through a run. The run installs observations when execution starts, before materializing the execution graph. Reusing an analyzer across runs intentionally combines its history. A trace exposes typed reads during and after execution. An accumulating analyzer is read once its run has finished.
 
-Properties on an analyzer return already published values without allocation. Methods may allocate immutable snapshots or projections. Do not expose the mutable accumulator through a read-only collection interface.
+Properties on a trace return already published values without allocation. Its methods may allocate immutable snapshots or projections, and it does not expose its mutable entries through a read-only collection interface. An accumulating analyzer publishes the accumulator itself instead, as described under Accumulator.
 
 Do not use analyzer for Roslyn analyzers without the Roslyn qualifier when the context could be ambiguous.
 
-See also: Analysis snapshot, Observation, Run.
+See also: Accumulator, Analysis snapshot, Observation, Run.
 
 ### Analysis snapshot
 
@@ -630,7 +630,9 @@ Status: `Canonical`
 
 An analysis snapshot is an immutable value published from an analyzer at a point in time.
 
-Snapshots may contain curves, traces, genealogy graphs or summaries. A snapshot remains unchanged while its analyzer collects more data. Creating a snapshot or projection may allocate, so these operations are methods rather than properties.
+A trace publishes snapshots: `Snapshot()` and `By(clock)` copy its entries, so what a caller holds stays unchanged while the trace collects more. Creating one may allocate, so these are methods rather than properties.
+
+An accumulator does not. Copying a Pareto front or a genealogy graph per read would cost the whole accumulator, so those analyzers publish the object itself and are read once their run has finished.
 
 The analyzer remains the owner of its mutable accumulator. The run installs observations but does not own analyzer disposal or provide result lookup.
 
@@ -649,17 +651,31 @@ Do not use series for this concept. In HeuristicLib, a series is a named column 
 
 See also: Analysis snapshot, Analyzer, Run.
 
+### Accumulator
+
+Status: `Canonical`
+
+An accumulator is the single object an analyzer updates in place as it observes a run, rather than a history of
+values. A Pareto front, a genealogy graph and a fitted model are accumulators.
+
+An analyzer holding one derives from `AccumulatingAnalyzer` and updates it under the analyzer's lock. What it
+publishes is that object, not a copy of it, so it is read once the run has finished. Neither trace retention nor
+clocks apply to an accumulator: there is nothing to store apart from what was computed, and one current state has no
+moment of its own.
+
+See also: Trace, Analyzer.
+
 ### Trace retention
 
 Status: `Canonical`
 
-Trace retention decides whether an aggregated observation becomes a trace entry. `TraceRetention` is reusable configuration resolved to an `ITraceRetentionInstance`. Each trace has private retention state. Retention happens after measurement and aggregation. It neither skips that work nor evicts old entries.
+Trace retention decides what a trace does with an aggregated observation: append it as a new entry, store it over the entry before it, or drop it. `TraceRetention` is an object that holds whatever counting or remembering its policy needs, so each trace is given its own. Retention happens after measurement and aggregation and never skips that work. A policy that appends or drops leaves stored entries untouched; `TraceRetention.LatestOnly()` replaces, so a trace using it keeps one entry rather than a history.
 
 ### Aggregation
 
 Status: `Canonical`
 
-An aggregation turns an observation's readings into an immutable result and may accumulate across observations. `IAggregation<TValue, TResult>` is reusable configuration; `IAggregationInstance<TValue, TResult>` performs the operation and owns any mutable history. Both use the common execution-instance foundation. A stateless aggregation summarizes each observation independently.
+An aggregation turns an observation's readings into an immutable result and may accumulate across observations. `IAggregation<TValue, TResult>` is an object with one `Aggregate` method, which owns any history it keeps, so each trace is given its own. A stateless aggregation summarizes each observation independently and holds nothing.
 
 ### Clock
 
@@ -686,8 +702,8 @@ See also: Clock, Moment.
 
 Status: `Provisional`
 
-A moment is the collective time of one trace entry. It contains simultaneous readings from every clock selected by that
-trace analyzer.
+A moment is the collective time of one trace entry. It contains simultaneous readings from every clock selected by
+that trace analyzer, and is read back one clock at a time through `TraceEntry.At`.
 
 See also: Clock, Time, Trace.
 

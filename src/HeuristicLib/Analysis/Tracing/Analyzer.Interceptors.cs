@@ -26,9 +26,9 @@ public static partial class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState =>
-        CreateAggregating<IInterceptor<TCandidate>, InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>, TProblem, TValue, TResult>(interceptors, measurement, aggregation,
+        Create<IInterceptor<TCandidate>, InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>, TProblem, TValue, TResult>(interceptors,
             static (source, record) => new InterceptorObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(source, record),
-            clocks, retention, objectiveComparer);
+            clocks, retention, measurement, aggregation, objectiveComparer);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TSearchState, TValue, TResult>(
         IInterceptor<TCandidate> interceptor,
@@ -68,9 +68,9 @@ public static partial class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState =>
-        CreateProjected(interceptors, value,
+        Create(interceptors,
             static (source, record) => new InterceptorObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(source, record),
-            clocks, retention);
+            clocks, retention, value);
 
     // Observes at the interface search space and problem, so an implicitly typed lambda needs no type arguments.
 
@@ -104,7 +104,7 @@ public static partial class Analyzer
         Func<InterceptorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>, TResult> value,
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null)
         where TSearchState : class, ISearchState =>
-        CreateProjected(interceptors, value,
+        Create(interceptors,
             static (source, record) => new InterceptorObservationModule<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>(source, record),
-            clocks, retention);
+            clocks, retention, value);
 }

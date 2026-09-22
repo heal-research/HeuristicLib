@@ -235,9 +235,8 @@ public class PythonGenealogyAnalysis
 
             if (RankAnalysis is not null)
             {
-                var rankResult = RankAnalysis.State.Result();
-                rankGraph = rankResult.Graph.ToGraphViz();
-                rankLines = rankResult.Ranks.Select(x => x.ToList()).ToArray();
+                rankGraph = RankAnalysis.State.Graph.ToGraphViz();
+                rankLines = RankAnalysis.State.Ranks.Select(row => row.ToList()).ToArray();
             }
 
             IReadOnlyList<EvaluatedCandidate<TCandidate>[]> apRes =

@@ -4,8 +4,9 @@ namespace HEAL.HeuristicLib.Analysis;
 /// Creates one analyzer per experiment trial, bound to boundaries selected from that trial's algorithm.
 /// </summary>
 /// <remarks>
-/// An analyzer holds one run's data, so a trial analyzer is a factory rather than a shared analyzer. The experiment
-/// hands back the analyzer it created for each trial, and the caller reads its data directly.
+/// One analyzer attached to several runs combines their data, so a trial analyzer is a factory that gives each trial
+/// an analyzer of its own. The experiment hands back the analyzer it created for each trial, and the caller reads its
+/// data directly.
 /// </remarks>
 public static class TrialAnalyzer
 {

@@ -11,6 +11,10 @@ Type names below predate the resolution-scope rename: `ExecutionInstanceResolver
 `ExecutionInstanceResolverBuilder` is now `ResolutionScopeBuilder`, and `IExecutionHook` is now `IExecutionModule`.
 The text is left as written.
 
+Aggregation and retention are no longer execution configurations, and accumulating analyzers publish live state rather
+than snapshots. See the [analysis system rework](analysis-system-rework.md#status) for the decisions that revised this
+document.
+
 ## Working agreement
 
 The user reviews by staging files. Do not stage, unstage, reset the index or commit. Preserve their working edits and

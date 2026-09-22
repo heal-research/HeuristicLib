@@ -348,18 +348,25 @@ public sealed class ResolutionScopeBuilder
         if (!installedModules.Add(module))
             return this;
 
+        DeclareAsModule(module.Install);
+        return this;
+    }
+
+    /// <summary>
+    /// Runs a declaration with module origin, for something a run attaches that is not itself a module, such as an analyzer.
+    /// </summary>
+    internal void DeclareAsModule(Action<ResolutionScopeBuilder> declare)
+    {
         var previousOrigin = origin;
         origin = DecorationOrigin.Module;
         try
         {
-            module.Install(this);
+            declare(this);
         }
         finally
         {
             origin = previousOrigin;
         }
-
-        return this;
     }
 
     internal ResolutionScope Build()
@@ -380,7 +387,7 @@ public enum DecorationOrigin
     /// <summary>Declared by the configuration being executed, such as a budget wrapping the operator it limits.</summary>
     Configuration = 0,
 
-    /// <summary>Declared by a module installed on the run, such as an analyzer observing an operator.</summary>
+    /// <summary>Declared by a module or an analyzer attached to the run, such as a trace observing an operator.</summary>
     Module = 1
 }
 

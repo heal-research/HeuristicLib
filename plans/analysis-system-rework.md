@@ -1,7 +1,8 @@
 # Analysis system rework
 
-Type names below predate the resolution-scope rename: `IExecutionHook` is now `IExecutionModule`. The text is left as
-written.
+Type names below predate later renames and decisions: `IExecutionHook` is now `IExecutionModule`, and `IAnalyzer` is a
+first-class stateful analyzer again rather than a hook. The body is left as written; [Status](#status) records what was
+actually built.
 
 ## Summary
 
@@ -864,15 +865,47 @@ against another would describe neither, and no clock could honestly tag it.
 
 ## Status
 
-Phases 1 to 4 are implemented, along with parts of 5. What the branch now has: `IAnalyzer` reduced to `IExecutionHook`,
-anchors as reference-matched decorations, `Analyzer.Trace` overloads for the algorithm, crossover, evaluator, mutator and
-interceptor roles, iteration, evaluation and elapsed-time clocks, moments, retention, and `TraceAnalyzer<T>` with live
-reads, snapshots and typed `By(clock)` projections. The quality analyzers collapsed into `BestMedianWorstTrace` and
-`BestQualityTrace`; hypervolume, population similarity and population capture became traces; experiment trial binding and
-the Python interop analyzers moved onto the new contracts. `IAnalyzerRunState`, `ObservationPlan`, `WithAnalyzer` and the
-`Observable...` operator wrappers are gone.
+Phases 1 to 6 are implemented. Phase 7 is partly done.
 
-The agreed order for what remains:
+What the branch has: `IAnalyzer` as a first-class stateful run component installing its own observations, boundaries
+matched by the selected configuration rather than by an anchor object, `Analyzer.Trace` overloads for the algorithm,
+crossover, evaluator, mutator and interceptor roles, iteration, evaluation and elapsed-time clocks, moments, retention,
+and `TraceAnalyzer<T>` with live reads, snapshots and typed `By(clock)` projections. The quality analyzers collapsed
+into `BestMedianWorstTrace` and `BestQualityTrace`; hypervolume, population similarity and population capture became
+traces; experiment trial binding and the Python interop analyzers moved onto the new contracts. `IAnalyzerRunState`,
+`ObservationPlan`, `WithAnalyzer` and the `Observable...` operator wrappers are gone.
+
+### Decisions taken after this plan was written
+
+These revise the plan rather than follow it, and the code and guides are the current word on each.
+
+- **One trace type.** `TraceAnalyzer<T>` is sealed and concrete. `AggregatingTrace` and `ProjectedTrace` existed only to
+  hold a differently typed callback; the factory now closes over a `Func<TObservation, TResult>`, so measuring and
+  aggregating need no trace type of their own. Measurement and storage happen under one lock.
+- **Retention decides, it does not only filter.** `TraceRetention.Decide` returns `Append`, `ReplaceLatest` or `Skip`.
+  `LatestOnly()` keeps one entry, which is how a trace answers what a measurement says now rather than how it moved. The
+  plan's rule that retention never evicts no longer holds. `OnChange` takes an optional `IEqualityComparer`.
+- **Aggregation and retention are plain objects.** They are not `IExecutionConfiguration` and are never resolved through
+  a `ResolutionScope`: no implementation ever used the scope, nothing re-instantiated them, and `Fits` was never asked.
+  `IAggregationInstance`, `ITraceRetentionInstance` and `StatelessAggregation` are gone. One that keeps state owns it, so
+  two traces sharing one object share its state; the factories return a fresh object per call.
+- **Accumulators are a second analyzer shape, not a second framework.** `AccumulatingAnalyzer` supplies the lock and the
+  install hook for an analyzer whose data is one object updated in place. Retention and clocks do not apply to it: there
+  is nothing to store apart from what was computed, and one current state has no moment of its own.
+- **An accumulator publishes itself, not a copy.** Copying a Pareto front or a descent graph per read costs the whole
+  accumulator, and every reader of one reads after its run finished, so they expose live read-only views and reading
+  during a run is unsupported. Traces still publish snapshots, which are cheap.
+- **Genealogy is encapsulated rather than duplicated.** `GenealogyGraph` keeps its nodes private and exposes read-only
+  views; `Node` carries correct breadth-first `Descendants()` and `Ancestors()`, replacing a quadratic descendant walk
+  and an ancestor walk that followed the wrong edges. `ParetoState` is `ParetoFront`, and `HyperVolumeState` is gone.
+- **Locks stay, for two reasons.** An observation of one source arrives on the thread that called the operator, so batch
+  parallelism never double-fires it. The lock is what lets a caller read a trace while a run writes, and what keeps one
+  analyzer consistent across runs executing at the same time.
+- **Two footguns are accepted and documented, not guarded.** An aggregation returning a mutable object it keeps mutating
+  can still be handed to an ordinary trace, which then stores one object N times. A retention object hoisted into two
+  traces couples their counting. Add checks when either bites.
+
+### The agreed order for what remains
 
 1. **Dynamic analysis and the epoch clock.** Done. `EvaluationTiming` now carries the environment version an
    evaluation was made against and whether that environment was already due for replacement; the free-running counter is
@@ -880,14 +913,21 @@ The agreed order for what remains:
    `OnEvaluation` event, `DynamicAnalysis` and its disposal are deleted and nothing outside the problem drives its
    environment. Per-epoch quality and stale-evaluation counts are ordinary `Analyzer.Trace` compositions over an epoch
    clock.
-2. **The accumulator extension point**, with genealogy as its reference case, and
-   `BestBeforeChangePerformanceAnalysis` as the second. That analyzer is now on the new plumbing but still folds by
-   hand, which is what the extension point removes.
-3. **The rest of the measurement and aggregation catalog, and the across-firing axis.** Deferred deliberately until the
-   design has stopped moving, so that the catalog is written once against a settled shape. Only what a migration needs is
-   added before then.
-4. **Anchor resolution reads.**
-5. **Documentation.** Phase 7 runs last, once the surface is settled.
+2. **The accumulator extension point.** Done, with genealogy as its reference case and the Pareto front beside it.
+   `BestBeforeChangePerformanceAnalyzer` is on it too, keeping a hand-written fold: what it records per epoch is the best
+   of an epoch that has ended, which is only known once the next one begins, so no trace can express it. `RankAnalyzer`
+   stays hand-written on purpose, because its rows are series-shaped and it composes the genealogy analyzer.
+3. **The rest of the measurement and aggregation catalog, and the across-firing axis.** The reason for deferring was
+   that the design was still moving. It has stopped, so this is unblocked and is the largest remaining piece.
+4. **Observation resolution reads.** Decided against for now. The case is real but narrow: an observation names a
+   configuration by reference, so tracing a configuration the run never resolves, typically a stale reference left
+   behind by `with`, leaves the trace silently empty. Nobody has hit it, and a read only helps someone who already
+   suspects it. A flag set by each observation module was tried and removed: it covered observation modules and no
+   other decoration, and it relied on every module author remembering to set it. If this is ever needed, it belongs
+   where decorations are applied, in `Decoration.Apply`, so it covers every module and cannot be forgotten.
+5. **Documentation.** The analyzer architecture page, the observability guide and the glossary track the current design.
+   So do the API usage specs: the current-state specs, which observed through a placeholder interceptor, are retired,
+   and the desired-state specs are now `AnalysisSpecs`.
 
 ## Implementation sequence
 

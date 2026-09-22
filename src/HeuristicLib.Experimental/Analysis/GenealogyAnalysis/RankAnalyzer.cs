@@ -68,43 +68,37 @@ public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchStat
         graphBuilder.Install(builder);
 
         foreach (var algorithm in algorithms)
-            builder.Observe(algorithm, _ => RecordRanks(State));
+            builder.Observe(algorithm, _ => State.RecordRanks());
     }
-
-    private static void RecordRanks(RankState<TCandidate> state)
-    {
-        if (state.Graph.Nodes.Count < 2)
-            return;
-
-        var line = state.Graph.Nodes[^2].Values
-                        .Where(x => x.Layer == 0)
-                        .OrderBy(x => x.Rank)
-                        .Select(node =>
-                            node.GetAllDescendants().Where(x => x.Rank >= 0).Select(x => (double)x.Rank)
-                                .DefaultIfEmpty(double.NaN).Average())
-                        .ToList();
-        if (line.Count > 0)
-        {
-            state.Ranks.Add(line);
-        }
-    }
-
-
 }
 
+/// <summary>
+/// The graph a rank analysis builds and the ranks it read from it, one row per closed generation.
+/// </summary>
+/// <remarks>Both are accumulators, so read them once the run has finished.</remarks>
 public class RankState<TCandidate> where TCandidate : notnull
 {
+    private readonly List<ImmutableArray<double>> ranks = [];
+
     public RankState(GenealogyGraph<TCandidate> graph)
     {
         Graph = graph;
     }
 
-    public List<List<double>> Ranks { get; } = [];
-
     public GenealogyGraph<TCandidate> Graph { get; }
 
-    public RankAnalysisResult<TCandidate> Result() =>
-        new(Graph, Ranks.Select(IReadOnlyList<double> (x) => x.ToArray()).ToArray());
+    /// <summary>The average descendant ranks per closed generation, oldest first.</summary>
+    public IReadOnlyList<ImmutableArray<double>> Ranks => ranks;
+
+    internal void RecordRanks()
+    {
+        var row = Graph.AverageDescendantRanksOfPreviousGeneration();
+        if (row.IsEmpty)
+            return;
+
+        lock (ranks)
+            ranks.Add(row);
+    }
 }
 
 public static class RankAnalysisTraces

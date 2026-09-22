@@ -22,10 +22,8 @@ public interface ICandidateSimilarityCalculator<TCandidate>
 /// Reduces a population to its pairwise similarity matrix and the summary over it.
 /// </summary>
 public sealed class PopulationSimilarityAggregation<TCandidate>(ICandidateSimilarityCalculator<TCandidate> candidateSimilarity)
-    : IAggregation<EvaluatedCandidate<TCandidate>, PopulationSimilarity>, IAggregationInstance<EvaluatedCandidate<TCandidate>, PopulationSimilarity>
+    : IAggregation<EvaluatedCandidate<TCandidate>, PopulationSimilarity>
 {
-    public IAggregationInstance<EvaluatedCandidate<TCandidate>, PopulationSimilarity> CreateExecutionInstance(ResolutionScope scope) => this;
-
     public PopulationSimilarity Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
     {
         if (readings.Count == 0)
@@ -75,11 +73,9 @@ public sealed class PopulationSimilarityAggregation<TCandidate>(ICandidateSimila
 /// keeps every entry, and a matrix per iteration grows with the square of the population size.
 /// </remarks>
 public sealed class AverageSimilarityAggregation<TCandidate>(ICandidateSimilarityCalculator<TCandidate> candidateSimilarity)
-    : IAggregation<EvaluatedCandidate<TCandidate>, MinMeanMax>, IAggregationInstance<EvaluatedCandidate<TCandidate>, MinMeanMax>
+    : IAggregation<EvaluatedCandidate<TCandidate>, MinMeanMax>
 {
     private readonly PopulationSimilarityAggregation<TCandidate> full = new(candidateSimilarity);
-
-    public IAggregationInstance<EvaluatedCandidate<TCandidate>, MinMeanMax> CreateExecutionInstance(ResolutionScope scope) => this;
 
     public MinMeanMax Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null) =>
         full.Aggregate(readings, objective, objectiveComparer).Average;

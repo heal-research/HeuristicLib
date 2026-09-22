@@ -11,10 +11,10 @@ namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 /// Builds the genealogy graph of a run from crossover, mutation and generation boundaries.
 /// </summary>
 /// <remarks>
-/// This analyzer holds its own data and is used for one run. It combines multiple kinds of boundary
-/// into a graph with domain-specific queries.
+/// This analyzer holds its own data. It combines multiple kinds of boundary into a graph with domain-specific
+/// queries. The graph is an accumulator, so read it once the run has finished.
 /// </remarks>
-public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState> : IAnalyzer
+public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState> : AccumulatingAnalyzer
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : PopulationState<TCandidate>
@@ -24,6 +24,7 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
     private readonly ImmutableArray<ICrossover<TCandidate>> crossovers;
     private readonly ImmutableArray<IMutator<TCandidate>> mutators;
     private readonly ImmutableArray<IAlgorithm<TCandidate, TSearchState>> algorithms;
+    private readonly GenealogyGraph<TCandidate> graph;
 
     /// <param name="crossovers">Crossovers whose offspring become graph edges from two parents.</param>
     /// <param name="mutators">Mutators whose offspring become graph edges from one parent.</param>
@@ -59,18 +60,19 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
         if ((crossovers?.Count ?? 0) + (mutators?.Count ?? 0) + (algorithms?.Count ?? 0) == 0)
             throw new ArgumentException("A genealogy analysis needs at least one crossover, mutator or algorithm to observe.");
 
-        Graph = graph;
+        this.graph = graph;
         this.crossovers = [.. crossovers ?? []];
         this.mutators = [.. mutators ?? []];
         this.algorithms = [.. algorithms ?? []];
         this.saveSpace = saveSpace;
     }
 
-    public GenealogyGraph<TCandidate> Graph { get; }
+    /// <summary>The graph this analyzer accumulates.</summary>
+    public GenealogyGraph<TCandidate> Graph => graph;
 
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; init; }
 
-    public void Install(ResolutionScopeBuilder builder)
+    public override void Install(ResolutionScopeBuilder builder)
     {
         foreach (var crossover in crossovers)
             builder.Observe<TCandidate, TSearchSpace, TProblem>(
@@ -88,13 +90,13 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
     private void AfterCross(IReadOnlyList<TCandidate> offspring, IReadOnlyList<Parents<TCandidate>> parents)
     {
         foreach (var (parentPair, child) in parents.Zip(offspring))
-            Graph.AddConnection([parentPair.Parent1, parentPair.Parent2], child);
+            graph.AddConnection([parentPair.Parent1, parentPair.Parent2], child);
     }
 
     private void AfterMutate(IReadOnlyList<TCandidate> offspring, IReadOnlyList<TCandidate> parents)
     {
         foreach (var (parent, child) in parents.Zip(offspring))
-            Graph.AddConnection([parent], child);
+            graph.AddConnection([parent], child);
     }
 
     private void CloseGeneration(TSearchState currentState, TProblem problem)
@@ -102,7 +104,7 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
         var ordered = currentState.Population
                                   .OrderBy(keySelector: x => x.ObjectiveVector, problem.Objective.RequireTotalOrder(ObjectiveComparer))
                                   .ToArray();
-        Graph.SetAsNewGeneration(ordered.Select(x => x.Candidate), saveSpace);
+        graph.SetAsNewGeneration(ordered.Select(x => x.Candidate), saveSpace);
     }
 }
 

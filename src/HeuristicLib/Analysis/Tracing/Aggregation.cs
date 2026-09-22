@@ -1,23 +1,18 @@
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-/// <summary>Reusable configuration for aggregating observations, optionally accumulating across them.</summary>
-public interface IAggregation<TValue, TResult>
-    : IExecutionConfiguration<IAggregationInstance<TValue, TResult>>;
-
-/// <summary>Aggregates readings into an immutable result. Mutable history belongs to this instance.</summary>
-public interface IAggregationInstance<in TValue, out TResult> : IExecutionInstance
+/// <summary>
+/// Turns the readings of one observation into the value a trace stores, and may keep state across observations.
+/// </summary>
+/// <remarks>
+/// An aggregation is an object rather than a setting. One that keeps state, such as a best-so-far, owns that state,
+/// so two traces sharing one object share its history. The factories on <see cref="Aggregate"/> return a fresh
+/// aggregation per call, which is what makes the ordinary inline use independent.
+/// </remarks>
+public interface IAggregation<in TValue, out TResult>
 {
     TResult Aggregate(IReadOnlyList<TValue> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null);
-}
-
-/// <summary>A value strategy without mutable execution state. Resolution returns the strategy itself.</summary>
-public abstract record StatelessAggregation<TValue, TResult> : IAggregation<TValue, TResult>, IAggregationInstance<TValue, TResult>
-{
-    public IAggregationInstance<TValue, TResult> CreateExecutionInstance(ResolutionScope scope) => this;
-    public abstract TResult Aggregate(IReadOnlyList<TValue> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null);
 }
 
 public readonly record struct BestMedianWorst(ObjectiveVector Best, ObjectiveVector Median, ObjectiveVector Worst);
@@ -37,9 +32,9 @@ public static class BestMedianWorstEntry
 /// <summary>
 /// Orders objective vectors by the observed run's objective and keeps the best, median and worst of them.
 /// </summary>
-public sealed record BestMedianWorstAggregation : StatelessAggregation<ObjectiveVector, BestMedianWorst>
+public sealed class BestMedianWorstAggregation : IAggregation<ObjectiveVector, BestMedianWorst>
 {
-    public override BestMedianWorst Aggregate(IReadOnlyList<ObjectiveVector> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
+    public BestMedianWorst Aggregate(IReadOnlyList<ObjectiveVector> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
     {
         var ordered = readings.Order(objective.RequireTotalOrder(objectiveComparer)).ToArray();
         if (ordered.Length == 0)
@@ -52,9 +47,9 @@ public sealed record BestMedianWorstAggregation : StatelessAggregation<Objective
 /// <summary>
 /// Orders evaluated candidates by the observed run's objective and keeps the best, median and worst of them.
 /// </summary>
-public sealed record BestMedianWorstCandidateAggregation<TCandidate> : StatelessAggregation<EvaluatedCandidate<TCandidate>, BestMedianWorstEntry<TCandidate>>
+public sealed class BestMedianWorstCandidateAggregation<TCandidate> : IAggregation<EvaluatedCandidate<TCandidate>, BestMedianWorstEntry<TCandidate>>
 {
-    public override BestMedianWorstEntry<TCandidate> Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
+    public BestMedianWorstEntry<TCandidate> Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
     {
         var ordered = readings.OrderBy(evaluated => evaluated.ObjectiveVector, objective.RequireTotalOrder(objectiveComparer)).ToArray();
         if (ordered.Length == 0)
@@ -67,9 +62,9 @@ public sealed record BestMedianWorstCandidateAggregation<TCandidate> : Stateless
 /// <summary>
 /// Keeps the smallest, the arithmetic mean and the largest of the readings.
 /// </summary>
-public sealed record MinMeanMaxAggregation : StatelessAggregation<double, MinMeanMax>
+public sealed class MinMeanMaxAggregation : IAggregation<double, MinMeanMax>
 {
-    public override MinMeanMax Aggregate(IReadOnlyList<double> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
+    public MinMeanMax Aggregate(IReadOnlyList<double> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
     {
         if (readings.Count == 0)
             throw new InvalidOperationException("There are no readings, cannot determine minimum, mean and maximum.");
@@ -85,17 +80,17 @@ public sealed record MinMeanMaxAggregation : StatelessAggregation<double, MinMea
 /// This is the absence of aggregation. It retains one value per reading rather than one per firing, so a trace using it
 /// grows with the observed population and is not a default recommendation for long runs.
 /// </remarks>
-public sealed record ReadingsAggregation<TValue> : StatelessAggregation<TValue, IReadOnlyList<TValue>>
+public sealed class ReadingsAggregation<TValue> : IAggregation<TValue, IReadOnlyList<TValue>>
 {
-    public override IReadOnlyList<TValue> Aggregate(IReadOnlyList<TValue> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null) => readings.ToImmutableArray();
+    public IReadOnlyList<TValue> Aggregate(IReadOnlyList<TValue> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null) => readings.ToImmutableArray();
 }
 
 /// <summary>
 /// Keeps the best objective vector of the readings, by the observed run's objective.
 /// </summary>
-public sealed record BestAggregation : StatelessAggregation<ObjectiveVector, ObjectiveVector>
+public sealed class BestAggregation : IAggregation<ObjectiveVector, ObjectiveVector>
 {
-    public override ObjectiveVector Aggregate(IReadOnlyList<ObjectiveVector> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
+    public ObjectiveVector Aggregate(IReadOnlyList<ObjectiveVector> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
     {
         if (readings.Count == 0)
             throw new InvalidOperationException("There are no readings, cannot determine the best.");
@@ -107,9 +102,9 @@ public sealed record BestAggregation : StatelessAggregation<ObjectiveVector, Obj
 /// <summary>
 /// Keeps the best evaluated candidate of the readings, by the observed run's objective.
 /// </summary>
-public sealed record BestCandidateAggregation<TCandidate> : StatelessAggregation<EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>>
+public sealed class BestCandidateAggregation<TCandidate> : IAggregation<EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>>
 {
-    public override EvaluatedCandidate<TCandidate> Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
+    public EvaluatedCandidate<TCandidate> Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
     {
         if (readings.Count == 0)
             throw new InvalidOperationException("There are no readings, cannot determine the best.");
@@ -122,17 +117,17 @@ public sealed record BestCandidateAggregation<TCandidate> : StatelessAggregation
 /// <summary>
 /// Counts the readings of one firing, so that a firing's sample is how many things it produced.
 /// </summary>
-public sealed record CountAggregation<TValue> : StatelessAggregation<TValue, int>
+public sealed class CountAggregation<TValue> : IAggregation<TValue, int>
 {
-    public override int Aggregate(IReadOnlyList<TValue> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null) => readings.Count;
+    public int Aggregate(IReadOnlyList<TValue> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null) => readings.Count;
 }
 
 /// <summary>
 /// Takes the one reading of a firing, for a measurement that reads a single value rather than a set of them.
 /// </summary>
-public sealed record SingleAggregation<TValue> : StatelessAggregation<TValue, TValue>
+public sealed class SingleAggregation<TValue> : IAggregation<TValue, TValue>
 {
-    public override TValue Aggregate(IReadOnlyList<TValue> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null) =>
+    public TValue Aggregate(IReadOnlyList<TValue> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null) =>
         readings.Count == 1
             ? readings[0]
             : throw new InvalidOperationException($"A single aggregation needs exactly one reading per firing but received {readings.Count}.");

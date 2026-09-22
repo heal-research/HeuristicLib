@@ -8,6 +8,10 @@ foundation revision.
 
 This plan supersedes conflicting recommendations in [analysis-api-simplification.md](analysis-api-simplification.md). The first implementation passed its checks, then the user requested the revisions below. Production APIs, usage specs and current guides define the resulting design.
 
+Aggregation and retention are no longer execution configurations, and accumulating analyzers publish live state rather
+than snapshots. See the [analysis system rework](analysis-system-rework.md#status) for the decisions that revised this
+document.
+
 ## Working agreement
 
 The user reviews by staging files. Do not stage, unstage, reset the index or commit. Preserve their working edits and treat index changes as review activity.

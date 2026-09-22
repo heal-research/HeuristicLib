@@ -51,13 +51,7 @@ public abstract class Clock<TTime> : Clock
     internal sealed override object Read() => ReadTime()!;
 }
 
-/// <summary>
-/// A clock whose time is kept current by observations from one configured source.
-/// </summary>
-/// <remarks>
-/// Derive from this rather than wiring an observation module by hand: it installs itself at the source it was given, so a clock of
-/// your own is left with reading an observation and reporting the time.
-/// </remarks>
+/// <summary>The times a selected set of clocks read together, recorded with one entry or one update.</summary>
 internal sealed class Moment
 {
     private readonly ImmutableDictionary<Clock, object> times;
@@ -70,7 +64,7 @@ internal sealed class Moment
     internal TTime At<TTime>(Clock<TTime> clock)
     {
         if (!times.TryGetValue(clock, out var time))
-            throw new InvalidOperationException("The trace does not use the requested clock.");
+            throw new InvalidOperationException("The requested clock is not one of the selected clocks.");
         return (TTime)time;
     }
 

@@ -1,42 +1,39 @@
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public sealed record BestSoFarAggregation : IAggregation<ObjectiveVector, ObjectiveVector>
+/// <summary>
+/// Keeps the best objective vector seen so far, across observations.
+/// </summary>
+/// <remarks>The running best is this object's own state, so give each trace its own.</remarks>
+public sealed class BestSoFarAggregation : IAggregation<ObjectiveVector, ObjectiveVector>
 {
-    public IAggregationInstance<ObjectiveVector, ObjectiveVector> CreateExecutionInstance(ResolutionScope scope) => new ExecutionInstance();
+    private readonly BestAggregation best = new();
+    private ObjectiveVector? bestSoFar;
 
-    private sealed class ExecutionInstance : IAggregationInstance<ObjectiveVector, ObjectiveVector>
+    public ObjectiveVector Aggregate(IReadOnlyList<ObjectiveVector> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
     {
-        private ObjectiveVector? best;
-        private readonly BestAggregation aggregation = new();
-
-        public ObjectiveVector Aggregate(IReadOnlyList<ObjectiveVector> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
-        {
-            var current = aggregation.Aggregate(readings, objective, objectiveComparer);
-            if (best is null || objective.RequireTotalOrder(objectiveComparer).Compare(current, best) < 0)
-                best = current;
-            return best;
-        }
+        var current = best.Aggregate(readings, objective, objectiveComparer);
+        if (bestSoFar is null || objective.RequireTotalOrder(objectiveComparer).Compare(current, bestSoFar) < 0)
+            bestSoFar = current;
+        return bestSoFar;
     }
 }
 
-public sealed record BestCandidateSoFarAggregation<TCandidate> : IAggregation<EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>>
+/// <summary>
+/// Keeps the best evaluated candidate seen so far, across observations.
+/// </summary>
+/// <remarks>The running best is this object's own state, so give each trace its own.</remarks>
+public sealed class BestCandidateSoFarAggregation<TCandidate> : IAggregation<EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>>
 {
-    public IAggregationInstance<EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>> CreateExecutionInstance(ResolutionScope scope) => new ExecutionInstance();
+    private readonly BestCandidateAggregation<TCandidate> best = new();
+    private EvaluatedCandidate<TCandidate>? bestSoFar;
 
-    private sealed class ExecutionInstance : IAggregationInstance<EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>>
+    public EvaluatedCandidate<TCandidate> Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
     {
-        private EvaluatedCandidate<TCandidate>? best;
-        private readonly BestCandidateAggregation<TCandidate> aggregation = new();
-
-        public EvaluatedCandidate<TCandidate> Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
-        {
-            var current = aggregation.Aggregate(readings, objective, objectiveComparer);
-            if (best is null || objective.RequireTotalOrder(objectiveComparer).Compare(current.ObjectiveVector, best.ObjectiveVector) < 0)
-                best = current;
-            return best;
-        }
+        var current = best.Aggregate(readings, objective, objectiveComparer);
+        if (bestSoFar is null || objective.RequireTotalOrder(objectiveComparer).Compare(current.ObjectiveVector, bestSoFar.ObjectiveVector) < 0)
+            bestSoFar = current;
+        return bestSoFar;
     }
 }

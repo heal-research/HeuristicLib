@@ -55,9 +55,35 @@ var quality = algorithm.TracePopulationQuality(clocks: [iterations], retention: 
 var bestAtEveryEvaluation = algorithm.Evaluator.TraceBestSoFar(clocks: [evaluations], retention: TraceRetention.EveryObservation());
 ```
 
-`TraceRetention.EveryNth(10)` records observations 10, 20, 30, and so on. It adds no extra initial or final entry. `TraceRetention.OnChange()` records the first value and subsequent changes by value equality. Trace-retention settings are immutable and can be reused across traces. Their counters are private to each trace by default.
+`TraceRetention.EveryNth(10)` records observations 10, 20, 30, and so on. It adds no extra initial or final entry. `TraceRetention.OnChange()` records the first value and subsequent changes by value equality, and `TraceRetention.OnChange(comparer)` decides sameness with a comparer of your own. `TraceRetention.LatestOnly()` stores each value over the one before it, so the trace holds a single entry carrying the moment of the observation that produced it. Use it when you want what a measurement says now rather than how it moved, and read it with `Latest` or `RequireLatestValue()`. A retention counts for the object it is, so give each trace its own, which the factories do.
 
-Retention runs after measurement and aggregation. It controls stored entries and does not skip expensive computations or discard old history. Best-so-far therefore still sees an improvement between retained observations.
+Retention runs after measurement and aggregation. It controls stored entries and never skips expensive computations, so best-so-far still sees an improvement between retained observations. `EveryNth` and `OnChange` leave stored entries alone; `LatestOnly` is the one policy that discards what the trace already held.
+
+## Accumulating analyzers
+
+Some analysis is not a series. A Pareto front, a genealogy graph and a fitted model are each one object that every observation changes, and what you want back is that object as it stands. Those analyzers derive from `AccumulatingAnalyzer`:
+
+```csharp
+var front = new ParetoFrontAnalyzer<RealVector, TSearchSpace, TProblem>(
+    problem.Objective, referencePoint, algorithm.Evaluator);
+
+var points = front.Front.Points;   // the front itself, still growing while the run runs
+```
+
+An accumulator is one mutable object, so what it publishes is a live view of it rather than a copy. Read it once the run has finished. Clocks and retention do not apply either: it holds the current state, not a history, so there is no entry for a moment to belong to.
+
+To write one, derive from `AccumulatingAnalyzer`, install your observations, and update under `Sync`:
+
+```csharp
+public override void Install(ResolutionScopeBuilder builder) =>
+    builder.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, Record);
+
+private void Record(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation)
+{
+    lock (Sync)
+        accumulator.Add(observation.Candidates);
+}
+```
 
 ## Custom traces
 
@@ -74,9 +100,11 @@ var quality = Analyzer.Trace(
 
 Named measurements provide reusable value strategies with type inference from the source. Runtime-only delegates provide local projections and have no value-equality or serialization contract.
 
-`IAggregation<TValue, TResult>` is a configuration that resolves to `IAggregationInstance<TValue, TResult>`, using the same execution-instance system as algorithms and operators. `Aggregate.Best()` summarizes each observation; `Aggregate.BestSoFar()` accumulates across observations. Custom aggregations implement `CreateExecutionInstance(scope)` and put mutable state on their execution instance. They must publish immutable results.
+`IAggregation<TValue, TResult>` has a single `Aggregate` method. `Aggregate.Best()` summarizes each observation; `Aggregate.BestSoFar()` accumulates across observations, keeping the running best as its own state. A custom aggregation is an ordinary class implementing that one method, and it must publish immutable results.
 
-A trace privately resolves its aggregation and retention strategies. To collect several compatible sources into one accumulator and result sink, create one combined trace:
+An aggregation or retention that holds state owns it, so build one per trace. The factories do that for you: `TraceRetention.EveryNth(10)` and `Aggregate.BestSoFar()` return a fresh object every call. Hoisting one into a variable and passing it to two traces makes them share its counting.
+
+To collect several compatible sources into one accumulator and result sink, create one combined trace:
 
 ```csharp
 var evaluators = new[] { firstAlgorithm.Evaluator, secondAlgorithm.Evaluator };

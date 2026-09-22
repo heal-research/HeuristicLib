@@ -1,8 +1,8 @@
 # Analyzer architecture
 
-An analyzer is a stateful, first-class run component. It owns its collected data and exposes typed reads directly. It implements `IAnalyzer.Install(ResolutionScopeBuilder)` to declare the execution observations it needs. An analyzer is not an execution module, although its installation can create and install any number of modules.
+An analyzer is a stateful, first-class run component. It owns its collected data and exposes typed reads directly. It implements `IAnalyzer.Install(ResolutionScopeBuilder)` to declare the execution observations it needs. An analyzer is not an execution module, although its installation can create and install any number of modules. The run installs it as it would a module, so a decoration an analyzer declares directly, without creating a module for it, still has module origin.
 
-`AlgorithmRun` accepts analyzers and modules while its lifecycle is `Preparing`. Starting it freezes those attachments, installs them, and resolves the execution graph. The run does not own analyzer disposal and does not provide a result lookup service. Reusing one analyzer on several runs intentionally combines its results.
+`AlgorithmRun` accepts analyzers and modules while its lifecycle is `Preparing`. Starting it freezes those attachments, installs them, analyzers before modules and each in the order attached, and resolves the execution graph. The run does not own analyzer disposal and does not provide a result lookup service. Reusing one analyzer on several runs intentionally combines its results.
 
 ## Observation boundaries
 
@@ -37,11 +37,19 @@ Configuration decorations remain inside module decorations. Among modules, earli
 
 Named measurements are immutable value strategies. Delegate measurements and scalar projections are runtime-only adapters with identity semantics. Public trace construction never exposes an execution scope.
 
-Aggregation and retention use `IExecutionConfiguration<T>` and `IExecutionInstance`, the same foundation as algorithms and operators. Their configuration objects are reusable and their execution instances own mutable state. A trace privately resolves those strategies, so separate traces always receive separate state. Combining several sources in one trace is the public way to share an accumulator and result sink.
+Aggregation and retention are plain objects, not execution configurations. They are never resolved through a `ResolutionScope`, because nothing about them depends on a run: an aggregation's state is its own, it is built when the trace is built, and it is never rebuilt. A trace does reach the resolution system for the one thing that needs it, installing its observation modules and clocks into the run's scope.
 
-`IAggregation<TValue, TResult>` covers both per-observation summaries and accumulation across observations. `StatelessAggregation<TValue, TResult>` returns itself when resolved. Stateful configurations such as `BestSoFarAggregation` create private mutable execution instances. There is no separate reducer role.
+One consequence is deliberate: an aggregation or retention that holds state owns it, so handing one object to two traces couples them. The factories on `Aggregate` and `TraceRetention` return a fresh object per call, which is what makes ordinary inline use independent. Combining several sources in one trace remains the supported way to share an accumulator and result sink.
 
-`TraceRetention` configurations similarly create instances for counters and remembered values. Retention happens after measurement and aggregation. It controls publication without skipping computation or evicting history.
+`IAggregation<TValue, TResult>` has one method and covers both per-observation summaries and accumulation across observations, such as `BestSoFarAggregation`. There is no separate reducer role and no stateless base class: a stateless aggregation is a class with no fields.
+
+`TraceRetention.Decide` returns `RetentionDecision.Append`, `ReplaceLatest` or `Skip`, so a policy controls publication and may keep the trace at its most recent entry. An unknown decision fails at the trace. Retention happens after measurement and aggregation and never skips that computation.
+
+## Accumulating analyzers
+
+`TraceAnalyzer<T>` keeps a history of immutable values. An analyzer whose data is one object updated in place, such as a Pareto front or a descent graph, derives from `AccumulatingAnalyzer` instead. It owns that object, mutates it under the inherited `Sync` and publishes it as it is. Copying it per read would cost the whole accumulator, and every reader of one today reads after the run finished, so a live view is what they get and reading during a run is not supported.
+
+Neither retention nor clocks apply to it. There is nothing to store apart from what was computed, and one current state has no moment of its own.
 
 ## Objective comparison and publication
 

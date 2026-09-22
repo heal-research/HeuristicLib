@@ -10,6 +10,10 @@ Type names below predate the resolution-scope rename: `ExecutionInstanceResolver
 `ExecutionInstanceResolverBuilder` is now `ResolutionScopeBuilder`, and `IExecutionHook` is now `IExecutionModule`.
 The text is left as written.
 
+Aggregation and retention are no longer execution configurations, and accumulating analyzers publish live state rather
+than snapshots. See the [analysis system rework](analysis-system-rework.md#status) for the decisions that revised this
+document.
+
 ## Summary
 
 The analysis rework in [analysis-system-rework.md](analysis-system-rework.md) landed the right model: analysis data belongs to one run, observations attach at declared anchors, and a trace composes from a measurement, an aggregation, a retention and a set of clocks. That model is sound and this plan does not reopen it.

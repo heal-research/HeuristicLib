@@ -16,16 +16,16 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 /// environment version, so it neither subscribes to anything nor needs cleanup.
 /// </para>
 /// <para>
-/// It is not a plain trace: besides the per-epoch series it maintains a fitted model and derives a prediction from it.
-/// It also merges several evaluator boundaries. These prediction and observation responsibilities remain specific
-/// to this analyzer.
+/// It is not a trace, because what it records per epoch is the best of an epoch that has ended, which is only known
+/// once the next one begins. It is an accumulator with a hand-written fold: besides the per-epoch rows it maintains a
+/// fitted model and derives a prediction from it, and it merges several evaluator boundaries. Those responsibilities
+/// stay specific to this analyzer; the lock and the publication rule come from the base.
 /// </para>
 /// </remarks>
-public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace, TProblem> : IAnalyzer
+public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace, TProblem> : AccumulatingAnalyzer
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IDynamicProblem<TCandidate, TSearchSpace>
 {
-    private readonly Lock sync = new();
     private readonly List<BestBeforeChangePerformanceEntry<TCandidate>> bestBeforeChange = [];
     private readonly ImmutableArray<IEvaluator<TCandidate>> evaluators;
     private readonly Func<ObjectiveVector, double> objectiveValueSelector;
@@ -54,23 +54,20 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
     /// <summary>
     /// The best candidate of every epoch that has ended. The epoch in progress appears once it does.
     /// </summary>
-    public IReadOnlyList<BestBeforeChangePerformanceEntry<TCandidate>> BestBeforeChange
-    {
-        get { lock (sync) return [.. bestBeforeChange]; }
-    }
+    public IReadOnlyList<BestBeforeChangePerformanceEntry<TCandidate>> BestBeforeChange => bestBeforeChange;
 
     public double Performance
     {
-        get { lock (sync) return bestBeforeChange.Count == 0 ? double.NaN : objectiveValueSum / bestBeforeChange.Count; }
+        get { lock (Sync) return bestBeforeChange.Count == 0 ? double.NaN : objectiveValueSum / bestBeforeChange.Count; }
     }
 
     public double Prediction
     {
-        get { lock (sync) return prediction; }
+        get { lock (Sync) return prediction; }
     }
     private double prediction = double.NaN;
 
-    public void Install(ResolutionScopeBuilder builder)
+    public override void Install(ResolutionScopeBuilder builder)
     {
         foreach (var evaluator in evaluators)
             builder.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, ReadBatch);
@@ -87,7 +84,7 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
         if (batchBest is null)
             return;
 
-        lock (sync)
+        lock (Sync)
         {
             if (currentEpochBest is not { } current)
             {

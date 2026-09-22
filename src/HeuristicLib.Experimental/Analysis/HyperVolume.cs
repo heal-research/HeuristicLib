@@ -5,56 +5,26 @@ using HEAL.HeuristicLib.Operators;
 namespace HEAL.HeuristicLib.Analysis;
 
 /// <summary>
-/// The Pareto front a hypervolume aggregation accumulates while a run executes.
+/// Accumulates a Pareto front across observations and reports its hypervolume.
 /// </summary>
-public class HyperVolumeState<T>(ObjectiveVector referencePoint, ObjectiveDirections objective)
-    : ParetoState<T>(referencePoint, objective)
+/// <remarks>The front is this object's own state, so give each trace its own.</remarks>
+public sealed class HyperVolumeAggregation<TCandidate>(ObjectiveVector referencePoint)
+    : IAggregation<EvaluatedCandidate<TCandidate>, double>
 {
-    private Lazy<double>? hyperVolumeLazy;
-    public double HyperVolume => hyperVolumeLazy?.Value ?? 0;
+    private ParetoFront<TCandidate>? front;
+    private double hyperVolume;
 
-    public override bool AddPoints(IEnumerable<EvaluatedCandidate<T>> evaluatedCandidates)
+    public ObjectiveVector ReferencePoint { get; } = referencePoint;
+
+    public double Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
     {
-        if (!base.AddPoints(evaluatedCandidates))
-            return false;
+        front ??= new ParetoFront<TCandidate>(ReferencePoint, objective);
 
-        hyperVolumeLazy = new Lazy<double>(() =>
-            HyperVolumeCalculator.Calculate(
-                Front.Select(x => x.ObjectiveVector),
-                ReferencePoint,
-                Objective));
-        return true;
-    }
-
-    public override void Clear()
-    {
-        base.Clear();
-        hyperVolumeLazy = null;
-    }
-}
-
-/// <summary>Reusable settings for accumulating a Pareto front and reporting its hypervolume.</summary>
-public sealed record HyperVolumeAggregation<TCandidate> : IAggregation<EvaluatedCandidate<TCandidate>, double>
-{
-    public ObjectiveVector ReferencePoint { get; init; }
-
-    public HyperVolumeAggregation(ObjectiveVector referencePoint)
-    {
-        ReferencePoint = referencePoint;
-    }
-
-    public IAggregationInstance<EvaluatedCandidate<TCandidate>, double> CreateExecutionInstance(ResolutionScope scope) => new ExecutionInstance(ReferencePoint);
-
-    private sealed class ExecutionInstance(ObjectiveVector referencePoint) : IAggregationInstance<EvaluatedCandidate<TCandidate>, double>
-    {
-        private HyperVolumeState<TCandidate>? front;
-
-        public double Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
-        {
-            front ??= new HyperVolumeState<TCandidate>(referencePoint, objective);
-            front.AddPoints(readings);
-            return front.HyperVolume;
-        }
+        // The front only moves when a reading survives domination, and the calculation is the expensive part.
+        if (front.AddPoints(readings))
+            hyperVolume = HyperVolumeCalculator.Calculate(
+                front.Points.Select(evaluated => evaluated.ObjectiveVector), ReferencePoint, objective);
+        return hyperVolume;
     }
 }
 

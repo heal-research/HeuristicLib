@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
@@ -62,11 +63,41 @@ public class AlgorithmRunTests
         exception.Message.ShouldContain("its current lifecycle state is Running");
     }
 
+    [Fact]
+    public void AnAnalyzerDecoratingDirectly_ObservesInTheOrderItWasAttached()
+    {
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var algorithm = new AdditiveStepAlgorithm(1);
+        var observed = new List<string>();
+
+        _ = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42))
+                     .AddAnalyzer(new ObservingAnalyzer(algorithm.Evaluator, () => observed.Add("first")))
+                     .AddAnalyzer(new DecoratingAnalyzer(algorithm.Evaluator, () => observed.Add("second")))
+                     .Complete(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Both bind as modules, so the one attached first sits innermost and observes first. Recorded as
+        // configuration, the direct decoration would sit inside every module whatever the attachment order.
+        observed.ShouldBe(["first", "second"]);
+    }
+
     private sealed class BlindAnalyzer : IAnalyzer
     {
         public void Install(ResolutionScopeBuilder builder)
         {
         }
+    }
+
+    private sealed class ObservingAnalyzer(IEvaluator<int> evaluator, Action observed) : IAnalyzer
+    {
+        public void Install(ResolutionScopeBuilder builder) => builder.Observe(evaluator, _ => observed());
+    }
+
+    // Declares its decoration itself rather than through a module, as a hand-written analyzer may.
+    private sealed class DecoratingAnalyzer(IEvaluator<int> evaluator, Action observed) : IAnalyzer
+    {
+        public void Install(ResolutionScopeBuilder builder) =>
+            builder.Decorate(evaluator, current =>
+                new ObservingEvaluator<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(evaluator, current, _ => observed()));
     }
 
     private static int StateValue(PopulationState<int> state) =>
