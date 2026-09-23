@@ -108,6 +108,35 @@ public class QuadraticAssignmentProblemTests
     }
 
     [Fact]
+    public void CurrentRearrangementLowerBound_IsFiniteAndNoGreaterThanObservedCosts()
+    {
+        var rng = TestRandoms.SystemRandomGenerator(1);
+        var a = QuadraticAssignmentProblemHelper.CreateDefaultA();
+        var b = QuadraticAssignmentProblemHelper.CreateDefaultB();
+        var dyn = new InterpolatedQuadraticAssignmentProblem(a, b, rng, 0.0, 0.25, true);
+
+        var lowerBound = dyn.CurrentRearrangementLowerBound()[0];
+
+        double.IsFinite(lowerBound).ShouldBeTrue();
+        foreach (var solution in EnumeratePermutations(a.Size))
+            lowerBound.ShouldBeLessThanOrEqualTo(dyn.Evaluate(solution, TestRandoms.NoRandom)[0]);
+    }
+
+    [Fact]
+    public void CurrentRearrangementLowerBound_UpdatesWithInterpolatedMatrices()
+    {
+        var rng = TestRandoms.SystemRandomGenerator(1);
+        var a = QuadraticAssignmentProblemHelper.CreateDefaultA();
+        var b = QuadraticAssignmentProblemHelper.CreateDefaultB();
+        var dyn = new InterpolatedQuadraticAssignmentProblem(a, b, rng, 0.0, 1.0, true, false);
+        var alpha0Bound = dyn.CurrentRearrangementLowerBound()[0];
+
+        dyn.UpdateOnce();
+
+        dyn.CurrentRearrangementLowerBound()[0].ShouldNotBe(alpha0Bound);
+    }
+
+    [Fact]
     public void SigmaZero_EqualsBaseCost_Always()
     {
         var baseData = QuadraticAssignmentProblemHelper.CreateDefaultA();
@@ -130,5 +159,29 @@ public class QuadraticAssignmentProblemTests
 
         var c3 = dyn.Evaluate([sol], TestRandoms.NoRandom)[0];
         c3.ShouldBe(c2);
+    }
+
+    private static IEnumerable<Permutation> EnumeratePermutations(int size)
+    {
+        var values = Enumerable.Range(0, size).ToArray();
+        foreach (var permutation in Enumerate(values, 0))
+            yield return new Permutation(permutation);
+
+        static IEnumerable<int[]> Enumerate(int[] values, int start)
+        {
+            if (start == values.Length)
+            {
+                yield return values.ToArray();
+                yield break;
+            }
+
+            for (var i = start; i < values.Length; i++)
+            {
+                (values[start], values[i]) = (values[i], values[start]);
+                foreach (var permutation in Enumerate(values, start + 1))
+                    yield return permutation;
+                (values[start], values[i]) = (values[i], values[start]);
+            }
+        }
     }
 }

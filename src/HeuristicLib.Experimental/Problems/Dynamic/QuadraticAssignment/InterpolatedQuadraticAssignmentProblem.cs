@@ -55,6 +55,9 @@ public sealed class InterpolatedQuadraticAssignmentProblem
 
     public double Alpha { get; private set; }
 
+    public ObjectiveVector CurrentRearrangementLowerBound() =>
+        new(CalculateRearrangementLowerBound(currentFlows, currentDistances));
+
     protected override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, int epoch)
     {
         var n = a.Size;
@@ -124,6 +127,41 @@ public sealed class InterpolatedQuadraticAssignmentProblem
         {
             CopyDistancesInto(currentDistances, a);
         }
+    }
+
+    private static double CalculateRearrangementLowerBound(double[,] flows, double[,] distances) =>
+        CalculateRelaxedPairingBound(flows, distances, includeDiagonal: true)
+        + CalculateRelaxedPairingBound(flows, distances, includeDiagonal: false);
+
+    private static double CalculateRelaxedPairingBound(double[,] flows, double[,] distances, bool includeDiagonal)
+    {
+        var size = flows.GetLength(0);
+        var values = includeDiagonal ? size : size * (size - 1);
+        var flowValues = new double[values];
+        var distanceValues = new double[values];
+        var index = 0;
+
+        for (var i = 0; i < size; i++)
+        {
+            for (var j = 0; j < size; j++)
+            {
+                if ((i == j) != includeDiagonal)
+                    continue;
+
+                flowValues[index] = flows[i, j];
+                distanceValues[index] = distances[i, j];
+                index++;
+            }
+        }
+
+        Array.Sort(flowValues);
+        Array.Sort(distanceValues);
+
+        var bound = 0.0;
+        for (var i = 0; i < values; i++)
+            bound += flowValues[i] * distanceValues[values - i - 1];
+
+        return bound;
     }
 
     private static void LerpFlowsInto(double[,] destination, IQuadraticAssignmentProblemData x, IQuadraticAssignmentProblemData y, double t)
