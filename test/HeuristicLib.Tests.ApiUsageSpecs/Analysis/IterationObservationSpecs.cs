@@ -15,52 +15,70 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Analysis;
 public class IterationObservationSpecs
 {
     [Fact]
+    public async Task QualityCurve_IsAStatefulAnalysis()
+    {
+        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
+        var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 3);
+        var iterations = Clock.FromIterations(algorithm);
+        var quality = algorithm.TracePopulationCandidates([iterations]);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(quality);
+
+        await foreach (var state in run.Stream(cancellationToken: TestContext.Current.CancellationToken))
+        {
+            quality.Latest.ShouldNotBeNull();
+            var current = quality.Snapshot();
+            current.Count.ShouldBeGreaterThan(0);
+        }
+
+        quality.By(iterations).Count.ShouldBe(3);
+    }
+
+    [Fact]
     public async Task QualityCurve_IsTrackedFromTheRun_WithoutAnInterceptor()
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 5);
 
-        var run = algorithm
-            .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-            .TrackBestMedianWorst(out var qualityAnalyzer);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
+                           .TracePopulationCandidates(out var qualityAnalyzer);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        var qualityCurve = run.GetResult(qualityAnalyzer);
+        var qualityCurve = qualityAnalyzer.Snapshot();
 
         qualityCurve.Count.ShouldBe(5);
-        qualityCurve[0].Best.ObjectiveVector.ShouldNotBeNull();
+        qualityCurve[0].Value.Best.ObjectiveVector.ShouldNotBeNull();
     }
 
     [Fact]
-    public async Task QualityCurve_CanAnchorOnTheAlgorithmExplicitly()
+    public async Task QualityCurve_CanObserveTheAlgorithmExplicitly()
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 5);
 
-        var qualityAnalyzer = Analyzer.BestMedianWorst(algorithm);
+        var qualityAnalyzer = algorithm.TracePopulationCandidates();
         var run = algorithm
             .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-            .AttachAnalyzer(qualityAnalyzer);
+            .AddAnalyzer(qualityAnalyzer);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.GetResult(qualityAnalyzer).Count.ShouldBe(5);
+        qualityAnalyzer.SampleCount.ShouldBe(5);
     }
 
     [Fact]
-    public async Task AnchoringOnAnInnerAlgorithm_ObservesThatInnerLoop()
+    public async Task ObservingAnInnerAlgorithm_ObservesThatInnerLoop()
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var innerAlgorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 3);
         var cycle = CycleAlgorithm.Create(innerAlgorithm) with { MaximumCycles = 2, NewExecutionInstancesPerCycle = false };
 
-        var innerQuality = Analyzer.BestMedianWorst(innerAlgorithm);
-        var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AttachAnalyzer(innerQuality);
+        var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
+                       .TracePopulationCandidates(out var innerQuality, innerAlgorithm);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.GetResult(innerQuality).Count.ShouldBe(6);
+        innerQuality.SampleCount.ShouldBe(6);
     }
 
     [Fact]
@@ -69,9 +87,8 @@ public class IterationObservationSpecs
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 4);
 
-        var run = algorithm
-            .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-            .TrackBestMedianWorst(out var qualityAnalyzer);
+        var qualityAnalyzer = algorithm.TracePopulationCandidates();
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(qualityAnalyzer);
 
         var streamedStates = new List<PopulationState<RealVector>>();
         await foreach (var state in run.Stream(cancellationToken: TestContext.Current.CancellationToken))
@@ -79,7 +96,7 @@ public class IterationObservationSpecs
             streamedStates.Add(state);
         }
 
-        var qualityCurve = run.GetResult(qualityAnalyzer);
+        var qualityCurve = qualityAnalyzer.Snapshot();
 
         qualityCurve.Count.ShouldBe(streamedStates.Count);
     }

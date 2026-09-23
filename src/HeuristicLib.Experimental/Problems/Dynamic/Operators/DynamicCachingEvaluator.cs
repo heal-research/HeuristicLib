@@ -74,7 +74,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
             this.sourceProblem = sourceProblem;
             this.keySelector = keySelector;
             this.graceCount = graceCount;
-            sourceProblem.EpochClock.OnEpochChange += (_, _) =>
+            sourceProblem.OnEpochChange += (_, _) =>
             {
                 executionData.Cache.Clear();
                 executionData.HitCount = 0;
@@ -157,7 +157,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
                 executionData.HitCount += cachedSolutionsCount;
                 if (executionData.HitCount >= graceCount)
                 {
-                    sourceProblem.EpochClock.AdvanceEpoch();
+                    ((IUpdateRequestable)sourceProblem).RequestUpdate();
                 }
             }
             else

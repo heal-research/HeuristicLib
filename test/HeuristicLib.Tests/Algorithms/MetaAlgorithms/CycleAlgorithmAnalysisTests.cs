@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 public class CycleAlgorithmAnalysisTests
 {
     [Fact]
-    public void ObservationPlan_MergesMultipleAnalyzerCallbacksForSameOperator()
+    public void SeveralAnalyzers_ObserveTheSameOperatorIndependently()
     {
         var evaluator = new IncrementingEvaluator();
         var interceptor = new IdentityInterceptor<int, PopulationState<int>>();
@@ -21,71 +21,12 @@ public class CycleAlgorithmAnalysisTests
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AttachAnalyzers(analysis1, analysis2);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAnalyzer(analysis1).AddAnalyzer(analysis2);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.GetResult(analysis1).ObjectiveValues.ShouldBe([1.0]);
-        run.GetResult(analysis2).ObjectiveValues.ShouldBe([1.0]);
-    }
-
-    [Fact]
-    public void GetResult_ReturnsSameResultOnRepeatedCalls()
-    {
-        var evaluator = new IncrementingEvaluator();
-        var analysis = new EvaluationTraceAnalysis(evaluator);
-        var run = CreateRun(analysis);
-        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
-
-        var result = run.GetResult(analysis);
-
-        result.ShouldBeSameAs(run.GetResult(analysis));
-    }
-
-    [Fact]
-    public void TryGetResult_ReturnsDirectResultWhenPresent()
-    {
-        var evaluator = new IncrementingEvaluator();
-        var analysis = new EvaluationTraceAnalysis(evaluator);
-        var run = CreateRun(analysis);
-        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
-
-        run.TryGetResult(analysis, out var result).ShouldBeTrue();
-
-        result.ShouldNotBeNull();
-        result.ShouldBeSameAs(run.GetResult(analysis));
-    }
-
-    [Fact]
-    public void TryGetResult_ReturnsFalseWhenAnalyzerWasNotAttached()
-    {
-        var attached = new EvaluationTraceAnalysis(new IncrementingEvaluator());
-        var missing = new EvaluationTraceAnalysis(new IncrementingEvaluator());
-        var run = CreateRun(attached);
-        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
-
-        run.TryGetResult(missing, out var result).ShouldBeFalse();
-
-        result.ShouldBeNull();
-    }
-
-    [Fact]
-    public void ResultRetrieval_ThrowsInvalidOperationExceptionForMismatchedRunState()
-    {
-        var analyzer = new MalformedAnalyzer();
-        var run = CreateRun(analyzer);
-        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
-
-        Should.Throw<InvalidOperationException>(() => run.GetResult(analyzer));
-        Should.Throw<InvalidOperationException>(() => run.TryGetResult<MalformedAnalyzer.Result>(analyzer, out _));
-    }
-
-    private static AlgorithmRun<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateRun(IAnalyzer analyzer)
-    {
-        var evaluator = new IncrementingEvaluator();
-        var problem = FuncProblem.Create(evaluateFunc: (int x) => x, encoding: DummySearchSpace<int>.Instance, objective: SingleObjective.Minimize);
-        var algorithm = new SingleStepAlgorithm(1, evaluator, new IdentityInterceptor<int, PopulationState<int>>());
-        return algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AttachAnalyzer(analyzer);
+        analysis1.Result.ObjectiveValues.ShouldBe([1.0]);
+        analysis2.Result.ObjectiveValues.ShouldBe([1.0]);
     }
 
     private sealed record IncrementingEvaluator
@@ -120,10 +61,10 @@ public class CycleAlgorithmAnalysisTests
             Evaluator = evaluator;
         }
 
-        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         {
-            var resolver = instanceRegistry.For<int, TRunSearchSpace, TRunProblem, PopulationState<int>>();
-            return new Instance<TRunSearchSpace, TRunProblem>(resolver.Resolve(Evaluator), resolver.Resolve(Interceptor), Candidate);
+            var typed = scope.For<int, TRunSearchSpace, TRunProblem, PopulationState<int>>();
+            return new Instance<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Interceptor), Candidate);
         }
 
         private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator, IInterceptorInstance<int, TSearchSpace, TProblem, PopulationState<int>> interceptor, int candidate)
@@ -150,15 +91,15 @@ public class CycleAlgorithmAnalysisTests
         }
     }
 
-    private sealed record EvaluationTraceAnalysis(IEvaluator<int> Evaluator)
-        : Analyzer<EvaluationTraceAnalysis.ExecutionState>
+    private sealed class EvaluationTraceAnalysis(IEvaluator<int> evaluator)
+        : IAnalyzer
     {
-        public override ExecutionState CreateInitialResult() => new();
+        public ExecutionState Result { get; } = new();
 
-        public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
-        {
-            observations.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Evaluator, (objectiveVectors, _, _, _) => result.RecordObjectiveValues(objectiveVectors));
-        }
+        public void Install(ResolutionScopeBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
+
+        public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
+            Result.RecordObjectiveValues(observation.ObjectiveVectors);
 
         public sealed class ExecutionState
         {
@@ -170,29 +111,6 @@ public class CycleAlgorithmAnalysisTests
             {
                 objectiveValues.AddRange(objectiveVectors.Select(x => x[0]));
             }
-        }
-    }
-
-    private sealed class MalformedAnalyzer : IAnalyzer<MalformedAnalyzer.Result>
-    {
-        public IAnalyzerRunState<Result> CreateAnalyzerState() => new CorrectRunState();
-
-        IAnalyzerRunState IAnalyzer.CreateAnalyzerState() => new WrongRunState();
-
-        public sealed class Result;
-
-        private sealed class CorrectRunState : IAnalyzerRunState<Result>
-        {
-            public Result Result { get; } = new();
-
-            public void RegisterObservations(ObservationPlan observations)
-            { }
-        }
-
-        private sealed class WrongRunState : IAnalyzerRunState
-        {
-            public void RegisterObservations(ObservationPlan observations)
-            { }
         }
     }
 }

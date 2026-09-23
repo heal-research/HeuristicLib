@@ -124,7 +124,7 @@ public class PreflightValidationSpecs
         var mutator = new FlipOneBitMutator();
         SearchConfigurationValidation.Validate(mutator, Constrained).IsValid.ShouldBeFalse();
 
-        var instance = new ExecutionInstanceRegistry()
+        var instance = ResolutionScope.Create()
             .Resolve<BoolVector, FixedCardinalityBoolVectorSearchSpace, IProblem<BoolVector, FixedCardinalityBoolVectorSearchSpace>>(mutator);
         var inSpace = BoolVector.Create(true, true, false, false);
         Constrained.Contains(inSpace).ShouldBeTrue();

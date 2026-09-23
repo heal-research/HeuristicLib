@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Operators.MoveCreators;
 
 public interface IMoveCreator<TCandidate, out TMove> : IOperator
 {
-    IMoveCreatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    IMoveCreatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
@@ -25,19 +25,19 @@ public interface IMoveCreatorInstance<in TCandidate, in TSearchSpace, in TProble
         TProblem problem);
 }
 
-public static class MoveCreatorResolverExtensions
+public static class MoveCreatorResolutionExtensions
 {
-    extension(ExecutionInstanceRegistry registry)
+    extension(ResolutionScope scope)
     {
         public IMoveCreatorInstance<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TCandidate, TSearchSpace, TProblem, TMove>(IMoveCreator<TCandidate, TMove> moveCreator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            registry.Resolve(moveCreator, static (creationTarget, childRegistry) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childRegistry));
+            scope.Resolve(moveCreator, static (creationTarget, childScope) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childScope));
 
         public IMoveCreatorInstance<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TMove>(IMoveCreator<TCandidate, TMove>? moveCreator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            moveCreator is null ? null : registry.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveCreator);
+            moveCreator is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveCreator);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem, TMove>(
             IMoveCreator<TCandidate, TMove> moveCreator,
@@ -48,7 +48,7 @@ public static class MoveCreatorResolverExtensions
         {
             try
             {
-                instance = registry.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveCreator);
+                instance = scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveCreator);
                 reason = null;
                 return true;
             }
@@ -61,20 +61,20 @@ public static class MoveCreatorResolverExtensions
         }
     }
 
-    extension<TCandidate, TSearchSpace, TProblem>(ExecutionInstanceResolver<TCandidate, TSearchSpace, TProblem> resolver)
+    extension<TCandidate, TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public IMoveCreatorInstance<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TMove>(IMoveCreator<TCandidate, TMove> moveCreator) =>
-            resolver.Registry.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveCreator);
+            scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveCreator);
 
         public IMoveCreatorInstance<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TMove>(IMoveCreator<TCandidate, TMove>? moveCreator) =>
-            moveCreator is null ? null : resolver.Resolve(moveCreator);
+            moveCreator is null ? null : scope.Resolve(moveCreator);
 
         public bool TryResolve<TMove>(
             IMoveCreator<TCandidate, TMove> moveCreator,
             [NotNullWhen(true)] out IMoveCreatorInstance<TCandidate, TSearchSpace, TProblem, TMove>? instance,
             [NotNullWhen(false)] out string? reason) =>
-            resolver.Registry.TryResolve(moveCreator, out instance, out reason);
+            scope.Scope.TryResolve(moveCreator, out instance, out reason);
     }
 }

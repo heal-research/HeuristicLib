@@ -166,6 +166,7 @@ public class ExperimentExecutionTests
             run.CompleteAsync(ExecutionConcurrency.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken));
 
         exception.InnerExceptions.Cast<ExperimentTrialException<int>>().Select(failure => failure.Key).ShouldBe([0, 2]);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
         probe.Candidates.ShouldBe([1]);
         probe.SetupCount.ShouldBe(3);
         probe.ExecutionCount.ShouldBe(2);
@@ -186,6 +187,7 @@ public class ExperimentExecutionTests
                 .ToListAsync(TestContext.Current.CancellationToken));
 
         exception.InnerExceptions.Cast<ExperimentTrialException<int>>().Select(failure => failure.Key).ShouldBe([0, 2]);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
         probe.Candidates.ShouldBe([1]);
     }
 

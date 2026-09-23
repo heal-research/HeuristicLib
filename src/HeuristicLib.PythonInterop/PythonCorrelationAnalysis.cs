@@ -74,6 +74,8 @@ public static class PythonCorrelationAnalysis
           new TestFunctionExperimentParameters
           {
               AlgorithmName = "nsga2",
+              // Reports prioritize the first objective; NSGA-II still uses Pareto ranking.
+              ObjectiveComparer = new LexicographicComparer(problem.Objective.Directions),
               Creator = new UniformDistributedCreator(),
               Crossover = new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.AppliedAtRate(0.9),
               Mutator = new PolynomialMutator().AppliedAtRate(0.9),

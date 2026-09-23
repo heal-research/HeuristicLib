@@ -244,35 +244,8 @@ public class CreatorConfigurationEqualityTests
         left.ShouldNotBe(right);
     }
 
-    [Fact]
-    public void ObservableCreator_WithSameObserverInstance_IsEqual()
-    {
-        var observer = new ActionCreatorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var left = new ConstantCreator(1).ObserveWith(observer);
-        var right = new ConstantCreator(1).ObserveWith(observer);
 
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
 
-    [Fact]
-    public void ObservableCreator_WithDifferentChildCreator_IsNotEqual()
-    {
-        var observer = new ActionCreatorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var left = new ConstantCreator(1).ObserveWith(observer);
-        var right = new ConstantCreator(2).ObserveWith(observer);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void ObservableCreator_WithSeparatelyConstructedActionObservers_IsNotEqual()
-    {
-        var left = new ConstantCreator(1).ObserveWith(_ => { });
-        var right = new ConstantCreator(1).ObserveWith(_ => { });
-
-        left.ShouldNotBe(right);
-    }
 
     [Fact]
     public void SingleCandidateCreator_WithDifferentConcurrency_IsNotEqual()

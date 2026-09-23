@@ -36,21 +36,21 @@ public class MoveRoleBindingTests
     public void BoundMoveOperators_ResolveOverTheirOwnSearchSpaceAndProblem()
     {
         INeighborhood<RealVector, int> neighborhood = new ShiftNeighborhood();
-        var resolver = new ExecutionInstanceRegistry().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
 
-        resolver.Resolve(neighborhood.MoveCreator).ShouldNotBeNull();
-        resolver.Resolve(neighborhood.MoveApplier).ShouldNotBeNull();
-        resolver.Resolve(neighborhood.MoveEvaluator).ShouldNotBeNull();
+        scope.Resolve(neighborhood.MoveCreator).ShouldNotBeNull();
+        scope.Resolve(neighborhood.MoveApplier).ShouldNotBeNull();
+        scope.Resolve(neighborhood.MoveEvaluator).ShouldNotBeNull();
     }
 
     [Fact]
     public void BoundMoveOperators_AreReportedOverAWiderProblem()
     {
         INeighborhood<RealVector, int> neighborhood = new ShiftNeighborhood();
-        var resolver = new ExecutionInstanceRegistry()
+        var scope = ResolutionScope.Create()
             .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
 
-        resolver.TryResolve(neighborhood.MoveCreator, out _, out var reason).ShouldBeFalse();
+        scope.TryResolve(neighborhood.MoveCreator, out _, out var reason).ShouldBeFalse();
         reason.ShouldContain(nameof(TestFunctionProblem));
     }
 
@@ -59,9 +59,9 @@ public class MoveRoleBindingTests
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 2));
         var neighborhood = new ShiftNeighborhood();
-        var resolver = new ExecutionInstanceRegistry().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
-        var creator = resolver.Resolve(((INeighborhood<RealVector, int>)neighborhood).MoveCreator);
-        var applier = resolver.Resolve(((INeighborhood<RealVector, int>)neighborhood).MoveApplier);
+        var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var creator = scope.Resolve(((INeighborhood<RealVector, int>)neighborhood).MoveCreator);
+        var applier = scope.Resolve(((INeighborhood<RealVector, int>)neighborhood).MoveApplier);
         var random = RandomNumberGenerator.Create(1);
 
         var candidate = new RealVector(0.0, 0.0);

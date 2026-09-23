@@ -33,7 +33,6 @@ public sealed class AssemblyDependencyTests
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Random", "Distributions"), "HEAL.HeuristicLib.Random", mismatches);
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Random", "KeyCombiners"), "HEAL.HeuristicLib.Random", mismatches);
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Random", "RandomEngines"), "HEAL.HeuristicLib.Random", mismatches);
-        CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Analysis", "Quality"), "HEAL.HeuristicLib.Analysis", mismatches);
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Encodings", "SymbolicExpressions"), "HEAL.HeuristicLib.Encodings.SymbolicExpressions", mismatches);
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts", "Algorithms", "SearchStates"), "HEAL.HeuristicLib.Algorithms", mismatches);
 
@@ -80,7 +79,7 @@ public sealed class AssemblyDependencyTests
         main.GetType("HEAL.HeuristicLib.Algorithms.NSGA2`1").ShouldNotBeNull();
         main.GetType("HEAL.HeuristicLib.Problems.QuadraticAssignment.QuadraticAssignmentProblem").ShouldNotBeNull();
         main.GetType("HEAL.HeuristicLib.Algorithms.AlpsGeneticAlgorithm`1").ShouldBeNull();
-        main.GetType("HEAL.HeuristicLib.Analysis.PopulationSimilarityAnalyzer`4").ShouldBeNull();
+        main.GetType("HEAL.HeuristicLib.Analysis.PopulationSimilarityAggregation`1").ShouldBeNull();
         main.GetType("HEAL.HeuristicLib.SearchSpaces.ISubencodingComparable`1").ShouldBeNull();
         main.GetType("HEAL.HeuristicLib.Algorithms.ISolutionLayout`1").ShouldBeNull();
     }

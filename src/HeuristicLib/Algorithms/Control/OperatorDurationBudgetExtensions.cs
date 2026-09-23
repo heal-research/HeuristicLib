@@ -46,11 +46,7 @@ public static class OperatorDurationBudgetExtensions
                 MeasuredOperatorFactory = measuredOperatorFactory
             };
         }
-    }
 
-    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
-        where TSearchState : class, ISearchState
-    {
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IEvaluator<TCandidate>> LimitedToEvaluatorDuration(
             IEvaluator<TCandidate> evaluator,
             TimeSpan maximumDuration)

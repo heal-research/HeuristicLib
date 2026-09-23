@@ -114,9 +114,9 @@ Configurations own immutable settings and child configurations. Execution instan
 
 Search states are public progress values. Do not use them to carry private counters, caches or other execution data.
 
-### § 4.3 Resolve declared children through the execution instance registry
+### § 4.3 Resolve declared children through the resolution scope
 
-Creation methods receive the full `ExecutionInstanceRegistry`. Resolve declared children during instance creation. Retain the registry only for child registries, replacements or delayed child algorithm creation. Do not add another resolver abstraction.
+Creation methods receive the full `ResolutionScope`. Resolve declared children during instance creation. Retain the scope only for child scopes, decorations or delayed child algorithm creation. Do not add another scope abstraction.
 
 ### § 4.4 Expose one execution instance factory
 
@@ -329,7 +329,7 @@ Benchmark locally when a change presents a performance risk and report the numbe
 Make intended use easy and misuse difficult.
 
 - Use descriptive names. Documentation does not excuse an unclear API.
-- Public authoring bases expose required constructors, state and hooks as `protected`, not `private protected`. Otherwise do not present the type as an authoring base.
+- Public authoring bases expose required constructors, state and modules as `protected`, not `private protected`. Otherwise do not present the type as an authoring base.
 - Keep related abstractions and operator roles structurally consistent.
 - Make defaults, side effects and potentially expensive behavior visible.
 - Do not give a nullable operator slot a non-null default. `null` would then mean both "not supplied, use the default" and "deliberately absent", and a caller could no longer express the second. Either the slot stays nullable and absence is its default, or it becomes non-nullable with a no-op implementation as the default, such as an identity interceptor. A nullable _parameter_ on a factory is unaffected: it means "not supplied" for a slot that cannot itself be null.
@@ -448,12 +448,12 @@ adding one role silently obliges members for every value of some other dimension
 name the axes it varies over and check that a role author can enumerate all of them.
 
 Two receivers for the same operation are not a second axis when one is defined in terms of the other.
-`registry.Resolve<TCandidate, TSearchSpace, TProblem>(config)` is canonical — the registry is generic-less and cannot
-infer the triple. `resolver.Resolve(config)` binds a registry that already knows the triple, infers everything and
-relays to the canonical form. One mechanism, two spellings; keep both.
+`scope.Resolve<TCandidate, TSearchSpace, TProblem>(config)` is canonical — the scope is generic-less and cannot
+infer the triple. `typed.Resolve(config)` goes through a `ResolutionScope` that already knows the triple, infers
+everything and relays to the canonical form. One mechanism, two spellings; keep both.
 
-Whatever the declaration count, the call site stays minimal: `resolver.Resolve(config)` or
-`registry.TryResolve(config, out var instance)`, with nothing the caller is forced to supply to make inference work.
+Whatever the declaration count, the call site stays minimal: `typed.Resolve(config)` or
+`typed.TryResolve(config, out var instance, out var reason)`, with nothing the caller is forced to supply to make inference work.
 An overload that exists so a type argument can be inferred is justified; one that exists only so a call site reads
 differently needs a separate argument.
 
@@ -468,7 +468,7 @@ because an adjective cannot be misread as a command to modify the receiver: `alg
 more, and the name should not suggest otherwise.
 
 A method that **mutates the receiver** is named with an imperative verb and never with `With*`, even when it returns
-the receiver for chaining: `run.AttachAnalyzer(analyzer)`. A fluent chain is not evidence that a value is being built,
+the receiver for chaining: `run.AddAnalyzer(analyzer)`. A fluent chain is not evidence that a value is being built,
 so the name has to carry that distinction on its own.
 
 This was applied across the library after `With*` was found covering three different semantics at once, one of which

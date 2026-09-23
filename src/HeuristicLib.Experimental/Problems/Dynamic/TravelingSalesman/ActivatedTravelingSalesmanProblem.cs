@@ -11,9 +11,9 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<ActivatedTraveli
                                              IRandomNumberGenerator environmentRandom,
                                              double activationProb = 0.9,
                                              double switchProbability = 0.1,
-                                             UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                                             int epochLength = int.MaxValue) : base(SingleObjective.Minimize,
-        new PermutationSearchSpace(tspData.NumberOfCities), environmentRandom, updatePolicy, epochLength)
+                                             IEpochSchedule? epochSchedule = null,
+                                             UpdatePolicy updatePolicy = UpdatePolicy.AfterEachEvaluation) : base(SingleObjective.Minimize,
+        new PermutationSearchSpace(tspData.NumberOfCities), environmentRandom, epochSchedule ?? new EvaluationCountSchedule(int.MaxValue), updatePolicy)
     {
         SwitchProbability = switchProbability;
         CurrentState = Generate(tspData, activationProb, environmentRandom);
@@ -24,9 +24,9 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<ActivatedTraveli
                                              IRandomNumberGenerator environmentRandom,
                                              bool[] startState,
                                              double switchProbability = 0.1,
-                                             UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                                             int epochLength = int.MaxValue) : base(SingleObjective.Minimize,
-        new PermutationSearchSpace(tspData.NumberOfCities), environmentRandom, updatePolicy, epochLength)
+                                             IEpochSchedule? epochSchedule = null,
+                                             UpdatePolicy updatePolicy = UpdatePolicy.AfterEachEvaluation) : base(SingleObjective.Minimize,
+        new PermutationSearchSpace(tspData.NumberOfCities), environmentRandom, epochSchedule ?? new EvaluationCountSchedule(int.MaxValue), updatePolicy)
     {
         SwitchProbability = switchProbability;
         ArgumentOutOfRangeException.ThrowIfNotEqual(tspData.NumberOfCities, startState.Length);
@@ -59,8 +59,7 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<ActivatedTraveli
         return new TravelingSalesmanDistanceMatrixProblemData(distances);
     }
 
-    public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random,
-                                             EvaluationTiming timing)
+    protected override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, int epoch)
     {
         return solution
                .Where(x => CurrentState[x])

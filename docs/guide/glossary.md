@@ -446,7 +446,7 @@ See also: Algorithm, Meta-algorithm, Operator, Run, Search state.
 
 Status: `Canonical`
 
-A configuration is a reusable algorithm or operator object that users set up before execution.
+A configuration is a reusable object that users set up before execution, such as an algorithm or operator.
 
 A configuration can contain parameters, child configurations, validation or helper logic and the mechanism that creates execution instances. It is not required to be a passive data object. Mutable execution data belongs to an execution instance, either directly or in framework managed operator state.
 
@@ -481,7 +481,7 @@ An `AlgorithmRun` executes one algorithm configuration on a problem. An `Experim
 
 When a meta-algorithm coordinates child algorithms, the run is created by the algorithm started by the user. Child algorithms and operators participate in that same run unless they are explicitly started as separate runs.
 
-Analyzers are attached to a run, so their observations and results can span nested algorithms and multiple short-lived execution instances.
+Run analyzers are attached while a run is preparing and installed when execution starts, so their observations can span nested algorithms and multiple short-lived execution instances. A run does not accept more analyzers after it leaves `Preparing`.
 
 See also: Analyzer, Configuration, Execution instance, Search state.
 
@@ -503,7 +503,7 @@ See also: Candidate, Evaluated candidate, Execution state, Run, Search space.
 
 Status: `Canonical`
 
-An execution instance is the concrete algorithm or operator object created from a configuration for use during a run.
+An execution instance is the concrete runtime object created from a configuration. Algorithms and operators are the main examples in the execution model.
 
 Execution instances perform the work of an algorithm or operator after configuration has been resolved for execution. They may hold private execution state and resolved child execution instances.
 
@@ -542,15 +542,39 @@ A run may contain more than one execution graph over time, for example when meta
 
 See also: Configuration graph, Execution instance, Run.
 
-### Execution instance registry
+### Resolution scope
 
 Status: `Canonical`
 
-An execution instance registry resolves configurations to execution instances during a run.
+A resolution scope resolves configurations to execution instances during a run.
 
-The registry controls execution-instance identity and sharing. Explicit operator and algorithm instance creation methods receive the registry and normally resolve their declared children eagerly. Execution graph compositions may additionally create child registries, register replacements or control instance reuse.
+The scope controls execution-instance identity and sharing. Explicit operator and algorithm instance creation methods receive the scope and normally resolve their declared children eagerly. Execution graph compositions may additionally create child scopes, declare decorations for them or control instance reuse. Decorations are declared on a `ResolutionScopeBuilder` before the scope resolves anything.
 
-See also: Configuration, Execution graph, Execution instance, Run.
+See also: Configuration, Decoration chain, Execution graph, Execution instance, Execution module, Run.
+
+### Decoration chain
+
+Status: `Canonical`
+
+A decoration chain is the ordered set of decorations that apply to one configuration at one resolution scope: every decoration declared by that scope or any of its ancestors, and no others.
+
+The chain decides execution-instance sharing. Two scopes resolve the same execution instance when, and only when, their decoration chains for that configuration are identical. A decoration does not by itself prevent reuse; only a difference in chains does. Sibling scopes never share, which is what expresses per-cycle freshness in meta-algorithms that recreate their execution instances.
+
+Within a chain, decorations declared by an execution module sit outside those declared by the configuration, and a deeper scope's decorations bind more tightly than a shallower one's.
+
+See also: Configuration, Execution instance, Execution module, Resolution scope.
+
+### Execution module
+
+Status: `Canonical`
+
+An execution module adds behavior at chosen configurations in a run's execution graph, before the graph is resolved, represented by `IExecutionModule`.
+
+A module declares its decorations on a `ResolutionScopeBuilder` and resolves nothing itself, so it cannot participate in building the graph it decorates. Run-level additions wrap configuration-level ones, so a module always sees the fully configured operator.
+
+Analyzers install most of the modules a run sees, but the contract is not analysis specific. Writing to a log, reporting progress, advancing a dynamic problem at an iteration boundary and bridging to another runtime are equally valid modules.
+
+See also: Analyzer, Configuration, Decoration chain, Observation, Resolution scope, Run.
 
 ### Random number generator (RNG)
 
@@ -570,7 +594,7 @@ A value array is an immutable ordered collection that compares by its elements r
 
 Configurations use a value array for every retained ordered collection, such as child operators, pipeline stages or weights, so that structurally identical configurations compare equal without an equality attribute or a hand-written comparison. An `ImmutableArray<T>` compares by underlying array reference and must not be used for collection state that participates in equality. Execution instances keep `ImmutableArray<T>`, because they are resolved by reference identity and never compared structurally.
 
-See also: Child operator, Configuration, Execution instance, Execution instance registry.
+See also: Child operator, Configuration, Execution instance, Resolution scope.
 
 ### Execution concurrency
 
@@ -590,35 +614,108 @@ See also: Execution instance, Run.
 
 Status: `Canonical`
 
-An analyzer is a reusable, run-scoped analysis configuration.
+An analyzer is a stateful object that records or derives information from selected execution boundaries.
 
-An analyzer declares which observations it needs and exposes analysis results through the run. It records or derives information about execution; it should not control optimization behavior.
+The caller creates an analyzer for selected algorithm or operator sources, clocks and analysis behavior. A trace owns its aggregation and retention objects, which are never resolved through a run. The run installs observations when execution starts, before materializing the execution graph. Reusing an analyzer across runs intentionally combines its history. A trace exposes typed reads during and after execution. An accumulating analyzer is read once its run has finished.
 
-See also: Analyzer result, Observation, Observation plan, Run.
+Properties on a trace return already published values without allocation. Its methods may allocate immutable snapshots or projections, and it does not expose its mutable entries through a read-only collection interface. An accumulating analyzer publishes the accumulator itself instead, as described under Accumulator.
 
-### Analyzer result
+Do not use analyzer for Roslyn analyzers without the Roslyn qualifier when the context could be ambiguous.
 
-Status: `Canonical`
+See also: Accumulator, Analysis snapshot, Observation, Run.
 
-An analyzer result is the run scoped object that stores the data produced by an analyzer during a run.
-
-Analyzer results may contain counters, curves, traces, genealogy graphs or summaries. Users retrieve analyzer results from the run with the analyzer configuration that produced them.
-
-Do not store analyzer result data on reusable analyzer configurations, observable operator wrappers or execution registries.
-
-See also: Analyzer, Observation, Observation plan, Run.
-
-### Observation plan
+### Analysis snapshot
 
 Status: `Canonical`
 
-An observation plan is the run scoped registration plan that records which analyzer callbacks should be installed at which observation anchors.
+An analysis snapshot is an immutable value published from an analyzer at a point in time.
 
-Analyzer run states add their observation requirements to the observation plan. The run then uses the plan to install the required observable replacements into execution instance registries.
+A trace publishes snapshots: `Snapshot()` and `By(clock)` copy its entries, so what a caller holds stays unchanged while the trace collects more. Creating one may allocate, so these are methods rather than properties.
 
-Do not use observation plan to mean the collected analysis data. The plan describes what to observe. Analyzer results store what was observed.
+An accumulator does not. Copying a Pareto front or a genealogy graph per read would cost the whole accumulator, so those analyzers publish the object itself and are read once their run has finished.
 
-See also: Analyzer, Analyzer result, Observation, Run.
+The analyzer remains the owner of its mutable accumulator. The run installs observations but does not own analyzer disposal or provide result lookup.
+
+See also: Analyzer, Observation, Run.
+
+### Trace
+
+Status: `Canonical`
+
+A trace is an ordered history of values that a trace analyzer records while a run executes.
+
+Each trace entry contains one analyzed value and the moment when the value was observed. A trace analyzer owns its
+mutable trace and exposes safe live reads and immutable trace snapshots during and after execution.
+
+Do not use series for this concept. In HeuristicLib, a series is a named column in tabular data.
+
+See also: Analysis snapshot, Analyzer, Run.
+
+### Accumulator
+
+Status: `Canonical`
+
+An accumulator is the single object an analyzer updates in place as it observes a run, rather than a history of
+values. A Pareto front, a genealogy graph and a fitted model are accumulators.
+
+An analyzer holding one derives from `AccumulatingAnalyzer` and updates it under the analyzer's lock. What it
+publishes is that object, not a copy of it, so it is read once the run has finished. Neither trace retention nor
+clocks apply to an accumulator: there is nothing to store apart from what was computed, and one current state has no
+moment of its own.
+
+See also: Trace, Analyzer.
+
+### Trace retention
+
+Status: `Canonical`
+
+Trace retention decides what a trace does with an aggregated observation: append it as a new entry, store it over the entry before it, or drop it. `TraceRetention` is an object that holds whatever counting or remembering its policy needs, so each trace is given its own. Retention happens after measurement and aggregation and never skips that work. A policy that appends or drops leaves stored entries untouched; `TraceRetention.LatestOnly()` replaces, so a trace using it keeps one entry rather than a history.
+
+### Measurement
+
+Status: `Canonical`
+
+A measurement is what a trace reads from one observation, such as the objective vectors of a population or the offspring of a crossover. It receives the typed observation of the boundary it observes and returns the readings an aggregation then summarizes.
+
+A named measurement is an immutable value strategy implementing `IMeasurement<TInput, TValue>`, usually reached through `Measurement`. A delegate passed to `Analyzer.Trace` is a runtime-only projection with identity semantics and no value-equality or serialization contract.
+
+See also: Aggregation, Observation, Trace.
+
+### Aggregation
+
+Status: `Canonical`
+
+An aggregation turns an observation's readings into an immutable result and may accumulate across observations. `IAggregation<TValue, TResult>` is an object with one `Aggregate` method, which owns any history it keeps, so each trace is given its own. A stateless aggregation summarizes each observation independently and holds nothing.
+
+### Clock
+
+Status: `Canonical`
+
+A clock defines one typed notion of time for a trace. A clock may progress with algorithm iterations, candidate
+evaluations, elapsed duration or a domain event such as a dynamic-problem epoch.
+
+The caller explicitly selects the clocks a trace analyzer reads. The same clock object is used to project the trace by
+the time it reports.
+
+See also: Moment, Time, Trace.
+
+### Time
+
+Status: `Canonical`
+
+Time is the typed value read from one clock. Examples include an iteration number, cumulative evaluation count, elapsed
+duration and epoch number.
+
+See also: Clock, Moment.
+
+### Moment
+
+Status: `Provisional`
+
+A moment is the collective time of one trace entry. It contains simultaneous readings from every clock selected by
+that trace analyzer, and is read back one clock at a time through `TraceEntry.At`.
+
+See also: Clock, Time, Trace.
 
 ### Observation
 
@@ -630,10 +727,10 @@ An observation may record data, but it must not change the observed operation's 
 
 Related terms:
 
-- `Observer`: the callback object or function that receives an observation.
-- `Observation anchor`: the algorithm or operator whose boundary an observation is registered at. An anchor is matched by reference, so a copy of an algorithm or operator is a different anchor.
-- `Observable operator`: an operator wrapper that installs observers around an operator boundary.
-- `Observable algorithm`: an algorithm wrapper that installs observers around the search states an algorithm yields, that is, at the end of every iteration.
+- `Observation callback`: the method or runtime delegate that receives an observation.
+- `Observation source`: the algorithm or operator configuration whose boundary is observed. Sources are matched by reference, so a copied configuration is a different source.
+- `Observable operator`: a runtime operator wrapper that reports completed operations to observation callbacks.
+- `Observable algorithm`: a runtime algorithm wrapper that reports the search states an algorithm yields, at the end of every iteration.
 
 See also: Algorithm, Analyzer, Operator, Run.
 
@@ -655,7 +752,7 @@ Status: `Canonical`
 
 An experiment trial is one materialized algorithm configuration and algorithm run within an experiment run.
 
-Each trial has a deterministic typed key, its own algorithm run, its own execution registry and its own random number generator fork. Trials do not pass search states or analyzer state to one another.
+Each trial has a deterministic typed key, its own algorithm run, its own resolution scope and its own random number generator fork. Trials do not pass search states or analyzer state to one another.
 
 See also: Algorithm, Experiment, Run.
 
@@ -663,7 +760,7 @@ See also: Algorithm, Experiment, Run.
 
 Status: `Canonical`
 
-A trial analyzer describes how an experiment run selects one operator from each trial algorithm configuration and creates an analyzer for that selected operator.
+A trial analyzer is a factory that creates an analyzer from each trial algorithm configuration. It can select several observation boundaries and create clocks within that factory.
 
 The trial analyzer is also the typed lookup object used to retrieve the ordered analyzer results from all trials.
 

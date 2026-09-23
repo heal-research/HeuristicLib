@@ -118,20 +118,20 @@ private sealed record CountingEvaluator
 }
 ```
 
-`CreateInitialState()` must return a fresh object. State must not contain operator or algorithm configurations, execution instances, registries or delegates bound to child execution instances. Use the explicit path when an operator needs any of those execution graph dependencies.
+`CreateInitialState()` must return a fresh object. State must not contain operator or algorithm configurations, execution instances, scopes or delegates bound to child execution instances. Use the explicit path when an operator needs any of those execution graph dependencies.
 
 Framework managed state does not have a disposal lifecycle. Do not put disposable resources there. Such ownership requires an explicitly authored execution instance and a defined lifecycle mechanism.
 
 ## Explicit execution instances
 
-The configuration describes reusable parameters and graph structure. Its instance creation method resolves child configurations through the registry and creates an execution instance. The instance owns operation logic, resolved child instances and mutable execution data.
+The configuration describes reusable parameters and graph structure. Its instance creation method resolves child configurations through the scope and creates an execution instance. The instance owns operation logic, resolved child instances and mutable execution data.
 
 ```csharp
 private sealed record ForwardingEvaluator(IEvaluator<RealVector> Inner)
     : Evaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
 {
-    public override EvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
+    public override EvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ResolutionScope scope) =>
+        new Instance(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
 
     private sealed class Instance(IEvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> inner)
         : EvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
@@ -146,7 +146,7 @@ private sealed record ForwardingEvaluator(IEvaluator<RealVector> Inner)
 }
 ```
 
-Resolve ordinary child operators while creating the instance. Retain the registry only when runtime graph construction is an intentional part of the operator.
+Resolve ordinary child operators while creating the instance. Retain the scope only when runtime graph construction is an intentional part of the operator.
 
 Return the most concrete accessible instance type that is useful to callers. A private nested instance is returned through its role specific instance base.
 
@@ -182,11 +182,11 @@ public record EliteSelector<TCandidate> : ISelector<TCandidate>
     public int Elites { get; init; } = 1;
 
     public ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem>
-        CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
         new Instance<TRunSearchSpace, TRunProblem>(
-            instanceRegistry.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(SelectorForRemaining), Elites);
+            scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(SelectorForRemaining), Elites);
     // ...
 }
 ```
@@ -210,8 +210,8 @@ An agent will not settle a concern's semantics for you. Implement and review the
 - Keep configuration values unchanged during execution. Retained collection inputs are immutable snapshots.
 - Keep randomness, the search space and the problem explicit in operation calls.
 - Store mutable run data in framework managed state or an explicitly authored execution instance.
-- Resolve the same configuration through one registry when sharing its execution instance is intentional.
-- Use independent registries when independent execution instances are required.
+- Resolve the same configuration through one scope when sharing its execution instance is intentional.
+- Use scopes that are not ancestors of one another, such as sibling child scopes, when independent execution instances are required.
 - Do not assume stateful operation calls are serialized unless the owning execution path guarantees it.
 
 ## Roslyn analyzer guardrails

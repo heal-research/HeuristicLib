@@ -25,12 +25,12 @@ public abstract record MultiMutator<TCandidate>
     /// Resolves each child over the run's search space and problem and hands them to
     /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
-    public IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    public IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return CombineExecutionInstances([.. ChildMutators.Select(child => resolver.Resolve(child))]);
+        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        return CombineExecutionInstances([.. ChildMutators.Select(child => typed.Resolve(child))]);
     }
 
     /// <summary>Combines the children's execution instances into this operator's own.</summary>

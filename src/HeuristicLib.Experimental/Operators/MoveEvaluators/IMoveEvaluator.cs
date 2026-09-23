@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
 
 public interface IMoveEvaluator<TCandidate, in TMove> : IOperator
 {
-    IMoveEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    IMoveEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
@@ -34,19 +34,19 @@ public interface IMoveEvaluatorInstance<in TCandidate, in TSearchSpace, in TProb
         TProblem problem);
 }
 
-public static class MoveEvaluatorResolverExtensions
+public static class MoveEvaluatorResolutionExtensions
 {
-    extension(ExecutionInstanceRegistry registry)
+    extension(ResolutionScope scope)
     {
         public IMoveEvaluatorInstance<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TCandidate, TSearchSpace, TProblem, TMove>(IMoveEvaluator<TCandidate, TMove> moveEvaluator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            registry.Resolve(moveEvaluator, static (creationTarget, childRegistry) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childRegistry));
+            scope.Resolve(moveEvaluator, static (creationTarget, childScope) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childScope));
 
         public IMoveEvaluatorInstance<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TMove>(IMoveEvaluator<TCandidate, TMove>? moveEvaluator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            moveEvaluator is null ? null : registry.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveEvaluator);
+            moveEvaluator is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveEvaluator);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem, TMove>(
             IMoveEvaluator<TCandidate, TMove> moveEvaluator,
@@ -57,7 +57,7 @@ public static class MoveEvaluatorResolverExtensions
         {
             try
             {
-                instance = registry.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveEvaluator);
+                instance = scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveEvaluator);
                 reason = null;
                 return true;
             }
@@ -70,20 +70,20 @@ public static class MoveEvaluatorResolverExtensions
         }
     }
 
-    extension<TCandidate, TSearchSpace, TProblem>(ExecutionInstanceResolver<TCandidate, TSearchSpace, TProblem> resolver)
+    extension<TCandidate, TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public IMoveEvaluatorInstance<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TMove>(IMoveEvaluator<TCandidate, TMove> moveEvaluator) =>
-            resolver.Registry.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveEvaluator);
+            scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveEvaluator);
 
         public IMoveEvaluatorInstance<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TMove>(IMoveEvaluator<TCandidate, TMove>? moveEvaluator) =>
-            moveEvaluator is null ? null : resolver.Resolve(moveEvaluator);
+            moveEvaluator is null ? null : scope.Resolve(moveEvaluator);
 
         public bool TryResolve<TMove>(
             IMoveEvaluator<TCandidate, TMove> moveEvaluator,
             [NotNullWhen(true)] out IMoveEvaluatorInstance<TCandidate, TSearchSpace, TProblem, TMove>? instance,
             [NotNullWhen(false)] out string? reason) =>
-            resolver.Registry.TryResolve(moveEvaluator, out instance, out reason);
+            scope.Scope.TryResolve(moveEvaluator, out instance, out reason);
     }
 }

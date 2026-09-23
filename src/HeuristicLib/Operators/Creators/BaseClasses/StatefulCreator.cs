@@ -21,7 +21,7 @@ public abstract record StatefulCreator<TCandidate, TSearchSpace, TProblem, TStat
 
     protected abstract IReadOnlyList<TCandidate> Create(int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public sealed override ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope) =>
         new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulCreator<TCandidate, TSearchSpace, TProblem, TState> creator, TState state)
@@ -41,7 +41,7 @@ public abstract record StatefulCreator<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<TCandidate> Create(int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override ICreatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public sealed override ICreatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ResolutionScope scope) =>
         new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulCreator<TCandidate, TSearchSpace, TState> creator, TState state)
@@ -60,7 +60,7 @@ public abstract record StatefulCreator<TCandidate, TState>
 
     protected abstract IReadOnlyList<TCandidate> Create(int count, TState state, IRandomNumberGenerator random);
 
-    public sealed override ICreatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public sealed override ICreatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ResolutionScope scope) =>
         new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulCreator<TCandidate, TState> creator, TState state)

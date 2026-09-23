@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-// Adapter for algorithms that do not have an inner termination criterion; revisit if every algorithm exposes a terminal-state hook.
+// Adapter for algorithms that do not have an inner termination criterion; revisit if every algorithm exposes a terminal-state module.
 public record StateTerminatedAlgorithm<TCandidate, TSearchState>
     : Algorithm<StateTerminatedAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
@@ -17,12 +17,12 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchState>
 
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, Terminator);
 
-    public override StateTerminatedAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    public override StateTerminatedAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
-        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
+        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
         // Resolve the terminator before the wrapped algorithm so elapsed-time terminators start at the earliest point this wrapper controls, including wrapped algorithm instancing.
-        var terminator = resolver.Resolve(Terminator);
-        return new(resolver.Resolve(Algorithm), terminator);
+        var terminator = typed.Resolve(Terminator);
+        return new(typed.Resolve(Algorithm), terminator);
     }
 }
 

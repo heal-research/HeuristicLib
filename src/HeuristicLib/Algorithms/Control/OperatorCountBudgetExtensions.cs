@@ -31,11 +31,7 @@ public static class OperatorCountBudgetExtensions
                 CountedOperatorFactory = countedOperatorFactory
             };
         }
-    }
 
-    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
-        where TSearchState : class, ISearchState
-    {
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, IEvaluator<TCandidate>> LimitedToEvaluatorCalls(
             IEvaluator<TCandidate> evaluator,
             int maximumCalls)

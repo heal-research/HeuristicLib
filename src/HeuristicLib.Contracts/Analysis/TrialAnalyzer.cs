@@ -1,36 +1,56 @@
 namespace HEAL.HeuristicLib.Analysis;
 
-public abstract class TrialAnalyzer
+/// <summary>
+/// Creates one analyzer per experiment trial, bound to boundaries selected from that trial's algorithm.
+/// </summary>
+/// <remarks>
+/// One analyzer attached to several runs combines their data, so a trial analyzer is a factory that gives each trial
+/// an analyzer of its own. The experiment hands back the analyzer it created for each trial, and the caller reads its
+/// data directly.
+/// </remarks>
+public static class TrialAnalyzer
 {
-    public static TrialAnalyzer<TAlgorithm, TOperator, TResult> Create<TAlgorithm, TOperator, TResult>(
-        Func<TAlgorithm, TOperator> selector,
-        Func<TOperator, IAnalyzer<TResult>> analyzerFactory)
-        where TResult : class => new(selector, analyzerFactory);
+    public static TrialAnalyzer<TAlgorithm, TAnalyzer> Create<TAlgorithm, TAnalyzer>(
+        Func<TAlgorithm, TAnalyzer> analyzerFactory)
+        where TAnalyzer : IAnalyzer => new(analyzerFactory);
+}
 
+/// <summary>
+/// A trial analyzer for one algorithm type, which is what an experiment run accepts.
+/// </summary>
+public abstract class TrialAnalyzer<TAlgorithm>
+{
     private protected TrialAnalyzer()
     {
     }
+
+    /// <summary>
+    /// Creates the analyzer for one trial's algorithm.
+    /// </summary>
+    internal abstract IAnalyzer CreateFor(TAlgorithm algorithm);
 }
 
-public sealed class TrialAnalyzer<TAlgorithm, TOperator, TResult> : TrialAnalyzer
-    where TResult : class
+public sealed class TrialAnalyzer<TAlgorithm, TAnalyzer> : TrialAnalyzer<TAlgorithm>
+    where TAnalyzer : IAnalyzer
 {
-    internal Func<TAlgorithm, TOperator> Selector { get; }
+    internal Func<TAlgorithm, TAnalyzer> AnalyzerFactory { get; }
 
-    internal Func<TOperator, IAnalyzer<TResult>> AnalyzerFactory { get; }
-
-    internal TrialAnalyzer(Func<TAlgorithm, TOperator> selector, Func<TOperator, IAnalyzer<TResult>> analyzerFactory)
+    internal TrialAnalyzer(Func<TAlgorithm, TAnalyzer> analyzerFactory)
     {
-        Selector = selector;
         AnalyzerFactory = analyzerFactory;
     }
+
+    internal override IAnalyzer CreateFor(TAlgorithm algorithm) => AnalyzerFactory(algorithm);
 }
 
-public sealed record TrialAnalysisResult<TTrial, TResult>(TTrial Trial, IAnalyzer<TResult> Analyzer, TResult Result)
-    where TResult : class;
+/// <summary>
+/// One trial and the analyzer that observed it.
+/// </summary>
+public sealed record TrialAnalysis<TTrial, TAnalyzer>(TTrial Trial, TAnalyzer Analyzer)
+    where TAnalyzer : IAnalyzer;
 
-public static class TrialAnalysisResult
+public static class TrialAnalysis
 {
-    public static TrialAnalysisResult<TTrial, TResult> From<TTrial, TResult>(TTrial trial, IAnalyzer<TResult> analyzer, TResult result)
-        where TResult : class => new(trial, analyzer, result);
+    public static TrialAnalysis<TTrial, TAnalyzer> From<TTrial, TAnalyzer>(TTrial trial, TAnalyzer analyzer)
+        where TAnalyzer : IAnalyzer => new(trial, analyzer);
 }

@@ -51,7 +51,7 @@ public sealed record ValidationReport(ImmutableArray<ValidationDiagnostic> Diagn
 /// <para>
 /// Two independent questions are asked of each node. Whether it declares an invariant contract the search space
 /// contradicts, which is skipped when it declares none; and, when the run's types are supplied, whether it was
-/// written for them at all. The second is the same <see cref="IExecutionInstanceResolvable.Fits"/> the
+/// written for them at all. The second is the same <see cref="IExecutionConfiguration.Fits"/> the
 /// authoring bases apply when they bridge, so validation and execution decide by one rule. Because the walk asks each
 /// node directly rather than building anything, it also reaches children a run would only resolve later, such as the
 /// stages inside a cycling algorithm.
@@ -68,10 +68,10 @@ public static class SearchConfigurationValidation
     /// name. Use the overload taking an <see cref="ExecutionSignature"/> where all three are known; it adds the check
     /// that each configuration was written for that execution.
     /// </remarks>
-    public static ValidationReport Validate<TCandidate>(IExecutionInstanceResolvable configuration, ISearchSpace<TCandidate> searchSpace)
+    public static ValidationReport Validate<TCandidate>(IExecutionConfiguration configuration, ISearchSpace<TCandidate> searchSpace)
     {
         var diagnostics = ImmutableArray.CreateBuilder<ValidationDiagnostic>();
-        Walk(configuration, configuration.GetType().Name, searchSpace, new HashSet<IExecutionInstanceResolvable>(ReferenceEqualityComparer.Instance), diagnostics);
+        Walk(configuration, configuration.GetType().Name, searchSpace, new HashSet<IExecutionConfiguration>(ReferenceEqualityComparer.Instance), diagnostics);
         return new ValidationReport(diagnostics.ToImmutable());
     }
 
@@ -80,13 +80,13 @@ public static class SearchConfigurationValidation
     /// <paramref name="searchSpace"/>, and every configuration in the graph against
     /// <paramref name="execution"/>.
     /// </summary>
-    public static ValidationReport Validate<TCandidate>(IExecutionInstanceResolvable configuration, ISearchSpace<TCandidate> searchSpace, ExecutionSignature execution)
+    public static ValidationReport Validate<TCandidate>(IExecutionConfiguration configuration, ISearchSpace<TCandidate> searchSpace, ExecutionSignature execution)
     {
         var diagnostics = ImmutableArray.CreateBuilder<ValidationDiagnostic>();
         var rootPath = configuration.GetType().Name;
 
         ReportMismatch(configuration, rootPath, execution, diagnostics);
-        Walk(configuration, rootPath, searchSpace, new HashSet<IExecutionInstanceResolvable>(ReferenceEqualityComparer.Instance), diagnostics);
+        Walk(configuration, rootPath, searchSpace, new HashSet<IExecutionConfiguration>(ReferenceEqualityComparer.Instance), diagnostics);
         return new ValidationReport(diagnostics.ToImmutable());
     }
 
@@ -98,7 +98,7 @@ public static class SearchConfigurationValidation
     /// the same invariant. A composed operator inherits its children's limits, so repeating them would bury the one
     /// diagnostic that names the operator a user has to change.
     /// </remarks>
-    private static HashSet<string> Walk<TCandidate>(IExecutionInstanceResolvable node, string path, ISearchSpace<TCandidate> searchSpace, HashSet<IExecutionInstanceResolvable> visited, ImmutableArray<ValidationDiagnostic>.Builder diagnostics)
+    private static HashSet<string> Walk<TCandidate>(IExecutionConfiguration node, string path, ISearchSpace<TCandidate> searchSpace, HashSet<IExecutionConfiguration> visited, ImmutableArray<ValidationDiagnostic>.Builder diagnostics)
     {
         var reported = new HashSet<string>(StringComparer.Ordinal);
         if (!visited.Add(node))
@@ -143,7 +143,7 @@ public static class SearchConfigurationValidation
     /// which adapts its children out of the report: such a composition does not forward, so it answers for itself, and
     /// its children are never asked about a run they were never going to see.
     /// </remarks>
-    private static bool ReportMismatch(IExecutionInstanceResolvable node, string path, ExecutionSignature execution, ImmutableArray<ValidationDiagnostic>.Builder diagnostics)
+    private static bool ReportMismatch(IExecutionConfiguration node, string path, ExecutionSignature execution, ImmutableArray<ValidationDiagnostic>.Builder diagnostics)
     {
         if (node.Fits(execution))
         {
@@ -168,7 +168,7 @@ public static class SearchConfigurationValidation
     /// Yields the configuration children of a node: any property value, or element of an enumerable property, that is
     /// itself a configuration.
     /// </summary>
-    private static IEnumerable<(IExecutionInstanceResolvable Child, string Path)> Children(IExecutionInstanceResolvable node, string path)
+    private static IEnumerable<(IExecutionConfiguration Child, string Path)> Children(IExecutionConfiguration node, string path)
     {
         foreach (var property in node.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
@@ -192,7 +192,7 @@ public static class SearchConfigurationValidation
                 continue;
             }
 
-            if (value is IExecutionInstanceResolvable child)
+            if (value is IExecutionConfiguration child)
             {
                 yield return (child, $"{path}.{property.Name}");
                 continue;
@@ -206,7 +206,7 @@ public static class SearchConfigurationValidation
             var index = 0;
             foreach (var element in elements)
             {
-                if (element is IExecutionInstanceResolvable nestedChild)
+                if (element is IExecutionConfiguration nestedChild)
                 {
                     yield return (nestedChild, $"{path}.{property.Name}[{index}]");
                 }

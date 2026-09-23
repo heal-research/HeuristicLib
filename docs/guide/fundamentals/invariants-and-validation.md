@@ -127,7 +127,7 @@ Put that in an algorithm running over a different permutation problem and it can
 type arguments, so nothing has to be built to find out:
 
 ```csharp
-public interface IExecutionInstanceResolvable
+public interface IExecutionConfiguration
 {
     /// A configuration that names no search space, problem or search state is written for every run.
     bool Fits(ExecutionSignature execution) => true;
@@ -220,7 +220,7 @@ Every form reports **every** failure it finds rather than stopping at the first,
 
 ::: warning Resolution does not validate
 The check happens when a run is created. Reaching an execution instance directly through
-`ExecutionInstanceRegistry.Resolve` bypasses it, by design — that is the same escape hatch as `validate: false`, and
+`ResolutionScope.Resolve` bypasses it, by design — that is the same escape hatch as `validate: false`, and
 it is how the library's own internals build operators.
 :::
 

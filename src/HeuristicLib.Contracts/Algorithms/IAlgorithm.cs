@@ -11,9 +11,9 @@ namespace HEAL.HeuristicLib.Algorithms;
 /// to keep algorithms with different search states in one collection, and
 /// <see cref="IAlgorithm{TCandidate, TSearchState}"/> to run one.
 /// </remarks>
-public interface IAlgorithm<TCandidate> : IExecutionInstanceResolvable
+public interface IAlgorithm<TCandidate> : IExecutionConfiguration
 {
-    IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ExecutionInstanceRegistry instanceRegistry)
+    IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState;
@@ -23,7 +23,7 @@ public interface IAlgorithm<TCandidate> : IExecutionInstanceResolvable
 public interface IAlgorithm<TCandidate, TSearchState> : IAlgorithm<TCandidate>
     where TSearchState : class, ISearchState
 {
-    IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
@@ -37,21 +37,21 @@ public interface IAlgorithmInstance<TCandidate, in TSearchSpace, in TProblem, TS
     IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
 }
 
-public static class AlgorithmResolverExtensions
+public static class AlgorithmResolutionExtensions
 {
-    extension(ExecutionInstanceRegistry registry)
+    extension(ResolutionScope scope)
     {
         public IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate> algorithm)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            registry.Resolve(algorithm, static (creationTarget, childRegistry) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem, TSearchState>(childRegistry));
+            scope.Resolve(algorithm, static (creationTarget, childScope) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem, TSearchState>(childScope));
 
         public IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate>? algorithm)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            algorithm is null ? null : registry.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+            algorithm is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 
         /// <remarks>Reports rather than throws, so a caller can validate without catching.</remarks>
         public bool TryResolve<TCandidate, TSearchSpace, TProblem, TSearchState>(
@@ -64,7 +64,7 @@ public static class AlgorithmResolverExtensions
         {
             try
             {
-                instance = registry.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+                instance = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
                 reason = null;
                 return true;
             }
@@ -77,21 +77,21 @@ public static class AlgorithmResolverExtensions
         }
     }
 
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(ExecutionInstanceResolver<TCandidate, TSearchSpace, TProblem, TSearchState> resolver)
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
         public IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve(IAlgorithm<TCandidate> algorithm) =>
-            resolver.Registry.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+            scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 
         public IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional(IAlgorithm<TCandidate>? algorithm) =>
-            algorithm is null ? null : resolver.Registry.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+            algorithm is null ? null : scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 
         public bool TryResolve(
             IAlgorithm<TCandidate> algorithm,
             [NotNullWhen(true)] out IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? instance,
             [NotNullWhen(false)] out string? reason) =>
-            resolver.Registry.TryResolve(algorithm, out instance, out reason);
+            scope.Scope.TryResolve(algorithm, out instance, out reason);
     }
 }

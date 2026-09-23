@@ -25,12 +25,12 @@ public abstract record MultiEvaluator<TCandidate>
     /// Resolves each child over the run's search space and problem and hands them to <see
     /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
-    public IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    public IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        var resolver = instanceRegistry.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return CombineExecutionInstances([.. ChildEvaluators.Select(child => resolver.Resolve(child))]);
+        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
+        return CombineExecutionInstances([.. ChildEvaluators.Select(child => typed.Resolve(child))]);
     }
 
     /// <summary>Combines the children's execution instances into this operator's own.</summary>

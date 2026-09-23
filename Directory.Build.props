@@ -16,7 +16,7 @@
         <Copyright>(c) Heuristic and Evolutionary Algorithms Laboratory (HEAL)</Copyright>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageProjectUrl>https://github.com/heal-research/HeuristicLib</PackageProjectUrl>
+        <PackageProjectUrl>https://heuristiclib.github.io/</PackageProjectUrl>
         <RepositoryUrl>https://github.com/heal-research/HeuristicLib</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageTags>metaheuristic-optimization; evolutionary-algorithms</PackageTags>

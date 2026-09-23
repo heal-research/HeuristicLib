@@ -679,6 +679,76 @@ public class OperatorBudgetAlgorithmTests
         budgeted.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
     }
 
+    [Fact]
+    public void OperatorBudget_KeepsAnalysisObservationsOnTheCountedOperator()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 3
+        };
+        var analyzer = new EvaluationObservingAnalyzer(algorithm.Evaluator);
+
+        algorithm.LimitedToEvaluatedCandidates(algorithm.Evaluator, maximumCandidates: 1000)
+                 .CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(analyzer)
+                 .Complete(cancellationToken: TestContext.Current.CancellationToken);
+
+        analyzer.ObservedCandidates.ShouldBeGreaterThan(0);
+    }
+
+    /// <summary>
+    /// A budget measures the operator it limits, never the analyzer watching that operator. Were it the other way
+    /// round, the recording work would be charged to the budget and attaching an analyzer would shorten the run.
+    /// </summary>
+    [Fact]
+    public async Task ADurationBudget_WrapsTheOperatorRatherThanTheAnalyzerObservingIt()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 3 };
+        var quality = algorithm.Evaluator.TraceBestCandidateSoFar();
+        var measuredOperators = new List<Type>();
+
+        var budgeted = algorithm.LimitedToOperatorDuration(
+            algorithm.Evaluator,
+            TimeSpan.FromSeconds(30),
+            new AdvancingTimeProvider(TimeSpan.FromMilliseconds(1)),
+            (observedOperator, duration, timeProvider) =>
+            {
+                measuredOperators.Add(observedOperator.GetType());
+                return observedOperator.MeasureDuration(duration, timeProvider);
+            });
+
+        await budgeted.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(quality)
+                      .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        measuredOperators.ShouldHaveSingleItem();
+        measuredOperators[0].ShouldBe(algorithm.Evaluator.GetType());
+        quality.SampleCount.ShouldBeGreaterThan(0);
+    }
+
+    /// <summary>
+    /// The counterpart: the analyzer still observes everything the budget's wrapper passes through, so ordering them
+    /// does not cost the observation.
+    /// </summary>
+    [Fact]
+    public async Task ADurationBudget_DoesNotHideTheOperatorFromAnAnalyzer()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 3 };
+        var withoutBudget = algorithm.Evaluator.TraceBestCandidateSoFar();
+        var withBudget = algorithm.Evaluator.TraceBestCandidateSoFar();
+
+        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(withoutBudget)
+                       .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        await algorithm
+            .LimitedToEvaluatorDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), new AdvancingTimeProvider(TimeSpan.FromMilliseconds(1)))
+            .CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(withBudget)
+            .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        withBudget.SampleCount.ShouldBe(withoutBudget.SampleCount);
+    }
+
     private static TestFunctionProblem CreateProblem()
     {
         return new TestFunctionProblem(new SphereFunction(dimension: 3));
@@ -697,6 +767,21 @@ public class OperatorBudgetAlgorithmTests
             Selector = RandomSelector.For(problem),
             Elites = 0
         };
+    }
+
+    /// <summary>
+    /// Counts the candidates evaluated by one evaluator, so that a run can assert the observation was installed even
+    /// when a budget algorithm decorates the same evaluator.
+    /// </summary>
+    private sealed class EvaluationObservingAnalyzer(IEvaluator<RealVector> evaluator)
+        : IAnalyzer
+    {
+        public int ObservedCandidates { get; private set; }
+
+        public void Install(ResolutionScopeBuilder builder) => builder.Observe<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator, Record);
+
+        public void Record(EvaluatorObservation<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> observation) =>
+            ObservedCandidates += observation.ObjectiveVectors.Count;
     }
 
     private sealed class AdvancingTimeProvider(TimeSpan step) : TimeProvider

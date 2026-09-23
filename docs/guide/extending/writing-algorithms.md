@@ -33,15 +33,15 @@ public sealed record SingleCreateAlgorithm
 
     protected override IterativeAlgorithmInstance<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>
         CreateExecutionInstance<TRunSearchSpace, TRunProblem>(
-            ExecutionInstanceRegistry instanceRegistry,
+            ResolutionScope scope,
             IInterceptorInstance<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
     {
-        var resolver = instanceRegistry.For<RealVector, TRunSearchSpace, TRunProblem>();
+        var typed = scope.For<RealVector, TRunSearchSpace, TRunProblem>();
 
         return new Instance<TRunSearchSpace, TRunProblem>(
             resolvedInterceptor,
-            resolver.Resolve(Creator),
-            resolver.Resolve(Evaluator));
+            typed.Resolve(Creator),
+            typed.Resolve(Evaluator));
     }
 
     private sealed class Instance<TSearchSpace, TProblem>(
@@ -94,7 +94,7 @@ Use `.TerminatedAfterIterations(count)` or another terminator when the algorithm
 
 ## Resolve operators once
 
-Resolve every configured child operator through `ExecutionInstanceRegistry` while creating the algorithm instance. Do not call operator configurations directly from `ExecuteStep` and do not create new child instances for every iteration.
+Resolve every configured child operator through `ResolutionScope` while creating the algorithm instance. Do not call operator configurations directly from `ExecuteStep` and do not create new child instances for every iteration.
 
 Store counters and other changing values on the nested execution instance. Never mutate the configuration record.
 

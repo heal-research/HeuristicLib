@@ -35,14 +35,13 @@ var algorithm = GeneticAlgorithm.For(
     maximumGenerations: 1000,
     mutationRate: 0.25);
 
-var run = algorithm
-    .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .TrackBestMedianWorst(out var qualityAnalyzer);
+var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
+    .TracePopulationCandidates(out var qualityAnalyzer);
 
 await run.CompleteAsync();
 
-var qualityCurve = run.GetResult(qualityAnalyzer);
-var best = qualityCurve[^1].Best;
+var qualityCurve = qualityAnalyzer.Snapshot().Values;
+var best = qualityAnalyzer.RequireLatestValue().Best;
 
 Console.WriteLine($"Instance: {instance.Name}");
 Console.WriteLine($"Best tour length: {best.ObjectiveVector[0]:F0}");

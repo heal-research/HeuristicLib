@@ -79,7 +79,7 @@ public class ImprovementCheckingCompositionTests
         IRefiner<int> refiner,
         FuncProblem<int, DummySearchSpace<int>> problem,
         params int[] candidates) =>
-        refiner.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry()).Refine(candidates, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        refiner.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create()).Refine(candidates, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>
         FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);

@@ -313,14 +313,14 @@ public class NoviceFrictionSpecs
     {
         var problemBound = new DimensionCountingMutator();
 
-        // A registry serves one run, so each triple is asked in its own.
-        new ExecutionInstanceRegistry()
+        // A scope serves one run, so each triple is asked in its own.
+        ResolutionScope.Create()
             .TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problemBound, out var instance, out var reason)
             .ShouldBeTrue();
         instance.ShouldNotBeNull();
         reason.ShouldBeNull();
 
-        new ExecutionInstanceRegistry()
+        ResolutionScope.Create()
             .TryResolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(problemBound, out var wrong, out var refusal)
             .ShouldBeFalse();
         wrong.ShouldBeNull();

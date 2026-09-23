@@ -26,9 +26,9 @@ public sealed class InterpolatedQuadraticAssignmentProblem
         double alphaStep = 0.01,
         bool interpolateDistances = false,
         bool pingPong = true,
-        UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-        int epochLength = int.MaxValue
-    ) : base(SingleObjective.Minimize, new PermutationSearchSpace(a.Size), environmentRandom, updatePolicy, epochLength)
+        IEpochSchedule? epochSchedule = null,
+        UpdatePolicy updatePolicy = UpdatePolicy.AfterEachEvaluation
+    ) : base(SingleObjective.Minimize, new PermutationSearchSpace(a.Size), environmentRandom, epochSchedule ?? new EvaluationCountSchedule(int.MaxValue), updatePolicy)
     {
         if (a.Size != b.Size)
         {
@@ -55,8 +55,7 @@ public sealed class InterpolatedQuadraticAssignmentProblem
 
     public double Alpha { get; private set; }
 
-    public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random,
-                                             EvaluationTiming timing)
+    protected override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, int epoch)
     {
         var n = a.Size;
         var cost = 0.0;

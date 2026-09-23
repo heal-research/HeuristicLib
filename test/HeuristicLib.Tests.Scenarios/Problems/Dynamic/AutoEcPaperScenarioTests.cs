@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.Encodings.Composite;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
@@ -29,7 +30,8 @@ public class AutoEcPaperScenarioTests
             RandomNumberGenerator.Create(2024),
             activationProb: 0.7,
             switchProbability: 0.25,
-            epochLength: 120);
+            new EvaluationCountSchedule(120),
+            UpdatePolicy.AfterEachBatchEvaluation);
         var metaSpace = CreateTspHyperParameterSearchSpace();
         var metaCreator = metaSpace.CombineCreators(
             new UniformDistributedCreator(),
@@ -58,31 +60,28 @@ public class AutoEcPaperScenarioTests
             HallOfFameStrength = 0.25,
             ModelObservationInterval = 10
         };
-        var qualityCurve =
-            new QualityCurvePerEpochAnalysis<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(
-                problem,
-                evaluator);
+        var epoch = Clock.FromEpoch(problem);
+        var qualityCurve = Analyzer.Trace(evaluator,
+            observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors),
+            Aggregate.Best<Permutation>(),
+            [epoch]);
         var bbcp =
-            new BestBeforeChangePerformanceAnalysis<Permutation, PermutationSearchSpace,
+            new BestBeforeChangePerformanceAnalyzer<Permutation, PermutationSearchSpace,
                 ActivatedTravelingSalesmanProblem>(
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123))
-                        .AttachAnalyzers(qualityCurve, bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAnalyzer(qualityCurve).AddAnalyzer(bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
             problem, targetEpochChanges, TestContext.Current.CancellationToken);
-        var qualityResult = run.GetResult(qualityCurve);
-        var bbcpResult = run.GetResult(bbcp);
-
         finalState.Population.EvaluatedCandidates.Count.ShouldBeGreaterThan(0);
         finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
             problem.SearchSpace.Contains(candidate.Candidate));
-        qualityResult.BestPerEpoch.Count.ShouldBeGreaterThanOrEqualTo(2);
-        bbcpResult.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(1);
-        double.IsFinite(bbcpResult.Performance).ShouldBeTrue();
+        qualityCurve.By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(2);
+        bbcp.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(1);
+        double.IsFinite(bbcp.Performance).ShouldBeTrue();
     }
 
     [Fact]
@@ -114,32 +113,28 @@ public class AutoEcPaperScenarioTests
             HallOfFameStrength = 0.25,
             ModelObservationInterval = 10
         };
-        var qualityCurve =
-            new QualityCurvePerEpochAnalysis<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
-                problem,
-                evaluator);
+        var epoch = Clock.FromEpoch(problem);
+        var qualityCurve = Analyzer.Trace(evaluator,
+            observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors),
+            Aggregate.Best<RealVector>(),
+            [epoch]);
         var bbcp =
-            new BestBeforeChangePerformanceAnalysis<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
+            new BestBeforeChangePerformanceAnalyzer<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123))
-                        .AttachAnalyzers(qualityCurve, bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAnalyzer(qualityCurve).AddAnalyzer(bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
             problem, targetEpochChanges, TestContext.Current.CancellationToken);
-        var qualityResult = run.GetResult(qualityCurve);
-        var bbcpResult = run.GetResult(bbcp);
-
         finalState.Population.EvaluatedCandidates.Count.ShouldBeGreaterThan(0);
         finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
             problem.SearchSpace.Contains(candidate.Candidate));
-        qualityResult.BestPerEpoch.Count.ShouldBeGreaterThanOrEqualTo(3);
-        qualityResult.BestPerEpoch.Select(entry => entry.timing.Epoch).Distinct().Count()
-                     .ShouldBeGreaterThanOrEqualTo(3);
-        bbcpResult.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(2);
-        double.IsFinite(bbcpResult.Performance).ShouldBeTrue();
+        qualityCurve.SampleCount.ShouldBeGreaterThanOrEqualTo(3);
+        qualityCurve.By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(3);
+        bbcp.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(2);
+        double.IsFinite(bbcp.Performance).ShouldBeTrue();
     }
 
     private static async Task<TSearchState> RunUntilEpochChanges<TProblem, TCandidate, TSearchSpace, TSearchState>(
@@ -161,7 +156,7 @@ public class AutoEcPaperScenarioTests
             observedEpochChanges += 1;
         }
 
-        problem.EpochClock.OnEpochChange += OnEpochChange;
+        problem.OnEpochChange += OnEpochChange;
         try
         {
             await using var enumerator = stream.GetAsyncEnumerator(cancellationToken);
@@ -174,7 +169,7 @@ public class AutoEcPaperScenarioTests
         }
         finally
         {
-            problem.EpochClock.OnEpochChange -= OnEpochChange;
+            problem.OnEpochChange -= OnEpochChange;
         }
 
         return finalState ?? throw new InvalidOperationException("The stream did not produce a state.");
@@ -196,7 +191,8 @@ public class AutoEcPaperScenarioTests
             WidthSeverity = 0.1
         },
             RandomNumberGenerator.Create(321),
-            epochLength: 30);
+            new EvaluationCountSchedule(30),
+            UpdatePolicy.AfterEachBatchEvaluation);
 
     private static CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
         CreateHyperParameterSearchSpace() =>

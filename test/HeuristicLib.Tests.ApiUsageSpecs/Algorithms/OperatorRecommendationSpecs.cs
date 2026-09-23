@@ -51,13 +51,13 @@ public class OperatorRecommendationSpecs
     {
         var problem = new TravelingSalesmanProblem();
 
-        var run = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5)
-            .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-            .TrackBestMedianWorst(out var qualityAnalyzer);
+        var algorithm = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
+        var qualityAnalyzer = algorithm.TracePopulationCandidates();
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(qualityAnalyzer);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.GetResult(qualityAnalyzer).Count.ShouldBe(5);
+        qualityAnalyzer.SampleCount.ShouldBe(5);
     }
 
     /// <summary>

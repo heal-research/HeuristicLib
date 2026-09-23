@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>
@@ -30,7 +32,7 @@ public readonly record struct ExecutionSignature(Type SearchSpace, Type Problem,
     /// default, is what makes such a composition a boundary of the check. It may check them against the inner
     /// signature instead.
     /// </remarks>
-    public bool Fits(params ReadOnlySpan<IExecutionInstanceResolvable?> configurations)
+    public bool Fits(params ReadOnlySpan<IExecutionConfiguration?> configurations)
     {
         foreach (var configuration in configurations)
         {
@@ -51,13 +53,29 @@ public readonly record struct ExecutionSignature(Type SearchSpace, Type Problem,
     /// </summary>
     public static string Describe(Type searchSpace, Type problem, Type? searchState = null) =>
         searchState is null
-            ? $"{searchSpace.Name} with {problem.Name}"
-            : $"{searchSpace.Name} with {problem.Name} producing {searchState.Name}";
+            ? $"{Name(searchSpace)} with {Name(problem)}"
+            : $"{Name(searchSpace)} with {Name(problem)} producing {Name(searchState)}";
 
     /// <summary>
     /// The exception an authoring base throws when it is asked for an execution it was not written for. One message
     /// for every role, so a mismatch reads the same wherever it is reported.
     /// </summary>
     public static InvalidOperationException Mismatch(object configuration, string writtenFor, string execution) =>
-        new($"{configuration.GetType().Name} is written for {writtenFor}, and cannot run over {execution}.");
+        new($"{Name(configuration.GetType())} is written for {writtenFor}, and cannot run over {execution}.");
+
+    /// <summary>
+    /// Names a type with its type arguments, so a generic wrapper reads <c>ObservingMutator&lt;RealVector, …&gt;</c>
+    /// rather than by its metadata name.
+    /// </summary>
+    internal static string Name(Type type)
+    {
+        var tick = type.Name.IndexOf('`');
+        if (tick < 0)
+            return type.Name;
+
+        // A nested type also carries its declaring type's arguments; its own are the last ones.
+        var count = int.Parse(type.Name.AsSpan(tick + 1), CultureInfo.InvariantCulture);
+        var arguments = type.GetGenericArguments()[^count..];
+        return $"{type.Name[..tick]}<{string.Join(", ", arguments.Select(Name))}>";
+    }
 }

@@ -68,11 +68,11 @@ var algorithm = GeneticAlgorithm.For(
 
 var run = algorithm
     .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .TrackBestMedianWorst(out var qualityAnalyzer);
+    .TracePopulationCandidates(out var qualityAnalyzer);
 
 await run.CompleteAsync();
 
-var qualityCurve = run.GetResult(qualityAnalyzer);
+var qualityCurve = qualityAnalyzer.Snapshot().Values;
 var best = qualityCurve[^1].Best;
 
 Console.WriteLine($"Instance: {instance.Name}");

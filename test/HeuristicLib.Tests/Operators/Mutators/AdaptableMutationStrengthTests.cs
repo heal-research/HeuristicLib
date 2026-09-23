@@ -74,7 +74,7 @@ public class AdaptableMutationStrengthTests
     /// discovered.
     /// </summary>
     private static IAdaptableMutationStrengthInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> Resolve(GaussianMutator mutator) =>
-        new ExecutionInstanceRegistry()
+        ResolutionScope.Create()
             .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>()
             .Resolve(mutator)
             .ShouldBeAssignableTo<IAdaptableMutationStrengthInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>();

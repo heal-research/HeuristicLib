@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators;
 
 public interface IEvaluator<TCandidate> : IOperator
 {
-    IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
@@ -22,19 +22,19 @@ public interface IEvaluatorInstance<TCandidate, in TSearchSpace, in TProblem>
     IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-public static class EvaluatorResolverExtensions
+public static class EvaluatorResolutionExtensions
 {
-    extension(ExecutionInstanceRegistry registry)
+    extension(ResolutionScope scope)
     {
         public IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate> evaluator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            registry.Resolve(evaluator, static (creationTarget, childRegistry) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childRegistry));
+            scope.Resolve(evaluator, static (creationTarget, childScope) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childScope));
 
         public IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate>? evaluator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            evaluator is null ? null : registry.Resolve<TCandidate, TSearchSpace, TProblem>(evaluator);
+            evaluator is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem>(evaluator);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem>(
             IEvaluator<TCandidate> evaluator,
@@ -45,7 +45,7 @@ public static class EvaluatorResolverExtensions
         {
             try
             {
-                instance = registry.Resolve<TCandidate, TSearchSpace, TProblem>(evaluator);
+                instance = scope.Resolve<TCandidate, TSearchSpace, TProblem>(evaluator);
                 reason = null;
                 return true;
             }
@@ -58,20 +58,20 @@ public static class EvaluatorResolverExtensions
         }
     }
 
-    extension<TCandidate, TSearchSpace, TProblem>(ExecutionInstanceResolver<TCandidate, TSearchSpace, TProblem> resolver)
+    extension<TCandidate, TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> Resolve(IEvaluator<TCandidate> evaluator) =>
-            resolver.Registry.Resolve<TCandidate, TSearchSpace, TProblem>(evaluator);
+            scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(evaluator);
 
         public IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IEvaluator<TCandidate>? evaluator) =>
-            evaluator is null ? null : resolver.Resolve(evaluator);
+            evaluator is null ? null : scope.Resolve(evaluator);
 
         public bool TryResolve(
             IEvaluator<TCandidate> evaluator,
             [NotNullWhen(true)] out IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>? instance,
             [NotNullWhen(false)] out string? reason) =>
-            resolver.Registry.TryResolve(evaluator, out instance, out reason);
+            scope.Scope.TryResolve(evaluator, out instance, out reason);
     }
 }

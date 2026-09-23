@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Problems;
@@ -10,105 +8,113 @@ namespace HEAL.HeuristicLib.Execution;
 
 public abstract class AlgorithmRun
 {
+    private readonly Lock sync = new();
     private readonly List<IAnalyzer> analyzers = [];
-    private Dictionary<IAnalyzer, IAnalyzerRunState>? analyzerStates;
+    private readonly HashSet<IAnalyzer> analyzerSet = new(ReferenceEqualityComparer.Instance);
+    private readonly List<IExecutionModule> modules = [];
+    private readonly HashSet<IExecutionModule> moduleSet = new(ReferenceEqualityComparer.Instance);
+    private ResolutionScope? scope;
 
-    public bool ExecutionStarted { get; private set; }
+    public RunLifecycleState LifecycleState { get; private set; } = RunLifecycleState.Preparing;
 
-    protected void RegisterAnalyzer(IAnalyzer analyzer)
+    protected AlgorithmRun()
     {
-        EnsureNotStarted();
-        analyzers.Add(analyzer);
     }
 
-    protected void RegisterAnalyzers(IReadOnlyList<IAnalyzer> analyzers)
+    protected void Add(IAnalyzer analyzer)
     {
-        EnsureNotStarted();
-        this.analyzers.AddRange(analyzers);
-    }
-
-    protected ExecutionInstanceRegistry StartExecution()
-    {
-        EnsureNotStarted();
-        ExecutionStarted = true;
-
-        var observationPlan = new ObservationPlan();
-        analyzerStates = new Dictionary<IAnalyzer, IAnalyzerRunState>(ReferenceEqualityComparer.Instance);
-
-        foreach (var analyzer in analyzers)
+        lock (sync)
         {
-            var analyzerState = analyzer.CreateAnalyzerState();
-            analyzerStates.Add(analyzer, analyzerState);
-            analyzerState.RegisterObservations(observationPlan);
-        }
-
-        var registry = new ExecutionInstanceRegistry();
-        observationPlan.Install(registry);
-        return registry;
-    }
-
-    //TODO: Discuss whether we really want this. A disposable analyzer run state is a strange contract: it makes every
-    //      analyzer a potential resource owner and couples run teardown to analyzer internals. The only current need is
-    //      unsubscribing from problem events, which might be better solved by a dedicated subscription lifetime.
-    protected void DisposeAnalyzerStates()
-    {
-        if (analyzerStates is null)
-            return;
-
-        foreach (var state in analyzerStates.Values)
-        {
-            if (state is IDisposable disposable)
-                disposable.Dispose();
+            EnsurePreparing();
+            if (analyzerSet.Add(analyzer))
+                analyzers.Add(analyzer);
         }
     }
 
-    public TResult GetResult<TResult>(IAnalyzer<TResult> analyzer) where TResult : class
+    protected void Add(IExecutionModule module)
     {
-        var states = GetAnalyzerStates();
-        if (!states.TryGetValue(analyzer, out var state))
+        lock (sync)
         {
-            throw new KeyNotFoundException($"No analyzer found for analyzer {analyzer}");
-        }
-
-        if (state is IAnalyzerRunState<TResult> typedState)
-        {
-            return typedState.Result;
-        }
-
-        throw CreateResultTypeMismatchException(analyzer, state);
-    }
-
-    public bool TryGetResult<TResult>(IAnalyzer<TResult> analyzer, [MaybeNullWhen(false)] out TResult result) where TResult : class
-    {
-        var states = GetAnalyzerStates();
-        if (!states.TryGetValue(analyzer, out var state))
-        {
-            result = null;
-            return false;
-        }
-
-        if (state is IAnalyzerRunState<TResult> typedState)
-        {
-            result = typedState.Result;
-            return true;
-        }
-
-        throw CreateResultTypeMismatchException(analyzer, state);
-    }
-
-    private Dictionary<IAnalyzer, IAnalyzerRunState> GetAnalyzerStates() =>
-        analyzerStates ?? throw new InvalidOperationException("Analyzer results are not available before the run starts.");
-
-    private void EnsureNotStarted()
-    {
-        if (ExecutionStarted)
-        {
-            throw new InvalidOperationException("A run can only be configured and executed once. Create a new run for another execution.");
+            EnsurePreparing();
+            if (moduleSet.Add(module))
+                modules.Add(module);
         }
     }
 
-    private static InvalidOperationException CreateResultTypeMismatchException<TResult>(IAnalyzer<TResult> analyzer, IAnalyzerRunState state) where TResult : class =>
-        new($"Analyzer {analyzer} created run state {state.GetType()} which does not implement {typeof(IAnalyzerRunState<TResult>)}.");
+    protected ResolutionScope? BeginExecutionSegment()
+    {
+        lock (sync)
+        {
+            if (LifecycleState == RunLifecycleState.Completed)
+                return null;
+            if (LifecycleState == RunLifecycleState.Running)
+                throw new InvalidOperationException("This run already has an active execution stream.");
+            if (LifecycleState is not (RunLifecycleState.Preparing or RunLifecycleState.Paused))
+                throw new InvalidOperationException($"A run cannot continue while its lifecycle state is {LifecycleState}.");
+
+            if (LifecycleState == RunLifecycleState.Paused)
+            {
+                LifecycleState = RunLifecycleState.Running;
+                return scope!;
+            }
+
+            LifecycleState = RunLifecycleState.Running;
+
+            try
+            {
+                scope = ResolutionScope.Create(builder =>
+                {
+                    foreach (var analyzer in analyzers)
+                        builder.DeclareAsModule(analyzer.Install);
+                    foreach (var module in modules)
+                        builder.Install(module);
+                });
+                return scope;
+            }
+            catch (OperationCanceledException)
+            {
+                LifecycleState = RunLifecycleState.Canceled;
+                throw;
+            }
+            catch
+            {
+                LifecycleState = RunLifecycleState.Failed;
+                throw;
+            }
+        }
+    }
+
+    protected void ExecutionCompleted() => TransitionFromRunning(RunLifecycleState.Completed);
+
+    protected void ExecutionCanceled()
+    {
+        lock (sync)
+        {
+            if (LifecycleState is RunLifecycleState.Running or RunLifecycleState.Paused)
+                LifecycleState = RunLifecycleState.Canceled;
+        }
+    }
+
+    protected void ExecutionFailed() => TransitionFromRunning(RunLifecycleState.Failed);
+
+    protected void ExecutionPaused() => TransitionFromRunning(RunLifecycleState.Paused);
+
+    private void TransitionFromRunning(RunLifecycleState next)
+    {
+        lock (sync)
+        {
+            if (LifecycleState == RunLifecycleState.Running)
+                LifecycleState = next;
+        }
+    }
+
+    private void EnsurePreparing()
+    {
+        if (LifecycleState != RunLifecycleState.Preparing)
+        {
+            throw new InvalidOperationException($"A run only accepts configuration and can only start while it is {RunLifecycleState.Preparing}; its current lifecycle state is {LifecycleState}.");
+        }
+    }
 }
 
 public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> : AlgorithmRun
@@ -116,6 +122,7 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
+    private IAsyncEnumerator<TSearchState>? execution;
     public IAlgorithm<TCandidate, TSearchState> Algorithm { get; }
 
     public TProblem Problem { get; }
@@ -129,30 +136,59 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         Random = random;
     }
 
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AttachAnalyzer(IAnalyzer analyzer)
+    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AddAnalyzer(IAnalyzer analyzer)
     {
-        RegisterAnalyzer(analyzer);
+        Add(analyzer);
         return this;
     }
 
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AttachAnalyzer<TAnalyzer>(TAnalyzer analyzer, out TAnalyzer attachedAnalyzer)
-        where TAnalyzer : IAnalyzer
+    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AddExecutionModule(IExecutionModule module)
     {
-        attachedAnalyzer = analyzer;
-        RegisterAnalyzer(analyzer);
+        Add(module);
         return this;
     }
 
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AttachAnalyzers(params IReadOnlyList<IAnalyzer> analyzers)
-    {
-        RegisterAnalyzers(analyzers);
-        return this;
-    }
+    public ExecutionStream<TSearchState> Stream(TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
+        CreateStream(initialState, cancellationToken, cancellationTerminatesRun: false);
 
-    public ExecutionStream<TSearchState> Stream(TSearchState? initialState = null, CancellationToken cancellationToken = default)
+    internal ExecutionStream<TSearchState> StreamForTerminalCancellation(
+        TSearchState? initialState, CancellationToken cancellationToken) =>
+        CreateStream(initialState, cancellationToken, cancellationTerminatesRun: true);
+
+    private ExecutionStream<TSearchState> CreateStream(TSearchState? initialState, CancellationToken cancellationToken,
+        bool cancellationTerminatesRun)
     {
-        var algorithmInstance = StartExecution().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
-        return new(StreamStates(algorithmInstance, initialState, cancellationToken), cancellationToken);
+        try
+        {
+            var scope = BeginExecutionSegment();
+            if (scope is null)
+                return new(AsyncEnumerable.Empty<TSearchState>());
+
+            if (execution is null)
+            {
+                var algorithmInstance = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
+                var executionCancellation = cancellationTerminatesRun ? cancellationToken : CancellationToken.None;
+                execution = algorithmInstance.RunStreamingAsync(Problem, Random, initialState, executionCancellation)
+                                             .GetAsyncEnumerator(executionCancellation);
+            }
+            else if (initialState is not null)
+            {
+                ExecutionPaused();
+                throw new InvalidOperationException("An initial state can only be supplied when a run starts.");
+            }
+
+            return new(Track(cancellationToken, cancellationTerminatesRun), cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            ExecutionCanceled();
+            throw;
+        }
+        catch
+        {
+            ExecutionFailed();
+            throw;
+        }
     }
 
     public async Task<TSearchState> CompleteAsync(TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
@@ -161,18 +197,65 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     public TSearchState Complete(TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
         CompleteAsync(initialState, cancellationToken).GetAwaiter().GetResult();
 
-    private async IAsyncEnumerable<TSearchState> StreamStates(IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithmInstance, TSearchState? initialState, [EnumeratorCancellation] CancellationToken cancellationToken)
+    internal async ValueTask CancelAsync()
     {
+        var currentExecution = execution;
+        execution = null;
+        if (currentExecution is not null)
+            await currentExecution.DisposeAsync();
+        ExecutionCanceled();
+    }
+
+    private async IAsyncEnumerable<TSearchState> Track(
+        CancellationToken streamCancellation,
+        bool cancellationTerminatesRun,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken enumerationCancellation = default)
+    {
+        using var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(
+            streamCancellation, enumerationCancellation);
+        var cancellationToken = cancellationSource.Token;
+        var ended = false;
         try
         {
-            await foreach (var state in algorithmInstance.RunStreamingAsync(Problem, Random, initialState, cancellationToken))
+            while (true)
             {
-                yield return state;
+                bool hasNext;
+                try
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    hasNext = await execution!.MoveNextAsync();
+                }
+                catch (OperationCanceledException)
+                {
+                    if (cancellationTerminatesRun)
+                        ExecutionCanceled();
+                    else
+                        ExecutionPaused();
+                    throw;
+                }
+                catch
+                {
+                    ExecutionFailed();
+                    throw;
+                }
+
+                if (!hasNext)
+                {
+                    ended = true;
+                    await execution!.DisposeAsync();
+                    execution = null;
+                    ExecutionCompleted();
+                    yield break;
+                }
+
+                yield return execution.Current;
             }
         }
         finally
         {
-            DisposeAnalyzerStates();
+            if (!ended && !cancellationTerminatesRun)
+                ExecutionPaused();
         }
     }
+
 }

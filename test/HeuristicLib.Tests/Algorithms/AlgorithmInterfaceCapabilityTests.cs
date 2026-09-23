@@ -14,7 +14,7 @@ public class AlgorithmInterfaceCapabilityTests
     [InlineData("held.TerminatedAfterIterations(10)")]
     [InlineData("held.TerminatedBy(new NeverTerminator<Permutation>())")]
     [InlineData("held.LimitedToDuration(TimeSpan.FromSeconds(1))")]
-    [InlineData("held.ObserveWith((PopulationState<Permutation> state) => { })")]
+    [InlineData("held.TracePopulationQuality()")]
     [InlineData("held.AsGrid()")]
     [InlineData("held.Repeat(2)")]
     [InlineData("held.CycleWith(algorithm)")]
@@ -29,7 +29,7 @@ public class AlgorithmInterfaceCapabilityTests
 
     [Theory]
     [InlineData("new List<IAlgorithm<Permutation>> { algorithm }")]
-    [InlineData("new ExecutionInstanceRegistry().Resolve<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, PopulationState<Permutation>>(held)")]
+    [InlineData("ResolutionScope.Create().Resolve<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, PopulationState<Permutation>>(held)")]
     public void ErasedSurface_IsReachableFromBothForms(string expression)
     {
         Compiles("IAlgorithm<Permutation, PopulationState<Permutation>>", expression).ShouldBeTrue();
@@ -40,6 +40,7 @@ public class AlgorithmInterfaceCapabilityTests
         using System;
         using System.Collections.Generic;
         using HEAL.HeuristicLib.Algorithms;
+        using HEAL.HeuristicLib.Analysis;
         using HEAL.HeuristicLib.Encodings.Permutations;
         using HEAL.HeuristicLib.Execution;
         using HEAL.HeuristicLib.Experiments;

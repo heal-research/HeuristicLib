@@ -125,3 +125,18 @@ Parameter search can overfit benchmark instances. Keep separate instances for fi
 ## Add analysis
 
 Analyzers can collect progress during each trial rather than only final states. Continue with [Observability and analysis](/guide/execution/observability-and-analysis).
+
+
+A trial analyzer factory receives the concrete trial algorithm. Create any clocks inside the factory so they belong to that trial:
+
+```csharp
+var quality = TrialAnalyzer.Create(
+    (GeneticAlgorithm<RealVector> trial) =>
+        trial.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
+var run = algorithm.Repeat(2).CreateRun(problem, random)
+    .AddTrialAnalyzer(quality);
+await run.CompleteAsync();
+var analyses = run.GetAnalyzers(quality);
+```
+
+Each result has typed `Trial` and `Analyzer` properties. The factory is reusable across experiments; the analyzers and clocks it creates are not.

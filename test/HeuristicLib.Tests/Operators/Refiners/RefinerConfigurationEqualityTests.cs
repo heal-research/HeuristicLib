@@ -146,37 +146,10 @@ public class RefinerConfigurationEqualityTests
         left.ShouldNotBe(right);
     }
 
-    [Fact]
-    public void ObservableRefiner_WithSameObserverInstance_IsEqual()
-    {
-        var observer = new ActionRefinerObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var left = new AddOffsetRefiner(1).ObserveWith(observer);
-        var right = new AddOffsetRefiner(1).ObserveWith(observer);
 
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
-
-    [Fact]
-    public void ObservableRefiner_WithDifferentChildRefiner_IsNotEqual()
-    {
-        var observer = new ActionRefinerObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var left = new AddOffsetRefiner(1).ObserveWith(observer);
-        var right = new AddOffsetRefiner(2).ObserveWith(observer);
-
-        left.ShouldNotBe(right);
-    }
 
     // A freshly allocated action observer defeats structural equality, which is why concern types carrying only
     // value-like settings must not be expressed as an observer wrapper.
-    [Fact]
-    public void ObservableRefiner_WithSeparatelyConstructedActionObservers_IsNotEqual()
-    {
-        var left = new AddOffsetRefiner(1).ObserveWith(_ => { });
-        var right = new AddOffsetRefiner(1).ObserveWith(_ => { });
-
-        left.ShouldNotBe(right);
-    }
 
     [Fact]
     public void IteratedRefiner_WithEqualChildRefinerAndIterations_IsEqual()

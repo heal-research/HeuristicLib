@@ -17,6 +17,15 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
     public required TOperator ObservedOperator { get; init; }
 
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
+
+    /// <summary>
+    /// Gets the factory that wraps the observed operator in a duration-measuring operator.
+    /// </summary>
+    /// <remarks>
+    /// The factory receives whatever the surrounding execution already resolves for the observed operator, which may
+    /// itself be a wrapper installed by an analyzer or by an enclosing budget, so that the decorations compose. The
+    /// returned operator is expected to keep the observed operator's role, as every operator wrapper does.
+    /// </remarks>
     public required Func<TOperator, ObservationDuration, TimeProvider, TOperator> MeasuredOperatorFactory { get; init; }
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
@@ -26,14 +35,13 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override OperatorDurationBudgetAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+    public override OperatorDurationBudgetAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
         var duration = new ObservationDuration();
-        var measuredOperator = MeasuredOperatorFactory(ObservedOperator, duration, TimeProvider);
-        var childRegistry = instanceRegistry.CreateChildRegistry();
-        childRegistry.RegisterReplacement(ObservedOperator, measuredOperator);
+        var childScope = scope.CreateChildScope(child =>
+            child.Decorate(ObservedOperator, current => MeasuredOperatorFactory(current, duration, TimeProvider)));
 
-        return new(childRegistry.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
+        return new(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
     }
 }
 

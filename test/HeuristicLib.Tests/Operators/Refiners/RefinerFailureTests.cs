@@ -98,7 +98,7 @@ public class RefinerFailureTests
     {
         private readonly Counter counter = new();
 
-        public override IRefinerInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        public override IRefinerInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ResolutionScope scope) =>
             new Instance(counter, SuccessfulBatches);
 
         private sealed class Counter

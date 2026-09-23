@@ -12,13 +12,13 @@ public class RefinerEvaluatorAccountingTests
     [Fact]
     public void EvaluationAccounting_FollowsConfigurationInstanceIdentityRatherThanEquality()
     {
-        var registry = new ExecutionInstanceRegistry();
+        var scope = ResolutionScope.Create();
         var shared = CreateEvaluator().LimitEvaluations(1);
         var separateButEqual = CreateEvaluator().LimitEvaluations(1);
 
-        registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared).ShouldBeSameAs(registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared).ShouldBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
         separateButEqual.ShouldBe(shared);
-        registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(separateButEqual).ShouldNotBeSameAs(registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(separateButEqual).ShouldNotBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
     }
 
     // Composition example 2: one shared budget instance, so the comparison evaluations consume it.
@@ -27,9 +27,9 @@ public class RefinerEvaluatorAccountingTests
     {
         var problem = CreateProblem();
         var sharedEvaluator = CreateEvaluator().LimitEvaluations(2);
-        var registry = new ExecutionInstanceRegistry();
-        var refiner = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator));
-        var algorithmEvaluator = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
+        var scope = ResolutionScope.Create();
+        var refiner = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator));
+        var algorithmEvaluator = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
 
         // One original and one refined candidate exhaust the budget of two.
         refiner.Refine([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -44,9 +44,9 @@ public class RefinerEvaluatorAccountingTests
     {
         var problem = CreateProblem();
         var algorithmEvaluator = CreateEvaluator().LimitEvaluations(2);
-        var registry = new ExecutionInstanceRegistry();
-        var refiner = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().LimitEvaluations(2)));
-        var evaluatorInstance = registry.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(algorithmEvaluator);
+        var scope = ResolutionScope.Create();
+        var refiner = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().LimitEvaluations(2)));
+        var evaluatorInstance = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(algorithmEvaluator);
 
         refiner.Refine([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
@@ -60,8 +60,8 @@ public class RefinerEvaluatorAccountingTests
     public void WrapperOrder_DecidesWhetherCacheHitsConsumeTheBudget()
     {
         var problem = CreateProblem();
-        var limitOutside = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().Cached().LimitEvaluations(2));
-        var cacheOutside = new ExecutionInstanceRegistry().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().LimitEvaluations(2).Cached());
+        var limitOutside = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().Cached().LimitEvaluations(2));
+        var cacheOutside = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().LimitEvaluations(2).Cached());
 
         for (var request = 0; request < 2; request++)
         {
@@ -83,7 +83,7 @@ public class RefinerEvaluatorAccountingTests
         var instance = PipelineRefiner.Create(
                 new AddOffsetRefiner(-1),
                 new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().CountCandidates(counter)))
-            .CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new ExecutionInstanceRegistry());
+            .CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
         var problem = CreateProblem();
 
         instance.Refine([10, 20], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

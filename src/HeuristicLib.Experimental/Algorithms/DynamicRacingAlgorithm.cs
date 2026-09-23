@@ -4,6 +4,7 @@ using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -88,13 +89,13 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     /// written for and the base reconciles them with the run's.
     /// </remarks>
     protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(
-        ExecutionInstanceRegistry instanceRegistry,
+        ResolutionScope scope,
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor) =>
-        new Instance(instanceRegistry, resolvedInterceptor, instanceRegistry.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Creator), instanceRegistry.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Mutator), MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
+        new Instance(scope, resolvedInterceptor, scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Creator), scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Mutator), MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
             EvaluatorSelector, NoRacers, HallOfFameStrength, EarlyTerminationStrength, BurnInEpochs, MinimumModelObservationCount, ModelObservationInterval, ObjectiveValueSelector);
 
     private sealed class Instance(
-        ExecutionInstanceRegistry registry,
+        ResolutionScope scope,
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor,
         ICreatorInstance<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> creator,
         IMutatorInstance<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> mutator,
@@ -135,7 +136,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             var raceEnded = false;
             try
             {
-                problem.EpochClock.OnEpochChange += OnEpochChange;
+                problem.OnEpochChange += OnEpochChange;
                 while (!raceEnded)
                 {
                     var lowest = entries.MinBy(x => x.UsedCount);
@@ -147,7 +148,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             }
             finally
             {
-                problem.EpochClock.OnEpochChange -= OnEpochChange;
+                problem.OnEpochChange -= OnEpochChange;
             }
 
             try
@@ -176,13 +177,13 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             var epochEnded = false;
             try
             {
-                problem.EpochClock.OnEpochChange += OnEpochChange;
+                problem.OnEpochChange += OnEpochChange;
                 while (!epochEnded)
                     _ = entry.MakeMove(problem, random, CancellationToken.None);
             }
             finally
             {
-                problem.EpochClock.OnEpochChange -= OnEpochChange;
+                problem.OnEpochChange -= OnEpochChange;
             }
 
             incumbentAlgorithm = entry.Algorithm;
@@ -221,9 +222,13 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             if (earlyTerminationStrength <= 0)
                 return false;
 
+            // Early termination projects a contender forward to the end of the epoch, so it needs a schedule that
+            // measures epochs in the same evaluations the projection is made in.
+            if (problem.EpochSchedule is not EvaluationCountSchedule { EvaluationsPerEpoch: var predictionHorizon })
+                return false;
+
             var bestIndex = SelectWinner(entries, problem.Objective);
             var best = entries[bestIndex];
-            var predictionHorizon = problem.EpochClock.EpochLength;
             var requiredEvaluationCount = predictionHorizon * earlyTerminationStrength;
             return entries.Where((_, index) => index != bestIndex)
                 .All(contender => CanTerminateContender(best, contender, requiredEvaluationCount, predictionHorizon, problem.Objective));
@@ -256,7 +261,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         private Entry CreateEntry(MetaOptimizationGenotype candidate, TAlgorithm? sourceAlgorithm, TSearchState? initialState, TProblem problem, IRandomNumberGenerator random)
         {
             var algorithm = algorithmBuilder(candidate, sourceAlgorithm);
-            return new Entry(algorithm, evaluatorSelector(algorithm), candidate, problem, random, initialState, CancellationToken.None, registry, modelObservationInterval, objectiveValueSelector);
+            return new Entry(algorithm, evaluatorSelector(algorithm), candidate, problem, random, initialState, CancellationToken.None, scope, modelObservationInterval, objectiveValueSelector);
         }
 
         private MetaOptimizationGenotype CreateChallenger(MetaOptimizationGenotype currentIncumbent, IRandomNumberGenerator random) =>
@@ -323,7 +328,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         private IEnumerator<TSearchState> running;
 
         public Entry(TAlgorithm algorithm, IEvaluator<TCandidate> evaluator, MetaOptimizationGenotype candidate, TProblem problem, IRandomNumberGenerator random,
-                     TSearchState? initialState, CancellationToken ct, ExecutionInstanceRegistry parentRegistry, int modelObservationInterval, Func<ObjectiveVector, double> objectiveValueSelector)
+                     TSearchState? initialState, CancellationToken ct, ResolutionScope parentRegistry, int modelObservationInterval, Func<ObjectiveVector, double> objectiveValueSelector)
         {
             Algorithm = algorithm;
             this.evaluator = evaluator;
@@ -336,7 +341,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
         public MetaOptimizationGenotype Candidate { get; }
         public TAlgorithm Algorithm { get; }
-        private ExecutionInstanceRegistry ParentRegistry { get; }
+        private ResolutionScope ParentRegistry { get; }
         public TSearchState? LastState { get; private set; }
         public int UsedCount => performanceObserver.EvaluatedCandidateCount;
         public ObjectiveVector? CurrentBestObjectiveVector => performanceObserver.CurrentBestObjectiveVector;
@@ -363,28 +368,38 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
         private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct)
         {
-            var inheritedRegistry = ParentRegistry.CreateChildRegistry();
-            var inheritedEvaluator = inheritedRegistry.Resolve<TCandidate, TSearchSpace, TProblem>(evaluator);
-            var contenderRegistry = inheritedRegistry.CreateChildRegistry();
-            contenderRegistry.RegisterInstance(evaluator, new PerformanceTrackingEvaluatorInstance(inheritedEvaluator, performanceObserver));
-            return contenderRegistry.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm).Stream(problem, random, initialState, ct).GetEnumerator();
+            var contenderScope = ParentRegistry.CreateChildScope(contender =>
+                contender.Decorate(evaluator, current => new PerformanceTrackingEvaluator(current, performanceObserver)));
+            return contenderScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm).Stream(problem, random, initialState, ct).GetEnumerator();
         }
+    }
+
+    /// <summary>
+    /// Reports one contender's evaluations to its own performance observer, without affecting sibling contenders.
+    /// </summary>
+    private sealed record PerformanceTrackingEvaluator(
+        IEvaluator<TCandidate> ChildEvaluator,
+        PerformanceTrackingEvaluatorObserver Observer)
+        : Evaluator<TCandidate, TSearchSpace, TProblem>
+    {
+        public override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope) =>
+            new PerformanceTrackingEvaluatorInstance(scope.Resolve<TCandidate, TSearchSpace, TProblem>(ChildEvaluator), Observer);
     }
 
     private sealed class PerformanceTrackingEvaluatorInstance(
         IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator,
-        IEvaluatorObserver<TCandidate, TSearchSpace, TProblem> observer)
+        PerformanceTrackingEvaluatorObserver observer)
         : IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>
     {
         public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var objectiveVectors = innerEvaluator.Evaluate(candidates, random, searchSpace, problem);
-            observer.AfterEvaluation(objectiveVectors, candidates, searchSpace, problem);
+            observer.AfterEvaluation(objectiveVectors, candidates, problem);
             return objectiveVectors;
         }
     }
 
-    private sealed class PerformanceTrackingEvaluatorObserver : IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>
+    private sealed class PerformanceTrackingEvaluatorObserver
     {
         private readonly int modelObservationInterval;
         private readonly Func<ObjectiveVector, double> objectiveValueSelector;
@@ -404,7 +419,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         public int ModelObservationCount => CurveModel.ObservationCount;
         public OnlineWeibullCurveModel CurveModel { get; } = new();
 
-        public void AfterEvaluation(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, TSearchSpace searchSpace, TProblem problem)
+        public void AfterEvaluation(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, TProblem problem)
         {
             EvaluatedCandidateCount += candidates.Count;
             if (objectiveVectors.Count == 0)

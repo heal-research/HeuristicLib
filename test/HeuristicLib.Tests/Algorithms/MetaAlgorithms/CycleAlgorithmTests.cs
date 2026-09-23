@@ -128,9 +128,9 @@ public class CycleAlgorithmTests
             MaximumCycles = 2,
             NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
         };
-        var registry = new ExecutionInstanceRegistry();
-        _ = registry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
-        var cycleInstance = registry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
+        var scope = ResolutionScope.Create();
+        _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
+        var cycleInstance = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
 
         var states = cycleInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -163,7 +163,7 @@ public class CycleAlgorithmTests
     {
         public int InstanceCount { get; private set; }
 
-        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ExecutionInstanceRegistry instanceRegistry)
+        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         {
             InstanceCount++;
             return new Instance<TRunSearchSpace, TRunProblem>();

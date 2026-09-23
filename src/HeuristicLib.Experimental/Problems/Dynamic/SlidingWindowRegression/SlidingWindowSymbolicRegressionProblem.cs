@@ -13,8 +13,8 @@ public class SlidingWindowSymbolicRegressionProblem
     private readonly SymbolicRegressionProblem innerProblem;
     private SymbolicRegressionProblem windowProblem;
 
-    public SlidingWindowSymbolicRegressionProblem(SymbolicRegressionProblem problem, int windowStart = 0, int windowLength = 100, int stepSize = 10, UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation, int epochLength = int.MaxValue)
-        : base(problem.Objective, problem.SearchSpace, RandomNumberGenerator.Create(0), updatePolicy, epochLength)
+    public SlidingWindowSymbolicRegressionProblem(SymbolicRegressionProblem problem, int windowStart = 0, int windowLength = 100, int stepSize = 10, IEpochSchedule? epochSchedule = null, UpdatePolicy updatePolicy = UpdatePolicy.AfterEachEvaluation)
+        : base(problem.Objective, problem.SearchSpace, RandomNumberGenerator.Create(0), epochSchedule ?? new EvaluationCountSchedule(int.MaxValue), updatePolicy)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(windowStart);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(windowLength);
@@ -33,7 +33,7 @@ public class SlidingWindowSymbolicRegressionProblem
 
     public (int StartIndex, int EndIndex) CurrentState { get; private set; }
 
-    public override ObjectiveVector Evaluate(ExpressionTree solution, IRandomNumberGenerator random, EvaluationTiming timing)
+    protected override ObjectiveVector Evaluate(ExpressionTree solution, IRandomNumberGenerator random, int epoch)
     {
         return windowProblem.Evaluate(solution);
     }

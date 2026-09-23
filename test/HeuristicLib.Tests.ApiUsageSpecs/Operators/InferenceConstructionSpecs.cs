@@ -54,7 +54,6 @@ public class InferenceConstructionSpecs
         var fluentTransformedCrossover = algorithm.Crossover.TransformWith(algorithm.Mutator);
         var pipelineInterceptor = PipelineInterceptor.Create(identityInterceptor, identityInterceptor);
         var fluentPipelineInterceptor = identityInterceptor.Then(identityInterceptor);
-        var observableInterceptor = ObservableInterceptor.Create(identityInterceptor, (PopulationState<RealVector> _) => { });
         var countingInterceptor = CountingInterceptor.Create(identityInterceptor, new ObservationCounter());
         var measuredInterceptor = DurationMeasuringInterceptor.Create(identityInterceptor, new ObservationDuration());
         var eliteSelector = EliteSelector.Create(algorithm.Selector, elites: 1);
@@ -79,7 +78,6 @@ public class InferenceConstructionSpecs
         var fluentAnyTerminator = firstTerminator.Or(secondTerminator);
         var allTerminator = AllTerminator.Create(firstTerminator, secondTerminator);
         var fluentAllTerminator = firstTerminator.And(secondTerminator);
-        var observableTerminator = ObservableTerminator.Create<RealVector, PopulationState<RealVector>>(firstTerminator, _ => { });
         var countingTerminator = CountingTerminator.Create(firstTerminator, new ObservationCounter());
         var measuredTerminator = DurationMeasuringTerminator.Create(firstTerminator, new ObservationDuration());
         var terminatedAlgorithm = StateTerminatedAlgorithm.Create(algorithm, firstTerminator);
@@ -124,7 +122,6 @@ public class InferenceConstructionSpecs
         fluentTransformedCrossover.SourceCrossover.ShouldBeSameAs(algorithm.Crossover);
         pipelineInterceptor.ChildInterceptors.Count.ShouldBe(2);
         fluentPipelineInterceptor.ChildInterceptors.Count.ShouldBe(2);
-        observableInterceptor.ChildInterceptor.ShouldBeSameAs(identityInterceptor);
         countingInterceptor.ChildInterceptor.ShouldBeSameAs(identityInterceptor);
         measuredInterceptor.ChildInterceptor.ShouldBeSameAs(identityInterceptor);
         eliteSelector.SelectorForRemaining.ShouldBeSameAs(algorithm.Selector);
@@ -146,7 +143,6 @@ public class InferenceConstructionSpecs
         fluentAnyTerminator.ShouldNotBeNull();
         allTerminator.ShouldNotBeNull();
         fluentAllTerminator.ShouldNotBeNull();
-        observableTerminator.ChildTerminator.ShouldBeSameAs(firstTerminator);
         countingTerminator.ChildTerminator.ShouldBeSameAs(firstTerminator);
         measuredTerminator.ChildTerminator.ShouldBeSameAs(firstTerminator);
         terminatedAlgorithm.Algorithm.ShouldBeSameAs(algorithm);

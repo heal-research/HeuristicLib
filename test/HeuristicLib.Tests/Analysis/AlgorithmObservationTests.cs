@@ -11,53 +11,58 @@ public class AlgorithmObservationTests
     private const int PopulationSize = 16;
 
     [Fact]
-    public void ObservableAlgorithm_NotifiesOncePerYieldedIteration()
+    public async Task AlgorithmObservation_ObservesOncePerYieldedIteration()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 4);
-        var observedCounts = new List<int>();
+        var observed = Analyzer.Trace(algorithm,
+            observation => (IReadOnlyList<double>)[observation.State.Population.EvaluatedCandidates.Count],
+            Aggregate.MinMeanMax());
 
-        algorithm.ObserveWith(state => observedCounts.Add(state.Population.EvaluatedCandidates.Count))
-                 .Complete(problem, RandomNumberGenerator.Create(seed: 42),
-                     ct: TestContext.Current.CancellationToken);
+        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(observed)
+                       .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        observedCounts.Count.ShouldBe(4);
-        observedCounts.ShouldAllBe(count => count == PopulationSize);
+        observed.SampleCount.ShouldBe(4);
+        observed.Snapshot().ShouldAllBe(sample => sample.Value.Max == PopulationSize);
     }
 
     [Fact]
-    public void ObservableAlgorithm_ObservesStateAfterInterception()
+    public async Task AlgorithmObservation_ObservesStateAfterInterception()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 4) with
         {
             Interceptor = new TruncatingInterceptor(KeptCandidates: 5)
         };
-        var observedCounts = new List<int>();
+        var observed = Analyzer.Trace(algorithm,
+            observation => (IReadOnlyList<double>)[observation.State.Population.EvaluatedCandidates.Count],
+            Aggregate.MinMeanMax());
 
-        algorithm.ObserveWith(state => observedCounts.Add(state.Population.EvaluatedCandidates.Count))
-                 .Complete(problem, RandomNumberGenerator.Create(seed: 42),
-                     ct: TestContext.Current.CancellationToken);
+        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(observed)
+                       .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        observedCounts.Count.ShouldBe(4);
-        observedCounts.ShouldAllBe(count => count == 5);
+        observed.SampleCount.ShouldBe(4);
+        observed.Snapshot().ShouldAllBe(sample => sample.Value.Max == 5);
     }
 
     [Fact]
-    public void ObservableAlgorithm_PassesPreviousStateAndProblem()
+    public async Task AlgorithmObservation_CarriesThePreviousStateAndTheProblem()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var previousStates = new List<PopulationState<RealVector>?>();
+        var observed = Analyzer.Trace(algorithm,
+            observation =>
+            {
+                previousStates.Add(observation.PreviousState);
+                observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
+                observation.Problem.ShouldBeSameAs(problem);
+                return (IReadOnlyList<double>)[observation.Iteration];
+            },
+            Aggregate.MinMeanMax());
 
-        algorithm.ObserveWith((PopulationState<RealVector> _, PopulationState<RealVector>? previousState, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem observedProblem) =>
-                 {
-                     previousStates.Add(previousState);
-                     searchSpace.ShouldBeSameAs(problem.SearchSpace);
-                     observedProblem.ShouldBeSameAs(problem);
-                 })
-                 .Complete(problem, RandomNumberGenerator.Create(seed: 42),
-                     ct: TestContext.Current.CancellationToken);
+        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(observed)
+                       .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         previousStates.Count.ShouldBe(3);
         previousStates[0].ShouldBeNull();
@@ -66,106 +71,191 @@ public class AlgorithmObservationTests
     }
 
     [Fact]
-    public async Task AlgorithmAnchoredAnalyzer_RecordsOneEntryPerGeneration()
+    public async Task AlgorithmAnalyzer_RecordsOneEntryPerGeneration()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 4);
-        var analysis = Analyzer.BestMedianWorst(algorithm);
+        var analysis = algorithm.TracePopulationCandidates();
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AttachAnalyzer(analysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(analysis);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.GetResult(analysis).Count.ShouldBe(4);
+        analysis.SampleCount.ShouldBe(4);
     }
 
     [Fact]
-    public async Task AlgorithmAnchoredAnalyzers_ShareOneAnchorWithoutConflict()
+    public async Task AlgorithmAnalyzers_ShareOneSourceWithoutConflict()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
-        var first = Analyzer.BestMedianWorst(algorithm);
-        var second = Analyzer.BestMedianWorst(algorithm);
+        var first = algorithm.TracePopulationCandidates();
+        var second = algorithm.TracePopulationCandidates();
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AttachAnalyzers(first, second);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(first).AddAnalyzer(second);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.GetResult(first).Count.ShouldBe(3);
-        run.GetResult(second).Count.ShouldBe(3);
+        first.SampleCount.ShouldBe(3);
+        second.SampleCount.ShouldBe(3);
     }
 
     [Fact]
-    public async Task AlgorithmAndInterceptorAnchors_CanBeUsedInTheSameRun()
+    public async Task AlgorithmAndInterceptorSources_CanBeUsedInTheSameRun()
     {
         var problem = CreateProblem();
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3) with { Interceptor = interceptor };
-        var atIterationEnd = Analyzer.BestMedianWorst(algorithm);
+        var atIterationEnd = algorithm.TracePopulationCandidates();
+        var atInterceptor = interceptor.TracePopulationCandidates();
 
-        // Named rather than inferred on purpose: this is where an analysis narrowed to a concrete search space and
-        // problem is shown running, which the inferred spelling elsewhere no longer covers.
-        var atInterceptor = Analyzer.BestMedianWorst<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(interceptor);
-
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-                           .AttachAnalyzers(atIterationEnd, atInterceptor);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(atIterationEnd).AddAnalyzer(atInterceptor);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.GetResult(atIterationEnd).Count.ShouldBe(3);
-        run.GetResult(atInterceptor).Count.ShouldBe(3);
+        atIterationEnd.SampleCount.ShouldBe(3);
+        atInterceptor.SampleCount.ShouldBe(3);
     }
 
     /// <summary>
-    /// Documents the stale-anchor hazard: the anchor is a reference, so a copy is a different anchor.
+    /// The analyzer observes the exact algorithm configuration supplied as its source.
     /// </summary>
     [Fact]
-    public async Task AlgorithmAnchor_IsReferenceIdentity_SoACopyIsNotObserved()
+    public async Task AlgorithmObservation_UsesTheConfiguredSourceInstance()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
-        var analysis = Analyzer.BestMedianWorst(algorithm);
+        var analysis = algorithm.TracePopulationCandidates();
 
         var copy = algorithm with { PopulationSize = PopulationSize * 2 };
-        var run = copy.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AttachAnalyzer(analysis);
+        var run = copy.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(analysis);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.GetResult(analysis).ShouldBeEmpty();
+        analysis.SampleCount.ShouldBe(0);
     }
 
     [Fact]
-    public async Task TrackBestMedianWorst_TakesTheAnchorFromTheRun()
+    public async Task TraceAnalyzer_IsReadableWhileTheRunStreams()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 4);
+        var iterations = Clock.FromIterations(algorithm);
+        var quality = algorithm.TracePopulationCandidates([iterations]);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(quality);
+        var observedIterations = 0;
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-                           .TrackBestMedianWorst(out var analysis);
-        await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+        await foreach (var state in run.Stream(cancellationToken: TestContext.Current.CancellationToken))
+        {
+            observedIterations++;
+            quality.SampleCount.ShouldBe(observedIterations);
+            quality.Latest.ShouldNotBeNull();
+            quality.Latest.Value.At(iterations).ShouldBe(observedIterations);
+            state.Population.EvaluatedCandidates.ShouldContain(quality.Latest.Value.Value.Best);
+        }
 
-        run.GetResult(analysis).Count.ShouldBe(4);
     }
 
     [Fact]
-    public void BestMedianWorstAnalysis_ComparesAnchorCollectionsStructurally()
-    {
-        var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
-
-        var first = Analyzer.BestMedianWorst(interceptor);
-        var second = Analyzer.BestMedianWorst(interceptor);
-
-        first.ShouldBe(second);
-        first.GetHashCode().ShouldBe(second.GetHashCode());
-    }
-
-    [Fact]
-    public void BestMedianWorstAnalysis_WithDifferentAnchors_IsNotEqual()
+    public async Task TraceAnalyzer_SnapshotRemainsStableWhileTheRunContinues()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
+        var iterations = Clock.FromIterations(algorithm);
+        var quality = Analyzer.Trace(algorithm,
+            new ObjectiveVectorsMeasurement<RealVector, PopulationState<RealVector>>(),
+            Aggregate.BestMedianWorst(),
+            [iterations]);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(quality);
+
+        await using var enumerator = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
+                                        .GetAsyncEnumerator(TestContext.Current.CancellationToken);
+
+        (await enumerator.MoveNextAsync()).ShouldBeTrue();
+        var firstIteration = quality.Snapshot();
+
+        (await enumerator.MoveNextAsync()).ShouldBeTrue();
+
+        firstIteration.Count.ShouldBe(1);
+        firstIteration[0].At(iterations).ShouldBe(1);
+        quality.SampleCount.ShouldBe(2);
+        quality.Snapshot().Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task TraceAnalyzer_ByIterationPublishesAStableProjection()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
+        var iterations = Clock.FromIterations(algorithm);
+        var quality = algorithm.TracePopulationCandidates([iterations]);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(quality);
+
+        await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        var byIteration = quality.By(iterations);
+        byIteration.Select(point => point.Time).ShouldBe([1L, 2L, 3L]);
+    }
+
+    [Fact]
+    public async Task TraceAnalyzer_CombinesContextualRetainedAndPulledCoordinates()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
+        var iterations = Clock.FromIterations(algorithm);
+        var evaluations = Clock.FromEvaluations(algorithm.Evaluator);
+        var elapsed = Clock.FromElapsedTime(TimeProvider.System);
+        var quality = algorithm.TracePopulationCandidates([iterations, evaluations, elapsed]);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(quality);
+
+        await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        quality.By(iterations).Select(point => point.Time).ShouldBe([1L, 2L, 3L]);
+
+        var evaluationCounts = quality.By(evaluations).Select(point => point.Time).ToArray();
+        evaluationCounts.ShouldAllBe(count => count > 0);
+        evaluationCounts.ShouldBe(evaluationCounts.Order());
+
+        var elapsedTimes = quality.By(elapsed).Select(point => point.Time).ToArray();
+        elapsedTimes.ShouldAllBe(time => time >= TimeSpan.Zero);
+        elapsedTimes.ShouldBe(elapsedTimes.Order());
+    }
+
+    [Fact]
+    public void TracePopulationCandidates_AtOneSource_StaysTwoIndependentAnalyzers()
+    {
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
 
-        var atAlgorithm = Analyzer.BestMedianWorst(algorithm);
-        var atInterceptor = Analyzer.BestMedianWorst(interceptor);
+        var first = interceptor.TracePopulationCandidates();
+        var second = interceptor.TracePopulationCandidates();
 
-        atAlgorithm.ShouldNotBe<object>(atInterceptor);
+        // A stateful analyzer holds one run's data, so two of them are never interchangeable.
+        first.ShouldNotBeSameAs(second);
+        first.SampleCount.ShouldBe(0);
+        second.SampleCount.ShouldBe(0);
+    }
+
+    /// <summary>
+    /// A cycle that recreates its execution instances restarts the observed algorithm, so its iteration count restarts
+    /// with it. Reusing the instances continues one algorithm, so the count continues.
+    /// </summary>
+    [Theory]
+    [InlineData(true, new long[] { 1, 2, 3, 1, 2, 3 })]
+    [InlineData(false, new long[] { 1, 2, 3, 4, 5, 6 })]
+    public async Task IterationClock_FollowsWhetherTheCycleRecreatesItsInstances(
+        bool newExecutionInstancesPerCycle, long[] expectedIterations)
+    {
+        var problem = CreateProblem();
+        var inner = CreateAlgorithm(problem, maximumGenerations: 3);
+        var cycle = CycleAlgorithm.Create(inner) with
+        {
+            MaximumCycles = 2,
+            NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
+        };
+
+        var iterations = Clock.FromIterations(inner);
+        var quality = inner.TracePopulationCandidates([iterations]);
+        var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAnalyzer(quality);
+
+        await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        quality.By(iterations).Select(point => point.Time).ShouldBe(expectedIterations);
     }
 
     private static TestFunctionProblem CreateProblem() => new(new RastriginFunction(dimension: 4));

@@ -12,20 +12,19 @@ var algorithm = GeneticAlgorithm.For(problem, populationSize: 100, maximumGenera
 
 // A run pairs the configuration with a problem and a random source. Analyzers attach to the run, not to the
 // algorithm, so the same configuration can be run again under different observation.
-var run = algorithm
-    .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .TrackBestMedianWorst(out var quality);
+var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
+    .TracePopulationCandidates(out var quality);
 
 var finalState = await run.CompleteAsync();
 
-var generations = run.GetResult(quality);
+var generations = quality.Snapshot().Values;
 var bestTour = finalState.Population.EvaluatedCandidates
     .MinBy(candidate => candidate.ObjectiveVector, problem.Objective.TotalOrderComparer)!;
 
-Console.WriteLine($"Cities: {cityCount}   Generations: {generations.Count}");
+Console.WriteLine($"Cities: {cityCount}   Generations: {generations.Length}");
 Console.WriteLine();
 Console.WriteLine($"{"Generation",12}{"Best",12}{"Median",12}{"Worst",12}");
-foreach (var generation in Milestones(generations.Count))
+foreach (var generation in Milestones(generations.Length))
 {
     var entry = generations[generation];
     Console.WriteLine($"{generation + 1,12}{entry.Best.ObjectiveVector[0],12:F1}{entry.Median.ObjectiveVector[0],12:F1}{entry.Worst.ObjectiveVector[0],12:F1}");

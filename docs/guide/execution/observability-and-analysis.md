@@ -1,110 +1,154 @@
 # Observability and analysis
 
-Start with streamed states when you need simple progress. Add an analyzer when a run should collect a reusable time series or metric without mixing that concern into the algorithm.
-
-## Read progress directly
-
-```csharp
-await foreach (var state in algorithm.Stream(problem, random))
-{
-    var best = state.Population.EvaluatedCandidates
-        .MinBy(candidate => candidate.ObjectiveVector, problem.Objective.TotalOrderComparer)!;
-
-    Console.WriteLine(best.ObjectiveVector);
-}
-```
-
-This is a good fit for logging and user interface updates. The consumer decides how much data to retain.
-
-## Attach an analyzer
-
-An analyzer collects typed results from observation points in a run. The end of an iteration is an observation point on the algorithm itself, so recording a quality curve needs nothing but the run:
+An analyzer collects data from the execution boundaries you select. Create it, attach it to a prepared run, then read its typed properties or take a snapshot.
 
 ```csharp
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Objectives;
 
-var run = algorithm
-    .CreateRun(problem, RandomNumberGenerator.Create(seed: 777))
-    .TrackBestMedianWorst(out var analysis);
-
+var run = algorithm.CreateRun(problem, random)
+    .TracePopulationCandidates(out var quality);
 await run.CompleteAsync();
-var series = run.GetResult(analysis);
+
+var best = quality.RequireLatestValue().Best;
 ```
 
-Each entry is captured from a state the algorithm yields, after any interceptor has transformed it. Sub-iterations an algorithm does not yield are not observed.
+An algorithm observation captures each search state it yields, after its interceptors have transformed that state. No placeholder interceptor is needed. For simple progress logging, consuming `algorithm.Stream(problem, random)` directly is also sufficient.
 
-### Anchor on an algorithm by name
+## Choose the right tool
 
-`TrackBestMedianWorst` takes the anchor from the run. Name the algorithm instead when the anchor is not the algorithm the run was created from, such as the inner algorithm of a meta-algorithm:
+An analyzer is one of several ways to see what a run does. Pick by what you need:
+
+| Need | Use |
+| --- | --- |
+| Look at every state the algorithm yields | `algorithm.Stream(problem, random)` |
+| Only the final state | `algorithm.CompleteAsync(problem, random)` |
+| Typed data from chosen boundaries, such as a quality curve or an operator's offspring | An analyzer attached with `AddAnalyzer` |
+| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An execution module attached with `AddExecutionModule` |
+| A count or duration that stops or limits the run | Instrumentation such as `CountCandidates` or `LimitedToEvaluatedCandidates`, read by terminators and budgets |
+| The same analysis for every experiment trial | A trial analyzer, see [Experiments](/guide/execution/experiments) |
+
+Analyzers only read. Nothing an analyzer records changes what the algorithm does next.
+
+## Choose a boundary and a clock
+
+An evaluator observation captures one completed evaluator call, including the whole batch. An algorithm observation captures a yielded state. A nested algorithm is a separate observation boundary.
 
 ```csharp
-var innerQuality = Analyzer.BestMedianWorst(innerAlgorithm);
-var run = cycleAlgorithm.CreateRun(problem, random).AttachAnalyzer(innerQuality);
+var evaluations = Clock.FromEvaluations(algorithm.Evaluator);
+var best = algorithm.Evaluator.TraceBestSoFar(clocks: [evaluations]);
+var population = algorithm.TracePopulationQuality(clocks: [evaluations]);
+var run = algorithm.CreateRun(problem, random)
+    .AddAnalyzer(best)
+    .AddAnalyzer(population);
+await run.CompleteAsync();
 ```
 
-An algorithm is an anchor by reference. `algorithm with { PopulationSize = 200 }` is a different object and therefore a different anchor, so an analyzer created for the original silently observes nothing when the copy is run. `TrackBestMedianWorst` resolves the anchor at attach time and cannot get this wrong.
+Several traces may share the same clock in one run. Its observations are installed once. Use that same clock object to project the trace; constructing another clock does not identify the original axis.
 
-### Anchor on an operator
+Evaluation counts describe the selected evaluator boundary. A caching evaluator's outer boundary can count requests while its inner evaluator counts cache misses. Choose the boundary whose work you intend to compare.
 
-Some observations are about what an operator did rather than about the resulting state — selection pressure, evaluation counts, crossover statistics — and cannot be derived from search states. Those anchor on the operator:
+Observation sources match configurations by reference. A copied configuration is a different source, even if its settings compare equal. A source that never participates produces no observations. Create analyzers for the actual configured objects that will execute.
+
+## Ownership and reads
+
+A run accepts analyzers through `AddAnalyzer` and independent execution behavior through `AddExecutionModule` while its lifecycle is `Preparing`. It installs both when execution starts, before resolving the execution graph. Create fresh analyzers and clocks for independent results. You may reuse them across runs when combined history or cumulative counts are intentional. Installation does not reset their state.
+
+`LifecycleState` reports whether a run is `Preparing`, `Running`, `Paused`, `Completed`, `Canceled`, `Failed` or `Stopped`. Calling an execution entry point freezes its attachments. Each returned execution stream has one consumer. The run itself can continue through a later `Stream()` call after the consumer stops at a yielded root-algorithm state.
+
+`SampleCount` counts recorded entries. `Latest` is the latest recorded entry, or null before any entry is recorded. These properties do not allocate. `Snapshot()` and `By(clock)` allocate stable copies. Taking a snapshot does not stop collection.
+
+Results remain available after completion, cancellation or pausing. An analyzer has no completion flag because another run may still be using it. Disposing a stream enumerator pauses the run without disposing its underlying algorithm iterator.
+
+## Retention and accumulation
+
+`TracePopulationQuality` records current best, median, and worst objective vectors from each population. `TraceBestSoFar` accumulates the best objective vector across evaluator calls and records only improvements by default. Use `TracePopulationCandidates` or `TraceBestCandidateSoFar` when you need to retain the candidates behind those values.
 
 ```csharp
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Operators;
-
-var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
-var observedAlgorithm = algorithm with { Interceptor = interceptor };
-var analysis = Analyzer.BestMedianWorst(interceptor);
-
-var run = observedAlgorithm
-    .CreateRun(problem, RandomNumberGenerator.Create(seed: 777))
-    .AttachAnalyzer(analysis);
+var quality = algorithm.TracePopulationQuality(clocks: [iterations], retention: TraceRetention.EveryNth(10));
+var bestAtEveryEvaluation = algorithm.Evaluator.TraceBestSoFar(clocks: [evaluations], retention: TraceRetention.EveryObservation());
 ```
 
-An interceptor anchor observes the state at that point in the iteration, which is what you want when several interceptors run and the distinction matters. For a plain quality curve, prefer the algorithm anchor: it needs no placeholder operator in the configuration.
+`TraceRetention.EveryNth(10)` records observations 10, 20, 30, and so on. It adds no extra initial or final entry. `TraceRetention.OnChange()` records the first value and subsequent changes by value equality, and `TraceRetention.OnChange(comparer)` decides sameness with a comparer of your own. `TraceRetention.LatestOnly()` stores each value over the one before it, so the trace holds a single entry carrying the moment of the observation that produced it. Use it when you want what a measurement says now rather than how it moved, and read it with `Latest` or `RequireLatestValue()`. A retention counts for the object it is, so give each trace its own, which the factories do.
 
-`series` is a `List<BestMedianWorstEntry<RealVector>>` with one entry per observed generation. Each entry holds three evaluated candidates, so both the objective values and the candidates behind them stay available:
+Retention runs after measurement and aggregation. It controls stored entries and never skips expensive computations, so best-so-far still sees an improvement between retained observations. `EveryNth` and `OnChange` leave stored entries alone; `LatestOnly` is the one policy that discards what the trace already held.
+
+## Accumulating analyzers
+
+Some analysis is not a series. A Pareto front, a genealogy graph and a fitted model are each one object that every observation changes, and what you want back is that object as it stands. Those analyzers derive from `AccumulatingAnalyzer`:
 
 ```csharp
-Console.WriteLine("generation      best    median     worst");
+var front = new ParetoFrontAnalyzer<RealVector, TSearchSpace, TProblem>(
+    problem.Objective, referencePoint, algorithm.Evaluator);
 
-foreach (var (entry, generation) in series.Select((e, index) => (e, index + 1)))
+var points = front.Front.Points;   // the front itself, still growing while the run runs
+```
+
+An accumulator is one mutable object, so what it publishes is a live view of it rather than a copy. Read it once the run has finished. Clocks and retention do not apply either: it holds the current state, not a history, so there is no entry for a moment to belong to.
+
+To write one, derive from `AccumulatingAnalyzer`, install your observations, and update under `Sync`:
+
+```csharp
+public override void Install(ResolutionScopeBuilder builder) =>
+    builder.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, Record);
+
+private void Record(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation)
 {
-    if (generation % 10 != 0) continue;
-
-    Console.WriteLine(
-        $"{generation,10}{entry.Best.ObjectiveVector[0],10:F3}" +
-        $"{entry.Median.ObjectiveVector[0],10:F3}{entry.Worst.ObjectiveVector[0],10:F3}");
+    lock (Sync)
+        accumulator.Add(observation.Candidates);
 }
 ```
 
-Running that against a 50 generation genetic algorithm on the Rastrigin function prints:
+## Custom traces
 
+Use a scalar projection when the observation already provides one value:
+
+```csharp
+var size = Analyzer.Trace(algorithm,
+    value: observation => observation.State.Population.EvaluatedCandidates.Count);
+var quality = Analyzer.Trace(
+    algorithm,
+    Measurement.ObjectiveVectors(algorithm),
+    Aggregate.BestMedianWorst());
 ```
-generation      best    median     worst
-        10     3.100    23.707    53.849
-        20     1.860     3.280     8.158
-        30     1.201     1.490     3.127
-        40     1.035     1.068     2.281
-        50     1.007     1.014     2.398
+
+Named measurements provide reusable value strategies with type inference from the source. Runtime-only delegates provide local projections and have no value-equality or serialization contract.
+
+`IAggregation<TValue, TResult>` has a single `Aggregate` method. `Aggregate.Best()` summarizes each observation; `Aggregate.BestSoFar()` accumulates across observations, keeping the running best as its own state. A custom aggregation is an ordinary class implementing that one method, and it must publish immutable results.
+
+An aggregation or retention that holds state owns it, so build one per trace. The factories do that for you: `TraceRetention.EveryNth(10)` and `Aggregate.BestSoFar()` return a fresh object every call. Hoisting one into a variable and passing it to two traces makes them share its counting.
+
+To collect several compatible sources into one accumulator and result sink, create one combined trace:
+
+```csharp
+var evaluators = new[] { firstAlgorithm.Evaluator, secondAlgorithm.Evaluator };
+var combined = evaluators.TraceBestSoFar();
 ```
 
-Read the three columns together rather than watching the best value alone. Best and median start far apart and close by generation 40, which means the improvement reached the whole population instead of one elite. From there both sit near `1.0`, a local minimum of the Rastrigin function, and stop moving: the run has converged and the remaining budget is buying nothing.
+Attach `combined` to both runs to intentionally accumulate shared history. Separate traces have separate strategy state, even when they use the same aggregation or retention configuration object.
 
-The analyzer result belongs to this run, which prevents results from different executions from being mixed accidentally.
+Take one snapshot when you want consistent projections onto several axes:
 
-## Choose what to retain
+```csharp
+var snapshot = population.Snapshot();
+var byEvaluations = snapshot.By(evaluations);
+```
 
-Optimization can produce a large amount of data. Prefer compact metrics unless full populations are needed for a stated analysis.
+The snapshot preserves its selected axes even when empty. Selected clocks are read when an entry is recorded. Clocks on independent concurrent boundaries do not promise an atomic global timestamp.
 
-- Keep best and median objective values for convergence plots.
-- Sample large populations instead of serializing every state by default.
-- Store evaluation counts when operator costs differ.
-- Attach units and objective labels at the reporting boundary.
-- Record package version, configuration, problem identity and seed with every series.
+## Multi-objective ranking
+
+Single-objective traces use the observed problem's objective comparer automatically. A multi-objective problem without a total order cannot supply a unique best, median, or worst. Ranking throws when first required, even for a singleton batch. There is no implicit lexicographic fallback.
+
+Use Pareto analysis, such as the experimental `TraceHyperVolume`, or explicitly select an objective comparer for the analysis:
+
+```csharp
+var best = algorithm.Evaluator.TraceBestSoFar(objectiveComparer: new LexicographicComparer(problem.Objective.Directions));
+```
+
+This makes dimension priority explicit and affects this trace's comparisons, including best-so-far accumulation. It does not change the problem or algorithm's objective. Analysis accepts the objective system's existing `IComparer<ObjectiveVector>` implementations. The `RequireTotalOrder` helper also serves callers outside analysis. Genealogy and rank factories accept the same objective comparer. The correlation NSGA-II helper uses a lexicographic comparer for reports while leaving optimization Pareto-based. Ranking is checked at observation time because installation has no problem context.
 
 ## Experiments
 
-Experiment runs can bind an analyzer to each concrete algorithm in a grid. This preserves typed trial keys and independent result ownership. See [Experiments](/guide/execution/experiments) for repetition and grid construction.
-
-Instrumentation is an advanced extension point. Prefer existing states and analyzers before adding a custom interceptor.
+An experiment uses a trial analyzer factory to create fresh analyzers for every trial. Retrieve the typed trial/analyzer pairs and read each analyzer directly. See [Experiments](/guide/execution/experiments).

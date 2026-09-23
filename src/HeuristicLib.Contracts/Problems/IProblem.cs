@@ -4,7 +4,13 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems;
 
-/// <summary>Describes the part of a problem that does not depend on its candidate or search space types.</summary>
+/// <summary>
+/// What every problem has regardless of what it is searched over.
+/// </summary>
+/// <remarks>
+/// The objective says which direction is better, which does not depend on the candidate type. Keeping it reachable
+/// without the type parameters is what lets anything holding a problem rank results by it.
+/// </remarks>
 public interface IProblem
 {
     ObjectiveDirections Objective { get; }

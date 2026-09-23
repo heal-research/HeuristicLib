@@ -64,12 +64,12 @@ public class PipelineAlgorithmTests
         var evaluator = new ForwardingEvaluator();
         var pipeline = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Then(new AdditiveStepAlgorithm(10) { Evaluator = evaluator }, new AdditiveStepAlgorithm(100) { Evaluator = evaluator });
         var analysis = new EvaluationCountAnalysis(evaluator);
-        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).AttachAnalyzer(analysis);
+        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAnalyzer(analysis);
 
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 11, 111]);
-        run.GetResult(analysis).Count.ShouldBe(3);
+        analysis.AnalysisResult.Count.ShouldBe(3);
     }
 
     [Fact]
@@ -79,9 +79,9 @@ public class PipelineAlgorithmTests
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
         var pipeline = algorithm.Then(algorithm);
-        var registry = new ExecutionInstanceRegistry();
-        _ = registry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
-        var pipelineInstance = registry.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(pipeline);
+        var scope = ResolutionScope.Create();
+        _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
+        var pipelineInstance = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(pipeline);
 
         var states = pipelineInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -100,16 +100,15 @@ public class PipelineAlgorithmTests
         }
     }
 
-    private sealed record EvaluationCountAnalysis(
-        IEvaluator<int> Evaluator)
-        : Analyzer<EvaluationCountAnalysis.Result>
+    private sealed class EvaluationCountAnalysis(IEvaluator<int> evaluator)
+        : IAnalyzer
     {
-        public override Result CreateInitialResult() => new();
+        public Result AnalysisResult { get; } = new();
 
-        public override void RegisterObservations(ObservationPlan observations, Result result)
-        {
-            observations.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Evaluator, (_, objectiveVectors, _, _) => result.Count += objectiveVectors.Count);
-        }
+        public void Install(ResolutionScopeBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
+
+        public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
+            AnalysisResult.Count += observation.Candidates.Count;
 
         public sealed class Result
         {

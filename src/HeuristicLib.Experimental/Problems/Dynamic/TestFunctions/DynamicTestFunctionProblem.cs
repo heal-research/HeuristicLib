@@ -12,9 +12,9 @@ public class DynamicTestFunctionProblem : DynamicProblem<DynamicTestFunctionProb
 
     public DynamicTestFunctionProblem(IRandomNumberGenerator environmentRandom,
                                       TestFunctionProblem problem,
-                                      UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                                      int epochLength = int.MaxValue) : base(problem.Objective, problem.SearchSpace,
-        environmentRandom, updatePolicy, epochLength)
+                                      IEpochSchedule? epochSchedule = null,
+                                      UpdatePolicy updatePolicy = UpdatePolicy.AfterEachEvaluation) : base(problem.Objective, problem.SearchSpace,
+        environmentRandom, epochSchedule ?? new EvaluationCountSchedule(int.MaxValue), updatePolicy)
     {
         this.problem = problem;
         var rot = new double[problem.SearchSpace.Length, problem.SearchSpace.Length];
@@ -32,8 +32,7 @@ public class DynamicTestFunctionProblem : DynamicProblem<DynamicTestFunctionProb
     public State CurrentState { get; private set; }
     public required DeviationSigmas DeviationSigma { get; init; }
 
-    public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random,
-                                             EvaluationTiming timing)
+    protected override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random, int epoch)
     {
         solution = RealVector.FromOwnedArray(RotatedTestFunction.Rotate(CurrentState.Rotation, solution));
         solution *= RealVector.Create(CurrentState.InputScaling);

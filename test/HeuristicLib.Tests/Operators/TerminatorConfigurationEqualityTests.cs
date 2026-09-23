@@ -49,11 +49,9 @@ public class TerminatorConfigurationEqualityTests
     {
         var counter = new ObservationCounter();
         var duration = new ObservationDuration();
-        var observer = new ActionTerminatorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>((_, _, _, _) => { });
 
         new ThresholdTerminator(1).CountCalls(counter).ShouldBe(new ThresholdTerminator(1).CountCalls(counter));
         new ThresholdTerminator(1).MeasureDuration(duration, TimeProvider.System).ShouldBe(new ThresholdTerminator(1).MeasureDuration(duration, TimeProvider.System));
-        new ThresholdTerminator(1).ObserveWith(observer).ShouldBe(new ThresholdTerminator(1).ObserveWith(observer));
         new ThresholdTerminator(1).CountCalls(counter).ShouldNotBe(new ThresholdTerminator(2).CountCalls(counter));
     }
 

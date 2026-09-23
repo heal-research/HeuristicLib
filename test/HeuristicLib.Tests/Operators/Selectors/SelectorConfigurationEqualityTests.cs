@@ -222,35 +222,8 @@ public class SelectorConfigurationEqualityTests
         left.ShouldNotBe(right);
     }
 
-    [Fact]
-    public void ObservableSelector_WithSameObserverInstance_IsEqual()
-    {
-        var observer = new ActionSelectorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _, _, _) => { });
-        var left = new RangeSelector(1).ObserveWith(observer);
-        var right = new RangeSelector(1).ObserveWith(observer);
 
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
 
-    [Fact]
-    public void ObservableSelector_WithDifferentChildSelector_IsNotEqual()
-    {
-        var observer = new ActionSelectorObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _, _, _) => { });
-        var left = new RangeSelector(1).ObserveWith(observer);
-        var right = new RangeSelector(2).ObserveWith(observer);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void ObservableSelector_WithSeparatelyConstructedActionObservers_IsNotEqual()
-    {
-        var left = new RangeSelector(1).ObserveWith(_ => { });
-        var right = new RangeSelector(1).ObserveWith(_ => { });
-
-        left.ShouldNotBe(right);
-    }
 
     [Fact]
     public void NestedSelectorComposition_WithEqualParts_IsEqual()
