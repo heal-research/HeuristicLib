@@ -1,18 +1,32 @@
-using HEAL.HeuristicLib.Encodings.Permutations;
-
 namespace HEAL.HeuristicLib.Objectives;
 
 public class LexicographicComparer : IComparer<ObjectiveVector>
 {
     private readonly ImmutableArray<ObjectiveDirection> objectives;
-    private readonly Permutation order;
+    private readonly ImmutableArray<int> order;
 
+    /// <param name="objectives">The direction of each objective.</param>
+    /// <param name="order">
+    /// Every objective index exactly once, in comparison priority order. When omitted, uses ascending index order.
+    /// </param>
     public LexicographicComparer(IReadOnlyList<ObjectiveDirection> objectives, IReadOnlyList<int>? order = null)
     {
         this.objectives = objectives.ToImmutableArray();
         this.order = order is null
-            ? Permutation.Range(objectives.Count)
-            : Permutation.Create(order);
+            ? Enumerable.Range(0, this.objectives.Length).ToImmutableArray()
+            : order.ToImmutableArray();
+
+        if (this.order.Length != this.objectives.Length)
+            throw new ArgumentException("The order must contain every objective index exactly once.", nameof(order));
+
+        var seen = new bool[this.objectives.Length];
+        foreach (var dimension in this.order)
+        {
+            if (dimension < 0 || dimension >= seen.Length || seen[dimension])
+                throw new ArgumentException("The order must contain every objective index exactly once.", nameof(order));
+
+            seen[dimension] = true;
+        }
     }
 
     public int Compare(ObjectiveVector? x, ObjectiveVector? y)
