@@ -6,13 +6,9 @@ namespace HEAL.HeuristicLib.Analysis;
 /// Owns mutable analysis results and installs the observations used to produce them.
 /// </summary>
 /// <remarks>
-/// An analyzer may install zero, one or several execution modules. A run installs the analyzer itself as it would a
-/// module, so a decoration the analyzer declares directly binds as a module's would. Reusing an analyzer across runs
+/// An analyzer is an execution module and may install additional modules. Its decorations have module origin,
+/// including those it declares directly. Reusing an analyzer across runs
 /// intentionally combines its results. An analyzer that observes concurrent runs is responsible for synchronizing its
 /// mutable state.
 /// </remarks>
-public interface IAnalyzer
-{
-    /// <summary>Installs this analyzer's observation machinery into a run before its execution graph is resolved.</summary>
-    void Install(ResolutionScopeBuilder builder);
-}
+public interface IAnalyzer : IExecutionModule;

@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -9,8 +8,6 @@ namespace HEAL.HeuristicLib.Execution;
 public abstract class AlgorithmRun
 {
     private readonly Lock sync = new();
-    private readonly List<IAnalyzer> analyzers = [];
-    private readonly HashSet<IAnalyzer> analyzerSet = new(ReferenceEqualityComparer.Instance);
     private readonly List<IExecutionModule> modules = [];
     private readonly HashSet<IExecutionModule> moduleSet = new(ReferenceEqualityComparer.Instance);
     private ResolutionScope? scope;
@@ -19,16 +16,6 @@ public abstract class AlgorithmRun
 
     protected AlgorithmRun()
     {
-    }
-
-    protected void Add(IAnalyzer analyzer)
-    {
-        lock (sync)
-        {
-            EnsurePreparing();
-            if (analyzerSet.Add(analyzer))
-                analyzers.Add(analyzer);
-        }
     }
 
     protected void Add(IExecutionModule module)
@@ -64,8 +51,6 @@ public abstract class AlgorithmRun
             {
                 scope = ResolutionScope.Create(builder =>
                 {
-                    foreach (var analyzer in analyzers)
-                        builder.DeclareAsModule(analyzer.Install);
                     foreach (var module in modules)
                         builder.Install(module);
                 });
@@ -136,13 +121,8 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         Random = random;
     }
 
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AddAnalyzer(IAnalyzer analyzer)
-    {
-        Add(analyzer);
-        return this;
-    }
-
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AddExecutionModule(IExecutionModule module)
+    /// <summary>Attaches a module while preparing, preserving attachment order and deduplicating by reference.</summary>
+    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> Attach(IExecutionModule module)
     {
         Add(module);
         return this;

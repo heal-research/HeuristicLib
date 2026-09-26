@@ -71,7 +71,7 @@ public class AutoEcPaperScenarioTests
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAnalyzer(qualityCurve).AddAnalyzer(bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).Attach(qualityCurve).Attach(bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -123,7 +123,7 @@ public class AutoEcPaperScenarioTests
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAnalyzer(qualityCurve).AddAnalyzer(bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).Attach(qualityCurve).Attach(bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),

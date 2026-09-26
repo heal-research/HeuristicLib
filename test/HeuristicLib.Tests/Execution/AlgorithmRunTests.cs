@@ -59,7 +59,7 @@ public class AlgorithmRunTests
 
         _ = run.Stream(cancellationToken: TestContext.Current.CancellationToken);
 
-        var exception = Should.Throw<InvalidOperationException>(() => run.AddAnalyzer(new BlindAnalyzer()));
+        var exception = Should.Throw<InvalidOperationException>(() => run.Attach(new BlindAnalyzer()));
         exception.Message.ShouldContain("its current lifecycle state is Running");
     }
 
@@ -71,13 +71,39 @@ public class AlgorithmRunTests
         var observed = new List<string>();
 
         _ = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42))
-                     .AddAnalyzer(new ObservingAnalyzer(algorithm.Evaluator, () => observed.Add("first")))
-                     .AddAnalyzer(new DecoratingAnalyzer(algorithm.Evaluator, () => observed.Add("second")))
+                     .Attach(new ObservingAnalyzer(algorithm.Evaluator, () => observed.Add("first")))
+                     .Attach(new DecoratingAnalyzer(algorithm.Evaluator, () => observed.Add("second")))
                      .Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // Both bind as modules, so the one attached first sits innermost and observes first. Recorded as
         // configuration, the direct decoration would sit inside every module whatever the attachment order.
         observed.ShouldBe(["first", "second"]);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TheSameAttachmentThroughBothInterfaces_IsInstalledOnce(bool analyzerFirst)
+    {
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var run = new AdditiveStepAlgorithm(1).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var attachment = new DualRoleAttachment();
+
+        if (analyzerFirst)
+            run.Attach((IAnalyzer)attachment).Attach((IExecutionModule)attachment);
+        else
+            run.Attach((IExecutionModule)attachment).Attach((IAnalyzer)attachment);
+
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
+
+        attachment.InstallationCount.ShouldBe(1);
+    }
+
+    private sealed class DualRoleAttachment : IAnalyzer
+    {
+        public int InstallationCount { get; private set; }
+
+        public void Install(ResolutionScopeBuilder builder) => InstallationCount++;
     }
 
     private sealed class BlindAnalyzer : IAnalyzer

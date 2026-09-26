@@ -348,25 +348,18 @@ public sealed class ResolutionScopeBuilder
         if (!installedModules.Add(module))
             return this;
 
-        DeclareAsModule(module.Install);
-        return this;
-    }
-
-    /// <summary>
-    /// Runs a declaration with module origin, for something a run attaches that is not itself a module, such as an analyzer.
-    /// </summary>
-    internal void DeclareAsModule(Action<ResolutionScopeBuilder> declare)
-    {
         var previousOrigin = origin;
         origin = DecorationOrigin.Module;
         try
         {
-            declare(this);
+            module.Install(this);
         }
         finally
         {
             origin = previousOrigin;
         }
+
+        return this;
     }
 
     internal ResolutionScope Build()

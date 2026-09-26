@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -16,7 +15,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
 {
     private readonly Lock sync = new();
-    private readonly Dictionary<TrialAnalyzer<TAlgorithm>, ImmutableArray<IAnalyzer>> trialAnalyzers = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<TrialModule<TAlgorithm>, ImmutableArray<IExecutionModule>> trialModules = new(ReferenceEqualityComparer.Instance);
     private RunLifecycleState lifecycleState = RunLifecycleState.Preparing;
 
     public IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> Experiment { get; }
@@ -63,32 +62,32 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
     }
 
-    /// <summary>Creates and attaches one analyzer from this factory to every experiment trial.</summary>
-    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> AddTrialAnalyzer<TAnalyzer>(
-        TrialAnalyzer<TAlgorithm, TAnalyzer> trialAnalyzer)
-        where TAnalyzer : IAnalyzer
+    /// <summary>Creates and attaches one module from this factory to every experiment trial.</summary>
+    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> AttachPerTrial<TModule>(
+        TrialModule<TAlgorithm, TModule> trialModule)
+        where TModule : IExecutionModule
     {
         EnsureNotStarted();
-        if (trialAnalyzers.ContainsKey(trialAnalyzer))
-            throw new InvalidOperationException("The same trial analyzer cannot be attached more than once.");
+        if (trialModules.ContainsKey(trialModule))
+            throw new InvalidOperationException("The same trial module cannot be attached more than once.");
 
-        ImmutableArray<IAnalyzer> analyzers = [.. Trials.Select(trial => trialAnalyzer.CreateFor(trial.Algorithm))];
+        ImmutableArray<IExecutionModule> modules = [.. Trials.Select(trial => trialModule.CreateFor(trial.Algorithm))];
         for (var index = 0; index < Trials.Length; index++)
-            Trials[index].Run.AddAnalyzer(analyzers[index]);
+            Trials[index].Run.Attach(modules[index]);
 
-        trialAnalyzers.Add(trialAnalyzer, analyzers);
+        trialModules.Add(trialModule, modules);
         return this;
     }
 
     /// <summary>
-    /// Gets each trial together with the analyzer that observed it. Read the collected data from the analyzer.
+    /// Gets each trial together with its module, in trial order.
     /// </summary>
-    public ImmutableArray<TrialAnalysis<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAnalyzer>> GetAnalyzers<TAnalyzer>(TrialAnalyzer<TAlgorithm, TAnalyzer> trialAnalyzer)
-        where TAnalyzer : IAnalyzer
+    public ImmutableArray<TrialAttachment<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TModule>> GetAttached<TModule>(TrialModule<TAlgorithm, TModule> trialModule)
+        where TModule : IExecutionModule
     {
-        var analyzers = trialAnalyzers[trialAnalyzer];
+        var modules = trialModules[trialModule];
 
-        return [.. Trials.Select((trial, index) => TrialAnalysis.From(trial, (TAnalyzer)analyzers[index]))];
+        return [.. Trials.Select((trial, index) => TrialAttachment.From(trial, (TModule)modules[index]))];
     }
 
     public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)

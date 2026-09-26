@@ -14,9 +14,6 @@ public sealed class LayerDependencyTests
     private static readonly string[] ExistingViolations =
     [
         "src/HeuristicLib.Experimental/Problems/Dynamic/DynamicProblem.cs | Problems -> Analysis",
-        "src/HeuristicLib/Experiments/ExperimentRun.cs | Hosting -> Analysis",
-        "src/HeuristicLib/Execution/Runs/AlgorithmRun.cs | Hosting -> Analysis",
-        "src/HeuristicLib/Execution/Runs/AlgorithmRun.cs | OutsideExecution -> ResolutionInternal",
     ];
 
     [Fact]

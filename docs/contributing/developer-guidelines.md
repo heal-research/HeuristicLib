@@ -474,7 +474,7 @@ because an adjective cannot be misread as a command to modify the receiver: `alg
 more, and the name should not suggest otherwise.
 
 A method that **mutates the receiver** is named with an imperative verb and never with `With*`, even when it returns
-the receiver for chaining: `run.AddAnalyzer(analyzer)`. A fluent chain is not evidence that a value is being built,
+the receiver for chaining: `run.Attach(analyzer)`. A fluent chain is not evidence that a value is being built,
 so the name has to carry that distinction on its own.
 
 This was applied across the library after `With*` was found covering three different semantics at once, one of which

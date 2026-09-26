@@ -614,7 +614,7 @@ See also: Execution instance, Run.
 
 Status: `Canonical`
 
-An analyzer is a stateful object that records or derives information from selected execution boundaries.
+An analyzer is a stateful execution module that records or derives information from selected execution boundaries. `IAnalyzer` inherits `IExecutionModule`, and runs attach it through `Attach` alongside other modules.
 
 The caller creates an analyzer for selected algorithm or operator sources, clocks and analysis behavior. A trace owns its aggregation and retention objects, which are never resolved through a run. The run installs observations when execution starts, before materializing the execution graph. Reusing an analyzer across runs intentionally combines its history. A trace exposes typed reads during and after execution. An accumulating analyzer is read once its run has finished.
 
@@ -760,8 +760,8 @@ See also: Algorithm, Experiment, Run.
 
 Status: `Canonical`
 
-A trial analyzer is a factory that creates an analyzer from each trial algorithm configuration. It can select several observation boundaries and create clocks within that factory.
+A trial analyzer is a factory that creates an analyzer from each trial algorithm configuration. `TrialAnalyzer.Create` returns a `TrialModule` that the experiment accepts through `AttachPerTrial`. It can select several observation boundaries and create clocks within that factory.
 
-The trial analyzer is also the typed lookup object used to retrieve the ordered analyzer results from all trials.
+The trial analyzer factory is also the typed lookup object passed to `GetAttached` to retrieve ordered trial/analyzer pairs. Each returned `TrialAttachment` exposes the trial as `Trial` and the concrete analyzer as `Module`.
 
 See also: Analyzer, Experiment trial, Run.

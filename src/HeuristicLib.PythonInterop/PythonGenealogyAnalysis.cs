@@ -147,7 +147,7 @@ public class PythonGenealogyAnalysis
                                                gaAlgorithm.TerminatedAfterIterations(parameters.Iterations),
                                                problem, RandomNumberGenerator.Create(parameters.Seed));
                     foreach (var analyzer in analyzers.GetAll())
-                        gaRun.AddAnalyzer(analyzer);
+                        gaRun.Attach(analyzer);
                     gaRun.Complete();
                     return analyzers.ToExperimentResult(gaRun);
                 }
@@ -168,7 +168,7 @@ public class PythonGenealogyAnalysis
                                                esAlgorithm.TerminatedAfterIterations(parameters.Iterations),
                                                problem, RandomNumberGenerator.Create(parameters.Seed));
                     foreach (var analyzer in analyzers.GetAll())
-                        esRun.AddAnalyzer(analyzer);
+                        esRun.Attach(analyzer);
                     esRun.Complete();
                     return analyzers.ToExperimentResult(esRun);
                 }
@@ -201,7 +201,7 @@ public class PythonGenealogyAnalysis
                                                      nsga2Algorithm.TerminatedAfterIterations(parameters.Iterations),
                                                      problem, RandomNumberGenerator.Create(parameters.Seed));
                     foreach (var analyzer in analyzers.GetAll())
-                        nsga2Run.AddAnalyzer(analyzer);
+                        nsga2Run.Attach(analyzer);
                     _ = nsga2Run.Complete();
                     return analyzers.ToExperimentResult(nsga2Run);
                 }

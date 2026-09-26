@@ -1,8 +1,8 @@
 # Analyzer architecture
 
-An analyzer is a stateful, first-class run component. It owns its collected data and exposes typed reads directly. It implements `IAnalyzer.Install(ResolutionScopeBuilder)` to declare the execution observations it needs. An analyzer is not an execution module, although its installation can create and install any number of modules. The run installs it as it would a module, so a decoration an analyzer declares directly, without creating a module for it, still has module origin.
+An analyzer is a stateful execution module. It owns its collected data and exposes typed reads directly. `IAnalyzer` inherits `IExecutionModule`; the analyzer implements `Install(ResolutionScopeBuilder)` to declare its observations and may install additional modules. Decorations it declares directly also have module origin.
 
-`AlgorithmRun` accepts analyzers and modules while its lifecycle is `Preparing`. Starting it freezes those attachments, installs them, analyzers before modules and each in the order attached, and resolves the execution graph. The run does not own analyzer disposal and does not provide a result lookup service. Reusing one analyzer on several runs intentionally combines its results.
+`AlgorithmRun.Attach` accepts analyzers and other modules while its lifecycle is `Preparing`. Starting it freezes one attachment list, installs every attachment in attachment order, and resolves the execution graph. Attaching the same object more than once installs it once, using reference identity. The run does not own analyzer disposal and does not provide a result lookup service. Reusing one analyzer on several runs intentionally combines its results.
 
 ## Observation boundaries
 

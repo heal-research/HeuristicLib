@@ -50,7 +50,7 @@ public class DynamicAnalysisTests
             Aggregate.Best<int>(),
             [epoch]);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAnalyzer(bestPerEpoch);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(bestPerEpoch);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -71,7 +71,7 @@ public class DynamicAnalysisTests
         var epoch = Clock.FromEpoch(problem);
         var work = Analyzer.TraceEpochWork(algorithm.Evaluator, evaluations, epoch);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAnalyzer(work);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(work);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -109,7 +109,7 @@ public class DynamicAnalysisTests
             [4]
         ]);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddExecutionModule(problem.CreateIterationUpdateModule(algorithm));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(problem.CreateIterationUpdateModule(algorithm));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -181,7 +181,7 @@ public class DynamicAnalysisTests
                 [algorithm.Evaluator],
                 predictionEpochMultiplier: 2);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAnalyzer(analysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(analysis);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 

@@ -134,9 +134,11 @@ var quality = TrialAnalyzer.Create(
     (GeneticAlgorithm<RealVector> trial) =>
         trial.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
 var run = algorithm.Repeat(2).CreateRun(problem, random)
-    .AddTrialAnalyzer(quality);
+    .AttachPerTrial(quality);
 await run.CompleteAsync();
-var analyses = run.GetAnalyzers(quality);
+var analyses = run.GetAttached(quality);
 ```
 
-Each result has typed `Trial` and `Analyzer` properties. The factory is reusable across experiments; the analyzers and clocks it creates are not.
+`GetAttached` returns `TrialAttachment` entries in trial order. Each has a typed `Trial` and a `Module` property; here `Module` has the concrete analyzer type created by the factory. The factory is reusable across experiments; the analyzers and clocks it creates are not.
+
+Use `TrialModule.Create` for other execution modules. `TrialAnalyzer.Create` is its analyzer-specific convenience. Both use `AttachPerTrial` and `GetAttached`, and factories install their attachments in the order they were attached to the experiment. Attaching the same factory twice is rejected.

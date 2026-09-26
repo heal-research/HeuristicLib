@@ -690,7 +690,7 @@ public class OperatorBudgetAlgorithmTests
         var analyzer = new EvaluationObservingAnalyzer(algorithm.Evaluator);
 
         algorithm.LimitedToEvaluatedCandidates(algorithm.Evaluator, maximumCandidates: 1000)
-                 .CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(analyzer)
+                 .CreateRun(problem, RandomNumberGenerator.Create(42)).Attach(analyzer)
                  .Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         analyzer.ObservedCandidates.ShouldBeGreaterThan(0);
@@ -718,7 +718,7 @@ public class OperatorBudgetAlgorithmTests
                 return observedOperator.MeasureDuration(duration, timeProvider);
             });
 
-        await budgeted.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(quality)
+        await budgeted.CreateRun(problem, RandomNumberGenerator.Create(42)).Attach(quality)
                       .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         measuredOperators.ShouldHaveSingleItem();
@@ -738,12 +738,12 @@ public class OperatorBudgetAlgorithmTests
         var withoutBudget = algorithm.Evaluator.TraceBestCandidateSoFar();
         var withBudget = algorithm.Evaluator.TraceBestCandidateSoFar();
 
-        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(withoutBudget)
+        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).Attach(withoutBudget)
                        .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         await algorithm
             .LimitedToEvaluatorDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), new AdvancingTimeProvider(TimeSpan.FromMilliseconds(1)))
-            .CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(withBudget)
+            .CreateRun(problem, RandomNumberGenerator.Create(42)).Attach(withBudget)
             .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         withBudget.SampleCount.ShouldBe(withoutBudget.SampleCount);
