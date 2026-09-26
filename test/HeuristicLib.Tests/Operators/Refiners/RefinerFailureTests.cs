@@ -58,7 +58,7 @@ public class RefinerFailureTests
     public void WhenARunFailsPartWay_InstrumentationKeepsWhatItRecordedBefore()
     {
         var problem = CreateProblem();
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingAfterBatchesRefiner(2).CountCalls(counter) };
 
         Should.Throw<InvalidOperationException>(() => algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));

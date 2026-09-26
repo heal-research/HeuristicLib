@@ -12,7 +12,7 @@ public class EvaluatorConfigurationEqualityTests
     {
         var child = new OffsetEvaluator(1);
 
-        child.CountCalls(new ObservationCounter()).ChildEvaluator.ShouldBeSameAs(child);
+        child.CountCalls(new CountAccumulator()).ChildEvaluator.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -43,8 +43,8 @@ public class EvaluatorConfigurationEqualityTests
     [Fact]
     public void WrappingConcerns_IncludeChildAndSettingsInEquality()
     {
-        var counter = new ObservationCounter();
-        var duration = new ObservationDuration();
+        var counter = new CountAccumulator();
+        var duration = new DurationAccumulator();
         var counted = new OffsetEvaluator(1).CountCalls(counter);
         var countedEqual = new OffsetEvaluator(1).CountCalls(counter);
         var differentMetric = new OffsetEvaluator(1).CountCandidates(counter);

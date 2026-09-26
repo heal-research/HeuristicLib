@@ -11,7 +11,7 @@ public class InterceptorConfigurationEqualityTests
     {
         var child = new OffsetInterceptor(1);
 
-        child.CountCalls(new ObservationCounter()).ChildInterceptor.ShouldBeSameAs(child);
+        child.CountCalls(new CountAccumulator()).ChildInterceptor.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class InterceptorConfigurationEqualityTests
     [Fact]
     public void NestedComposition_WithEqualParts_IsEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2)).CountCalls(counter);
         var equal = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2)).CountCalls(counter);
         var different = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(3)).CountCalls(counter);
@@ -47,8 +47,8 @@ public class InterceptorConfigurationEqualityTests
     [Fact]
     public void WrappingConcerns_IncludeChildAndSettingsInEquality()
     {
-        var counter = new ObservationCounter();
-        var duration = new ObservationDuration();
+        var counter = new CountAccumulator();
+        var duration = new DurationAccumulator();
 
         new OffsetInterceptor(1).CountCalls(counter).ShouldBe(new OffsetInterceptor(1).CountCalls(counter));
         new OffsetInterceptor(1).MeasureDuration(duration, TimeProvider.System).ShouldBe(new OffsetInterceptor(1).MeasureDuration(duration, TimeProvider.System));

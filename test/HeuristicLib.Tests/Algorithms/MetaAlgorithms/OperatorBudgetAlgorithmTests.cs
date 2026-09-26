@@ -560,7 +560,7 @@ public class OperatorBudgetAlgorithmTests
     public void AfterOperatorCountTerminator_CanUseSharedCounterAcrossObservedOperators()
     {
         var problem = CreateProblem();
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var baseAlgorithm = CreateAlgorithm(problem);
         var algorithm = baseAlgorithm with
         {
@@ -585,7 +585,7 @@ public class OperatorBudgetAlgorithmTests
     [InlineData(-1)]
     public void AfterOperatorCountTerminator_IsImmediatelyTerminal_WhenMaximumCountIsNotPositive(int maximumCount)
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var terminator = new AfterOperatorCountTerminator<RealVector>(counter, maximumCount);
 
         terminator.IsTerminalState().ShouldBeTrue();
@@ -594,7 +594,7 @@ public class OperatorBudgetAlgorithmTests
     [Fact]
     public void AfterOperatorDurationTerminator_IsTerminalAtMaximumDuration()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var terminator = new AfterOperatorDurationTerminator<RealVector>(
             duration,
             maximumDuration: TimeSpan.FromSeconds(2));
@@ -609,7 +609,7 @@ public class OperatorBudgetAlgorithmTests
     [Fact]
     public void AfterOperatorDurationTerminator_IsImmediatelyTerminal_WhenMaximumDurationIsNotPositive()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
 
         new AfterOperatorDurationTerminator<RealVector>(duration, TimeSpan.Zero).IsTerminalState().ShouldBeTrue();
         new AfterOperatorDurationTerminator<RealVector>(duration, TimeSpan.FromTicks(-1)).IsTerminalState().ShouldBeTrue();

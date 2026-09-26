@@ -16,7 +16,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountCreatorCalls_IncrementsOncePerCreateCall()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var creator = new SequenceCreator().CountCalls(counter);
         creator.Counter.ShouldBeSameAs(counter);
         creator.Metric.ShouldBe(OperatorCountMetric.Calls);
@@ -32,7 +32,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountCreatedCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var creator = new SequenceCreator().CountCandidates(counter);
         var instance = creator.CreateCreatorInstance();
         var problem = CreateProblem();
@@ -46,7 +46,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureCreatorDuration_AddsElapsedCreatorExecutionDuration()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var creator = new SequenceCreator().MeasureDuration(duration, timeProvider);
         creator.Duration.ShouldBeSameAs(duration);
@@ -63,7 +63,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountCreatorCalls_DoesNotIncrementWhenCreationThrows()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = new ThrowingCreator().CountCalls(counter).CreateCreatorInstance();
         var problem = CreateProblem();
 
@@ -76,7 +76,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureCreatorDuration_RecordsElapsedDurationWhenCreationThrows()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var instance = new ThrowingCreator().MeasureDuration(duration, timeProvider).CreateCreatorInstance();
         var problem = CreateProblem();
@@ -90,7 +90,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountMutatorCalls_IncrementsOncePerMutateCall()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var mutator = new AddOneMutator().CountCalls(counter);
         mutator.Counter.ShouldBeSameAs(counter);
         mutator.Metric.ShouldBe(OperatorCountMetric.Calls);
@@ -106,7 +106,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountMutatedCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var mutator = new AddOneMutator().CountCandidates(counter);
         var instance = mutator.CreateMutatorInstance();
         var problem = CreateProblem();
@@ -120,7 +120,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountMutatorCalls_DoesNotIncrementWhenMutationThrows()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = new ThrowingMutator().CountCalls(counter).CreateMutatorInstance();
         var problem = CreateProblem();
 
@@ -133,7 +133,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureMutatorDuration_AddsElapsedMutatorExecutionDuration()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var mutator = new AddOneMutator().MeasureDuration(duration, timeProvider);
         mutator.Duration.ShouldBeSameAs(duration);
@@ -150,7 +150,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureMutatorDuration_RecordsElapsedDurationWhenMutationThrows()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var mutator = new ThrowingMutator().MeasureDuration(duration, timeProvider);
         var instance = mutator.CreateMutatorInstance();
@@ -169,8 +169,8 @@ public class OperatorInstrumentationTests
         IReadOnlyList<int> parents = [1, 2, 3];
         var random = RandomNumberGenerator.Create(1);
         var problem = CreateProblem();
-        var innerDuration = new ObservationDuration();
-        var outerDuration = new ObservationDuration();
+        var innerDuration = new DurationAccumulator();
+        var outerDuration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var childMutator = new CallbackMutator((actualParents, actualRandom, actualSearchSpace, actualProblem) =>
         {
@@ -199,8 +199,8 @@ public class OperatorInstrumentationTests
     {
         var calls = 0;
         var problem = CreateProblem();
-        var innerDuration = new ObservationDuration();
-        var outerDuration = new ObservationDuration();
+        var innerDuration = new DurationAccumulator();
+        var outerDuration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var childMutator = new CallbackMutator((_, _, _, _) =>
         {
@@ -223,7 +223,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountCrossoverCalls_IncrementsOncePerCrossCall()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var crossover = new SumParentsCrossover().CountCalls(counter);
         crossover.Counter.ShouldBeSameAs(counter);
         crossover.Metric.ShouldBe(OperatorCountMetric.Calls);
@@ -247,7 +247,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountCrossedCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var crossover = new SumParentsCrossover().CountCandidates(counter);
         var instance = crossover.CreateCrossoverInstance();
         var problem = CreateProblem();
@@ -269,7 +269,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureCrossoverDuration_AddsElapsedCrossoverExecutionDuration()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var crossover = new SumParentsCrossover().MeasureDuration(duration, timeProvider);
         crossover.Duration.ShouldBeSameAs(duration);
@@ -294,7 +294,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountCrossoverCalls_DoesNotIncrementWhenCrossoverThrows()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = new ThrowingCrossover().CountCalls(counter).CreateCrossoverInstance();
         var problem = CreateProblem();
 
@@ -307,7 +307,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureCrossoverDuration_RecordsElapsedDurationWhenCrossoverThrows()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var instance = new ThrowingCrossover().MeasureDuration(duration, timeProvider).CreateCrossoverInstance();
         var problem = CreateProblem();
@@ -321,7 +321,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountSelectorCalls_IncrementsOncePerSelectCall()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var selector = new FirstCandidatesSelector().CountCalls(counter);
         selector.Counter.ShouldBeSameAs(counter);
         selector.Metric.ShouldBe(OperatorCountMetric.Calls);
@@ -337,7 +337,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountSelectedCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var selector = new FirstCandidatesSelector().CountCandidates(counter);
         var instance = selector.CreateSelectorInstance();
         var problem = CreateProblem();
@@ -351,7 +351,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountSelectorCalls_DoesNotIncrementWhenSelectionThrows()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = new ThrowingSelector().CountCalls(counter).CreateSelectorInstance();
         var problem = CreateProblem();
 
@@ -364,7 +364,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureSelectorDuration_AddsElapsedSelectorExecutionDuration()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var selector = new FirstCandidatesSelector().MeasureDuration(duration, timeProvider);
         selector.Duration.ShouldBeSameAs(duration);
@@ -381,7 +381,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureSelectorDuration_RecordsElapsedDurationWhenSelectionThrows()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var selector = new ThrowingSelector().MeasureDuration(duration, timeProvider);
         var instance = selector.CreateSelectorInstance();
@@ -396,7 +396,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountReplacerCalls_IncrementsOncePerReplaceCall()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var replacer = new FirstReplacementCandidatesReplacer().CountCalls(counter);
         replacer.Counter.ShouldBeSameAs(counter);
         replacer.Metric.ShouldBe(OperatorCountMetric.Calls);
@@ -426,7 +426,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountReplacementCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var replacer = new FirstReplacementCandidatesReplacer().CountCandidates(counter);
         var instance = replacer.CreateReplacerInstance();
         var problem = CreateProblem();
@@ -454,7 +454,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountReplacerCalls_DoesNotCountFailedCall()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = new ThrowingReplacer().CountCalls(counter).CreateReplacerInstance();
         var problem = CreateProblem();
 
@@ -473,7 +473,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureReplacerDuration_AddsElapsedReplacerExecutionDuration()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var replacer = new FirstReplacementCandidatesReplacer().MeasureDuration(duration, timeProvider);
         replacer.Duration.ShouldBeSameAs(duration);
@@ -504,7 +504,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureReplacerDuration_RecordsFailedCall()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var instance = new ThrowingReplacer().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateReplacerInstance();
         var problem = CreateProblem();
 
@@ -523,7 +523,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountInterceptorCalls_IncrementsOncePerTransformCall()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var interceptor = new AddOneInterceptor().CountCalls(counter);
         interceptor.Counter.ShouldBeSameAs(counter);
         var instance = interceptor.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
@@ -538,7 +538,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureInterceptorDuration_AddsElapsedInterceptorExecutionDuration()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var interceptor = new AddOneInterceptor().MeasureDuration(duration, timeProvider);
         interceptor.Duration.ShouldBeSameAs(duration);
@@ -555,7 +555,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountInterceptorCalls_DoesNotCountFailedCall()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = new ThrowingInterceptor().CountCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
@@ -567,7 +567,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureInterceptorDuration_RecordsFailedCall()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var instance = new ThrowingInterceptor().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
@@ -579,7 +579,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountTerminatorCalls_IncrementsOncePerTerminalStateCheck()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var terminator = new NeverTerminalStateTerminator().CountCalls(counter);
         terminator.Counter.ShouldBeSameAs(counter);
         var instance = terminator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
@@ -594,7 +594,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureTerminatorDuration_AddsElapsedTerminatorExecutionDuration()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var terminator = new NeverTerminalStateTerminator().MeasureDuration(duration, timeProvider);
         terminator.Duration.ShouldBeSameAs(duration);
@@ -611,7 +611,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void CountTerminatorCalls_DoesNotCountFailedCall()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = new ThrowingTerminator().CountCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
@@ -623,7 +623,7 @@ public class OperatorInstrumentationTests
     [Fact]
     public void MeasureTerminatorDuration_RecordsFailedCall()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var instance = new ThrowingTerminator().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 

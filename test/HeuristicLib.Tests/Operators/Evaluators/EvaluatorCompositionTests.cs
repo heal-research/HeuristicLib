@@ -9,7 +9,7 @@ public class EvaluatorCompositionTests
     [Fact]
     public void CachingEvaluator_UsesIndependentCachePerExecutionInstance()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var evaluator = CreateEvaluator().CountCalls(counter).Cached();
         var firstInstance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var secondInstance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
@@ -25,7 +25,7 @@ public class EvaluatorCompositionTests
     [Fact]
     public void LimitEvaluator_UsesIndependentCounterPerExecutionInstance()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var evaluator = CreateEvaluator().CountCandidates(counter).LimitEvaluations(2, enforceLimitWithinBatch: true);
         var firstInstance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var secondInstance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
@@ -41,7 +41,7 @@ public class EvaluatorCompositionTests
     [Fact]
     public void RepeatingEvaluator_InvokesResolvedChildForEveryEvaluation()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var evaluator = CreateEvaluator().CountCalls(counter).AsRepeated(2, ObjectiveVectorAggregation.Mean);
         var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();

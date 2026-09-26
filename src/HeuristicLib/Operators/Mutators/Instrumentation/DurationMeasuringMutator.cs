@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -7,15 +7,15 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 public sealed record DurationMeasuringMutator<TCandidate> : WrappingMutator<TCandidate>
 {
-    public ObservationDuration Duration { get; init; }
+    public DurationAccumulator Duration { get; init; }
     public TimeProvider TimeProvider { get; init; }
 
-    public DurationMeasuringMutator(IMutator<TCandidate> childMutator, ObservationDuration duration)
+    public DurationMeasuringMutator(IMutator<TCandidate> childMutator, DurationAccumulator duration)
         : this(childMutator, duration, TimeProvider.System)
     {
     }
 
-    public DurationMeasuringMutator(IMutator<TCandidate> childMutator, ObservationDuration duration, TimeProvider timeProvider)
+    public DurationMeasuringMutator(IMutator<TCandidate> childMutator, DurationAccumulator duration, TimeProvider timeProvider)
         : base(childMutator)
     {
         Duration = duration;
@@ -25,7 +25,7 @@ public sealed record DurationMeasuringMutator<TCandidate> : WrappingMutator<TCan
     protected override IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childMutator) =>
         new Instance<TRunSearchSpace, TRunProblem>(childMutator, Duration, TimeProvider);
 
-    private sealed class Instance<TSearchSpace, TProblem>(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator, ObservationDuration duration, TimeProvider timeProvider)
+    private sealed class Instance<TSearchSpace, TProblem>(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator, DurationAccumulator duration, TimeProvider timeProvider)
         : WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem>(childMutator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -47,10 +47,10 @@ public sealed record DurationMeasuringMutator<TCandidate> : WrappingMutator<TCan
 
 public static class DurationMeasuringMutator
 {
-    public static DurationMeasuringMutator<TCandidate> Create<TCandidate>(IMutator<TCandidate> childMutator, ObservationDuration duration) =>
+    public static DurationMeasuringMutator<TCandidate> Create<TCandidate>(IMutator<TCandidate> childMutator, DurationAccumulator duration) =>
         new(childMutator, duration);
 
-    public static DurationMeasuringMutator<TCandidate> Create<TCandidate>(IMutator<TCandidate> childMutator, ObservationDuration duration, TimeProvider timeProvider) =>
+    public static DurationMeasuringMutator<TCandidate> Create<TCandidate>(IMutator<TCandidate> childMutator, DurationAccumulator duration, TimeProvider timeProvider) =>
         new(childMutator, duration, timeProvider);
 }
 
@@ -58,19 +58,19 @@ public static class MutatorDurationExtensions
 {
     extension<TCandidate>(IMutator<TCandidate> mutator)
     {
-        public DurationMeasuringMutator<TCandidate> MeasureDuration(ObservationDuration duration) => new(mutator, duration);
+        public DurationMeasuringMutator<TCandidate> MeasureDuration(DurationAccumulator duration) => new(mutator, duration);
 
-        public DurationMeasuringMutator<TCandidate> MeasureDuration(ObservationDuration duration, TimeProvider timeProvider) => new(mutator, duration, timeProvider);
+        public DurationMeasuringMutator<TCandidate> MeasureDuration(DurationAccumulator duration, TimeProvider timeProvider) => new(mutator, duration, timeProvider);
 
-        public DurationMeasuringMutator<TCandidate> MeasureDuration(out ObservationDuration duration)
+        public DurationMeasuringMutator<TCandidate> MeasureDuration(out DurationAccumulator duration)
         {
-            duration = new ObservationDuration();
+            duration = new DurationAccumulator();
             return new(mutator, duration);
         }
 
-        public DurationMeasuringMutator<TCandidate> MeasureDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringMutator<TCandidate> MeasureDuration(out DurationAccumulator duration, TimeProvider timeProvider)
         {
-            duration = new ObservationDuration();
+            duration = new DurationAccumulator();
             return new(mutator, duration, timeProvider);
         }
     }

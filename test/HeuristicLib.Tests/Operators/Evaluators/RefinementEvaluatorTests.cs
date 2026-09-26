@@ -48,7 +48,7 @@ public class RefinementEvaluatorTests
     [Fact]
     public void Evaluate_IssuesItsEvaluationsThroughTheChildEvaluator()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = CreateEvaluator().CountCandidates(counter).AppliedAfterRefinement(new AddOffsetRefiner(10)).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
         var problem = CreateProblem();
 
@@ -61,7 +61,7 @@ public class RefinementEvaluatorTests
     [Fact]
     public void Evaluate_SharesOneCounterWithAnAlgorithmUsingTheSameEvaluatorInstance()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var sharedEvaluator = CreateEvaluator().CountCandidates(counter);
         var scope = ResolutionScope.Create();
         var refining = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator.AppliedAfterRefinement(new AddOffsetRefiner(10)));

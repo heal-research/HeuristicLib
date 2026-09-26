@@ -1,11 +1,11 @@
 using HEAL.HeuristicLib.Algorithms.AutoEC;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic;
+namespace HEAL.HeuristicLib.Analysis;
 
 /// <summary>
 /// Records the best candidate of every completed epoch and fits a curve through those bests.

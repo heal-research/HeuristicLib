@@ -1,7 +1,7 @@
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic;
+namespace HEAL.HeuristicLib.Analysis;
 
 /// <summary>
 /// The environment version of a dynamic problem, as an axis a trace can record against.

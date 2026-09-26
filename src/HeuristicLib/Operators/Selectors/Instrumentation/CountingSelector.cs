@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -9,10 +9,10 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 public sealed record CountingSelector<TCandidate>
     : WrappingSelector<TCandidate>
 {
-    public ObservationCounter Counter { get; init; }
+    public CountAccumulator Counter { get; init; }
     public OperatorCountMetric Metric { get; init; }
 
-    public CountingSelector(ISelector<TCandidate> childSelector, ObservationCounter counter, OperatorCountMetric metric)
+    public CountingSelector(ISelector<TCandidate> childSelector, CountAccumulator counter, OperatorCountMetric metric)
         : base(childSelector)
     {
         Counter = counter;
@@ -22,7 +22,7 @@ public sealed record CountingSelector<TCandidate>
     protected override ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> childSelector) =>
         new Instance<TRunSearchSpace, TRunProblem>(childSelector, Counter, Metric);
 
-    private sealed class Instance<TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, ObservationCounter counter, OperatorCountMetric metric)
+    private sealed class Instance<TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, CountAccumulator counter, OperatorCountMetric metric)
         : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(childSelector)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -38,7 +38,7 @@ public sealed record CountingSelector<TCandidate>
 
 public static class CountingSelector
 {
-    public static CountingSelector<TCandidate> Create<TCandidate>(ISelector<TCandidate> childSelector, ObservationCounter counter, OperatorCountMetric metric) =>
+    public static CountingSelector<TCandidate> Create<TCandidate>(ISelector<TCandidate> childSelector, CountAccumulator counter, OperatorCountMetric metric) =>
         new(childSelector, counter, metric);
 }
 
@@ -46,19 +46,19 @@ public static class SelectorCounterExtensions
 {
     extension<TCandidate>(ISelector<TCandidate> selector)
     {
-        public CountingSelector<TCandidate> CountCalls(ObservationCounter counter) => new(selector, counter, OperatorCountMetric.Calls);
+        public CountingSelector<TCandidate> CountCalls(CountAccumulator counter) => new(selector, counter, OperatorCountMetric.Calls);
 
-        public CountingSelector<TCandidate> CountCalls(out ObservationCounter counter)
+        public CountingSelector<TCandidate> CountCalls(out CountAccumulator counter)
         {
-            counter = new ObservationCounter();
+            counter = new CountAccumulator();
             return selector.CountCalls(counter);
         }
 
-        public CountingSelector<TCandidate> CountCandidates(ObservationCounter counter) => new(selector, counter, OperatorCountMetric.Candidates);
+        public CountingSelector<TCandidate> CountCandidates(CountAccumulator counter) => new(selector, counter, OperatorCountMetric.Candidates);
 
-        public CountingSelector<TCandidate> CountCandidates(out ObservationCounter counter)
+        public CountingSelector<TCandidate> CountCandidates(out CountAccumulator counter)
         {
-            counter = new ObservationCounter();
+            counter = new CountAccumulator();
             return selector.CountCandidates(counter);
         }
     }

@@ -104,6 +104,12 @@ not a compatibility restriction and an operator omitted from the recommendations
 `IsSubspaceOf` describes candidate membership only. Do not use it as a substitute for operator contracts or
 recommendations.
 
+### § 3.5 Keep dependencies within their layers
+
+Follow the [layering rules](/contributing/architecture/layering) when adding or moving types. Assign a type by its
+responsibility, including where a namespace contains both contracts and implementations, and keep dependencies directed
+from higher layers to lower ones. Treat configuration and execution instance as phases within those responsibilities.
+
 ## § 4 Configuration and execution ownership
 
 ### § 4.1 Separate reusable configurations from execution instances
@@ -520,6 +526,7 @@ For example, `ExpressionDraft` takes an `ExpressionTreeSearchSpace` to resolve s
 - Use detailed namespaces only for contracts, bases and machinery that authors reach for rather than users.
 - Give a concept one namespace. Do not split it into small public namespaces that a user has to import together.
 - A source subfolder adds a namespace segment only when it changes the audience. Folders may organize implementation categories without adding a namespace segment.
+- Every namespace segment must map to its corresponding source folder. Additional grouping folders belong beneath that namespace folder: types in `HEAL.HeuristicLib.Execution` may live in `Execution/Runs` or `Execution/Concurrency` without adding a namespace segment.
 - Use architecture tests for reviewed concept boundaries. Do not enforce a mechanical namespace to path equation across the project.
 - Keep project roots free of source files. Put every type in the folder for its owning concept even when its namespace is intentionally broader than that folder.
 
@@ -533,7 +540,7 @@ Do not move empty implementations, inaccessible results or known unbounded defec
 
 Promote a feature from Experimental only when its responsibility belongs in the standard toolkit, its central API has no expected replacement, its ownership rules match this guide, its advertised behavior is complete, its normal setup has an API usage spec and its important failure behavior has unit tests. Promotion must not force unrelated experimental concepts or unsuitable dependencies into the main package.
 
-The main and Contracts packages must never reference Experimental. Experimental may reference the main package.
+The main package must never reference Experimental. Experimental may reference the main package.
 
 ### § 9.7 Keep XML documentation verifiable by the build
 

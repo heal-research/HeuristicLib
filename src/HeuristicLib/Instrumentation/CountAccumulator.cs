@@ -1,6 +1,6 @@
-namespace HEAL.HeuristicLib.Analysis;
+namespace HEAL.HeuristicLib.Instrumentation;
 
-public sealed class ObservationCounter
+public sealed class CountAccumulator
 {
     private int currentCount;
 

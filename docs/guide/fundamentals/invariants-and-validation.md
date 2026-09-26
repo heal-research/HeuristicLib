@@ -216,6 +216,8 @@ foreach (var diagnostic in report.Diagnostics)
 
 `algorithm.ValidateAndThrow(problem)` is the same check as a guard clause. `SearchConfigurationValidation.Validate(configuration, searchSpace)` checks any configuration — a single operator, a composition — against a space directly, without a problem.
 
+`SearchConfigurationValidation`, `ValidationReport` and `ValidationDiagnostic` are in the `HEAL.HeuristicLib.Execution` namespace.
+
 Every form reports **every** failure it finds rather than stopping at the first, so one pass tells you everything to fix.
 
 ::: warning Resolution does not validate

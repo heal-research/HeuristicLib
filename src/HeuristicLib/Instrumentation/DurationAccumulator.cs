@@ -1,6 +1,6 @@
-namespace HEAL.HeuristicLib.Analysis;
+namespace HEAL.HeuristicLib.Instrumentation;
 
-public sealed class ObservationDuration
+public sealed class DurationAccumulator
 {
     private long currentDurationTicks;
 

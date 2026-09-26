@@ -1,9 +1,9 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Experiments;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Crossovers;
@@ -400,8 +400,8 @@ public class PractitionerUsageSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var mutator = CreateSimpleGeneticAlgorithm(problem).Mutator;
-        var counter = new ObservationCounter();
-        var duration = new ObservationDuration();
+        var counter = new CountAccumulator();
+        var duration = new DurationAccumulator();
 
         var counted = new CountingMutator<RealVector>(mutator, counter, OperatorCountMetric.Candidates);
         var measured = mutator.MeasureDuration(duration);
@@ -468,7 +468,7 @@ public class PractitionerUsageSpecs
     public void GeneticAlgorithm_SharedOperatorCounter_CanDriveExternalEarlyStopping()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem) with
         {
             MaximumGenerations = 5,

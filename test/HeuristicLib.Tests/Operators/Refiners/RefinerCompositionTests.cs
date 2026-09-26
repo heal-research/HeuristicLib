@@ -36,7 +36,7 @@ public class RefinerCompositionTests
     [Fact]
     public void IteratedRefiner_AppliesTheChildRefinerOncePerIteration()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = AddOffset(1).CountCalls(counter).AsIterated(4).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
 
         Refine(instance, 3).ShouldBe([7]);
@@ -102,7 +102,7 @@ public class RefinerCompositionTests
     [Fact]
     public void CountRefinedCandidates_CountsEveryReturnedCandidate()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = AddOffset(1).CountCandidates(counter).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
 
         Refine(instance, 3, 4, 5);
@@ -113,7 +113,7 @@ public class RefinerCompositionTests
     [Fact]
     public void CountRefinerCalls_DoesNotIncrementWhenRefinementThrows()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = new ThrowingRefiner().CountCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
 
         Should.Throw<InvalidOperationException>(() => Refine(instance, 3));
@@ -124,7 +124,7 @@ public class RefinerCompositionTests
     [Fact]
     public void MeasureRefinerDuration_RecordsElapsedDurationWhenRefinementThrows()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var instance = new ThrowingRefiner().MeasureDuration(duration, timeProvider).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
 
@@ -146,8 +146,8 @@ public class RefinerCompositionTests
     [Fact]
     public void ObservableRefiner_ReportsOncePerCallAtItsOwnPositionInTheComposition()
     {
-        var inside = new ObservationCounter();
-        var around = new ObservationCounter();
+        var inside = new CountAccumulator();
+        var around = new CountAccumulator();
         var insideInstance = AddOffset(1).CountCalls(inside).AsIterated(3).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
         var aroundInstance = AddOffset(1).AsIterated(3).CountCalls(around).CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
 
@@ -161,7 +161,7 @@ public class RefinerCompositionTests
     [Fact]
     public void NestedComposition_AppliesEveryStageAndItsInstrumentation()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = PipelineRefiner.Create(
                 AddOffset(1).CountCandidates(counter),
                 Multiply(2).AsIterated(2))

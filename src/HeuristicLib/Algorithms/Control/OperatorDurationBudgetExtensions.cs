@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
@@ -20,7 +20,7 @@ public static class OperatorDurationBudgetExtensions
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperator> LimitedToOperatorDuration<TOperator>(
             TOperator observedOperator,
             TimeSpan maximumDuration,
-            Func<TOperator, ObservationDuration, TimeProvider, TOperator> measuredOperatorFactory)
+            Func<TOperator, DurationAccumulator, TimeProvider, TOperator> measuredOperatorFactory)
             where TOperator : class, IOperator
         {
             return algorithm.LimitedToOperatorDuration(
@@ -34,7 +34,7 @@ public static class OperatorDurationBudgetExtensions
             TOperator observedOperator,
             TimeSpan maximumDuration,
             TimeProvider timeProvider,
-            Func<TOperator, ObservationDuration, TimeProvider, TOperator> measuredOperatorFactory)
+            Func<TOperator, DurationAccumulator, TimeProvider, TOperator> measuredOperatorFactory)
             where TOperator : class, IOperator
         {
             return new()

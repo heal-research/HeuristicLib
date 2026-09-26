@@ -16,7 +16,7 @@ public class CrossoverConfigurationEqualityTests
     {
         var childCrossover = new OffsetCrossover(1);
 
-        var crossover = childCrossover.CountCalls(new ObservationCounter());
+        var crossover = childCrossover.CountCalls(new CountAccumulator());
 
         crossover.ChildCrossover.ShouldBeSameAs(childCrossover);
     }
@@ -145,7 +145,7 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void CountingCrossover_WithSameCounterAndMetric_IsEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new OffsetCrossover(1).CountCalls(counter);
         var right = new OffsetCrossover(1).CountCalls(counter);
 
@@ -156,7 +156,7 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void CountingCrossover_WithDifferentMetric_IsNotEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new OffsetCrossover(1).CountCalls(counter);
         var right = new OffsetCrossover(1).CountCandidates(counter);
 
@@ -166,8 +166,8 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void CountingCrossover_WithDifferentCounter_IsNotEqual()
     {
-        var left = new OffsetCrossover(1).CountCalls(new ObservationCounter());
-        var right = new OffsetCrossover(1).CountCalls(new ObservationCounter());
+        var left = new OffsetCrossover(1).CountCalls(new CountAccumulator());
+        var right = new OffsetCrossover(1).CountCalls(new CountAccumulator());
 
         left.ShouldNotBe(right);
     }
@@ -175,7 +175,7 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void CountingCrossover_WithDifferentChildCrossover_IsNotEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new OffsetCrossover(1).CountCalls(counter);
         var right = new OffsetCrossover(2).CountCalls(counter);
 
@@ -185,7 +185,7 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringCrossover_WithSameDurationAndTimeProvider_IsEqual()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var left = new OffsetCrossover(1).MeasureDuration(duration, TimeProvider.System);
         var right = new OffsetCrossover(1).MeasureDuration(duration, TimeProvider.System);
 
@@ -196,8 +196,8 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringCrossover_WithDifferentDuration_IsNotEqual()
     {
-        var left = new OffsetCrossover(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
-        var right = new OffsetCrossover(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
+        var left = new OffsetCrossover(1).MeasureDuration(new DurationAccumulator(), TimeProvider.System);
+        var right = new OffsetCrossover(1).MeasureDuration(new DurationAccumulator(), TimeProvider.System);
 
         left.ShouldNotBe(right);
     }
@@ -205,7 +205,7 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringCrossover_WithDifferentChildCrossover_IsNotEqual()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var left = new OffsetCrossover(1).MeasureDuration(duration, TimeProvider.System);
         var right = new OffsetCrossover(2).MeasureDuration(duration, TimeProvider.System);
 
@@ -222,7 +222,7 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void RequiredChild_CanBeReplacedWithAWithExpression()
     {
-        var original = new OffsetCrossover(1).CountCalls(new ObservationCounter());
+        var original = new OffsetCrossover(1).CountCalls(new CountAccumulator());
         var replacement = new OffsetCrossover(2);
 
         var reconfigured = original with { ChildCrossover = replacement };

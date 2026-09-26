@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,10 +8,10 @@ namespace HEAL.HeuristicLib.Operators.Refiners;
 public sealed record CountingRefiner<TCandidate>
     : WrappingRefiner<TCandidate>
 {
-    public ObservationCounter Counter { get; init; }
+    public CountAccumulator Counter { get; init; }
     public OperatorCountMetric Metric { get; init; }
 
-    public CountingRefiner(IRefiner<TCandidate> childRefiner, ObservationCounter counter, OperatorCountMetric metric)
+    public CountingRefiner(IRefiner<TCandidate> childRefiner, CountAccumulator counter, OperatorCountMetric metric)
         : base(childRefiner)
     {
         Counter = counter;
@@ -21,7 +21,7 @@ public sealed record CountingRefiner<TCandidate>
     protected override IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> childRefiner) =>
         new Instance<TRunSearchSpace, TRunProblem>(childRefiner, Counter, Metric);
 
-    private sealed class Instance<TSearchSpace, TProblem>(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner, ObservationCounter counter, OperatorCountMetric metric)
+    private sealed class Instance<TSearchSpace, TProblem>(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner, CountAccumulator counter, OperatorCountMetric metric)
         : WrappingRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiner)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -37,7 +37,7 @@ public sealed record CountingRefiner<TCandidate>
 
 public static class CountingRefiner
 {
-    public static CountingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> childRefiner, ObservationCounter counter, OperatorCountMetric metric) =>
+    public static CountingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> childRefiner, CountAccumulator counter, OperatorCountMetric metric) =>
         new(childRefiner, counter, metric);
 }
 
@@ -45,19 +45,19 @@ public static class RefinerCounterExtensions
 {
     extension<TCandidate>(IRefiner<TCandidate> refiner)
     {
-        public CountingRefiner<TCandidate> CountCalls(ObservationCounter counter) => new(refiner, counter, OperatorCountMetric.Calls);
+        public CountingRefiner<TCandidate> CountCalls(CountAccumulator counter) => new(refiner, counter, OperatorCountMetric.Calls);
 
-        public CountingRefiner<TCandidate> CountCalls(out ObservationCounter counter)
+        public CountingRefiner<TCandidate> CountCalls(out CountAccumulator counter)
         {
-            counter = new ObservationCounter();
+            counter = new CountAccumulator();
             return refiner.CountCalls(counter);
         }
 
-        public CountingRefiner<TCandidate> CountCandidates(ObservationCounter counter) => new(refiner, counter, OperatorCountMetric.Candidates);
+        public CountingRefiner<TCandidate> CountCandidates(CountAccumulator counter) => new(refiner, counter, OperatorCountMetric.Candidates);
 
-        public CountingRefiner<TCandidate> CountCandidates(out ObservationCounter counter)
+        public CountingRefiner<TCandidate> CountCandidates(out CountAccumulator counter)
         {
-            counter = new ObservationCounter();
+            counter = new CountAccumulator();
             return refiner.CountCandidates(counter);
         }
     }

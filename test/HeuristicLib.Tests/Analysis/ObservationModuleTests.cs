@@ -76,7 +76,7 @@ public class ObservationModuleTests
     {
         IEvaluator<int> evaluator = new ProblemEvaluator<int>();
         var problem = CreateProblem();
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var observed = new List<IEvaluator<int>>();
         var root = ResolutionScope.Create(builder =>
             builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, observation => observed.Add(observation.Evaluator)));

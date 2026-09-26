@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -9,10 +9,10 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 public sealed record CountingEvaluator<TCandidate>
     : WrappingEvaluator<TCandidate>
 {
-    public ObservationCounter Counter { get; init; }
+    public CountAccumulator Counter { get; init; }
     public OperatorCountMetric Metric { get; init; }
 
-    public CountingEvaluator(IEvaluator<TCandidate> childEvaluator, ObservationCounter counter, OperatorCountMetric metric)
+    public CountingEvaluator(IEvaluator<TCandidate> childEvaluator, CountAccumulator counter, OperatorCountMetric metric)
         : base(childEvaluator)
     {
         Counter = counter;
@@ -22,7 +22,7 @@ public sealed record CountingEvaluator<TCandidate>
     protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
         new Instance<TRunSearchSpace, TRunProblem>(childEvaluator, Counter, Metric);
 
-    private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationCounter counter, OperatorCountMetric metric)
+    private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, CountAccumulator counter, OperatorCountMetric metric)
         : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -38,7 +38,7 @@ public sealed record CountingEvaluator<TCandidate>
 
 public static class CountingEvaluator
 {
-    public static CountingEvaluator<TCandidate> Create<TCandidate>(IEvaluator<TCandidate> childEvaluator, ObservationCounter counter, OperatorCountMetric metric) =>
+    public static CountingEvaluator<TCandidate> Create<TCandidate>(IEvaluator<TCandidate> childEvaluator, CountAccumulator counter, OperatorCountMetric metric) =>
         new(childEvaluator, counter, metric);
 }
 
@@ -46,20 +46,20 @@ public static class EvaluatorCounterExtensions
 {
     extension<TCandidate>(IEvaluator<TCandidate> evaluator)
     {
-        public CountingEvaluator<TCandidate> CountCalls(ObservationCounter counter) => new(evaluator, counter, OperatorCountMetric.Calls);
+        public CountingEvaluator<TCandidate> CountCalls(CountAccumulator counter) => new(evaluator, counter, OperatorCountMetric.Calls);
 
-        public CountingEvaluator<TCandidate> CountCalls(out ObservationCounter counter)
+        public CountingEvaluator<TCandidate> CountCalls(out CountAccumulator counter)
         {
-            counter = new ObservationCounter();
+            counter = new CountAccumulator();
             return evaluator.CountCalls(counter);
         }
 
-        public CountingEvaluator<TCandidate> CountCandidates(ObservationCounter counter) =>
+        public CountingEvaluator<TCandidate> CountCandidates(CountAccumulator counter) =>
             new(evaluator, counter, OperatorCountMetric.Candidates);
 
-        public CountingEvaluator<TCandidate> CountCandidates(out ObservationCounter counter)
+        public CountingEvaluator<TCandidate> CountCandidates(out CountAccumulator counter)
         {
-            counter = new ObservationCounter();
+            counter = new CountAccumulator();
             return evaluator.CountCandidates(counter);
         }
     }

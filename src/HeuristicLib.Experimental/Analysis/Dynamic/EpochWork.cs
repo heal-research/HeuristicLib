@@ -1,8 +1,8 @@
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic;
+namespace HEAL.HeuristicLib.Analysis;
 
 /// <summary>
 /// The work one environment received.

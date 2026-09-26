@@ -79,7 +79,7 @@ public class RefinerEvaluatorAccountingTests
     [Fact]
     public void InAPipeline_OnlyTheStageWithAnEvaluatorEvaluates()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = PipelineRefiner.Create(
                 new AddOffsetRefiner(-1),
                 new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().CountCandidates(counter)))

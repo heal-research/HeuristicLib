@@ -1,5 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -9,9 +9,9 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 public sealed record CountingInterceptor<TCandidate>
     : WrappingInterceptor<TCandidate>
 {
-    public ObservationCounter Counter { get; init; }
+    public CountAccumulator Counter { get; init; }
 
-    public CountingInterceptor(IInterceptor<TCandidate> childInterceptor, ObservationCounter counter)
+    public CountingInterceptor(IInterceptor<TCandidate> childInterceptor, CountAccumulator counter)
         : base(childInterceptor)
     {
         Counter = counter;
@@ -20,7 +20,7 @@ public sealed record CountingInterceptor<TCandidate>
     protected override IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childInterceptor) =>
         new Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor, Counter);
 
-    private sealed class Instance<TSearchSpace, TProblem, TSearchState>(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, ObservationCounter counter)
+    private sealed class Instance<TSearchSpace, TProblem, TSearchState>(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, CountAccumulator counter)
         : WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptor)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -37,7 +37,7 @@ public sealed record CountingInterceptor<TCandidate>
 
 public static class CountingInterceptor
 {
-    public static CountingInterceptor<TCandidate> Create<TCandidate>(IInterceptor<TCandidate> childInterceptor, ObservationCounter counter) =>
+    public static CountingInterceptor<TCandidate> Create<TCandidate>(IInterceptor<TCandidate> childInterceptor, CountAccumulator counter) =>
         new(childInterceptor, counter);
 }
 
@@ -45,11 +45,11 @@ public static class InterceptorCounterExtensions
 {
     extension<TCandidate>(IInterceptor<TCandidate> interceptor)
     {
-        public CountingInterceptor<TCandidate> CountCalls(ObservationCounter counter) => new(interceptor, counter);
+        public CountingInterceptor<TCandidate> CountCalls(CountAccumulator counter) => new(interceptor, counter);
 
-        public CountingInterceptor<TCandidate> CountCalls(out ObservationCounter counter)
+        public CountingInterceptor<TCandidate> CountCalls(out CountAccumulator counter)
         {
-            counter = new ObservationCounter();
+            counter = new CountAccumulator();
             return interceptor.CountCalls(counter);
         }
     }

@@ -1,8 +1,8 @@
 using System.Reflection;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.SearchSpaces;
+namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>
 /// One problem found while validating a configuration, naming where in the configuration it was found.

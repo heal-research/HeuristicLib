@@ -47,7 +47,7 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void InstrumentationRefiners_ReportThePopulationTheRefinerActuallyReturned()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var instance = new DropLastRefiner()
             .CountCandidates(counter)
             .CreateExecutionInstance<DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ResolutionScope.Create());
@@ -78,8 +78,8 @@ public class RefinerBatchSemanticsTests
         yield return ("iterated", noChange.AsIterated(3));
         yield return ("choose one", ChooseOneRefiner.Create(noChange));
         yield return ("rate limited", new AddOffsetRefiner(1).AppliedAtRate(0.0));
-        yield return ("counting", noChange.CountCandidates(new ObservationCounter()));
-        yield return ("duration measuring", noChange.MeasureDuration(new ObservationDuration()));
+        yield return ("counting", noChange.CountCandidates(new CountAccumulator()));
+        yield return ("duration measuring", noChange.MeasureDuration(new DurationAccumulator()));
         yield return ("improvement checking", noChange.CheckedForImprovement());
         yield return ("single candidate", new IdentityRefiner());
     }

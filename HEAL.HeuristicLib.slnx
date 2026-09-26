@@ -12,7 +12,6 @@
     <Project Path="samples/TravelingSalesman/TravelingSalesman.csproj" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/HeuristicLib.Contracts/HeuristicLib.Contracts.csproj" />
     <Project Path="src/HeuristicLib.Experimental/HeuristicLib.Experimental.csproj" />
     <Project Path="src/HeuristicLib.PythonInterop/HeuristicLib.PythonInterop.csproj" />
     <Project Path="src/HeuristicLib/HeuristicLib.csproj" />
