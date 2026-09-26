@@ -174,6 +174,10 @@ Representative cases (resolve order is left to right):
 
 Reusing a cached composite also reuses the children it already holds. The resolver does not traverse those children again under the requesting scope. Scope nesting describes lookup ancestry; it does not identify which caller invokes a shared instance.
 
+For example, a parent scope observes mutator M and constructs algorithm G, which retains its resolved M instance. A child scope adds another observation of M and resolves G. If G is reused from the parent, its stored M reference is unchanged: the parent's observation still receives calls through G, but the child's additional observation does not. Resolving M directly is a different operation from invoking G's already-bound child. Child registrations do not modify a reused composite's dependencies.
+
+This limitation does not hide deferred descendants from parent observers. `CycleAlgorithm` and `PipelineAlgorithm` retain their creating scope and use it to create scopes for delayed child resolution. Observations inherited from that creating scope apply to those later resolutions. Reusing the algorithm from a different child scope does not replace its retained scope or add that requesting scope's observations to its future children. The distinction is which scope binds the dependencies, not whether execution has started.
+
 ## Ordering
 
 Decorations are sorted innermost to outermost by three keys, in this order:

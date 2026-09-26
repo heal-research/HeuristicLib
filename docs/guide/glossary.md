@@ -461,11 +461,23 @@ Related terms:
 
 See also: Algorithm, Execution instance, Operator, Run.
 
+### Configuration node
+
+Status: `Canonical`
+
+A configuration node is a configuration considered as a node in the configuration graph. Its identity is the configuration object's reference, not its value equality or one occurrence along a caller path. Several configurations may refer to the same child node.
+
+Configuration is accepted shorthand for configuration node when the context is clear. Use node when graph membership needs emphasis, or a role-specific term such as mutator when the role is known. The common interface is currently `IExecutionConfiguration`; its agreed replacement is `IConfigurationNode`, including its generic form. Role-specific configuration names such as `IOperator` and `IMutator` do not acquire a `Node` suffix.
+
+The term does not imply a common child-enumeration API or a universal operation on all nodes.
+
+See also: Configuration, Configuration graph, Execution node, Node selector.
+
 ### Configuration graph
 
 Status: `Canonical`
 
-A configuration graph is the graph of reusable configuration objects connected by references.
+A configuration graph is the graph of reusable configuration nodes connected by references.
 
 Use graph rather than tree because the same configuration object may be shared from more than one place. Do not use DAG as the glossary term; ordinary configuration graphs are expected to be acyclic, but the glossary term should not encode that stricter shape.
 
@@ -513,32 +525,33 @@ Use search terminology for the state and the search space, but do not use search
 
 See also: Candidate, Evaluated candidate, Execution state, Run, Search space.
 
-### Execution instance
+### Execution node
 
 Status: `Canonical`
 
-An execution instance is the concrete runtime object created from a configuration. Algorithms and operators are the main examples in the execution model.
+An execution node is the resolved runtime object that implements the operations of an algorithm or operator. Its resolved child references connect it to other execution nodes. It may hold private execution data or references to that data.
 
-Execution instances perform the work of an algorithm or operator after configuration has been resolved for execution. They may hold private execution state and resolved child execution instances.
+An execution node is distinct from a run, a single operation invocation and the planned persistent execution record in the resolver. The name alone does not promise a particular lifetime, a fresh allocation or a separate state object. A node can be shorter-lived than the run; a stateless configuration can also serve as its own execution node.
 
-An execution instance can be shorter-lived than the run. Meta-algorithms may create fresh execution instances for nested algorithms while all of those nested execution instances still belong to the same run.
+The common interface is currently `IExecutionInstance`. The agreed replacements are `IExecutionNode` and role-specific names such as `IOperatorExecution`, `IMutatorExecution` and `IAlgorithmExecution`, without a `Node` suffix on those roles. Renaming these types does not itself change execution-state ownership or resolution.
 
-Use role-specific terms when the context benefits from them:
+Execution is accepted shorthand for execution node when the context clearly refers to the callable object. Use node when graph membership needs emphasis, or role-specific terms such as algorithm execution, operator execution or mutator execution when the role is known. Use invocation or run when referring to execution over time.
 
-- `algorithm execution instance`
-- `operator execution instance`
-- `creator execution instance`
-- `evaluator execution instance`
-- `crossover execution instance`
-- `mutator execution instance`
+See also: Configuration node, Execution graph, Execution state, Run.
 
-See also: Configuration, Execution state, Run.
+### Execution instance
+
+Status: `Legacy`
+
+The former term for an execution node. Prefer execution node or a role-specific form such as mutator execution in new prose. Existing APIs still use `Instance` until the naming migration; references to those current symbols must use their actual names.
+
+See also: Execution node.
 
 ### Execution state
 
 Status: `Canonical`
 
-Execution state is private mutable state owned by an execution instance.
+Execution state is private mutable data used by an execution node. The current implementation owns it on that object or in framework-managed operator state; separating persistent ownership from replaceable execution nodes is planned, not yet implemented.
 
 Execution state can contain resolved child execution instances, counters, caches, buffers, or other data that must not be shared through the reusable configuration.
 
@@ -550,7 +563,7 @@ See also: Configuration, Execution instance, Run, Search state.
 
 Status: `Canonical`
 
-An execution graph is a graph of execution instances created from a configuration graph during a run.
+An execution graph is a graph of execution nodes created from a configuration graph during a run.
 
 A run may contain more than one execution graph over time, for example when meta-algorithms create fresh execution instances for nested algorithms.
 
