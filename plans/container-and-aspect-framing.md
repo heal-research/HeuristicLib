@@ -1,221 +1,170 @@
 # Container and aspect framing
 
-Status: direction accepted; DI/AOP implementation remains future work. This follows the completed layering overhaul, whose current rules are documented in [layering](../docs/contributing/architecture/layering.md). Written during `analysis-overhaul` and updated with the layering branch's settled decisions. The original analysis is in [layering and phase separation](layering-and-phase-separation.md).
+Status: packages 1 and 2 completed and approved for commit. The next step is the graph-selection naming and semantics discussion. Implementation choices below remain open. Stop after each package for review; do not commit automatically.
 
-This document compares the execution model with dependency injection containers and aspect-oriented programming, records the direction taken from that comparison, and orders the work together with the layering report. The report remains the record of its findings and its dependency analysis.
+Reviewed against `37e8bdcc` (the layering overhaul merged into `dev`) on 2026-09-26. Work continues on `container-and-aspect-framing`. The completed layering implementation plan and its obsolete analysis report have been removed; Git history preserves them. Durable rules live in [layering](../docs/contributing/architecture/layering.md), the [developer guidelines](../docs/contributing/developer-guidelines.md), the [design goals](../docs/contributing/design-goals.md) and the [developer backlog](developer-backlog.md).
 
-## Summary
+## Purpose and settled foundations
 
-The execution model is two well-known systems in one:
+Use DI and AOP as comparison models for concrete HeuristicLib authoring problems. Extend selection and attached behavior where they help users work with algorithm and operator graphs. An analyzer is already an execution module that owns results. The new capability is selecting more than one known configuration reference and expressing typed behavior beyond successful-operation observation.
 
-- Resolution is a scoped DI container. `ResolutionScopeBuilder` is the registration phase, `ResolutionScope` the resolution phase, and child scopes are nested lifetime scopes.
-- Decoration is an aspect weaver. Budgets and racing wrappers are around advice, observations are after-returning advice, and `IExecutionModule` is the aspect. The scope weaves them in as it builds each instance.
+**Settled design approach:** discuss a choice when its package needs it, using the current implementation and representative HeuristicLib usage. Do not copy AspectJ semantics or AOP vocabulary merely for conformity. Names must make sense to users who know algorithms and operators but do not know AOP. `Pointcut`, `JoinPoint`, `Advice` and `Aspect` are working comparison terms, not accepted public type names. `NodeSelector` is one candidate for graph selection, not a settled replacement for `Pointcut`. Choose names alongside the responsibility they express, including whether selection addresses configuration objects, graph occurrences, execution instances or operation boundaries. This does not reopen settled foundations.
 
-The names mostly agree with that reading already. `builder.Install(module)` is Guice's `install`, `Decorate` rewrites a registration the way Scrutor's does, and `IExecutionModule` has the shape of an Autofac or Guice module. What is missing is saying so, and going further where AOP offers more than HeuristicLib does today.
+Preserve these settled foundations:
 
-The direction:
+- Configuration-reference resolution, explicit instance creation and declared child resolution. Type matching selects advice targets; it never supplies dependencies by type.
+- Typed role contracts and handwritten wrappers. No dynamic proxies, reflection emit, universal role invocation or runtime service locator.
+- `IAnalyzer : IExecutionModule` with one installation contract. Keep `Attach`, `AttachPerTrial` and `GetAttached` as the user-facing attachment methods.
+- Run-specific lifecycle ownership. `AlgorithmRun` keeps its lifecycle and retained enumerator; `ExperimentRun` owns trial scheduling. No shared `RunHost`.
+- Concept namespaces with corresponding source folders and optional grouping folders beneath them. Do not arrange namespaces or assemblies by layer.
+- Nesting pointcuts must not silently split or merge mutable execution state. Selecting observations must not change which callers share the underlying state.
 
-1. Say it. The docs present the execution model as a DI container plus an aspect weaver, so users recognize concepts they know instead of learning a system of HeuristicLib's own.
-2. Use the established terms. API names follow AOP and DI terminology where the meaning matches. A different name is fine where it is clearly better. Final names are decided in the branch.
-3. Lean into AOP. Pointcuts become a type of their own with matching in the style of AspectJ, all advice kinds become available, and analysis becomes one client of that system: an analyzer is a module, with no parallel contract.
-4. Keep an order. The layering branch goes first and cleans up the structure. The DI and AOP alignment builds on it.
+A recommendation below is not a settled decision. Current behavior remains the baseline until an explicitly reviewed change replaces it.
 
-Some things stay refused, listed below: type-keyed resolution and auto-wiring, dynamic proxies, a universal role invocation path and a runtime service locator.
+Confirmed for the initial implementation on 2026-09-26: start with typed reference, role and type matching; preserve current instance reuse and origin/depth/declaration ordering; defer nesting; retain the operator name `Interceptor`. Whether state transformation should eventually move from that role to typed algorithm advice remains a separate open design question.
 
-## The framing
+## Current implementation and corrections
 
-### Two halves and the joint
+### Resolution and construction
 
-| HeuristicLib | DI container | AOP |
+The implementation is in [ResolutionScope.cs](../src/HeuristicLib/Execution/ResolutionScope.cs); existing behavior tests are in [ResolutionScopeTests.cs](../test/HeuristicLib.Tests/Execution/ResolutionScopeTests.cs).
+
+- `Decorate` registers `Func<TConfiguration, TConfiguration>` against one configuration reference. There is no pointcut type, role/type pattern registry, name metadata or caller-path matcher.
+- `Resolve(configuration, create)` searches the resolving scope and its ancestors. At each scope it checks under-construction instances, cached instances, then declarations for the target. A declaration stops the upward search. If nothing is reusable, resolution builds and caches in the resolving scope.
+- Identical decoration chains permit ancestor reuse; they do not guarantee sharing. A child that resolves first keeps its instance, and a parent resolving later builds its own. Siblings cannot inspect each other's caches, but both can reuse an instance already held by their common ancestor. The earlier claims that chain identity alone determines identity and that siblings never share were too strong.
+- The barrier is per configuration. Decorating one target does not block ancestor reuse of an unrelated target. Reusing a cached parent configuration also reuses its already-resolved children; they are not resolved again under the requesting scope.
+- A chain creates the raw instance first, then creates each wrapper through the supplied creation delegate. Temporary under-construction entries prevent wrappers from rebuilding children. Wrapper configurations produced by decorations do not automatically pass through a fresh top-level `Resolve` lookup. A future matcher must decide which objects it sees.
+- Builder and scope are separate types, and `Build` snapshots declarations. The callback can retain the builder and mutate it later without affecting the existing scope. The escaped-builder test covers this. The earlier claim that such code cannot be written was incorrect.
+- A run owns a root scope and may contain child scopes or several execution graphs. Scopes have no execution-instance disposal contract. The DI analogy must not imply conventional lifetime registrations or deterministic disposal.
+
+### Attachments, observation and instrumentation
+
+[AlgorithmRun](../src/HeuristicLib/Execution/Runs/AlgorithmRun.cs) accepts modules while preparing, deduplicates by reference and installs in attachment order at execution start. [ExperimentRun](../src/HeuristicLib/Experiments/ExperimentRun.cs) creates per-trial attachments; attaching the same trial factory twice is rejected. These are completed layering work.
+
+Current observation wrappers cover algorithms, evaluators, crossovers, mutators and interceptors. Operator callbacks run after a successful operation. [Algorithm observation](../src/HeuristicLib/Analysis/Tracing/Observations/AlgorithmObservation.cs) runs for each yielded search state before forwarding it, rather than once after the async stream completes. There is no general before/throwing/finally/around advice API.
+
+Counting increments after successful calls; duration measurement records in `finally`, including failed calls. Their sinks are now `Instrumentation.CountAccumulator` and `DurationAccumulator`. Reusing a wrapper configuration with a caller-owned sink shares that sink even across independent execution instances. Budgets create their instrumentation during instance creation. Advice objects, analyzers, clocks and underlying execution instances need separate ownership discussions.
+
+The dynamic-problem observation dependency remains the exact exception in [layering](../docs/contributing/architecture/layering.md#dependency-rules). Removing it depends on algorithm-boundary advice, not merely pointcuts.
+
+### Precedence
+
+`ResolutionScope.Chain` orders wrappers **innermost to outermost**: configuration origin before module origin, deeper scope before shallower scope, then earlier decoration declaration before later declaration. `Install` stamps module origin and deduplicates module objects per builder. The final key is decoration sequence, including nested installations, not a separate rank per module.
+
+For wrappers A then B at the same origin and depth, the chain is `B(A(target))`. Entry work runs B then A; successful exit callbacks run A then B. "First installed runs first" is therefore incorrect for before/around advice. Traces install clocks first so their callbacks update before the trace reads them.
+
+Configuration-origin duration budgets stay inside module observations so they exclude observer callback work. Around advice that retries, suppresses calls or throws introduces ordering questions the current sort keys do not answer.
+
+### Names and analogies
+
+`ResolutionScope`, `ResolutionScopeBuilder`, `Decorate`, `IExecutionModule` and `Install` are current API names. `Decoration` is internal; `DecorationOrigin` is public. `ExecutionSignature.Fits` checks execution-type compatibility, not complete graph validity or configuration settings.
+
+`Interceptor` remains canonical for the role transforming a produced search state. No role rename is planned. The proposed AOP vocabulary uses advice, so it does not require reserving `Interceptor` for a second concept.
+
+Pointcuts, advice and aspects are provisional terms used to discuss the extension; neither those public names nor their type shapes are settled. Compare graph-oriented alternatives when each API is designed. "AspectJ-style" is inspiration, not a matching specification. A CLR type attribute cannot hold a different runtime name for each instance of a proposed `Named` wrapper. Also, directly creating a child bypasses decoration of that child, but descendants it resolves through the scope can still receive their own decorations; earlier prose overstated that bypass.
+
+## Decisions before dependent implementation
+
+### D1: State transformation responsibility and naming
+
+**Settled naming decision:** retain `Interceptor`. With advice as the proposed AOP vocabulary, there is no naming collision to resolve. `StateTransformer` describes the operation but does not convey its iteration timing more clearly, so the rename would not solve the stated problem. See the [rejected rename rationale](developer-backlog.md#renaming-interceptor-only-to-make-room-for-aop).
+
+**Open:** whether state transformation needs a separate operator role or should become typed algorithm advice. Also decide whether the execution module contract serves as the public aspect abstraction; avoid an overlapping `IAspect` introduced only for the analogy.
+
+Current [IterativeAlgorithmInstance](../src/HeuristicLib/Algorithms/BaseClasses/IterativeAlgorithm.cs) performs `step -> Transform -> IsTerminalState -> yield`, then retains the transformed state for the next step and completion check. `Transform` receives the previous state, iteration RNG, search space and problem. `RemoveDuplicatesInterceptor` is a concrete population transformation; pipelines and stateful implementations are also supported. [IterativeAlgorithmInstanceTests](../test/HeuristicLib.Tests/Algorithms/IterativeAlgorithmInstanceTests.cs) characterize termination order and the iteration RNG.
+
+An ordinary wrapper around `RunStreamingAsync` can replace a state seen by the outer consumer but cannot replace the inner iterator's retained state or undo its termination decision. Pointcut selection alone does not create that missing boundary. Equivalent advice requires an explicit typed state-transformation boundary inside the iteration loop, with a contract that consumer-defined algorithms can implement. It must not silently apply to algorithms that expose only a stream.
+
+| Option | Benefit | Cost or condition |
 | --- | --- | --- |
-| Configuration | Registration, Spring bean definition | |
-| Execution instance | Resolved service, bean | Target object |
-| `ResolutionScopeBuilder` | `IServiceCollection`, Autofac `ContainerBuilder`, Guice `Binder` | |
-| `ResolutionScope` | `IServiceProvider`, Autofac `ILifetimeScope` | Weaver |
-| `CreateChildScope` | `CreateScope`, `BeginLifetimeScope` | |
-| `Decorate` | Scrutor `Decorate` | Around advice |
-| `IExecutionModule`, `Install` | Autofac `Module`, Guice `AbstractModule` and `install` | Aspect |
-| `Observe` callback | | After-returning advice |
-| Observation value | | Join point context |
-| Algorithm and operator boundaries | | Join points |
-| Observation source | | Pointcut naming one configuration |
-| `DecorationOrigin` and the ordering rules | Decorator registration order | Advice precedence |
-| `ExecutionSignature.Fits` | `ValidateOnBuild`, Simple Injector `Verify()` | |
-| Run | One container scope | |
-| `NewExecutionInstancesPerCycle` | A new lifetime scope per unit of work | |
+| Keep an explicit role | A reusable, configured algorithm dependency with existing composition, validation and state sharing. | Maintains a full operator family alongside algorithm advice. Clarify which concern belongs where. |
+| Replace the role with algorithm advice | One mechanism for selecting and composing algorithm-boundary behavior. | Needs the internal typed boundary, configuration/value semantics, shared-state ownership and equivalent termination/feedback/RNG behavior. Stream wrappers alone are insufficient. |
+| Keep transformation strategies behind an advice adapter | Separates reusable transformation logic from where it is applied. | Risks two overlapping public authoring surfaces; justify with real reuse before adding both. |
 
-The joint between the halves is the decoration's type. A decoration is `Func<TConfiguration, TConfiguration>`. It rewrites the registration rather than the instance, as Scrutor rewrites a `ServiceDescriptor`, and the scope then resolves the rewritten registration. Weaver and container are one component, which is why decoration composes with resolution instead of running beside it.
+**Recommendation, not decision:** defer replacing the role until the typed algorithm boundary has a concrete design. Compare the first two options with a deduplication example and a stateful transformation shared by two algorithms. The proposal must preserve next-step input, termination, RNG, pausing, ordering and shared state. Do not implement both surfaces merely to postpone the choice.
 
-Guice is the closest single precedent. Its `bindInterceptor(classMatcher, methodMatcher, interceptor)` registers advice inside the same container that resolves the advised objects.
+Retaining `IExecutionModule` and `Install` is a proposal independent of this role decision. Proposed AOP type names such as `Advice`/`AroundAdvice` still need API design; keeping `Interceptor` does not settle those signatures. The precise operator boundary remains after a successful step and before termination evaluation and publication, with the transformed state feeding the next iteration.
 
-### Where the model departs from both
+The earlier proposed glossary status `Analogue` is optional. The first package uses an explicitly labelled analogy table and keeps canonical terms unchanged.
 
-Each of these is hard to explain today and takes one sentence once the reader's prior is named.
+### D2: Pointcut matching and typed authoring
 
-1. **Keyed by object reference, not by service type.** Two equal configurations are two registrations. A `with` copy is a new registration, so an analyzer attached to the original records nothing when the copy runs. Resolution looks nothing up by type.
-2. **Instance identity is chain identity.** Two scopes share an execution instance exactly when the decoration chains applying to it are identical. In Spring a proxied singleton is still one singleton, and in Autofac a decorated registration keeps its one lifetime. Here the chain is part of what an instance is. Sibling scopes never share, and instances are never hoisted to the ancestor that owns their chain, because hoisting would let an instance outlive the scope it was built for. That is the failure a captive dependency causes in a DI container, reached from the other side.
-3. **Precedence is derived, not declared.** AspectJ's `declare precedence` and Spring's `@Order` leave the order of two aspects at one join point to the author, and undefined without one. Here it follows from origin, then scope depth, then install order. Origin comes first so that advice the configuration itself declares, such as a budget, always sits inside advice a run adds and never measures it.
+**Settled initial scope:** typed reference, role and type matching. Attributes, names, wildcard strings and nesting are deferred. **Still open:** specify these before implementing a matcher:
 
-A fourth difference belongs with the phases. Registering after the container is built is silently ignored by MS DI and throws in Simple Injector. Here it cannot be written, because declaring and resolving are separate types.
+- The selection concept's public name, using graph-oriented candidates such as `NodeSelector` alongside the working term `Pointcut`. Choose from concrete usage and what the selected object represents; familiarity with AOP is not a prerequisite for users.
+- Reference identity, exact versus assignable types, closed/open generic roles, AND/OR/NOT composition and whether overlapping branches apply one registration once or several times.
+- Matching original configurations, configured wrappers and/or wrappers produced by decorations. Avoid recursive advice on advice wrappers; preserve the selected original source in observations.
+- How typed selection proves advice can wrap the requested configuration/instance role, including a consumer-defined role. Keep stand-in compatibility checks; no universal invocation or built-in-role switch.
+- Configurations created during resolution, delayed child construction, ancestor cache hits and child-scope registrations. Construction-time matching does not imply the complete graph exists at run start.
+- Attribute inheritance, type-name/namespace/generic wildcard grammar, and runtime names with equality and persistence semantics. A naming wrapper adds a configuration identity and must not accidentally clone its child's state.
 
-These describe the model as it is today, not constraints on the redesign. If the alignment moves closer to standard AOP, adopting its resolution and precedence rules more closely is an option, where that makes the system easier to understand or solves a problem the current rules cannot.
+**Proposal for the remaining details:** a typed C# API with assignable-type selection against original configurations. Exact matching rules and API signatures still need review. Pattern pointcuts matching nothing are valid and silent, as already recorded in the backlog. Configuration-taking trace shortcuts remain convenient entry points.
 
-## Relation to the layering report
+The earlier `Anchor<TObservation>` experiment merely renamed one configuration reference and was removed. Selecting more than one known reference is what must justify the new abstraction.
 
-The report reached the same model from the other side. Its part 1 lists "DI registrations, container, resolved object graph" as one of three fitting analogies, and its part 3 names pointcut, advice and weaver.
+### D3: Nesting and instance sharing
 
-| Layering report | Where it goes |
-| --- | --- |
-| Part 1: configuration and execution are phases, not layers | Adopted as the model both branches work from |
-| Part 1: `Execution` holds four responsibilities | Layering branch: ownership checks and `Execution/Runs` and `Execution/Concurrency` grouping folders, retaining one `Execution` namespace |
-| Cycle 1: counters under `Analysis` | Layering branch: `Instrumentation.CountAccumulator` and `DurationAccumulator` |
-| Cycle 2: `IAnalyzer` and `IExecutionModule` share a signature | Layering branch: analyzers become modules, with no parallel contract |
-| The `DecorationOrigin` hole | Closed on `analysis-overhaul` by the run. It disappears for good once analyzers are modules |
-| Part 3: the pointcut has no type | DI and AOP branch: a pointcut type with AspectJ-style matching, replacing the report's phase 4 |
-| Part 4: `AlgorithmRun` is three objects | Reconsidered in the layering branch: lifecycle characterization retained; shared host and mandatory composition/continuation extraction rejected |
-| Phase 5: enforcement | Layering branch, plus one rule in the DI and AOP branch |
+**Settled for the initial work:** preserve current instance reuse and defer nesting. **Open for the later nesting design:** an immediate caller edge, a structural ancestor path, a resolution scope or dynamic call flow? These differ in shared graphs and delayed construction. `Resolve` currently receives a configuration and creation delegate, not an explicit caller edge/path. A transient construction stack cannot identify every caller of a reused instance.
 
-## Direction
+Acceptance case: a genetic algorithm and a hill climber share one stateful mutator configuration and instance. Advice selecting only hill-climber calls must leave the shared mutation counter and RNG behavior unchanged and must not observe genetic-algorithm calls. Decorating the shared instance observes both; creating another raw instance splits state.
 
-### Analyzers are modules
+**Proposal for later review:** compare explicit caller-edge wrappers around a shared target with a deliberately narrower scope-selection feature. Scope selection must not be called general nesting. Caller-edge wrappers still need explicit path propagation for delayed children, ownership, wrapper reuse and performance evidence; they are not an approved implementation.
 
-Decided: analysis builds on execution modules, and there is no parallel analyzer contract. Whatever an analyzer is, it is a module that owns results. This avoids a duality that is not needed and makes it plain how analysis integrates with the execution model instead of standing beside it.
+Do not change caching or promise zero call-path cost to make nesting appear solved. Preserve no-hoisting and ancestor reuse unless a separate change is explicitly accepted.
 
-The layering branch retained `IAnalyzer : IExecutionModule` for analyzer authoring and contracts such as `IRankAnalyzer`, without redeclaring `Install`. Existing analyzer bases retain their responsibilities, including synchronization and publication in `AccumulatingAnalyzer`; no new base was introduced just to replace the interface.
+### D4: Advice precedence
 
-Historically, the analysis rework went through three shapes. `IAnalyzer` started as `IAnalyzer : IExecutionHook` with no members. A simplification pass deleted it, then it returned with its own installation member when analyzers became stateful components that own their results. The layering branch superseded that separate contract with inheritance from `IExecutionModule`.
+**Settled initial rule:** retain current origin, depth and declaration ordering. **Open:** how advice kinds within one module compose, and whether a later explicit-precedence facility has a concrete need. Specify observable entry/exit order, not just wrapper order.
 
-A module read as a place to declare advice is a general mechanism, and analysis is one of its clients. The layering branch removed the run's dependency on Analysis. `AlgorithmRun.Attach` uses one attachment list and installs modules in attachment order, with reference deduplication. Experiments own `TrialModule` and `TrialAttachment`, exposed through `AttachPerTrial` and `GetAttached`; Analysis retains the `TrialAnalyzer.Create` convenience. The attachment-order behavior spec passes. Later module/aspect terminology work must account for these settled user-facing methods.
+**Proposal:** use nested-wrapper entry/exit order without a new priority property. Before implementation, define advice-failure behavior, whether around advice can proceed zero/multiple times, and what finally/throwing advice sees under suppression, replacement or retry. Acceptance tests must preserve duration-budget isolation and clock-before-trace reads.
 
-### Pointcuts
+### D5: Advice ownership and algorithm boundaries
 
-A pointcut becomes a type of its own, matched when the scope builds instances rather than on every call. Matching follows AspectJ:
+**Open:** distinguish reusable descriptions, per-target advice state and caller-owned modules intentionally shared across targets/runs. Reusing a pointcut must not implicitly choose advice-state reuse. Retain analyzer/result ownership; do not resolve trace retention or aggregation through a run.
 
-- by role or type, including derived types;
-- by attribute on the configuration type;
-- by wildcard patterns over type names;
-- by name, through a `Named` wrapper. It forwards every call to the operator it wraps and only carries a name, so matching a name is an attribute check under the hood;
-- by nesting, meaning a join point only when reached from a given caller.
+For algorithms, distinguish stream creation, enumeration start, each yield, normal completion, exception/cancellation and early disposal. Decide the boundary of each advice API before adding async wrappers. A run may pause while retaining its iterator; iterator disposal is not synonymous with pausing.
 
-Because matching happens while the scope builds, it sees every configuration that gets resolved, including those created during resolution, and matching costs nothing on the unadvised path.
+**Proposal:** first design synchronous advice for one operator role with explicit state ownership, then algorithm iteration/stream advice separately. A common callback context across roles is optional and needs a concrete counting/timing use case. The [typed invocation rejection](developer-backlog.md#typed-operator-invocation) permits internal callback type erasure, not replacement of role methods with generic invocation.
 
-The rework built a selector type once. `Anchor<TObservation>`, with `Anchor.At(...)` factories and a public `IObservationRecorder`, cut `Analyzer.Trace` from 20 overloads to 4 and `Observe` from 10 to 2, and reduced `Analyzer.Trace` from six type parameters to three. It was removed because an anchor wrapping one configuration reference is only a second name for it. A pointcut earns its place by selecting what one reference cannot. User-facing shortcuts such as `algorithm.TracePopulationQuality()` keep taking the configuration and build the pointcut themselves.
+## Review packages
 
-A pointcut that matches nothing is a valid result, not a mistake, and is not reported. One pointcut definition is meant to be reused across algorithms: a pointcut for mutations applied in an experiment on an algorithm without a mutator records nothing, and that is the right answer.
+Each row is a review stop. Implement at most one package per review cycle. At the start of a package, reassess the current code, present the choices that block that package, and resolve them before dependent implementation. Leave later choices open. Later rows are a proposed sequence, not authorization to settle open decisions silently; their AOP labels are working terms.
 
-#### Nesting
+| Package | Reviewable result | Dependencies | Validation |
+| --- | --- | --- | --- |
+| 1. Current model and plan | Correct the plan, add DI/AOP orientation, correct architecture/glossary sharing and builder wording, and update the stale instrumentation backlog item. No C# or public API changes. | Unblocked; first package. | Existing focused resolution/observation tests, API usage specs, docs build, diff/link checks. |
+| 2. Resolution characterization | Cover siblings reusing a pre-resolved ancestor, child-first resolution and decorations on unrelated targets. Correct matching XML/test descriptions; preserve runtime behavior. | Review package 1; independent of naming. | Focused resolution tests and release build for XML contracts. |
+| 3. State transformation design | Review whether to retain the role or expose an internal algorithm advice boundary. Retain the name `Interceptor`; if the role is replaced, removal follows equivalent algorithm advice. | D1 and the relevant algorithm part of D5; may follow package 7's design before its implementation. Does not block non-algorithm pointcuts. | Compare current termination, feedback, RNG and shared-state examples. Any later role replacement needs release build, core, API usage and experimental tests, then one full solution run. |
+| 4. First typed pointcut | Agreed selection contract with one mutator integration and a consumer-defined-role usage spec. Select multiple configurations through the same resolution mechanism. | D2; D3 deferred or resolved; matcher-state ownership. | Focused matcher/resolution tests, core and API usage specs. Include distinct equal configurations, ancestor caches, late children, wrapper exclusion and no matches. |
+| 5. First typed advice | Agreed synchronous advice kinds for one role, with traces for success, failure, advice failure and around short-circuit/retry. | D4 and synchronous D5. | Focused advice tests, core, API usage specs and a local lightweight-operation overhead comparison. |
+| 6. Role expansion | One further role per package, retaining consumer role extensibility. Migrate its observation adapter where appropriate. | Packages 4-5 reviewed. | Focused role tests, core and API usage specs; experimental tests for affected consumers. |
+| 7. Algorithm advice | Agreed iteration/stream boundaries and algorithm observation migration. Replace the dynamic-problem exception in a separately reviewed follow-up. | Algorithm D5 and D4. | Lifecycle/observation tests, core, API usage and experimental tests; selected workflow scenarios. |
+| 8. Rich matching | One package per accepted attribute, name or wildcard feature. Nesting has its own design review and implementation package. | Corresponding D2 choices; D3 for nesting. | Focused matching/sharing tests, core and API usage specs; performance evidence if the call path changes. |
+| 9. Instrumentation and budgets | Prove one role/concern migration, retaining success-only counts, failure-inclusive timing, sink ownership and configuration origin. Expand after review. | Advice supports those semantics. Do not assume all wrappers/factories disappear. | Instrumentation/budget tests, core, API usage specs; selected racing/cycle scenarios at completion. |
+| 10. Docs and guardrail | Publish aspect authoring docs with supported APIs. Separately audit/extend `HLib0001` for delayed creation if legitimate base/bridge calls can be distinguished. | Implemented APIs; diagnostic design. | Docs build/API usage specs; focused Roslyn analyzer/code-fix tests for diagnostic changes. |
 
-Open, and to be discussed again during the redesign. The problem: resolution builds one instance per configuration per scope, and a decoration wraps that instance. When a genetic algorithm and a hill climber both use one mutator object, both hold the same instance, so a wrapper around it is seen by both, and no wrapper exists that only the hill climber holds.
+For C# packages use `dotnet restore`, `dotnet build --configuration Release --no-restore` and the selected `dotnet test --configuration Release --no-restore` scope. Run repository whitespace, style and analyzer verification for changed C# code. Follow [AGENTS.md](../AGENTS.md) and [test/README.md](../test/README.md); do not repeatedly run scenarios. Substantial public API or shared-invariant integration needs one complete solution test run at completion.
 
-First ideas, none convincing:
+## Package 1 review record
 
-1. Use the separation that already exists. Some meta-algorithms, such as `CycleAlgorithm` with fresh instances per cycle, build a stage in a scope of its own, so the mutator that stage uses is already a separate instance from the outer algorithm's. A nesting pointcut could target only such cases. It needs no new mechanism, but it depends on how a meta-algorithm happens to build its stages, and it cannot separate callers that share a scope.
-2. Give the caller its own instance when a nesting pointcut matches. For a stateful operator the two callers would stop sharing its state, so observing a run would change it.
-3. Wrap the call rather than the instance, as AspectJ's `call` join point does, handing the caller a wrapper around the shared instance. This keeps sharing intact but is complex.
+- Changed: current-behavior corrections and DI/AOP orientation, plan dependencies/review stops, and the instrumentation backlog's retired layering reference.
+- Preserved: runtime code, public names, attachment methods, state sharing, ordering and lifecycle ownership.
+- Validation: `dotnet restore` passed. Release focused resolution/observation tests passed (29), iteration-boundary tests passed (8), and all API usage specs passed (185). `npm run docs:build` and `git diff --check` passed. Test builds emitted existing analyzer warnings in unchanged C# files. No runtime change required a full core/scenario run or C# formatting pass.
+- Settled in review: typed reference/role/type matching first; preserve current sharing and precedence; defer nesting; retain `Interceptor` as the operator name; settle remaining choices when their package needs them and choose public terminology for HeuristicLib users rather than AOP conformity.
+- Remaining: state-transformation role versus algorithm advice, new AOP API names, detailed matching semantics, per-kind precedence/exception behavior and advice ownership/algorithm boundaries. D1-D5 distinguish these from the accepted initial scope.
 
-The redesign may make the problem disappear or suggest a better answer, for example by adopting AOP's resolution rules more closely. Nesting here is structural, known when the graph is built, so whatever the answer, it can be decided once while the scope builds rather than checked on every call like AspectJ's `cflow`.
+## Package 2 review record
 
-### Advice kinds
-
-All advice kinds become available: before, after returning, after throwing, after in the sense of finally, and around. Around advice may change what an operation does, and aspects that change algorithm behavior are a legitimate use.
-
-Analyzers should use read-only advice. That is a convention, not a rule the system enforces: an analyzer is built on the same system as behavior-changing aspects, and nothing forbids it from using one. Changing the search is simply not what an analyzer is for.
-
-Advice stays typed per role. The wrappers that apply advice are written per role, as the current observing wrappers are. Advice across roles is the tricky part. It is useful for generic concerns such as counting operator calls or timing them, where the specifics of the operator do not matter, only that it was called. There each role's wrapper can erase its call to a common join point shape, which the backlog's [typed operator invocation](developer-backlog.md#typed-operator-invocation) entry allows for wrappers that apply advice, because they leave the role contracts untouched. The rejected universal invocation path is a different thing: it replaced the role contracts themselves.
-
-The current precedence rules, origin, then depth, then install order, extend to advice kinds. How before, around and after advice from one module order among each other is part of the branch's design. Rebuilding budgets and the counting and duration instrumentation as around advice, a backlog item, fits here.
-
-### Naming
-
-API names use the AOP and DI terms wherever HeuristicLib means the same thing: pointcut, advice, aspect, join point, module, scope, decorate. A different name is fine where it is clearly better. Terms whose meaning differs here stay out of API names:
-
-- container, because it implies lookup by type;
-- singleton, scoped and transient, because sharing here follows chain identity rather than a lifetime setting;
-- proxy, because it implies generated wrappers.
-
-Names that already match, and are a starting point rather than a decision: `ResolutionScope`, `ResolutionScopeBuilder`, `CreateChildScope`, `Decorate`, `Decoration`, `DecorationOrigin`, `IExecutionModule`, `Install` and `ExecutionSignature.Fits`.
-
-The `Interceptor` operator role transforms a produced search state. In Castle DynamicProxy, Guice, Spring AOP and Autofac, an interceptor is around advice. Once the API uses AOP terms, keeping the role's name would put one word in the API with two meanings, so the role is renamed. `StateRewriter` is one candidate. The rename touches about 52 source and test files: `IInterceptor`, `IInterceptorInstance`, the instance bases, the concrete interceptors, the counting, duration and observing decorations, the pipeline, the observation and clock plumbing, algorithm properties named `Interceptor`, samples, specs and docs.
-
-The glossary gains a status for terms from other systems that HeuristicLib does not adopt as its own:
-
-- `Analogue`: the term a well-known system uses for a closely related concept. Use it to orient a reader, never as a synonym in HeuristicLib text.
-
-Where an AOP term becomes the canonical name, the glossary uses it directly instead.
-
-### What stays refused
-
-The design goals ask for "plain C# composition over framework magic", and § 3.1 rules out ambient state, global registries and opaque indirection. Leaning into AOP keeps those constraints:
-
-- **Type-keyed resolution and auto-wiring.** Resolution stays keyed by configuration reference, with no `Resolve<IMutator<T>>()` and no constructor discovery. Pointcuts that match by type choose which instances receive advice. They do not change how an instance is found.
-- **Dynamic proxies and reflection emit.** Wrappers stay hand-written per role, as [operator implementation](../docs/contributing/architecture/operator-implementation.md) and the rejected [generated operator families](developer-backlog.md#generated-operator-families) settle. Pointcut matching may use reflection while the scope builds; the call path does not.
-- **A universal role invocation path.** Castle's `IInterceptor.Intercept(IInvocation)` sends every call through one generic path with `Proceed()`. That is the [typed operator invocation](developer-backlog.md#typed-operator-invocation) experiment, measured at 2.39 ns against 12.84 ns and rejected.
-- **A runtime service locator.** § 4.3 already limits the scope to instance creation, child scopes and delayed child algorithm creation. Composition-root code receiving the container is the standard exception in DI practice.
-
-Once the branch settles it, this list becomes guideline § 3.6, because it is policy. The layering branch occupies § 3.5.
-
-## Documentation
-
-Contributor docs get the full framing. The user guide explains what users meet: a sentence or two where a DI prior prevents a known mistake, and a page on writing aspects once pointcuts and advice exist.
-
-### Contributor docs
-
-1. [execution-instances.md](../docs/contributing/architecture/execution-instances.md) opens with the framing: two paragraphs, a trimmed version of the two-halves table, and the departures.
-2. [instance-resolution.md](../docs/contributing/architecture/instance-resolution.md) keeps its content and gains orientation. "Two phases, two types" names the lineage in one sentence: ignored by MS DI, rejected by Simple Injector, unrepresentable here. The sharing section names chain identity and the captive-dependency failure the no-hoisting rule prevents. The ordering section sets the three keys against `declare precedence` and `@Order`.
-3. [analyzers.md](../docs/contributing/architecture/analyzers.md) presents analysis as one client of the aspect system: an analyzer is a module that owns results and conventionally uses read-only advice.
-4. [writing-meta-algorithms.md](../docs/guide/extending/writing-meta-algorithms.md) is addressed to authors, so its warning about calling `CreateExecutionInstance` on a child can name the self-invocation problem Spring users know: a call that bypasses the proxy bypasses the advice.
-
-### User guide
-
-1. [running-algorithms.md](../docs/guide/execution/running-algorithms.md), in "Explicit runs for analysis":
-
-   > If you have used dependency injection: an algorithm configuration is a set of registrations, and each run builds a fresh scope from them. That is why two calls to `algorithm.Stream` start two runs, and why analyzers attach to the run rather than to the algorithm, the way decorators are added to a container rather than to the class they wrap.
-
-2. [observability-and-analysis.md](../docs/guide/execution/observability-and-analysis.md), beside "Observation sources match configurations by reference":
-
-   > In dependency injection terms, a source is a registration, not a service type. A configuration copied with `with` is a new registration, and an analyzer attached to the original never sees it.
-
-3. [writing-meta-algorithms.md](../docs/guide/extending/writing-meta-algorithms.md), opening its warning:
-
-   > This is the same mistake as calling `new` on a service your container should provide. The object works, but none of the decorators registered for it apply.
-
-4. A page on writing aspects: pointcuts, advice kinds and the convention that analyzers only read.
-5. [core-concepts.md](../docs/guide/fundamentals/core-concepts.md) and the guide index stay with the problem domain.
-
-## Order of work
-
-### First: the layering branch
-
-The layering branch goes first. It is a cleanup that leaves a clearer structure for the alignment to build on, and its moves are easiest to review while nothing else changes. It takes the layering report's phases 0 to 3 and 5:
-
-1. The doctrine: `layering.md` with the layers, their rules and the phase distinction.
-2. The two dependency cycles, including analyzers becoming modules.
-3. Contracts consolidation into the main assembly. Hosting and concurrency remain in `Execution`, grouped under `Execution/Runs` and `Execution/Concurrency`; experiments stay in `Experiments`.
-4. Lifecycle characterization with ownership retained by each run. `AlgorithmRun` keeps lifecycle and enumerator ownership together. No shared `RunHost` or mandatory composition/continuation extraction is required.
-5. Enforcement through semantic architecture tests, with exactly the dynamic-problem observation exception and checks for agreed public type ownership.
-
-### Second: the DI and AOP alignment branch
-
-It starts from the layering branch's structure. A suggested order:
-
-1. The framing in the contributor docs and the user-guide sentences above.
-2. Terminology: AOP terms in the API where the meaning matches, and the `Interceptor` role rename.
-3. The pointcut type and its matching, nesting included.
-4. The advice kinds.
-5. Budgets and instrumentation rebuilt on around advice, if the design supports it.
-6. The user-guide page on writing aspects.
-7. One more enforcement rule. `HLib0001` flags a child built with `CreateExecutionInstance` instead of resolved, but only inside another `CreateExecutionInstance`. Flagging such calls anywhere in `src` outside the creation delegate handed to `ResolutionScope.Resolve` would also catch meta-algorithms that build children lazily, which [writing-meta-algorithms.md](../docs/guide/extending/writing-meta-algorithms.md) guards by prose alone. Its false-positive rate needs checking against the authoring bases first.
-
-## Open for the branches
-
-1. Final names: the pointcut type, the advice kinds, the module or aspect type and the `Interceptor` role. The layering branch's existing concept namespaces are settled.
-2. Nesting. None of the first ideas convinces, and the redesign may resolve it differently.
-3. The pointcut syntax: a C# expression API, AspectJ-like string patterns or both; what wildcards cover, such as type names, namespaces and generic arguments; the attribute model; and how `Named` carries its name.
-4. Resolution and precedence rules: which of the current rules stay, and how closely to follow standard AOP, including precedence within one module and between advice kinds.
-5. Advice across roles: the shape of the common join point and which advice kinds it is offered for.
-
-The analyzer contract, attachment method names and Contracts assembly question were settled by the layering branch as described above.
+- Removed the obsolete layering analysis report after confirming its active decisions and follow-ups are already in the architecture docs, backlog and this plan. `Test-Path` returns `False`; no references to the deleted report remain in plans, docs or `AGENTS.md`.
+- Added five resolution test cases: decorated and undecorated ancestor reuse across sibling scopes, decorated sibling isolation when no ancestor has resolved the target, undecorated child-first resolution, and reuse when the child decorates another configuration. Existing decorated child-first coverage now also checks that both scopes retain their own cached instance.
+- Corrected the overly broad sibling-sharing test name and removed misleading test descriptions. Updated resolution XML to describe per-configuration lookup barriers, local caches, ancestor reuse, builder snapshots, declaration order and module origin.
+- Runtime implementation and public signatures are unchanged. Packages 1 and 2 were approved for commit on 2026-09-26 before continuing with graph-selection naming and semantics.
+- Validation passed: `dotnet restore`; `dotnet build --configuration Release --no-restore --no-incremental` (69 existing warnings, zero errors); a subsequent core-project Release build after the final XML wording correction; and `dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*ResolutionScopeTests'` (26 passed).
+- Whitespace, style at warning severity and analyzer verification at error severity passed with `--include` restricted to the two changed C# files. The format tools reported workspace-loading warnings. `git diff --check` passed. Broader test suites were not repeated because the package changes tests and documentation only.
+- Review stop: no graph-selection or advice API has been introduced. Discuss the relevant selection semantics and public names against the current code before implementing that package; algorithm-boundary decisions remain separate.
 
 ## Out of scope
 
-- A lifetime enum or policy object replacing `NewExecutionInstancesPerCycle`. The framing names the concept, and nothing else asks for the type.
+- Reopening the layering overhaul, Contracts assembly consolidation or shared run-host rejection.
+- A lifetime enum/policy replacing `NewExecutionInstancesPerCycle`.
+- Implementing the entire rework in one change, automatic commits or compatibility shims.

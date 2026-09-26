@@ -40,9 +40,9 @@ var childScope = scope.CreateChildScope(child =>
 return new(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
 ```
 
-`ResolutionScope.Create(declare)` does the same for the root. Both take a callback, so the builder never outlives the declaration it belongs to and cannot be reached once resolving starts.
+`ResolutionScope.Create(declare)` does the same for the root. Both take a callback, then snapshot the builder's declarations into the scope. A callback can retain the builder, but later changes to it cannot affect that snapshot. Treat the builder as valid only during declaration.
 
-**Why the split.** With one type carrying both operations, decorating something already resolved was accepted and then silently ignored — the instance cache answered first and never consulted decorations again. Reordering a decoration after a resolve disabled a budget with no exception and no failing test. Separate types, handed out only inside a declaration callback, make that impossible to write rather than an error to detect.
+**Why the split.** The scope exposes resolution and has no decoration-registration method. Its declaration snapshot stays fixed while instances are resolved, so the cache and decorations cannot diverge through changes to that scope. An escaped builder can still accept declarations, but they have no effect on an already-built scope; this is snapshot isolation, not a language restriction preventing the builder from escaping.
 
 `ResolutionScope.Create()` and `CreateChildScope()` take no callback, for the common case of a scope that declares nothing.
 
@@ -125,13 +125,13 @@ No runtime chain comparison is needed. The walk establishes the equality structu
 
 ## When two resolves share an instance
 
-> Two scopes share an instance of `r` exactly when the decorations applying to them are identical.
+> A resolve reuses the first eligible instance found in its own scope or an ancestor. Identical decoration chains permit ancestor reuse; they do not by themselves guarantee a shared instance.
 
-A decoration does not by itself prevent reuse. Only a _difference_ in decorations does.
+A decoration does not by itself prevent reuse. An intervening declaration for `r` blocks reuse from above it because the chains differ. Declarations for other configurations do not block that lookup. If no eligible instance exists yet, the resolving scope builds and stores its own; resolution order therefore matters.
 
 <!-- prettier-ignore -->
 <figure>
-<svg viewBox="0 0 620 364" role="img" aria-label="A child that declares no decoration of its own reuses the parent's decorated instance; a child that adds one builds its own. Two sibling scopes never share with each other." style="width:100%;height:auto">
+<svg viewBox="0 0 620 364" role="img" aria-label="A child that adds no decoration for the target reuses the parent's cached decorated instance; a child that adds one builds its own. Siblings cannot read each other's caches." style="width:100%;height:auto">
 <defs><marker id="reg-a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--vp-c-text-3,#8e8e93)"/></marker></defs>
 <rect x="170" y="28" width="280" height="88" rx="6" fill="var(--vp-c-bg-soft,#f6f6f7)" stroke="var(--vp-c-brand-1,#3451b2)" stroke-width="1.5"/>
 <text x="310" y="54" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">parent</text>
@@ -152,23 +152,27 @@ A decoration does not by itself prevent reuse. Only a _difference_ in decoration
 <path d="M150 308 V 328 H 480 V 308" fill="none" stroke="var(--vp-c-text-3,#8e8e93)" stroke-width="1.2" stroke-dasharray="4 3"/>
 <line x1="306" y1="320" x2="324" y2="336" stroke="var(--vp-c-danger-1,#b8272c)" stroke-width="2"/>
 <line x1="324" y1="320" x2="306" y2="336" stroke="var(--vp-c-danger-1,#b8272c)" stroke-width="2"/>
-<text x="315" y="356" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--vp-c-danger-1,#b8272c)">siblings never share</text>
+<text x="315" y="356" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--vp-c-danger-1,#b8272c)">no lookup across sibling caches</text>
 </svg>
-<figcaption>Sharing follows the decoration set, and flows from parent to child only.</figcaption>
+<figcaption>Existing ancestor instances can be reused. Instances built in a child stay in that child.</figcaption>
 </figure>
 
-The full set of cases:
+Representative cases (resolve order is left to right):
 
 | Decorations      | Resolves      | Outcome                                                    |
 | ---------------- | ------------- | ---------------------------------------------------------- |
 | none             | parent, child | child reuses the parent's instance                         |
-| none             | two siblings  | two instances — siblings never share                       |
+| none             | two siblings, no ancestor instance | each sibling builds its own instance |
+| none             | parent, then two siblings | both siblings reuse the parent's instance |
+| none             | child, then parent | each builds its own instance; the child retains its cached instance |
 | parent only      | parent, child | child reuses the parent's **decorated** instance           |
 | parent only      | child only    | child builds and keeps it                                  |
 | child only       | parent, child | parent gets an undecorated instance, child a decorated one |
 | parent and child | child         | both decorations apply; the child builds its own instance  |
 
-**Instances are stored where they are built, never hoisted.** Hoisting a newly built instance up to the ancestor that owns the decorations would let siblings share — and sibling isolation is exactly how `CycleAlgorithm.NewExecutionInstancesPerCycle` produces fresh instances per cycle.
+**Instances are stored where they are built, never hoisted.** Hoisting a child's new instance to an ancestor would expose it to later sibling resolves. Keeping it local is what lets `CycleAlgorithm.NewExecutionInstancesPerCycle` build fresh instances when the parent has not already resolved those configurations. A fresh child scope can still reuse an eligible instance already held by an ancestor.
+
+Reusing a cached composite also reuses the children it already holds. The resolver does not traverse those children again under the requesting scope. Scope nesting describes lookup ancestry; it does not identify which caller invokes a shared instance.
 
 ## Ordering
 
@@ -178,9 +182,11 @@ Decorations are sorted innermost to outermost by three keys, in this order:
 | ----------------- | ------------------------- | ------------------------------------------------------------- |
 | 1. Origin         | configuration before module | a wrapper that measures must never measure the observer       |
 | 2. Scope depth | deeper before shallower   | the most local budget is the least disturbed                  |
-| 3. Install order  | earlier before later      | a trace installs the clocks it reads before installing itself |
+| 3. Declaration sequence | earlier before later | a trace installs the clocks it reads before installing itself |
 
 Origin outranks depth: configuration declared in an ancestor still binds tighter than a module declared below it.
+
+At the same origin and depth, declarations A then B produce `B(A(target))`. Entry work runs B then A; successful exit callbacks run A then B. This is the current wrapper order. General before, throwing, finally and around advice APIs are proposed work and need their own documented contracts.
 
 ### Why origin comes first
 

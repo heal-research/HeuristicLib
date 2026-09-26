@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 /// </summary>
 public class ResolutionScopeTests
 {
-    // ---------- Sharing without decorations ----------
+    // ---------- Sharing across scopes ----------
 
     /// <summary>Cell A3. Nothing is decorated, so the child reuses what the parent already built.</summary>
     [Fact]
@@ -22,15 +22,15 @@ public class ResolutionScopeTests
         configuration.CreateCount.ShouldBe(1);
     }
 
-    /// <summary>
-    /// Cell A4. Siblings never share, which is how a meta-algorithm that recreates its execution instances gets fresh
-    /// ones per cycle.
-    /// </summary>
-    [Fact]
-    public void SiblingScopes_NeverShareAnInstance()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SiblingScopes_BuildSeparateInstancesWhenNoAncestorHasResolvedTheConfiguration(bool decorateInParent)
     {
-        var parent = ResolutionScope.Create();
         var configuration = new CountingConfiguration("instance");
+        var parent = decorateInParent
+            ? ResolutionScope.Create(builder => Wrap(builder, configuration, "parent"))
+            : ResolutionScope.Create();
 
         var first = parent.CreateChildScope().Resolve(configuration);
         var second = parent.CreateChildScope().Resolve(configuration);
@@ -39,15 +39,35 @@ public class ResolutionScopeTests
         configuration.CreateCount.ShouldBe(2);
     }
 
-    /// <summary>
-    /// Sharing only ever flows down the tree. An instance a child built stays with the child, so the parent resolving
-    /// the same configuration afterwards builds its own.
-    /// </summary>
-    [Fact]
-    public void AParent_NeverSeesAnInstanceItsChildBuilt()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SiblingScopes_ReuseAnInstanceAlreadyBuiltInAnAncestor(bool decorateInAncestor)
+    {
+        var configuration = new CountingConfiguration("instance");
+        var ancestor = decorateInAncestor
+            ? ResolutionScope.Create(builder => Wrap(builder, configuration, "ancestor"))
+            : ResolutionScope.Create();
+        var ancestorInstance = ancestor.Resolve(configuration);
+        var parent = ancestor.CreateChildScope();
+
+        var first = parent.CreateChildScope().Resolve(configuration);
+        var second = parent.CreateChildScope().Resolve(configuration);
+
+        first.ShouldBeSameAs(ancestorInstance);
+        second.ShouldBeSameAs(ancestorInstance);
+        configuration.CreateCount.ShouldBe(1);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AParent_NeverSeesAnInstanceItsChildBuilt(bool decorateInParent)
     {
         var original = new CountingConfiguration("original");
-        var parent = ResolutionScope.Create(builder => Wrap(builder, original, "parent"));
+        var parent = decorateInParent
+            ? ResolutionScope.Create(builder => Wrap(builder, original, "parent"))
+            : ResolutionScope.Create();
         var child = parent.CreateChildScope();
         var childInstance = child.Resolve(original);
 
@@ -55,6 +75,7 @@ public class ResolutionScopeTests
 
         parentInstance.ShouldNotBeSameAs(childInstance);
         child.Resolve(original).ShouldBeSameAs(childInstance);
+        parent.Resolve(original).ShouldBeSameAs(parentInstance);
         original.CreateCount.ShouldBe(2);
     }
 
@@ -76,6 +97,21 @@ public class ResolutionScopeTests
         childInstance.ShouldBeSameAs(parentInstance);
         childInstance.Name.ShouldBe("parent(original)");
         original.CreateCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void ChildDecoratingAnotherConfiguration_ReusesTheParentsInstanceForTheOriginal()
+    {
+        var original = new CountingConfiguration("original");
+        var other = new CountingConfiguration("other");
+        var parent = ResolutionScope.Create(builder => Wrap(builder, original, "parent"));
+        var parentInstance = parent.Resolve(original);
+        var child = parent.CreateChildScope(builder => Wrap(builder, other, "child"));
+
+        child.Resolve(original).ShouldBeSameAs(parentInstance);
+        child.Resolve(other).Name.ShouldBe("child(other)");
+        original.CreateCount.ShouldBe(1);
+        other.CreateCount.ShouldBe(1);
     }
 
     /// <summary>
@@ -272,10 +308,6 @@ public class ResolutionScopeTests
 
     // ---------- Phase separation ----------
 
-    /// <summary>
-    /// The builder belongs to its declaration callback. A caller that keeps it cannot reach the scope that callback
-    /// produced, so declaring after resolving has begun is not a mistake the scope has to defend against.
-    /// </summary>
     [Fact]
     public void ABuilderKeptPastItsDeclaration_CannotChangeTheScopeItProduced()
     {

@@ -2,6 +2,20 @@
 
 This page documents an advanced execution concept.
 
+Resolution works like a DI container keyed by configuration object reference: configurations describe what to create, and a scope creates and reuses execution instances through explicit factories. Child configurations are resolved explicitly; there is no lookup by service type or constructor auto-wiring.
+
+Decoration supplies an AOP-like part of that model. Execution modules declare wrappers while the scope is being configured, and resolution composes those wrappers as it builds instances. The wrappers implement ordinary typed algorithm or operator contracts. The current API selects individual configuration references; general pointcuts and advice kinds remain proposed work.
+
+| Current concept | DI or AOP analogy | Boundary of the analogy |
+| --- | --- | --- |
+| Configuration object | Registration | Identity is the object reference, even for structurally equal configurations. |
+| `ResolutionScopeBuilder` / `ResolutionScope` | Registration / resolution phases | The builder declares decorations; instance creation remains explicit. |
+| Execution module | Module or aspect | `Install` declares behavior; runs accept modules through `Attach`. |
+| Decoration | Advice implemented by a wrapper | Handwritten role wrappers; no dynamic proxy or universal invocation. |
+| Observation | Successful-operation advice | Operator callbacks follow successful calls; algorithm callbacks follow each yielded state. |
+
+An algorithm run owns one root scope and may create child scopes. Scope reuse follows the lookup rules in [instance resolution](/contributing/architecture/instance-resolution), not a singleton/scoped/transient setting. Execution instances have no general disposal contract.
+
 For most users and most extension authors, the preferred model is:
 
 1. Stateless operators use role specific stateless bases.
@@ -36,7 +50,7 @@ Important properties:
 
 Explicit operator and algorithm instance creation methods receive the scope. Ordinary creation methods should resolve their declared children eagerly. Meta algorithms, budget wrappers and other execution graph compositions may additionally create child scopes, declare decorations or control execution instance reuse.
 
-Obtain every child, operator or algorithm through `Resolve(...)`. Calling `CreateExecutionInstance(...)` on a child configuration bypasses the decorations that observation depends on, and does so silently: the search states are still correct, but analyzers observing that child, or any operator inside it, record nothing.
+Obtain every child operator or algorithm through `Resolve(...)`. Calling `CreateExecutionInstance(...)` directly bypasses that child's cache lookup and decorations, including its observation wrappers. Descendants that the child itself resolves through the scope still receive their own decorations. Direct creation therefore breaks the selected child's resolution contract even if execution otherwise appears to work.
 
 ## Decorations
 
@@ -72,7 +86,9 @@ A role specific stateful operator base creates one state object whenever it crea
 
 Scope identity determines state sharing. Resolving the same configuration object repeatedly through one scope returns the same execution instance and state. Independent scopes create independent instances and state objects. A child scope may reuse an instance from its parent, so it also reuses that instance's state.
 
-A child scope inherits its ancestors' decorations and may reuse instances already resolved by its parent — it does so exactly when it adds no decoration of its own, so that the parent's instance is what the child would have built anyway. Sibling scopes never share. Runtime composing meta algorithms resolve each child algorithm through a freshly created child scope rather than through the parent. This gives each requested stage or cycle a new algorithm instance without preventing intentional sharing of operator configurations from the parent execution graph, and because the child scope inherits its parent's decorations, observation keeps working. Resolve through the child scope; do not call `CreateExecutionInstance(...)` on the child configuration.
+A child scope inherits ancestor decorations and can reuse an instance already cached in an ancestor when no intervening scope adds a decoration for that configuration. Decorations for other configurations do not prevent that reuse. An instance built in a child stays there; a later parent resolve does not find it. Siblings cannot reuse instances built in each other's scopes, but can both reuse an instance already held by a common ancestor.
+
+Runtime composing meta-algorithms such as `CycleAlgorithm` resolve children through fresh child scopes. A stage or cycle builds a fresh instance when no eligible ancestor already holds one, while operator instances already held by an ancestor can be shared intentionally. Ancestor decorations are inherited. Resolve through the child scope; do not call `CreateExecutionInstance(...)` directly on the child configuration.
 
 Stateful operator calls are not inherently thread safe. An operator may use ordinary mutable state, but concurrent use is valid only when the owning execution path provides suitable synchronization or the state implementation is itself safe for concurrent access.
 

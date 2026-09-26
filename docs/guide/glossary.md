@@ -558,7 +558,7 @@ Status: `Canonical`
 
 A decoration chain is the ordered set of decorations that apply to one configuration at one resolution scope: every decoration declared by that scope or any of its ancestors, and no others.
 
-The chain decides execution-instance sharing. Two scopes resolve the same execution instance when, and only when, their decoration chains for that configuration are identical. A decoration does not by itself prevent reuse; only a difference in chains does. Sibling scopes never share, which is what expresses per-cycle freshness in meta-algorithms that recreate their execution instances.
+The chain determines whether an existing ancestor instance is eligible for reuse. Resolution searches its own scope and then ancestors, stopping at a scope that declares decorations for that configuration if no instance was found there. An instance built in a child stays in that child. Identical chains therefore permit reuse but do not guarantee it: a child may have built its own instance before its parent resolved the configuration. Siblings cannot read each other's caches, but can both reuse an instance already held by a common ancestor.
 
 Within a chain, decorations declared by an execution module sit outside those declared by the configuration, and a deeper scope's decorations bind more tightly than a shallower one's.
 

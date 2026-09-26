@@ -12,13 +12,13 @@ namespace HEAL.HeuristicLib.Execution;
 /// <para>
 /// A scope carries out the resolution phase of the execution graph. Decorations are declared beforehand, on an
 /// <see cref="ResolutionScopeBuilder"/> handed to <see cref="Create(Action{ResolutionScopeBuilder})"/>
-/// or <see cref="CreateChildScope(Action{ResolutionScopeBuilder})"/>. The builder never escapes that call,
-/// so a decoration cannot arrive after the instance it was meant to wrap.
+/// or <see cref="CreateChildScope(Action{ResolutionScopeBuilder})"/>. The declarations are snapshotted when that call
+/// returns. Retaining the builder and changing it later cannot change the scope's declarations.
 /// </para>
 /// <para>
-/// Scopes form a tree. A child sees its ancestors' decorations and instances; an ancestor never sees a child's, and
-/// siblings never see each other's. Sibling isolation is what expresses per-cycle freshness in meta-algorithms that
-/// recreate their execution instances.
+/// Scopes form a tree. A child inherits its ancestors' decorations and can reuse eligible instances already held by
+/// them. An ancestor never sees a child's cache, and siblings never see each other's caches. Siblings can both reuse
+/// an instance already held by a common ancestor; otherwise each builds and keeps its own instance.
 /// </para>
 /// <para>
 /// The resolution rules are documented on
@@ -54,7 +54,7 @@ public sealed class ResolutionScope
     /// <summary>
     /// Creates a root scope, declaring its decorations first.
     /// </summary>
-    /// <param name="declare">Declares what the scope decorates. The builder is not valid after this returns.</param>
+    /// <param name="declare">Declares what the scope decorates. Declarations are snapshotted when the callback returns.</param>
     public static ResolutionScope Create(Action<ResolutionScopeBuilder> declare) =>
         Declare(null, declare);
 
@@ -62,15 +62,16 @@ public sealed class ResolutionScope
     /// Creates a child scope that adds no decorations of its own.
     /// </summary>
     /// <remarks>
-    /// Use this for a fresh set of execution instances rather than for new behavior. The child still applies every
-    /// decoration its ancestors declared, and reuses their instances where the applicable decorations are the same.
+    /// The child applies every decoration its ancestors declared and can reuse eligible instances already held by
+    /// them. When none is found, it builds and stores a new instance locally. A fresh scope does not guarantee fresh
+    /// instances for configurations already resolved by an ancestor.
     /// </remarks>
     public ResolutionScope CreateChildScope() => new(this, Decoration.None);
 
     /// <summary>
     /// Creates a child scope, declaring the decorations it adds to its ancestors'.
     /// </summary>
-    /// <param name="declare">Declares what the child adds. The builder is not valid after this returns.</param>
+    /// <param name="declare">Declares what the child adds. Declarations are snapshotted when the callback returns.</param>
     public ResolutionScope CreateChildScope(Action<ResolutionScopeBuilder> declare) =>
         Declare(this, declare);
 
@@ -86,20 +87,20 @@ public sealed class ResolutionScope
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The instance handed back was built with exactly the decorations that apply here: every decoration declared by
-    /// this scope or any ancestor, and no others. Two scopes share an instance when, and only when, the
-    /// decorations applying to them are identical — a decoration does not by itself prevent reuse, only a difference in
-    /// decorations does.
+    /// Completed resolution applies every decoration declared for this configuration by this scope or an ancestor,
+    /// and no others. Identical decoration chains permit ancestor reuse but do not guarantee sharing: an eligible
+    /// instance must already exist when the search reaches that ancestor.
     /// </para>
     /// <para>
-    /// The search walks from this scope towards the root and stops at the first one that declares a decoration for
-    /// the configuration, because every instance above that point was built from a shorter chain and is not a valid answer
-    /// here. Reaching an ancestor without stopping proves that nothing in between contributed a decoration, so that
-    /// ancestor's instance was built from the same chain and can be reused.
+    /// The search walks from this scope towards the root. At each scope, an under-construction instance answers first,
+    /// then a cached instance. If neither exists and the scope declares a decoration for this configuration, the search
+    /// stops: instances above it have a shorter chain. Declarations for other configurations do not stop this search.
+    /// Under-construction instances let a wrapper resolve the chain already built for its child.
     /// </para>
     /// <para>
-    /// A newly built instance is stored here rather than hoisted to the ancestor that owns the decorations. Hoisting
-    /// would let sibling scopes share, which is precisely what recreating execution instances must not do.
+    /// A newly built instance is stored here rather than hoisted to an ancestor. Ancestor lookups cannot find this
+    /// entry, and this scope keeps its instance even if an ancestor resolves the same configuration later. Siblings
+    /// cannot reuse each other's locally built instances, but can both reuse an eligible common ancestor instance.
     /// </para>
     /// <para>
     /// <paramref name="create"/> performs every creation step: first for the configuration passed in, then for each
@@ -166,9 +167,9 @@ public sealed class ResolutionScope
     /// <remarks>
     /// Ordering is by specificity, so that the more specific wrapper sits closer to what it decorates. Configuration
     /// binds tighter than a module, so that a wrapper which measures never measures an observer. A deeper scope binds
-    /// tighter than a shallower one, so that the most local budget is the least disturbed. Within one scope, the
-    /// first decoration declared binds tightest and therefore observes first, which is what lets a trace install the
-    /// clocks it reads before installing itself.
+    /// tighter than a shallower one, so that the most local budget is the least disturbed. Within the same origin and
+    /// scope, the first decoration declared binds tightest. Its successful-operation callback therefore runs first,
+    /// which lets a trace install the clocks it reads before installing itself. Entry work runs in the opposite order.
     /// </remarks>
     private ImmutableArray<Decoration> Chain(IExecutionConfiguration configuration)
     {
@@ -299,8 +300,8 @@ public sealed class ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchS
 /// </summary>
 /// <remarks>
 /// The builder is the declaration phase and has no way to resolve; the scope it produces is the resolution phase and
-/// has no way to declare. It is handed to a declaration callback and is not valid once that callback returns, so
-/// decorating something already resolved is not an error to detect but a statement that cannot be written.
+/// has no way to declare. Use it during the declaration callback. The scope receives a snapshot when the callback
+/// returns, so later declarations on a retained builder cannot affect that scope.
 /// </remarks>
 public sealed class ResolutionScopeBuilder
 {
@@ -337,7 +338,7 @@ public sealed class ResolutionScopeBuilder
     }
 
     /// <summary>
-    /// Lets a module declare its decorations, recording them as observation rather than configuration.
+    /// Lets a module declare its decorations, recording them with module origin rather than configuration origin.
     /// </summary>
     /// <remarks>
     /// Origin is a fact about who installed a decoration rather than something the decoration claims, so a module cannot
