@@ -20,6 +20,8 @@ Use [docs/guide/glossary.md](docs/guide/glossary.md) for canonical HeuristicLib 
 - `docs`: user-facing and design documentation.
 - `samples`: runnable C# sample applications, one project per sample, referencing the projects in `src` so an API change breaks them here first.
 - `python-samples`: Python demonstrations and notebooks. Not part of the solution, so nothing builds, formats or tests them.
+- `.agents/skills`: agent skills for Codex; see "Agent skills" below.
+- `.claude`: Claude Code project settings, which enable the `dotnet` plugin, and identical copies of the shared skills in `.agents/skills`.
 
 Test-suite placement guidance lives in `test/README.md`.
 
@@ -45,3 +47,18 @@ Use the narrowest test scope that provides confidence for the current change and
 6. Run the complete solution test suite only for final validation of substantial public API, shared invariant or cross-project changes.
 
 Do not run scenario tests repeatedly during ordinary implementation iterations. Prefer the core, API usage and experimental test projects for faster results and feedback.
+
+## Agent skills
+
+The repository ships general-purpose agent skills, copied verbatim from their sources; `.agents/skills/README.md` lists them. Where a skill's instructions conflict with this file, the developer guidelines or the glossary, the repository wins. Adjust skill behavior in this section instead of editing the copied skills.
+
+Claude Code gets `csharp-refactoring` and the C# language server from the `dotnet` plugin, which `.claude/settings.json` enables once the folder is trusted. Codex has no language server, so the skill falls back to compiler-checked edits there.
+
+### Repository overrides
+
+- Glossary, for `domain-modeling` and `grill-with-docs`: `docs/guide/glossary.md` is the domain glossary. Challenge terms against it and record resolved terms there, using its status labels and entry format. Entries may name the type that represents a concept. Do not create `CONTEXT.md` or `CONTEXT-MAP.md`.
+- Decisions, for `domain-modeling` and `grill-with-docs`: do not create ADRs or `docs/adr/`. Record a settled decision in the plan of the change it belongs to under `plans/`. Approaches that were tried and rejected go to "Discussed, tried, and rejected" in `plans/developer-backlog.md`. Contributor and architecture docs describe the current state of the code, not decision history.
+- Review scope, for `two-axis-review`: changes are usually left uncommitted, so review the working tree against the fixed point, `git diff $(git merge-base <fixed-point> HEAD)`, and include untracked files from `git status --short`.
+- Review sources, for `two-axis-review`: there is no issue tracker, so skip `docs/agents/issue-tracker.md` and `/setup-matt-pocock-skills`. The spec is the branch's plan in `plans/`, usually `plans/<branch>.md`. The standards are this file, the developer guidelines, the design goals, the glossary and, for tests, `test/README.md`.
+- Compatibility, for `csharp-refactoring`: backward compatibility is not a design goal (developer guidelines § 1.1). A requested public rename, move or removal is an authorized breaking change. Migrate every in-repository caller, including tests, samples and documentation snippets, and add no `[Obsolete]` shims, forwarding members or `[TypeForwardedTo]` attributes.
+- Validation, for all skills: use the validation commands and test execution strategy above instead of a skill's generic build and test commands.
