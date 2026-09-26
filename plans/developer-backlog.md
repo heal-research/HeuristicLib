@@ -126,6 +126,10 @@ Discussed and rejected during the DI/AOP design review in September 2026. A rena
 
 Neither `Interceptor` nor `StateTransformer` communicates the precise invocation boundary: after a successful iteration step, before termination evaluation and publication, with the transformed state feeding the next iteration. Renaming would therefore leave the stated clarity problem unresolved while changing the whole role family and its callers. Retain `Interceptor`. Reconsider its name only if a concrete responsibility or unavoidable ambiguity changes; adopting AOP alone is insufficient. Whether typed algorithm advice should replace the role remains a separate open question in [container and aspect framing](container-and-aspect-framing.md#d1-state-transformation-responsibility-and-naming).
 
+### Separate node-selector filtering through Where
+
+The first node-selector draft used `Where(predicate)`. During the September 2026 composition review it was replaced by `And(predicate)`: a selector builds a definition rather than returning an enumerable, and a predicate condition is already intersection with a predicate selector. The overload constructs that selector and delegates to the same `And(selector)` implementation. Keeping both spellings would add a second public name for the same operation. Reconsider only if predicate filtering acquires a responsibility different from Boolean intersection; LINQ familiarity alone does not require another spelling.
+
 ### Typed operator invocation
 
 Prototyped during the operator rework in August 2026 and rolled back.

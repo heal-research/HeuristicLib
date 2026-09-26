@@ -471,6 +471,20 @@ Use graph rather than tree because the same configuration object may be shared f
 
 See also: Configuration, Execution graph.
 
+### Node selector
+
+Status: `Provisional`
+
+A node selector is a rule for selecting algorithm or operator configurations in a configuration graph. The first `NodeSelector<TConfiguration>` API supports matching individual supplied configurations; integration with attached behavior is planned.
+
+The current forms select by configuration reference or assignable type, including role interfaces. Selectors with the same declared configuration type or role compose by union (`Or`, `|`) or intersection (`And`, `&`). `And(predicate)` intersects with a selector constructed from the typed configuration predicate. Composition creates a new definition without changing its operands or evaluating predicates; matching evaluates predicates from left to right only as needed. A node matching several union branches still matches once. The selector does not traverse a graph or resolve execution instances. Combinations across different roles remain deferred.
+
+The agreed integration design selects source configuration nodes. Wrappers introduced by decoration are not additional selection targets, even when the decoration machinery represents them as configurations. Explicit wrappers in the source configuration graph remain selectable nodes. Multiple modules select the same source independently and compose their behavior using the decoration order; they do not select each other's generated wrappers. Resolver integration enforcing this boundary is planned.
+
+A selected configuration can be referenced by several callers and resolved into more than one execution instance. Selecting that configuration does not select one caller path or one invocation. Nesting selection is separate deferred work.
+
+See also: Configuration, Configuration graph, Execution instance, Execution module, Resolution scope.
+
 ### Run
 
 Status: `Canonical`
