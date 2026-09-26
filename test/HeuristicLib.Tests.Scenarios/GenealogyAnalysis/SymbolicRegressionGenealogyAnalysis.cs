@@ -47,7 +47,7 @@ public class GenealogyGraphTests
 
         var analysis = ga.TracePopulationCandidates();
 
-        var run = ga.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).AddAnalyzer(analysis);
+        var run = ga.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).Attach(analysis);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         var ares = analysis.Snapshot();
 
@@ -86,7 +86,7 @@ public class GenealogyGraphTests
         var genealogyAnalysis =
             Analyzer.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).AddAnalyzer(evalQualities).AddAnalyzer(qualities).AddAnalyzer(genealogyAnalysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).Attach(evalQualities).Attach(qualities).Attach(genealogyAnalysis);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         var qres = qualities.Snapshot();
@@ -118,7 +118,7 @@ public class GenealogyGraphTests
                 IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>,
                 SingleSolutionState<SymbolicExpressionTree>>(
                 mutators: [algorithm.Mutator], algorithms: [algorithm]);
-        var run = algorithm.TerminatedAfterIterations(8).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).AddAnalyzer(genealogy);
+        var run = algorithm.TerminatedAfterIterations(8).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).Attach(genealogy);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         var gres = genealogy.Graph;
         res.Population.EvaluatedCandidates.ShouldHaveSingleItem();
@@ -153,7 +153,7 @@ public class GenealogyGraphTests
         var genealogy = Analyzer.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm);
         var qualities = algorithm.TracePopulationCandidates();
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).AddAnalyzer(genealogy).AddAnalyzer(qualities);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).Attach(genealogy).Attach(qualities);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         var gres = genealogy.Graph;
         var qres = qualities.Snapshot();

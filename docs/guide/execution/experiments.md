@@ -112,6 +112,12 @@ await foreach (var completedTask in Task.WhenEach(tasks))
 
 Limit concurrency when evaluation is CPU heavy or uses a constrained external resource.
 
+## Run lifecycle
+
+An experiment run accepts attachments while `Preparing` and starts once. Do not start one of its trial runs directly before starting the experiment; the experiment rejects that mixed ownership.
+
+An experiment moves from `Running` to `Completed`, `Failed` or `Canceled`. Disposing its stream before completion stops scheduling, cancels active work and leaves the experiment `Stopped`. These states are terminal: create a new experiment run to execute again. Unlike an individual algorithm run, an experiment does not pause and resume.
+
 ## Design a useful comparison
 
 1. Choose a budget that reflects comparable work.
@@ -134,9 +140,11 @@ var quality = TrialAnalyzer.Create(
     (GeneticAlgorithm<RealVector> trial) =>
         trial.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
 var run = algorithm.Repeat(2).CreateRun(problem, random)
-    .AddTrialAnalyzer(quality);
+    .AttachPerTrial(quality);
 await run.CompleteAsync();
-var analyses = run.GetAnalyzers(quality);
+var analyses = run.GetAttached(quality);
 ```
 
-Each result has typed `Trial` and `Analyzer` properties. The factory is reusable across experiments; the analyzers and clocks it creates are not.
+`GetAttached` returns `TrialAttachment` entries in trial order. Each has a typed `Trial` and a `Module` property; here `Module` has the concrete analyzer type created by the factory. The factory is reusable across experiments; the analyzers and clocks it creates are not.
+
+Use `TrialModule.Create` for other execution modules. `TrialAnalyzer.Create` is its analyzer-specific convenience. Both use `AttachPerTrial` and `GetAttached`, and factories install their attachments in the order they were attached to the experiment. Attaching the same factory twice is rejected.

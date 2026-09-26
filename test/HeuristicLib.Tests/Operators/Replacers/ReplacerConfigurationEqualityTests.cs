@@ -12,7 +12,7 @@ public class ReplacerConfigurationEqualityTests
     {
         var child = new OffsetReplacer(1);
 
-        child.CountCalls(new ObservationCounter()).ChildReplacer.ShouldBeSameAs(child);
+        child.CountCalls(new CountAccumulator()).ChildReplacer.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -53,8 +53,8 @@ public class ReplacerConfigurationEqualityTests
     [Fact]
     public void WrappingConcerns_IncludeChildAndSettingsInEquality()
     {
-        var counter = new ObservationCounter();
-        var duration = new ObservationDuration();
+        var counter = new CountAccumulator();
+        var duration = new DurationAccumulator();
         var left = new OffsetReplacer(1).CountCalls(counter);
         var equal = new OffsetReplacer(1).CountCalls(counter);
         var differentMetric = new OffsetReplacer(1).CountCandidates(counter);

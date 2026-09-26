@@ -125,6 +125,7 @@ export default defineConfig({
                 {
                     text: "Architecture",
                     items: [
+                        { text: "Layering", link: "/contributing/architecture/layering" },
                         { text: "Analyzers", link: "/contributing/architecture/analyzers" },
                         {
                             text: "Execution instances",

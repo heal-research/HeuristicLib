@@ -17,7 +17,7 @@ public class CreatorConfigurationEqualityTests
     {
         var childCreator = new ConstantCreator(1);
 
-        var creator = childCreator.CountCalls(new ObservationCounter());
+        var creator = childCreator.CountCalls(new CountAccumulator());
 
         creator.ChildCreator.ShouldBeSameAs(childCreator);
     }
@@ -177,7 +177,7 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void CountingCreator_WithSameCounterAndMetric_IsEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new ConstantCreator(1).CountCalls(counter);
         var right = new ConstantCreator(1).CountCalls(counter);
 
@@ -188,7 +188,7 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void CountingCreator_WithDifferentMetric_IsNotEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new ConstantCreator(1).CountCalls(counter);
         var right = new ConstantCreator(1).CountCandidates(counter);
 
@@ -198,8 +198,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void CountingCreator_WithDifferentCounter_IsNotEqual()
     {
-        var left = new ConstantCreator(1).CountCalls(new ObservationCounter());
-        var right = new ConstantCreator(1).CountCalls(new ObservationCounter());
+        var left = new ConstantCreator(1).CountCalls(new CountAccumulator());
+        var right = new ConstantCreator(1).CountCalls(new CountAccumulator());
 
         left.ShouldNotBe(right);
     }
@@ -207,7 +207,7 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void CountingCreator_WithDifferentChildCreator_IsNotEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new ConstantCreator(1).CountCalls(counter);
         var right = new ConstantCreator(2).CountCalls(counter);
 
@@ -217,7 +217,7 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringCreator_WithSameDurationAndTimeProvider_IsEqual()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var left = new ConstantCreator(1).MeasureDuration(duration, TimeProvider.System);
         var right = new ConstantCreator(1).MeasureDuration(duration, TimeProvider.System);
 
@@ -228,8 +228,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringCreator_WithDifferentDuration_IsNotEqual()
     {
-        var left = new ConstantCreator(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
-        var right = new ConstantCreator(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
+        var left = new ConstantCreator(1).MeasureDuration(new DurationAccumulator(), TimeProvider.System);
+        var right = new ConstantCreator(1).MeasureDuration(new DurationAccumulator(), TimeProvider.System);
 
         left.ShouldNotBe(right);
     }
@@ -237,7 +237,7 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringCreator_WithDifferentChildCreator_IsNotEqual()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var left = new ConstantCreator(1).MeasureDuration(duration, TimeProvider.System);
         var right = new ConstantCreator(2).MeasureDuration(duration, TimeProvider.System);
 

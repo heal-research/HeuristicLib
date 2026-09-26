@@ -5,7 +5,6 @@ using HEAL.HeuristicLib.Operators.MoveEvaluators;
 using HEAL.HeuristicLib.Operators.Neighborhoods;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 
 namespace HEAL.HeuristicLib.Tests.Experimental.Operators;
 

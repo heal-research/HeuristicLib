@@ -104,6 +104,12 @@ not a compatibility restriction and an operator omitted from the recommendations
 `IsSubspaceOf` describes candidate membership only. Do not use it as a substitute for operator contracts or
 recommendations.
 
+### § 3.5 Keep dependencies within their layers
+
+Follow the [layering rules](/contributing/architecture/layering) when adding or moving types. Assign a type by its
+responsibility, including where a namespace contains both contracts and implementations, and keep dependencies directed
+from higher layers to lower ones. Treat configuration and execution instance as phases within those responsibilities.
+
 ## § 4 Configuration and execution ownership
 
 ### § 4.1 Separate reusable configurations from execution instances
@@ -468,7 +474,7 @@ because an adjective cannot be misread as a command to modify the receiver: `alg
 more, and the name should not suggest otherwise.
 
 A method that **mutates the receiver** is named with an imperative verb and never with `With*`, even when it returns
-the receiver for chaining: `run.AddAnalyzer(analyzer)`. A fluent chain is not evidence that a value is being built,
+the receiver for chaining: `run.Attach(analyzer)`. A fluent chain is not evidence that a value is being built,
 so the name has to carry that distinction on its own.
 
 This was applied across the library after `With*` was found covering three different semantics at once, one of which
@@ -504,9 +510,11 @@ Add XML documentation only for a nonobvious contract, invariant, lifecycle, fail
 - Keep contributor implementation rules in this document.
 - Keep unresolved decisions in `plans/developer-backlog.md`. Move settled decisions here or into the relevant public documentation.
 
-### § 9.3 Name types for what binds them
+### § 9.3 Name types for what binds them, place them by what they are
 
-Name a type for the narrowest domain or representation that binds it. Use genotype names for types that work with any problem over that genotype. Use domain names for types that require one problem. The placement question remains in `plans/developer-backlog.md`.
+Name a type for the narrowest domain or representation that binds it. Use genotype names for types that work with any problem over that genotype. Use domain names for types that require one problem.
+
+Place a type with the concept it implements, not with the representation that binds it. A problem, including an authoring base bound to one representation such as `RealVectorProblem`, belongs in `Problems`; an operator authoring base belongs in its role namespace. An encoding holds its representation's candidate types, search spaces and the operators that work with any problem over that representation. Put an operator that requires one problem beside that problem, as `NumericParameterFittingRefiner` sits in `Problems.MachineLearning`.
 
 ### § 9.4 Allow authoring dependencies required by construction
 
@@ -520,6 +528,7 @@ For example, `ExpressionDraft` takes an `ExpressionTreeSearchSpace` to resolve s
 - Use detailed namespaces only for contracts, bases and machinery that authors reach for rather than users.
 - Give a concept one namespace. Do not split it into small public namespaces that a user has to import together.
 - A source subfolder adds a namespace segment only when it changes the audience. Folders may organize implementation categories without adding a namespace segment.
+- Every namespace segment must map to its corresponding source folder. Additional grouping folders belong beneath that namespace folder: types in `HEAL.HeuristicLib.Execution` may live in `Execution/Runs` or `Execution/Concurrency` without adding a namespace segment.
 - Use architecture tests for reviewed concept boundaries. Do not enforce a mechanical namespace to path equation across the project.
 - Keep project roots free of source files. Put every type in the folder for its owning concept even when its namespace is intentionally broader than that folder.
 
@@ -533,7 +542,7 @@ Do not move empty implementations, inaccessible results or known unbounded defec
 
 Promote a feature from Experimental only when its responsibility belongs in the standard toolkit, its central API has no expected replacement, its ownership rules match this guide, its advertised behavior is complete, its normal setup has an API usage spec and its important failure behavior has unit tests. Promotion must not force unrelated experimental concepts or unsuitable dependencies into the main package.
 
-The main and Contracts packages must never reference Experimental. Experimental may reference the main package.
+The main package must never reference Experimental. Experimental may reference the main package.
 
 ### § 9.7 Keep XML documentation verifiable by the build
 

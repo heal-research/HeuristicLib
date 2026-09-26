@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,10 +8,10 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 public sealed record CountingCreator<TCandidate>
     : WrappingCreator<TCandidate>
 {
-    public ObservationCounter Counter { get; init; }
+    public CountAccumulator Counter { get; init; }
     public OperatorCountMetric Metric { get; init; }
 
-    public CountingCreator(ICreator<TCandidate> childCreator, ObservationCounter counter, OperatorCountMetric metric)
+    public CountingCreator(ICreator<TCandidate> childCreator, CountAccumulator counter, OperatorCountMetric metric)
         : base(childCreator)
     {
         Counter = counter;
@@ -21,7 +21,7 @@ public sealed record CountingCreator<TCandidate>
     protected override ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childCreator) =>
         new Instance<TRunSearchSpace, TRunProblem>(childCreator, Counter, Metric);
 
-    private sealed class Instance<TSearchSpace, TProblem>(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator, ObservationCounter counter, OperatorCountMetric metric)
+    private sealed class Instance<TSearchSpace, TProblem>(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator, CountAccumulator counter, OperatorCountMetric metric)
         : WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem>(childCreator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -37,7 +37,7 @@ public sealed record CountingCreator<TCandidate>
 
 public static class CountingCreator
 {
-    public static CountingCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> childCreator, ObservationCounter counter, OperatorCountMetric metric) =>
+    public static CountingCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> childCreator, CountAccumulator counter, OperatorCountMetric metric) =>
         new(childCreator, counter, metric);
 }
 
@@ -45,19 +45,19 @@ public static class CreatorCounterExtensions
 {
     extension<TCandidate>(ICreator<TCandidate> creator)
     {
-        public CountingCreator<TCandidate> CountCalls(ObservationCounter counter) => new(creator, counter, OperatorCountMetric.Calls);
+        public CountingCreator<TCandidate> CountCalls(CountAccumulator counter) => new(creator, counter, OperatorCountMetric.Calls);
 
-        public CountingCreator<TCandidate> CountCalls(out ObservationCounter counter)
+        public CountingCreator<TCandidate> CountCalls(out CountAccumulator counter)
         {
-            counter = new ObservationCounter();
+            counter = new CountAccumulator();
             return creator.CountCalls(counter);
         }
 
-        public CountingCreator<TCandidate> CountCandidates(ObservationCounter counter) => new(creator, counter, OperatorCountMetric.Candidates);
+        public CountingCreator<TCandidate> CountCandidates(CountAccumulator counter) => new(creator, counter, OperatorCountMetric.Candidates);
 
-        public CountingCreator<TCandidate> CountCandidates(out ObservationCounter counter)
+        public CountingCreator<TCandidate> CountCandidates(out CountAccumulator counter)
         {
-            counter = new ObservationCounter();
+            counter = new CountAccumulator();
             return creator.CountCandidates(counter);
         }
     }

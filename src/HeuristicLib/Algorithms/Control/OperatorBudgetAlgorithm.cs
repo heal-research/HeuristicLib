@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -26,7 +26,7 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchState, TOperator>
     /// itself be a wrapper installed by an analyzer or by an enclosing budget, so that the decorations compose. The
     /// returned operator is expected to keep the observed operator's role, as every operator wrapper does.
     /// </remarks>
-    public required Func<TOperator, ObservationCounter, TOperator> CountedOperatorFactory { get; init; }
+    public required Func<TOperator, CountAccumulator, TOperator> CountedOperatorFactory { get; init; }
 
     /// <summary>
     /// Gets the counted-operator budget. The expected value is positive.
@@ -36,7 +36,7 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchState, TOperator>
 
     public override OperatorBudgetAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var childScope = scope.CreateChildScope(child =>
             child.Decorate(ObservedOperator, current => CountedOperatorFactory(current, counter)));
 
@@ -51,10 +51,10 @@ public sealed class OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TP
     where TSearchState : class, ISearchState
 {
     private readonly IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
-    private readonly ObservationCounter counter;
+    private readonly CountAccumulator counter;
     private readonly int maximumCount;
 
-    public OperatorBudgetAlgorithmInstance(IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, ObservationCounter counter, int maximumCount)
+    public OperatorBudgetAlgorithmInstance(IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, CountAccumulator counter, int maximumCount)
     {
         this.algorithm = algorithm;
         this.counter = counter;

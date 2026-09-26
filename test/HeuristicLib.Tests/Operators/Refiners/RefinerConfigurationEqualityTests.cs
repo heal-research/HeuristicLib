@@ -79,7 +79,7 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void CountingRefiner_WithSameCounterAndMetric_IsEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new AddOffsetRefiner(1).CountCalls(counter);
         var right = new AddOffsetRefiner(1).CountCalls(counter);
 
@@ -90,7 +90,7 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void CountingRefiner_WithDifferentMetric_IsNotEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new AddOffsetRefiner(1).CountCalls(counter);
         var right = new AddOffsetRefiner(1).CountCandidates(counter);
 
@@ -100,8 +100,8 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void CountingRefiner_WithDifferentCounter_IsNotEqual()
     {
-        var left = new AddOffsetRefiner(1).CountCalls(new ObservationCounter());
-        var right = new AddOffsetRefiner(1).CountCalls(new ObservationCounter());
+        var left = new AddOffsetRefiner(1).CountCalls(new CountAccumulator());
+        var right = new AddOffsetRefiner(1).CountCalls(new CountAccumulator());
 
         left.ShouldNotBe(right);
     }
@@ -109,7 +109,7 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void CountingRefiner_WithDifferentChildRefiner_IsNotEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new AddOffsetRefiner(1).CountCalls(counter);
         var right = new AddOffsetRefiner(2).CountCalls(counter);
 
@@ -119,7 +119,7 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringRefiner_WithSameDurationAndTimeProvider_IsEqual()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var left = new AddOffsetRefiner(1).MeasureDuration(duration, TimeProvider.System);
         var right = new AddOffsetRefiner(1).MeasureDuration(duration, TimeProvider.System);
 
@@ -130,8 +130,8 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringRefiner_WithDifferentDuration_IsNotEqual()
     {
-        var left = new AddOffsetRefiner(1).MeasureDuration(new ObservationDuration());
-        var right = new AddOffsetRefiner(1).MeasureDuration(new ObservationDuration());
+        var left = new AddOffsetRefiner(1).MeasureDuration(new DurationAccumulator());
+        var right = new AddOffsetRefiner(1).MeasureDuration(new DurationAccumulator());
 
         left.ShouldNotBe(right);
     }
@@ -139,7 +139,7 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringRefiner_WithDifferentChildRefiner_IsNotEqual()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var left = new AddOffsetRefiner(1).MeasureDuration(duration);
         var right = new AddOffsetRefiner(2).MeasureDuration(duration);
 
@@ -191,7 +191,7 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void NestedRefinerComposition_WithEqualParts_IsEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = PipelineRefiner.Create(
             new AddOffsetRefiner(1).CountCalls(counter),
             new AddOffsetRefiner(2));
@@ -206,7 +206,7 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void NestedRefinerComposition_WithDifferentNestedChildRefiner_IsNotEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = PipelineRefiner.Create(
             new AddOffsetRefiner(1).CountCalls(counter),
             new AddOffsetRefiner(2));

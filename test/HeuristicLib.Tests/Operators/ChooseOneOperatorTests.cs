@@ -419,8 +419,8 @@ public class ChooseOneOperatorTests
     public void DurationWrappers_SharingAChildMutator_ReuseItsExecutionInstance()
     {
         var innerOperator = new CountingInstanceMutator();
-        var firstWrapper = innerOperator.MeasureDuration(new ObservationDuration());
-        var secondWrapper = innerOperator.MeasureDuration(new ObservationDuration());
+        var firstWrapper = innerOperator.MeasureDuration(new DurationAccumulator());
+        var secondWrapper = innerOperator.MeasureDuration(new DurationAccumulator());
         var scope = ResolutionScope.Create();
         var firstInstance = scope.ResolveMutator(firstWrapper);
         var secondInstance = scope.ResolveMutator(secondWrapper);

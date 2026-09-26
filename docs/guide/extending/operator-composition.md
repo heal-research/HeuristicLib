@@ -174,7 +174,7 @@ The snippets in this section need four namespaces:
 
 ```csharp
 using HEAL.HeuristicLib.Algorithms;   // TerminatedBy, LimitedToEvaluatedCandidates
-using HEAL.HeuristicLib.Analysis;     // ObservationCounter
+using HEAL.HeuristicLib.Instrumentation; // CountAccumulator
 using HEAL.HeuristicLib.Operators;    // ProblemEvaluator, CachingEvaluator, CheckedForImprovement, LimitEvaluations
 using HEAL.HeuristicLib.Operators.Evaluators; // CountCandidates
 ```
@@ -224,7 +224,7 @@ The refiner's comparison evaluations increment the same counter that ends the ru
 
 `algorithm.LimitedToEvaluatedCandidates(evaluator, 100_000)` is the shorthand for the same arrangement. It installs a counting replacement for the evaluator instance it observes and attaches the matching terminator. Replacements are also resolved by reference, so a refiner holding that instance resolves the counted version too and the accounting works out identically.
 
-Several observed operators can feed the same termination criterion by sharing one `ObservationCounter`. For example, the same counter can track refiner calls and evaluations.
+Several observed operators can feed the same termination criterion by sharing one `CountAccumulator`. For example, the same counter can track refiner calls and evaluations.
 
 Sharing a `CachingEvaluator` pays for two evaluations rather than three, because the algorithm's own evaluation of the returned candidate is already in the cache:
 

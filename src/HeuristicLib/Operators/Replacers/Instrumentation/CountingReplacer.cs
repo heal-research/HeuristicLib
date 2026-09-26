@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -9,10 +9,10 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 public sealed record CountingReplacer<TCandidate>
     : WrappingReplacer<TCandidate>
 {
-    public ObservationCounter Counter { get; init; }
+    public CountAccumulator Counter { get; init; }
     public OperatorCountMetric Metric { get; init; }
 
-    public CountingReplacer(IReplacer<TCandidate> childReplacer, ObservationCounter counter, OperatorCountMetric metric)
+    public CountingReplacer(IReplacer<TCandidate> childReplacer, CountAccumulator counter, OperatorCountMetric metric)
         : base(childReplacer)
     {
         Counter = counter;
@@ -22,7 +22,7 @@ public sealed record CountingReplacer<TCandidate>
     protected override IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> childReplacer) =>
         new Instance<TRunSearchSpace, TRunProblem>(childReplacer, Counter, Metric);
 
-    private sealed class Instance<TSearchSpace, TProblem>(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer, ObservationCounter counter, OperatorCountMetric metric)
+    private sealed class Instance<TSearchSpace, TProblem>(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer, CountAccumulator counter, OperatorCountMetric metric)
         : WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem>(childReplacer)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -38,7 +38,7 @@ public sealed record CountingReplacer<TCandidate>
 
 public static class CountingReplacer
 {
-    public static CountingReplacer<TCandidate> Create<TCandidate>(IReplacer<TCandidate> childReplacer, ObservationCounter counter, OperatorCountMetric metric) =>
+    public static CountingReplacer<TCandidate> Create<TCandidate>(IReplacer<TCandidate> childReplacer, CountAccumulator counter, OperatorCountMetric metric) =>
         new(childReplacer, counter, metric);
 }
 
@@ -46,20 +46,20 @@ public static class ReplacerCounterExtensions
 {
     extension<TCandidate>(IReplacer<TCandidate> replacer)
     {
-        public CountingReplacer<TCandidate> CountCalls(ObservationCounter counter) => new(replacer, counter, OperatorCountMetric.Calls);
+        public CountingReplacer<TCandidate> CountCalls(CountAccumulator counter) => new(replacer, counter, OperatorCountMetric.Calls);
 
-        public CountingReplacer<TCandidate> CountCalls(out ObservationCounter counter)
+        public CountingReplacer<TCandidate> CountCalls(out CountAccumulator counter)
         {
-            counter = new ObservationCounter();
+            counter = new CountAccumulator();
             return replacer.CountCalls(counter);
         }
 
-        public CountingReplacer<TCandidate> CountCandidates(ObservationCounter counter) =>
+        public CountingReplacer<TCandidate> CountCandidates(CountAccumulator counter) =>
             new(replacer, counter, OperatorCountMetric.Candidates);
 
-        public CountingReplacer<TCandidate> CountCandidates(out ObservationCounter counter)
+        public CountingReplacer<TCandidate> CountCandidates(out CountAccumulator counter)
         {
-            counter = new ObservationCounter();
+            counter = new CountAccumulator();
             return replacer.CountCandidates(counter);
         }
     }

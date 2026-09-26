@@ -24,8 +24,8 @@ An analyzer is one of several ways to see what a run does. Pick by what you need
 | --- | --- |
 | Look at every state the algorithm yields | `algorithm.Stream(problem, random)` |
 | Only the final state | `algorithm.CompleteAsync(problem, random)` |
-| Typed data from chosen boundaries, such as a quality curve or an operator's offspring | An analyzer attached with `AddAnalyzer` |
-| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An execution module attached with `AddExecutionModule` |
+| Typed data from chosen boundaries, such as a quality curve or an operator's offspring | An analyzer attached with `Attach` |
+| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An execution module attached with `Attach` |
 | A count or duration that stops or limits the run | Instrumentation such as `CountCandidates` or `LimitedToEvaluatedCandidates`, read by terminators and budgets |
 | The same analysis for every experiment trial | A trial analyzer, see [Experiments](/guide/execution/experiments) |
 
@@ -40,8 +40,8 @@ var evaluations = Clock.FromEvaluations(algorithm.Evaluator);
 var best = algorithm.Evaluator.TraceBestSoFar(clocks: [evaluations]);
 var population = algorithm.TracePopulationQuality(clocks: [evaluations]);
 var run = algorithm.CreateRun(problem, random)
-    .AddAnalyzer(best)
-    .AddAnalyzer(population);
+    .Attach(best)
+    .Attach(population);
 await run.CompleteAsync();
 ```
 
@@ -53,7 +53,7 @@ Observation sources match configurations by reference. A copied configuration is
 
 ## Ownership and reads
 
-A run accepts analyzers through `AddAnalyzer` and independent execution behavior through `AddExecutionModule` while its lifecycle is `Preparing`. It installs both when execution starts, before resolving the execution graph. Create fresh analyzers and clocks for independent results. You may reuse them across runs when combined history or cumulative counts are intentional. Installation does not reset their state.
+A run accepts analyzers and other execution modules through `Attach` while its lifecycle is `Preparing`. It installs them in attachment order when execution starts, before resolving the execution graph. Attaching the same object again does not install it twice. Create fresh analyzers and clocks for independent results. You may reuse them across runs when combined history or cumulative counts are intentional. Installation does not reset their state.
 
 `LifecycleState` reports whether a run is `Preparing`, `Running`, `Paused`, `Completed`, `Canceled`, `Failed` or `Stopped`. Calling an execution entry point freezes its attachments. Each returned execution stream has one consumer. The run itself can continue through a later `Stream()` call after the consumer stops at a yielded root-algorithm state.
 

@@ -4,7 +4,6 @@ using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
@@ -55,14 +54,14 @@ public class ExperimentSpecs
             .VaryBy([4, 8], (algorithm, maximumNeighbors) => algorithm with { MaxNeighbors = maximumNeighbors });
         var bestQuality = TrialAnalyzer.Create(
             (HillClimber<RealVector> algorithm) => algorithm.Evaluator.TraceBestSoFar());
-        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456)).AddTrialAnalyzer(bestQuality);
+        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456)).AttachPerTrial(bestQuality);
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-        var analyses = run.GetAnalyzers(bestQuality);
+        var analyses = run.GetAttached(bestQuality);
 
         analyses.Length.ShouldBe(2);
         analyses.Select(analysis => analysis.Trial.Key.MaxNeighbors).ShouldBe([4, 8]);
-        analyses.All(analysis => analysis.Analyzer.Latest is not null).ShouldBeTrue();
+        analyses.All(analysis => analysis.Module.Latest is not null).ShouldBeTrue();
     }
 
     [Fact]

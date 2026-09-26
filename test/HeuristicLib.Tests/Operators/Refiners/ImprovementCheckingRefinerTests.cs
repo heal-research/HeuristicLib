@@ -45,7 +45,7 @@ public class ImprovementCheckingRefinerTests
     [Fact]
     public void Refine_WithAnEmptyBatch_ReturnsAnEmptyResultWithoutEvaluating()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().CountCalls(counter));
 
         Refine(refiner.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create())).ShouldBeEmpty();
@@ -56,7 +56,7 @@ public class ImprovementCheckingRefinerTests
     [Fact]
     public void Refine_EvaluatesTheOriginalAndTheRefinedCandidates()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().CountCandidates(counter));
 
         Refine(refiner.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create()), 10, 20);
@@ -68,7 +68,7 @@ public class ImprovementCheckingRefinerTests
     [Fact]
     public void Refine_WithASharedCachingEvaluator_LetsALaterEvaluationHitTheCache()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var sharedEvaluator = CreateEvaluator().CountCandidates(counter).Cached();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator);
         var scope = ResolutionScope.Create();
@@ -88,7 +88,7 @@ public class ImprovementCheckingRefinerTests
     [Fact]
     public void Refine_WithTheEvaluatorAnOperatorBudgetObserves_CountsItsComparisonEvaluations()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var sharedEvaluator = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator);
 
@@ -104,7 +104,7 @@ public class ImprovementCheckingRefinerTests
     [Fact]
     public void Refine_WithItsOwnEvaluator_KeepsComparisonEvaluationsOutOfTheBudget()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var algorithmEvaluator = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement();
 

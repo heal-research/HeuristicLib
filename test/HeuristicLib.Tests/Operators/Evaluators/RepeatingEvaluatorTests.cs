@@ -17,7 +17,7 @@ public class RepeatingEvaluatorTests
     [Fact]
     public void Evaluate_PerformsConfiguredTotalNumberOfRepetitions()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var problem = CreateProblem();
         var evaluator = new CandidateEvaluator().CountCalls(counter).AsRepeated(3);
 

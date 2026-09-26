@@ -155,7 +155,7 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void CountingSelector_WithSameCounterAndMetric_IsEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new RangeSelector(1).CountCalls(counter);
         var right = new RangeSelector(1).CountCalls(counter);
 
@@ -166,7 +166,7 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void CountingSelector_WithDifferentMetric_IsNotEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new RangeSelector(1).CountCalls(counter);
         var right = new RangeSelector(1).CountCandidates(counter);
 
@@ -176,8 +176,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void CountingSelector_WithDifferentCounter_IsNotEqual()
     {
-        var left = new RangeSelector(1).CountCalls(new ObservationCounter());
-        var right = new RangeSelector(1).CountCalls(new ObservationCounter());
+        var left = new RangeSelector(1).CountCalls(new CountAccumulator());
+        var right = new RangeSelector(1).CountCalls(new CountAccumulator());
 
         left.ShouldNotBe(right);
     }
@@ -185,7 +185,7 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void CountingSelector_WithDifferentChildSelector_IsNotEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new RangeSelector(1).CountCalls(counter);
         var right = new RangeSelector(2).CountCalls(counter);
 
@@ -195,7 +195,7 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringSelector_WithSameDurationAndTimeProvider_IsEqual()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var left = new RangeSelector(1).MeasureDuration(duration, TimeProvider.System);
         var right = new RangeSelector(1).MeasureDuration(duration, TimeProvider.System);
 
@@ -206,8 +206,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringSelector_WithDifferentDuration_IsNotEqual()
     {
-        var left = new RangeSelector(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
-        var right = new RangeSelector(1).MeasureDuration(new ObservationDuration(), TimeProvider.System);
+        var left = new RangeSelector(1).MeasureDuration(new DurationAccumulator(), TimeProvider.System);
+        var right = new RangeSelector(1).MeasureDuration(new DurationAccumulator(), TimeProvider.System);
 
         left.ShouldNotBe(right);
     }
@@ -215,7 +215,7 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringSelector_WithDifferentChildSelector_IsNotEqual()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var left = new RangeSelector(1).MeasureDuration(duration, TimeProvider.System);
         var right = new RangeSelector(2).MeasureDuration(duration, TimeProvider.System);
 

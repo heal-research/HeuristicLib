@@ -83,7 +83,7 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void CountingMutator_WithSameCounterAndMetric_IsEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new AddOffsetMutator(1).CountCalls(counter);
         var right = new AddOffsetMutator(1).CountCalls(counter);
 
@@ -94,7 +94,7 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void CountingMutator_WithDifferentMetric_IsNotEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new AddOffsetMutator(1).CountCalls(counter);
         var right = new AddOffsetMutator(1).CountCandidates(counter);
 
@@ -104,8 +104,8 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void CountingMutator_WithDifferentCounter_IsNotEqual()
     {
-        var left = new AddOffsetMutator(1).CountCalls(new ObservationCounter());
-        var right = new AddOffsetMutator(1).CountCalls(new ObservationCounter());
+        var left = new AddOffsetMutator(1).CountCalls(new CountAccumulator());
+        var right = new AddOffsetMutator(1).CountCalls(new CountAccumulator());
 
         left.ShouldNotBe(right);
     }
@@ -113,7 +113,7 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void CountingMutator_WithDifferentChildMutator_IsNotEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = new AddOffsetMutator(1).CountCalls(counter);
         var right = new AddOffsetMutator(2).CountCalls(counter);
 
@@ -123,7 +123,7 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringMutator_WithSameDurationAndTimeProvider_IsEqual()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var left = new AddOffsetMutator(1).MeasureDuration(duration, TimeProvider.System);
         var right = new AddOffsetMutator(1).MeasureDuration(duration, TimeProvider.System);
 
@@ -134,8 +134,8 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringMutator_WithDifferentDuration_IsNotEqual()
     {
-        var left = new AddOffsetMutator(1).MeasureDuration(new ObservationDuration());
-        var right = new AddOffsetMutator(1).MeasureDuration(new ObservationDuration());
+        var left = new AddOffsetMutator(1).MeasureDuration(new DurationAccumulator());
+        var right = new AddOffsetMutator(1).MeasureDuration(new DurationAccumulator());
 
         left.ShouldNotBe(right);
     }
@@ -143,7 +143,7 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void DurationMeasuringMutator_WithDifferentChildMutator_IsNotEqual()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var left = new AddOffsetMutator(1).MeasureDuration(duration);
         var right = new AddOffsetMutator(2).MeasureDuration(duration);
 
@@ -169,7 +169,7 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void NestedMutatorComposition_WithEqualParts_IsEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = PipelineMutator.Create(
             new AddOffsetMutator(1).CountCalls(counter),
             new AddOffsetMutator(2));
@@ -184,7 +184,7 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void NestedMutatorComposition_WithDifferentNestedChildMutator_IsNotEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = PipelineMutator.Create(
             new AddOffsetMutator(1).CountCalls(counter),
             new AddOffsetMutator(2));

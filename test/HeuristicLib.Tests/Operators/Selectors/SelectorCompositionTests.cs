@@ -9,7 +9,7 @@ public class SelectorCompositionTests
     [Fact]
     public void NoSameMatesSelector_AcceptsDifferentMatesWithoutRetrying()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var problem = CreateProblem();
         var selector = BestSelector.For(problem).CountCalls(counter).AvoidSameMates(maximumAttempts: 3);
         var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);

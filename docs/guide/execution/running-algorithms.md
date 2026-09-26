@@ -86,3 +86,11 @@ var finalState = await run.CompleteAsync();
 ```
 
 See [Observability and analysis](/guide/execution/observability-and-analysis) for an analyzer example.
+
+## Pause and resume an explicit run
+
+An explicit `AlgorithmRun` starts in `Preparing` and accepts attachments until `Stream` starts execution. Consume each returned stream only once and finish or dispose it before requesting another stream from the run.
+
+Ending enumeration early pauses the run. Cancellation through the ordinary stream or enumeration token also pauses it. Call `Stream` again on the same run to resume its retained execution state; modules are installed and the algorithm is resolved only on the first start. Supply an initial state only on that first start.
+
+Natural completion sets `Completed`. Module installation or execution failures are terminal; cancellation during installation sets `Canceled`. A failed or canceled run cannot resume. [Experiment runs](/guide/execution/experiments#run-lifecycle) use terminal cancellation and do not support pause and resume.

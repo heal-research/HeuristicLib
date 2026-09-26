@@ -5,20 +5,11 @@ namespace HEAL.HeuristicLib.Tests.Architecture;
 public sealed class AssemblyDependencyTests
 {
     [Fact]
-    public void MainAndContracts_DoNotReferenceExperimental()
+    public void Main_DoesNotReferenceExperimental()
     {
-        var assemblies = new[]
-        {
-            typeof(Algorithm<, , , , >).Assembly,
-            typeof(IAlgorithm<>).Assembly
-        };
-
-        foreach (var assembly in assemblies)
-        {
-            assembly.GetReferencedAssemblies()
-                .Select(reference => reference.Name)
-                .ShouldNotContain("HEAL.HeuristicLib.Experimental");
-        }
+        typeof(Algorithm<,,,,>).Assembly.GetReferencedAssemblies()
+            .Select(reference => reference.Name)
+            .ShouldNotContain("HEAL.HeuristicLib.Experimental");
     }
 
     [Fact]
@@ -34,12 +25,14 @@ public sealed class AssemblyDependencyTests
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Random", "KeyCombiners"), "HEAL.HeuristicLib.Random", mismatches);
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Random", "RandomEngines"), "HEAL.HeuristicLib.Random", mismatches);
         CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Encodings", "SymbolicExpressions"), "HEAL.HeuristicLib.Encodings.SymbolicExpressions", mismatches);
-        CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts", "Algorithms", "SearchStates"), "HEAL.HeuristicLib.Algorithms", mismatches);
+        CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Algorithms", "SearchStates"), "HEAL.HeuristicLib.Algorithms", mismatches);
 
         // Operator defaults sit with what declares them rather than with the factories that read them, so a search
         // space or problem states its defaults without importing the algorithms namespace to describe itself.
-        CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts", "SearchSpaces"), "HEAL.HeuristicLib.SearchSpaces", mismatches);
-        CheckNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts", "Problems"), "HEAL.HeuristicLib.Problems", mismatches);
+        ReadNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "SearchSpaces", "ISearchSpace.cs")).ShouldBe("HEAL.HeuristicLib.SearchSpaces");
+        ReadNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "SearchSpaces", "IOperatorContract.cs")).ShouldBe("HEAL.HeuristicLib.SearchSpaces");
+        ReadNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "SearchSpaces", "ICandidateInvariant.cs")).ShouldBe("HEAL.HeuristicLib.SearchSpaces");
+        ReadNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Problems", "IProblem.cs")).ShouldBe("HEAL.HeuristicLib.Problems");
 
         typeof(ICrossover<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
         typeof(IRecommends<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
@@ -62,7 +55,6 @@ public sealed class AssemblyDependencyTests
         var folders = new[]
         {
             Path.Combine(repositoryRoot, "src", "HeuristicLib"),
-            Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts"),
             Path.Combine(repositoryRoot, "src", "HeuristicLib", "Encodings"),
         };
 
@@ -91,7 +83,6 @@ public sealed class AssemblyDependencyTests
         var roots = new[]
         {
             Path.Combine(repositoryRoot, "src", "HeuristicLib"),
-            Path.Combine(repositoryRoot, "src", "HeuristicLib.Contracts"),
             Path.Combine(repositoryRoot, "test", "HeuristicLib.Tests"),
             Path.Combine(repositoryRoot, "test", "HeuristicLib.Tests.ApiUsageSpecs"),
             Path.Combine(repositoryRoot, "docs", "guide"),

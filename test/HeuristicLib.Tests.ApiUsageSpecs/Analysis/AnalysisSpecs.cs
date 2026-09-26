@@ -4,7 +4,6 @@ using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
@@ -23,9 +22,9 @@ public class AnalysisSpecs
             new ObjectiveVectorsMeasurement<RealVector, PopulationState<RealVector>>(),
             Aggregate.BestSoFar());
 
-        await firstAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(combined)
+        await firstAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).Attach(combined)
             .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-        await secondAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(43)).AddAnalyzer(combined)
+        await secondAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(43)).Attach(combined)
             .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         combined.SampleCount.ShouldBe(8);
@@ -42,8 +41,8 @@ public class AnalysisSpecs
         var quality = algorithm.TracePopulationQuality(retention: TraceRetention.EveryNth(2), clocks: [iterations, evaluations]);
         var best = algorithm.Evaluator.TraceBestSoFar(clocks: [evaluations]);
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42))
-            .AddAnalyzer(quality)
-            .AddAnalyzer(best);
+            .Attach(quality)
+            .Attach(best);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -61,7 +60,7 @@ public class AnalysisSpecs
         var size = Analyzer.Trace(algorithm, value: observation => observation.State.Population.EvaluatedCandidates.Count);
         var quality = Analyzer.Trace(algorithm, Measurement.ObjectiveVectors(algorithm), Aggregate.BestMedianWorst());
 
-        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(size).AddAnalyzer(quality)
+        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).Attach(size).Attach(quality)
             .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         size.Latest!.Value.Value.ShouldBe(16);
@@ -76,13 +75,13 @@ public class AnalysisSpecs
         var quality = TrialAnalyzer.Create(
             (GeneticAlgorithm<RealVector> trial) =>
                 trial.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
-        var run = algorithm.Repeat(2).CreateRun(problem, RandomNumberGenerator.Create(42)).AddTrialAnalyzer(quality);
+        var run = algorithm.Repeat(2).CreateRun(problem, RandomNumberGenerator.Create(42)).AttachPerTrial(quality);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        var results = run.GetAnalyzers(quality);
-        results[0].Analyzer.ShouldNotBeSameAs(results[1].Analyzer);
-        results.ShouldAllBe(result => result.Analyzer.SampleCount == 4);
+        var results = run.GetAttached(quality);
+        results[0].Module.ShouldNotBeSameAs(results[1].Module);
+        results.ShouldAllBe(result => result.Module.SampleCount == 4);
     }
 
     private static GeneticAlgorithm<RealVector> CreateAlgorithm(TestFunctionProblem problem) =>

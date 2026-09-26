@@ -1,5 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -8,15 +8,15 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 public sealed record DurationMeasuringTerminator<TCandidate>
     : WrappingTerminator<TCandidate>
 {
-    public ObservationDuration Duration { get; init; }
+    public DurationAccumulator Duration { get; init; }
     public TimeProvider TimeProvider { get; init; }
 
-    public DurationMeasuringTerminator(ITerminator<TCandidate> terminator, ObservationDuration duration)
+    public DurationMeasuringTerminator(ITerminator<TCandidate> terminator, DurationAccumulator duration)
         : this(terminator, duration, TimeProvider.System)
     {
     }
 
-    public DurationMeasuringTerminator(ITerminator<TCandidate> terminator, ObservationDuration duration, TimeProvider timeProvider)
+    public DurationMeasuringTerminator(ITerminator<TCandidate> terminator, DurationAccumulator duration, TimeProvider timeProvider)
         : base(terminator)
     {
         Duration = duration;
@@ -26,7 +26,7 @@ public sealed record DurationMeasuringTerminator<TCandidate>
     protected override ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childTerminator) =>
         new Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminator, Duration, TimeProvider);
 
-    private sealed class Instance<TSearchSpace, TProblem, TSearchState>(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, ObservationDuration duration, TimeProvider timeProvider)
+    private sealed class Instance<TSearchSpace, TProblem, TSearchState>(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, DurationAccumulator duration, TimeProvider timeProvider)
         : WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -49,10 +49,10 @@ public sealed record DurationMeasuringTerminator<TCandidate>
 
 public static class DurationMeasuringTerminator
 {
-    public static DurationMeasuringTerminator<TCandidate> Create<TCandidate>(ITerminator<TCandidate> childTerminator, ObservationDuration duration) =>
+    public static DurationMeasuringTerminator<TCandidate> Create<TCandidate>(ITerminator<TCandidate> childTerminator, DurationAccumulator duration) =>
         new(childTerminator, duration);
 
-    public static DurationMeasuringTerminator<TCandidate> Create<TCandidate>(ITerminator<TCandidate> childTerminator, ObservationDuration duration, TimeProvider timeProvider) =>
+    public static DurationMeasuringTerminator<TCandidate> Create<TCandidate>(ITerminator<TCandidate> childTerminator, DurationAccumulator duration, TimeProvider timeProvider) =>
         new(childTerminator, duration, timeProvider);
 }
 
@@ -60,20 +60,20 @@ public static class TerminatorDurationExtensions
 {
     extension<TCandidate>(ITerminator<TCandidate> terminator)
     {
-        public DurationMeasuringTerminator<TCandidate> MeasureDuration(ObservationDuration duration) => new(terminator, duration);
+        public DurationMeasuringTerminator<TCandidate> MeasureDuration(DurationAccumulator duration) => new(terminator, duration);
 
-        public DurationMeasuringTerminator<TCandidate> MeasureDuration(ObservationDuration duration, TimeProvider timeProvider) =>
+        public DurationMeasuringTerminator<TCandidate> MeasureDuration(DurationAccumulator duration, TimeProvider timeProvider) =>
             new(terminator, duration, timeProvider);
 
-        public DurationMeasuringTerminator<TCandidate> MeasureDuration(out ObservationDuration duration)
+        public DurationMeasuringTerminator<TCandidate> MeasureDuration(out DurationAccumulator duration)
         {
-            duration = new ObservationDuration();
+            duration = new DurationAccumulator();
             return new(terminator, duration);
         }
 
-        public DurationMeasuringTerminator<TCandidate> MeasureDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringTerminator<TCandidate> MeasureDuration(out DurationAccumulator duration, TimeProvider timeProvider)
         {
-            duration = new ObservationDuration();
+            duration = new DurationAccumulator();
             return new(terminator, duration, timeProvider);
         }
     }

@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
@@ -20,7 +20,7 @@ public static class OperatorCountBudgetExtensions
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, TOperator> LimitedToCount<TOperator>(
             TOperator observedOperator,
             int maximumCount,
-            Func<TOperator, ObservationCounter, TOperator> countedOperatorFactory)
+            Func<TOperator, CountAccumulator, TOperator> countedOperatorFactory)
             where TOperator : class, IOperator
         {
             return new()

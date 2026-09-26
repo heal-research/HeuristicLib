@@ -1,7 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators;
@@ -15,7 +15,6 @@ using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -111,7 +110,7 @@ public class OperatorAuthoringSpecs
     public void MutatorCompositionFactories_InferRoleTypes()
     {
         IMutator<RealVector> childMutator = new PullTowardZeroMutator();
-        var counting = CountingMutator.Create(childMutator, new ObservationCounter(), OperatorCountMetric.Calls);
+        var counting = CountingMutator.Create(childMutator, new CountAccumulator(), OperatorCountMetric.Calls);
         counting.ChildMutator.ShouldBeSameAs(childMutator);
     }
 
@@ -218,7 +217,7 @@ public class OperatorAuthoringSpecs
     public void RefinerCompositionFactories_InferRoleTypes()
     {
         IRefiner<RealVector> childRefiner = new HalveRefiner();
-        var counting = CountingRefiner.Create(childRefiner, new ObservationCounter(), OperatorCountMetric.Calls);
+        var counting = CountingRefiner.Create(childRefiner, new CountAccumulator(), OperatorCountMetric.Calls);
         var iterated = IteratedRefiner.Create(childRefiner, 2);
         counting.ChildRefiner.ShouldBeSameAs(childRefiner);
         iterated.ChildRefiner.ShouldBeSameAs(childRefiner);
@@ -413,8 +412,8 @@ public class OperatorAuthoringSpecs
     public void EvaluatorCompositionFactories_InferRoleTypes()
     {
         IEvaluator<RealVector> child = new FirstValueEvaluator();
-        var counting = CountingEvaluator.Create(child, new ObservationCounter(), OperatorCountMetric.Calls);
-        var duration = DurationMeasuringEvaluator.Create(child, new ObservationDuration());
+        var counting = CountingEvaluator.Create(child, new CountAccumulator(), OperatorCountMetric.Calls);
+        var duration = DurationMeasuringEvaluator.Create(child, new DurationAccumulator());
         var repeating = child.AsRepeated(3, ObjectiveVectorAggregation.Median);
         var caching = child.Cached(new FirstCoordinateCacheKeySelector());
         counting.ChildEvaluator.ShouldBeSameAs(child);
@@ -504,7 +503,7 @@ public class OperatorAuthoringSpecs
     public void SelectorCompositionFactories_InferRoleTypes()
     {
         ISelector<RealVector> childSelector = new FirstSelector();
-        var counting = childSelector.CountCalls(new ObservationCounter());
+        var counting = childSelector.CountCalls(new CountAccumulator());
         var chooseOne = ChooseOneSelector.Create(childSelector, new LastSelector());
         counting.ChildSelector.ShouldBeSameAs(childSelector);
         chooseOne.ChildSelectors[0].ShouldBeSameAs(childSelector);
@@ -582,8 +581,8 @@ public class OperatorAuthoringSpecs
     public void ReplacerCompositionFactories_InferRoleTypes()
     {
         IReplacer<RealVector> child = new OffspringReplacer();
-        var counting = CountingReplacer.Create(child, new ObservationCounter(), OperatorCountMetric.Calls);
-        var duration = DurationMeasuringReplacer.Create(child, new ObservationDuration());
+        var counting = CountingReplacer.Create(child, new CountAccumulator(), OperatorCountMetric.Calls);
+        var duration = DurationMeasuringReplacer.Create(child, new DurationAccumulator());
         counting.ChildReplacer.ShouldBeSameAs(child);
         duration.ChildReplacer.ShouldBeSameAs(child);
     }

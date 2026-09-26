@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -9,15 +9,15 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 public sealed record DurationMeasuringSelector<TCandidate>
     : WrappingSelector<TCandidate>
 {
-    public ObservationDuration Duration { get; init; }
+    public DurationAccumulator Duration { get; init; }
     public TimeProvider TimeProvider { get; init; }
 
-    public DurationMeasuringSelector(ISelector<TCandidate> childSelector, ObservationDuration duration)
+    public DurationMeasuringSelector(ISelector<TCandidate> childSelector, DurationAccumulator duration)
         : this(childSelector, duration, TimeProvider.System)
     {
     }
 
-    public DurationMeasuringSelector(ISelector<TCandidate> childSelector, ObservationDuration duration, TimeProvider timeProvider)
+    public DurationMeasuringSelector(ISelector<TCandidate> childSelector, DurationAccumulator duration, TimeProvider timeProvider)
         : base(childSelector)
     {
         Duration = duration;
@@ -27,7 +27,7 @@ public sealed record DurationMeasuringSelector<TCandidate>
     protected override ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> childSelector) =>
         new Instance<TRunSearchSpace, TRunProblem>(childSelector, Duration, TimeProvider);
 
-    private sealed class Instance<TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, ObservationDuration duration, TimeProvider timeProvider)
+    private sealed class Instance<TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, DurationAccumulator duration, TimeProvider timeProvider)
         : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(childSelector)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -49,10 +49,10 @@ public sealed record DurationMeasuringSelector<TCandidate>
 
 public static class DurationMeasuringSelector
 {
-    public static DurationMeasuringSelector<TCandidate> Create<TCandidate>(ISelector<TCandidate> childSelector, ObservationDuration duration) =>
+    public static DurationMeasuringSelector<TCandidate> Create<TCandidate>(ISelector<TCandidate> childSelector, DurationAccumulator duration) =>
         new(childSelector, duration);
 
-    public static DurationMeasuringSelector<TCandidate> Create<TCandidate>(ISelector<TCandidate> childSelector, ObservationDuration duration, TimeProvider timeProvider) =>
+    public static DurationMeasuringSelector<TCandidate> Create<TCandidate>(ISelector<TCandidate> childSelector, DurationAccumulator duration, TimeProvider timeProvider) =>
         new(childSelector, duration, timeProvider);
 }
 
@@ -60,20 +60,20 @@ public static class SelectorDurationExtensions
 {
     extension<TCandidate>(ISelector<TCandidate> selector)
     {
-        public DurationMeasuringSelector<TCandidate> MeasureDuration(ObservationDuration duration) => new(selector, duration);
+        public DurationMeasuringSelector<TCandidate> MeasureDuration(DurationAccumulator duration) => new(selector, duration);
 
-        public DurationMeasuringSelector<TCandidate> MeasureDuration(ObservationDuration duration, TimeProvider timeProvider) =>
+        public DurationMeasuringSelector<TCandidate> MeasureDuration(DurationAccumulator duration, TimeProvider timeProvider) =>
             new(selector, duration, timeProvider);
 
-        public DurationMeasuringSelector<TCandidate> MeasureDuration(out ObservationDuration duration)
+        public DurationMeasuringSelector<TCandidate> MeasureDuration(out DurationAccumulator duration)
         {
-            duration = new ObservationDuration();
+            duration = new DurationAccumulator();
             return new(selector, duration);
         }
 
-        public DurationMeasuringSelector<TCandidate> MeasureDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringSelector<TCandidate> MeasureDuration(out DurationAccumulator duration, TimeProvider timeProvider)
         {
-            duration = new ObservationDuration();
+            duration = new DurationAccumulator();
             return new(selector, duration, timeProvider);
         }
     }

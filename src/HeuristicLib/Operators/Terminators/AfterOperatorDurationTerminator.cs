@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -7,13 +7,13 @@ namespace HEAL.HeuristicLib.Operators;
 
 public sealed record AfterOperatorDurationTerminator<TCandidate> : StatelessTerminator<TCandidate>
 {
-    public AfterOperatorDurationTerminator(ObservationDuration duration, TimeSpan maximumDuration)
+    public AfterOperatorDurationTerminator(DurationAccumulator duration, TimeSpan maximumDuration)
     {
         Duration = duration;
         MaximumDuration = maximumDuration;
     }
 
-    public ObservationDuration Duration { get; init; }
+    public DurationAccumulator Duration { get; init; }
 
     public TimeSpan MaximumDuration { get; init; }
 
@@ -25,5 +25,5 @@ public sealed record AfterOperatorDurationTerminator<TCandidate> : StatelessTerm
 
 public static class AfterOperatorDurationTerminator
 {
-    public static AfterOperatorDurationTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, ObservationDuration duration, TimeSpan maximumDuration) => new(duration, maximumDuration);
+    public static AfterOperatorDurationTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, DurationAccumulator duration, TimeSpan maximumDuration) => new(duration, maximumDuration);
 }

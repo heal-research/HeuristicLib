@@ -9,7 +9,7 @@ public class EvaluatorInstrumentationTests
     [Fact]
     public void CountEvaluatorCalls_IncrementsOncePerEvaluateCall()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var evaluator = CreateEvaluator().CountCalls(counter);
         evaluator.Counter.ShouldBeSameAs(counter);
         evaluator.Metric.ShouldBe(OperatorCountMetric.Calls);
@@ -25,7 +25,7 @@ public class EvaluatorInstrumentationTests
     [Fact]
     public void CountEvaluatedCandidates_IncrementsByBatchSize()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var evaluator = CreateEvaluator().CountCandidates(counter);
         var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
@@ -39,7 +39,7 @@ public class EvaluatorInstrumentationTests
     [Fact]
     public void MeasureEvaluatorDuration_AddsElapsedEvaluatorExecutionDuration()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var evaluator = CreateEvaluator().MeasureDuration(duration, timeProvider);
         evaluator.Duration.ShouldBeSameAs(duration);
@@ -56,7 +56,7 @@ public class EvaluatorInstrumentationTests
     [Fact]
     public void CountEvaluatorCalls_DoesNotCountFailedCall()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var evaluator = new ThrowingEvaluator().CountCalls(counter);
         var problem = CreateProblem();
 
@@ -69,7 +69,7 @@ public class EvaluatorInstrumentationTests
     [Fact]
     public void MeasureEvaluatorDuration_RecordsFailedCall()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var evaluator = new ThrowingEvaluator().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
         var problem = CreateProblem();
 
@@ -80,9 +80,9 @@ public class EvaluatorInstrumentationTests
     }
 
     [Fact]
-    public void ObservationDuration_AllowsNegativeAdjustments()
+    public void DurationAccumulator_AllowsNegativeAdjustments()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
 
         duration.AddDuration(TimeSpan.FromSeconds(5));
         duration.AddDuration(TimeSpan.FromSeconds(-2));

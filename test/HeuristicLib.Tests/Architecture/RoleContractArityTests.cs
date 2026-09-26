@@ -8,13 +8,13 @@ namespace HEAL.HeuristicLib.Tests.Architecture;
 /// <remarks>
 /// This split is what the arity reduction bought, and nothing else in the suite fails if it is lost: a role that
 /// reintroduced <c>TSearchSpace</c> on its configuration contract would compile, pass every existing test, and
-/// surface only as arity in a user's field and parameter declarations. The roles are discovered from the assembly
-/// rather than listed, so a new role added at the wrong arity is caught on the same terms as a regression in an
-/// existing one.
+/// surface only as arity in a user's field and parameter declarations. The roles are discovered from the public
+/// Operators namespace rather than listed, so a new role added there at the wrong arity is caught on the same terms
+/// as a regression in an existing one.
 /// </remarks>
 public sealed class RoleContractArityTests
 {
-    private static readonly Assembly Contracts = typeof(IOperator).Assembly;
+    private static readonly Assembly Main = typeof(IOperator).Assembly;
 
     private static readonly IReadOnlyList<Type> Roles = RolesDerivedFrom(typeof(IOperator));
     private static readonly IReadOnlyList<Type> RoleInstances = RolesDerivedFrom(typeof(IOperatorInstance));
@@ -51,7 +51,7 @@ public sealed class RoleContractArityTests
     [Fact]
     public void TheAlgorithmContract_NamesTheCandidateAndWhatItReturns()
     {
-        var forms = Contracts.GetExportedTypes()
+        var forms = Main.GetExportedTypes()
             .Where(type => type.IsInterface && type.Name.StartsWith("IAlgorithm`", StringComparison.Ordinal))
             .Select(type => type.GetGenericArguments().Select(argument => argument.Name).ToArray())
             .OrderBy(named => named.Length)
@@ -61,7 +61,8 @@ public sealed class RoleContractArityTests
     }
 
     private static IReadOnlyList<Type> RolesDerivedFrom(Type half) =>
-        [.. Contracts.GetExportedTypes()
-            .Where(type => type.IsInterface && type.IsGenericTypeDefinition && type.GetInterfaces().Contains(half))
+        [.. Main.GetExportedTypes()
+            .Where(type => type.IsInterface && type.IsGenericTypeDefinition &&
+                           type.Namespace == typeof(IOperator).Namespace && type.GetInterfaces().Contains(half))
             .OrderBy(type => type.Name, StringComparer.Ordinal)];
 }

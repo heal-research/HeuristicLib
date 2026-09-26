@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,15 +8,15 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 public sealed record DurationMeasuringCreator<TCandidate>
     : WrappingCreator<TCandidate>
 {
-    public ObservationDuration Duration { get; init; }
+    public DurationAccumulator Duration { get; init; }
     public TimeProvider TimeProvider { get; init; }
 
-    public DurationMeasuringCreator(ICreator<TCandidate> childCreator, ObservationDuration duration)
+    public DurationMeasuringCreator(ICreator<TCandidate> childCreator, DurationAccumulator duration)
         : this(childCreator, duration, TimeProvider.System)
     {
     }
 
-    public DurationMeasuringCreator(ICreator<TCandidate> childCreator, ObservationDuration duration, TimeProvider timeProvider)
+    public DurationMeasuringCreator(ICreator<TCandidate> childCreator, DurationAccumulator duration, TimeProvider timeProvider)
         : base(childCreator)
     {
         Duration = duration;
@@ -26,7 +26,7 @@ public sealed record DurationMeasuringCreator<TCandidate>
     protected override ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childCreator) =>
         new Instance<TRunSearchSpace, TRunProblem>(childCreator, Duration, TimeProvider);
 
-    private sealed class Instance<TSearchSpace, TProblem>(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator, ObservationDuration duration, TimeProvider timeProvider)
+    private sealed class Instance<TSearchSpace, TProblem>(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator, DurationAccumulator duration, TimeProvider timeProvider)
         : WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem>(childCreator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -48,10 +48,10 @@ public sealed record DurationMeasuringCreator<TCandidate>
 
 public static class DurationMeasuringCreator
 {
-    public static DurationMeasuringCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> childCreator, ObservationDuration duration) =>
+    public static DurationMeasuringCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> childCreator, DurationAccumulator duration) =>
         new(childCreator, duration);
 
-    public static DurationMeasuringCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> childCreator, ObservationDuration duration, TimeProvider timeProvider) =>
+    public static DurationMeasuringCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> childCreator, DurationAccumulator duration, TimeProvider timeProvider) =>
         new(childCreator, duration, timeProvider);
 }
 
@@ -59,20 +59,20 @@ public static class CreatorDurationExtensions
 {
     extension<TCandidate>(ICreator<TCandidate> creator)
     {
-        public DurationMeasuringCreator<TCandidate> MeasureDuration(ObservationDuration duration) => new(creator, duration);
+        public DurationMeasuringCreator<TCandidate> MeasureDuration(DurationAccumulator duration) => new(creator, duration);
 
-        public DurationMeasuringCreator<TCandidate> MeasureDuration(ObservationDuration duration, TimeProvider timeProvider) =>
+        public DurationMeasuringCreator<TCandidate> MeasureDuration(DurationAccumulator duration, TimeProvider timeProvider) =>
             new(creator, duration, timeProvider);
 
-        public DurationMeasuringCreator<TCandidate> MeasureDuration(out ObservationDuration duration)
+        public DurationMeasuringCreator<TCandidate> MeasureDuration(out DurationAccumulator duration)
         {
-            duration = new ObservationDuration();
+            duration = new DurationAccumulator();
             return new(creator, duration);
         }
 
-        public DurationMeasuringCreator<TCandidate> MeasureDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public DurationMeasuringCreator<TCandidate> MeasureDuration(out DurationAccumulator duration, TimeProvider timeProvider)
         {
-            duration = new ObservationDuration();
+            duration = new DurationAccumulator();
             return new(creator, duration, timeProvider);
         }
     }

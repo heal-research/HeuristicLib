@@ -76,6 +76,8 @@ Each decoration records its **origin**, which is a fact about who installed it r
 
 `ResolutionScopeBuilder.Install(module)` stamps `Module` for the duration of the call, so a module cannot present itself as configuration.
 
+Analyzers implement the module contract. Runs install their single attachment list in attachment order through `Install`, so analyzers and other modules share the same ordering and reference deduplication. Configuration-origin decorations still bind inside module-origin decorations.
+
 ## The lookup
 
 `Resolve(r)` walks from the resolving scope towards the root, asking three questions at each one, and builds if the walk finds nothing.

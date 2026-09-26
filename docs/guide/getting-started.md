@@ -27,7 +27,6 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 
 var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
 

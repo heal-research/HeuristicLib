@@ -82,6 +82,8 @@ public class ExperimentExecutionTests
 
         probe.ExecutionCount.ShouldBe(3);
         probe.ActiveExecutions.ShouldBe(0);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Canceled);
+        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState == RunLifecycleState.Canceled);
     }
 
     [Fact]
@@ -97,6 +99,7 @@ public class ExperimentExecutionTests
 
         await Should.ThrowAsync<OperationCanceledException>(() =>
             run.CompleteAsync(ExecutionConcurrency.Concurrent(2), cancellationToken: cancellation.Token));
+        run.LifecycleState.ShouldBe(RunLifecycleState.Canceled);
     }
 
     [Fact]
@@ -113,6 +116,8 @@ public class ExperimentExecutionTests
 
         probe.ExecutionCount.ShouldBe(2);
         probe.ActiveExecutions.ShouldBe(0);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Stopped);
+        Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]

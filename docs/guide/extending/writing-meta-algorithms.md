@@ -103,7 +103,7 @@ var staged = new TwoStageAlgorithm<RealVector, PopulationState<RealVector>>
 
 var wholeRun = staged.TracePopulationQuality();
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .AddAnalyzer(wholeRun);
+    .Attach(wholeRun);
 ```
 
 Two type arguments, not four. The search space and the problem are supplied by `CreateRun`, so the same `staged` value composes stages written for any real vector problem.
@@ -115,8 +115,8 @@ var exploreQuality = explore.TracePopulationQuality();
 
 var wholeRun = staged.TracePopulationQuality();
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .AddAnalyzer(exploreQuality)
-    .AddAnalyzer(wholeRun);
+    .Attach(exploreQuality)
+    .Attach(wholeRun);
 ```
 
 `exploreQuality` then holds only the first stage's generations, and `wholeRun` holds every state the meta-algorithm yielded. Note that `explore` and `exploit` must be distinct objects for this to work, since observation sources are matched by reference.

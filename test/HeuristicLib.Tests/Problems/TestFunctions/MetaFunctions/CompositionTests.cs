@@ -1,7 +1,5 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Tests.Problems.TestFunctions.SingleObjectives;
 
 namespace HEAL.HeuristicLib.Tests.Problems.TestFunctions.MetaFunctions;

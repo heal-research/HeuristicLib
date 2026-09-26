@@ -11,7 +11,7 @@ public class TerminatorConfigurationEqualityTests
     {
         var child = new ThresholdTerminator(1);
 
-        child.CountCalls(new ObservationCounter()).ChildTerminator.ShouldBeSameAs(child);
+        child.CountCalls(new CountAccumulator()).ChildTerminator.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class TerminatorConfigurationEqualityTests
     [Fact]
     public void NestedComposition_WithEqualParts_IsEqual()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var left = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(2)).CountCalls(counter);
         var equal = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(2)).CountCalls(counter);
         var different = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(3)).CountCalls(counter);
@@ -47,8 +47,8 @@ public class TerminatorConfigurationEqualityTests
     [Fact]
     public void WrappingConcerns_IncludeChildAndSettingsInEquality()
     {
-        var counter = new ObservationCounter();
-        var duration = new ObservationDuration();
+        var counter = new CountAccumulator();
+        var duration = new DurationAccumulator();
 
         new ThresholdTerminator(1).CountCalls(counter).ShouldBe(new ThresholdTerminator(1).CountCalls(counter));
         new ThresholdTerminator(1).MeasureDuration(duration, TimeProvider.System).ShouldBe(new ThresholdTerminator(1).MeasureDuration(duration, TimeProvider.System));

@@ -3,7 +3,6 @@ using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using SinglePointCrossover = HEAL.HeuristicLib.Encodings.RealVectors.SinglePointCrossover;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
@@ -560,7 +559,7 @@ public class OperatorBudgetAlgorithmTests
     public void AfterOperatorCountTerminator_CanUseSharedCounterAcrossObservedOperators()
     {
         var problem = CreateProblem();
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var baseAlgorithm = CreateAlgorithm(problem);
         var algorithm = baseAlgorithm with
         {
@@ -585,7 +584,7 @@ public class OperatorBudgetAlgorithmTests
     [InlineData(-1)]
     public void AfterOperatorCountTerminator_IsImmediatelyTerminal_WhenMaximumCountIsNotPositive(int maximumCount)
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var terminator = new AfterOperatorCountTerminator<RealVector>(counter, maximumCount);
 
         terminator.IsTerminalState().ShouldBeTrue();
@@ -594,7 +593,7 @@ public class OperatorBudgetAlgorithmTests
     [Fact]
     public void AfterOperatorDurationTerminator_IsTerminalAtMaximumDuration()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
         var terminator = new AfterOperatorDurationTerminator<RealVector>(
             duration,
             maximumDuration: TimeSpan.FromSeconds(2));
@@ -609,7 +608,7 @@ public class OperatorBudgetAlgorithmTests
     [Fact]
     public void AfterOperatorDurationTerminator_IsImmediatelyTerminal_WhenMaximumDurationIsNotPositive()
     {
-        var duration = new ObservationDuration();
+        var duration = new DurationAccumulator();
 
         new AfterOperatorDurationTerminator<RealVector>(duration, TimeSpan.Zero).IsTerminalState().ShouldBeTrue();
         new AfterOperatorDurationTerminator<RealVector>(duration, TimeSpan.FromTicks(-1)).IsTerminalState().ShouldBeTrue();
@@ -690,7 +689,7 @@ public class OperatorBudgetAlgorithmTests
         var analyzer = new EvaluationObservingAnalyzer(algorithm.Evaluator);
 
         algorithm.LimitedToEvaluatedCandidates(algorithm.Evaluator, maximumCandidates: 1000)
-                 .CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(analyzer)
+                 .CreateRun(problem, RandomNumberGenerator.Create(42)).Attach(analyzer)
                  .Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         analyzer.ObservedCandidates.ShouldBeGreaterThan(0);
@@ -718,7 +717,7 @@ public class OperatorBudgetAlgorithmTests
                 return observedOperator.MeasureDuration(duration, timeProvider);
             });
 
-        await budgeted.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(quality)
+        await budgeted.CreateRun(problem, RandomNumberGenerator.Create(42)).Attach(quality)
                       .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         measuredOperators.ShouldHaveSingleItem();
@@ -738,12 +737,12 @@ public class OperatorBudgetAlgorithmTests
         var withoutBudget = algorithm.Evaluator.TraceBestCandidateSoFar();
         var withBudget = algorithm.Evaluator.TraceBestCandidateSoFar();
 
-        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(withoutBudget)
+        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).Attach(withoutBudget)
                        .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         await algorithm
             .LimitedToEvaluatorDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), new AdvancingTimeProvider(TimeSpan.FromMilliseconds(1)))
-            .CreateRun(problem, RandomNumberGenerator.Create(42)).AddAnalyzer(withBudget)
+            .CreateRun(problem, RandomNumberGenerator.Create(42)).Attach(withBudget)
             .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         withBudget.SampleCount.ShouldBe(withoutBudget.SampleCount);

@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -7,10 +7,10 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 public sealed record CountingMutator<TCandidate> : WrappingMutator<TCandidate>
 {
-    public ObservationCounter Counter { get; init; }
+    public CountAccumulator Counter { get; init; }
     public OperatorCountMetric Metric { get; init; }
 
-    public CountingMutator(IMutator<TCandidate> childMutator, ObservationCounter counter, OperatorCountMetric metric)
+    public CountingMutator(IMutator<TCandidate> childMutator, CountAccumulator counter, OperatorCountMetric metric)
         : base(childMutator)
     {
         Counter = counter;
@@ -20,7 +20,7 @@ public sealed record CountingMutator<TCandidate> : WrappingMutator<TCandidate>
     protected override IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childMutator) =>
         new Instance<TRunSearchSpace, TRunProblem>(childMutator, Counter, Metric);
 
-    private sealed class Instance<TSearchSpace, TProblem>(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator, ObservationCounter counter, OperatorCountMetric metric)
+    private sealed class Instance<TSearchSpace, TProblem>(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator, CountAccumulator counter, OperatorCountMetric metric)
         : WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem>(childMutator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -36,7 +36,7 @@ public sealed record CountingMutator<TCandidate> : WrappingMutator<TCandidate>
 
 public static class CountingMutator
 {
-    public static CountingMutator<TCandidate> Create<TCandidate>(IMutator<TCandidate> childMutator, ObservationCounter counter, OperatorCountMetric metric) =>
+    public static CountingMutator<TCandidate> Create<TCandidate>(IMutator<TCandidate> childMutator, CountAccumulator counter, OperatorCountMetric metric) =>
         new(childMutator, counter, metric);
 }
 
@@ -44,19 +44,19 @@ public static class MutatorCounterExtensions
 {
     extension<TCandidate>(IMutator<TCandidate> mutator)
     {
-        public CountingMutator<TCandidate> CountCalls(ObservationCounter counter) => new(mutator, counter, OperatorCountMetric.Calls);
+        public CountingMutator<TCandidate> CountCalls(CountAccumulator counter) => new(mutator, counter, OperatorCountMetric.Calls);
 
-        public CountingMutator<TCandidate> CountCalls(out ObservationCounter counter)
+        public CountingMutator<TCandidate> CountCalls(out CountAccumulator counter)
         {
-            counter = new ObservationCounter();
+            counter = new CountAccumulator();
             return mutator.CountCalls(counter);
         }
 
-        public CountingMutator<TCandidate> CountCandidates(ObservationCounter counter) => new(mutator, counter, OperatorCountMetric.Candidates);
+        public CountingMutator<TCandidate> CountCandidates(CountAccumulator counter) => new(mutator, counter, OperatorCountMetric.Candidates);
 
-        public CountingMutator<TCandidate> CountCandidates(out ObservationCounter counter)
+        public CountingMutator<TCandidate> CountCandidates(out CountAccumulator counter)
         {
-            counter = new ObservationCounter();
+            counter = new CountAccumulator();
             return mutator.CountCandidates(counter);
         }
     }

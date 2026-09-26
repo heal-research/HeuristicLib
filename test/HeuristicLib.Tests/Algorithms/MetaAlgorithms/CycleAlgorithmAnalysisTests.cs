@@ -21,7 +21,7 @@ public class CycleAlgorithmAnalysisTests
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAnalyzer(analysis1).AddAnalyzer(analysis2);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(analysis1).Attach(analysis2);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
