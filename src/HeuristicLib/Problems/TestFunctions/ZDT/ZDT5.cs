@@ -2,7 +2,7 @@ using HEAL.HeuristicLib.Encodings.BoolVectors;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
+namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 /// <summary>
 ///   ZDT5 is a binary-encoded multi-objective optimization problem and therefore can not fit into the RealVector

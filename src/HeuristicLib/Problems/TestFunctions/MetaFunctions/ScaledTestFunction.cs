@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 
-namespace HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
+namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public class ScaledTestFunction(double[] inputScaling, double outputScaling, ITestFunction inner)
     : MetaTestFunction(inner)

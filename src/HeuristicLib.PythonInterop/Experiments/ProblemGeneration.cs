@@ -8,12 +8,10 @@ using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.MachineLearning;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.BBoB;
-using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
-using RastriginFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.RastriginFunction;
-using SphereFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.SphereFunction;
+using RastriginFunction = HEAL.HeuristicLib.Problems.TestFunctions.RastriginFunction;
+using SphereFunction = HEAL.HeuristicLib.Problems.TestFunctions.SphereFunction;
 
 namespace HEAL.HeuristicLib.PythonInterop;
 

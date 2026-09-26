@@ -7,7 +7,7 @@ public sealed class AssemblyDependencyTests
     [Fact]
     public void Main_DoesNotReferenceExperimental()
     {
-        typeof(Algorithm<, , , , >).Assembly.GetReferencedAssemblies()
+        typeof(Algorithm<,,,,>).Assembly.GetReferencedAssemblies()
             .Select(reference => reference.Name)
             .ShouldNotContain("HEAL.HeuristicLib.Experimental");
     }

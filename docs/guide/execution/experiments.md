@@ -112,6 +112,12 @@ await foreach (var completedTask in Task.WhenEach(tasks))
 
 Limit concurrency when evaluation is CPU heavy or uses a constrained external resource.
 
+## Run lifecycle
+
+An experiment run accepts attachments while `Preparing` and starts once. Do not start one of its trial runs directly before starting the experiment; the experiment rejects that mixed ownership.
+
+An experiment moves from `Running` to `Completed`, `Failed` or `Canceled`. Disposing its stream before completion stops scheduling, cancels active work and leaves the experiment `Stopped`. These states are terminal: create a new experiment run to execute again. Unlike an individual algorithm run, an experiment does not pause and resume.
+
 ## Design a useful comparison
 
 1. Choose a budget that reflects comparable work.

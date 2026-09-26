@@ -510,9 +510,11 @@ Add XML documentation only for a nonobvious contract, invariant, lifecycle, fail
 - Keep contributor implementation rules in this document.
 - Keep unresolved decisions in `plans/developer-backlog.md`. Move settled decisions here or into the relevant public documentation.
 
-### § 9.3 Name types for what binds them
+### § 9.3 Name types for what binds them, place them by what they are
 
-Name a type for the narrowest domain or representation that binds it. Use genotype names for types that work with any problem over that genotype. Use domain names for types that require one problem. The placement question remains in `plans/developer-backlog.md`.
+Name a type for the narrowest domain or representation that binds it. Use genotype names for types that work with any problem over that genotype. Use domain names for types that require one problem.
+
+Place a type with the concept it implements, not with the representation that binds it. A problem, including an authoring base bound to one representation such as `RealVectorProblem`, belongs in `Problems`; an operator authoring base belongs in its role namespace. An encoding holds its representation's candidate types, search spaces and the operators that work with any problem over that representation. Put an operator that requires one problem beside that problem, as `NumericParameterFittingRefiner` sits in `Problems.MachineLearning`.
 
 ### § 9.4 Allow authoring dependencies required by construction
 

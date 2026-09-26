@@ -10,17 +10,83 @@ public sealed class LayerDependencyTests
     private const string MainRoot = "src/HeuristicLib/";
     private const string ExperimentalRoot = "src/HeuristicLib.Experimental/";
 
-    // Each entry is one source file and forbidden dependency. Remove entries as the corresponding steps land.
-    private static readonly string[] ExistingViolations =
+    // The sole exception in architecture/layering.md: epoch updates use the analysis-owned Observe hook.
+    // Remove it when the DI/AOP work supplies a problem-control hook; do not add migration allowances.
+    private static readonly string[] AllowedExceptions =
     [
         "src/HeuristicLib.Experimental/Problems/Dynamic/DynamicProblem.cs | Problems -> Analysis",
     ];
 
     [Fact]
-    public void SourceDependencies_MatchTheTemporaryBaseline()
+    public void SourceDependencies_HaveOnlyTheDocumentedException()
     {
         var actual = FindViolations();
-        actual.ShouldBe(ExistingViolations, ignoreOrder: true);
+        actual.ShouldBe(AllowedExceptions, ignoreOrder: true);
+    }
+
+    [Fact]
+    public void CorePublicTypes_LiveInTheirAgreedConcepts()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var (compilation, _) = CreateMainCompilation(repositoryRoot);
+
+        // Reviewed ownership boundaries only; grouping folders do not introduce namespaces.
+        AssertPublicTypeLocations(compilation, repositoryRoot, MainRoot,
+        [
+            ("Instrumentation.CountAccumulator", "Instrumentation/"),
+            ("Instrumentation.DurationAccumulator", "Instrumentation/"),
+            ("Execution.SearchConfigurationValidation", "Execution/"),
+            ("Execution.ValidationReport", "Execution/"),
+            ("Execution.ValidationDiagnostic", "Execution/"),
+            ("Execution.AlgorithmRun", "Execution/Runs/"),
+            ("Execution.AlgorithmRun`4", "Execution/Runs/"),
+            ("Execution.ExecutionStream`1", "Execution/Runs/"),
+            ("Execution.RunLifecycleState", "Execution/Runs/"),
+            ("Execution.ExecutionConcurrency", "Execution/Concurrency/"),
+            ("Execution.ExecutionConcurrencyKind", "Execution/Concurrency/"),
+            ("Execution.BatchExecution", "Execution/Concurrency/"),
+            ("Execution.IExecutionModule", "Execution/"),
+            ("Analysis.IAnalyzer", "Analysis/"),
+            ("Analysis.TrialAnalyzer", "Analysis/"),
+            ("Experiments.ExperimentRun`6", "Experiments/"),
+            ("Experiments.TrialModule", "Experiments/"),
+            ("Experiments.TrialModule`1", "Experiments/"),
+            ("Experiments.TrialModule`2", "Experiments/"),
+            ("Experiments.TrialAttachment", "Experiments/"),
+            ("Experiments.TrialAttachment`2", "Experiments/"),
+        ]);
+    }
+
+    [Fact]
+    public void DynamicAnalysisTypes_BelongToExperimentalAnalysis()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var (compilation, _) = CreateCompilation(repositoryRoot, "HeuristicLib.Experimental", includeMain: true);
+
+        AssertPublicTypeLocations(compilation, repositoryRoot, ExperimentalRoot,
+        [
+            ("Analysis.EpochClock`2", "Analysis/Dynamic/"),
+            ("Analysis.DynamicClocks", "Analysis/Dynamic/"),
+            ("Analysis.EpochWork", "Analysis/Dynamic/"),
+            ("Analysis.EpochWorkTrace", "Analysis/Dynamic/"),
+            ("Analysis.BestBeforeChangePerformanceAnalyzer`3", "Analysis/Dynamic/"),
+            ("Analysis.BestBeforeChangePerformanceEntry`1", "Analysis/Dynamic/"),
+        ]);
+    }
+
+    private static void AssertPublicTypeLocations(CSharpCompilation compilation, string repositoryRoot,
+        string projectRoot, (string Name, string Folder)[] expectedTypes)
+    {
+        foreach (var (name, folder) in expectedTypes)
+        {
+            var type = compilation.Assembly.GetTypeByMetadataName("HEAL.HeuristicLib." + name);
+            type.ShouldNotBeNull($"{name} must belong to {projectRoot} in its agreed namespace.");
+            type.DeclaredAccessibility.ShouldBe(Accessibility.Public);
+            var sourcePaths = type.DeclaringSyntaxReferences.Select(reference =>
+                Path.GetRelativePath(repositoryRoot, reference.SyntaxTree.FilePath).Replace('\\', '/')).ToArray();
+            sourcePaths.ShouldNotBeEmpty();
+            sourcePaths.ShouldAllBe(path => path.StartsWith(projectRoot + folder, StringComparison.Ordinal));
+        }
     }
 
     [Fact]
@@ -83,7 +149,28 @@ public sealed class LayerDependencyTests
         ScanTree(compilation, hostProbe, repositoryRoot)
             .ShouldContain("src/HeuristicLib/Execution/Runs/HostProbe.cs | OutsideExecution -> ResolutionInternal");
         ScanTree(compilation, objectiveProbe, repositoryRoot)
-            .ShouldContain("src/HeuristicLib/Objectives/ObjectiveProbe.cs | Objectives -> ConcreteEncoding");
+            .ShouldContain("src/HeuristicLib/Objectives/ObjectiveProbe.cs | Domain -> Encodings");
+    }
+
+    [Fact]
+    public void SemanticCheck_KeepsDomainVocabularyAtTheBottom()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var (compilation, _) = CreateMainCompilation(repositoryRoot);
+        var probe = CSharpSyntaxTree.ParseText(
+            "namespace HEAL.HeuristicLib.Random; internal class DomainProbe { private HEAL.HeuristicLib.Operators.IOperator? candidateOperator; private HEAL.HeuristicLib.Execution.ExecutionConcurrency? concurrency; private HEAL.HeuristicLib.Problems.IProblem? problem; }",
+            ParseOptions,
+            Path.Combine(repositoryRoot, MainRoot, "Random", "DomainProbe.cs"),
+            cancellationToken: TestContext.Current.CancellationToken);
+        var delegateProbe = CSharpSyntaxTree.ParseText(
+            "namespace HEAL.HeuristicLib.Random; internal delegate HEAL.HeuristicLib.Operators.IOperator DomainFactory();",
+            ParseOptions,
+            Path.Combine(repositoryRoot, MainRoot, "Random", "DelegateProbe.cs"),
+            cancellationToken: TestContext.Current.CancellationToken);
+        compilation = compilation.AddSyntaxTrees(probe, delegateProbe);
+
+        ScanTree(compilation, probe, repositoryRoot).ShouldBe(["src/HeuristicLib/Random/DomainProbe.cs | Domain -> Operators"]);
+        ScanTree(compilation, delegateProbe, repositoryRoot).ShouldBe(["src/HeuristicLib/Random/DelegateProbe.cs | Domain -> Operators"]);
     }
 
     private static string[] FindViolations()
@@ -218,9 +305,8 @@ public sealed class LayerDependencyTests
                 targetNamespace.StartsWith("HEAL.HeuristicLib.Analysis", StringComparison.Ordinal))
                 found.Add($"{path} | {sourceKind} -> Analysis");
 
-            if (sourceKind == "Objectives" &&
-                targetNamespace.StartsWith("HEAL.HeuristicLib.Encodings", StringComparison.Ordinal))
-                found.Add($"{path} | Objectives -> ConcreteEncoding");
+            if (targetType is not null && IsDomainReference(node, model, targetType))
+                found.Add($"{path} | Domain -> {Concept(targetType)}");
 
             if (sourceKind == "Hosting" && targetType is { TypeKind: TypeKind.Class, IsAbstract: false } &&
                 targetNamespace.StartsWith("HEAL.HeuristicLib.Algorithms", StringComparison.Ordinal) &&
@@ -247,6 +333,47 @@ public sealed class LayerDependencyTests
         return found;
     }
 
+    // Domain vocabulary (L0) references only domain vocabulary. Classified by type, because Problems, SearchSpaces and
+    // Execution also hold types of higher layers. Encodings are concrete representations, so none of them is L0.
+    private static bool IsDomainReference(SyntaxNode node, SemanticModel model, INamedTypeSymbol targetType)
+    {
+        var declaration = node.Ancestors().LastOrDefault(ancestor => ancestor is BaseTypeDeclarationSyntax or DelegateDeclarationSyntax);
+        return declaration is not null && model.GetDeclaredSymbol(declaration) is INamedTypeSymbol sourceType &&
+               IsDomain(sourceType) && IsLibrary(targetType) && !IsDomain(targetType);
+    }
+
+    private static bool IsDomain(INamedTypeSymbol type)
+    {
+        type = Outermost(type);
+        var ns = type.ContainingNamespace.ToDisplayString();
+        return ns switch
+        {
+            _ when InNamespace(ns, "SearchSpaces") => type.Name is not ("OperatorContractComposition" or
+                "OperatorContractVerification" or "SearchSpaceCompatibility"),
+            _ when InNamespace(ns, "Objectives") || InNamespace(ns, "Random") || InNamespace(ns, "Collections") ||
+                   InNamespace(ns, "Instrumentation") || InNamespace(ns, "Numerics") => true,
+            "HEAL.HeuristicLib.Execution" => type.Name is "ExecutionConcurrency" or "ExecutionConcurrencyKind" or "BatchExecution",
+            "HEAL.HeuristicLib.Problems" => type.Name is "IProblem" or "IStochasticProblem" or "Problem" or "SingleSolutionProblem",
+            _ => false,
+        };
+    }
+
+    private static bool InNamespace(string ns, string concept) =>
+        ns == "HEAL.HeuristicLib." + concept || ns.StartsWith("HEAL.HeuristicLib." + concept + ".", StringComparison.Ordinal);
+
+    private static bool IsLibrary(INamedTypeSymbol type) =>
+        Outermost(type).ContainingNamespace.ToDisplayString().StartsWith("HEAL.HeuristicLib.", StringComparison.Ordinal);
+
+    private static INamedTypeSymbol Outermost(INamedTypeSymbol type)
+    {
+        while (type.ContainingType is { } containing)
+            type = containing;
+        return type;
+    }
+
+    private static string Concept(INamedTypeSymbol type) =>
+        Outermost(type).ContainingNamespace.ToDisplayString().Split('.').ElementAtOrDefault(2) ?? string.Empty;
+
     private static bool IsResolutionInternal(ISymbol symbol, INamedTypeSymbol? type) =>
         type?.Name is "ResolutionScope" or "ResolutionScopeBuilder" or "Decoration" &&
         (symbol.DeclaredAccessibility == Accessibility.Internal || type.DeclaredAccessibility == Accessibility.Internal);
@@ -258,9 +385,6 @@ public sealed class LayerDependencyTests
 
     private static string SourceKind(string path, SyntaxNode root)
     {
-        if (path.StartsWith(MainRoot + "Objectives/", StringComparison.Ordinal) ||
-            path.StartsWith(ExperimentalRoot + "Objectives/", StringComparison.Ordinal))
-            return "Objectives";
         if (path.StartsWith(MainRoot + "Operators/", StringComparison.Ordinal) ||
             path.StartsWith(ExperimentalRoot + "Operators/", StringComparison.Ordinal))
             return "Operators";

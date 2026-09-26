@@ -2,7 +2,9 @@
 
 Analysis of the layering concerns in HeuristicLib, written against the `analysis-overhaul` branch at `d2ba7789`. No code was changed.
 
-Status: direction accepted. This report's work is the first of two branches and goes first, as a cleanup, before the DI and AOP alignment in [container and aspect framing](container-and-aspect-framing.md). That plan takes over this report's phase 4 and settles phase 1 item 2. This report remains the record of the findings and the dependency analysis.
+Status: implemented with revisions; current rules are documented in [layering](../docs/contributing/architecture/layering.md), with follow-ups and rejected approaches in the [developer backlog](developer-backlog.md). The findings below describe the original `analysis-overhaul` snapshot; the implementation sequence in Part 6 reflects the settled outcome. The later DI and AOP alignment in [container and aspect framing](container-and-aspect-framing.md) owns phase 4.
+
+The branch consolidated Contracts into the main assembly, kept hosting and concurrency in `Execution` with separate grouping folders, and retained run-specific lifecycle ownership after rejecting a shared host. Lifecycle and enumerator ownership remain together in `AlgorithmRun`; composition and continuation wrappers are not required. The original report's decomposition recommendation is superseded. Layering occupies guideline § 3.5, leaving § 3.6 for the later container/AOP policy.
 
 ## Summary
 
@@ -177,32 +179,29 @@ This is worth doing first because the later phases are mechanical once the rule 
 
 ### Phase 1: break the two cycles
 
-Cheap, mechanical, no design risk.
+Implemented with an explicit behavior spec for attachment ordering.
 
-1. Move `ObservationCounter` and `ObservationDuration` from `Analysis` down to L0. Rename to drop "Observation", since budgets and terminators use them for control flow. Something like `Counter` and `DurationAccumulator`. Removes the `Operators -> Analysis` and `Algorithms -> Analysis` edges from 25 files.
-2. Make analyzers modules and let the run accept modules only; an analyzer is a module that owns results. Decided in [container and aspect framing](container-and-aspect-framing.md), which keeps an `IAnalyzer` interface or `Analyzer` base class on top of the module contract possible where it helps understanding or carries analyzer-specific behavior. The run stops referencing `Analysis`. `AlgorithmRun` collapses to one attachment list, one `HashSet`, one `Add`. Every decoration then routes through `builder.Install`, so module origin follows from the type rather than from the run installing analyzers specially.
-   - `TrialAnalyzer<TAlgorithm, TAnalyzer>` constrains `TAnalyzer : IAnalyzer`. That constraint can relax or drop. Per-trial factories plus typed result retrieval are an experiment feature and belong at L4, generic over whatever the user hands in.
-   - Ordering changes: analyzers currently install before modules. If both become modules, order is installation order. The docs already state that rule for modules, so this is more honest, but it is a behavioral change and needs a spec check.
+1. Moved the two sinks to `Instrumentation` as `CountAccumulator` and `DurationAccumulator`, removing the operator and algorithm imports of Analysis.
+2. Retained `IAnalyzer : IExecutionModule` with no duplicate installation member. `AlgorithmRun.Attach` accepts modules through one ordered list, one reference-identity set and `builder.Install`; the run no longer references Analysis.
+   - Experiments own `TrialModule<TAlgorithm, TModule>` and `TrialAttachment<TTrial, TModule>`. The methods are `AttachPerTrial` and `GetAttached`; Analysis retains `TrialAnalyzer.Create` as a convenience. Returned pairs expose `Trial` and `Module`.
+   - Attachment order now determines installation order across analyzers and other modules. The behavior specs pass, including reference deduplication and direct analyzer decoration. Configuration-origin precedence is preserved.
 3. Move `SearchConfigurationValidation` from `SearchSpaces` to L1 next to `ExecutionSignature`.
-4. Move `Clock` and `Clock<TTime>` down out of `Analysis`. Concrete clocks stay beside whatever they read, so `EpochClock` stays with dynamic problems and stops reaching upward.
+4. Kept the clocks in Analysis. Moved `EpochClock`, `EpochWork` and `BestBeforeChangePerformanceAnalyzer` to Experimental's `Analysis/Dynamic` folder and `Analysis` namespace. The remaining dynamic-problem `Observe` call is the doctrine's one allowed exception.
 5. Fix the `Objectives -> Encodings.Permutations` edge in `LexicographicComparer`.
 
-### Phase 2: split the Execution namespace
+### Phase 2: consolidate the assembly and organize Execution
 
-`Execution` keeps the composition model and the resolver. A new namespace, `Runs` or `Hosting`, takes `AlgorithmRun`, `ExecutionStream`, `RunLifecycleState` and `ExecutionConcurrency`. `Experiments` moves next to it. `BatchExecution` goes wherever parallel helpers go, which is not here.
+All Contracts source now belongs to the main HeuristicLib assembly, and the Contracts project and package have been removed. Deprecating the published package remains a manual release action. `Execution` contains composition, resolution and hosting types, with ownership enforced by the architecture test.
 
-After this, "which is more bottom" has an answer you can point at. `Execution` is the model, `Runs` is the host above it, and the dependency runs one way.
+Run files live under `Execution/Runs`; shared concurrency helpers live under `Execution/Concurrency`. Both retain the `Execution` namespace. `ExperimentRun` remains in `Experiments`. The grouping folders do not create new namespaces.
 
-### Phase 3: decompose AlgorithmRun
+### Phase 3: characterize lifecycle and retain ownership
 
-Three objects, one façade.
+The extraction proposal was reconsidered against the actual run semantics. Algorithm runs resume a retained execution; experiment runs coordinate trials and have a terminal lifecycle. Sharing guarded state assignments does not justify a common host.
 
-- `RunComposition`, immutable once built. Algorithm, problem, random, modules.
-- Resolution, already `ResolutionScope.Create(...)`, taking the composition as its input rather than reading the run's private fields.
-- `RunHost<TSearchState>`, owning lifecycle state, the enumerator, stream creation and the pause-versus-terminate cancellation rule. Generic in the search state only. Knows nothing about analyzers, modules, search spaces or problems.
-- `AlgorithmRun<...>` stays as the user-facing façade over the three.
+The committed characterization tests cover preparation, completion, pause/resume, cancellation, failure and experiment early disposal. `AlgorithmRun` keeps lifecycle and enumerator ownership together; `ExperimentRun` keeps scheduling and its lifecycle. The rejected `RunHost` and mandatory composition/continuation extraction are not prerequisites for the next branch.
 
-`ExperimentRun` then reuses `RunHost` instead of carrying its own copy of the state machine. The state machine becomes testable on its own, which given the number of transitions in `Track` is overdue.
+Two code-inspection findings, competing-stream rejection failing the active run and disposal exceptions leaving an incorrect lifecycle, are recorded as separate focused fixes in [developer backlog](developer-backlog.md).
 
 ### Phase 4: give the pointcut a type
 
@@ -217,8 +216,8 @@ Without this, phase 0 is a document that decays. `ObservationCounter` did not en
 ## Judgement calls I would not make for you
 
 - The five near-identical `ObservingX` wrappers could collapse behind a generated or reflective mechanism. I would leave them. The duplication is honest and visible, and the alternative adds indirection to the hot path, which § 7.1 and the performance constraint in the design goals both push against. Five files of repetition is a fair price.
-- Decided since: analyzers are modules, with no parallel contract. Whether an `IAnalyzer` interface or `Analyzer` base class remains on top of the module contract is decided in the branch; see phase 1 item 2.
-- Whether `Contracts` is the right home for `AlgorithmRun` and `ExperimentRun` at all. They are the least contract-like things in that assembly: a 261-line state machine and a 431-line scheduler with channels and worker tasks. Splitting the Execution namespace in phase 2 raises the question of whether the host belongs in the main package instead, with Contracts keeping the composition model and the resolver. Worth deciding deliberately rather than by drift.
+- Settled: `IAnalyzer` inherits `IExecutionModule`, and the run uses the module contract. See phase 1 item 2.
+- Settled: Contracts was consolidated into the main assembly, including both run types. See phase 2.
 
 ## What I would do first
 

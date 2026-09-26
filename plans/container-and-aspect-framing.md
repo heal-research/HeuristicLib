@@ -1,6 +1,6 @@
 # Container and aspect framing
 
-Status: direction accepted. The work described here is the second of two branches. It starts after the layering branch described in [layering and phase separation](layering-and-phase-separation.md), which goes first as a cleanup. Final names and detailed designs are settled in the implementing branches. Written during `analysis-overhaul` and current as of its end on 2026-09-23.
+Status: direction accepted; DI/AOP implementation remains future work. This follows the completed layering overhaul, whose current rules are documented in [layering](../docs/contributing/architecture/layering.md). Written during `analysis-overhaul` and updated with the layering branch's settled decisions. The original analysis is in [layering and phase separation](layering-and-phase-separation.md).
 
 This document compares the execution model with dependency injection containers and aspect-oriented programming, records the direction taken from that comparison, and orders the work together with the layering report. The report remains the record of its findings and its dependency analysis.
 
@@ -67,12 +67,12 @@ The report reached the same model from the other side. Its part 1 lists "DI regi
 | Layering report | Where it goes |
 | --- | --- |
 | Part 1: configuration and execution are phases, not layers | Adopted as the model both branches work from |
-| Part 1: `Execution` holds four responsibilities | Layering branch: the namespace split, following the line .NET draws between `DependencyInjection` and `Hosting` |
-| Cycle 1: counters under `Analysis` | Layering branch |
+| Part 1: `Execution` holds four responsibilities | Layering branch: ownership checks and `Execution/Runs` and `Execution/Concurrency` grouping folders, retaining one `Execution` namespace |
+| Cycle 1: counters under `Analysis` | Layering branch: `Instrumentation.CountAccumulator` and `DurationAccumulator` |
 | Cycle 2: `IAnalyzer` and `IExecutionModule` share a signature | Layering branch: analyzers become modules, with no parallel contract |
 | The `DecorationOrigin` hole | Closed on `analysis-overhaul` by the run. It disappears for good once analyzers are modules |
 | Part 3: the pointcut has no type | DI and AOP branch: a pointcut type with AspectJ-style matching, replacing the report's phase 4 |
-| Part 4: `AlgorithmRun` is three objects | Layering branch, as an internal split |
+| Part 4: `AlgorithmRun` is three objects | Reconsidered in the layering branch: lifecycle characterization retained; shared host and mandatory composition/continuation extraction rejected |
 | Phase 5: enforcement | Layering branch, plus one rule in the DI and AOP branch |
 
 ## Direction
@@ -81,11 +81,11 @@ The report reached the same model from the other side. Its part 1 lists "DI regi
 
 Decided: analysis builds on execution modules, and there is no parallel analyzer contract. Whatever an analyzer is, it is a module that owns results. This avoids a duality that is not needed and makes it plain how analysis integrates with the execution model instead of standing beside it.
 
-An `IAnalyzer` interface or an `Analyzer` base class on top of the module contract stays possible. Keep one where it helps readers understand the system, or where genuinely analyzer-specific behavior belongs in it, such as the synchronization and publication rules `AccumulatingAnalyzer` holds today. The history below is the warning against keeping one that only marks a distinction.
+The layering branch retained `IAnalyzer : IExecutionModule` for analyzer authoring and contracts such as `IRankAnalyzer`, without redeclaring `Install`. Existing analyzer bases retain their responsibilities, including synchronization and publication in `AccumulatingAnalyzer`; no new base was introduced just to replace the interface.
 
-The analysis rework went through three shapes to get here. `IAnalyzer` started as `IAnalyzer : IExecutionHook` with no members. The simplification pass deleted it, because a marker that appears in constraints reads as a distinction that does not exist. It came back as its own contract when analyzers became first-class stateful run components that own their results, because an execution hook did not feel like a base an analyzer could stand on. That is the current code: an analyzer "is not an execution module, although its installation can create and install any number of modules", and the run installs it with module origin.
+Historically, the analysis rework went through three shapes. `IAnalyzer` started as `IAnalyzer : IExecutionHook` with no members. A simplification pass deleted it, then it returned with its own installation member when analyzers became stateful components that own their results. The layering branch superseded that separate contract with inheritance from `IExecutionModule`.
 
-A module read as a place to declare advice is a general mechanism, and analysis is one of its clients. Ownership is a separate question: an aspect with fields is still an aspect. The change belongs to the layering branch, because it also removes the run's dependency on analysis. `AlgorithmRun` then keeps one attachment list, `TrialAnalyzer` constrains on the module type, and install order becomes attachment order across everything a run installs, where today analyzers install first. That changes behavior for runs that attach both and needs a spec before the change. Whether a user-facing convenience such as `AddAnalyzer` stays is a naming question for that branch.
+A module read as a place to declare advice is a general mechanism, and analysis is one of its clients. The layering branch removed the run's dependency on Analysis. `AlgorithmRun.Attach` uses one attachment list and installs modules in attachment order, with reference deduplication. Experiments own `TrialModule` and `TrialAttachment`, exposed through `AttachPerTrial` and `GetAttached`; Analysis retains the `TrialAnalyzer.Create` convenience. The attachment-order behavior spec passes. Later module/aspect terminology work must account for these settled user-facing methods.
 
 ### Pointcuts
 
@@ -152,7 +152,7 @@ The design goals ask for "plain C# composition over framework magic", and § 3.1
 - **A universal role invocation path.** Castle's `IInterceptor.Intercept(IInvocation)` sends every call through one generic path with `Proceed()`. That is the [typed operator invocation](developer-backlog.md#typed-operator-invocation) experiment, measured at 2.39 ns against 12.84 ns and rejected.
 - **A runtime service locator.** § 4.3 already limits the scope to instance creation, child scopes and delayed child algorithm creation. Composition-root code receiving the container is the standard exception in DI practice.
 
-Once the branch settles it, this list becomes a guideline, § 3.5, because it is policy.
+Once the branch settles it, this list becomes guideline § 3.6, because it is policy. The layering branch occupies § 3.5.
 
 ## Documentation
 
@@ -190,9 +190,9 @@ The layering branch goes first. It is a cleanup that leaves a clearer structure 
 
 1. The doctrine: `layering.md` with the layers, their rules and the phase distinction.
 2. The two dependency cycles, including analyzers becoming modules.
-3. The namespace split. Its names are decided at the start of the branch, so each file moves once. `Execution` and `Runs` are the current proposal.
-4. The internal split of `AlgorithmRun` into composition, scope and a `RunHost` that `ExperimentRun` reuses. The public `AlgorithmRun` and its fluent API stay.
-5. Enforcement of the layer rules through an architecture test or a Roslyn analyzer.
+3. Contracts consolidation into the main assembly. Hosting and concurrency remain in `Execution`, grouped under `Execution/Runs` and `Execution/Concurrency`; experiments stay in `Experiments`.
+4. Lifecycle characterization with ownership retained by each run. `AlgorithmRun` keeps lifecycle and enumerator ownership together. No shared `RunHost` or mandatory composition/continuation extraction is required.
+5. Enforcement through semantic architecture tests, with exactly the dynamic-problem observation exception and checks for agreed public type ownership.
 
 ### Second: the DI and AOP alignment branch
 
@@ -208,13 +208,13 @@ It starts from the layering branch's structure. A suggested order:
 
 ## Open for the branches
 
-1. Final names: the pointcut type, the advice kinds, the module or aspect type, the `Interceptor` role, and the namespaces, which the layering branch settles.
+1. Final names: the pointcut type, the advice kinds, the module or aspect type and the `Interceptor` role. The layering branch's existing concept namespaces are settled.
 2. Nesting. None of the first ideas convinces, and the redesign may resolve it differently.
 3. The pointcut syntax: a C# expression API, AspectJ-like string patterns or both; what wildcards cover, such as type names, namespaces and generic arguments; the attribute model; and how `Named` carries its name.
 4. Resolution and precedence rules: which of the current rules stay, and how closely to follow standard AOP, including precedence within one module and between advice kinds.
 5. Advice across roles: the shape of the common join point and which advice kinds it is offered for.
-6. Whether an `IAnalyzer` interface or `Analyzer` base class sits on top of the module contract, and whether user-facing conveniences such as `AddAnalyzer` and the trial analyzer lookup stay.
-7. Whether `AlgorithmRun` and `ExperimentRun` belong in `Contracts` at all, from the layering report's judgement calls.
+
+The analyzer contract, attachment method names and Contracts assembly question were settled by the layering branch as described above.
 
 ## Out of scope
 

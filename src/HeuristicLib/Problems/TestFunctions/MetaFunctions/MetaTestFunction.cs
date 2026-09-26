@@ -1,7 +1,7 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Objectives;
 
-namespace HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
+namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public abstract class MetaTestFunction : ITestFunction
 {

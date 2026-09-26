@@ -1,5 +1,5 @@
 using HEAL.HeuristicLib.Encodings.BoolVectors;
-using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
+using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Problems.TestFunctions.ZDT;
