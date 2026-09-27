@@ -770,7 +770,7 @@ public class OperatorBudgetAlgorithmTests
 
     /// <summary>
     /// Counts the candidates evaluated by one evaluator, so that a run can assert the observation was installed even
-    /// when a budget algorithm decorates the same evaluator.
+    /// when a budget algorithm wraps the same evaluator.
     /// </summary>
     private sealed class EvaluationObservingAnalyzer(IEvaluator<RealVector> evaluator)
         : IAnalyzer

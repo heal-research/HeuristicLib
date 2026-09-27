@@ -373,7 +373,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct)
         {
             var contenderScope = ParentRegistry.CreateChildScope(contender =>
-                contender.Decorate(evaluator, current => new PerformanceTrackingEvaluator(current, performanceObserver)));
+                contender.Wrap(evaluator, current => new PerformanceTrackingEvaluator(current, performanceObserver)));
             return contenderScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm).Stream(problem, random, initialState, ct).GetEnumerator();
         }
     }

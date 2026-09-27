@@ -15,7 +15,7 @@ A meta-algorithm splits into a configuration record and an execution node, exact
 ::: warning Never call CreateExecutionInstance on a child algorithm
 Always obtain a child algorithm's execution node with `scope.Resolve(childAlgorithm)`. Calling `childAlgorithm.CreateExecutionInstance(scope)` yourself compiles, runs, and produces correct search states — and silently breaks observation.
 
-`ResolutionScope.Resolve` is what applies the decorations an [analyzer](/guide/execution/observability-and-analysis) installed for the run. Bypassing it means an analyzer observing that child algorithm, or an operator inside it, records nothing at all. There is no error and no warning; the result list is simply empty.
+`ResolutionScope.Resolve` is what applies the wrappers an [analyzer](/guide/execution/observability-and-analysis) installed for the run. Bypassing it means an analyzer observing that child algorithm, or an operator inside it, records nothing at all. There is no error and no warning; the result list is simply empty.
 
 The `HLib0001` analyzer does **not** catch this. It only inspects calls made inside a `CreateExecutionInstance` method, and a meta-algorithm that stores the scope and resolves its children lazily during the run is outside that window.
 :::
@@ -82,7 +82,7 @@ public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
 
 Three details carry the design:
 
-- **Both children are resolved in `CreateExecutionInstance`**, not during the run. That is where the scope is available and where decorations are applied.
+- **Both children are resolved in `CreateExecutionInstance`**, not during the run. That is where the scope is available and where wrappers are applied.
 - **The last state of the first stage becomes the initial state of the second.** Nothing converts between them, because both stages are declared over the same `TSearchState`.
 - **Each stage gets its own random stream** through `random.Fork(index)`. Forking by a stable index keeps the stages independent and the run reproducible.
 - **The stages are named by candidate and state only.** `IAlgorithm<TCandidate, TSearchState>` accepts any algorithm over that candidate producing that state, whatever search space or problem it was written for. The run supplies those, which arrive as the method type arguments `TRunSearchSpace` and `TRunProblem` on `CreateExecutionInstance` and are threaded into the nested execution class. Binding the types once with `scope.For<...>()` is what keeps the two `Resolve` calls free of type arguments.
@@ -132,7 +132,7 @@ var execution = childScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchSt
 
 The scope itself has no type arguments, so it cannot infer the four the resolution needs and the call names them. Where several children are resolved against the same child scope, bind it once with `childScope.For<TCandidate, TSearchSpace, TProblem, TSearchState>()` and the individual `Resolve` calls need no type arguments at all. Both spellings reach the same resolution; the typed scope only saves the repetition.
 
-A child scope applies its parent's decorations, so observation still works. Calling `CreateExecutionInstance` with the child scope does not, for the reason in the warning above.
+A child scope applies its parent's wrappers, so observation still works. Calling `CreateExecutionInstance` with the child scope does not, for the reason in the warning above.
 
 ## Preserve run behavior
 

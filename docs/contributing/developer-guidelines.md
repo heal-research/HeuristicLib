@@ -112,9 +112,11 @@ from higher layers to lower ones. Treat configuration and execution node as phas
 
 ## § 4 Configuration and execution ownership
 
+The common typed factory contract and resolver are implemented; role interfaces and authoring bases are still being migrated. The rules below describe the factory contract. Unmigrated roles retain their existing method names until their review package; do not add a compatibility creation path. See [execution resolution](/contributing/architecture/execution-resolution) for the current boundary.
+
 ### § 4.1 Separate reusable configurations from execution nodes
 
-Configurations own immutable settings and child configurations. Execution nodes own resolved children, mutable run data and behavior. Never store run data on a configuration.
+Configurations own immutable settings and child configurations. Prepare persistent execution state once, then bind nodes with resolved children and observations for each context. Nodes own typed behavior and binding-local references; invocation-local values stay in the operation or iterator. Never store run data on a configuration.
 
 ### § 4.2 Keep execution data out of search states
 
@@ -122,13 +124,13 @@ Search states are public progress values. Do not use them to carry private count
 
 ### § 4.3 Resolve declared children through the resolution scope
 
-Creation methods receive the full `ResolutionScope`. Resolve declared children during execution creation. Retain the scope only for child scopes, decorations or delayed child algorithm creation. Do not add another scope abstraction.
+Preparation receives no scope. The returned `ExecutionFactory<TExecution>` receives a `ResolutionScope` construction frame; resolve children inside that factory and pass them to the node. Retain the frame only for child scopes, wrappers or delayed child construction. Use a preparation-owned key for a retained child slot. Do not add another scope abstraction or call a child's factory directly.
 
 ### § 4.4 Expose one execution node factory
 
-Expose one public `CreateExecutionInstance(...)` method with the exact execution node role as its return type. Do not add role named alternatives such as `CreateSelectorExecution` or hide the factory behind explicit interface implementation.
+Expose one public `CreateExecutionFactory(...)` method returning `ExecutionFactory<TExecution>` for the exact execution role. Do not add role named alternatives or hide it behind explicit interface implementation. Preparation runs once per selected logical execution; its returned factory may bind several nodes.
 
-A topology base may seal the public method and expose one protected overload after child resolution. Return the most concrete accessible execution type useful to derived authors. This rule applies to algorithms and operators.
+A topology base may seal the public method and expose one protected preparation hook. That hook prepares persistent state and returns a constructor accepting the newly resolved children. Preserve the most concrete accessible execution type useful to derived authors. The role/base packages introduce these hooks; ordinary leaf operation overrides remain unchanged.
 
 ### § 4.5 Keep construction entry points semantically equivalent
 
@@ -143,15 +145,15 @@ A setting has one input path.
 - Every configuration property is `{ get; init; }` so `with` can vary it.
 - Execution node children and run data are `{ get; }` because executions are not reconfigured.
 
-### § 4.7 Validate complete configurations during execution creation
+### § 4.7 Validate complete configurations during preparation
 
-Retain configuration values unchanged during construction and `with`. Validate the complete configuration in `CreateExecutionInstance` and throw `InvalidOperationException` before execution begins. Do not add a separate validation API.
+Retain configuration values unchanged during construction and `with`. Validate them in `CreateExecutionFactory` or the protected preparation hook and throw `InvalidOperationException` before execution begins. Bound bridges validate run-type compatibility before preparation. Do not add a separate validation API.
 
-A derived topology configuration validates in the protected overload called after child resolution.
+Persistent initialization must not depend on whichever binding first resolves a live child. Binding failures are contextual; preparation failures remain attached to the selected execution.
 
 ### § 4.8 Represent configured behavior with value strategies
 
-Represent configured behavior with a strategy interface whose implementations are immutable values. Do not use delegates because their equality depends on method and target identity and captured state is not persistable. Delegate adapters are limited to documented runtime only APIs.
+Represent configured behavior with a strategy interface whose implementations are immutable values. Do not use delegates because their equality depends on method and target identity and captured state is not persistable. Delegate adapters are limited to documented runtime only APIs. Execution factories are runtime preparation/binding machinery and are not persisted configuration strategies.
 
 ### § 4.9 Use records only for value semantics
 
@@ -169,7 +171,7 @@ Execution nodes keep resolved children and machinery private or protected. Use n
 
 ### § 4.12 Keep role authoring hierarchies symmetric
 
-Keep configuration and execution authoring hierarchies symmetric. Full role, wrapping and multi bases have matching execution bases. Derived configurations and executions use the matching pair. Pass required resolved children through constructors.
+Keep configuration and execution authoring hierarchies symmetric. Full role, wrapping and multi bases have matching execution bases. Derived configurations and executions use the matching pair. Pass required resolved children and prepared state through constructors. Rebinding must not reset persistent state or capture children from an earlier context.
 
 ### § 4.13 Give each child slot one public name
 
@@ -186,7 +188,9 @@ Choose an authoring base by ownership. See [Operator implementation](/contributi
 - Use a stateful base for ordinary run data without execution graph dependencies.
 - Author an execution explicitly for child executions, disposable resources or custom execution structure.
 - Use a single item base for independent per item work.
-- Never put configurations, executions, registries or child bound delegates in framework managed operator state.
+- Never put configurations, executions, registries, scopes or child bound delegates in framework managed operator state.
+
+Stateless and ordinary stateful leaf bases hide factory preparation. Composite authors separate persistent `ExecutionState state` from bound children. Execution nodes have no general disposal contract; resources still require an explicit lifecycle owner.
 
 ### § 4.15 Keep single item batching explicit and deterministic
 
@@ -198,7 +202,7 @@ Operator scaffolding remains checked in source. Do not add source generators, ID
 
 ### § 4.17 Give algorithms explicit execution nodes
 
-Algorithms use a configuration paired with an explicitly authored execution node. See [Algorithms](/guide/fundamentals/algorithms).
+Algorithms use a configuration paired with an explicitly authored execution node. Persistent counters and derived configurations are prepared once; child operators and interceptors bind per context. Active iterators retain their original children, RNG forks, progress and timers when another binding is created. See [Algorithms](/guide/fundamentals/algorithms).
 
 ### § 4.18 Treat Roslyn analyzers as guardrails
 

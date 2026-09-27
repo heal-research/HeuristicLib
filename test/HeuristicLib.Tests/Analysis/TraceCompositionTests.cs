@@ -538,7 +538,7 @@ public class TraceCompositionTests
         Action<int> observe) : IExecutionModule
     {
         public void Install(ResolutionScopeBuilder builder) =>
-            builder.Decorate(creator, current => new ObservingCreator(current, observe));
+            builder.Wrap(creator, current => new ObservingCreator(current, observe));
     }
 
     private sealed record ObservingCreator(

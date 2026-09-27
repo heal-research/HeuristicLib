@@ -68,8 +68,8 @@ public class ObservationModuleTests
     }
 
     /// <summary>
-    /// An observation reports the configuration it was declared for, even when a configuration decoration such as a
-    /// budget wraps it more tightly, and the two decorations both act.
+    /// An observation reports the configuration it was declared for, even when a configuration wrapper such as a
+    /// budget wraps it more tightly, and the two wrappers both act.
     /// </summary>
     [Fact]
     public void AnEvaluatorObservation_ReportsTheObservedEvaluatorAndComposesWithABudget()
@@ -80,7 +80,7 @@ public class ObservationModuleTests
         var observed = new List<IEvaluator<int>>();
         var root = ResolutionScope.Create(builder =>
             builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, observation => observed.Add(observation.Evaluator)));
-        var budget = root.CreateChildScope(builder => builder.Decorate<IEvaluator<int>>(evaluator, current => current.CountCalls(counter)));
+        var budget = root.CreateChildScope(builder => builder.Wrap<IEvaluator<int>>(evaluator, current => current.CountCalls(counter)));
 
         budget.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
             .Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

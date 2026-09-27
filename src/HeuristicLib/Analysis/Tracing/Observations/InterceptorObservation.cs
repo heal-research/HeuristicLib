@@ -60,7 +60,7 @@ internal sealed class InterceptorObservationModule<TCandidate, TSearchSpace, TPr
     where TSearchState : class, ISearchState
 {
     public void Install(ResolutionScopeBuilder builder) =>
-        builder.Decorate(interceptor, current => new ObservingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, current, observe));
+        builder.Wrap(interceptor, current => new ObservingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, current, observe));
 }
 
 internal sealed class ObservingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(

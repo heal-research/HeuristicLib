@@ -152,6 +152,28 @@ public sealed class LayerDependencyTests
             .ShouldContain("src/HeuristicLib/Objectives/ObjectiveProbe.cs | Domain -> Encodings");
     }
 
+    [Theory]
+    [InlineData("ExecutionSharingScope")]
+    [InlineData("ExecutionPreparation")]
+    [InlineData("ExecutionBindings")]
+    [InlineData("ExecutionBindings.WrappedNodes")]
+    [InlineData("WrapperRegistration")]
+    [InlineData("ExecutionSharingScope.RetainedChildScope")]
+    public void SemanticCheck_KeepsExtractedResolutionComponentsInternalToResolution(string component)
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var (compilation, _) = CreateMainCompilation(repositoryRoot);
+        var probe = CSharpSyntaxTree.ParseText(
+            $"namespace HEAL.HeuristicLib.Execution; internal class HostProbe {{ private {component}? component; }}",
+            ParseOptions,
+            Path.Combine(repositoryRoot, MainRoot, "Execution", "Runs", "HostProbe.cs"),
+            cancellationToken: TestContext.Current.CancellationToken);
+        compilation = compilation.AddSyntaxTrees(probe);
+
+        ScanTree(compilation, probe, repositoryRoot)
+            .ShouldContain("src/HeuristicLib/Execution/Runs/HostProbe.cs | OutsideExecution -> ResolutionInternal");
+    }
+
     [Fact]
     public void SemanticCheck_KeepsDomainVocabularyAtTheBottom()
     {
@@ -374,9 +396,16 @@ public sealed class LayerDependencyTests
     private static string Concept(INamedTypeSymbol type) =>
         Outermost(type).ContainingNamespace.ToDisplayString().Split('.').ElementAtOrDefault(2) ?? string.Empty;
 
-    private static bool IsResolutionInternal(ISymbol symbol, INamedTypeSymbol? type) =>
-        type?.Name is "ResolutionScope" or "ResolutionScopeBuilder" or "Decoration" &&
-        (symbol.DeclaredAccessibility == Accessibility.Internal || type.DeclaredAccessibility == Accessibility.Internal);
+    private static bool IsResolutionInternal(ISymbol symbol, INamedTypeSymbol? type)
+    {
+        if (type is null)
+            return false;
+        type = Outermost(type);
+        return type.ContainingNamespace.ToDisplayString() == "HEAL.HeuristicLib.Execution" &&
+               type.Name is "ResolutionScope" or "ResolutionScopeBuilder" or "ExecutionSharingScope" or
+                   "ExecutionPreparation" or "ExecutionBindings" or "WrapperRegistration" &&
+               (symbol.DeclaredAccessibility == Accessibility.Internal || type.DeclaredAccessibility == Accessibility.Internal);
+    }
 
     private static bool IsRunInternal(ISymbol symbol, INamedTypeSymbol? type) =>
         type?.Name.StartsWith("AlgorithmRun", StringComparison.Ordinal) == true &&

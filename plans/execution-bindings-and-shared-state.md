@@ -2,7 +2,7 @@
 
 Status: implementation authorized on 2026-09-27. The naming migration is committed as `d5ad7fb2`; C2 and C3 were completed and validated locally. The user has authorized continuing directly in the library and its normal tests, with temporary non-compiling review checkpoints where the contract cutover requires them. The selected direction is option C using typed execution factories (candidate 1 in the [design comparison](execution-bindings-design-investigation.md)), superseding option A in the [container and aspect rework](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings). End the turn for explicit review after every migration package and C4. C4 remains a performance and final acceptance gate for the integrated implementation. Leave index and commit operations to the user unless explicitly authorized.
 
-C1 has a [concrete design](execution-factory-design.md), including authoring examples, resolver ownership, retained child scopes, decoration construction, capabilities and failure behavior. C2 validated its core authoring examples; C3 validated deferred execution and lifecycle ownership locally. Integrated coverage through the public library route and C4 cost evidence remain outstanding before final acceptance.
+C1 has a [concrete design](execution-factory-design.md), including authoring examples, resolver ownership, retained child scopes, decoration construction, capabilities and failure behavior. C2 validated its core authoring examples; C3 validated deferred execution and lifecycle ownership locally. M0a/M0b are committed together as `23d65748`. M1a replaces the common factory contract and real resolver, with regression tests in the normal core suite. The role-adapter cutover is incomplete, so those tests have not run against the new resolver. Integrated runtime validation and C4 cost evidence remain outstanding before final acceptance.
 
 Naming decision, 2026-09-27: adopt the [graph naming family](execution-factory-design.md#agreed-naming-family): `IConfigurationNode`, `IExecutionNode` and role-specific `...Execution` types, retaining ordinary algorithm/operator configuration names. The [commit boundaries](#agreed-commit-boundaries) separate a behavior-preserving rename from the factory/resolution rework. The naming migration is the first implementation review package; it retains the existing object-returning creation methods and behavior.
 
@@ -97,14 +97,14 @@ Follow [AGENTS.md](../AGENTS.md) and [test/README.md](../test/README.md): focuse
 
 Review [the concrete design](execution-factory-design.md) as one coherent contract. Its D1-D7 table identifies the consequential proposals: pinned dependency continuity, preparation hooks, retained child scopes, original-source decoration recipes, explicit controls, sticky construction failures and iterator ownership. Review the complete examples before approving executable work. The factory direction itself is already selected.
 
-In particular, changing `Decorate` to receive the original source and introducing a construction-time control projection are supporting API changes, not consequences that should be hidden inside a resolver implementation. There is no proposal to make handwritten wrappers transparently implement arbitrary interfaces. Binding-time persistent initialization that requires a child's live value is outside the initial contract; no current production need has been established for its additional helper.
+In particular, changing `Wrap` to receive the original source and introducing a construction-time control projection are supporting API changes, not consequences that should be hidden inside a resolver implementation. There is no proposal to make handwritten wrappers transparently implement arbitrary interfaces. Binding-time persistent initialization that requires a child's live value is outside the initial contract; no current production need has been established for its additional helper.
 
 ### C2: typed core proof
 
 Build the smallest isolated proof of the reviewed contract before changing every public role. Use a test-only namespace/project or internal candidate engine exercised by tests, keeping it out of the public API. Reuse the eventual resolver implementation where practical; do not mistake a disconnected hand-simulated state dictionary for a proof of the actual binding design. Do not create a permanent second resolution workflow.
 
 1. Implement typed preparation, reference-identity logical selection, explicit construction frames, dependency pinning and view-owned binding caches. Include failed preparation and re-entrant construction states from the beginning.
-2. Implement stable generated-decoration occurrences and predecessor binding with the reviewed `Decorate` semantics. Cover ordering, original-source attribution and exclusion of generated wrappers before adding selector integration.
+2. Implement stable generated-decoration occurrences and predecessor binding with the reviewed `Wrap` semantics. Cover ordering, original-source attribution and exclusion of generated wrappers before adding selector integration.
 3. Port a minimal stateful leaf, `PredefinedCandidatesCreator`-shaped composite, the two-child consumer role and one ordinary algorithm. Compile both bound and agnostic factory bridges, wrapping/multi hooks and iterative hooks. Compile all C1 authoring snippets as executable usage examples in the candidate context.
 4. Prove the proposed control projection with Gaussian/EvolutionStrategy behavior and a consumer-defined control, including an explicit configured wrapper that deliberately does not forward the control.
 5. Review the focused results and authoring cost before expanding to delayed construction. A passing return-lambda example does not fulfill this package.
@@ -233,7 +233,7 @@ Naming agreed during review: use `ExecutionState` for these private state holder
 
 Validation passed: `dotnet build --configuration Release --no-restore` (zero errors, 65 existing warnings); `dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --no-build` (2,295 passed, zero failed or skipped); the repository whitespace, style and analyzer verification commands; plan link checks and `git diff --check`. Format commands reported workspace-loading warnings and exited successfully. No new warning diagnostic appeared compared with the recorded baseline. Existing behavioral tests were used without changes; broader runtime suites remain for the later affected packages and final integration.
 
-The user reviewed and staged M0a, including its naming adjustments and plan updates, then requested committing and continuing. The staged package was committed as `5762e477` (`Extract persistent state from core executions`). No staging or unstaging was performed. M0b followed that explicit continuation.
+The user reviewed and staged M0a, including its naming adjustments and plan updates, then requested committing and continuing. The staged package was committed as `5762e477` (`Extract persistent state from core executions`). M0b followed that explicit continuation. The user subsequently reviewed and staged M0b and explicitly requested amending it into the same commit; the combined commit is now `23d65748` (`Extract persistent state from core and experimental executions`). No staging or unstaging was performed.
 
 ### M0b review record, 2026-09-27
 
@@ -257,13 +257,81 @@ dotnet test --project test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Ex
 dotnet test --project test/HeuristicLib.Tests.Scenarios/HeuristicLib.Tests.Scenarios.csproj --configuration Release --no-restore --no-build --filter-method '*DynamicRacingGa_OnMovingPeaks_ProducesPaperExperimentSignals'
 ```
 
-Stop for M0b review with these changes unstaged. The proposed next package is M1a: introduce the typed `ExecutionFactory` contract and replace the actual `IConfigurationNode`/`ResolutionScope` preparation, ownership and binding machinery. Authoring bases and dependent roles follow in separate review packages; temporary consumer compilation failures remain permitted during that cutover.
+The user reviewed and staged M0b, then requested amending it into M0a and continuing. The amendment is `23d65748`; M1a follows below. Authoring bases and dependent roles remain separate review packages.
+
+### M1a review record, 2026-09-27
+
+The real common contract and resolver now use typed factories:
+
+- Added `ExecutionFactory<TExecution>` and changed `IConfigurationNode<TExecution>` to scope-free `CreateExecutionFactory()`. The generic resolver accepts a typed preparation adapter; the old object-returning adapter is removed.
+- Replaced the old execution cache/reuse barrier with reference-identity logical selections, once-only preparation, pinned dependencies and context-owned raw/completed binding caches. A changed observation context rebinds composites and their children without resetting persistent state. Empty child contexts can reuse completed ancestor bindings.
+- Added fresh/retained child-domain behavior, immutable deferred construction frames, original-source decoration occurrences with per-binding predecessors, private extra-child ownership, and raw-binding control projection after successful completion.
+- Implemented sticky preparation, occurrence and retained-declaration faults; context-local binding faults; checked contract diagnostics; and recursion detection across child contexts. Weak ownership links and declaration-owned weak source keys follow the reviewed lifetime design. The occurrence's strong private-domain field has a narrow S1450 suppression because making it a local would discard its ownership.
+- Migrated `ResolutionScopeTests` to the common factory contract and added 35 cases in `ExecutionFactoryResolutionTests` and its lifetimes partial file. They cover selection, composite/advice state, child-first control collisions, ordering, failure ownership, retained/deferred children, contextual depth and collection in both directions. These are normal core test files and depend only on production code.
+- Updated the resolver and execution-node guides, glossary, contributor ownership rules and design examples. Documentation explicitly identifies the incomplete role/base cutover. Existing leaf overrides and typed operation contracts are unchanged in this package.
+
+Validation at this checkpoint:
+
+- The Release solution build stops at ten CS0411 errors in the unchanged resolution adapters for Algorithm, Creator, Crossover, Evaluator, Interceptor, Mutator, Refiner, Replacer, Selector and Terminator. They still supply the former object-creation callback. No compiler error is reported in the new factory contract or resolver.
+- The focused normal test command below also stops at that production compilation barrier. **No test compiled or ran against this new implementation.** Full core/API/Experimental/scenario validation remains pending until the migration compiles; previously built binaries were not used to claim success.
+- Repository whitespace, style (warning severity) and analyzer (error severity) verification exited successfully with workspace-loading warnings. Those checks are limited by the incomplete compilation and do not establish semantic correctness.
+- `npm run docs:build` passed after removing two links from the published docs to repository-only plans. `git diff --check` passed. Local validation logs are in ignored `artifacts/execution-factory/`.
+
+```powershell
+dotnet build --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*ResolutionScopeTests' --filter-class '*ExecutionFactoryResolutionTests'
+```
+
+Stop for M1a review with its changes unstaged and uncommitted. No compatibility path, duplicate implementation project or hidden runtime dependency was added. The accepted temporary compilation break remains the unresolved integration issue; runtime correctness and lifetime tests are not yet validated.
+
+Proposed M1b: migrate the ten core role interfaces/resolution adapters and their role configuration bases, including stateless/stateful/single-item leaf bases, to typed preparation while preserving leaf override ergonomics and typed operations. Review that package separately. Wrapping/multi and iterative algorithm preparation hooks, concrete implementations, Experimental roles and consumer migrations follow in further bounded packages; do not repair the build by wrapping old state-resetting creation calls in lambdas.
+
+### M1a maintainability and diagram revision, 2026-09-27
+
+This record describes the first extraction. The subsequent wrapper vocabulary revision below replaces its decoration names and nests the small support types.
+
+During review, the user requested clearer internal names, an actual decomposition of `ResolutionScope`, and restoration of the resolution diagrams. This revision stays within M1a and preserves the current public contracts and resolution rules.
+
+The decomposition follows responsibilities, rather than moving the same dictionaries behind new names:
+
+| Previous component | Replacement | Responsibility moved out of the public scope |
+| --- | --- | --- |
+| `LogicalDomain` | `ExecutionSharingScope` | Direct/ancestor state selection, ancestry, retained standalone children and the active construction guard. |
+| `ExecutionRecord` | `ExecutionPreparation` | Once-only factory preparation/faults, pinned dependencies and retained children. This name includes pending and failed preparation and does not imply a callable node. |
+| `BindingView` plus the scope's `Bind` algorithm | `ExecutionBindings` | Contextual construction, node caching/publication/faults, decoration ordering and retained contextual scopes. |
+| `Predecessor` | `DecorationTarget` | The original source and immutable inner chain supplied only to its generated wrapper. |
+| `Decoration` / `DecorationOccurrence` | `DecorationDeclaration` / private `PreparedDecoration` | Stable declaration identity and weak-key per-source wrapper preparation, including private dependency ownership. |
+| `ChildSlot` | `RetainedChildScope` | Reserved child sharing scope and sticky once-only declaration snapshot. |
+
+The six collaborators live under `Execution/Resolution` in the existing namespace. Their dictionaries and state machines are private. The public scope now routes selection and binding in 167 lines; builder, typed scope conveniences and origin enum have their own files. There is no additional public resolution workflow. The architecture check now protects the extracted components, with six focused boundary cases.
+
+Astra provided a read-only design critique and inspected the extraction for semantic/lifetime regressions. The review found no actionable difference in reference selection, dependency pinning, preparation/guard/cache ordering, retained scopes, decoration targets, weak ownership or fault boundaries. Runtime equivalence remains unverified while the migration does not compile.
+
+The execution-resolution guide restores three diagrams: the selection/binding flow, parent/child nodes sharing persistent state, and inner-to-outer decoration construction. The existing budget-order diagram remains. The diagrams were inspected in the built documentation preview, including dark-theme rendering. The guide records that future design changes must update the diagrams; visualization remains part of the documentation.
+
+Validation: baseline and refactored Release builds report the same ten CS0411 role-adapter errors, with identical error text and locations and 28 warnings. No new compiler error appears. The normal focused resolver/architecture test command remains blocked at the production build, so no runtime or architecture test result is claimed. The documentation build, `git diff --check`, whitespace, style (warning severity) and analyzer (error severity) verification pass. All three format commands report workspace-loading warnings, which limit their assurance while compilation is incomplete.
+
+The user's staged M1a changes were preserved; these revisions remain unstaged. No Git index or commit operation was performed. Stop again for review before M1b.
+
+### M1a wrapper vocabulary and encapsulation revision, 2026-09-27
+
+The user approved `Wrap`, `WrapperRegistration` and `WrappedNodes`, while asking whether the remaining resolver components were necessary. Applied the names throughout production callers, normal tests, XML documentation, the glossary and current architecture guides. Historical comparison sections retain the former names explicitly as history.
+
+- Renamed `ResolutionScopeBuilder.Decorate` to `Wrap` without a compatibility alias. Removed the public `DecorationOrigin` enum; the builder's nested-installation flag stamps internal registration metadata. Configuration/module, contextual depth and registration sequence ordering are preserved.
+- Replaced the abstract/generic declaration hierarchy with one sealed `WrapperRegistration` and a typed creation helper. Its source matching, weak-key preparation ownership, sticky faults and private wrapper dependency scope retain the same rules.
+- Nested immutable `WrappedNodes` under `ExecutionBindings` and retained-child bookkeeping under `ExecutionSharingScope`. Updated the architecture probes for those nested types. These support records do not constitute independent resolver components.
+- Retained sharing, preparation and contextual binding as separate internal storage owners after assessing each possible merger. One sharing scope selects many preparations, one preparation supplies nodes in multiple contexts, and a retained sharing scope can appear at different effective depths. Merging the owners would still require equivalent records/caches to express those identities and lifetimes. This is an implementation judgment, not a requirement for these exact class names or file boundaries. The [design plan](execution-factory-design.md#wrapper-registration-and-internal-ownership) records the reasoning and the AOP integration boundary.
+- Updated and visually checked the wrapper-chain and budget-order diagrams in the built documentation. Removed the resolved public-origin question from the backlog and corrected budget-factory XML to describe its original-source argument.
+
+Validation: baseline and renamed Release builds report the same ten CS0411 role-adapter errors and 28 warnings. The focused normal resolver/factory/architecture/observation test command is blocked at production compilation; its compiler errors match the baseline exactly. No test result is claimed. Whitespace, style (warning severity), analyzer (error severity), documentation build and `git diff --check` pass. Format commands report workspace-loading warnings. A read-only Astra review found no actionable semantic or lifetime regression; it does not replace runtime validation. Logs are in ignored `artifacts/execution-factory/m1a-wrap-*` files.
+
+The Git index remains unchanged. Stop at M1a for review; M1b role/base migration remains the proposed next implementation package.
 
 ### Documentation and enforcement changes with implementation
 
 Update developer guidelines § 4.1, § 4.3, § 4.4, § 4.7, § 4.12, § 4.14 and § 4.17 together: reusable configuration, once-only preparation, repeatable typed binding, persistent versus binding-local data, protected preparation hooks and validation phases. Keep the ordinary stateful-leaf restriction on graph dependencies. Explain why execution factories are runtime machinery rather than persisted value strategies.
 
-The glossary records Configuration node and Execution node as the agreed terms now, while explicitly retaining current API/state facts. Migrate existing API references and role terminology in the naming commit. Update Execution state, Execution graph, Resolution scope and Decoration chain behavior descriptions with the factory/resolution commit. Review wording on [execution nodes](../docs/contributing/architecture/execution-nodes.md), [instance resolution](../docs/contributing/architecture/execution-resolution.md), [operator implementation](../docs/contributing/architecture/operator-implementation.md), [writing algorithms](../docs/guide/extending/writing-algorithms.md) and [writing meta-algorithms](../docs/guide/extending/writing-meta-algorithms.md). Budget factory XML documentation must no longer promise the previous generated configuration as its callback input after that behavioral change.
+The glossary records Configuration node and Execution node as the agreed terms now, while explicitly retaining current API/state facts. Migrate existing API references and role terminology in the naming commit. Update Execution state, Execution graph, Resolution scope and Wrapper chain behavior descriptions with the factory/resolution commit. Review wording on [execution nodes](../docs/contributing/architecture/execution-nodes.md), [execution resolution](../docs/contributing/architecture/execution-resolution.md), [operator implementation](../docs/contributing/architecture/operator-implementation.md), [writing algorithms](../docs/guide/extending/writing-algorithms.md) and [writing meta-algorithms](../docs/guide/extending/writing-meta-algorithms.md). Budget factory XML documentation must no longer promise the previous generated configuration as its callback input after that behavioral change.
 
 Revise HLib0001/code-fix tests and [role contract architecture tests](../test/HeuristicLib.Tests/Architecture/RoleContractArityTests.cs). Recognizable misuse should be diagnosed without treating every mutable field as an error or pretending that nullable annotations need defensive runtime guards. No analyzer or generator is required to make a valid factory work.
 

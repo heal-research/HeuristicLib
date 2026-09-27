@@ -49,7 +49,7 @@ internal sealed class AlgorithmObservationModule<TCandidate, TSearchSpace, TProb
     where TSearchState : class, ISearchState
 {
     public void Install(ResolutionScopeBuilder builder) =>
-        builder.Decorate(algorithm, current => new ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, current, observe));
+        builder.Wrap(algorithm, current => new ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, current, observe));
 }
 
 internal sealed record ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>(

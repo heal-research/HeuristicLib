@@ -25,19 +25,19 @@ public interface IConfigurationNode
 }
 
 /// <summary>
-/// A configuration whose execution node type is known without a run's types, so it can create that execution
-/// itself.
+/// A configuration whose execution node type is known without a run's types, so it can prepare its typed factory.
 /// </summary>
 /// <remarks>
 /// Role configurations such as mutators are not of this kind: their execution type depends on the run's search space
 /// and problem, so they are resolved through
-/// <see cref="ResolutionScope.Resolve{TConfiguration, TExecution}(TConfiguration, Func{TConfiguration, ResolutionScope, TExecution})"/>
+/// <see cref="ResolutionScope.Resolve{TConfiguration, TExecution}(TConfiguration, Func{TConfiguration, ExecutionFactory{TExecution}})"/>
 /// instead.
 /// </remarks>
 public interface IConfigurationNode<out TExecution> : IConfigurationNode
-  where TExecution : IExecutionNode
+    where TExecution : class, IExecutionNode
 {
-    TExecution CreateExecutionInstance(ResolutionScope scope);
+    /// <summary>Prepares persistent execution state once and returns a factory that can bind it repeatedly.</summary>
+    ExecutionFactory<TExecution> CreateExecutionFactory();
 }
 
 public interface IExecutionNode;

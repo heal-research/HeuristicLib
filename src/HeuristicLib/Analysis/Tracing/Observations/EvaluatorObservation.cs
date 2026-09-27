@@ -51,7 +51,7 @@ internal sealed class EvaluatorObservationModule<TCandidate, TSearchSpace, TProb
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public void Install(ResolutionScopeBuilder builder) =>
-        builder.Decorate(evaluator, current => new ObservingEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, current, observe));
+        builder.Wrap(evaluator, current => new ObservingEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, current, observe));
 }
 
 internal sealed class ObservingEvaluator<TCandidate, TSearchSpace, TProblem>(

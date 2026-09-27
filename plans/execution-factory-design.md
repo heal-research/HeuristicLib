@@ -1,8 +1,8 @@
 # Typed execution factories: concrete design
 
-Status: implementation authorized, 2026-09-27. The naming migration was reviewed and committed as `d5ad7fb2`; the C2 core and C3 deferred/lifecycle proofs were completed and validated locally. The selected direction is option C from [container and aspect framing](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings), implemented through candidate 1 from the [comparison](execution-bindings-design-investigation.md). These factory semantics are not yet shipping library behavior. The user has authorized direct implementation in the library, including temporary breaking checkpoints for review. The [work plan](execution-bindings-and-shared-state.md) owns the package stops and validation gates; C4 compares the integrated implementation against the previous version in a temporary worktree before final acceptance.
+Status: implementation authorized, 2026-09-27. The naming migration was reviewed and committed as `d5ad7fb2`; the C2 core and C3 deferred/lifecycle proofs were completed and validated locally. The selected direction is option C from [container and aspect framing](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings), implemented through candidate 1 from the [comparison](execution-bindings-design-investigation.md). M1a now introduces the common factory contract and replaces the real resolver. Built-in role contracts, authoring bases and consumers are not yet migrated, so this is a temporarily non-compiling review checkpoint. The user has authorized direct implementation in the library, including temporary breaking checkpoints for review. The [work plan](execution-bindings-and-shared-state.md) owns the package stops and validation gates; C4 compares the integrated implementation against the previous version in a temporary worktree before final acceptance.
 
-This document specifies the design. C2 validated the core authoring examples and typed operations; C3 validated deferred children, budgets, iterator continuity and lifetime ownership. The shipping library has not undergone the factory cutover. Those results are reference evidence; the migration must add regression coverage through the public library route. Performance claims still require C4 evidence.
+This document specifies the design. C2 validated the core authoring examples and typed operations; C3 validated deferred children, budgets, iterator continuity and lifetime ownership. The common factory/resolver cutover is in progress, with new regression tests in the normal core test project. Those tests cannot run until the dependent contracts compile. Local proof results remain reference evidence and do not establish that integrated validation has passed. Performance claims still require C4 evidence.
 
 ## Agreed naming family
 
@@ -18,7 +18,7 @@ Decision, 2026-09-27: use graph vocabulary for the common contracts and executio
 | `IOperator`, `IMutator<...>`, `IAlgorithm<...>` and concrete configuration types | Retain their domain names without `Node` | No naming change. |
 | Prepared typed factory | `ExecutionFactory<TExecution>` | Introduced by the factory/resolution commit. |
 | `CreateExecutionInstance(...)` | `CreateExecutionFactory()` with the reviewed run type parameters | Factory/resolution commit, because this changes what is returned and when state is initialized. |
-| Resolution and declaration APIs | Retain `ResolutionScope`, typed scope views, `ResolutionScopeBuilder`, `Resolve`, `ResolveOptional`, `TryResolve`, `CreateChildScope` and `Decorate` | Names retained; behavioral/API extensions remain subject to their design review. |
+| Resolution and declaration APIs | Retain `ResolutionScope`, typed scope views, `ResolutionScopeBuilder`, `Resolve`, `ResolveOptional`, `TryResolve`, `CreateChildScope` and `Wrap` | Names retained; behavioral/API extensions remain subject to their design review. |
 | Source selection and setup contributions | Retain `NodeSelector<TConfiguration>`, `IExecutionModule` and `Install` | Names retained. |
 | Compatibility and run lifecycle | Retain `ExecutionSignature`, `Fits`, `AlgorithmRun`, `ExperimentRun`, `Attach`, `AttachPerTrial` and `GetAttached` | Names and responsibilities retained. |
 
@@ -39,14 +39,14 @@ The naming migration uses the agreed names in source, links and examples. Object
 | Explicit leaf authors | Return a factory; construct the reusable raw leaf once outside its lambda when it has no scope-dependent children. |
 | Composite authors | Prepare persistent fields and derived configurations once; return a lambda that resolves typed children and creates the execution node. Operations keep their existing role signatures. |
 | Algorithm authors | Same split as composites. Iterative bases continue resolving interceptors. Search progress remains in the invocation. |
-| Meta-algorithm and budget authors | Use explicit fresh or retained child scopes; never retain decorated child instances in shared data. |
-| Resolver and instrumentation authors | Own logical identity, dependency selection, binding caches, generated-decoration identities and failure publication. |
+| Meta-algorithm and budget authors | Use explicit fresh or retained child scopes; never retain wrapped child instances in shared data. |
+| Resolver and instrumentation authors | Own logical identity, dependency selection, binding caches, generated-wrapper identities and failure publication. |
 
-An execution node is the concrete object on which `Mutate`, `Evaluate` or `RunStreamingAsync` is called. It may be a scope-specific binding over persistent execution data. The descriptive terms *execution record*, *logical domain*, *binding context* and *construction frame* below name implementation responsibilities, not new public objects ordinary authors must construct. The execution record is the persistent owner; it must not also be called an execution node. Its eventual internal CLR name remains an implementation choice.
+An execution node is the concrete object on which `Mutate`, `Evaluate` or `RunStreamingAsync` is called. It may be a scope-specific binding over persistent execution data. The descriptive terms *execution preparation*, *sharing scope*, *binding context* and *construction frame* below name implementation responsibilities, not new public objects ordinary authors must construct. The execution preparation is the persistent owner; it must not also be called an execution node. Its eventual internal CLR name remains an implementation choice.
 
 ## 2. Core and role contracts
 
-Use one public factory method, `CreateExecutionFactory`, replacing `CreateExecutionInstance`. Preparation is synchronous, scope-free and performed once for the selected execution record. Its result is a typed delegate invoked during resolution, never on each operator call.
+Use one public factory method, `CreateExecutionFactory`, replacing `CreateExecutionInstance`. Preparation is synchronous, scope-free and performed once for the selected execution preparation. Its result is a typed delegate invoked during resolution, never on each operator call.
 
 ```csharp
 public delegate TExecution ExecutionFactory<out TExecution>(ResolutionScope scope)
@@ -94,25 +94,74 @@ Configuration-only validation moves to preparation. Validation that genuinely de
 
 ## 3. Identity, ownership and resolution
 
-### Internal records
+### Resolver responsibilities
 
-| Record | Contents and owner |
+`ResolutionScope` is the public entry point and the scope passed to factories. It routes selection through the proper owner, verifies the requested contract, and obtains the current nodes from `ExecutionBindings`. It does not own their dictionaries or construction state machines.
+
+| Component | Responsibility and ownership |
 | --- | --- |
-| Logical domain | Parent logical domain, direct source selections by configuration reference, local declarations. Root/explicit child scopes establish domains. |
-| Execution record | Original source reference, owning domain, prepared typed factory or preparation fault, pinned dependency selections, retained child-domain slots. State is retained by its factory, not an untyped public property bag. |
-| Binding context | Immutable ordered declaration layers affecting this path, including contextual placement of retained internal child scopes. No mutable ambient current scope. |
-| Construction frame | Execution record, current binding context and typed resolution adapter; a generated decoration additionally has one predecessor override. Represented to authors by `ResolutionScope`. |
-| Binding cache entry | Raw and completed typed bindings, or a binding fault, for an execution record within one binding view/context. The view owns this cache. |
-| Generated decoration occurrence | One source execution record plus one declaration identity; prepared wrapper, persistent advice data and a private domain for additional children. Its predecessor is supplied per binding. |
+| `ExecutionSharingScope` | Local configuration-reference selections, ancestor lookup, retained standalone child scopes, ancestry checks and the active construction guard shared by related scopes. It decides where state is shared, not how nodes are built. |
+| `ExecutionPreparation` | One selected configuration's preparation attempt, typed factory or sticky preparation fault, pinned dependencies and retained children. Persistent state lives in its prepared factory. It can be unprepared or faulted and is not an `IExecutionNode`. |
+| `ExecutionBindings` | Ordered declarations and their current depth, node construction, raw/completed node caches and binding faults, plus retained child bindings. Empty observation layers can read ancestor nodes, but never publish nodes upward. |
+| `WrapperRegistration` | One stable recipe, its source/declaring sharing scope/module flag/sequence, and weak-key per-source wrapper preparations. Its private `PreparedWrapper` owns the generated wrapper, state and private sharing scope. |
 
-The resolver may erase types inside heterogeneous caches as it does today, but checks them when recovering entries. Role operations remain statically typed. These records do not constitute a generic invocation or service-injection API.
+Selection precedes preparation so a failure cannot replace a dependency's identity. Construction guarding precedes cache reuse. The collaborators encapsulate these rules rather than exposing dictionaries for the public scope to manipulate.
+
+The private caches can erase execution types and check them on recovery; role operations remain statically typed. These components introduce no second public scope abstraction, generic invocation or service lookup.
+
+### Wrapper registration and internal ownership
+
+Naming decision, 2026-09-27: the user approved `Wrap`, `WrapperRegistration` and `WrappedNodes`. M1a now uses these names and removes the public `DecorationOrigin` enum. This supersedes the earlier decision to retain `Decorate`. The later advice contracts remain open.
+
+**Required follow-up after the AOP rework:** the user remains dissatisfied with the resolver's design and wants its complexity, component boundaries and public wrapper/advice registration API revisited once the AOP implementation is available. Committing this checkpoint is not final approval of the architecture. Track this reassessment in [AOP review package 11](container-and-aspect-framing.md#review-packages).
+
+Use **wrapper registration** for the construction mechanism. A registration selects an original configuration and supplies a recipe for wrapping its execution. Handwritten typed wrappers remain an agreed foundation of the later AOP work. **Advice** can name the later operation-level behavior once its typed contracts are reviewed. **Observation** remains the narrower, read-only glossary concept.
+
+The family is `NodeSelector` for selection, `Wrap` for the low-level builder operation, `WrapperRegistration` for one registered recipe, **wrapper chain** for the composed executions, and `IExecutionModule.Install` for a group of setup contributions. The resolver still matches exact references; selector integration remains a later package.
+
+The remaining internal classes are storage owners, not interchangeable services or a new public framework. Their exact class boundaries are implementation choices. Their independent identities and lifetimes follow from the required behavior:
+
+| Stored information | Why it cannot be combined into one cache |
+| --- | --- |
+| Sharing-scope selections | Several factory frames and observation contexts can refer to the same selected state. Keeping a sharing scope alive must not itself retain all observing contexts. |
+| A selected execution's preparation | Its factory, pinned dependencies and preparation fault survive contextual node reconstruction. Different configurations in one sharing scope have separate preparation attempts. |
+| Contextual bindings | Parent and child can need different nodes over the same preparation. Their node caches, wrappers and binding failures belong to those contexts. |
+| A wrapper registration | One recipe can prepare separate wrapper state for different selected executions. Two registrations of the same recipe remain two contributions. |
+
+For example, parent and child calls can advance the same mutator counter while only child calls reach a child observer. Merging state selection with the bound-node cache would need another way to represent that pair of identities. Combining these objects into the public scope would require modes or references between scopes and would still need separate storage for those lifetimes. The current implementation keeps the separation explicit; it does not claim that four top-level classes are inherently required.
+
+`WrappedNodes` is a small immutable carrier nested under `ExecutionBindings`. `RetainedChildScope` is nested under `ExecutionSharingScope` and preserves its once-only declaration attempt and failure. Wrapper preparation, node construction and registration placement remain private helpers. There is no registration inheritance hierarchy.
+
+```mermaid
+flowchart TD
+    scope[ResolutionScope: typed resolution entry point]
+    sharing[ExecutionSharingScope: choose shared state]
+    preparation[ExecutionPreparation: prepare once and pin dependencies]
+    bindings[ExecutionBindings: construct and cache contextual nodes]
+    registration[WrapperRegistration: recipe and per-source wrapper state]
+    scope --> sharing
+    sharing --> preparation
+    scope --> bindings
+    preparation --> bindings
+    registration --> bindings
+```
+
+The arrows show participation in resolution, not strong-reference ownership. A factory's scope resolves children through its owning preparation's pinned dependencies. Actual weak/strong ownership follows the lifetime requirements below.
+
+**Ordering remains unchanged.** Each registration records internally whether it was made during module installation. Configuration registrations bind inside module registrations, deeper effective scopes inside shallower, then declaration sequence breaks ties. Nested `Install` calls restore the previous installation state. This keeps duration budgets inside observer callbacks and preserves clock-before-trace reads without a public origin enum or precedence setting.
+
+**The later AOP integration belongs at the registration boundary.** The selector package replaces exact-reference matching there with the reviewed `NodeSelector` integration. Matching sees original source configurations, including explicitly configured wrappers, and excludes generated wrappers. Per-source wrapper preparation stays owned by the registration and keyed by the selected preparation with weak retention. A shared selector does not establish shared advice state.
+
+Before/after/throwing/finally/around failure and continuation semantics, predicate-failure caching, general caller-path selection and algorithm iterator boundaries remain the explicit review gates in [D2-D5](container-and-aspect-framing.md#decisions-before-dependent-implementation). `WrappedNodes` is construction data; it is not a per-operation `Proceed` callback. The resolver has no knowledge of advice kinds or generic invocation.
+
+This revision migrates source, callers, tests, glossary and resolution diagrams together. It remains part of M1a, with the known role-adapter compilation barrier and a review stop before M1b.
 
 ### Direct resolution versus dependency resolution
 
-1. Direct `scope.Resolve(M)` consults that logical domain's pinned selection, then existing ancestor selections. Decorations do not stop state lookup. On a miss, create the execution record locally; never populate an ancestor merely to share it with siblings.
+1. Direct `scope.Resolve(M)` consults that sharing scope's pinned selection, then existing ancestor selections. Wrappers do not stop state lookup. On a miss, create the execution preparation locally; never populate an ancestor merely to share it with siblings.
 2. Remember a direct selection, including a reused ancestor selection, so subsequent resolutions do not switch identity when another cache is populated later. Distinct configuration references never merge because their records compare equal.
-3. The factory for G receives a construction frame. Its `scope.Resolve(M)` first consults G's recorded dependency for that source reference. If selected already, bind that exact execution record for the frame's context; do not rerun C's direct selection.
-4. A new dependency is selected through the frame's logical domain, using the same local/ancestor rules, then pinned to G. Fixed dependencies resolve on first binding. Deferred dependencies retain this frame explicitly; dynamically repeated independent executions use child domains as described below.
+3. The factory for G receives a construction frame. Its `scope.Resolve(M)` first consults G's recorded dependency for that source reference. If selected already, bind that exact execution preparation for the frame's context; do not rerun C's direct selection.
+4. A new dependency is selected through the frame's sharing scope, using the same local/ancestor rules, then pinned to G. Fixed dependencies resolve on first binding. Deferred dependencies retain this frame explicitly; dynamically repeated independent executions use child domains as described below.
 5. Build/cache the typed raw binding, apply its declaration chain, then return the completed binding. Different observer contexts can require different bindings even if no declaration matches G itself: its descendants may match.
 
 This yields the following collision policy:
@@ -126,18 +175,18 @@ This yields the following collision policy:
 
 Two M states are consequently reachable from C through different logical graphs. This is deliberate dependency continuity, not two states in one direct cache slot. The alternative, substituting M_child into G, would preserve only G's own fields and silently change its existing execution graph.
 
-The logical domain of an already-shared G remains its original one; C supplies observation context rather than adopting G's dependency ownership. A previously unselected dependency resolved directly through G's retained frame belongs to that original domain, even if first triggered by a C binding. This explicitly extends the original execution graph; it is not a direct `C.Resolve(M)` request. New per-invocation children must use a fresh child domain and stay there. Include this distinction in the late-resolution tests and review: otherwise the phrase "no hoisting" hides an unresolved policy for delayed dependencies.
+The sharing scope of an already-shared G remains its original one; C supplies observation context rather than adopting G's dependency ownership. A previously unselected dependency resolved directly through G's retained frame belongs to that original domain, even if first triggered by a C binding. This explicitly extends the original execution graph; it is not a direct `C.Resolve(M)` request. New per-invocation children must use a fresh child domain and stay there. Include this distinction in the late-resolution tests and review: otherwise the phrase "no hoisting" hides an unresolved policy for delayed dependencies.
 
 Repeated resolution of the same source in one frame means the same logical dependency. Two independent children using the same configuration reference require distinct child domains; call order is not a dependency identifier. Recreating a derived configuration inside every binder would create another reference: authors must prepare it once. Existing guidance allowing explicit children on execution nodes becomes a rule about binding-local children, not shared persistent data.
 
 ### Cache and lifetime rules
 
-- Cache by execution record and full binding context, not configuration plus its own matching declarations. A child-only match can change a parent's binding requirements.
+- Cache by execution preparation and full binding context, not configuration plus its own matching declarations. A child-only match can change a parent's binding requirements.
 - An empty child scope with an identical full context may reuse the ancestor binding. A changed context conservatively rebinds; do not add dependency-completeness optimizations before measurement.
-- Stateful leaf bases can reuse their one raw leaf instance while decoration chains differ. Stateless bases can keep returning `this`. Composite raw bindings are view-local.
-- A long-lived execution record must not own a strong dictionary of every short-lived observation context and binding. Views own binding caches; records own persistent state/dependency selections and explicitly retained logical child domains. Fresh Cycle/Pipeline child views must be collectible when their invocation releases them.
-- Generated occurrences need both source and declaration lifetimes. Use declaration-owned weak-key storage, such as `ConditionalWeakTable<ExecutionRecord, DecorationOccurrence>`: a surviving declaration must not retain every source it once observed, and a surviving source must not retain expired child declarations. An occurrence may reference its key record; the storage must support that relationship without turning it into a strong-key cache. Views/active bindings retain the occurrences they use. Include both lifetime directions in collection tests.
-- A weak-table value must not retain its owning declaration/table, directly or through a declaring domain's retained slots. That back-reference can keep an expired declaration alive while its source remains alive. Pass the declaration into occurrence preparation instead of storing it on the occurrence, and keep binding frames out of prepared configurations and persistent advice data. A private advice domain uses a weak link when its parent is supplied by the declaration rather than the source's own ancestry; the declaration and active contextual views keep that parent alive for binding and deferred dependency selection. Execution records likewise refer weakly to their owning domain, so a pinned extra dependency cannot indirectly retain the declaration through that domain's slots. Scopes, construction frames, retained child slots and occurrences own the domains needed for future resolution. Ordinary logical parent links remain strong. Include these weak references in C4's allocation and resolution-cost measurements.
+- Stateful leaf bases can reuse their one raw leaf instance while wrapper chains differ. Stateless bases can keep returning `this`. Composite raw nodes belong to their execution bindings.
+- A long-lived execution preparation must not own a strong dictionary of every short-lived observation context and binding. Execution bindings own node caches; preparations own persistent state/dependency selections and explicitly retained child sharing scopes. Fresh Cycle/Pipeline child bindings must be collectible when their invocation releases them.
+- Generated occurrences need both source and declaration lifetimes. Use declaration-owned weak-key storage, such as `ConditionalWeakTable<ExecutionPreparation, PreparedWrapper>`: a surviving declaration must not retain every source it once observed, and a surviving source must not retain expired child declarations. An occurrence may reference its key record; the storage must support that relationship without turning it into a strong-key cache. Active execution bindings retain the declarations and selected preparations they use. Include both lifetime directions in collection tests.
+- A weak-table value must not retain its owning declaration/table, directly or through a declaring domain's retained slots. That back-reference can keep an expired declaration alive while its source remains alive. Pass the declaration into occurrence preparation instead of storing it on the occurrence, and keep binding frames out of prepared configurations and persistent advice data. A private advice domain uses a weak link when its parent is supplied by the declaration rather than the source's own ancestry; the declaration and active contextual views keep that parent alive for binding and deferred dependency selection. Execution preparations likewise refer weakly to their owning domain, so a pinned extra dependency cannot indirectly retain the declaration through that domain's slots. Scopes, construction frames, retained child slots and occurrences own the domains needed for future resolution. Ordinary logical parent links remain strong. Include these weak references in C4's allocation and resolution-cost measurements.
 - Stable declaration identities, not captured callback equality, select advice occurrences. Installing the same module twice in one builder retains current idempotence; two separate declarations remain two occurrences.
 - Sharing data does not make calls concurrent-safe. Preserve existing serialization requirements. Do not add locks, asynchronous construction or parallel resolution as part of this change.
 
@@ -163,11 +212,11 @@ public sealed override ExecutionFactory<IMutatorExecution<TCandidate, TSearchSpa
 }
 ```
 
-`CreateInitialState` therefore runs once per execution record, not once per observer context. Framework-managed leaf state still must not retain configurations, scopes, child execution nodes or child-bound delegates. An explicit stateful leaf such as GaussianMutator can also create its raw instance in preparation, so its current strength survives every decorated binding without a separate empty state wrapper.
+`CreateInitialState` therefore runs once per execution preparation, not once per observer context. Framework-managed leaf state still must not retain configurations, scopes, child execution nodes or child-bound delegates. An explicit stateful leaf such as GaussianMutator can also create its raw instance in preparation, so its current strength survives every wrapped binding without a separate empty state wrapper.
 
 ### A stateful non-terminal: predefined candidates
 
-[PredefinedCandidatesCreator](../src/HeuristicLib/Operators/Creators/PredefinedCandidatesCreator.cs) currently combines the fallback binding and `currentCandidateIndex` in one object. The proposed method is:
+[PredefinedCandidatesCreator](../src/HeuristicLib/Operators/Creators/PredefinedCandidatesCreator.cs) now stores its cursor in `ExecutionState` after M0a. The remaining factory migration moves that allocation into preparation:
 
 ```csharp
 public ExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>>
@@ -175,18 +224,18 @@ public ExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProbl
     where TRunSearchSpace : class, ISearchSpace<TCandidate>
     where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
 {
-    var state = new State();
+    var state = new ExecutionState();
     return scope => new Execution<TRunSearchSpace, TRunProblem>(
         state, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(CreatorForRemainingCandidates), PredefinedCandidates);
 }
 
-private sealed class State
+private sealed class ExecutionState
 {
     public int CurrentCandidateIndex;
 }
 ```
 
-The existing instance constructor takes `State state` in addition to the existing fallback and candidate values. Its `Create` body replaces `currentCandidateIndex` with `state.CurrentCandidateIndex`; its call to `creatorForRemainingCandidates.Create(...)` is unchanged. Consuming seeds through a parent and then a child binding advances one cursor and observes only the fallback calls that actually occur.
+The existing instance constructor takes `ExecutionState state` in addition to the existing fallback and candidate values. Its `Create` body replaces `currentCandidateIndex` with `state.CurrentCandidateIndex`; its call to `creatorForRemainingCandidates.Create(...)` is unchanged. Consuming seeds through a parent and then a child binding advances one cursor and observes only the fallback calls that actually occur.
 
 Cost to this author: one private state class, one constructor parameter and one lambda. No public state type, execution-record handle, new generic dimension or changed operation signature.
 
@@ -214,7 +263,7 @@ public sealed record Probe<TCandidate, TSearchSpace, TProblem>
 
     public ExecutionFactory<IProbeExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory()
     {
-        var state = new State();
+        var state = new ExecutionState();
         return scope =>
         {
             var typed = scope.For<TCandidate, TSearchSpace, TProblem>();
@@ -222,9 +271,9 @@ public sealed record Probe<TCandidate, TSearchSpace, TProblem>
         };
     }
 
-    private sealed class State { public int Calls; }
+    private sealed class ExecutionState { public int Calls; }
 
-    private sealed class Execution(State state,
+    private sealed class Execution(ExecutionState state,
         IMutatorExecution<TCandidate, TSearchSpace, TProblem> mutator,
         IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator)
         : IProbeExecution<TCandidate, TSearchSpace, TProblem>
@@ -243,7 +292,7 @@ public sealed record Probe<TCandidate, TSearchSpace, TProblem>
 }
 ```
 
-Before the change, preparation and the lambda body were one `CreateExecutionInstance(scope)` method, and `Calls` was an instance field. Afterwards the two child-resolution expressions and typed calls are identical. `scope.Resolve(probe)` still infers the returned role. A consumer observing `Probe` supplies its own typed wrapper, using the same decoration facility as built-in roles.
+Before the change, preparation and the lambda body were one `CreateExecutionInstance(scope)` method, and `Calls` was an instance field. Afterwards the two child-resolution expressions and typed calls are identical. `scope.Resolve(probe)` still infers the returned role. A consumer observing `Probe` supplies its own typed wrapper, using the same wrapper facility as built-in roles.
 
 ### Wrapping and multi bases
 
@@ -344,7 +393,7 @@ For a future controller that snapshots a child's *current* strength, distinguish
 
 ## 5. Child scopes, Cycle and Pipeline
 
-Keep `CreateChildScope` as a fresh logical domain per call, inheriting applicable declarations and existing ancestor state. "Fresh scope" still does not guarantee fresh state when an ancestor already owns the source. That is true of today's Cycle reset flag and must not silently change during this work.
+Keep `CreateChildScope` as a fresh sharing scope per call, inheriting applicable declarations and existing ancestor state. "Fresh scope" still does not guarantee fresh state when an ancestor already owns the source. That is true of today's Cycle reset flag and must not silently change during this work.
 
 Add these advanced members to the existing `ResolutionScope`, not a second public scope abstraction:
 
@@ -353,7 +402,7 @@ public ResolutionScope GetOrCreateChildScope(object key);
 public ResolutionScope GetOrCreateChildScope(object key, Action<ResolutionScopeBuilder> declare);
 ```
 
-Keys compare by reference. In a construction frame they belong to the execution record; on a standalone scope they belong to its logical domain. The first call creates the retained logical child domain and snapshots its declarations. Subsequent calls return a view over that domain with the requesting frame's binding context. They do not rerun the declaration callback. Use the same declaration-producing code for every use of a key; changing captures is not reconfiguration. A key allocated inside each binder would defeat retention. Distinct child slots need distinct stable key objects; the resolver never infers keys from call order.
+Keys compare by reference. In a construction frame they belong to the execution preparation; on a standalone scope they belong to its sharing scope. The first call creates the retained logical child domain and snapshots its declarations. Subsequent calls return a view over that domain with the requesting frame's binding context. They do not rerun the declaration callback. Use the same declaration-producing code for every use of a key; changing captures is not reconfiguration. A key allocated inside each binder would defeat retention. Distinct child slots need distinct stable key objects; the resolver never infers keys from call order.
 
 Cycle's factory remains simple:
 
@@ -364,7 +413,7 @@ public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace
         scope, Algorithms, MaximumCycles, NewExecutionInstancesPerCycle);
 ```
 
-Remove its dictionary of decorated child instances. Inside each Cycle binding:
+Remove its dictionary of wrapped child instances. Inside each Cycle binding:
 
 ```csharp
 private IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> ResolveAlgorithmExecution(TAlgorithm algorithm)
@@ -376,7 +425,7 @@ private IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> Re
 }
 ```
 
-Reuse mode preserves the existing algorithm-reference key behavior, including the same algorithm appearing twice in the list. Separate Cycle execution records have separate retained-domain tables. Reset mode creates a fresh domain for every actual child activation, including repeated references. Do not key reset domains just by cycle index: two invocations can have the same index. Existing `random.Fork(cycleCount).Fork(algorithmIndex)` placement remains unchanged.
+Reuse mode preserves the existing algorithm-reference key behavior, including the same algorithm appearing twice in the list. Separate Cycle execution preparations have separate retained-domain tables. Reset mode creates a fresh domain for every actual child activation, including repeated references. Do not key reset domains just by cycle index: two invocations can have the same index. Existing `random.Fork(cycleCount).Fork(algorithmIndex)` placement remains unchanged.
 
 Pipeline likewise returns `scope => new PipelineAlgorithmExecution<...>(scope, Algorithms)`. Its iterator retains the binding frame and calls `CreateChildScope()` for each stage activation as today. Its state handoff and `random.Fork(index)` are unchanged. An earlier stage's local children never become visible to a later sibling stage unless deliberately owned by an ancestor.
 
@@ -388,35 +437,35 @@ var childKey = new object();
 return scope =>
 {
     var child = scope.GetOrCreateChildScope(childKey, builder =>
-        builder.Decorate(ObservedOperator, source => MeasuredOperatorFactory(source, duration, TimeProvider)));
+        builder.Wrap(ObservedOperator, source => MeasuredOperatorFactory(source, duration, TimeProvider)));
     return new OperatorDurationBudgetAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(
         child.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
 };
 ```
 
-The accumulator belongs to that budget execution record; the declaration identity belongs to its retained domain. A second binding adds the requesting outer observations without resetting the budget or reinstalling its measurement. Count budgets follow the same pattern. Algorithm-duration budgets keep their stopwatch/duration locals in each invocation iterator, as their existing implementation does.
+The accumulator belongs to that budget execution preparation; the declaration identity belongs to its retained domain. A second binding adds the requesting outer observations without resetting the budget or reinstalling its measurement. Count budgets follow the same pattern. Algorithm-duration budgets keep their stopwatch/duration locals in each invocation iterator, as their existing implementation does.
 
-## 6. Decoration construction and advice state
+## 6. Wrapper construction and advice state
 
 Merely changing configuration factories cannot preserve state in generated wrappers. With outer A and new inner B, the required chain changes from `A(M)` to `A(B(M))`. A must retain its persistent advice state while its predecessor changes. It is therefore incorrect either to pin A's predecessor as an ordinary source dependency or to create another A state for every entire chain.
 
-Propose changing `ResolutionScopeBuilder.Decorate(source, wrap)` to the following explicit wrapping contract while retaining its call shape:
+Propose changing `ResolutionScopeBuilder.Wrap(source, wrap)` to the following explicit wrapping contract while retaining its call shape:
 
-1. `wrap` receives the original source configuration, not the previous generated wrapper configuration. Call it once per source execution record and declaration identity; prepare the resulting wrapper once. The source selection and observation attribution refer to that same original source.
+1. `wrap` receives the original source configuration, not the previous generated wrapper configuration. Call it once per source execution preparation and declaration identity; prepare the resulting wrapper once. The source selection and observation attribution refer to that same original source.
 2. For each binding, construct the chain in the established order. Bind each generated occurrence using a frame in which resolution of its source argument means the already-built predecessor binding.
 3. That special predecessor edge changes per context. Other dependencies of the generated wrapper are ordinary pinned dependencies. Its persistent data stays with the occurrence.
 4. A frame may be retained for deferred resolution. The predecessor override is immutable and belongs to that wrapper's frame, not an entry temporarily installed in a global `underConstruction` map. Do not propagate it into an unrelated child's own frame; that child's source dependency follows its own identity rules.
 5. Generated wrappers are not additional node-selector targets. Explicit configured wrappers are ordinary sources with their own state, dependencies and selectable identities.
 
-Generated advice's additional dependencies require their own ownership rule. Give each occurrence a private logical domain. Its parent is the more deeply nested of the source-owning domain and declaring domain when they are comparable in the logical tree. If they are incomparable because a retained domain is being viewed through a different declaration path, use the declaring domain. Select existing ancestor children through that parent; create missing children only in the occurrence's private domain and pin them there. The source/predecessor edge bypasses this lookup. The rule depends on stable logical identities, not whichever observer context first requests a binding.
+Generated advice's additional dependencies require their own ownership rule. Give each occurrence a private sharing scope. Its parent is the more deeply nested of the source-owning domain and declaring domain when they are comparable in the logical tree. If they are incomparable because a retained domain is being viewed through a different declaration path, use the declaring domain. Select existing ancestor children through that parent; create missing children only in the occurrence's private domain and pin them there. The source/predecessor edge bypasses this lookup. The rule depends on stable logical identities, not whichever observer context first requests a binding.
 
-For example, P owns M and C declares `W(M, X)`: W may reuse C's already-selected X, but a missing X is created privately for W and is never inserted into P or C. Another sibling declaration gets its own occurrence and private X. Conversely, a root declaration applied to a child-owned M uses a private domain below M's owner, so it can reuse that owner's existing X. Later ancestor creation of X does not replace a pinned private X. Two source execution records get separate occurrence domains even for the same declaration. This is a proposed advice-ownership policy and must be tested alongside inherited declarations and retained internal domains; ordinary configured wrappers continue using the normal source-node rules.
+For example, P owns M and C declares `W(M, X)`: W may reuse C's already-selected X, but a missing X is created privately for W and is never inserted into P or C. Another sibling declaration gets its own occurrence and private X. Conversely, a root declaration applied to a child-owned M uses a private domain below M's owner, so it can reuse that owner's existing X. Later ancestor creation of X does not replace a pinned private X. Two source execution preparations get separate occurrence domains even for the same declaration. This is a proposed advice-ownership policy and must be tested alongside inherited declarations and retained internal domains; ordinary configured wrappers continue using the normal source-node rules.
 
 This is an intentional breaking change for callbacks that inspect the previous generated wrapper's type/settings. Existing observing/counting/measuring adapters use the parameter as their wrapped child, so their composition is retained through the predecessor edge. Audit all callbacks, including Experimental and consumer examples. Configuration transformation (`source with { ... }`) belongs before resolution; it is not this wrapping contract. Require a wrapper to retain/resolve its supplied source as the predecessor; returning the source unchanged and obvious construction cycles receive diagnostics. General semantic compliance remains an authoring contract, not something reflection or a construction stack can prove.
 
-Ordering is still innermost-first: configuration-origin before module-origin, deeper effective binding-context layer before shallower, then declaration sequence. Determine depth from the current declaration path, not the retained logical domain's original depth. A budget child D rebound below C has effective path `P -> C -> D`, even if D was originally created under P.
+Ordering is still innermost-first: configuration-origin before module-origin, deeper effective binding-context layer before shallower, then declaration sequence. Determine depth from the current declaration path, not the retained sharing scope's original depth. A budget child D rebound below C has effective path `P -> C -> D`, even if D was originally created under P.
 
-Test both entry and completion order. Reusing A's state does not mean using the same A object: parent calls remain `A_parent(M_parentBinding)` and child calls become `A_child(B_child(M_childBinding))`; both A bindings advance the same A data, and both M bindings advance the same M data. Each operation reaches A once. With three parent and two child calls, A reports five and B reports two. Analyzer accumulators remain caller-owned and may intentionally aggregate different source execution records as well.
+Test both entry and completion order. Reusing A's state does not mean using the same A object: parent calls remain `A_parent(M_parentBinding)` and child calls become `A_child(B_child(M_childBinding))`; both A bindings advance the same A data, and both M bindings advance the same M data. Each operation reaches A once. With three parent and two child calls, A reports five and B reports two. Analyzer accumulators remain caller-owned and may intentionally aggregate different source execution preparations as well.
 
 A wrapper which keeps its own mutable counter moves it into preparation, just like a stateful source composite. Two independent declarations get separate counters even if their callbacks are equal. No predecessor swap mutates an existing binding.
 
@@ -424,7 +473,7 @@ A wrapper which keeps its own mutable counter moves it into preparation, just li
 
 Handwritten role wrappers cannot automatically implement an unknown extra interface. The existing observing mutator already hides `IAdaptableMutationStrengthExecution`, disabling EvolutionStrategy's adaptation. The factory itself does not fix that. Do not claim arbitrary extra-interface preservation.
 
-Propose separating the existing strength control from `Mutate` into an operation-free interface, provisionally `IMutationStrengthControl`, with `double CurrentMutationStrength { get; set; }`. GaussianMutator's raw leaf offers this control over its persistent data. EvolutionStrategy stores two typed references: the decorated `IMutatorExecution` for calls, and the control for adaptation. No operation is called through an undecorated reference.
+Propose separating the existing strength control from `Mutate` into an operation-free interface, provisionally `IMutationStrengthControl`, with `double CurrentMutationStrength { get; set; }`. GaussianMutator's raw leaf offers this control over its persistent data. EvolutionStrategy stores two typed references: the wrapped `IMutatorExecution` for calls, and the control for adaptation. No operation is called through an unwrapped reference.
 
 Use one advanced generic construction overload to select such a control from the selected source's raw binding:
 
@@ -444,7 +493,7 @@ var mutator = scope.Resolve(Mutator,
     static source => source as IMutationStrengthControl, out var strength);
 ```
 
-The result and control use the same pinned execution record and context; the selector runs on its cached raw binding after complete resolution succeeds. It must be a side-effect-free projection, not a second construction hook. This is explicit construction-time projection of one requested source, not an ambient type-keyed service lookup. Do not multiply every role extension over controls; advanced authors can use this generic form, while normal `typed.Resolve` is unchanged.
+The result and control use the same pinned execution preparation and context; the selector runs on its cached raw binding after complete resolution succeeds. It must be a side-effect-free projection, not a second construction hook. This is explicit construction-time projection of one requested source, not an ambient type-keyed service lookup. Do not multiply every role extension over controls; advanced authors can use this generic form, while normal `typed.Resolve` is unchanged.
 
 Generated observations preserve access to that source control without implementing its interface. Explicit configured wrappers do not automatically inherit their child's control: they must deliberately expose a suitable control from their own raw binding, or report none. Automatic unwrapping could adapt the wrong child of a multi-operator composition. A consumer-defined control participates identically. Extra capabilities which themselves execute work need a declared typed role/adapter and observation semantics; they cannot be projected as an unobserved shortcut.
 
@@ -458,17 +507,17 @@ Reserve the logical selection before preparation so a repeated request cannot al
 
 | Failure | Proposed outcome |
 | --- | --- |
-| Preparation/validation throws | Execution record stores the original fault. Later requests for it rethrow without calling preparation again. |
+| Preparation/validation throws | Execution preparation stores the original fault. Later requests for it rethrow without calling preparation again. |
 | A dependency fails during binding | The dependency's selected identity remains pinned. The parent context's binding is faulted; no completed parent is published. Already completed sibling dependencies remain valid. |
-| Raw binder or decoration binder throws | Cache a fault for that execution record/context. Other completed contexts remain usable. Prepared persistent state is retained; a new context may attempt its own binding. |
-| Decoration callback/preparation throws | Fault that source/declaration occurrence; do not repeatedly allocate advice data on another context. |
+| Raw binder or wrapper binder throws | Cache a fault for that execution preparation/context. Other completed contexts remain usable. Prepared persistent state is retained; a new context may attempt its own binding. |
+| Wrapper callback/preparation throws | Fault that source/declaration occurrence; do not repeatedly allocate advice data on another context. |
 | Retained child declaration throws | Reserve/fault that owner's key. Do not rerun the callback and partially redeclare modules. |
 | Recursive construction returns to active source/occurrence construction, including through another context/domain | Diagnose a dependency cycle. A changing context is not an escape. Only the explicit generated predecessor edge may resolve an already-built chain prefix. |
 | Operation or observer callback throws | Keep existing operation semantics; construction records do not replay or roll back the operation. |
 
-This sticky construction-failure policy is a behavior change from rebuilding after a miss. It prevents partial initialization from silently becoming a second logical execution. It provides no rollback of arbitrary user side effects. Recover by creating a genuinely independent execution scope/run; an ordinary child that inherits the same faulted execution record is not a retry mechanism. `TryResolve` retains its documented exception-to-reason behavior; it is not a hidden retry API. Include exact failure identity and preparation-count tests.
+This sticky construction-failure policy is a behavior change from rebuilding after a miss. It prevents partial initialization from silently becoming a second logical execution. It provides no rollback of arbitrary user side effects. Recover by creating a genuinely independent execution scope/run; an ordinary child that inherits the same faulted execution preparation is not a retry mechanism. `TryResolve` retains its documented exception-to-reason behavior; it is not a hidden retry API. Include exact failure identity and preparation-count tests.
 
-Track active synchronous construction explicitly across frames: re-entering an active execution record or occurrence fails even if `CreateChildScope` or `GetOrCreateChildScope` changes the binding context. Also detect repeating the same source configuration/compatible creation contract through fresh domains during that unfinished construction, which could otherwise allocate an endless sequence of new execution records. Completed predecessor bindings are the narrow decoration exception. Sequential child activations after construction has finished are valid; this does not prohibit Cycle from invoking the same completed algorithm repeatedly or attempt to detect arbitrary recursion during execution.
+Track active synchronous construction explicitly across frames: re-entering an active execution preparation or occurrence fails even if `CreateChildScope` or `GetOrCreateChildScope` changes the binding context. Also detect repeating the same source configuration/compatible creation contract through fresh domains during that unfinished construction, which could otherwise allocate an endless sequence of new execution preparations. Completed predecessor bindings are the narrow wrapper exception. Sequential child activations after construction has finished are valid; this does not prohibit Cycle from invoking the same completed algorithm repeatedly or attempt to detect arbitrary recursion during execution.
 
 ### Invocation ownership
 
@@ -485,7 +534,7 @@ The constructor audit found no need for child-dependent binding initialization o
 | D1 | Preserve G's pinned M even when direct C resolution selects another M; keep original logical ownership for delayed dependencies. | Collision, late dependency and no-hoisting tests; clear direct-versus-composite behavior. |
 | D2 | `CreateWrapperFactory` / `CreateIterationFactory` prepare once and receive typed children later. | Full compilation of agnostic/bound bases, custom roles, representative algorithms; author ceremony comparison. |
 | D3 | Retained child domains keyed explicitly, returning contextual views. | Both Cycle modes, repeated source references, two Cycle nodes, two invocations, Pipeline and budget composition. |
-| D4 | Decoration callback receives original source; generated occurrence has a per-binding predecessor, private extra-child domain and weak-key lifetime. | Stateful A/B chain insertion, deferred predecessor, extra-child isolation, unrelated child, attribution, contextual depth, timing order and both collection directions. |
+| D4 | Wrapper callback receives original source; generated occurrence has a per-binding predecessor, private extra-child domain and weak-key lifetime. | Stateful A/B chain insertion, deferred predecessor, extra-child isolation, unrelated child, attribution, contextual depth, timing order and both collection directions. |
 | D5 | Operation-free controls projected during resolution. | EvolutionStrategy/Gaussian with observation, consumer control, explicit wrapper absence/forwarding, inference. |
 | D6 | Sticky preparation/occurrence faults and context-local binding faults. | Failure injection at each phase; no repeated preparation or partial publication. |
 | D7 | No first-binding child-dependent initialization helper; paused iterators keep original bindings. | Audit remaining constructors; pause/resume and exception/disposal lifecycle tests. |

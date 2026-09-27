@@ -28,7 +28,9 @@ A recommendation below is not a settled decision. Current behavior remains the b
 
 Initially confirmed on 2026-09-26: typed reference, role and type matching; preservation of current reuse and ordering; deferred nesting; and retention of `Interceptor`. Subsequent scope review supersedes blanket reuse preservation: a child decoration must not force another underlying instance. Existing ordering remains the comparison baseline, with its extension to wrappers around reused instances under discussion. Whether state transformation should eventually move from the operator role to typed algorithm advice remains a separate open question.
 
-## Current implementation and corrections
+## Pre-factory implementation baseline and corrections
+
+This section records the behavior before the factory cutover, including the former `Decorate` spelling and public `DecorationOrigin`. The current M1a working tree implements preparation and contextual binding, including reuse through composites; consult the [factory design](execution-factory-design.md#resolver-responsibilities) for that implementation. The reviewed [wrapper registration vocabulary](execution-factory-design.md#wrapper-registration-and-internal-ownership) now uses `Wrap`, `WrapperRegistration` and `WrappedNodes`, with private module-ordering metadata. Later advice signatures and precedence extensions remain open. The baseline below remains useful for behavioral comparisons and is not a description of the new resolver.
 
 ### Resolution and construction
 
@@ -259,6 +261,7 @@ Each row is a review stop. Implement at most one package per review cycle. At th
 | 8. Rich matching | One package per accepted attribute, name or wildcard feature. Nesting has its own design review and implementation package. | Corresponding D2 choices; D3 for nesting. | Focused matching/sharing tests, core and API usage specs; performance evidence if the call path changes. |
 | 9. Instrumentation and budgets | Prove one role/concern migration, retaining success-only counts, failure-inclusive timing, sink ownership and configuration origin. Expand after review. | Advice supports those semantics. Do not assume all wrappers/factories disappear. | Instrumentation/budget tests, core, API usage specs; selected racing/cycle scenarios at completion. |
 | 10. Docs and guardrail | Publish aspect authoring docs with supported APIs. Separately audit/extend `HLib0001` for delayed creation if legitimate base/bridge calls can be distinguished. | Implemented APIs; diagnostic design. | Docs build/API usage specs; focused Roslyn analyzer/code-fix tests for diagnostic changes. |
+| 11. Revisit the resolver design | Reassess `ResolutionScope`, its internal components and the public wrapper/advice registration surface using the completed AOP implementation and actual authoring examples. The user remains dissatisfied with the current design; accepting the factory/resolution checkpoint does not settle its final structure. Look for simpler component boundaries and terminology while preserving shared state, scoped behavior and typed role operations. | AOP rework completed. This is a required follow-up, not a reason to expand the current factory package. | Present the reassessment and proposed simplifications for review before another implementation package. |
 
 For C# packages use `dotnet restore`, `dotnet build --configuration Release --no-restore` and the selected `dotnet test --configuration Release --no-restore` scope. Run repository whitespace, style and analyzer verification for changed C# code. Follow [AGENTS.md](../AGENTS.md) and [test/README.md](../test/README.md); do not repeatedly run scenarios. Substantial public API or shared-invariant integration needs one complete solution test run at completion.
 

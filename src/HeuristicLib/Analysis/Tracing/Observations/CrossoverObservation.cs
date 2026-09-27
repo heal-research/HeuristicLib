@@ -41,7 +41,7 @@ internal sealed class CrossoverObservationModule<TCandidate, TSearchSpace, TProb
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public void Install(ResolutionScopeBuilder builder) =>
-        builder.Decorate(crossover, current => new ObservingCrossover<TCandidate, TSearchSpace, TProblem>(crossover, current, observe));
+        builder.Wrap(crossover, current => new ObservingCrossover<TCandidate, TSearchSpace, TProblem>(crossover, current, observe));
 }
 
 internal sealed class ObservingCrossover<TCandidate, TSearchSpace, TProblem>(

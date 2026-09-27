@@ -50,7 +50,7 @@ internal sealed class MutatorObservationModule<TCandidate, TSearchSpace, TProble
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public void Install(ResolutionScopeBuilder builder) =>
-        builder.Decorate(mutator, current => new ObservingMutator<TCandidate, TSearchSpace, TProblem>(mutator, current, observe));
+        builder.Wrap(mutator, current => new ObservingMutator<TCandidate, TSearchSpace, TProblem>(mutator, current, observe));
 }
 
 internal sealed class ObservingMutator<TCandidate, TSearchSpace, TProblem>(

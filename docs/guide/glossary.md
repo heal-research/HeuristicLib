@@ -469,6 +469,8 @@ A configuration node is a configuration considered as a node in the configuratio
 
 Configuration is accepted shorthand for configuration node when the context is clear. Use node when graph membership needs emphasis, or a role-specific term such as mutator when the role is known. The common interface is `IConfigurationNode`, including its generic form. Role-specific configuration names such as `IOperator` and `IMutator` do not acquire a `Node` suffix.
 
+The generic `IConfigurationNode<TExecution>` prepares an `ExecutionFactory<TExecution>` through `CreateExecutionFactory()`. The factory binds typed nodes to a resolution context; it is runtime machinery, not a configuration value strategy. Run-typed role contracts are migrating separately.
+
 The term does not imply a common child-enumeration API or a universal operation on all nodes.
 
 See also: Configuration, Configuration graph, Execution node, Node selector.
@@ -491,7 +493,7 @@ A node selector is a rule for selecting algorithm or operator configurations in 
 
 The current forms select by configuration reference or assignable type, including role interfaces. Selectors with the same declared configuration type or role compose by union (`Or`, `|`) or intersection (`And`, `&`). `And(predicate)` intersects with a selector constructed from the typed configuration predicate. Composition creates a new definition without changing its operands or evaluating predicates; matching evaluates predicates from left to right only as needed. A node matching several union branches still matches once. The selector does not traverse a graph or resolve execution nodes. Combinations across different roles remain deferred.
 
-The agreed integration design selects source configuration nodes. Wrappers introduced by decoration are not additional selection targets, even when the decoration machinery represents them as configurations. Explicit wrappers in the source configuration graph remain selectable nodes. Multiple modules select the same source independently and compose their behavior using the decoration order; they do not select each other's generated wrappers. Resolver integration enforcing this boundary is planned.
+The agreed integration design selects source configuration nodes. Wrappers introduced by wrapper are not additional selection targets, even when the wrapper machinery represents them as configurations. Explicit wrappers in the source configuration graph remain selectable nodes. Multiple modules select the same source independently and compose their behavior using the wrapper order; they do not select each other's generated wrappers. Resolver integration enforcing this boundary is planned.
 
 A selected configuration can be referenced by several callers and resolved into more than one execution node. Selecting that configuration does not select one caller path or one invocation. Nesting selection is separate deferred work.
 
@@ -529,9 +531,9 @@ See also: Candidate, Evaluated candidate, Execution state, Run, Search space.
 
 Status: `Canonical`
 
-An execution node is the resolved runtime object that implements the operations of an algorithm or operator. Its resolved child references connect it to other execution nodes. It may hold private execution data or references to that data.
+An execution node is the resolved runtime object that implements the operations of an algorithm or operator. Its resolved child references connect it to other execution nodes. It may hold private execution data or references to that data. A binding is that node with the children and observations supplied for a particular resolution context.
 
-An execution node is distinct from a run, a single operation invocation and the planned persistent execution record in the resolver. The name alone does not promise a particular lifetime, a fresh allocation or a separate state object. A node can be shorter-lived than the run; a stateless configuration can also serve as its own execution node.
+An execution node is distinct from a run, a single operation invocation and the preparation that owns its persistent state and selected dependencies. The name alone does not promise a particular lifetime, a fresh allocation or a separate state object. A node can be shorter-lived than the run; a stateless configuration can also serve as its own execution node.
 
 The common interface is `IExecutionNode`. Role-specific contracts use names such as `IOperatorExecution`, `IMutatorExecution` and `IAlgorithmExecution`, without a `Node` suffix on those roles. These names do not themselves change execution-state ownership or resolution.
 
@@ -551,9 +553,11 @@ See also: Execution node.
 
 Status: `Canonical`
 
-Execution state is private mutable data used by an execution node. The current implementation owns it on that object or in framework-managed operator state; separating persistent ownership from replaceable execution nodes is planned, not yet implemented.
+Execution state is private mutable data used by an execution node, such as counters, caches and buffers. It must not be shared through the reusable configuration.
 
-Execution state can contain resolved child execution nodes, counters, caches, buffers, or other data that must not be shared through the reusable configuration.
+Under the typed factory contract, persistent state belongs to the selected logical execution and survives reconstruction of its nodes. Resolved children and construction frames belong to each binding; iterator progress and local timers belong to an invocation. Framework-managed leaf state cannot contain graph dependencies. Built-in role implementations are still migrating to this separation.
+
+Use `ExecutionState` for an authored private state holder and `state` for its local variable or parameter when the context is clear.
 
 Execution state is distinct from search state. Search states describe visible progress through the search and may be streamed, inspected, analyzed, or returned as the final state of a run.
 
@@ -565,7 +569,7 @@ Status: `Canonical`
 
 An execution graph is a graph of execution nodes created from a configuration graph during a run.
 
-A run may contain more than one execution graph over time, for example when meta-algorithms create fresh execution nodes for nested algorithms.
+A run may contain more than one execution graph over time or through different observation contexts. Distinct bound nodes can share persistent execution state while retaining their own children and observers.
 
 See also: Configuration graph, Execution node, Run.
 
@@ -575,19 +579,31 @@ Status: `Canonical`
 
 A resolution scope resolves configurations to execution nodes during a run.
 
-The scope controls execution-node identity and sharing. Explicit operator and algorithm execution creation methods receive the scope and normally resolve their declared children eagerly. Execution graph compositions may additionally create child scopes, declare decorations for them or control execution reuse. Decorations are declared on a `ResolutionScopeBuilder` before the scope resolves anything.
+The scope selects persistent execution state by configuration reference and obtains nodes bound to an observation context. Internally, sharing scopes determine state reuse, preparations retain factories and chosen dependencies, and execution bindings construct the callable nodes. A typed factory receives a construction frame that preserves its selected child identities while applying the requesting context's observations. Fresh child scopes create new local domains; retained child scopes preserve a domain under a stable reference key. Wrappers are snapshotted from a `ResolutionScopeBuilder` before resolution.
 
-See also: Configuration, Decoration chain, Execution graph, Execution node, Execution module, Run.
+The common factory and resolver implement this model; role interfaces and authoring bases are still migrating. See [execution resolution](/contributing/architecture/execution-resolution) for the current cutover boundary.
 
-### Decoration chain
+See also: Configuration, Wrapper chain, Execution graph, Execution node, Execution module, Run.
+
+### Wrapper registration
 
 Status: `Canonical`
 
-A decoration chain is the ordered set of decorations that apply to one configuration at one resolution scope: every decoration declared by that scope or any of its ancestors, and no others.
+A wrapper registration adds a recipe for wrapping a selected source configuration's execution. `ResolutionScopeBuilder.Wrap` currently selects one source by reference. The recipe receives the original source configuration, even when other wrappers also apply.
 
-The chain determines whether an existing ancestor execution is eligible for reuse. Resolution searches its own scope and then ancestors, stopping at a scope that declares decorations for that configuration if no execution was found there. An execution built in a child stays in that child. Identical chains therefore permit reuse but do not guarantee it: a child may have built its own execution before its parent resolved the configuration. Siblings cannot read each other's caches, but can both reuse an execution already held by a common ancestor.
+One registration keeps its own prepared wrapper state for each selected execution, across observation contexts. Two registrations are separate contributions even when their recipes are equal. An execution module groups registrations through `Install`. Wrappers can observe operations or add other typed behavior; observation retains its narrower read-only meaning.
 
-Within a chain, decorations declared by an execution module sit outside those declared by the configuration, and a deeper scope's decorations bind more tightly than a shallower one's.
+See also: Configuration node, Execution module, Observation, Resolution scope, Wrapper chain.
+
+### Wrapper chain
+
+Status: `Canonical`
+
+A wrapper chain is the ordered set of wrappers that apply to one configuration at one resolution scope: every wrapper declared by that scope or any of its ancestors, and no others.
+
+The chain controls the bound wrappers, independently of persistent state selection. Adding declarations can rebuild nodes and child bindings without preparing state again. A child selection stays local, and siblings share state only when an ancestor already owns it. Each generated wrapper occurrence preserves its own state across contexts and resolves the original source as the already-built inner chain for that wrapper.
+
+Within a chain, wrappers declared by an execution module sit outside those declared by the configuration. Greater depth in the current observation path binds more tightly; declaration sequence breaks ties. Retained domains use their current contextual depth.
 
 See also: Configuration, Execution node, Execution module, Resolution scope.
 
@@ -597,11 +613,11 @@ Status: `Canonical`
 
 An execution module adds behavior at chosen configurations in a run's execution graph, before the graph is resolved, represented by `IExecutionModule`.
 
-A module declares its decorations on a `ResolutionScopeBuilder` and resolves nothing itself, so it cannot participate in building the graph it decorates. Run-level additions wrap configuration-level ones, so a module always sees the fully configured operator.
+A module declares its wrappers on a `ResolutionScopeBuilder` and resolves nothing itself, so it cannot participate in building the graph it wraps. Run-level additions wrap configuration-level ones, so a module always sees the fully configured operator.
 
 Analyzers install most of the modules a run sees, but the contract is not analysis specific. Writing to a log, reporting progress, advancing a dynamic problem at an iteration boundary and bridging to another runtime are equally valid modules.
 
-See also: Analyzer, Configuration, Decoration chain, Observation, Resolution scope, Run.
+See also: Analyzer, Configuration, Wrapper chain, Observation, Resolution scope, Run.
 
 ### Random number generator (RNG)
 

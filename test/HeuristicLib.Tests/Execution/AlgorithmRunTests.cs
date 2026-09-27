@@ -158,7 +158,7 @@ public class AlgorithmRunTests
     }
 
     [Fact]
-    public void AnAnalyzerDecoratingDirectly_ObservesInTheOrderItWasAttached()
+    public void AnAnalyzerWrappingDirectly_ObservesInTheOrderItWasAttached()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = new AdditiveStepAlgorithm(1);
@@ -166,11 +166,11 @@ public class AlgorithmRunTests
 
         _ = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42))
                      .Attach(new ObservingAnalyzer(algorithm.Evaluator, () => observed.Add("first")))
-                     .Attach(new DecoratingAnalyzer(algorithm.Evaluator, () => observed.Add("second")))
+                     .Attach(new WrappingAnalyzer(algorithm.Evaluator, () => observed.Add("second")))
                      .Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // Both bind as modules, so the one attached first sits innermost and observes first. Recorded as
-        // configuration, the direct decoration would sit inside every module whatever the attachment order.
+        // configuration, the direct wrapper would sit inside every module whatever the attachment order.
         observed.ShouldBe(["first", "second"]);
     }
 
@@ -217,11 +217,11 @@ public class AlgorithmRunTests
         public void Install(ResolutionScopeBuilder builder) => builder.Observe(evaluator, _ => observed());
     }
 
-    // Declares its decoration itself rather than through a module, as a hand-written analyzer may.
-    private sealed class DecoratingAnalyzer(IEvaluator<int> evaluator, Action observed) : IAnalyzer
+    // Declares its wrapper itself rather than through a module, as a hand-written analyzer may.
+    private sealed class WrappingAnalyzer(IEvaluator<int> evaluator, Action observed) : IAnalyzer
     {
         public void Install(ResolutionScopeBuilder builder) =>
-            builder.Decorate(evaluator, current =>
+            builder.Wrap(evaluator, current =>
                 new ObservingEvaluator<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(evaluator, current, _ => observed()));
     }
 

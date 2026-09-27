@@ -61,7 +61,6 @@ These are still real open items:
 - design provenance. Genealogy reconstructs candidate identity by value through an equality comparer, because no identity survives an operator boundary. Candidate identity across operators, a first-class lineage model and operator attribution, including making the dispatch decision inside `ChooseOne*` operators visible so operator success rates become measurable, were deferred from the analysis rework as their own work. Relates to the solution-equivalence and repeated-genealogy-values items above
 - settle `PopulationSimilarity` before promoting it. It has no behavior tests, excludes the diagonal without saying so, and reports a minimum of 1, a maximum of 0 and a mean of NaN for a single-member population
 - decide whether epoch work needs exact recording. `EpochWorkTrace.PerEpoch` derives staleness from an evaluation clock and the epoch clock, which does not describe a caching evaluator. A counter on the problem would be exact, but it puts into the problem's state a metric that only the coarser update policies and parallel evaluation produce
-- decide whether `DecorationOrigin` stays public. No caller can supply one: `Install` sets it and `Decorate` reads it
 - two analysis footguns are documented rather than guarded: an aggregation that mutates and returns one object can still be put in an ordinary trace, which then stores that one object many times, and a retention object shared by two traces couples their counting. Add checks when either bites
 
 - island-style population workflow

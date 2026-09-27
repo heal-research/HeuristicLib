@@ -1,6 +1,6 @@
 # Analyzer architecture
 
-An analyzer is a stateful execution module. It owns its collected data and exposes typed reads directly. `IAnalyzer` inherits `IExecutionModule`; the analyzer implements `Install(ResolutionScopeBuilder)` to declare its observations and may install additional modules. Decorations it declares directly also have module origin.
+An analyzer is a stateful execution module. It owns its collected data and exposes typed reads directly. `IAnalyzer` inherits `IExecutionModule`; the analyzer implements `Install(ResolutionScopeBuilder)` to declare its observations and may install additional modules. Wrappers it registers directly also sit outside configuration wrappers.
 
 `AlgorithmRun.Attach` accepts analyzers and other modules while its lifecycle is `Preparing`. Starting it freezes one attachment list, installs every attachment in attachment order, and resolves the execution graph. Attaching the same object more than once installs it once, using reference identity. The run does not own analyzer disposal and does not provide a result lookup service. Reusing one analyzer on several runs intentionally combines its results.
 
@@ -29,7 +29,7 @@ Named types are checked against the run when the observation is resolved, applyi
 
 Each `Observe` call creates a private runtime module. These module and wrapper classes may retain delegates because they are runtime identity objects rather than records or serializable configuration. Installing the same exact module object twice in one scope has no additional effect. Distinct modules compose in declaration order.
 
-Configuration decorations remain inside module decorations. Among modules, earlier declarations observe completed operations first. A trace therefore installs its clocks before its own observation modules.
+Configuration wrappers remain inside module wrappers. Among modules, earlier declarations observe completed operations first. A trace therefore installs its clocks before its own observation modules.
 
 An operator that nothing observes is resolved without a wrapper, so a run without analyzers takes the ordinary operator path unchanged. Observation only reads, and analysis never steers the search. An operator that adapts to its own measured success is control flow: it reads instrumentation, as budgets and terminators read an operator counter, rather than an analyzer.
 
