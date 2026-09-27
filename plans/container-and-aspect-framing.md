@@ -4,6 +4,8 @@ Status: packages 1 and 2 committed as `0236ab08`; packages 4a and 4b committed a
 
 Reviewed against `37e8bdcc` (the layering overhaul merged into `dev`) on 2026-09-26. Work continues on `container-and-aspect-framing`. The completed layering implementation plan and its obsolete analysis report have been removed; Git history preserves them. Durable rules live in [layering](../docs/contributing/architecture/layering.md), the [developer guidelines](../docs/contributing/developer-guidelines.md), the [design goals](../docs/contributing/design-goals.md) and the [developer backlog](developer-backlog.md).
 
+Implementation update, 2026-09-27: implementation is authorized with the documented review gates. The reviewed naming migration is committed as `d5ad7fb2`. The C2 core proof was completed and validated locally. C3/C4 and the public factory migration have not started; the shipping resolver retains its existing behavior.
+
 ## Purpose and settled foundations
 
 Use DI and AOP as comparison models for concrete HeuristicLib authoring problems. Extend selection and attached behavior where they help users work with algorithm and operator graphs. An analyzer is already an execution module that owns results. The new capability is selecting more than one known configuration reference and expressing typed behavior beyond successful-operation observation.

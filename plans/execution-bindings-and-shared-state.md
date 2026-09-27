@@ -1,8 +1,8 @@
 # Design execution factories and shared state
 
-Status: implementation authorized on 2026-09-27, beginning with the behavior-preserving naming migration. The selected direction is option C using typed execution factories (candidate 1 in the [design comparison](execution-bindings-design-investigation.md)), superseding option A in the [container and aspect rework](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings). End the turn for explicit review after naming, C2, C3 and C4, then after each reviewed migration package. C4 must finalize the library-wide migration scope before rollout. Leave the Git index and commits to the user.
+Status: implementation authorized on 2026-09-27. The user reviewed and staged the naming migration, then explicitly authorized committing it and continuing; it is committed as `d5ad7fb2`. C2 was completed and validated locally. The selected direction is option C using typed execution factories (candidate 1 in the [design comparison](execution-bindings-design-investigation.md)), superseding option A in the [container and aspect rework](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings). End the turn for explicit review after C2, C3 and C4, then after each reviewed migration package. C4 must finalize the library-wide migration scope before rollout. Leave further index and commit operations to the user unless explicitly authorized.
 
-C1 now has a [concrete design draft](execution-factory-design.md), including authoring examples, resolver ownership, retained child scopes, decoration construction, capabilities and failure behavior. The detailed proof packages and provisional migration sequence below make the next work reviewable. C2/C3 proof and C4 cost evidence are not yet completed; the migration sequence must be finalized from their results before rollout.
+C1 has a [concrete design](execution-factory-design.md), including authoring examples, resolver ownership, retained child scopes, decoration construction, capabilities and failure behavior. C2 validated its core authoring examples locally. C3 proof and C4 cost evidence remain outstanding; the migration sequence must be finalized from their results before rollout.
 
 Naming decision, 2026-09-27: adopt the [graph naming family](execution-factory-design.md#agreed-naming-family): `IConfigurationNode`, `IExecutionNode` and role-specific `...Execution` types, retaining ordinary algorithm/operator configuration names. The [commit boundaries](#agreed-commit-boundaries) separate a behavior-preserving rename from the factory/resolution rework. The naming migration is the first implementation review package; it retains the existing object-returning creation methods and behavior.
 
@@ -193,7 +193,7 @@ The C2/C3 proofs and C4 review still precede the final rollout decision. The fol
 
 ### Naming migration review record, 2026-09-27
 
-The behavior-preserving naming package is complete and awaiting review. C2 has not started.
+The behavior-preserving naming package was reviewed by staging and committed as `d5ad7fb2` after the user's explicit commit-and-continue instruction. The following records its validation before that review.
 
 - Renamed the common contracts to `IConfigurationNode` and `IExecutionNode`, runtime role contracts and bases to `...Execution`, and nested runtime types/type parameters to `Execution`/`TExecution`. Migrated core and Experimental consumers, test doubles, architecture/reflection checks, analyzer metadata, authoring snippets, documentation filenames and links. Ordinary configuration roles and operators retain their domain names.
 - Preserved `CreateExecutionInstance`, `WrapExecutionInstance`, `CombineExecutionInstances`, type arities/constraints, typed role operations, state allocation, resolver caching, decoration order and lifecycle behavior. Kept singleton `Instance` properties and the `NewExecutionInstancesPerCycle` policy name. No typed-factory API, state extraction or resolution rework is included.
@@ -202,6 +202,10 @@ The behavior-preserving naming package is complete and awaiting review. C2 has n
 - A local Roslyn token audit of all 214 changed C# files found no structural or non-string-literal changes. Identifier changes and the 23 string changes were reviewed; strings contain renamed diagnostics, analyzer metadata and compiled analyzer-test snippets. Local validation logs and the audit helper are under ignored `artifacts/execution-naming/`.
 - Renamed documentation/source links resolve. The wider link audit found one unrelated pre-existing missing target: `plans/data-analysis-modernization-plan.md` links to `docs/guide/domains/data-analysis.md`, which is also absent at the baseline revision. That historical plan was left unchanged.
 - No unresolved naming issue. The current decoration reuse barrier and shared-composite limitation remain current behavior, pending C2 and the later factory migration. The next package is the isolated typed-factory proof, after explicit review continuation. No staging, unstaging, reset or commit was performed.
+
+### C2 completion record, 2026-09-27
+
+The focused typed-factory proof was completed and validated locally: 31 invariant tests and eight executable authoring specs passed. It established the planned core state-preservation, scoped-observation, identity, capability and failure cases. The production factory/resolution migration has not started. C3 remains the next review-gated step and requires explicit continuation.
 
 ### Factory/resolution work packages to finalize at C4
 

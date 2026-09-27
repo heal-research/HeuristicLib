@@ -1,8 +1,8 @@
 # Typed execution factories: concrete design
 
-Status: C1 design draft, 2026-09-27. The selected direction is option C from [container and aspect framing](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings), implemented through candidate 1 from the [comparison](execution-bindings-design-investigation.md). The user has selected that direction and the graph vocabulary recorded below. The remaining contract details and semantic choices are proposals for review, not implemented behavior. The [work plan](execution-bindings-and-shared-state.md) owns proof, migration and validation packages, including separate naming and behavior commits.
+Status: implementation authorized, 2026-09-27. The naming migration was reviewed and committed as `d5ad7fb2`; the C2 core proof was completed and validated locally. The selected direction is option C from [container and aspect framing](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings), implemented through candidate 1 from the [comparison](execution-bindings-design-investigation.md). These factory semantics are not yet shipping library behavior. The [work plan](execution-bindings-and-shared-state.md) owns proof, migration and validation gates, including C3/C4 before the library-wide migration.
 
-This document specifies a design rather than another alternatives survey. Code blocks show proposed authoring contracts; they have not been compiled against a migrated library. The earlier standalone lambda check establishes target typing only. C2 must compile the complete examples and exercise their behavior.
+This document specifies the design. C2 compiled the core authoring examples against candidate contracts and exercised their behavior through real typed operations. The shipping library has not undergone the factory cutover. Child-scope/lifecycle examples and performance claims still require C3/C4 evidence.
 
 ## Agreed naming family
 
@@ -28,7 +28,7 @@ In prose, a configuration node belongs to the configuration graph; an execution 
 
 Binding remains a descriptive word for constructing scope-specific dependencies and observations; it is not the public type family. `IExecutionBinding`, bare `IExecution`, bare `IConfiguration` and definition-based names are not selected. This does not change state-sharing policy or approve the remaining proposed control, child-scope or protected factory-hook APIs.
 
-The naming migration now uses the agreed names in source, links and examples. Object-returning creation methods retain their existing names for this intermediate revision. The factory examples below remain proposals for the next proof package. The [naming commit boundary](execution-bindings-and-shared-state.md#agreed-commit-boundaries) keeps the rename separate from the return-type and resolution changes.
+The naming migration uses the agreed names in source, links and examples. Object-returning creation methods retain their existing names in the shipping library. The core factory examples below were validated during C2. The [naming commit boundary](execution-bindings-and-shared-state.md#agreed-commit-boundaries) keeps the rename separate from the return-type and resolution changes.
 
 ## 1. What changes for each audience
 
