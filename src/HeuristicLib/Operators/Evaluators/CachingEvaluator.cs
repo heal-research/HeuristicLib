@@ -31,15 +31,13 @@ public record CachingEvaluator<TCandidate, TKey>
     }
 
     protected override IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, SizeLimit);
+        new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, new MemoryCache(new MemoryCacheOptions { SizeLimit = SizeLimit, TrackStatistics = true }));
 
-    private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit)
+    private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, MemoryCache cache)
         : WrappingEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(childEvaluator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        private readonly MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
-
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var n = candidates.Count;

@@ -36,18 +36,27 @@ public record GaussianMutator
     /// <see cref="IAdaptableMutationStrengthExecution{TCandidate,TSearchSpace,TProblem}"/>.
     /// </summary>
     public override IMutatorExecution<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> CreateExecutionInstance(ResolutionScope scope) =>
-        new Execution(MutationRate, MutationStrength);
+        new Execution(MutationRate, new ExecutionState(MutationStrength));
 
-    private sealed class Execution(double mutationRate, double mutationStrength)
-        : MutatorExecution<RealVector, BoundedRealVectorSearchSpace>, IAdaptableMutationStrengthExecution<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>
+    private sealed class ExecutionState(double mutationStrength)
     {
         public double CurrentMutationStrength { get; set; } = mutationStrength;
+    }
+
+    private sealed class Execution(double mutationRate, ExecutionState state)
+        : MutatorExecution<RealVector, BoundedRealVectorSearchSpace>, IAdaptableMutationStrengthExecution<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>
+    {
+        public double CurrentMutationStrength
+        {
+            get => state.CurrentMutationStrength;
+            set => state.CurrentMutationStrength = value;
+        }
 
         public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) =>
             BatchExecution.Sequential(
                 parents,
                 (searchSpace, mutationRate, mutationStrength: CurrentMutationStrength),
-                static (parent, itemRandom, state) => GaussianMutator.Mutate(parent, itemRandom, state.searchSpace, state.mutationRate, state.mutationStrength),
+                static (parent, itemRandom, parameters) => GaussianMutator.Mutate(parent, itemRandom, parameters.searchSpace, parameters.mutationRate, parameters.mutationStrength),
                 random);
     }
 

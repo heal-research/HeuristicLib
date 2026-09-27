@@ -31,15 +31,13 @@ public sealed record LimitEvaluator<TCandidate>
     }
 
     protected override IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch);
+        new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch, new CountAccumulator());
 
-    private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch)
+    private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch, CountAccumulator counter)
         : WrappingEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(childEvaluator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        private readonly CountAccumulator counter = new();
-
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var remainingEvaluations = maxEvaluations - counter.CurrentCount;

@@ -13,12 +13,12 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     where TCandidate : notnull
     where TKey : notnull
 {
-    private sealed class ExecutionData
+    private sealed class ExecutionState
     {
         public MemoryCache Cache { get; }
         public long HitCount { get; set; }
 
-        public ExecutionData(long? sizeLimit)
+        public ExecutionState(long? sizeLimit)
         {
             Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
         }
@@ -55,30 +55,34 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// <remarks>
     /// This evaluator serves exactly one problem instance, matched by identity, which <c>Evaluate</c> checks.
     /// </remarks>
-    protected override IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, SizeLimit, GraceCount);
+    protected override IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator)
+    {
+        var state = new ExecutionState(SizeLimit);
+        var execution = new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, GraceCount, state);
+        SourceProblem.OnEpochChange += (_, _) =>
+        {
+            state.Cache.Clear();
+            state.HitCount = 0;
+        };
+        return execution;
+    }
 
     private sealed class Execution<TRunSearchSpace, TRunProblem> : WrappingEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        private readonly ExecutionData executionData;
+        private readonly ExecutionState state;
         private readonly IDynamicProblem<TCandidate, TSearchSpace> sourceProblem;
         private readonly ICacheKeySelector<TCandidate, TKey> keySelector;
         private readonly long graceCount;
 
-        public Execution(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> sourceProblem, ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit, long graceCount)
+        public Execution(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> sourceProblem, ICacheKeySelector<TCandidate, TKey> keySelector, long graceCount, ExecutionState state)
             : base(childEvaluator)
         {
-            executionData = new ExecutionData(sizeLimit);
+            this.state = state;
             this.sourceProblem = sourceProblem;
             this.keySelector = keySelector;
             this.graceCount = graceCount;
-            sourceProblem.OnEpochChange += (_, _) =>
-            {
-                executionData.Cache.Clear();
-                executionData.HitCount = 0;
-            };
         }
 
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TRunSearchSpace searchSpace, TRunProblem problem)
@@ -86,7 +90,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
             if (!ReferenceEquals(problem, sourceProblem))
                 throw new InvalidOperationException("Dynamic caching evaluator executions can only evaluate the dynamic problem they were created for.");
 
-            var cache = executionData.Cache;
+            var cache = state.Cache;
             var beforeCacheStatistics = cache.GetCurrentStatistics();
             var beforeHits = beforeCacheStatistics?.TotalHits ?? 0;
             var beforeMisses = beforeCacheStatistics?.TotalMisses ?? 0;
@@ -154,15 +158,15 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
 
             if (uniqueEvaluatedCount == 0)
             {
-                executionData.HitCount += cachedSolutionsCount;
-                if (executionData.HitCount >= graceCount)
+                state.HitCount += cachedSolutionsCount;
+                if (state.HitCount >= graceCount)
                 {
                     ((IUpdateRequestable)sourceProblem).RequestUpdate();
                 }
             }
             else
             {
-                executionData.HitCount = 0;
+                state.HitCount = 0;
             }
 
             return results;

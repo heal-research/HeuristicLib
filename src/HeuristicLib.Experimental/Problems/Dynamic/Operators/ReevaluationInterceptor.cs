@@ -25,26 +25,31 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
 
     public override InterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope)
     {
-        var execution = new Execution(scope.Resolve<TCandidate, TSearchSpace, TProblem>(Evaluator));
+        var evaluator = scope.Resolve<TCandidate, TSearchSpace, TProblem>(Evaluator);
+        var state = new ExecutionState();
+        var execution = new Execution(evaluator, state);
 
         // The subscription lifetime is shared with DynamicCachingEvaluator and requires a common lifecycle design.
-        SourceProblem.OnEpochChange += (_, _) => execution.RequestReevaluation();
+        SourceProblem.OnEpochChange += (_, _) => state.RequestReevaluation();
 
         return execution;
     }
 
-    private sealed class Execution(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator)
-        : InterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+    private sealed class ExecutionState
     {
         private int requireReevaluation;
 
         public void RequestReevaluation() => Interlocked.Increment(ref requireReevaluation);
 
-        private bool ConsumeReevaluationRequest() => Interlocked.Exchange(ref requireReevaluation, 0) != 0;
+        public bool ConsumeReevaluationRequest() => Interlocked.Exchange(ref requireReevaluation, 0) != 0;
+    }
 
+    private sealed class Execution(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator, ExecutionState state)
+        : InterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+    {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            if (!ConsumeReevaluationRequest())
+            if (!state.ConsumeReevaluationRequest())
             {
                 return currentState;
             }

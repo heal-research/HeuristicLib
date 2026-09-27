@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -63,6 +64,37 @@ file sealed record DummyGenotypeValueCacheKeySelector : ICacheKeySelector<DummyG
 
 public class DynamicEvaluationCacheTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void EpochSubscription_DoesNotRetainExecutionOrChild(bool useReevaluationInterceptor)
+    {
+        var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
+        var (execution, child) = CreateWeakExecutionReferences(problem, useReevaluationInterceptor);
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        execution.IsAlive.ShouldBeFalse();
+        child.IsAlive.ShouldBeFalse();
+        problem.UpdateOnce();
+        GC.KeepAlive(problem);
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        static (WeakReference Execution, WeakReference Child) CreateWeakExecutionReferences(DummyDynamicProblem problem, bool useReevaluationInterceptor)
+        {
+            var child = new CountingEvaluator();
+            var scope = ResolutionScope.Create();
+            object execution = useReevaluationInterceptor
+                ? scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(
+                    new ReevaluationInterceptor<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(child, problem))
+                : scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(child.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance));
+
+            return (new WeakReference(execution), new WeakReference(child));
+        }
+    }
+
     [Fact]
     public void ReevaluationInterceptor_UsesProvidedIterationRandomAfterEpochChange()
     {

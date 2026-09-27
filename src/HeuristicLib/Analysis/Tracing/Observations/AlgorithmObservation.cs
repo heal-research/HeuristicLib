@@ -68,29 +68,33 @@ internal sealed record ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TS
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
         return new Execution<TRunSearchSpace, TRunProblem>(
-            ObservedAlgorithm, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(ChildAlgorithm), Observe);
+            ObservedAlgorithm, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(ChildAlgorithm), Observe, new ExecutionState());
+    }
+
+    private sealed class ExecutionState
+    {
+        public long Iteration { get; set; }
     }
 
     private sealed class Execution<TRunSearchSpace, TRunProblem>(
         IAlgorithm<TCandidate, TSearchState> observedAlgorithm,
         IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> childAlgorithm,
-        Action<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe)
+        Action<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe,
+        ExecutionState state)
         : IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        private long iteration;
-
         public async IAsyncEnumerable<TSearchState> RunStreamingAsync(TRunProblem problem, IRandomNumberGenerator random,
             TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             var previousState = initialState;
-            await foreach (var state in childAlgorithm.RunStreamingAsync(problem, random, initialState, ct))
+            await foreach (var searchState in childAlgorithm.RunStreamingAsync(problem, random, initialState, ct))
             {
                 observe(new AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>(
-                    observedAlgorithm, ++iteration, state, previousState, (TSearchSpace)(object)problem.SearchSpace, (TProblem)(object)problem));
-                previousState = state;
-                yield return state;
+                    observedAlgorithm, ++state.Iteration, searchState, previousState, (TSearchSpace)(object)problem.SearchSpace, (TProblem)(object)problem));
+                previousState = searchState;
+                yield return searchState;
             }
         }
     }

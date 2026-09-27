@@ -1,8 +1,8 @@
 # Design execution factories and shared state
 
-Status: implementation authorized on 2026-09-27. The user reviewed and staged the naming migration, then explicitly authorized committing it and continuing; it is committed as `d5ad7fb2`. C2 was completed and validated locally. The selected direction is option C using typed execution factories (candidate 1 in the [design comparison](execution-bindings-design-investigation.md)), superseding option A in the [container and aspect rework](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings). End the turn for explicit review after C2, C3 and C4, then after each reviewed migration package. C4 must finalize the library-wide migration scope before rollout. Leave further index and commit operations to the user unless explicitly authorized.
+Status: implementation authorized on 2026-09-27. The naming migration is committed as `d5ad7fb2`; C2 and C3 were completed and validated locally. The user has authorized continuing directly in the library and its normal tests, with temporary non-compiling review checkpoints where the contract cutover requires them. The selected direction is option C using typed execution factories (candidate 1 in the [design comparison](execution-bindings-design-investigation.md)), superseding option A in the [container and aspect rework](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings). End the turn for explicit review after every migration package and C4. C4 remains a performance and final acceptance gate for the integrated implementation. Leave index and commit operations to the user unless explicitly authorized.
 
-C1 has a [concrete design](execution-factory-design.md), including authoring examples, resolver ownership, retained child scopes, decoration construction, capabilities and failure behavior. C2 validated its core authoring examples locally. C3 proof and C4 cost evidence remain outstanding; the migration sequence must be finalized from their results before rollout.
+C1 has a [concrete design](execution-factory-design.md), including authoring examples, resolver ownership, retained child scopes, decoration construction, capabilities and failure behavior. C2 validated its core authoring examples; C3 validated deferred execution and lifecycle ownership locally. Integrated coverage through the public library route and C4 cost evidence remain outstanding before final acceptance.
 
 Naming decision, 2026-09-27: adopt the [graph naming family](execution-factory-design.md#agreed-naming-family): `IConfigurationNode`, `IExecutionNode` and role-specific `...Execution` types, retaining ordinary algorithm/operator configuration names. The [commit boundaries](#agreed-commit-boundaries) separate a behavior-preserving rename from the factory/resolution rework. The naming migration is the first implementation review package; it retains the existing object-returning creation methods and behavior.
 
@@ -77,7 +77,9 @@ Preserve explicit typed calls and handwritten wrappers. No type-keyed auto-wirin
 
 ## Review packages
 
-Implementation follows the explicit review stops authorized on 2026-09-27: naming first, then C2, C3, C4 and the reviewed migration packages. C0's decision alignment and C1's concrete design are recorded. Do not begin the next package until the user explicitly continues after review. If a requirement proves infeasible, present the conflict and revisit the decision explicitly rather than silently falling back to option A.
+The revised workflow authorized on 2026-09-27 follows naming, C2 and C3 with direct implementation in the existing library/test files. The user reviews the actual Git diff and stages accepted changes; later edits to reviewed files must be identified. Temporary broken builds during the contract cutover are acceptable review checkpoints, but the eventual functional commit must compile and pass validation. C4 compares the integrated implementation with the previous version in a temporary worktree before final acceptance. This replaces the earlier requirement to finish C4 before library edits. No duplicate candidate implementation or compatibility path is needed to keep intermediate packages compiling.
+
+The completed local proofs are reference evidence, not a dependency of committed code or a replacement for integrated regression tests. Do not expand them further. Remove obsolete proof references as implementation supersedes them. Do not begin the next package until the user explicitly continues after review. If a requirement proves infeasible, present the conflict and revisit the decision explicitly rather than silently falling back to option A.
 
 | Package | Deliverable | Validation and review stop |
 | --- | --- | --- |
@@ -85,7 +87,7 @@ Implementation follows the explicit review stops authorized on 2026-09-27: namin
 | C1. Concrete factory design | Specify the typed factory and authoring-base contracts, ownership/cache rules, failure publication, observation ordering and capability access using the agreed graph/role names. Show before/after stateless/stateful leaves, a stateful non-terminal operator, a two-role consumer composite, HillClimber/GeneticAlgorithm, and Cycle/Pipeline. Separate persistent, binding-local and invocation-local fields. Resolve or explicitly bound every question above. | Review complete typed call paths and all acceptance cases, author ceremony and required guideline changes. The naming family is settled; remaining signatures and semantics require design review. |
 | C2. Small typed proof | Prove the reviewed contract with a stateful leaf, a consumer-defined two-child composite and a representative algorithm. Include richer capability preservation and the child-first dependency collision. Avoid a full role-family migration. | Focused sharing/observation/failure tests and executable API usage specs, Release build and appropriate core tests. Review before expansion; a typed syntax check alone is insufficient. |
 | C3. Deferred/lifecycle proof | Prove both Cycle modes, Pipeline, retained iterators, budget/advice ownership and late child binding. Define migration handling for unsupported existing factories. | Focused lifecycle/budget tests; core/API suites, experimental consumers when affected and a selected workflow scenario. Preserve RNG behavior and paused invocation identity. |
-| C4. Cost evidence and migration plan | Compare with the recorded pre-change baseline. Use the results and reviewed design to write bounded migration packages for resolver/contracts, authoring bases, algorithms/compositions, observations/instrumentation, consumers and documentation. Distinguish structural edits from behavior changes. | Review measured costs and the detailed implementation plan. Do not automatically turn a successful proof into a library-wide rollout. Final migration validation includes affected suites, formatting/analyzers, docs and one full solution run. |
+| C4. Cost evidence and final acceptance | Compare the integrated library with the recorded pre-change baseline in a temporary worktree. Record measured costs, completed migration scope and any necessary design adjustments. | Stop for review before accepting the completed functional change. Final validation includes affected suites, formatting/analyzers, docs and one full solution run. |
 
 Follow [AGENTS.md](../AGENTS.md) and [test/README.md](../test/README.md): focused tests first, full core after meaningful core changes, API usage specs for authoring changes, experimental tests for affected consumers and scenarios when validating broad workflows. Use repository Release build, formatting and analyzer commands. A substantial public execution-model change requires a full solution test run near completion, not repeated scenario runs during sketches.
 
@@ -144,9 +146,9 @@ Reuse existing [Cycle tests](../test/HeuristicLib.Tests/Algorithms/MetaAlgorithm
 
 Tests must assert externally meaningful identity, state transitions, call reports and deterministic results. Do not assert private dictionary layouts or require every raw stateless binding to allocate an object. Update old scope tests that encode the decoration reuse barrier explicitly, retaining their other invariants.
 
-### C4: cost evidence and rollout decision
+### C4: cost evidence and final acceptance
 
-Record the exact pre-change revision plus any relevant working-tree state, SDK/runtime, build configuration, machine and benchmark source. Do not stage, commit or reset to obtain a baseline. Run the baseline in a separate suitable checkout or exported source snapshot after checking existing worktree attachments. Keep all measurements reproducible; do not add a permanent benchmark framework without a concrete need.
+The pre-functional-change baseline is `edcf81d1c898c5e6b2ec0586b877783ba3b8c43a`; source is unchanged from the naming commit. At the start of direct implementation, the working tree adds only plan edits and an unrelated local tool-settings file. Record SDK/runtime, build configuration, machine and benchmark source with the results. The user authorized a temporary worktree at the previous version, with an equivalent benchmark harness added there and adapted only as needed for the old API. Inspect existing worktree attachments before creating one. Keep the active checkout and Git index intact; do not stage, commit or reset to obtain a baseline. Keep benchmark source and adaptations available as reviewable Git diffs and record exact run commands. Do not hide benchmark code in an ignored duplicate project or add a permanent benchmark framework without a concrete need.
 
 Measure these cases separately:
 
@@ -156,11 +158,11 @@ Measure these cases separately:
 - Allocations per node, binding and declaration; retained bytes after many short Cycle/Pipeline activations, both reset and reuse modes.
 - Real HillClimber/GA execution and short repeated algorithm invocations; include the one-time construction delegates and typed-scope views in total costs.
 
-Use warmups, repeated samples and allocation measurements, report variance and distinguish equivalent baseline workloads from option C's newly supported composite case. Do not assign an arbitrary acceptable percentage without seeing the cheap-operation and memory results. If costs conflict with the design goals, present the measured tradeoff and an explicit design revision before rollout. C4 completes the migration package boundaries below using the actual proof diff and compile dependencies.
+Use warmups, repeated samples and allocation measurements, report variance and distinguish equivalent baseline workloads from option C's newly supported composite case. Do not assign an arbitrary acceptable percentage without seeing the cheap-operation and memory results. If costs conflict with the design goals, present the measured tradeoff and an explicit design revision before final acceptance. C4 records the resulting implementation scope and any follow-up packages; it does not waive their review stops.
 
 ## Provisional migration scope
 
-This is a source-grounded migration inventory and sequence, not an approved library-wide edit. A current search for `CreateExecutionInstance` or `WrapExecutionInstance` finds 106 main-library source files, 17 Experimental source files, 36 test/spec files and two analyzer files; these counts include textual matches and are not a count of concrete factories. Samples and PythonInterop still require build validation even when they have no direct authoring-method match. Refresh this inventory at C4.
+This source-grounded inventory bounds the authorized migration, carried out in the review packages below. Before the factory cutover, a search for `CreateExecutionInstance` or `WrapExecutionInstance` found 106 main-library source files, 17 Experimental source files, 36 test/spec files and two analyzer files; these are textual matches, not a count of concrete factories. Samples and PythonInterop still require build validation even when they have no direct authoring-method match. Refresh this inventory as packages proceed and reconcile it at C4.
 
 | Area | Required migration |
 | --- | --- |
@@ -189,7 +191,7 @@ The temporary old creation-method name in commit 1 is deliberate: changing it to
 
 Validate the rename independently with a Release build, core/API usage tests, affected Experimental consumers and final solution validation for the cross-project public rename. Verify that changes to behavioral assertions are limited to renamed symbols, diagnostics and identifiers. Keep unrelated `Instance` names such as singleton properties intact. Review lifecycle policy names such as `NewExecutionInstancesPerCycle` for their actual meaning instead of mechanically replacing a substring; no new policy name is selected here.
 
-The C2/C3 proofs and C4 review still precede the final rollout decision. The following M0-M3 work packages subdivide preparation and review of commit 2; they are not instructions to create four additional commits. State extraction and internal resolver work stay out of the naming commit. No commit or index operation is authorized by recording these boundaries.
+The following M0-M3 work packages subdivide preparation and review of the factory/resolution change; they do not require separate commits. The user subsequently requested committing the reviewed M0a preparation separately, recorded below. Direct implementation is authorized after the completed C2/C3 proofs, with C4 before final acceptance. State extraction and resolver work stay out of the naming commit. No commit or index operation is authorized by recording these boundaries.
 
 ### Naming migration review record, 2026-09-27
 
@@ -205,16 +207,57 @@ The behavior-preserving naming package was reviewed by staging and committed as 
 
 ### C2 completion record, 2026-09-27
 
-The focused typed-factory proof was completed and validated locally: 31 invariant tests and eight executable authoring specs passed. It established the planned core state-preservation, scoped-observation, identity, capability and failure cases. The production factory/resolution migration has not started. C3 remains the next review-gated step and requires explicit continuation.
+The focused typed-factory proof was completed and validated locally: 31 invariant tests and eight executable authoring specs passed. It established the planned core state-preservation, scoped-observation, identity, capability and failure cases. This was local validation before the production migration; C3 followed with explicit continuation.
 
-### Factory/resolution work packages to finalize at C4
+### C3 completion record, 2026-09-27
 
-1. **M0: prepare existing authored state without changing the public workflow.** Where independently useful, extract counters/caches from explicit composite instances into private data holders and pass them to existing constructors. Existing factories still create one fresh holder per existing instance. Split core composites and Experimental algorithms into separate review packages. Test behavior preservation; avoid unrelated moves/renames.
-2. **M1: land the proved internal resolver machinery.** Keep it internal and exercise it directly through the candidate tests until the public cutover. This is a temporary implementation seam, not a supported alternative execution API. Include explicit ownership, occurrence lifetime, construction failure and child-domain behavior. Review its diff independently of routine authoring conversions.
-3. **M2: perform the public contract cutover and all dependent migrations.** Changing interface return contracts necessarily affects implementations, typed bridges, role extensions, wrappers, algorithms, test doubles and analyzer expectations together. Prepare/review those facets as separate coherent diff groups, but publish a complete compiling package. Do not promise an independently building per-role sequence that the interfaces do not permit. The code must be repeatably bindable at this point; wrapping the old state-resetting factory in a lambda is insufficient. Wire the proved engine, update current docs and remove the temporary proof seam.
-4. **M3: final integration and validation.** Reconcile all R1-R16 cases against the public route, run the full affected suites and final solution checks, repeat only benchmarks materially affected by the final adapter/code layout, remove prototype-only duplication and complete the documentation audit. Resume container/aspect package 4c.2 selector registration only after this foundation is reviewed.
+The deferred execution and lifecycle proof was completed and validated locally: all 77 checks passed, including the C2 cases. It covered retained/fresh children, Cycle/Pipeline state and RNG behavior, budget and observer ownership, paused iterators, construction/operation failures, cancellation/disposal and collection in both lifetime directions. The Release build passed without warnings or errors; whitespace, style and analyzer verification passed. Independent repository validation passed: core 2,295, API usage 191 and the two selected Cycle analysis scenarios, with no failed or skipped tests. Existing repository analyzer warnings remain.
 
-M2 is unavoidably wider than the individual proof packages because it is a breaking contract replacement. C4 must use the compiled proof to minimize and accurately bound that package. If further subdivision would require parallel public APIs or unsupported non-rebindable factories, bring that tradeoff to review instead of adding compatibility scaffolding or an option-A fallback silently. No merge/commit or index operation is part of these packages unless explicitly requested.
+The constructor audit and the necessary weak ownership links are recorded in the [design](execution-factory-design.md). No additional public factory API was required. Experimental subscription ownership and DynamicRacing's existing exception-path disposal gap remain explicit migration work; C4 must measure the ownership machinery's cost. At this checkpoint, shipping source and normal tests were unchanged, with no dependency on local proof material. The user subsequently authorized the direct implementation workflow above; C4 remains outstanding.
+
+### Factory/resolution work packages
+
+1. **M0a: extract persistent state in the core library.** Separate the predefined-candidate cursor, evaluation cache and limit counter, Gaussian mutation strength and algorithm-observation iteration counter from their execution bindings. Existing creation methods still allocate fresh state per execution; public workflow and behavior remain unchanged. Validate and stop.
+2. **M0b: prepare Experimental persistent state.** Separately review DynamicRacing, DynamicCachingEvaluator, DynamicRelativeQualityEvaluator and ReevaluationInterceptor. Separate persistent data from scopes/children and invocation resources without changing resolution semantics. Keep subscription/lifecycle fixes with the later ownership migration where necessary. Validate and stop.
+3. **M1: replace the actual resolver and contracts.** Introduce typed factories, preparation/binding ownership, occurrence lifetime, construction failure and child-domain behavior directly in production files. Migrate the authoring bases and representative call paths with normal tests. Review resolver/contracts and authoring-base changes in bounded subpackages, stopping after each. Temporary compilation failures in unmigrated consumers are permitted and must be reported; do not maintain a parallel candidate engine or temporary public API.
+4. **M2: migrate dependent implementations and consumers.** Review bounded groups of role extensions/wrappers, ordinary algorithms/composites, deferred algorithms/budgets, observations/instrumentation, capabilities, Experimental code, consumers/tests/analyzers and documentation. Identify the next group's concrete files before editing and stop after each group. Preserve typed operations and repeatable binding; wrapping the old state-resetting factory in a lambda is insufficient. Add integrated regression coverage for the C2/C3 requirements through the public route.
+5. **M3 and C4: integration, performance and final review.** Reconcile all R1-R16 cases, finish consumer compilation and documentation, run the affected suites and final solution checks, and compare the actual implementation against the old-version worktree. Review measured costs and any design adjustments before accepting the functional change. Resume container/aspect package 4c.2 selector registration only after this foundation is reviewed.
+
+Review checkpoints may be smaller than a compiling migration because the user explicitly accepts temporary breaking code. Each handoff must identify changed files, available validation, unresolved dependencies and the proposed next package. The final commit must be self-contained, compiling and fully validated without local proof files. No merge/commit or index operation is part of these packages unless explicitly requested.
+
+### M0a review record, 2026-09-27
+
+The first direct implementation package changes five existing core files: PredefinedCandidatesCreator, CachingEvaluator, LimitEvaluator, GaussianMutator and AlgorithmObservation. Private `ExecutionState` holders now carry the cursor, adaptable strength and observation counter; the cache and limit accumulator are passed into execution constructors directly. Existing object-returning creation methods still allocate fresh state per execution. Child resolution order, typed operations, capability access, cache/limit behavior and invocation-local iterator state are preserved. The later factory cutover will control state reuse.
+
+Naming agreed during review: use `ExecutionState` for these private state holders and the short name `state` for their parameters, matching the glossary's execution state term. Use specific names such as `searchState` for other values where needed to avoid ambiguity. Apply this naming in subsequent migration packages too. The rename passed a Release core-test-project build, all 19 tests in PredefinedCandidatesCreatorTests, AdaptableMutationStrengthTests and AlgorithmObservationTests, and `git diff --check`.
+
+Validation passed: `dotnet build --configuration Release --no-restore` (zero errors, 65 existing warnings); `dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --no-build` (2,295 passed, zero failed or skipped); the repository whitespace, style and analyzer verification commands; plan link checks and `git diff --check`. Format commands reported workspace-loading warnings and exited successfully. No new warning diagnostic appeared compared with the recorded baseline. Existing behavioral tests were used without changes; broader runtime suites remain for the later affected packages and final integration.
+
+The user reviewed and staged M0a, including its naming adjustments and plan updates, then requested committing and continuing. The staged package was committed as `5762e477` (`Extract persistent state from core executions`). No staging or unstaging was performed. M0b followed that explicit continuation.
+
+### M0b review record, 2026-09-27
+
+Four existing Experimental files now receive persistent `ExecutionState state` through their execution constructors:
+
+- DynamicRacingAlgorithm: hall of fame, incumbent candidate/configuration and completed race/epoch counters. Scopes, resolved children and settings stay on the execution; race-entry observers, enumerators and subscriptions remain invocation-local.
+- DynamicCachingEvaluator: cache and consecutive-hit count, using the agreed state naming.
+- DynamicRelativeQualityEvaluator: cached best-known objective vector and its epoch.
+- ReevaluationInterceptor: pending reevaluation count, preserving atomic request/consume operations.
+
+Existing object-returning creation methods still allocate fresh state. The cache and reevaluation epoch subscriptions are installed alongside that state creation, after constructing the execution, and capture only state. This removes retention of unused execution nodes and child evaluators while preserving subscription count, timing and epoch behavior. Two regression cases in the normal Experimental suite check collection while the source problem remains alive. Existing epoch/cache/normalization tests cover operation behavior. The problem still owns the subscription lifetime; general subscription cleanup and DynamicRacing's existing entry-disposal gap remain deferred to the lifecycle migration.
+
+The production Release solution build passed with zero errors and 69 existing warnings. After adding the collection tests, the focused dynamic tests passed (32), the full Experimental suite passed (178), and the self-contained MovingPeaks DynamicRacing scenario passed (1), with no failures or skips. The test helper's initial file-local-type signature error was corrected by making it a static local function; the final test project compiled successfully. Repository whitespace, style and analyzer verification, plan link checks and `git diff --check` passed. Format commands reported workspace-loading warnings and exited successfully; the build introduced no new warning diagnostics compared with the recorded baseline.
+
+Validation commands for this package:
+
+```powershell
+dotnet build --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Experimental.csproj --configuration Release --no-restore --filter-class '*DynamicEvaluationCacheTests' --filter-class '*DynamicAnalysisTests' --filter-class '*TravelingSalesmanProblemTests'
+dotnet test --project test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Experimental.csproj --configuration Release --no-restore --no-build
+dotnet test --project test/HeuristicLib.Tests.Scenarios/HeuristicLib.Tests.Scenarios.csproj --configuration Release --no-restore --no-build --filter-method '*DynamicRacingGa_OnMovingPeaks_ProducesPaperExperimentSignals'
+```
+
+Stop for M0b review with these changes unstaged. The proposed next package is M1a: introduce the typed `ExecutionFactory` contract and replace the actual `IConfigurationNode`/`ResolutionScope` preparation, ownership and binding machinery. Authoring bases and dependent roles follow in separate review packages; temporary consumer compilation failures remain permitted during that cutover.
 
 ### Documentation and enforcement changes with implementation
 
@@ -226,14 +269,14 @@ Revise HLib0001/code-fix tests and [role contract architecture tests](../test/He
 
 ### Validation commands at rollout
 
-Use the repository's commands and suite order; builds/tests run sequentially to avoid output-file locks. The following is the final rollout scope, not a request to execute it for this documentation draft:
+Use the repository's commands and suite order; builds/tests run sequentially to avoid output-file locks. The following is the final integration scope, not a requirement to repeat every check after each review package:
 
 ```powershell
 dotnet restore
 dotnet build --configuration Release --no-restore
-dotnet test test/HeuristicLib.Tests --configuration Release --no-restore
-dotnet test test/HeuristicLib.Tests.ApiUsageSpecs --configuration Release --no-restore
-dotnet test test/HeuristicLib.Tests.Experimental --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Experimental.csproj --configuration Release --no-restore
 dotnet test --configuration Release --no-restore
 dotnet format whitespace ./HEAL.HeuristicLib.slnx --verify-no-changes --no-restore
 dotnet format style ./HEAL.HeuristicLib.slnx --verify-no-changes --no-restore --severity warn

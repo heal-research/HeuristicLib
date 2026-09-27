@@ -4,7 +4,7 @@ Status: packages 1 and 2 committed as `0236ab08`; packages 4a and 4b committed a
 
 Reviewed against `37e8bdcc` (the layering overhaul merged into `dev`) on 2026-09-26. Work continues on `container-and-aspect-framing`. The completed layering implementation plan and its obsolete analysis report have been removed; Git history preserves them. Durable rules live in [layering](../docs/contributing/architecture/layering.md), the [developer guidelines](../docs/contributing/developer-guidelines.md), the [design goals](../docs/contributing/design-goals.md) and the [developer backlog](developer-backlog.md).
 
-Implementation update, 2026-09-27: implementation is authorized with the documented review gates. The reviewed naming migration is committed as `d5ad7fb2`. The C2 core proof was completed and validated locally. C3/C4 and the public factory migration have not started; the shipping resolver retains its existing behavior.
+Implementation update, 2026-09-27: the reviewed naming migration is committed as `d5ad7fb2`; C2 and C3 were completed and validated locally. The user has authorized direct implementation in the library and normal tests, with explicit review stops and temporary breaking checkpoints where needed. The first package extracts core persistent state while preserving existing creation behavior. C4 remains outstanding and will compare the integrated implementation against the previous version in a temporary worktree before final acceptance. The shipping resolver retains its existing behavior until the factory cutover.
 
 ## Purpose and settled foundations
 
