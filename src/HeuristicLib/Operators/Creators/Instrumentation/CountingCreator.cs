@@ -18,11 +18,11 @@ public sealed record CountingCreator<TCandidate>
         Metric = metric;
     }
 
-    protected override ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childCreator) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childCreator, Counter, Metric);
+    protected override ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childCreator) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childCreator, Counter, Metric);
 
-    private sealed class Instance<TSearchSpace, TProblem>(ICreatorInstance<TCandidate, TSearchSpace, TProblem> childCreator, CountAccumulator counter, OperatorCountMetric metric)
-        : WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem>(childCreator)
+    private sealed class Execution<TSearchSpace, TProblem>(ICreatorExecution<TCandidate, TSearchSpace, TProblem> childCreator, CountAccumulator counter, OperatorCountMetric metric)
+        : WrappingCreatorExecution<TCandidate, TSearchSpace, TProblem>(childCreator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

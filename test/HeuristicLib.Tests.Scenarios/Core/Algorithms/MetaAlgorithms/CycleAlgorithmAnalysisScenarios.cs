@@ -102,20 +102,20 @@ public class CycleAlgorithmAnalysisScenarios
             Evaluator = evaluator;
         }
 
-        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+        public override IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         {
             var typed = scope.For<int, TRunSearchSpace, TRunProblem, PopulationState<int>>();
-            return new Instance<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Interceptor), Candidate);
+            return new Execution<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Interceptor), Candidate);
         }
 
-        private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator, IInterceptorInstance<int, TSearchSpace, TProblem, PopulationState<int>> interceptor, int candidate)
-            : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+        private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator, IInterceptorExecution<int, TSearchSpace, TProblem, PopulationState<int>> interceptor, int candidate)
+            : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
-            private readonly IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator = evaluator;
+            private readonly IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator = evaluator;
 
-            private readonly IInterceptorInstance<int, TSearchSpace, TProblem, PopulationState<int>> interceptor = interceptor;
+            private readonly IInterceptorExecution<int, TSearchSpace, TProblem, PopulationState<int>> interceptor = interceptor;
 
             private readonly int candidate = candidate;
 

@@ -23,11 +23,11 @@ public sealed record DurationMeasuringRefiner<TCandidate>
         TimeProvider = timeProvider;
     }
 
-    protected override IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> childRefiner) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childRefiner, Duration, TimeProvider);
+    protected override IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> childRefiner) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childRefiner, Duration, TimeProvider);
 
-    private sealed class Instance<TSearchSpace, TProblem>(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiner)
+    private sealed class Execution<TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> childRefiner, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiner)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

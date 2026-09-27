@@ -51,7 +51,7 @@ public class CycleAlgorithmTests
         var states = cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.ShouldBeEmpty();
-        algorithm.InstanceCount.ShouldBe(3);
+        algorithm.ExecutionCount.ShouldBe(3);
     }
 
     [Fact]
@@ -67,18 +67,18 @@ public class CycleAlgorithmTests
     }
 
     [Fact]
-    public void CycleAlgorithm_ChecksCancellationBeforeCreatingAChildInstance()
+    public void CycleAlgorithm_ChecksCancellationBeforeCreatingAChildExecution()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
-        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var cycle = CycleAlgorithm.Create(algorithm);
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         Should.Throw<OperationCanceledException>(() => cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
 
-        algorithm.InstanceCount.ShouldBe(0);
+        algorithm.ExecutionCount.ShouldBe(0);
     }
 
     [Fact]
@@ -117,11 +117,11 @@ public class CycleAlgorithmTests
     [Theory]
     [InlineData(true, 2)]
     [InlineData(false, 1)]
-    public void CycleAlgorithm_UsesConfiguredAlgorithmInstanceLifecycleWhileReusingResolvedParentDependencies(bool newExecutionInstancesPerCycle, int expectedAlgorithmInstances)
+    public void CycleAlgorithm_UsesConfiguredAlgorithmExecutionLifecycleWhileReusingResolvedParentDependencies(bool newExecutionInstancesPerCycle, int expectedAlgorithmExecutions)
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
-        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var cycle = CycleAlgorithm.Create(algorithm) with
         {
             MaximumCycles = 2,
@@ -129,13 +129,13 @@ public class CycleAlgorithmTests
         };
         var scope = ResolutionScope.Create();
         _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
-        var cycleInstance = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
+        var cycleExecution = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
 
-        var states = cycleInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = cycleExecution.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
-        algorithm.InstanceCount.ShouldBe(expectedAlgorithmInstances);
-        evaluator.InstanceCount.ShouldBe(1);
+        algorithm.ExecutionCount.ShouldBe(expectedAlgorithmExecutions);
+        evaluator.ExecutionCount.ShouldBe(1);
     }
 
     private static GeneticAlgorithm<RealVector> CreateStampedGeneticAlgorithm(
@@ -160,15 +160,15 @@ public class CycleAlgorithmTests
     private sealed record NoProgressAlgorithm
         : Algorithm<NoProgressAlgorithm, int, PopulationState<int>>
     {
-        public int InstanceCount { get; private set; }
+        public int ExecutionCount { get; private set; }
 
-        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+        public override IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         {
-            InstanceCount++;
-            return new Instance<TRunSearchSpace, TRunProblem>();
+            ExecutionCount++;
+            return new Execution<TRunSearchSpace, TRunProblem>();
         }
 
-        private sealed class Instance<TSearchSpace, TProblem> : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+        private sealed class Execution<TSearchSpace, TProblem> : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

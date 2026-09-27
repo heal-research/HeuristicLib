@@ -64,18 +64,18 @@ internal sealed record ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TS
     public override bool Fits(ExecutionSignature execution) =>
         base.Fits(execution) && ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(ChildAlgorithm);
 
-    public override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public override IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return new Instance<TRunSearchSpace, TRunProblem>(
+        return new Execution<TRunSearchSpace, TRunProblem>(
             ObservedAlgorithm, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(ChildAlgorithm), Observe);
     }
 
-    private sealed class Instance<TRunSearchSpace, TRunProblem>(
+    private sealed class Execution<TRunSearchSpace, TRunProblem>(
         IAlgorithm<TCandidate, TSearchState> observedAlgorithm,
-        IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> childAlgorithm,
+        IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> childAlgorithm,
         Action<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe)
-        : IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>
+        : IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {

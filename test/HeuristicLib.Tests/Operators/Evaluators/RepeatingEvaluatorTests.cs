@@ -32,9 +32,9 @@ public class RepeatingEvaluatorTests
     {
         var problem = CreateProblem();
         var evaluator = new RandomEvaluator().AsRepeated(5);
-        var instance = evaluator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
+        var execution = evaluator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
 
-        var actual = instance.Evaluate([1, 2], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        var actual = execution.Evaluate([1, 2], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
         var rootRandom = RandomNumberGenerator.Create(42);
         var repeated = Enumerable.Range(0, 5)
             .Select(repetition => Enumerable.Range(0, 2)
@@ -66,7 +66,7 @@ public class RepeatingEvaluatorTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void ExecutionInstanceCreation_RejectsNonPositiveRepetitions(int repetitions)
+    public void ExecutionCreation_RejectsNonPositiveRepetitions(int repetitions)
     {
         var constructed = new RepeatingEvaluator<int>(new CandidateEvaluator(), repetitions);
         var reconfigured = new RepeatingEvaluator<int>(new CandidateEvaluator(), 1) with

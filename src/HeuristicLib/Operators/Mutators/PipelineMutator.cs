@@ -12,11 +12,11 @@ public sealed record PipelineMutator<TCandidate> : MultiMutator<TCandidate>
     {
     }
 
-    protected override IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem>> childMutators) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childMutators);
+    protected override IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> childMutators) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childMutators);
 
-    private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators)
-        : MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(childMutators)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> childMutators)
+        : MultiMutatorExecution<TCandidate, TSearchSpace, TProblem>(childMutators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

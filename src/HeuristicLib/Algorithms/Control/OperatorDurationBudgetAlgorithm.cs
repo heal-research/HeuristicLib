@@ -35,7 +35,7 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override OperatorDurationBudgetAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public override OperatorDurationBudgetAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
         var duration = new DurationAccumulator();
         var childScope = scope.CreateChildScope(child =>
@@ -45,17 +45,17 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
     }
 }
 
-public sealed class OperatorDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+public sealed class OperatorDurationBudgetAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    private readonly IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
+    private readonly IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
     private readonly DurationAccumulator duration;
     private readonly TimeSpan maximumDuration;
 
-    public OperatorDurationBudgetAlgorithmInstance(IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, DurationAccumulator duration, TimeSpan maximumDuration)
+    public OperatorDurationBudgetAlgorithmExecution(IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, DurationAccumulator duration, TimeSpan maximumDuration)
     {
         this.algorithm = algorithm;
         this.duration = duration;

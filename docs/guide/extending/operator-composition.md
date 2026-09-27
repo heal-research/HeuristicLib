@@ -4,7 +4,7 @@
 Start with [built-in operators](/guide/fundamentals/operators). Compose operators when several reusable policies should behave as one operator in an algorithm configuration.
 :::
 
-Operator composition builds a new operator configuration from one or more existing operator configurations. The resulting configuration remains reusable and resolves its child execution instances as part of the execution graph.
+Operator composition builds a new operator configuration from one or more existing operator configurations. The resulting configuration remains reusable and resolves its child execution nodes as part of the execution graph.
 
 Composition policies describe how child operations are coordinated. `Wrapping*` and `Multi*` bases are authoring infrastructure for implementing those policies. They do not prescribe behavior by themselves.
 
@@ -168,7 +168,7 @@ A refinement that has to pass through a worse candidate to reach a better one is
 
 Improvement checking evaluates twice, and the algorithm then evaluates the returned candidate itself, so the naive configuration costs three problem evaluations per refined candidate where an unchecked refiner costs one. That cost is deliberately visible rather than hidden, and it is controlled by one thing: whether the refiner and the algorithm hold the **same evaluator object**.
 
-Execution instances are resolved by reference identity, so one evaluator object resolves to one execution instance, and therefore to one counter and one cache. Two separately constructed but structurally identical configurations resolve to two independent instances.
+Execution nodes are resolved by reference identity, so one evaluator object resolves to one execution node, and therefore to one counter and one cache. Two separately constructed but structurally identical configurations resolve to two independent instances.
 
 The snippets in this section need four namespaces:
 
@@ -220,9 +220,9 @@ var budgeted = (algorithm with
     .TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 100_000));
 ```
 
-The refiner's comparison evaluations increment the same counter that ends the run, so termination reflects the true cost of the search including refinement. Leave the refiner on its inherited default and the opposite holds: it holds a different evaluator instance, its evaluations never reach the counter, and refinement never shortens the run. Both behaviours are intentional, and the only thing that decides between them is whether the same evaluator object appears in both places.
+The refiner's comparison evaluations increment the same counter that ends the run, so termination reflects the true cost of the search including refinement. Leave the refiner on its inherited default and the opposite holds: it holds a different evaluator execution, its evaluations never reach the counter, and refinement never shortens the run. Both behaviours are intentional, and the only thing that decides between them is whether the same evaluator object appears in both places.
 
-`algorithm.LimitedToEvaluatedCandidates(evaluator, 100_000)` is the shorthand for the same arrangement. It installs a counting replacement for the evaluator instance it observes and attaches the matching terminator. Replacements are also resolved by reference, so a refiner holding that instance resolves the counted version too and the accounting works out identically.
+`algorithm.LimitedToEvaluatedCandidates(evaluator, 100_000)` is the shorthand for the same arrangement. It installs a counting replacement for the evaluator execution it observes and attaches the matching terminator. Replacements are also resolved by reference, so a refiner holding that instance resolves the counted version too and the accounting works out identically.
 
 Several observed operators can feed the same termination criterion by sharing one `CountAccumulator`. For example, the same counter can track refiner calls and evaluations.
 
@@ -356,19 +356,19 @@ Wrapping a complete composition observes the outer operation boundary and includ
 
 See [Observability and analysis](/guide/execution/observability-and-analysis) for observer, counter and duration APIs.
 
-## Specialized execution instance capabilities
+## Specialized execution node capabilities
 
-General wrappers and compositions currently preserve the operator role contract, but they do not automatically preserve additional execution instance capabilities. In particular, wrapping or composing an `IVariableStrengthMutator` such as `GaussianMutator` currently exposes an ordinary `IMutatorInstance` at the outer boundary.
+General wrappers and compositions currently preserve the operator role contract, but they do not automatically preserve additional execution node capabilities. In particular, wrapping or composing an `IVariableStrengthMutator` such as `GaussianMutator` currently exposes an ordinary `IMutatorExecution` at the outer boundary.
 
-`EvolutionStrategy` adapts mutation strength only when its resolved mutator instance implements `IVariableStrengthMutatorInstance`. Placing an observable, counting, duration measuring or other general mutator wrapper around a variable strength mutator therefore currently disables that adaptation. The wrapped mutator continues to use its configured mutation strength.
+`EvolutionStrategy` adapts mutation strength only when its resolved mutator execution implements `IAdaptableMutationStrengthExecution`. Placing an observable, counting, duration measuring or other general mutator wrapper around a variable strength mutator therefore currently disables that adaptation. The wrapped mutator continues to use its configured mutation strength.
 
 This is a known limitation. Avoid wrapping an adaptive mutator when the evolution strategy must retain mutation strength adaptation. A future design must preserve specialized run scoped capabilities through composition without requiring every general wrapper to contain role specific type checks.
 
-## Randomness and execution instances
+## Randomness and execution nodes
 
 Compositions whose role receives an explicit random number generator invoke children in the order defined by their policy. Random draw order is therefore part of reproducible behavior. Adding, removing or reordering child operators may change later random draws even when the same root seed is used. Interceptors and terminators do not receive a random number generator, so their built in compositions are deterministic with respect to child ordering unless a child depends on some other explicit input or external resource.
 
-Child configurations are resolved once for each composition execution instance. Reusing the same child configuration elsewhere through the same resolution scope reuses the same child execution instance and its execution data.
+Child configurations are resolved once for each composition execution node. Reusing the same child configuration elsewhere through the same resolution scope reuses the same child execution node and its execution data.
 
 See [Reproducible randomness](/guide/execution/randomness) and [Running algorithms](/guide/execution/running-algorithms) for the underlying models.
 
@@ -378,4 +378,4 @@ Use the role specific `Wrapping*` base when a composition coordinates one child 
 
 Derive directly from the unprefixed role base when a composition coordinates different roles or needs a custom execution structure. `TransformedCreator` and `TransformedCrossover` follow this path because each coordinates both a source operator and a mutator.
 
-The authored execution instance owns resolved child instances and mutable execution data. The reusable configuration owns parameters and child configurations.
+The authored execution node owns resolved child instances and mutable execution data. The reusable configuration owns parameters and child configurations.

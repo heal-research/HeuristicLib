@@ -22,10 +22,10 @@ That cooperation can be hidden completely from ordinary configuration users and 
 - [StatefulMutator](../src/HeuristicLib/Operators/Mutators/BaseClasses/StatefulMutator.cs) already separates ordinary state into `TState`, but initializes it on every factory call. [StatelessMutator](../src/HeuristicLib/Operators/Mutators/BaseClasses/StatelessMutator.cs) returns itself and needs no additional raw instance.
 - [PredefinedCandidatesCreator](../src/HeuristicLib/Operators/Creators/PredefinedCandidatesCreator.cs) is a concrete stateful composite: its mutable candidate index and its resolved fallback creator currently live together.
 - [GeneticAlgorithm](../src/HeuristicLib/Algorithms/Evolutionary/GeneticAlgorithm.cs) constructs `Mutator.AppliedAtRate(MutationRate)` inside its instance factory. Replaying that factory also changes a source-wrapper configuration reference unless its identity is preserved separately.
-- [CycleAlgorithm](../src/HeuristicLib/Algorithms/Composition/CycleAlgorithm.cs) retains its creating scope and, in reuse mode, a cache of child execution instances. [PipelineAlgorithm](../src/HeuristicLib/Algorithms/Composition/PipelineAlgorithm.cs) also retains a scope for delayed construction.
+- [CycleAlgorithm](../src/HeuristicLib/Algorithms/Composition/CycleAlgorithm.cs) retains its creating scope and, in reuse mode, a cache of child execution nodes. [PipelineAlgorithm](../src/HeuristicLib/Algorithms/Composition/PipelineAlgorithm.cs) also retains a scope for delayed construction.
 - [AlgorithmRun](../src/HeuristicLib/Execution/Runs/AlgorithmRun.cs) retains one live async enumerator across pauses. [IterativeAlgorithm](../src/HeuristicLib/Algorithms/BaseClasses/IterativeAlgorithm.cs) keeps progress, iteration position and dependencies in that enumeration.
 - [OperatorDurationBudgetAlgorithm](../src/HeuristicLib/Algorithms/Control/OperatorDurationBudgetAlgorithm.cs) allocates its accumulator during instance creation. [AlgorithmDurationBudgetAlgorithm](../src/HeuristicLib/Algorithms/Control/AlgorithmDurationBudgetAlgorithm.cs) instead keeps its duration inside an invocation's iterator. These require different lifetimes.
-- [EvolutionStrategy](../src/HeuristicLib/Algorithms/Evolutionary/EvolutionStrategy.cs) tests its resolved mutator for `IAdaptableMutationStrengthInstance`. The current [observation wrapper](../src/HeuristicLib/Analysis/Tracing/Observations/MutatorObservation.cs) implements only the ordinary mutator interface, already hiding that capability.
+- [EvolutionStrategy](../src/HeuristicLib/Algorithms/Evolutionary/EvolutionStrategy.cs) tests its resolved mutator for `IAdaptableMutationStrengthExecution`. The current [observation wrapper](../src/HeuristicLib/Analysis/Tracing/Observations/MutatorObservation.cs) implements only the ordinary mutator interface, already hiding that capability.
 
 ## Common ownership model
 
@@ -81,22 +81,22 @@ Illustrative core contract:
 
 ```csharp
 public delegate TInstance ExecutionFactory<out TInstance>(ResolutionScope scope)
-    where TInstance : class, IExecutionInstance;
+    where TInstance : class, IExecutionNode;
 
-public interface IExecutionConfiguration<out TInstance> : IExecutionConfiguration
-    where TInstance : class, IExecutionInstance
+public interface IConfigurationNode<out TInstance> : IConfigurationNode
+    where TInstance : class, IExecutionNode
 {
     ExecutionFactory<TInstance> CreateExecutionFactory();
 }
 ```
 
-Role configurations still take the run's types as method type arguments. For example, the mutator factory returns `ExecutionFactory<IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem>>`, with the existing search-space/problem constraints. Operation contracts such as `Mutate` do not change. A consumer-defined role uses the same generic resolver mechanism; there is no built-in-role enumeration.
+Role configurations still take the run's types as method type arguments. For example, the mutator factory returns `ExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>>`, with the existing search-space/problem constraints. Operation contracts such as `Mutate` do not change. A consumer-defined role uses the same generic resolver mechanism; there is no built-in-role enumeration.
 
 The resolver calls preparation once for the chosen logical node, retains the factory, and invokes it with an explicit construction scope for each necessary binding. A delegate here is an execution-time construction object, not persisted configuration behavior. A named delegate is only an illustrative shape; an equivalent covariant contract is possible.
 
 ### Representative authoring change
 
-Consider a consumer-defined `IProbeInstance` with a typed `Probe` operation. Its configuration has a mutator and an evaluator child. In the following abbreviated sketches, `MutatorInstance`, `EvaluatorInstance`, `Candidates`, `Rng`, `Space`, and `Problem` stand for concrete closed repository types; the production role's generic arity does not disappear.
+Consider a consumer-defined `IProbeInstance` with a typed `Probe` operation. Its configuration has a mutator and an evaluator child. In the following abbreviated sketches, `MutatorExecution`, `EvaluatorExecution`, `Candidates`, `Rng`, `Space`, and `Problem` stand for concrete closed repository types; the production role's generic arity does not disappear.
 
 Current shape:
 
@@ -107,7 +107,7 @@ public IProbeInstance CreateExecutionInstance(ResolutionScope scope)
     return new Instance(typed.Resolve(Mutator), typed.Resolve(Evaluator));
 }
 
-private sealed class Instance(MutatorInstance mutator, EvaluatorInstance evaluator) : IProbeInstance
+private sealed class Instance(MutatorExecution mutator, EvaluatorExecution evaluator) : IProbeInstance
 {
     private int calls;
     public int Calls => calls;
@@ -136,7 +136,7 @@ public ExecutionFactory<IProbeInstance> CreateExecutionFactory()
 
 private sealed class State { public int Calls; }
 
-private sealed class Instance(State state, MutatorInstance mutator, EvaluatorInstance evaluator) : IProbeInstance
+private sealed class Instance(State state, MutatorExecution mutator, EvaluatorExecution evaluator) : IProbeInstance
 {
     public int Calls => state.Calls;
 
@@ -168,19 +168,19 @@ return ExecutionFactory.Create(
     bind: (state, children) => new Instance(state, children.Mutator, children.Evaluator));
 ```
 
-`ResolveChildren` returns an explicitly typed pair, such as a named tuple of mutator and evaluator instances. This is construction-only dependency grouping, not type-keyed auto-wiring or generic operation invocation. The helper, rather than each operator author, would own the one-time initialization/fault state machine. Stable derived configurations are still created outside these callbacks once per logical preparation. Child wiring still appears once.
+`ResolveChildren` returns an explicitly typed pair, such as a named tuple of mutator and evaluator executions. This is construction-only dependency grouping, not type-keyed auto-wiring or generic operation invocation. The helper, rather than each operator author, would own the one-time initialization/fault state machine. Stable derived configurations are still created outside these callbacks once per logical preparation. Child wiring still appears once.
 
 This form adds a typed dependency tuple/carrier and three construction callbacks instead of the simple binder lambda. It needs a proof that failed first dependency construction, failed owner initialization and failed later binding have distinct correct outcomes. Initialization may read the first child bindings but must not retain them as scope-independent operational dependencies. That restriction remains an ownership convention. Candidate 2 can instead preserve the result of the original constructor without this additional factory shape.
 
 This variant makes candidate 1 plausible for child-dependent initialization; it is not a demonstrated general solution. The proof must include it before claiming that candidate 1 replaces all explicit authoring paths. Whether one factory shape can express both the simple and advanced cases without an unnecessarily large API remains open.
 
-Concrete hypothetical use case: an adaptation controller snapshots a shared mutator's current mutation strength when the controller is first created, then limits subsequent changes relative to that baseline. A configured starting strength of 0.10 may already have adapted to 0.04 in the shared execution instance; 0.04 is the requested baseline. Rebinding the controller after the mutator reaches 0.02 must retain 0.04. This is a consumer-extension example, not a current controller implementation. GaussianMutator's mutable strength and EvolutionStrategy's runtime adaptation are existing mechanisms, but the inspected constructors did not establish a current need for the proposed three-callback helper.
+Concrete hypothetical use case: an adaptation controller snapshots a shared mutator's current mutation strength when the controller is first created, then limits subsequent changes relative to that baseline. A configured starting strength of 0.10 may already have adapted to 0.04 in the shared execution node; 0.04 is the requested baseline. Rebinding the controller after the mutator reaches 0.02 must retain 0.04. This is a consumer-extension example, not a current controller implementation. GaussianMutator's mutable strength and EvolutionStrategy's runtime adaptation are existing mechanisms, but the inspected constructors did not establish a current need for the proposed three-callback helper.
 
 Creating an algorithm's initial candidate/population through resolved children is a different case: that work belongs to the invocation and already occurs during execution. Likewise, data obtainable from child configurations does not justify requiring resolved children during persistent initialization. Do not add the general helper solely on the strength of hypothetical extension cases; first decide whether the use case is wanted and whether initialization must happen at binding time rather than first execution.
 
 ### Algorithm authoring follow-up
 
-Algorithm configurations would return typed factories, while resolution would still return fully constructed `IAlgorithmInstance` objects with the existing operation methods. HillClimber's ordinary instance methods can remain unchanged: its fields hold children/settings, while its public progress and iteration position live in the active iterator. No empty shared state class is needed. Interceptor resolution must happen inside each binding; the iterative authoring base can continue centralizing that resolution, but its protected construction hook also needs to return a factory rather than capture an already-resolved interceptor during preparation.
+Algorithm configurations would return typed factories, while resolution would still return fully constructed `IAlgorithmExecution` objects with the existing operation methods. HillClimber's ordinary instance methods can remain unchanged: its fields hold children/settings, while its public progress and iteration position live in the active iterator. No empty shared state class is needed. Interceptor resolution must happen inside each binding; the iterative authoring base can continue centralizing that resolution, but its protected construction hook also needs to return a factory rather than capture an already-resolved interceptor during preparation.
 
 Pipeline's factory can likewise produce a new instance capturing the supplied construction scope. Cycle's reuse mode needs more work because its current dictionary stores decorated child instances. One possible resolver-owned authoring shape is a retained child-scope operation keyed by algorithm configuration reference: reset mode uses `scope.CreateChildScope()`, reuse mode uses a provisional `scope.GetOrCreateChildScope(algorithm)`, then both resolve through that child scope normally. The retained logical child scope belongs to the Cycle logical node, while each returned view carries the current binding's observation context. This is an unimplemented API sketch requiring ownership tests, not ordinary scope-global memoization. It would allow removing the instance dictionary without exposing logical-node handles to Cycle authors.
 
@@ -192,10 +192,10 @@ The shared object need not be passive data. The same factory can create a persis
 sealed class Core
 {
     private int calls;
-    public Result Probe(Input input, MutatorInstance mutator, EvaluatorInstance evaluator) { /* typed work */ }
+    public Result Probe(Input input, MutatorExecution mutator, EvaluatorExecution evaluator) { /* typed work */ }
 }
 
-sealed class Instance(Core core, MutatorInstance mutator, EvaluatorInstance evaluator) : IProbeInstance
+sealed class Instance(Core core, MutatorExecution mutator, EvaluatorExecution evaluator) : IProbeInstance
 {
     public Result Probe(Input input) => core.Probe(input, mutator, evaluator);
 }
@@ -212,7 +212,7 @@ Weaknesses: factory contract migration across roles and algorithms; some coopera
 Keep the current creation contract, but allow a raw execution object to create another typed binding of itself:
 
 ```csharp
-public interface IRebindable<out TInstance> where TInstance : class, IExecutionInstance
+public interface IRebindable<out TInstance> where TInstance : class, IExecutionNode
 {
     TInstance Rebind(ResolutionScope scope);
 }
@@ -287,7 +287,7 @@ Intrinsic child-scope declarations, such as budget instrumentation, need stable 
 
 ### Capabilities need a separate decision
 
-A handwritten wrapper implementing `IMutatorInstance` cannot automatically also implement every unknown interface implemented by its child. State storage does not solve nominal interface visibility.
+A handwritten wrapper implementing `IMutatorExecution` cannot automatically also implement every unknown interface implemented by its child. State storage does not solve nominal interface visibility.
 
 Two viable directions are:
 

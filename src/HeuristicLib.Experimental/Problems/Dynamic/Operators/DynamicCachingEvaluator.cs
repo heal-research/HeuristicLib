@@ -55,10 +55,10 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// <remarks>
     /// This evaluator serves exactly one problem instance, matched by identity, which <c>Evaluate</c> checks.
     /// </remarks>
-    protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, SizeLimit, GraceCount);
+    protected override IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, SizeLimit, GraceCount);
 
-    private sealed class Instance<TRunSearchSpace, TRunProblem> : WrappingEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem>
+    private sealed class Execution<TRunSearchSpace, TRunProblem> : WrappingEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -67,7 +67,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
         private readonly ICacheKeySelector<TCandidate, TKey> keySelector;
         private readonly long graceCount;
 
-        public Instance(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> sourceProblem, ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit, long graceCount)
+        public Execution(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> sourceProblem, ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit, long graceCount)
             : base(childEvaluator)
         {
             executionData = new ExecutionData(sizeLimit);
@@ -84,7 +84,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TRunSearchSpace searchSpace, TRunProblem problem)
         {
             if (!ReferenceEquals(problem, sourceProblem))
-                throw new InvalidOperationException("Dynamic caching evaluator instances can only evaluate the dynamic problem they were created for.");
+                throw new InvalidOperationException("Dynamic caching evaluator executions can only evaluate the dynamic problem they were created for.");
 
             var cache = executionData.Cache;
             var beforeCacheStatistics = cache.GetCurrentStatistics();

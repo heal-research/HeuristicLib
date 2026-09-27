@@ -18,11 +18,11 @@ public sealed record CountingRefiner<TCandidate>
         Metric = metric;
     }
 
-    protected override IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> childRefiner) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childRefiner, Counter, Metric);
+    protected override IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> childRefiner) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childRefiner, Counter, Metric);
 
-    private sealed class Instance<TSearchSpace, TProblem>(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner, CountAccumulator counter, OperatorCountMetric metric)
-        : WrappingRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiner)
+    private sealed class Execution<TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> childRefiner, CountAccumulator counter, OperatorCountMetric metric)
+        : WrappingRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiner)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

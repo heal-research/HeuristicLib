@@ -9,13 +9,13 @@ namespace HEAL.HeuristicLib.Operators;
 
 public interface IReplacer<TCandidate> : IOperator
 {
-    IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public interface IReplacerInstance<TCandidate, in TSearchSpace, in TProblem>
-    : IOperatorInstance
+public interface IReplacerExecution<TCandidate, in TSearchSpace, in TProblem>
+    : IOperatorExecution
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -29,32 +29,32 @@ public static class ReplacerResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public IReplacerInstance<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate> replacer)
+        public IReplacerExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate> replacer)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             scope.Resolve(replacer, static (creationTarget, childScope) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childScope));
 
-        public IReplacerInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate>? replacer)
+        public IReplacerExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate>? replacer)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             replacer is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem>(
             IReplacer<TCandidate> replacer,
-            [NotNullWhen(true)] out IReplacerInstance<TCandidate, TSearchSpace, TProblem>? instance,
+            [NotNullWhen(true)] out IReplacerExecution<TCandidate, TSearchSpace, TProblem>? execution,
             [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
         {
             try
             {
-                instance = scope.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
+                execution = scope.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
                 reason = null;
                 return true;
             }
             catch (InvalidOperationException exception)
             {
-                instance = null;
+                execution = null;
                 reason = exception.Message;
                 return false;
             }
@@ -65,16 +65,16 @@ public static class ReplacerResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReplacerInstance<TCandidate, TSearchSpace, TProblem> Resolve(IReplacer<TCandidate> replacer) =>
+        public IReplacerExecution<TCandidate, TSearchSpace, TProblem> Resolve(IReplacer<TCandidate> replacer) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
 
-        public IReplacerInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IReplacer<TCandidate>? replacer) =>
+        public IReplacerExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IReplacer<TCandidate>? replacer) =>
             replacer is null ? null : scope.Resolve(replacer);
 
         public bool TryResolve(
             IReplacer<TCandidate> replacer,
-            [NotNullWhen(true)] out IReplacerInstance<TCandidate, TSearchSpace, TProblem>? instance,
+            [NotNullWhen(true)] out IReplacerExecution<TCandidate, TSearchSpace, TProblem>? execution,
             [NotNullWhen(false)] out string? reason) =>
-            scope.Scope.TryResolve(replacer, out instance, out reason);
+            scope.Scope.TryResolve(replacer, out execution, out reason);
     }
 }

@@ -25,21 +25,21 @@ public abstract record WrappingRefiner<TCandidate>
     /// Resolves the child over the run's search space and problem and hands it to <see
     /// cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
-    public IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
         WrapExecutionInstance(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildRefiner));
 
-    /// <summary>Wraps the child's execution instance in this operator's own.</summary>
-    protected abstract IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> childRefiner)
+    /// <summary>Wraps the child's execution node in this operator's own.</summary>
+    protected abstract IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> childRefiner)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class WrappingRefinerInstance<TCandidate, TSearchSpace, TProblem>(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner)
-    : RefinerInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class WrappingRefinerExecution<TCandidate, TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> childRefiner)
+    : RefinerExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IRefinerInstance<TCandidate, TSearchSpace, TProblem> ChildRefiner { get; } = childRefiner;
+    protected IRefinerExecution<TCandidate, TSearchSpace, TProblem> ChildRefiner { get; } = childRefiner;
 }

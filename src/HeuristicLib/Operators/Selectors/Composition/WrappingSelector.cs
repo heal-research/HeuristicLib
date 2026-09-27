@@ -25,21 +25,21 @@ public abstract record WrappingSelector<TCandidate>
     /// Resolves the child over the run's search space and problem and hands it to
     /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
-    public ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
         WrapExecutionInstance(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildSelector));
 
-    /// <summary>Wraps the child's execution instance in this operator's own.</summary>
-    protected abstract ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> childSelector)
+    /// <summary>Wraps the child's execution node in this operator's own.</summary>
+    protected abstract ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem> childSelector)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector)
-    : SelectorInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class WrappingSelectorExecution<TCandidate, TSearchSpace, TProblem>(ISelectorExecution<TCandidate, TSearchSpace, TProblem> childSelector)
+    : SelectorExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ISelectorInstance<TCandidate, TSearchSpace, TProblem> ChildSelector { get; } = childSelector;
+    protected ISelectorExecution<TCandidate, TSearchSpace, TProblem> ChildSelector { get; } = childSelector;
 }

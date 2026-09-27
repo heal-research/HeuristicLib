@@ -268,13 +268,13 @@ See also: Expression metric, Refiner, Regression metric.
 
 Status: `Canonical`
 
-An algorithm defines a reusable search process through an algorithm configuration and its run scoped execution instances.
+An algorithm defines a reusable search process through an algorithm configuration and its run scoped execution nodes.
 
-In a run, an algorithm execution instance advances search state until the run stops. It owns resolved child operator instances, private execution data and execution behavior. One shot algorithms are still algorithms. They produce a search process with a single state.
+In a run, an algorithm execution advances search state until the run stops. It owns resolved child operator executions, private execution data and execution behavior. One shot algorithms are still algorithms. They produce a search process with a single state.
 
-Use algorithm for the reusable configuration unless the text explicitly says algorithm execution instance.
+Use algorithm for the reusable configuration unless the text explicitly says algorithm execution.
 
-See also: Configuration, Execution instance, Operator, Run, Search state.
+See also: Configuration, Execution node, Operator, Run, Search state.
 
 ### Meta-algorithm
 
@@ -300,9 +300,9 @@ An operator is a reusable building block that an algorithm or another operator c
 
 Examples include creators, evaluators, selectors, crossovers, mutators, replacers, terminators, and interceptors. An operator does not own the overall search process or define the run's stream of search states.
 
-Use operator for the reusable configuration unless the text explicitly says operator execution instance.
+Use operator for the reusable configuration unless the text explicitly says operator execution.
 
-See also: Algorithm, Configuration, Evaluator, Execution instance.
+See also: Algorithm, Configuration, Evaluator, Execution node.
 
 ### Child operator
 
@@ -448,7 +448,7 @@ Status: `Canonical`
 
 A configuration is a reusable object that users set up before execution, such as an algorithm or operator.
 
-A configuration can contain parameters, child configurations, validation or helper logic and the mechanism that creates execution instances. It is not required to be a passive data object. Mutable execution data belongs to an execution instance, either directly or in framework managed operator state.
+A configuration can contain parameters, child configurations, validation or helper logic and the mechanism that creates execution nodes. It is not required to be a passive data object. Mutable execution data belongs to an execution node, either directly or in framework managed operator state.
 
 Use more specific terms when the context benefits from them:
 
@@ -459,7 +459,7 @@ Related terms:
 
 - `Definition`: `Legacy`. Older docs may use definition for the reusable configured object graph. Prefer configuration in new text.
 
-See also: Algorithm, Execution instance, Operator, Run.
+See also: Algorithm, Execution node, Operator, Run.
 
 ### Configuration node
 
@@ -467,7 +467,7 @@ Status: `Canonical`
 
 A configuration node is a configuration considered as a node in the configuration graph. Its identity is the configuration object's reference, not its value equality or one occurrence along a caller path. Several configurations may refer to the same child node.
 
-Configuration is accepted shorthand for configuration node when the context is clear. Use node when graph membership needs emphasis, or a role-specific term such as mutator when the role is known. The common interface is currently `IExecutionConfiguration`; its agreed replacement is `IConfigurationNode`, including its generic form. Role-specific configuration names such as `IOperator` and `IMutator` do not acquire a `Node` suffix.
+Configuration is accepted shorthand for configuration node when the context is clear. Use node when graph membership needs emphasis, or a role-specific term such as mutator when the role is known. The common interface is `IConfigurationNode`, including its generic form. Role-specific configuration names such as `IOperator` and `IMutator` do not acquire a `Node` suffix.
 
 The term does not imply a common child-enumeration API or a universal operation on all nodes.
 
@@ -489,13 +489,13 @@ Status: `Provisional`
 
 A node selector is a rule for selecting algorithm or operator configurations in a configuration graph. The first `NodeSelector<TConfiguration>` API supports matching individual supplied configurations; integration with attached behavior is planned.
 
-The current forms select by configuration reference or assignable type, including role interfaces. Selectors with the same declared configuration type or role compose by union (`Or`, `|`) or intersection (`And`, `&`). `And(predicate)` intersects with a selector constructed from the typed configuration predicate. Composition creates a new definition without changing its operands or evaluating predicates; matching evaluates predicates from left to right only as needed. A node matching several union branches still matches once. The selector does not traverse a graph or resolve execution instances. Combinations across different roles remain deferred.
+The current forms select by configuration reference or assignable type, including role interfaces. Selectors with the same declared configuration type or role compose by union (`Or`, `|`) or intersection (`And`, `&`). `And(predicate)` intersects with a selector constructed from the typed configuration predicate. Composition creates a new definition without changing its operands or evaluating predicates; matching evaluates predicates from left to right only as needed. A node matching several union branches still matches once. The selector does not traverse a graph or resolve execution nodes. Combinations across different roles remain deferred.
 
 The agreed integration design selects source configuration nodes. Wrappers introduced by decoration are not additional selection targets, even when the decoration machinery represents them as configurations. Explicit wrappers in the source configuration graph remain selectable nodes. Multiple modules select the same source independently and compose their behavior using the decoration order; they do not select each other's generated wrappers. Resolver integration enforcing this boundary is planned.
 
-A selected configuration can be referenced by several callers and resolved into more than one execution instance. Selecting that configuration does not select one caller path or one invocation. Nesting selection is separate deferred work.
+A selected configuration can be referenced by several callers and resolved into more than one execution node. Selecting that configuration does not select one caller path or one invocation. Nesting selection is separate deferred work.
 
-See also: Configuration, Configuration graph, Execution instance, Execution module, Resolution scope.
+See also: Configuration, Configuration graph, Execution node, Execution module, Resolution scope.
 
 ### Run
 
@@ -507,9 +507,9 @@ An `AlgorithmRun` executes one algorithm configuration on a problem. An `Experim
 
 When a meta-algorithm coordinates child algorithms, the run is created by the algorithm started by the user. Child algorithms and operators participate in that same run unless they are explicitly started as separate runs.
 
-Run analyzers are attached while a run is preparing and installed when execution starts, so their observations can span nested algorithms and multiple short-lived execution instances. A run does not accept more analyzers after it leaves `Preparing`.
+Run analyzers are attached while a run is preparing and installed when execution starts, so their observations can span nested algorithms and multiple short-lived execution nodes. A run does not accept more analyzers after it leaves `Preparing`.
 
-See also: Analyzer, Configuration, Execution instance, Search state.
+See also: Analyzer, Configuration, Execution node, Search state.
 
 ### Search state
 
@@ -533,7 +533,7 @@ An execution node is the resolved runtime object that implements the operations 
 
 An execution node is distinct from a run, a single operation invocation and the planned persistent execution record in the resolver. The name alone does not promise a particular lifetime, a fresh allocation or a separate state object. A node can be shorter-lived than the run; a stateless configuration can also serve as its own execution node.
 
-The common interface is currently `IExecutionInstance`. The agreed replacements are `IExecutionNode` and role-specific names such as `IOperatorExecution`, `IMutatorExecution` and `IAlgorithmExecution`, without a `Node` suffix on those roles. Renaming these types does not itself change execution-state ownership or resolution.
+The common interface is `IExecutionNode`. Role-specific contracts use names such as `IOperatorExecution`, `IMutatorExecution` and `IAlgorithmExecution`, without a `Node` suffix on those roles. These names do not themselves change execution-state ownership or resolution.
 
 Execution is accepted shorthand for execution node when the context clearly refers to the callable object. Use node when graph membership needs emphasis, or role-specific terms such as algorithm execution, operator execution or mutator execution when the role is known. Use invocation or run when referring to execution over time.
 
@@ -543,7 +543,7 @@ See also: Configuration node, Execution graph, Execution state, Run.
 
 Status: `Legacy`
 
-The former term for an execution node. Prefer execution node or a role-specific form such as mutator execution in new prose. Existing APIs still use `Instance` until the naming migration; references to those current symbols must use their actual names.
+The former term for an execution node. Prefer execution node or a role-specific form such as mutator execution. Object-returning creation methods temporarily retain `CreateExecutionInstance`, `WrapExecutionInstance` and `CombineExecutionInstances` until the separately reviewed typed-factory migration; references to those methods must use their actual names.
 
 See also: Execution node.
 
@@ -553,11 +553,11 @@ Status: `Canonical`
 
 Execution state is private mutable data used by an execution node. The current implementation owns it on that object or in framework-managed operator state; separating persistent ownership from replaceable execution nodes is planned, not yet implemented.
 
-Execution state can contain resolved child execution instances, counters, caches, buffers, or other data that must not be shared through the reusable configuration.
+Execution state can contain resolved child execution nodes, counters, caches, buffers, or other data that must not be shared through the reusable configuration.
 
 Execution state is distinct from search state. Search states describe visible progress through the search and may be streamed, inspected, analyzed, or returned as the final state of a run.
 
-See also: Configuration, Execution instance, Run, Search state.
+See also: Configuration, Execution node, Run, Search state.
 
 ### Execution graph
 
@@ -565,19 +565,19 @@ Status: `Canonical`
 
 An execution graph is a graph of execution nodes created from a configuration graph during a run.
 
-A run may contain more than one execution graph over time, for example when meta-algorithms create fresh execution instances for nested algorithms.
+A run may contain more than one execution graph over time, for example when meta-algorithms create fresh execution nodes for nested algorithms.
 
-See also: Configuration graph, Execution instance, Run.
+See also: Configuration graph, Execution node, Run.
 
 ### Resolution scope
 
 Status: `Canonical`
 
-A resolution scope resolves configurations to execution instances during a run.
+A resolution scope resolves configurations to execution nodes during a run.
 
-The scope controls execution-instance identity and sharing. Explicit operator and algorithm instance creation methods receive the scope and normally resolve their declared children eagerly. Execution graph compositions may additionally create child scopes, declare decorations for them or control instance reuse. Decorations are declared on a `ResolutionScopeBuilder` before the scope resolves anything.
+The scope controls execution-node identity and sharing. Explicit operator and algorithm execution creation methods receive the scope and normally resolve their declared children eagerly. Execution graph compositions may additionally create child scopes, declare decorations for them or control execution reuse. Decorations are declared on a `ResolutionScopeBuilder` before the scope resolves anything.
 
-See also: Configuration, Decoration chain, Execution graph, Execution instance, Execution module, Run.
+See also: Configuration, Decoration chain, Execution graph, Execution node, Execution module, Run.
 
 ### Decoration chain
 
@@ -585,11 +585,11 @@ Status: `Canonical`
 
 A decoration chain is the ordered set of decorations that apply to one configuration at one resolution scope: every decoration declared by that scope or any of its ancestors, and no others.
 
-The chain determines whether an existing ancestor instance is eligible for reuse. Resolution searches its own scope and then ancestors, stopping at a scope that declares decorations for that configuration if no instance was found there. An instance built in a child stays in that child. Identical chains therefore permit reuse but do not guarantee it: a child may have built its own instance before its parent resolved the configuration. Siblings cannot read each other's caches, but can both reuse an instance already held by a common ancestor.
+The chain determines whether an existing ancestor execution is eligible for reuse. Resolution searches its own scope and then ancestors, stopping at a scope that declares decorations for that configuration if no execution was found there. An execution built in a child stays in that child. Identical chains therefore permit reuse but do not guarantee it: a child may have built its own execution before its parent resolved the configuration. Siblings cannot read each other's caches, but can both reuse an execution already held by a common ancestor.
 
 Within a chain, decorations declared by an execution module sit outside those declared by the configuration, and a deeper scope's decorations bind more tightly than a shallower one's.
 
-See also: Configuration, Execution instance, Execution module, Resolution scope.
+See also: Configuration, Execution node, Execution module, Resolution scope.
 
 ### Execution module
 
@@ -619,9 +619,9 @@ Status: `Canonical`
 
 A value array is an immutable ordered collection that compares by its elements rather than by the identity of its backing storage, represented by `ValueArray<T>`.
 
-Configurations use a value array for every retained ordered collection, such as child operators, pipeline stages or weights, so that structurally identical configurations compare equal without an equality attribute or a hand-written comparison. An `ImmutableArray<T>` compares by underlying array reference and must not be used for collection state that participates in equality. Execution instances keep `ImmutableArray<T>`, because they are resolved by reference identity and never compared structurally.
+Configurations use a value array for every retained ordered collection, such as child operators, pipeline stages or weights, so that structurally identical configurations compare equal without an equality attribute or a hand-written comparison. An `ImmutableArray<T>` compares by underlying array reference and must not be used for collection state that participates in equality. Execution nodes keep `ImmutableArray<T>`, because they are resolved by reference identity and never compared structurally.
 
-See also: Child operator, Configuration, Execution instance, Resolution scope.
+See also: Child operator, Configuration, Execution node, Resolution scope.
 
 ### Execution concurrency
 
@@ -633,7 +633,7 @@ Execution concurrency describes whether independent operations must execute sequ
 
 Execution concurrency describes scheduling permission and bounds. It does not imply dedicated threads.
 
-See also: Execution instance, Run.
+See also: Execution node, Run.
 
 ## Analysis and Experiments
 

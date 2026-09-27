@@ -25,7 +25,7 @@ internal sealed record ProbeAlgorithm(
     int HoldAfterYieldMilliseconds = 0)
     : Algorithm<ProbeAlgorithm, int, PopulationState<int>>
 {
-    public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public override IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
         Probe?.RecordSetup();
         if (FailDuringSetup)
@@ -33,11 +33,11 @@ internal sealed record ProbeAlgorithm(
             throw new InvalidOperationException($"Setup failed for {Value}.");
         }
 
-        return new Instance<TRunSearchSpace, TRunProblem>(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState, HoldAfterYieldMilliseconds);
+        return new Execution<TRunSearchSpace, TRunProblem>(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState, HoldAfterYieldMilliseconds);
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState, int holdAfterYieldMilliseconds)
-        : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+    private sealed class Execution<TSearchSpace, TProblem>(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState, int holdAfterYieldMilliseconds)
+        : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
         where TSearchSpace : class, ISearchSpace<int>
         where TProblem : class, IProblem<int, TSearchSpace>
     {

@@ -11,19 +11,19 @@ public class AlgorithmRunTests
     public async Task Stream_PreparesOnceBeforeEnumerationAndReusesPreparationOnResume()
     {
         var evaluator = new CountingResolutionEvaluator();
-        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var module = new DualRoleAttachment();
         var run = algorithm.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42))
             .Attach(module);
         var cancellationToken = TestContext.Current.CancellationToken;
 
-        algorithm.InstanceCount.ShouldBe(0);
+        algorithm.ExecutionCount.ShouldBe(0);
         module.InstallationCount.ShouldBe(0);
         var stream = run.Stream(cancellationToken: cancellationToken);
 
         run.LifecycleState.ShouldBe(RunLifecycleState.Running);
-        algorithm.InstanceCount.ShouldBe(1);
-        evaluator.InstanceCount.ShouldBe(1);
+        algorithm.ExecutionCount.ShouldBe(1);
+        evaluator.ExecutionCount.ShouldBe(1);
         module.InstallationCount.ShouldBe(1);
         await using (var enumerator = stream.GetAsyncEnumerator(cancellationToken))
             (await enumerator.MoveNextAsync()).ShouldBeTrue();
@@ -33,8 +33,8 @@ public class AlgorithmRunTests
         _ = await run.Stream(cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
         run.LifecycleState.ShouldBe(RunLifecycleState.Completed);
-        algorithm.InstanceCount.ShouldBe(1);
-        evaluator.InstanceCount.ShouldBe(1);
+        algorithm.ExecutionCount.ShouldBe(1);
+        evaluator.ExecutionCount.ShouldBe(1);
         module.InstallationCount.ShouldBe(1);
     }
 
@@ -231,11 +231,11 @@ public class AlgorithmRunTests
     private sealed record SequenceAlgorithm
         : Algorithm<SequenceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
-            CreateExecutionInstance(ResolutionScope scope) => new Instance();
+        public override AlgorithmExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+            CreateExecutionInstance(ResolutionScope scope) => new Execution();
 
-        private sealed class Instance
-            : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        private sealed class Execution
+            : AlgorithmExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
         {
             public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
                 IProblem<int, DummySearchSpace<int>> problem,

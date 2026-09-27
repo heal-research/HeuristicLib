@@ -22,34 +22,34 @@ public static class MetaAlgorithmTestHelpers
 
 public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
 {
-    public int InstanceCount { get; private set; }
+    public int ExecutionCount { get; private set; }
 
-    public override IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ResolutionScope scope)
+    public override IEvaluatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ResolutionScope scope)
     {
-        InstanceCount++;
-        return new Instance();
+        ExecutionCount++;
+        return new Execution();
     }
 
-    private sealed class Instance : EvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+    private sealed class Execution : EvaluatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
             problem.Evaluate(candidates, random).ToArray();
     }
 }
 
-public sealed record CountingInstanceAlgorithm(int Increment, IEvaluator<int> Evaluator)
-    : Algorithm<CountingInstanceAlgorithm, int, PopulationState<int>>
+public sealed record CountingExecutionAlgorithm(int Increment, IEvaluator<int> Evaluator)
+    : Algorithm<CountingExecutionAlgorithm, int, PopulationState<int>>
 {
-    public int InstanceCount { get; private set; }
+    public int ExecutionCount { get; private set; }
 
-    public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public override IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
-        InstanceCount++;
-        return new Instance<TRunSearchSpace, TRunProblem>(Increment, scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator));
+        ExecutionCount++;
+        return new Execution<TRunSearchSpace, TRunProblem>(Increment, scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator));
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(int increment, IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator)
-        : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+    private sealed class Execution<TSearchSpace, TProblem>(int increment, IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator)
+        : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
         where TSearchSpace : class, ISearchSpace<int>
         where TProblem : class, IProblem<int, TSearchSpace>
     {

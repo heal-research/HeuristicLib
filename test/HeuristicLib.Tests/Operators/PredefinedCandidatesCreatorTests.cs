@@ -13,10 +13,10 @@ public class PredefinedCandidatesCreatorTests
         var fallback = new ExpectedRandomCreator(random, 99);
         var creator = fallback.SeededWith([10, 20]);
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator);
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator);
 
-        var first = instance.Create(1, random, DummySearchSpace<int>.Instance, problem);
-        var second = instance.Create(3, random, DummySearchSpace<int>.Instance, problem);
+        var first = execution.Create(1, random, DummySearchSpace<int>.Instance, problem);
+        var second = execution.Create(3, random, DummySearchSpace<int>.Instance, problem);
 
         first.ShouldBe([10]);
         second.ShouldBe([20, 99, 99]);

@@ -8,8 +8,8 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 
 /// <remarks>
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
-/// It must not contain operator or algorithm configurations, execution instances or execution instance resolution facilities.
-/// <see cref="CreateInitialState"/> must return a fresh state object for every execution instance. Calls are not inherently thread safe.
+/// It must not contain operator or algorithm configurations, execution nodes or execution node resolution facilities.
+/// <see cref="CreateInitialState"/> must return a fresh state object for every execution node. Calls are not inherently thread safe.
 /// </remarks>
 public abstract record StatefulReplacer<TCandidate, TSearchSpace, TProblem, TState>
     : Replacer<TCandidate, TSearchSpace, TProblem>
@@ -21,10 +21,10 @@ public abstract record StatefulReplacer<TCandidate, TSearchSpace, TProblem, TSta
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope) => new Instance(this, CreateInitialState());
+    public sealed override IReplacerExecution<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope) => new Execution(this, CreateInitialState());
 
-    private sealed class Instance(StatefulReplacer<TCandidate, TSearchSpace, TProblem, TState> replacer, TState state)
-        : ReplacerInstance<TCandidate, TSearchSpace, TProblem>
+    private sealed class Execution(StatefulReplacer<TCandidate, TSearchSpace, TProblem, TState> replacer, TState state)
+        : ReplacerExecution<TCandidate, TSearchSpace, TProblem>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => replacer.Replace(previousPopulation, offspringPopulation, objective, count, state, random, searchSpace, problem);
     }
@@ -39,10 +39,10 @@ public abstract record StatefulReplacer<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override IReplacerInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ResolutionScope scope) => new Instance(this, CreateInitialState());
+    public sealed override IReplacerExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ResolutionScope scope) => new Execution(this, CreateInitialState());
 
-    private sealed class Instance(StatefulReplacer<TCandidate, TSearchSpace, TState> replacer, TState state)
-        : ReplacerInstance<TCandidate, TSearchSpace>
+    private sealed class Execution(StatefulReplacer<TCandidate, TSearchSpace, TState> replacer, TState state)
+        : ReplacerExecution<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace) => replacer.Replace(previousPopulation, offspringPopulation, objective, count, state, random, searchSpace);
     }
@@ -56,10 +56,10 @@ public abstract record StatefulReplacer<TCandidate, TState>
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random);
 
-    public sealed override IReplacerInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ResolutionScope scope) => new Instance(this, CreateInitialState());
+    public sealed override IReplacerExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ResolutionScope scope) => new Execution(this, CreateInitialState());
 
-    private sealed class Instance(StatefulReplacer<TCandidate, TState> replacer, TState state)
-        : ReplacerInstance<TCandidate>
+    private sealed class Execution(StatefulReplacer<TCandidate, TState> replacer, TState state)
+        : ReplacerExecution<TCandidate>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random) => replacer.Replace(previousPopulation, offspringPopulation, objective, count, state, random);
     }

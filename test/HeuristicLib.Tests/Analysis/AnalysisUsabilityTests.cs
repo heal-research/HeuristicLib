@@ -148,9 +148,9 @@ public class AnalysisUsabilityTests
 
     private sealed record ManualEvaluator : Evaluator<int, DummySearchSpace<int>, TestProblem>
     {
-        public override IEvaluatorInstance<int, DummySearchSpace<int>, TestProblem> CreateExecutionInstance(ResolutionScope scope) => new Instance();
+        public override IEvaluatorExecution<int, DummySearchSpace<int>, TestProblem> CreateExecutionInstance(ResolutionScope scope) => new Execution();
 
-        private sealed class Instance : IEvaluatorInstance<int, DummySearchSpace<int>, TestProblem>
+        private sealed class Execution : IEvaluatorExecution<int, DummySearchSpace<int>, TestProblem>
         {
             public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random,
                 DummySearchSpace<int> searchSpace, TestProblem problem) =>

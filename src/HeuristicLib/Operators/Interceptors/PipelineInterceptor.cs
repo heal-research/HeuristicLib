@@ -14,11 +14,11 @@ public sealed record PipelineInterceptor<TCandidate>
     {
     }
 
-    protected override IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CombineExecutionInstances<TRunSearchSpace, TRunProblem, TRunSearchState>(ImmutableArray<IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> childInterceptors) =>
-        new Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptors);
+    protected override IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CombineExecutionInstances<TRunSearchSpace, TRunProblem, TRunSearchState>(ImmutableArray<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> childInterceptors) =>
+        new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptors);
 
-    private sealed class Instance<TSearchSpace, TProblem, TSearchState>(ImmutableArray<IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
-        : MultiInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptors)
+    private sealed class Execution<TSearchSpace, TProblem, TSearchState>(ImmutableArray<IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
+        : MultiInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptors)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState

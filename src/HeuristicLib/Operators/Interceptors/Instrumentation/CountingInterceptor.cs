@@ -17,11 +17,11 @@ public sealed record CountingInterceptor<TCandidate>
         Counter = counter;
     }
 
-    protected override IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childInterceptor) =>
-        new Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor, Counter);
+    protected override IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childInterceptor) =>
+        new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor, Counter);
 
-    private sealed class Instance<TSearchSpace, TProblem, TSearchState>(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, CountAccumulator counter)
-        : WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptor)
+    private sealed class Execution<TSearchSpace, TProblem, TSearchState>(IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, CountAccumulator counter)
+        : WrappingInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptor)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState

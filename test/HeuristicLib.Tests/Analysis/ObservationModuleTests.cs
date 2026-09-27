@@ -97,12 +97,12 @@ public class ObservationModuleTests
         var observations = new List<AlgorithmObservation<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>>();
         var scope = ResolutionScope.Create(builder =>
             builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, observations.Add));
-        var instance = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
+        var execution = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
 
         var states = new List<PopulationState<int>>();
-        await foreach (var state in instance.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
+        await foreach (var state in execution.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
             states.Add(state);
-        await foreach (var state in instance.RunStreamingAsync(problem, RandomNumberGenerator.Create(2), states[^1], TestContext.Current.CancellationToken))
+        await foreach (var state in execution.RunStreamingAsync(problem, RandomNumberGenerator.Create(2), states[^1], TestContext.Current.CancellationToken))
             states.Add(state);
 
         observations.Select(observation => observation.Iteration).ShouldBe([1L, 2L]);

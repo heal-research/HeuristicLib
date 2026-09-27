@@ -7,15 +7,15 @@ namespace HEAL.HeuristicLib.Tests.Operators.Mutators;
 public class AdaptableMutationStrengthTests
 {
     [Fact]
-    public void GaussianMutator_KeepsConfiguredStrengthOnConfigurationAndCurrentStrengthOnInstance()
+    public void GaussianMutator_KeepsConfiguredStrengthOnConfigurationAndCurrentStrengthOnExecution()
     {
         var mutator = new GaussianMutator(1.0, 2.0);
-        var instance = Resolve(mutator);
+        var execution = Resolve(mutator);
 
-        instance.CurrentMutationStrength = 4.0;
+        execution.CurrentMutationStrength = 4.0;
 
         mutator.MutationStrength.ShouldBe(2.0);
-        instance.CurrentMutationStrength.ShouldBe(4.0);
+        execution.CurrentMutationStrength.ShouldBe(4.0);
     }
 
     [Fact]
@@ -32,14 +32,14 @@ public class AdaptableMutationStrengthTests
     }
 
     [Fact]
-    public void GaussianMutator_UsesCurrentInstanceStrength()
+    public void GaussianMutator_UsesCurrentExecutionStrength()
     {
         var mutator = new GaussianMutator(1.0, 2.0);
-        var instance = Resolve(mutator);
-        instance.CurrentMutationStrength = 4.0;
+        var execution = Resolve(mutator);
+        execution.CurrentMutationStrength = 4.0;
         var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
 
-        var offspring = instance.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, CreateProblem(searchSpace));
+        var offspring = execution.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, CreateProblem(searchSpace));
 
         offspring.Single().ShouldBe(new RealVector(2.0));
     }
@@ -73,11 +73,11 @@ public class AdaptableMutationStrengthTests
     /// <c>EvolutionStrategy</c> does: the configuration says nothing about adaptation, so the instance is where it is
     /// discovered.
     /// </summary>
-    private static IAdaptableMutationStrengthInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> Resolve(GaussianMutator mutator) =>
+    private static IAdaptableMutationStrengthExecution<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> Resolve(GaussianMutator mutator) =>
         ResolutionScope.Create()
             .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>()
             .Resolve(mutator)
-            .ShouldBeAssignableTo<IAdaptableMutationStrengthInstance<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>();
+            .ShouldBeAssignableTo<IAdaptableMutationStrengthExecution<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>();
 
     private static FuncProblem<RealVector, BoundedRealVectorSearchSpace> CreateProblem(BoundedRealVectorSearchSpace searchSpace) =>
         FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);

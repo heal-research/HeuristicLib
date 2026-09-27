@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 /// <remarks>
-/// Derive directly from this base when the crossover owns child execution instances or needs direct control over its execution structure.
+/// Derive directly from this base when the crossover owns child execution nodes or needs direct control over its execution structure.
 /// Use <see cref="StatelessCrossover{TCandidate,TSearchSpace,TProblem}"/> when no mutable execution data is needed.
 /// Use <see cref="StatefulCrossover{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
 /// <para>
@@ -21,11 +21,11 @@ public abstract record Crossover<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope);
+    public abstract ICrossoverExecution<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope);
 
     public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> ICrossover<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> ICrossover<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -35,7 +35,7 @@ public abstract record Crossover<TCandidate, TSearchSpace, TProblem>
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem>)CreateExecutionInstance(scope);
+        return (ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>)CreateExecutionInstance(scope);
     }
 }
 
@@ -46,29 +46,29 @@ public abstract record Crossover<TCandidate, TSearchSpace>
 public abstract record Crossover<TCandidate>
     : Crossover<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
-public abstract class CrossoverInstance<TCandidate, TSearchSpace, TProblem>
-    : ICrossoverInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class CrossoverExecution<TCandidate, TSearchSpace, TProblem>
+    : ICrossoverExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-public abstract class CrossoverInstance<TCandidate, TSearchSpace>
-    : ICrossoverInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+public abstract class CrossoverExecution<TCandidate, TSearchSpace>
+    : ICrossoverExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    IReadOnlyList<TCandidate> ICrossoverInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
+    IReadOnlyList<TCandidate> ICrossoverExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
         Cross(parents, random, searchSpace);
 }
 
-public abstract class CrossoverInstance<TCandidate>
-    : ICrossoverInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+public abstract class CrossoverExecution<TCandidate>
+    : ICrossoverExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
     public abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random);
 
-    IReadOnlyList<TCandidate> ICrossoverInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+    IReadOnlyList<TCandidate> ICrossoverExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         Cross(parents, random);
 }

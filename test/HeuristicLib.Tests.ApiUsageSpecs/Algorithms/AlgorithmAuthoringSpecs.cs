@@ -15,7 +15,7 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Algorithms;
 public class AlgorithmAuthoringSpecs
 {
     [Fact]
-    public async Task IterativeAlgorithm_AuthoringExample_UsesResolvedExecutionInstances()
+    public async Task IterativeAlgorithm_AuthoringExample_UsesResolvedExecutions()
     {
         var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
         var algorithm = new SingleCreateAlgorithm { Creator = new CountingCreator() }.TerminatedAfterIterations(1);
@@ -99,9 +99,9 @@ public class AlgorithmAuthoringSpecs
 
         _ = registry.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(algorithm);
 
-        creator.ExecutionInstancesCreated.ShouldBe(1);
-        evaluator.ExecutionInstancesCreated.ShouldBe(1);
-        interceptor.ExecutionInstancesCreated.ShouldBe(1);
+        creator.ExecutionsCreated.ShouldBe(1);
+        evaluator.ExecutionsCreated.ShouldBe(1);
+        interceptor.ExecutionsCreated.ShouldBe(1);
         creator.CreateCalls.ShouldBe(0);
         evaluator.EvaluateCalls.ShouldBe(0);
         interceptor.TransformCalls.ShouldBe(0);
@@ -117,9 +117,9 @@ public class AlgorithmAuthoringSpecs
     {
         var algorithm = new SingleCreateAlgorithm { Creator = new CountingCreator() };
 
-        var instance = algorithm.CreateExecutionInstance<BoundedRealVectorSearchSpace, TestFunctionProblem>(ResolutionScope.Create());
+        var execution = algorithm.CreateExecutionInstance<BoundedRealVectorSearchSpace, TestFunctionProblem>(ResolutionScope.Create());
 
-        instance.ShouldBeAssignableTo<IterativeAlgorithmInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>();
+        execution.ShouldBeAssignableTo<IterativeAlgorithmExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>();
         typeof(SingleCreateAlgorithm).GetMethod("CreateExecutionInstance", [typeof(ResolutionScope)]).ShouldNotBeNull();
     }
 
@@ -129,17 +129,17 @@ public class AlgorithmAuthoringSpecs
         public required ICreator<RealVector> Creator { get; init; }
         public IEvaluator<RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
-        protected override IterativeAlgorithmInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(ResolutionScope scope,
-            IInterceptorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
+        protected override IterativeAlgorithmExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(ResolutionScope scope,
+            IInterceptorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
         {
-            return new Instance(resolvedInterceptor, scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Creator), scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Evaluator));
+            return new Execution(resolvedInterceptor, scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Creator), scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Evaluator));
         }
 
-        private sealed class Instance(
-            IInterceptorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? interceptor,
-            ICreatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> creator,
-            IEvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> evaluator)
-            : IterativeAlgorithmInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(interceptor)
+        private sealed class Execution(
+            IInterceptorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? interceptor,
+            ICreatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> creator,
+            IEvaluatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> evaluator)
+            : IterativeAlgorithmExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(interceptor)
         {
             protected override SingleSolutionState<RealVector> ExecuteStep(SingleSolutionState<RealVector>? previousState, TestFunctionProblem problem, IRandomNumberGenerator random)
             {
@@ -157,17 +157,17 @@ public class AlgorithmAuthoringSpecs
         public required ICreator<RealVector> Creator { get; init; }
         public IEvaluator<RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
-        protected override IterativeAlgorithmInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(ResolutionScope scope,
-            IInterceptorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
+        protected override IterativeAlgorithmExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutionInstance(ResolutionScope scope,
+            IInterceptorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
         {
-            return new Instance(resolvedInterceptor, scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Creator), scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Evaluator));
+            return new Execution(resolvedInterceptor, scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Creator), scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Evaluator));
         }
 
-        private sealed class Instance(
-            IInterceptorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? interceptor,
-            ICreatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> creator,
-            IEvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> evaluator)
-            : IterativeAlgorithmInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(interceptor)
+        private sealed class Execution(
+            IInterceptorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? interceptor,
+            ICreatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> creator,
+            IEvaluatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> evaluator)
+            : IterativeAlgorithmExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(interceptor)
         {
             private int steps;
 
@@ -233,19 +233,19 @@ public class AlgorithmAuthoringSpecs
 
     private sealed class InstancingCreator : ICreator<RealVector>
     {
-        public int ExecutionInstancesCreated { get; private set; }
+        public int ExecutionsCreated { get; private set; }
         public int CreateCalls { get; private set; }
 
-        public ICreatorInstance<RealVector, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+        public ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
             where TRunSearchSpace : class, ISearchSpace<RealVector>
             where TRunProblem : class, IProblem<RealVector, TRunSearchSpace>
         {
-            ExecutionInstancesCreated++;
-            return (ICreatorInstance<RealVector, TRunSearchSpace, TRunProblem>)(object)new Instance(this);
+            ExecutionsCreated++;
+            return (ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem>)(object)new Execution(this);
         }
 
-        private sealed class Instance(InstancingCreator owner)
-            : ICreatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Execution(InstancingCreator owner)
+            : ICreatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             public IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random,
                                                     BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
@@ -260,19 +260,19 @@ public class AlgorithmAuthoringSpecs
 
     private sealed class InstancingEvaluator : IEvaluator<RealVector>
     {
-        public int ExecutionInstancesCreated { get; private set; }
+        public int ExecutionsCreated { get; private set; }
         public int EvaluateCalls { get; private set; }
 
-        public IEvaluatorInstance<RealVector, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+        public IEvaluatorExecution<RealVector, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
             where TRunSearchSpace : class, ISearchSpace<RealVector>
             where TRunProblem : class, IProblem<RealVector, TRunSearchSpace>
         {
-            ExecutionInstancesCreated++;
-            return (IEvaluatorInstance<RealVector, TRunSearchSpace, TRunProblem>)(object)new Instance(this);
+            ExecutionsCreated++;
+            return (IEvaluatorExecution<RealVector, TRunSearchSpace, TRunProblem>)(object)new Execution(this);
         }
 
-        private sealed class Instance(InstancingEvaluator owner)
-            : IEvaluatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Execution(InstancingEvaluator owner)
+            : IEvaluatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates,
                                                            IRandomNumberGenerator random,
@@ -289,20 +289,20 @@ public class AlgorithmAuthoringSpecs
 
     private sealed class InstancingInterceptor : IInterceptor<RealVector>
     {
-        public int ExecutionInstancesCreated { get; private set; }
+        public int ExecutionsCreated { get; private set; }
         public int TransformCalls { get; private set; }
 
-        public IInterceptorInstance<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+        public IInterceptorExecution<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
             where TRunSearchSpace : class, ISearchSpace<RealVector>
             where TRunProblem : class, IProblem<RealVector, TRunSearchSpace>
             where TRunSearchState : class, ISearchState
         {
-            ExecutionInstancesCreated++;
-            return (IInterceptorInstance<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState>)(object)new Instance(this);
+            ExecutionsCreated++;
+            return (IInterceptorExecution<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState>)(object)new Execution(this);
         }
 
-        private sealed class Instance(InstancingInterceptor owner)
-            : IInterceptorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
+        private sealed class Execution(InstancingInterceptor owner)
+            : IInterceptorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
         {
             public SingleSolutionState<RealVector> Transform(SingleSolutionState<RealVector> currentState, SingleSolutionState<RealVector>? previousState,
                 IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)

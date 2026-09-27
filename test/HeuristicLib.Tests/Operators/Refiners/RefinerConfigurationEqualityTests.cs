@@ -257,11 +257,11 @@ public class RefinerConfigurationEqualityTests
         {
         }
 
-        protected override IRefinerInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerInstance<int, TRunSearchSpace, TRunProblem>> childRefiners) =>
-            new Instance<TRunSearchSpace, TRunProblem>(childRefiners);
+        protected override IRefinerExecution<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerExecution<int, TRunSearchSpace, TRunProblem>> childRefiners) =>
+            new Execution<TRunSearchSpace, TRunProblem>(childRefiners);
 
-        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IRefinerInstance<int, TSearchSpace, TProblem>> childRefiners)
-            : MultiRefinerInstance<int, TSearchSpace, TProblem>(childRefiners)
+        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<int, TSearchSpace, TProblem>> childRefiners)
+            : MultiRefinerExecution<int, TSearchSpace, TProblem>(childRefiners)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

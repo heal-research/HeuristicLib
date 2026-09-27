@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>
-/// Resolves configuration into execution instances for one run, applying the decorations declared for it.
+/// Resolves configuration into execution nodes for one run, applying the decorations declared for it.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -16,25 +16,25 @@ namespace HEAL.HeuristicLib.Execution;
 /// returns. Retaining the builder and changing it later cannot change the scope's declarations.
 /// </para>
 /// <para>
-/// Scopes form a tree. A child inherits its ancestors' decorations and can reuse eligible instances already held by
+/// Scopes form a tree. A child inherits its ancestors' decorations and can reuse eligible executions already held by
 /// them. An ancestor never sees a child's cache, and siblings never see each other's caches. Siblings can both reuse
-/// an instance already held by a common ancestor; otherwise each builds and keeps its own instance.
+/// an execution already held by a common ancestor; otherwise each builds and keeps its own execution.
 /// </para>
 /// <para>
 /// The resolution rules are documented on
-/// <see cref="Resolve{TConfiguration, TExecutionInstance}(TConfiguration, Func{TConfiguration, ResolutionScope, TExecutionInstance})"/>.
+/// <see cref="Resolve{TConfiguration, TExecution}(TConfiguration, Func{TConfiguration, ResolutionScope, TExecution})"/>.
 /// </para>
 /// </remarks>
 public sealed class ResolutionScope
 {
     private readonly ResolutionScope? parent;
-    private readonly ImmutableDictionary<IExecutionConfiguration, ImmutableArray<Decoration>> decorations;
-    private readonly Dictionary<IExecutionConfiguration, IExecutionInstance> instances = new(ReferenceEqualityComparer.Instance);
-    private readonly Dictionary<IExecutionConfiguration, IExecutionInstance> underConstruction = new(ReferenceEqualityComparer.Instance);
+    private readonly ImmutableDictionary<IConfigurationNode, ImmutableArray<Decoration>> decorations;
+    private readonly Dictionary<IConfigurationNode, IExecutionNode> executions = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IConfigurationNode, IExecutionNode> underConstruction = new(ReferenceEqualityComparer.Instance);
 
     internal ResolutionScope(
         ResolutionScope? parent,
-        ImmutableDictionary<IExecutionConfiguration, ImmutableArray<Decoration>> decorations)
+        ImmutableDictionary<IConfigurationNode, ImmutableArray<Decoration>> decorations)
     {
         this.parent = parent;
         this.decorations = decorations;
@@ -62,9 +62,9 @@ public sealed class ResolutionScope
     /// Creates a child scope that adds no decorations of its own.
     /// </summary>
     /// <remarks>
-    /// The child applies every decoration its ancestors declared and can reuse eligible instances already held by
-    /// them. When none is found, it builds and stores a new instance locally. A fresh scope does not guarantee fresh
-    /// instances for configurations already resolved by an ancestor.
+    /// The child applies every decoration its ancestors declared and can reuse eligible executions already held by
+    /// them. When none is found, it builds and stores a new execution locally. A fresh scope does not guarantee fresh
+    /// executions for configurations already resolved by an ancestor.
     /// </remarks>
     public ResolutionScope CreateChildScope() => new(this, Decoration.None);
 
@@ -83,24 +83,24 @@ public sealed class ResolutionScope
     }
 
     /// <summary>
-    /// Resolves configuration into the execution instance that this scope's decorations apply to.
+    /// Resolves configuration into the execution node that this scope's decorations apply to.
     /// </summary>
     /// <remarks>
     /// <para>
     /// Completed resolution applies every decoration declared for this configuration by this scope or an ancestor,
     /// and no others. Identical decoration chains permit ancestor reuse but do not guarantee sharing: an eligible
-    /// instance must already exist when the search reaches that ancestor.
+    /// execution must already exist when the search reaches that ancestor.
     /// </para>
     /// <para>
-    /// The search walks from this scope towards the root. At each scope, an under-construction instance answers first,
-    /// then a cached instance. If neither exists and the scope declares a decoration for this configuration, the search
-    /// stops: instances above it have a shorter chain. Declarations for other configurations do not stop this search.
-    /// Under-construction instances let a wrapper resolve the chain already built for its child.
+    /// The search walks from this scope towards the root. At each scope, an under-construction execution answers first,
+    /// then a cached execution. If neither exists and the scope declares a decoration for this configuration, the search
+    /// stops: executions above it have a shorter chain. Declarations for other configurations do not stop this search.
+    /// Under-construction executions let a wrapper resolve the chain already built for its child.
     /// </para>
     /// <para>
-    /// A newly built instance is stored here rather than hoisted to an ancestor. Ancestor lookups cannot find this
-    /// entry, and this scope keeps its instance even if an ancestor resolves the same configuration later. Siblings
-    /// cannot reuse each other's locally built instances, but can both reuse an eligible common ancestor instance.
+    /// A newly built execution is stored here rather than hoisted to an ancestor. Ancestor lookups cannot find this
+    /// entry, and this scope keeps its execution even if an ancestor resolves the same configuration later. Siblings
+    /// cannot reuse each other's locally built executions, but can both reuse an eligible common ancestor execution.
     /// </para>
     /// <para>
     /// <paramref name="create"/> performs every creation step: first for the configuration passed in, then for each
@@ -109,43 +109,43 @@ public sealed class ResolutionScope
     /// resolution.
     /// </para>
     /// <para>
-    /// A scope serves one execution, so an instance of another type found here was built for a different search
+    /// A scope serves one execution, so an execution of another type found here was built for a different search
     /// space or problem. That is reported rather than cast.
     /// </para>
     /// </remarks>
-    public TExecutionInstance Resolve<TConfiguration, TExecutionInstance>(TConfiguration configuration, Func<TConfiguration, ResolutionScope, TExecutionInstance> create)
-        where TConfiguration : class, IExecutionConfiguration
-        where TExecutionInstance : class, IExecutionInstance
+    public TExecution Resolve<TConfiguration, TExecution>(TConfiguration configuration, Func<TConfiguration, ResolutionScope, TExecution> create)
+        where TConfiguration : class, IConfigurationNode
+        where TExecution : class, IExecutionNode
     {
         for (var scope = this; scope is not null; scope = scope.parent)
         {
-            // A configuration currently being wrapped answers with the instance built so far, so that a decoration
+            // A configuration currently being wrapped answers with the execution built so far, so that a decoration
             // resolving what it wraps receives that rather than starting the chain again.
             if (scope.underConstruction.TryGetValue(configuration, out var partial))
-                return RequireInstanceOf<TExecutionInstance>(configuration, partial);
+                return RequireExecutionOf<TExecution>(configuration, partial);
 
-            if (scope.instances.TryGetValue(configuration, out var resolved))
-                return RequireInstanceOf<TExecutionInstance>(configuration, resolved);
+            if (scope.executions.TryGetValue(configuration, out var resolved))
+                return RequireExecutionOf<TExecution>(configuration, resolved);
 
             if (scope.decorations.ContainsKey(configuration))
                 break;
         }
 
-        var instance = Build(configuration, create);
-        instances.Add(configuration, instance);
-        return instance;
+        var execution = Build(configuration, create);
+        executions.Add(configuration, execution);
+        return execution;
     }
 
     /// <summary>
-    /// Resolves a configuration that creates its own execution instance.
+    /// Resolves a configuration that creates its own execution node.
     /// </summary>
     /// <remarks>
     /// Convenience over
-    /// <see cref="Resolve{TConfiguration, TExecutionInstance}(TConfiguration, Func{TConfiguration, ResolutionScope, TExecutionInstance})"/>,
+    /// <see cref="Resolve{TConfiguration, TExecution}(TConfiguration, Func{TConfiguration, ResolutionScope, TExecution})"/>,
     /// which documents the resolution rules.
     /// </remarks>
-    public TExecutionInstance Resolve<TExecutionInstance>(IExecutionConfiguration<TExecutionInstance> configuration)
-        where TExecutionInstance : class, IExecutionInstance =>
+    public TExecution Resolve<TExecution>(IConfigurationNode<TExecution> configuration)
+        where TExecution : class, IExecutionNode =>
         Resolve(configuration, static (target, scope) => target.CreateExecutionInstance(scope));
 
     /// <summary>
@@ -153,12 +153,12 @@ public sealed class ResolutionScope
     /// </summary>
     /// <remarks>
     /// Use this for optional slots such as a terminator or a refiner.
-    /// <see cref="Resolve{TExecutionInstance}(IExecutionConfiguration{TExecutionInstance})"/> stays strict, so passing a
-    /// possibly-null operator to it is a compile-time error rather than a null instance discovered later.
+    /// <see cref="Resolve{TExecution}(IConfigurationNode{TExecution})"/> stays strict, so passing a
+    /// possibly-null operator to it is a compile-time error rather than a null execution discovered later.
     /// </remarks>
     [return: NotNullIfNotNull(nameof(configuration))]
-    public TExecutionInstance? ResolveOptional<TExecutionInstance>(IExecutionConfiguration<TExecutionInstance>? configuration)
-        where TExecutionInstance : class, IExecutionInstance =>
+    public TExecution? ResolveOptional<TExecution>(IConfigurationNode<TExecution>? configuration)
+        where TExecution : class, IExecutionNode =>
         configuration is null ? null : Resolve(configuration);
 
     /// <summary>
@@ -171,7 +171,7 @@ public sealed class ResolutionScope
     /// scope, the first decoration declared binds tightest. Its successful-operation callback therefore runs first,
     /// which lets a trace install the clocks it reads before installing itself. Entry work runs in the opposite order.
     /// </remarks>
-    private ImmutableArray<Decoration> Chain(IExecutionConfiguration configuration)
+    private ImmutableArray<Decoration> Chain(IConfigurationNode configuration)
     {
         var gathered = new List<(Decoration Decoration, int Depth)>();
         for (var scope = this; scope is not null; scope = scope.parent)
@@ -194,38 +194,38 @@ public sealed class ResolutionScope
     }
 
     /// <summary>
-    /// Builds the instance by folding the applicable decorations over the configuration, innermost first.
+    /// Builds the execution by folding the applicable decorations over the configuration, innermost first.
     /// </summary>
     /// <remarks>
     /// A decoration produces a configuration, and that wrapper resolves what it wraps through this scope. Each link is
-    /// therefore published as under construction while the chain is built, so the wrapper receives the instance already
+    /// therefore published as under construction while the chain is built, so the wrapper receives the execution already
     /// created for its child instead of rebuilding the chain from the start.
     /// </remarks>
-    private TExecutionInstance Build<TConfiguration, TExecutionInstance>(TConfiguration configuration, Func<TConfiguration, ResolutionScope, TExecutionInstance> create)
-        where TConfiguration : class, IExecutionConfiguration
-        where TExecutionInstance : class, IExecutionInstance
+    private TExecution Build<TConfiguration, TExecution>(TConfiguration configuration, Func<TConfiguration, ResolutionScope, TExecution> create)
+        where TConfiguration : class, IConfigurationNode
+        where TExecution : class, IExecutionNode
     {
         var chain = Chain(configuration);
         if (chain.IsEmpty)
             return create(configuration, this);
 
-        var links = new List<IExecutionConfiguration>(chain.Length + 1);
+        var links = new List<IConfigurationNode>(chain.Length + 1);
         try
         {
             var current = configuration;
-            var instance = create(configuration, this);
-            underConstruction.Add(current, instance);
+            var execution = create(configuration, this);
+            underConstruction.Add(current, execution);
             links.Add(current);
 
             foreach (var decoration in chain)
             {
                 current = RequireStandIn(configuration, decoration.Apply(current));
-                instance = create(current, this);
-                underConstruction.Add(current, instance);
+                execution = create(current, this);
+                underConstruction.Add(current, execution);
                 links.Add(current);
             }
 
-            return instance;
+            return execution;
         }
         finally
         {
@@ -238,8 +238,8 @@ public sealed class ResolutionScope
     /// Returns a decoration's result as the type the caller creates from, or explains why it cannot stand in for the
     /// configuration it decorates.
     /// </summary>
-    private static TConfiguration RequireStandIn<TConfiguration>(TConfiguration configuration, IExecutionConfiguration decorated)
-        where TConfiguration : class, IExecutionConfiguration
+    private static TConfiguration RequireStandIn<TConfiguration>(TConfiguration configuration, IConfigurationNode decorated)
+        where TConfiguration : class, IConfigurationNode
     {
         if (decorated is not TConfiguration typed)
         {
@@ -251,17 +251,17 @@ public sealed class ResolutionScope
     }
 
     /// <summary>
-    /// Returns an instance already held here as the type the caller asked for, or explains why it is not that type.
+    /// Returns an execution already held here as the type the caller asked for, or explains why it is not that type.
     /// </summary>
-    /// <remarks>A scope serves one run, so finding an instance of another type here means it was built for a
+    /// <remarks>A scope serves one run, so finding an execution of another type here means it was built for a
     /// different search space or problem.</remarks>
-    private static TExecutionInstance RequireInstanceOf<TExecutionInstance>(IExecutionConfiguration configuration, IExecutionInstance instance)
-        where TExecutionInstance : class, IExecutionInstance
+    private static TExecution RequireExecutionOf<TExecution>(IConfigurationNode configuration, IExecutionNode execution)
+        where TExecution : class, IExecutionNode
     {
-        if (instance is not TExecutionInstance cached)
+        if (execution is not TExecution cached)
         {
             throw new InvalidOperationException(
-                $"This scope already holds a {ExecutionSignature.Name(instance.GetType())} for {ExecutionSignature.Name(configuration.GetType())}, which is not a {ExecutionSignature.Name(typeof(TExecutionInstance))}. " +
+                $"This scope already holds a {ExecutionSignature.Name(execution.GetType())} for {ExecutionSignature.Name(configuration.GetType())}, which is not a {ExecutionSignature.Name(typeof(TExecution))}. " +
                 "A scope serves one run, so resolve over a second search space or problem in its own scope.");
         }
 
@@ -306,7 +306,7 @@ public sealed class ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchS
 public sealed class ResolutionScopeBuilder
 {
     private readonly ResolutionScope? parent;
-    private readonly Dictionary<IExecutionConfiguration, List<Decoration>> decorations = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IConfigurationNode, List<Decoration>> decorations = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<IExecutionModule> installedModules = new(ReferenceEqualityComparer.Instance);
     private DecorationOrigin origin = DecorationOrigin.Configuration;
     private int declared;
@@ -325,7 +325,7 @@ public sealed class ResolutionScopeBuilder
     /// decoration twice stacks it twice.
     /// </remarks>
     public ResolutionScopeBuilder Decorate<TConfiguration>(TConfiguration configuration, Func<TConfiguration, TConfiguration> decorate)
-        where TConfiguration : class, IExecutionConfiguration
+        where TConfiguration : class, IConfigurationNode
     {
         if (!decorations.TryGetValue(configuration, out var declaredHere))
         {
@@ -365,7 +365,7 @@ public sealed class ResolutionScopeBuilder
 
     internal ResolutionScope Build()
     {
-        var frozen = ImmutableDictionary.CreateBuilder<IExecutionConfiguration, ImmutableArray<Decoration>>(ReferenceEqualityComparer.Instance);
+        var frozen = ImmutableDictionary.CreateBuilder<IConfigurationNode, ImmutableArray<Decoration>>(ReferenceEqualityComparer.Instance);
         foreach (var (configuration, declaredHere) in decorations)
             frozen.Add(configuration, [.. declaredHere]);
 
@@ -391,21 +391,21 @@ public enum DecorationOrigin
 internal abstract class Decoration
 {
     /// <summary>Gets the empty declaration set, shared by every scope that declares nothing.</summary>
-    internal static ImmutableDictionary<IExecutionConfiguration, ImmutableArray<Decoration>> None { get; } =
-        ImmutableDictionary.Create<IExecutionConfiguration, ImmutableArray<Decoration>>(ReferenceEqualityComparer.Instance);
+    internal static ImmutableDictionary<IConfigurationNode, ImmutableArray<Decoration>> None { get; } =
+        ImmutableDictionary.Create<IConfigurationNode, ImmutableArray<Decoration>>(ReferenceEqualityComparer.Instance);
 
     public required DecorationOrigin Origin { get; init; }
 
     /// <summary>Gets the position among the decorations declared by one builder, counted across all configurations.</summary>
     public required int Sequence { get; init; }
 
-    public abstract IExecutionConfiguration Apply(IExecutionConfiguration current);
+    public abstract IConfigurationNode Apply(IConfigurationNode current);
 }
 
 internal sealed class Decoration<TConfiguration>(Func<TConfiguration, TConfiguration> decorate) : Decoration
-    where TConfiguration : class, IExecutionConfiguration
+    where TConfiguration : class, IConfigurationNode
 {
-    public override IExecutionConfiguration Apply(IExecutionConfiguration current)
+    public override IConfigurationNode Apply(IConfigurationNode current)
     {
         if (current is not TConfiguration typed)
         {

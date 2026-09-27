@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 /// <remarks>
-/// Derive directly from this base when the interceptor owns child execution instances or needs direct control over its execution structure.
+/// Derive directly from this base when the interceptor owns child execution nodes or needs direct control over its execution structure.
 /// Use <see cref="StatelessInterceptor{TCandidate,TSearchSpace,TProblem,TSearchState}"/> when no mutable execution data is needed.
 /// Use <see cref="StatefulInterceptor{TCandidate,TSearchSpace,TProblem,TSearchState,TState}"/> when only ordinary execution data is needed.
 /// </remarks>
@@ -17,7 +17,7 @@ public abstract record Interceptor<TCandidate, TSearchSpace, TProblem, TSearchSt
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope);
+    public abstract IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope);
 
     /// <summary>An interceptor returns the search state, so that one must match exactly rather than convert.</summary>
     public bool Fits(ExecutionSignature execution) =>
@@ -25,7 +25,7 @@ public abstract record Interceptor<TCandidate, TSearchSpace, TProblem, TSearchSt
         && execution.Problem.IsAssignableTo(typeof(TProblem))
         && execution.SearchState == typeof(TSearchState);
 
-    IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> IInterceptor<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+    IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> IInterceptor<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
     {
         if (!Fits(ExecutionSignature.For<TRunSearchSpace, TRunProblem, TRunSearchState>()))
         {
@@ -35,7 +35,7 @@ public abstract record Interceptor<TCandidate, TSearchSpace, TProblem, TSearchSt
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem), typeof(TRunSearchState)));
         }
 
-        return (IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>)CreateExecutionInstance(scope);
+        return (IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>)CreateExecutionInstance(scope);
     }
 }
 
@@ -48,8 +48,8 @@ public abstract record Interceptor<TCandidate, TSearchState>
     : Interceptor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
     where TSearchState : class, ISearchState;
 
-public abstract class InterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+public abstract class InterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -57,23 +57,23 @@ public abstract class InterceptorInstance<TCandidate, TSearchSpace, TProblem, TS
     public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-public abstract class InterceptorInstance<TCandidate, TSearchSpace, TSearchState>
-    : IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
+public abstract class InterceptorExecution<TCandidate, TSearchSpace, TSearchState>
+    : IInterceptorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    TSearchState IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>.Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
+    TSearchState IInterceptorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>.Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
         Transform(currentState, previousState, random, searchSpace);
 }
 
-public abstract class InterceptorInstance<TCandidate, TSearchState>
-    : IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
+public abstract class InterceptorExecution<TCandidate, TSearchState>
+    : IInterceptorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
     where TSearchState : class, ISearchState
 {
     public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random);
 
-    TSearchState IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>.Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+    TSearchState IInterceptorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>.Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         Transform(currentState, previousState, random);
 }

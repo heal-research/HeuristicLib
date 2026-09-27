@@ -24,11 +24,11 @@ public sealed record DurationMeasuringEvaluator<TCandidate>
         TimeProvider = timeProvider;
     }
 
-    protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childEvaluator, Duration, TimeProvider);
+    protected override IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, Duration, TimeProvider);
 
-    private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
+    private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(childEvaluator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

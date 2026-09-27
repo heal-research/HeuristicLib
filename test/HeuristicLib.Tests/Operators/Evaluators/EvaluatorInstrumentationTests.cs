@@ -13,11 +13,11 @@ public class EvaluatorInstrumentationTests
         var evaluator = CreateEvaluator().CountCalls(counter);
         evaluator.Counter.ShouldBeSameAs(counter);
         evaluator.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
-        instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
     }
@@ -27,11 +27,11 @@ public class EvaluatorInstrumentationTests
     {
         var counter = new CountAccumulator();
         var evaluator = CreateEvaluator().CountCandidates(counter);
-        var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
-        instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(4);
     }
@@ -44,11 +44,11 @@ public class EvaluatorInstrumentationTests
         var evaluator = CreateEvaluator().MeasureDuration(duration, timeProvider);
         evaluator.Duration.ShouldBeSameAs(duration);
         evaluator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
-        instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }

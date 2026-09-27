@@ -23,7 +23,7 @@ public record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override PipelineAlgorithmInstance<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope) =>
+    public override PipelineAlgorithmExecution<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope) =>
         new(scope, Algorithms);
 }
 
@@ -57,8 +57,8 @@ public static class PipelineAlgorithmExtensions
     }
 }
 
-public class PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+public class PipelineAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
@@ -67,7 +67,7 @@ public class PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TPr
     private readonly ResolutionScope scope;
     protected readonly ImmutableArray<TAlgorithm> Algorithms;
 
-    public PipelineAlgorithmInstance(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms)
+    public PipelineAlgorithmExecution(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms)
     {
         this.scope = scope;
         Algorithms = algorithms.ToImmutableArray();
@@ -82,9 +82,9 @@ public class PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TPr
             ct.ThrowIfCancellationRequested();
             var algRng = random.Fork(index);
             var childScope = scope.CreateChildScope();
-            var algorithmInstance = childScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+            var algorithmExecution = childScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 
-            await foreach (var newState in algorithmInstance.RunStreamingAsync(problem, algRng, state, ct))
+            await foreach (var newState in algorithmExecution.RunStreamingAsync(problem, algRng, state, ct))
             {
                 state = newState;
                 yield return newState;

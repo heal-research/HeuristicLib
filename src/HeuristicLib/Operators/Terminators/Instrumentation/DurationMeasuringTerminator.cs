@@ -23,11 +23,11 @@ public sealed record DurationMeasuringTerminator<TCandidate>
         TimeProvider = timeProvider;
     }
 
-    protected override ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childTerminator) =>
-        new Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminator, Duration, TimeProvider);
+    protected override ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childTerminator) =>
+        new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminator, Duration, TimeProvider);
 
-    private sealed class Instance<TSearchSpace, TProblem, TSearchState>(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminator)
+    private sealed class Execution<TSearchSpace, TProblem, TSearchState>(ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingTerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState

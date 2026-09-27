@@ -33,9 +33,9 @@ public class RoleBindingTests
     [MemberData(nameof(Roles))]
     public void ABoundOperator_ResolvesOverItsOwnSearchSpaceAndProblem(string role)
     {
-        var (instance, reason) = TryResolve(role, typeof(TestFunctionProblem));
+        var (execution, reason) = TryResolve(role, typeof(TestFunctionProblem));
 
-        instance.ShouldNotBeNull();
+        execution.ShouldNotBeNull();
         reason.ShouldBeNull();
     }
 
@@ -43,9 +43,9 @@ public class RoleBindingTests
     [MemberData(nameof(Roles))]
     public void ABoundOperator_IsReportedOverAWiderProblem(string role)
     {
-        var (instance, reason) = TryResolve(role, typeof(IProblem<RealVector, BoundedRealVectorSearchSpace>));
+        var (execution, reason) = TryResolve(role, typeof(IProblem<RealVector, BoundedRealVectorSearchSpace>));
 
-        instance.ShouldBeNull();
+        execution.ShouldBeNull();
         reason.ShouldNotBeNull();
         reason.ShouldContain(nameof(TestFunctionProblem));
     }
@@ -65,14 +65,14 @@ public class RoleBindingTests
         var throughUntyped = TryResolve(role, typeof(IProblem<RealVector, BoundedRealVectorSearchSpace>));
         var throughTyped = TryResolve(role, typeof(IProblem<RealVector, BoundedRealVectorSearchSpace>), viaTypedScope: true);
 
-        throughTyped.Instance.ShouldBe(throughUntyped.Instance);
+        throughTyped.Execution.ShouldBe(throughUntyped.Execution);
         throughTyped.Reason.ShouldBe(throughUntyped.Reason);
 
-        TryResolve(role, typeof(TestFunctionProblem), viaTypedScope: true).Instance.ShouldNotBeNull();
+        TryResolve(role, typeof(TestFunctionProblem), viaTypedScope: true).Execution.ShouldNotBeNull();
     }
 
     /// <summary>Calls the role's own <c>TryResolve</c> reflectively, so the test is the same for all nine.</summary>
-    private static (object? Instance, string? Reason) TryResolve(string role, Type problem, bool viaTypedScope = false)
+    private static (object? Execution, string? Reason) TryResolve(string role, Type problem, bool viaTypedScope = false)
     {
         var extensions = typeof(IMutator<>).Assembly
             .GetType($"HEAL.HeuristicLib.Operators.{role}ResolutionExtensions")!;

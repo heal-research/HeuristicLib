@@ -293,11 +293,11 @@ public class CreatorConfigurationEqualityTests
         {
         }
 
-        protected override ICreatorInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICreatorInstance<int, TRunSearchSpace, TRunProblem>> childCreators) =>
-            new Instance<TRunSearchSpace, TRunProblem>(childCreators);
+        protected override ICreatorExecution<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICreatorExecution<int, TRunSearchSpace, TRunProblem>> childCreators) =>
+            new Execution<TRunSearchSpace, TRunProblem>(childCreators);
 
-        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ICreatorInstance<int, TSearchSpace, TProblem>> childCreators)
-            : MultiCreatorInstance<int, TSearchSpace, TProblem>(childCreators)
+        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICreatorExecution<int, TSearchSpace, TProblem>> childCreators)
+            : MultiCreatorExecution<int, TSearchSpace, TProblem>(childCreators)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

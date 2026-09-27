@@ -22,11 +22,11 @@ public sealed record DurationMeasuringMutator<TCandidate> : WrappingMutator<TCan
         TimeProvider = timeProvider;
     }
 
-    protected override IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childMutator) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childMutator, Duration, TimeProvider);
+    protected override IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childMutator) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childMutator, Duration, TimeProvider);
 
-    private sealed class Instance<TSearchSpace, TProblem>(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem>(childMutator)
+    private sealed class Execution<TSearchSpace, TProblem>(IMutatorExecution<TCandidate, TSearchSpace, TProblem> childMutator, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingMutatorExecution<TCandidate, TSearchSpace, TProblem>(childMutator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

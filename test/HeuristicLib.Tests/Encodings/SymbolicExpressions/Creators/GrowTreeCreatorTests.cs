@@ -46,7 +46,7 @@ public sealed class GrowTreeCreatorTests
     }
 
     [Fact]
-    public void CreatorInstance_UsesTheSearchSpaceSuppliedByTheAlgorithmContract()
+    public void CreatorExecution_UsesTheSearchSpaceSuppliedByTheAlgorithmContract()
     {
         var searchSpace = new ExpressionTreeSearchSpace(15, 4, [Symbols.Addition], ["x0"]);
 
@@ -56,7 +56,7 @@ public sealed class GrowTreeCreatorTests
     }
 
     [Fact]
-    public void CreatorInstance_RestrictsCreationToTheConfiguredMaximumDepth()
+    public void CreatorExecution_RestrictsCreationToTheConfiguredMaximumDepth()
     {
         var searchSpace = new ExpressionTreeSearchSpace(31, 5, [Symbols.Addition], ["x0"]);
         var creator = new GrowTreeCreator { MaximumDepth = 2 };
@@ -78,7 +78,7 @@ public sealed class GrowTreeCreatorTests
     }
 
     [Fact]
-    public void CreatorInstance_RejectsMaximumDepthBeyondTheSearchSpaceLimit()
+    public void CreatorExecution_RejectsMaximumDepthBeyondTheSearchSpaceLimit()
     {
         var searchSpace = new ExpressionTreeSearchSpace(
             maximumLength: 4,

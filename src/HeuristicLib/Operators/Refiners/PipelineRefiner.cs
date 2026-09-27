@@ -13,11 +13,11 @@ public sealed record PipelineRefiner<TCandidate>
     {
     }
 
-    protected override IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem>> childRefiners) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childRefiners);
+    protected override IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> childRefiners) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childRefiners);
 
-    private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners)
-        : MultiRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiners)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> childRefiners)
+        : MultiRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiners)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

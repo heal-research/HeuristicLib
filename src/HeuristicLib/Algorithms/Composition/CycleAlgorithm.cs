@@ -31,7 +31,7 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override CycleAlgorithmInstance<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope) =>
+    public override CycleAlgorithmExecution<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope) =>
         new(scope, Algorithms, MaximumCycles, NewExecutionInstancesPerCycle);
 }
 
@@ -73,8 +73,8 @@ public static class CycleAlgorithmExtensions
     }
 }
 
-public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+public class CycleAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
@@ -85,16 +85,16 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
     protected readonly int? MaximumCycles;
     protected readonly bool NewExecutionInstancesPerCycle;
 
-    private readonly Dictionary<IAlgorithm<TCandidate>, IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithmInstances;
+    private readonly Dictionary<IAlgorithm<TCandidate>, IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithmExecutions;
 
-    public CycleAlgorithmInstance(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle)
+    public CycleAlgorithmExecution(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle)
     {
         this.scope = scope;
         Algorithms = algorithms.ToImmutableArray();
         MaximumCycles = maximumCycles;
         NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle;
 
-        algorithmInstances = new(capacity: NewExecutionInstancesPerCycle ? 0 : Algorithms.Length, ReferenceEqualityComparer.Instance);
+        algorithmExecutions = new(capacity: NewExecutionInstancesPerCycle ? 0 : Algorithms.Length, ReferenceEqualityComparer.Instance);
     }
 
     public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
@@ -114,9 +114,9 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
             {
                 ct.ThrowIfCancellationRequested();
                 var algorithmRng = cycleRng.Fork(algorithmIndex);
-                var algorithmInstance = ResolveAlgorithmInstance(algorithm);
+                var algorithmExecution = ResolveAlgorithmExecution(algorithm);
 
-                await foreach (var newState in algorithmInstance.RunStreamingAsync(problem, algorithmRng, state, ct))
+                await foreach (var newState in algorithmExecution.RunStreamingAsync(problem, algorithmRng, state, ct))
                 {
                     producedState = true;
                     state = newState;
@@ -131,23 +131,23 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
         }
     }
 
-    private IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> ResolveAlgorithmInstance(TAlgorithm algorithm)
+    private IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> ResolveAlgorithmExecution(TAlgorithm algorithm)
     {
         if (NewExecutionInstancesPerCycle)
         {
-            return CreateChildAlgorithmInstance(algorithm);
+            return CreateChildAlgorithmExecution(algorithm);
         }
 
-        if (algorithmInstances.TryGetValue(algorithm, out var existingInstance))
+        if (algorithmExecutions.TryGetValue(algorithm, out var existingExecution))
         {
-            return existingInstance;
+            return existingExecution;
         }
 
-        var newInstance = CreateChildAlgorithmInstance(algorithm);
-        algorithmInstances[algorithm] = newInstance;
-        return newInstance;
+        var newExecution = CreateChildAlgorithmExecution(algorithm);
+        algorithmExecutions[algorithm] = newExecution;
+        return newExecution;
     }
 
-    private IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateChildAlgorithmInstance(TAlgorithm algorithm) =>
+    private IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> CreateChildAlgorithmExecution(TAlgorithm algorithm) =>
         scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 }

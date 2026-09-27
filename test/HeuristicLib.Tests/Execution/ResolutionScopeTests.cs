@@ -10,22 +10,22 @@ public class ResolutionScopeTests
 
     /// <summary>Cell A3. Nothing is decorated, so the child reuses what the parent already built.</summary>
     [Fact]
-    public void UndecoratedChild_ReusesTheInstanceItsParentAlreadyBuilt()
+    public void UndecoratedChild_ReusesTheExecutionItsParentAlreadyBuilt()
     {
         var parent = ResolutionScope.Create();
         var configuration = new CountingConfiguration("instance");
-        var parentInstance = parent.Resolve(configuration);
+        var parentExecution = parent.Resolve(configuration);
 
-        var childInstance = parent.CreateChildScope().Resolve(configuration);
+        var childExecution = parent.CreateChildScope().Resolve(configuration);
 
-        childInstance.ShouldBeSameAs(parentInstance);
+        childExecution.ShouldBeSameAs(parentExecution);
         configuration.CreateCount.ShouldBe(1);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void SiblingScopes_BuildSeparateInstancesWhenNoAncestorHasResolvedTheConfiguration(bool decorateInParent)
+    public void SiblingScopes_BuildSeparateExecutionsWhenNoAncestorHasResolvedTheConfiguration(bool decorateInParent)
     {
         var configuration = new CountingConfiguration("instance");
         var parent = decorateInParent
@@ -42,40 +42,40 @@ public class ResolutionScopeTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void SiblingScopes_ReuseAnInstanceAlreadyBuiltInAnAncestor(bool decorateInAncestor)
+    public void SiblingScopes_ReuseAnExecutionAlreadyBuiltInAnAncestor(bool decorateInAncestor)
     {
         var configuration = new CountingConfiguration("instance");
         var ancestor = decorateInAncestor
             ? ResolutionScope.Create(builder => Wrap(builder, configuration, "ancestor"))
             : ResolutionScope.Create();
-        var ancestorInstance = ancestor.Resolve(configuration);
+        var ancestorExecution = ancestor.Resolve(configuration);
         var parent = ancestor.CreateChildScope();
 
         var first = parent.CreateChildScope().Resolve(configuration);
         var second = parent.CreateChildScope().Resolve(configuration);
 
-        first.ShouldBeSameAs(ancestorInstance);
-        second.ShouldBeSameAs(ancestorInstance);
+        first.ShouldBeSameAs(ancestorExecution);
+        second.ShouldBeSameAs(ancestorExecution);
         configuration.CreateCount.ShouldBe(1);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void AParent_NeverSeesAnInstanceItsChildBuilt(bool decorateInParent)
+    public void AParent_NeverSeesAnExecutionItsChildBuilt(bool decorateInParent)
     {
         var original = new CountingConfiguration("original");
         var parent = decorateInParent
             ? ResolutionScope.Create(builder => Wrap(builder, original, "parent"))
             : ResolutionScope.Create();
         var child = parent.CreateChildScope();
-        var childInstance = child.Resolve(original);
+        var childExecution = child.Resolve(original);
 
-        var parentInstance = parent.Resolve(original);
+        var parentExecution = parent.Resolve(original);
 
-        parentInstance.ShouldNotBeSameAs(childInstance);
-        child.Resolve(original).ShouldBeSameAs(childInstance);
-        parent.Resolve(original).ShouldBeSameAs(parentInstance);
+        parentExecution.ShouldNotBeSameAs(childExecution);
+        child.Resolve(original).ShouldBeSameAs(childExecution);
+        parent.Resolve(original).ShouldBeSameAs(parentExecution);
         original.CreateCount.ShouldBe(2);
     }
 
@@ -86,29 +86,29 @@ public class ResolutionScopeTests
     /// built is exactly what the child would build and is reused rather than duplicated.
     /// </summary>
     [Fact]
-    public void ChildAddingNoDecoration_ReusesTheParentsDecoratedInstance()
+    public void ChildAddingNoDecoration_ReusesTheParentsDecoratedExecution()
     {
         var original = new CountingConfiguration("original");
         var parent = ResolutionScope.Create(builder => Wrap(builder, original, "parent"));
-        var parentInstance = parent.Resolve(original);
+        var parentExecution = parent.Resolve(original);
 
-        var childInstance = parent.CreateChildScope().Resolve(original);
+        var childExecution = parent.CreateChildScope().Resolve(original);
 
-        childInstance.ShouldBeSameAs(parentInstance);
-        childInstance.Name.ShouldBe("parent(original)");
+        childExecution.ShouldBeSameAs(parentExecution);
+        childExecution.Name.ShouldBe("parent(original)");
         original.CreateCount.ShouldBe(1);
     }
 
     [Fact]
-    public void ChildDecoratingAnotherConfiguration_ReusesTheParentsInstanceForTheOriginal()
+    public void ChildDecoratingAnotherConfiguration_ReusesTheParentsExecutionForTheOriginal()
     {
         var original = new CountingConfiguration("original");
         var other = new CountingConfiguration("other");
         var parent = ResolutionScope.Create(builder => Wrap(builder, original, "parent"));
-        var parentInstance = parent.Resolve(original);
+        var parentExecution = parent.Resolve(original);
         var child = parent.CreateChildScope(builder => Wrap(builder, other, "child"));
 
-        child.Resolve(original).ShouldBeSameAs(parentInstance);
+        child.Resolve(original).ShouldBeSameAs(parentExecution);
         child.Resolve(other).Name.ShouldBe("child(other)");
         original.CreateCount.ShouldBe(1);
         other.CreateCount.ShouldBe(1);
@@ -119,22 +119,22 @@ public class ResolutionScopeTests
     /// instance — that one is missing a wrapper the child requires.
     /// </summary>
     [Fact]
-    public void ChildAddingItsOwnDecoration_BuildsItsOwnInstance()
+    public void ChildAddingItsOwnDecoration_BuildsItsOwnExecution()
     {
         var original = new CountingConfiguration("original");
         var parent = ResolutionScope.Create(builder => Wrap(builder, original, "parent"));
-        var parentInstance = parent.Resolve(original);
+        var parentExecution = parent.Resolve(original);
 
         var child = parent.CreateChildScope(builder => Wrap(builder, original, "child"));
 
-        var childInstance = child.Resolve(original);
-        childInstance.ShouldNotBeSameAs(parentInstance);
-        childInstance.Name.ShouldBe("parent(child(original))");
+        var childExecution = child.Resolve(original);
+        childExecution.ShouldNotBeSameAs(parentExecution);
+        childExecution.Name.ShouldBe("parent(child(original))");
     }
 
     /// <summary>Resolving twice in one scope returns the same instance rather than rebuilding the chain.</summary>
     [Fact]
-    public void ResolvingTwiceInOneScope_ReturnsTheSameDecoratedInstance()
+    public void ResolvingTwiceInOneScope_ReturnsTheSameDecoratedExecution()
     {
         var original = new CountingConfiguration("original");
         var scope = ResolutionScope.Create(builder => Wrap(builder, original, "only"));
@@ -241,7 +241,7 @@ public class ResolutionScopeTests
         var original = new CountingConfiguration("original");
         var scope = ResolutionScope.Create(builder =>
         {
-            builder.Install(new DecoratingModule<INamedInstance>(original, current => new LabelledConfiguration("module", current)));
+            builder.Install(new DecoratingModule<INamedExecution>(original, current => new LabelledConfiguration("module", current)));
             Wrap(builder, original, "configuration");
         });
 
@@ -256,7 +256,7 @@ public class ResolutionScopeTests
         var root = ResolutionScope.Create(builder => Wrap(builder, original, "configuration"));
 
         var child = root.CreateChildScope(builder =>
-            builder.Install(new DecoratingModule<INamedInstance>(original, current => new LabelledConfiguration("module", current))));
+            builder.Install(new DecoratingModule<INamedExecution>(original, current => new LabelledConfiguration("module", current))));
 
         child.Resolve(original).Name.ShouldBe("module(configuration(original))");
     }
@@ -267,8 +267,8 @@ public class ResolutionScopeTests
     {
         var original = new CountingConfiguration("original");
         var scope = ResolutionScope.Create(builder => builder
-            .Install(new DecoratingModule<INamedInstance>(original, current => new LabelledConfiguration("first", current)))
-            .Install(new DecoratingModule<INamedInstance>(original, current => new LabelledConfiguration("second", current))));
+            .Install(new DecoratingModule<INamedExecution>(original, current => new LabelledConfiguration("first", current)))
+            .Install(new DecoratingModule<INamedExecution>(original, current => new LabelledConfiguration("second", current))));
 
         scope.Resolve(original).Name.ShouldBe("second(first(original))");
     }
@@ -280,7 +280,7 @@ public class ResolutionScopeTests
     /// the link below it rather than starting the chain again, so the raw configuration is created exactly once.
     /// </summary>
     [Fact]
-    public void BuildingAChain_CreatesTheUndecoratedInstanceExactlyOnce()
+    public void BuildingAChain_CreatesTheUndecoratedExecutionExactlyOnce()
     {
         var original = new CountingConfiguration("original");
         var scope = ResolutionScope.Create(builder =>
@@ -352,17 +352,17 @@ public class ResolutionScopeTests
     /// different search space or problem. That is reported rather than cast.
     /// </summary>
     [Fact]
-    public void AnInstanceHeldAsAnotherType_IsReportedRatherThanCast()
+    public void AnExecutionHeldAsAnotherType_IsReportedRatherThanCast()
     {
         var configuration = new RunTypedConfiguration("instance");
         var scope = ResolutionScope.Create();
         ResolveRunTyped(scope, configuration);
 
         var exception = Should.Throw<InvalidOperationException>(() =>
-            scope.CreateChildScope().Resolve(configuration, static (_, _) => new OtherInstance()));
+            scope.CreateChildScope().Resolve(configuration, static (_, _) => new OtherExecution()));
 
         exception.Message.ShouldBe(
-            "This scope already holds a NamedInstance for RunTypedConfiguration, which is not a OtherInstance. " +
+            "This scope already holds a NamedExecution for RunTypedConfiguration, which is not a OtherExecution. " +
             "A scope serves one run, so resolve over a second search space or problem in its own scope.");
     }
 
@@ -375,7 +375,7 @@ public class ResolutionScopeTests
     {
         var original = new RunTypedConfiguration("original");
         var scope = ResolutionScope.Create(builder =>
-            builder.Decorate<IExecutionConfiguration>(original, _ => new CountingConfiguration("foreign")));
+            builder.Decorate<IConfigurationNode>(original, _ => new CountingConfiguration("foreign")));
 
         var exception = Should.Throw<InvalidOperationException>(() => ResolveRunTyped(scope, original));
 
@@ -385,70 +385,70 @@ public class ResolutionScopeTests
 
     // ---------- Test doubles ----------
 
-    private static void Wrap(ResolutionScopeBuilder builder, IExecutionConfiguration<INamedInstance> anchor, string label) =>
+    private static void Wrap(ResolutionScopeBuilder builder, IConfigurationNode<INamedExecution> anchor, string label) =>
         builder.Decorate(anchor, current => new LabelledConfiguration(label, current));
 
-    private interface INamedInstance : IExecutionInstance
+    private interface INamedExecution : IExecutionNode
     {
         string Name { get; }
     }
 
-    private sealed class NamedInstance(string name) : INamedInstance
+    private sealed class NamedExecution(string name) : INamedExecution
     {
         public string Name { get; } = name;
     }
 
-    private sealed class CountingConfiguration(string name) : IExecutionConfiguration<INamedInstance>
+    private sealed class CountingConfiguration(string name) : IConfigurationNode<INamedExecution>
     {
         public int CreateCount { get; private set; }
 
-        public INamedInstance CreateExecutionInstance(ResolutionScope scope)
+        public INamedExecution CreateExecutionInstance(ResolutionScope scope)
         {
             CreateCount++;
-            return new NamedInstance(name);
+            return new NamedExecution(name);
         }
     }
 
-    private sealed class LabelledConfiguration(string label, IExecutionConfiguration<INamedInstance> inner)
-        : IExecutionConfiguration<INamedInstance>
+    private sealed class LabelledConfiguration(string label, IConfigurationNode<INamedExecution> inner)
+        : IConfigurationNode<INamedExecution>
     {
-        public INamedInstance CreateExecutionInstance(ResolutionScope scope) =>
-            new NamedInstance($"{label}({scope.Resolve(inner).Name})");
+        public INamedExecution CreateExecutionInstance(ResolutionScope scope) =>
+            new NamedExecution($"{label}({scope.Resolve(inner).Name})");
     }
 
-    private sealed class OtherInstance : IExecutionInstance;
+    private sealed class OtherExecution : IExecutionNode;
 
     /// <summary>Stands in for a role configuration: configuration, but not able to create itself without its caller.</summary>
-    private interface IRunTypedConfiguration : IExecutionConfiguration
+    private interface IRunTypedConfiguration : IConfigurationNode
     {
-        INamedInstance Create(ResolutionScope scope);
+        INamedExecution Create(ResolutionScope scope);
     }
 
-    private static INamedInstance ResolveRunTyped(ResolutionScope scope, IRunTypedConfiguration configuration) =>
+    private static INamedExecution ResolveRunTyped(ResolutionScope scope, IRunTypedConfiguration configuration) =>
         scope.Resolve(configuration, static (target, targetScope) => target.Create(targetScope));
 
     private sealed class RunTypedConfiguration(string name) : IRunTypedConfiguration
     {
         public int CreateCount { get; private set; }
 
-        public INamedInstance Create(ResolutionScope scope)
+        public INamedExecution Create(ResolutionScope scope)
         {
             CreateCount++;
-            return new NamedInstance(name);
+            return new NamedExecution(name);
         }
     }
 
     private sealed class RunTypedWrapper(string label, IRunTypedConfiguration inner) : IRunTypedConfiguration
     {
-        public INamedInstance Create(ResolutionScope scope) =>
-            new NamedInstance($"{label}({ResolveRunTyped(scope, inner).Name})");
+        public INamedExecution Create(ResolutionScope scope) =>
+            new NamedExecution($"{label}({ResolveRunTyped(scope, inner).Name})");
     }
 
-    private sealed class DecoratingModule<TInstance>(
-        IExecutionConfiguration<TInstance> anchor,
-        Func<IExecutionConfiguration<TInstance>, IExecutionConfiguration<TInstance>> decorate)
+    private sealed class DecoratingModule<TExecution>(
+        IConfigurationNode<TExecution> anchor,
+        Func<IConfigurationNode<TExecution>, IConfigurationNode<TExecution>> decorate)
         : IExecutionModule
-        where TInstance : class, IExecutionInstance
+        where TExecution : class, IExecutionNode
     {
         public void Install(ResolutionScopeBuilder builder) => builder.Decorate(anchor, decorate);
     }

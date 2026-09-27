@@ -4,11 +4,11 @@ namespace HEAL.HeuristicLib.Execution;
 /// Selects configuration nodes while retaining the configuration type or role used by its predicates.
 /// </summary>
 /// <remarks>
-/// Matching examines the supplied configuration only; it does not traverse a graph, resolve instances or install
+/// Matching examines the supplied configuration only; it does not traverse a graph, resolve executions or install
 /// behavior. Predicates run on each matching query, without caching, and should depend only on configuration data.
 /// </remarks>
 public sealed class NodeSelector<TConfiguration>
-    where TConfiguration : class, IExecutionConfiguration
+    where TConfiguration : class, IConfigurationNode
 {
     private readonly Func<TConfiguration, bool> predicate;
 
@@ -21,7 +21,7 @@ public sealed class NodeSelector<TConfiguration>
     /// A configuration outside <typeparamref name="TConfiguration"/> does not match and never reaches the predicate.
     /// Exceptions from a predicate propagate to the caller.
     /// </remarks>
-    public bool Matches(IExecutionConfiguration configuration) =>
+    public bool Matches(IConfigurationNode configuration) =>
         configuration is TConfiguration typed && predicate(typed);
 
     /// <remarks>
@@ -74,7 +74,7 @@ public static class NodeSelector
     /// The reference's static type determines the selector's configuration type.
     /// </remarks>
     public static NodeSelector<TConfiguration> Reference<TConfiguration>(TConfiguration configuration)
-        where TConfiguration : class, IExecutionConfiguration
+        where TConfiguration : class, IConfigurationNode
     {
         return new(candidate => ReferenceEquals(candidate, configuration));
     }
@@ -84,5 +84,5 @@ public static class NodeSelector
     /// implementing that role, including consumer-defined implementations.
     /// </remarks>
     public static NodeSelector<TConfiguration> OfType<TConfiguration>()
-        where TConfiguration : class, IExecutionConfiguration => new(static _ => true);
+        where TConfiguration : class, IConfigurationNode => new(static _ => true);
 }

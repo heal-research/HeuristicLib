@@ -97,15 +97,15 @@ public class RefinerFailureTests
     {
         private readonly Counter counter = new();
 
-        public override IRefinerInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ResolutionScope scope) =>
-            new Instance(counter, SuccessfulBatches);
+        public override IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ResolutionScope scope) =>
+            new Execution(counter, SuccessfulBatches);
 
         private sealed class Counter
         {
             public int Batches;
         }
 
-        private sealed class Instance(Counter counter, int successfulBatches) : IRefinerInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Execution(Counter counter, int successfulBatches) : IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
                 counter.Batches++ < successfulBatches ? candidates : throw new InvalidOperationException("Refinement failed.");

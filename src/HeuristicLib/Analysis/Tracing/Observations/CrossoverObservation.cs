@@ -55,19 +55,19 @@ internal sealed class ObservingCrossover<TCandidate, TSearchSpace, TProblem>(
     public bool Fits(ExecutionSignature execution) =>
         ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(childCrossover);
 
-    public ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return new Instance<TRunSearchSpace, TRunProblem>(observedCrossover, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childCrossover), observe);
+        return new Execution<TRunSearchSpace, TRunProblem>(observedCrossover, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childCrossover), observe);
     }
 
-    private sealed class Instance<TRunSearchSpace, TRunProblem>(
+    private sealed class Execution<TRunSearchSpace, TRunProblem>(
         ICrossover<TCandidate> observedCrossover,
-        ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> childCrossover,
+        ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> childCrossover,
         Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> observe)
-        : ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem>
+        : ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {

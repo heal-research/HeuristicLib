@@ -7,8 +7,8 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 /// <remarks>
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
-/// It must not contain operator or algorithm configurations, execution instances or execution instance resolution facilities.
-/// <see cref="CreateInitialState"/> must return a fresh state object for every execution instance. Calls are not inherently thread safe.
+/// It must not contain operator or algorithm configurations, execution nodes or execution node resolution facilities.
+/// <see cref="CreateInitialState"/> must return a fresh state object for every execution node. Calls are not inherently thread safe.
 /// Use <see cref="Mutator{TCandidate,TSearchSpace,TProblem}"/> when the mutator needs execution graph dependencies.
 /// </remarks>
 public abstract record StatefulMutator<TCandidate, TSearchSpace, TProblem, TState>
@@ -21,11 +21,11 @@ public abstract record StatefulMutator<TCandidate, TSearchSpace, TProblem, TStat
 
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope) =>
-        new Instance(this, CreateInitialState());
+    public sealed override IMutatorExecution<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope) =>
+        new Execution(this, CreateInitialState());
 
-    private sealed class Instance(StatefulMutator<TCandidate, TSearchSpace, TProblem, TState> mutator, TState state)
-        : MutatorInstance<TCandidate, TSearchSpace, TProblem>
+    private sealed class Execution(StatefulMutator<TCandidate, TSearchSpace, TProblem, TState> mutator, TState state)
+        : MutatorExecution<TCandidate, TSearchSpace, TProblem>
     {
         public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             mutator.Mutate(parents, state, random, searchSpace, problem);
@@ -41,11 +41,11 @@ public abstract record StatefulMutator<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override IMutatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ResolutionScope scope) =>
-        new Instance(this, CreateInitialState());
+    public sealed override IMutatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ResolutionScope scope) =>
+        new Execution(this, CreateInitialState());
 
-    private sealed class Instance(StatefulMutator<TCandidate, TSearchSpace, TState> mutator, TState state)
-        : MutatorInstance<TCandidate, TSearchSpace>
+    private sealed class Execution(StatefulMutator<TCandidate, TSearchSpace, TState> mutator, TState state)
+        : MutatorExecution<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
             mutator.Mutate(parents, state, random, searchSpace);
@@ -60,11 +60,11 @@ public abstract record StatefulMutator<TCandidate, TState>
 
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state, IRandomNumberGenerator random);
 
-    public sealed override IMutatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ResolutionScope scope) =>
-        new Instance(this, CreateInitialState());
+    public sealed override IMutatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ResolutionScope scope) =>
+        new Execution(this, CreateInitialState());
 
-    private sealed class Instance(StatefulMutator<TCandidate, TState> mutator, TState state)
-        : MutatorInstance<TCandidate>
+    private sealed class Execution(StatefulMutator<TCandidate, TState> mutator, TState state)
+        : MutatorExecution<TCandidate>
     {
         public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random) =>
             mutator.Mutate(parents, state, random);

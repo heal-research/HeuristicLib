@@ -25,7 +25,7 @@ public abstract record MultiCreator<TCandidate>
     /// Resolves each child over the run's search space and problem and hands them to
     /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
-    public ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -33,16 +33,16 @@ public abstract record MultiCreator<TCandidate>
         return CombineExecutionInstances([.. ChildCreators.Select(child => typed.Resolve(child))]);
     }
 
-    /// <summary>Combines the children's execution instances into this operator's own.</summary>
-    protected abstract ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem>> childCreators)
+    /// <summary>Combines the children's execution nodes into this operator's own.</summary>
+    protected abstract ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> childCreators)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class MultiCreatorInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ICreatorInstance<TCandidate, TSearchSpace, TProblem>> childCreators)
-    : CreatorInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiCreatorExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> childCreators)
+    : CreatorExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<ICreatorInstance<TCandidate, TSearchSpace, TProblem>> ChildCreators { get; } = childCreators;
+    protected ImmutableArray<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> ChildCreators { get; } = childCreators;
 }

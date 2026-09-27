@@ -237,11 +237,11 @@ public class MutatorConfigurationEqualityTests
         {
         }
 
-        protected override IMutatorInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorInstance<int, TRunSearchSpace, TRunProblem>> childMutators) =>
-            new Instance<TRunSearchSpace, TRunProblem>(childMutators);
+        protected override IMutatorExecution<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorExecution<int, TRunSearchSpace, TRunProblem>> childMutators) =>
+            new Execution<TRunSearchSpace, TRunProblem>(childMutators);
 
-        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IMutatorInstance<int, TSearchSpace, TProblem>> childMutators)
-            : MultiMutatorInstance<int, TSearchSpace, TProblem>(childMutators)
+        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<int, TSearchSpace, TProblem>> childMutators)
+            : MultiMutatorExecution<int, TSearchSpace, TProblem>(childMutators)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

@@ -17,16 +17,16 @@ public sealed class RoleContractArityTests
     private static readonly Assembly Main = typeof(IOperator).Assembly;
 
     private static readonly IReadOnlyList<Type> Roles = RolesDerivedFrom(typeof(IOperator));
-    private static readonly IReadOnlyList<Type> RoleInstances = RolesDerivedFrom(typeof(IOperatorInstance));
+    private static readonly IReadOnlyList<Type> RoleExecutions = RolesDerivedFrom(typeof(IOperatorExecution));
 
     public static TheoryData<Type> ConfigurationContracts => [.. Roles];
-    public static TheoryData<Type> ExecutionContracts => [.. RoleInstances];
+    public static TheoryData<Type> ExecutionContracts => [.. RoleExecutions];
 
     [Fact]
     public void EveryRole_DeclaresBothHalves()
     {
         Roles.Count.ShouldBe(9);
-        RoleInstances.Count.ShouldBe(Roles.Count);
+        RoleExecutions.Count.ShouldBe(Roles.Count);
     }
 
     [Theory]
@@ -36,9 +36,9 @@ public sealed class RoleContractArityTests
 
     [Theory]
     [MemberData(nameof(ExecutionContracts))]
-    public void ItsExecutionInstance_StillNamesTheSearchSpaceAndProblem(Type instance)
+    public void ItsExecution_StillNamesTheSearchSpaceAndProblem(Type executionContract)
     {
-        var named = instance.GetGenericArguments().Select(argument => argument.Name).ToArray();
+        var named = executionContract.GetGenericArguments().Select(argument => argument.Name).ToArray();
 
         named.Take(3).ShouldBe(["TCandidate", "TSearchSpace", "TProblem"]);
         named.Skip(3).ShouldBeSubsetOf(["TSearchState"]);

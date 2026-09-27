@@ -21,11 +21,11 @@ public abstract record Mutator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope);
+    public abstract IMutatorExecution<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope);
 
     public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> IMutator<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> IMutator<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -35,7 +35,7 @@ public abstract record Mutator<TCandidate, TSearchSpace, TProblem>
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem>)CreateExecutionInstance(scope);
+        return (IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>)CreateExecutionInstance(scope);
     }
 }
 
@@ -46,29 +46,29 @@ public abstract record Mutator<TCandidate, TSearchSpace>
 public abstract record Mutator<TCandidate>
     : Mutator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
-public abstract class MutatorInstance<TCandidate, TSearchSpace, TProblem>
-    : IMutatorInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class MutatorExecution<TCandidate, TSearchSpace, TProblem>
+    : IMutatorExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-public abstract class MutatorInstance<TCandidate, TSearchSpace>
-    : IMutatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+public abstract class MutatorExecution<TCandidate, TSearchSpace>
+    : IMutatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    IReadOnlyList<TCandidate> IMutatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
+    IReadOnlyList<TCandidate> IMutatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
         Mutate(parents, random, searchSpace);
 }
 
-public abstract class MutatorInstance<TCandidate>
-    : IMutatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+public abstract class MutatorExecution<TCandidate>
+    : IMutatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
     public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random);
 
-    IReadOnlyList<TCandidate> IMutatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+    IReadOnlyList<TCandidate> IMutatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         Mutate(parents, random);
 }

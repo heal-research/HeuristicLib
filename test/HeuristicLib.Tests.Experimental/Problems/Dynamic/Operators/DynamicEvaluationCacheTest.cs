@@ -69,13 +69,13 @@ public class DynamicEvaluationCacheTests
         var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
         var evaluator = new CountingEvaluator();
         var interceptor = new ReevaluationInterceptor<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(evaluator, problem);
-        var instance = ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(interceptor);
+        var execution = ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(interceptor);
         var candidate = new DummyGenotype(1);
         var state = Population.From([EvaluatedCandidate.From(candidate, new ObjectiveVector(99.0))]).ToPopulationState();
         var random = RandomNumberGenerator.Create(1);
 
         problem.UpdateOnce();
-        var result = instance.Transform(state, previousState: null, random, problem.SearchSpace, problem);
+        var result = execution.Transform(state, previousState: null, random, problem.SearchSpace, problem);
 
         evaluator.LastRandom.ShouldBeSameAs(random);
         result.Population.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1.0));
@@ -132,10 +132,10 @@ public class DynamicEvaluationCacheTests
         var inner = new CountingEvaluator();
 
         var cached = inner.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance);
-        var cachedInstance = ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(cached);
+        var cachedExecution = ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(cached);
 
         // Evaluate two distinct keys -> 2 evaluations -> should hit boundary and schedule an epoch change
-        _ = cachedInstance.Evaluate([new DummyGenotype(1), new DummyGenotype(2)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        _ = cachedExecution.Evaluate([new DummyGenotype(1), new DummyGenotype(2)], TestRandoms.NoRandom, problem.SearchSpace, problem);
         inner.Calls.ShouldBe(1);
         problem.Evaluations.ShouldBe(2L);
 
@@ -145,7 +145,7 @@ public class DynamicEvaluationCacheTests
         problem.CurrentEpoch.ShouldBe(1); // an epoch was pending, so applying it advanced the environment
 
         // Previously cached: now must be reevaluated
-        _ = cachedInstance.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        _ = cachedExecution.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
         inner.Calls.ShouldBe(2);
     }
 

@@ -38,28 +38,28 @@ public record GeneticAlgorithm<TCandidate>
     public ISelector<TCandidate> Selector { get; init; } = GeneticAlgorithmDefaults.Selector<TCandidate>();
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Terminator, Evaluator, Refiner, Selector);
 
-    protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>? resolvedInterceptor)
+    protected override IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope, IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
         var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>();
         var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.AppliedAtRate(MutationRate);
-        return new Instance<TRunSearchSpace, TRunProblem>(resolvedInterceptor, typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover),
+        return new Execution<TRunSearchSpace, TRunProblem>(resolvedInterceptor, typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover),
             typed.Resolve(effectiveMutator), typed.Resolve(Selector), typed.ResolveOptional(Terminator),
             typed.ResolveOptional(Refiner), PopulationSize, MaximumGenerations, Elites);
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(
-        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
-        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
-        ICrossoverInstance<TCandidate, TSearchSpace, TProblem> crossover,
-        IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator,
-        ISelectorInstance<TCandidate, TSearchSpace, TProblem> selector,
-        ITerminatorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? terminator,
-        IRefinerInstance<TCandidate, TSearchSpace, TProblem>? refiner,
+    private sealed class Execution<TSearchSpace, TProblem>(
+        IInterceptorExecution<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
+        IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator,
+        ICreatorExecution<TCandidate, TSearchSpace, TProblem> creator,
+        ICrossoverExecution<TCandidate, TSearchSpace, TProblem> crossover,
+        IMutatorExecution<TCandidate, TSearchSpace, TProblem> mutator,
+        ISelectorExecution<TCandidate, TSearchSpace, TProblem> selector,
+        ITerminatorExecution<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? terminator,
+        IRefinerExecution<TCandidate, TSearchSpace, TProblem>? refiner,
         int populationSize,
         int? maximumGenerations,
         int elites)
-        : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
+        : IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

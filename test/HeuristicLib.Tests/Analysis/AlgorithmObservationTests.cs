@@ -231,13 +231,13 @@ public class AlgorithmObservationTests
     }
 
     /// <summary>
-    /// A cycle that recreates its execution instances restarts the observed algorithm, so its iteration count restarts
+    /// A cycle that recreates its execution nodes restarts the observed algorithm, so its iteration count restarts
     /// with it. Reusing the instances continues one algorithm, so the count continues.
     /// </summary>
     [Theory]
     [InlineData(true, new long[] { 1, 2, 3, 1, 2, 3 })]
     [InlineData(false, new long[] { 1, 2, 3, 4, 5, 6 })]
-    public async Task IterationClock_FollowsWhetherTheCycleRecreatesItsInstances(
+    public async Task IterationClock_FollowsWhetherTheCycleRecreatesItsExecutions(
         bool newExecutionInstancesPerCycle, long[] expectedIterations)
     {
         var problem = CreateProblem();

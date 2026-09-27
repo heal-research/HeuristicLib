@@ -65,19 +65,19 @@ internal sealed class ObservingEvaluator<TCandidate, TSearchSpace, TProblem>(
     public bool Fits(ExecutionSignature execution) =>
         ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(childEvaluator);
 
-    public IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return new Instance<TRunSearchSpace, TRunProblem>(observedEvaluator, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childEvaluator), observe);
+        return new Execution<TRunSearchSpace, TRunProblem>(observedEvaluator, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childEvaluator), observe);
     }
 
-    private sealed class Instance<TRunSearchSpace, TRunProblem>(
+    private sealed class Execution<TRunSearchSpace, TRunProblem>(
         IEvaluator<TCandidate> observedEvaluator,
-        IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator,
+        IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator,
         Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
-        : IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem>
+        : IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {

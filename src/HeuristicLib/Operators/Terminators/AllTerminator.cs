@@ -13,11 +13,11 @@ public sealed record AllTerminator<TCandidate>
     {
     }
 
-    protected override ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CombineExecutionInstances<TRunSearchSpace, TRunProblem, TRunSearchState>(ImmutableArray<ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> childTerminators) =>
-        new Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminators);
+    protected override ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CombineExecutionInstances<TRunSearchSpace, TRunProblem, TRunSearchState>(ImmutableArray<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> childTerminators) =>
+        new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminators);
 
-    private sealed class Instance<TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
-        : MultiTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminators)
+    private sealed class Execution<TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
+        : MultiTerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState

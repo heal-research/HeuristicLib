@@ -29,16 +29,16 @@ public sealed record IteratedRefiner<TCandidate>
         Iterations = iterations;
     }
 
-    protected override IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> childRefiner)
+    protected override IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> childRefiner)
     {
         if (Iterations <= 0)
             throw new InvalidOperationException("Iterations must be positive.");
 
-        return new Instance<TRunSearchSpace, TRunProblem>(childRefiner, Iterations);
+        return new Execution<TRunSearchSpace, TRunProblem>(childRefiner, Iterations);
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(IRefinerInstance<TCandidate, TSearchSpace, TProblem> childRefiner, int iterations)
-        : WrappingRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiner)
+    private sealed class Execution<TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> childRefiner, int iterations)
+        : WrappingRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiner)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

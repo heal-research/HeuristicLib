@@ -23,7 +23,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// </para>
 /// <para>
 /// The evaluations issued here belong to <see cref="Evaluator"/>, so counting, limiting and caching attach in the usual
-/// way. Passing the same evaluator configuration instance that the algorithm uses resolves to one execution instance,
+/// way. Passing the same evaluator configuration instance that the algorithm uses resolves to one execution node,
 /// and therefore to one counter and one cache.
 /// </para>
 /// </remarks>
@@ -45,21 +45,21 @@ public sealed record RefinementEvaluator<TCandidate>
     /// </summary>
     /// <remarks>
     /// The default is an unwrapped <see cref="ProblemEvaluator{TCandidate,TSearchSpace,TProblem}"/> and is therefore
-    /// invisible to budgets and analysis. Supply the same evaluator instance the algorithm uses to have these
+    /// invisible to budgets and analysis. Supply the same evaluator execution the algorithm uses to have these
     /// evaluations counted, limited or served from one shared cache.
     /// </remarks>
     public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
-    public IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Instance<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Refiner));
+        return new Execution<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Refiner));
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IRefinerInstance<TCandidate, TSearchSpace, TProblem> refiner)
-        : EvaluatorInstance<TCandidate, TSearchSpace, TProblem>
+    private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator, IRefinerExecution<TCandidate, TSearchSpace, TProblem> refiner)
+        : EvaluatorExecution<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

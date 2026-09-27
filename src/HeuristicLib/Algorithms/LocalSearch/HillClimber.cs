@@ -21,22 +21,22 @@ public record HillClimber<TCandidate>
     public int MaxNeighbors { get; init; } = HillClimberDefaults.MaxNeighbors;
     public int BatchSize { get; init; } = HillClimberDefaults.BatchSize;
 
-    protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor)
+    protected override IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope, IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor)
     {
         var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Instance<TRunSearchSpace, TRunProblem>(resolvedInterceptor, typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Mutator), typed.ResolveOptional(Refiner), Direction, MaxNeighbors, BatchSize);
+        return new Execution<TRunSearchSpace, TRunProblem>(resolvedInterceptor, typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Mutator), typed.ResolveOptional(Refiner), Direction, MaxNeighbors, BatchSize);
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(
-        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor,
-        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
-        IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator,
-        IRefinerInstance<TCandidate, TSearchSpace, TProblem>? refiner,
+    private sealed class Execution<TSearchSpace, TProblem>(
+        IInterceptorExecution<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor,
+        IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator,
+        ICreatorExecution<TCandidate, TSearchSpace, TProblem> creator,
+        IMutatorExecution<TCandidate, TSearchSpace, TProblem> mutator,
+        IRefinerExecution<TCandidate, TSearchSpace, TProblem>? refiner,
         LocalSearchDirection direction,
         int maxNeighbors,
         int batchSize)
-        : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>(interceptor)
+        : IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>(interceptor)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

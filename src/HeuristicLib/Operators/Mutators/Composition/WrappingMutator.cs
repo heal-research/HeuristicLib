@@ -25,13 +25,13 @@ public abstract record WrappingMutator<TCandidate>
     /// Resolves the child over the run's search space and problem and hands it to
     /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
-    public IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
         WrapExecutionInstance(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildMutator));
 
-    /// <summary>Wraps the child's execution instance in this operator's own.</summary>
-    protected abstract IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childMutator)
+    /// <summary>Wraps the child's execution node in this operator's own.</summary>
+    protected abstract IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childMutator)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
@@ -48,10 +48,10 @@ public abstract record WrappingMutator<TCandidate>
         OperatorContractComposition.Requires<TCandidate>([ChildMutator]);
 }
 
-public abstract class WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem>(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator)
-    : MutatorInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class WrappingMutatorExecution<TCandidate, TSearchSpace, TProblem>(IMutatorExecution<TCandidate, TSearchSpace, TProblem> childMutator)
+    : MutatorExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IMutatorInstance<TCandidate, TSearchSpace, TProblem> ChildMutator { get; } = childMutator;
+    protected IMutatorExecution<TCandidate, TSearchSpace, TProblem> ChildMutator { get; } = childMutator;
 }

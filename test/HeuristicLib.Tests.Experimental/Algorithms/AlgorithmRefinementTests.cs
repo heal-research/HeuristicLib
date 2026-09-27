@@ -299,8 +299,8 @@ public class AlgorithmRefinementTests
         public int BatchCount => counter.Batches;
         public int RefinedCount => counter.Candidates;
 
-        public override IRefinerInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ResolutionScope scope) =>
-            new Instance(counter);
+        public override IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ResolutionScope scope) =>
+            new Execution(counter);
 
         private sealed class Counter
         {
@@ -308,7 +308,7 @@ public class AlgorithmRefinementTests
             public int Candidates;
         }
 
-        private sealed class Instance(Counter counter) : IRefinerInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Execution(Counter counter) : IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
             {

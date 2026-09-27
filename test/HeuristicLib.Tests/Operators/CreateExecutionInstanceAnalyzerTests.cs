@@ -38,7 +38,7 @@ public class CreateExecutionInstanceAnalyzerTests
           {
               public required IMutator<int> Child { get; init; }
 
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+              public override IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
                   Child.CreateExecutionInstance<SS, P>(scope);
           }
           """);
@@ -53,10 +53,10 @@ public class CreateExecutionInstanceAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
           file sealed record ChildMutator : Mutator<int>
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
-                  new Instance();
+              public override IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  new Execution();
 
-              private sealed class Instance : MutatorInstance<int, SS, P>
+              private sealed class Execution : MutatorExecution<int, SS, P>
               {
                   public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, SS searchSpace, P problem) => parents;
               }
@@ -66,7 +66,7 @@ public class CreateExecutionInstanceAnalyzerTests
           {
               public required ChildMutator Child { get; init; }
 
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+              public override IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
                   Child.CreateExecutionInstance(scope);
           }
           """);
@@ -82,7 +82,7 @@ public class CreateExecutionInstanceAnalyzerTests
           {
               public required IMutator<int> Child { get; init; }
 
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+              public override IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
                   scope.Resolve<int, SS, P>(Child);
           }
           """);
@@ -100,10 +100,10 @@ public class CreateExecutionInstanceAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
           file sealed record ChildMutator : Mutator<int>
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
-                  new Instance();
+              public override IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  new Execution();
 
-              private sealed class Instance : MutatorInstance<int, SS, P>
+              private sealed class Execution : MutatorExecution<int, SS, P>
               {
                   public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, SS searchSpace, P problem) => parents;
               }
@@ -111,7 +111,7 @@ public class CreateExecutionInstanceAnalyzerTests
 
           file static class DeliberateCaller
           {
-              public static IMutatorInstance<int, SS, P> Create(ChildMutator mutator) =>
+              public static IMutatorExecution<int, SS, P> Create(ChildMutator mutator) =>
                   mutator.CreateExecutionInstance(ResolutionScope.Create());
           }
           """);
@@ -125,13 +125,13 @@ public class CreateExecutionInstanceAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
           file sealed record DelegatingMutator : Mutator<int>
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+              public override IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
                   CreateExecutionInstance(scope, 1);
 
-              private IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope, int unused) =>
-                  new Instance();
+              private IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope, int unused) =>
+                  new Execution();
 
-              private sealed class Instance : MutatorInstance<int, SS, P>
+              private sealed class Execution : MutatorExecution<int, SS, P>
               {
                   public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, SS searchSpace, P problem) => parents;
               }
@@ -151,10 +151,10 @@ public class CreateExecutionInstanceAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
           file sealed record ChildMutator : Mutator<int>
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
-                  new Instance();
+              public override IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  new Execution();
 
-              private sealed class Instance : MutatorInstance<int, SS, P>
+              private sealed class Execution : MutatorExecution<int, SS, P>
               {
                   public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, SS searchSpace, P problem) => parents;
               }
@@ -164,8 +164,8 @@ public class CreateExecutionInstanceAnalyzerTests
           {
               public required ChildMutator Child { get; init; }
 
-              IMutatorInstance<int, TRunSearchSpace, TRunProblem> IMutator<int>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope) =>
-                  (IMutatorInstance<int, TRunSearchSpace, TRunProblem>)Child.CreateExecutionInstance(scope);
+              IMutatorExecution<int, TRunSearchSpace, TRunProblem> IMutator<int>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope) =>
+                  (IMutatorExecution<int, TRunSearchSpace, TRunProblem>)Child.CreateExecutionInstance(scope);
           }
           """);
 
@@ -182,10 +182,10 @@ public class CreateExecutionInstanceAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
           file abstract record BaseMutator : Mutator<int>
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
-                  new Instance();
+              public override IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  new Execution();
 
-              private sealed class Instance : MutatorInstance<int, SS, P>
+              private sealed class Execution : MutatorExecution<int, SS, P>
               {
                   public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, SS searchSpace, P problem) => parents;
               }
@@ -193,7 +193,7 @@ public class CreateExecutionInstanceAnalyzerTests
 
           file sealed record DerivedMutator : BaseMutator
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+              public override IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
                   base.CreateExecutionInstance(scope);
           }
           """);
@@ -210,10 +210,10 @@ public class CreateExecutionInstanceAnalyzerTests
           {
               public RecursiveMutator? Child { get; init; }
 
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
-                  Child is null ? new Instance() : Child.CreateExecutionInstance(scope);
+              public override IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  Child is null ? new Execution() : Child.CreateExecutionInstance(scope);
 
-              private sealed class Instance : MutatorInstance<int, SS, P>
+              private sealed class Execution : MutatorExecution<int, SS, P>
               {
                   public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, SS searchSpace, P problem) => parents;
               }

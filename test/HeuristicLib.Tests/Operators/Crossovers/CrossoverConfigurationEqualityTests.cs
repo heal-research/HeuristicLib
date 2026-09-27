@@ -294,11 +294,11 @@ public class CrossoverConfigurationEqualityTests
         {
         }
 
-        protected override ICrossoverInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICrossoverInstance<int, TRunSearchSpace, TRunProblem>> childCrossovers) =>
-            new Instance<TRunSearchSpace, TRunProblem>(childCrossovers);
+        protected override ICrossoverExecution<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICrossoverExecution<int, TRunSearchSpace, TRunProblem>> childCrossovers) =>
+            new Execution<TRunSearchSpace, TRunProblem>(childCrossovers);
 
-        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ICrossoverInstance<int, TSearchSpace, TProblem>> childCrossovers)
-            : MultiCrossoverInstance<int, TSearchSpace, TProblem>(childCrossovers)
+        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICrossoverExecution<int, TSearchSpace, TProblem>> childCrossovers)
+            : MultiCrossoverExecution<int, TSearchSpace, TProblem>(childCrossovers)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

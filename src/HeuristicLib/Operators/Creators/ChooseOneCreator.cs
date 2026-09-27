@@ -30,18 +30,18 @@ public sealed record ChooseOneCreator<TCandidate>
     {
     }
 
-    protected override ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem>> childCreators)
+    protected override ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> childCreators)
     {
         if (ChildCreators.Count == 0)
             throw new InvalidOperationException("At least one creator must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildCreators.Count)
             throw new InvalidOperationException("Weights must have the same length as creators.");
 
-        return new Instance<TRunSearchSpace, TRunProblem>(childCreators, new WeightedBatchDispatcher(childCreators.Length, Weights));
+        return new Execution<TRunSearchSpace, TRunProblem>(childCreators, new WeightedBatchDispatcher(childCreators.Length, Weights));
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ICreatorInstance<TCandidate, TSearchSpace, TProblem>> childCreators, WeightedBatchDispatcher dispatcher)
-        : MultiCreatorInstance<TCandidate, TSearchSpace, TProblem>(childCreators)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> childCreators, WeightedBatchDispatcher dispatcher)
+        : MultiCreatorExecution<TCandidate, TSearchSpace, TProblem>(childCreators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

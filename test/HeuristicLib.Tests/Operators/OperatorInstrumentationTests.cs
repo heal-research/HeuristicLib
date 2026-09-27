@@ -20,11 +20,11 @@ public class OperatorInstrumentationTests
         var creator = new SequenceCreator().CountCalls(counter);
         creator.Counter.ShouldBeSameAs(counter);
         creator.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = creator.CreateCreatorInstance();
+        var execution = creator.CreateCreatorExecution();
         var problem = CreateProblem();
 
-        instance.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
     }
@@ -34,11 +34,11 @@ public class OperatorInstrumentationTests
     {
         var counter = new CountAccumulator();
         var creator = new SequenceCreator().CountCandidates(counter);
-        var instance = creator.CreateCreatorInstance();
+        var execution = creator.CreateCreatorExecution();
         var problem = CreateProblem();
 
-        instance.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(4);
     }
@@ -51,11 +51,11 @@ public class OperatorInstrumentationTests
         var creator = new SequenceCreator().MeasureDuration(duration, timeProvider);
         creator.Duration.ShouldBeSameAs(duration);
         creator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = creator.CreateCreatorInstance();
+        var execution = creator.CreateCreatorExecution();
         var problem = CreateProblem();
 
-        instance.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -64,11 +64,11 @@ public class OperatorInstrumentationTests
     public void CountCreatorCalls_DoesNotIncrementWhenCreationThrows()
     {
         var counter = new CountAccumulator();
-        var instance = new ThrowingCreator().CountCalls(counter).CreateCreatorInstance();
+        var execution = new ThrowingCreator().CountCalls(counter).CreateCreatorExecution();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            instance.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            execution.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -78,11 +78,11 @@ public class OperatorInstrumentationTests
     {
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var instance = new ThrowingCreator().MeasureDuration(duration, timeProvider).CreateCreatorInstance();
+        var execution = new ThrowingCreator().MeasureDuration(duration, timeProvider).CreateCreatorExecution();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            instance.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            execution.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -94,11 +94,11 @@ public class OperatorInstrumentationTests
         var mutator = new AddOneMutator().CountCalls(counter);
         mutator.Counter.ShouldBeSameAs(counter);
         mutator.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = mutator.CreateMutatorInstance();
+        var execution = mutator.CreateMutatorExecution();
         var problem = CreateProblem();
 
-        instance.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
     }
@@ -108,11 +108,11 @@ public class OperatorInstrumentationTests
     {
         var counter = new CountAccumulator();
         var mutator = new AddOneMutator().CountCandidates(counter);
-        var instance = mutator.CreateMutatorInstance();
+        var execution = mutator.CreateMutatorExecution();
         var problem = CreateProblem();
 
-        instance.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(4);
     }
@@ -121,11 +121,11 @@ public class OperatorInstrumentationTests
     public void CountMutatorCalls_DoesNotIncrementWhenMutationThrows()
     {
         var counter = new CountAccumulator();
-        var instance = new ThrowingMutator().CountCalls(counter).CreateMutatorInstance();
+        var execution = new ThrowingMutator().CountCalls(counter).CreateMutatorExecution();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            instance.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            execution.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -138,11 +138,11 @@ public class OperatorInstrumentationTests
         var mutator = new AddOneMutator().MeasureDuration(duration, timeProvider);
         mutator.Duration.ShouldBeSameAs(duration);
         mutator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = mutator.CreateMutatorInstance();
+        var execution = mutator.CreateMutatorExecution();
         var problem = CreateProblem();
 
-        instance.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -153,11 +153,11 @@ public class OperatorInstrumentationTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var mutator = new ThrowingMutator().MeasureDuration(duration, timeProvider);
-        var instance = mutator.CreateMutatorInstance();
+        var execution = mutator.CreateMutatorExecution();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            instance.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            execution.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -184,9 +184,9 @@ public class OperatorInstrumentationTests
         var mutator = childMutator
             .MeasureDuration(innerDuration, timeProvider)
             .MeasureDuration(outerDuration, timeProvider);
-        var instance = mutator.CreateMutatorInstance();
+        var execution = mutator.CreateMutatorExecution();
 
-        var result = instance.Mutate(parents, random, problem.SearchSpace, problem);
+        var result = execution.Mutate(parents, random, problem.SearchSpace, problem);
 
         result.ShouldBeSameAs(parents);
         calls.ShouldBe(1);
@@ -210,10 +210,10 @@ public class OperatorInstrumentationTests
         var mutator = childMutator
             .MeasureDuration(innerDuration, timeProvider)
             .MeasureDuration(outerDuration, timeProvider);
-        var instance = mutator.CreateMutatorInstance();
+        var execution = mutator.CreateMutatorExecution();
 
         Should.Throw<InvalidOperationException>(() =>
-            instance.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            execution.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         calls.ShouldBe(1);
         innerDuration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
@@ -227,15 +227,15 @@ public class OperatorInstrumentationTests
         var crossover = new SumParentsCrossover().CountCalls(counter);
         crossover.Counter.ShouldBeSameAs(counter);
         crossover.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = crossover.CreateCrossoverInstance();
+        var execution = crossover.CreateCrossoverExecution();
         var problem = CreateProblem();
 
-        instance.Cross(
+        execution.Cross(
             [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
-        instance.Cross(
+        execution.Cross(
             [Parents.From(4, 40)],
             RandomNumberGenerator.Create(2),
             problem.SearchSpace,
@@ -249,15 +249,15 @@ public class OperatorInstrumentationTests
     {
         var counter = new CountAccumulator();
         var crossover = new SumParentsCrossover().CountCandidates(counter);
-        var instance = crossover.CreateCrossoverInstance();
+        var execution = crossover.CreateCrossoverExecution();
         var problem = CreateProblem();
 
-        instance.Cross(
+        execution.Cross(
             [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
-        instance.Cross(
+        execution.Cross(
             [Parents.From(4, 40)],
             RandomNumberGenerator.Create(2),
             problem.SearchSpace,
@@ -274,15 +274,15 @@ public class OperatorInstrumentationTests
         var crossover = new SumParentsCrossover().MeasureDuration(duration, timeProvider);
         crossover.Duration.ShouldBeSameAs(duration);
         crossover.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = crossover.CreateCrossoverInstance();
+        var execution = crossover.CreateCrossoverExecution();
         var problem = CreateProblem();
 
-        instance.Cross(
+        execution.Cross(
             [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
-        instance.Cross(
+        execution.Cross(
             [Parents.From(4, 40)],
             RandomNumberGenerator.Create(2),
             problem.SearchSpace,
@@ -295,11 +295,11 @@ public class OperatorInstrumentationTests
     public void CountCrossoverCalls_DoesNotIncrementWhenCrossoverThrows()
     {
         var counter = new CountAccumulator();
-        var instance = new ThrowingCrossover().CountCalls(counter).CreateCrossoverInstance();
+        var execution = new ThrowingCrossover().CountCalls(counter).CreateCrossoverExecution();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            instance.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            execution.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -309,11 +309,11 @@ public class OperatorInstrumentationTests
     {
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var instance = new ThrowingCrossover().MeasureDuration(duration, timeProvider).CreateCrossoverInstance();
+        var execution = new ThrowingCrossover().MeasureDuration(duration, timeProvider).CreateCrossoverExecution();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            instance.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            execution.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -325,11 +325,11 @@ public class OperatorInstrumentationTests
         var selector = new FirstCandidatesSelector().CountCalls(counter);
         selector.Counter.ShouldBeSameAs(counter);
         selector.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = selector.CreateSelectorInstance();
+        var execution = selector.CreateSelectorExecution();
         var problem = CreateProblem();
 
-        instance.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
     }
@@ -339,11 +339,11 @@ public class OperatorInstrumentationTests
     {
         var counter = new CountAccumulator();
         var selector = new FirstCandidatesSelector().CountCandidates(counter);
-        var instance = selector.CreateSelectorInstance();
+        var execution = selector.CreateSelectorExecution();
         var problem = CreateProblem();
 
-        instance.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(3);
     }
@@ -352,11 +352,11 @@ public class OperatorInstrumentationTests
     public void CountSelectorCalls_DoesNotIncrementWhenSelectionThrows()
     {
         var counter = new CountAccumulator();
-        var instance = new ThrowingSelector().CountCalls(counter).CreateSelectorInstance();
+        var execution = new ThrowingSelector().CountCalls(counter).CreateSelectorExecution();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            instance.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            execution.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -369,11 +369,11 @@ public class OperatorInstrumentationTests
         var selector = new FirstCandidatesSelector().MeasureDuration(duration, timeProvider);
         selector.Duration.ShouldBeSameAs(duration);
         selector.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = selector.CreateSelectorInstance();
+        var execution = selector.CreateSelectorExecution();
         var problem = CreateProblem();
 
-        instance.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -384,11 +384,11 @@ public class OperatorInstrumentationTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var selector = new ThrowingSelector().MeasureDuration(duration, timeProvider);
-        var instance = selector.CreateSelectorInstance();
+        var execution = selector.CreateSelectorExecution();
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            instance.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            execution.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -400,10 +400,10 @@ public class OperatorInstrumentationTests
         var replacer = new FirstReplacementCandidatesReplacer().CountCalls(counter);
         replacer.Counter.ShouldBeSameAs(counter);
         replacer.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = replacer.CreateReplacerInstance();
+        var execution = replacer.CreateReplacerExecution();
         var problem = CreateProblem();
 
-        instance.Replace(
+        execution.Replace(
             CreateEvaluatedCandidates([1, 2, 3]),
             CreateEvaluatedCandidates([10, 20]),
             problem.Objective,
@@ -411,7 +411,7 @@ public class OperatorInstrumentationTests
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
-        instance.Replace(
+        execution.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
             problem.Objective,
@@ -428,10 +428,10 @@ public class OperatorInstrumentationTests
     {
         var counter = new CountAccumulator();
         var replacer = new FirstReplacementCandidatesReplacer().CountCandidates(counter);
-        var instance = replacer.CreateReplacerInstance();
+        var execution = replacer.CreateReplacerExecution();
         var problem = CreateProblem();
 
-        instance.Replace(
+        execution.Replace(
             CreateEvaluatedCandidates([1, 2, 3]),
             CreateEvaluatedCandidates([10, 20]),
             problem.Objective,
@@ -439,7 +439,7 @@ public class OperatorInstrumentationTests
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
-        instance.Replace(
+        execution.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
             problem.Objective,
@@ -455,10 +455,10 @@ public class OperatorInstrumentationTests
     public void CountReplacerCalls_DoesNotCountFailedCall()
     {
         var counter = new CountAccumulator();
-        var instance = new ThrowingReplacer().CountCalls(counter).CreateReplacerInstance();
+        var execution = new ThrowingReplacer().CountCalls(counter).CreateReplacerExecution();
         var problem = CreateProblem();
 
-        Should.Throw<InvalidOperationException>(() => instance.Replace(
+        Should.Throw<InvalidOperationException>(() => execution.Replace(
             CreateEvaluatedCandidates([1]),
             CreateEvaluatedCandidates([2]),
             problem.Objective,
@@ -478,10 +478,10 @@ public class OperatorInstrumentationTests
         var replacer = new FirstReplacementCandidatesReplacer().MeasureDuration(duration, timeProvider);
         replacer.Duration.ShouldBeSameAs(duration);
         replacer.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = replacer.CreateReplacerInstance();
+        var execution = replacer.CreateReplacerExecution();
         var problem = CreateProblem();
 
-        instance.Replace(
+        execution.Replace(
             CreateEvaluatedCandidates([1, 2, 3]),
             CreateEvaluatedCandidates([10, 20]),
             problem.Objective,
@@ -489,7 +489,7 @@ public class OperatorInstrumentationTests
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
-        instance.Replace(
+        execution.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
             problem.Objective,
@@ -505,10 +505,10 @@ public class OperatorInstrumentationTests
     public void MeasureReplacerDuration_RecordsFailedCall()
     {
         var duration = new DurationAccumulator();
-        var instance = new ThrowingReplacer().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateReplacerInstance();
+        var execution = new ThrowingReplacer().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateReplacerExecution();
         var problem = CreateProblem();
 
-        Should.Throw<InvalidOperationException>(() => instance.Replace(
+        Should.Throw<InvalidOperationException>(() => execution.Replace(
             CreateEvaluatedCandidates([1]),
             CreateEvaluatedCandidates([2]),
             problem.Objective,
@@ -526,11 +526,11 @@ public class OperatorInstrumentationTests
         var counter = new CountAccumulator();
         var interceptor = new AddOneInterceptor().CountCalls(counter);
         interceptor.Counter.ShouldBeSameAs(counter);
-        var instance = interceptor.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
+        var execution = interceptor.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
-        instance.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
     }
@@ -543,11 +543,11 @@ public class OperatorInstrumentationTests
         var interceptor = new AddOneInterceptor().MeasureDuration(duration, timeProvider);
         interceptor.Duration.ShouldBeSameAs(duration);
         interceptor.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = interceptor.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
+        var execution = interceptor.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
-        instance.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        execution.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -556,10 +556,10 @@ public class OperatorInstrumentationTests
     public void CountInterceptorCalls_DoesNotCountFailedCall()
     {
         var counter = new CountAccumulator();
-        var instance = new ThrowingInterceptor().CountCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
+        var execution = new ThrowingInterceptor().CountCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
-        Should.Throw<InvalidOperationException>(() => instance.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => execution.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -568,10 +568,10 @@ public class OperatorInstrumentationTests
     public void MeasureInterceptorDuration_RecordsFailedCall()
     {
         var duration = new DurationAccumulator();
-        var instance = new ThrowingInterceptor().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
+        var execution = new ThrowingInterceptor().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
-        Should.Throw<InvalidOperationException>(() => instance.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => execution.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -582,11 +582,11 @@ public class OperatorInstrumentationTests
         var counter = new CountAccumulator();
         var terminator = new NeverTerminalStateTerminator().CountCalls(counter);
         terminator.Counter.ShouldBeSameAs(counter);
-        var instance = terminator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
+        var execution = terminator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
-        instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
-        instance.IsTerminalState(new CounterState { Value = 2 }, problem.SearchSpace, problem);
+        execution.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
+        execution.IsTerminalState(new CounterState { Value = 2 }, problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
     }
@@ -599,11 +599,11 @@ public class OperatorInstrumentationTests
         var terminator = new NeverTerminalStateTerminator().MeasureDuration(duration, timeProvider);
         terminator.Duration.ShouldBeSameAs(duration);
         terminator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = terminator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
+        var execution = terminator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
-        instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
-        instance.IsTerminalState(new CounterState { Value = 2 }, problem.SearchSpace, problem);
+        execution.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
+        execution.IsTerminalState(new CounterState { Value = 2 }, problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -612,10 +612,10 @@ public class OperatorInstrumentationTests
     public void CountTerminatorCalls_DoesNotCountFailedCall()
     {
         var counter = new CountAccumulator();
-        var instance = new ThrowingTerminator().CountCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
+        var execution = new ThrowingTerminator().CountCalls(counter).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
-        Should.Throw<InvalidOperationException>(() => instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => execution.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -624,10 +624,10 @@ public class OperatorInstrumentationTests
     public void MeasureTerminatorDuration_RecordsFailedCall()
     {
         var duration = new DurationAccumulator();
-        var instance = new ThrowingTerminator().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
+        var execution = new ThrowingTerminator().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))).CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(ResolutionScope.Create());
         var problem = CreateProblem();
 
-        Should.Throw<InvalidOperationException>(() => instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => execution.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -693,16 +693,16 @@ public class OperatorInstrumentationTests
     private sealed class CallbackMutator(MutateCallback callback)
         : IMutator<int>
     {
-        public IMutatorInstance<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ResolutionScope scope)
+        public IMutatorExecution<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ResolutionScope scope)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace> =>
-            (IMutatorInstance<int, TSearchSpace, TProblem>)CreateBoundInstance();
+            (IMutatorExecution<int, TSearchSpace, TProblem>)CreateBoundExecution();
 
-        private IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateBoundInstance() =>
-            new Instance(callback);
+        private IMutatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateBoundExecution() =>
+            new Execution(callback);
 
-        private sealed class Instance(MutateCallback callback)
-            : IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+        private sealed class Execution(MutateCallback callback)
+            : IMutatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
         {
             public IReadOnlyList<int> Mutate(
                 IReadOnlyList<int> parents,
@@ -881,49 +881,49 @@ file static class OperatorResolution
 {
     extension(ResolutionScope scope)
     {
-        public ICreatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCreator(ICreator<int> creator) =>
+        public ICreatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCreator(ICreator<int> creator) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator);
 
-        public ICrossoverInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCrossover(ICrossover<int> crossover) =>
+        public ICrossoverExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCrossover(ICrossover<int> crossover) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover);
 
-        public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IMutator<int> mutator) =>
+        public IMutatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IMutator<int> mutator) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
 
-        public ISelectorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveSelector(ISelector<int> selector) =>
+        public ISelectorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveSelector(ISelector<int> selector) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
 
-        public IReplacerInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveReplacer(IReplacer<int> replacer) =>
+        public IReplacerExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveReplacer(IReplacer<int> replacer) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(replacer);
     }
 
     extension(ICreator<int> creator)
     {
-        public ICreatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCreatorInstance() =>
+        public ICreatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCreatorExecution() =>
             ResolutionScope.Create().ResolveCreator(creator);
     }
 
     extension(ICrossover<int> crossover)
     {
-        public ICrossoverInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCrossoverInstance() =>
+        public ICrossoverExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCrossoverExecution() =>
             ResolutionScope.Create().ResolveCrossover(crossover);
     }
 
     extension(IMutator<int> mutator)
     {
-        public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateMutatorInstance() =>
+        public IMutatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateMutatorExecution() =>
             ResolutionScope.Create().ResolveMutator(mutator);
     }
 
     extension(ISelector<int> selector)
     {
-        public ISelectorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateSelectorInstance() =>
+        public ISelectorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateSelectorExecution() =>
             ResolutionScope.Create().ResolveSelector(selector);
     }
 
     extension(IReplacer<int> replacer)
     {
-        public IReplacerInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateReplacerInstance() =>
+        public IReplacerExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateReplacerExecution() =>
             ResolutionScope.Create().ResolveReplacer(replacer);
     }
 }

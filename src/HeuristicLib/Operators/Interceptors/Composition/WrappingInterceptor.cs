@@ -26,24 +26,24 @@ public abstract record WrappingInterceptor<TCandidate>
     /// Resolves the child over the run's search space and problem and hands it to <see
     /// cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
     /// </summary>
-    public IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+    public IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState =>
         WrapExecutionInstance(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(ChildInterceptor));
 
-    /// <summary>Wraps the child's execution instance in this operator's own.</summary>
-    protected abstract IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childInterceptor)
+    /// <summary>Wraps the child's execution node in this operator's own.</summary>
+    protected abstract IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childInterceptor)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState;
 }
 
-public abstract class WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor)
-    : InterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+public abstract class WrappingInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor)
+    : InterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> ChildInterceptor { get; } = childInterceptor;
+    protected IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> ChildInterceptor { get; } = childInterceptor;
 }

@@ -41,7 +41,7 @@ public class CreateExecutionInstanceCodeFixTests
           {
               public required IMutator<int> Child { get; init; }
 
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+              public override IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
                   Child.CreateExecutionInstance<SS, P>(scope);
           }
           """);
@@ -57,10 +57,10 @@ public class CreateExecutionInstanceCodeFixTests
         var fixedSource = await ApplyFixAsync(Preamble + """
           file sealed record ChildMutator : Mutator<int>
           {
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
-                  new Instance();
+              public override IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+                  new Execution();
 
-              private sealed class Instance : MutatorInstance<int, SS, P>
+              private sealed class Execution : MutatorExecution<int, SS, P>
               {
                   public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, SS searchSpace, P problem) => parents;
               }
@@ -70,7 +70,7 @@ public class CreateExecutionInstanceCodeFixTests
           {
               public required ChildMutator Child { get; init; }
 
-              public override IMutatorInstance<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
+              public override IMutatorExecution<int, SS, P> CreateExecutionInstance(ResolutionScope scope) =>
                   Child.CreateExecutionInstance(scope);
           }
           """);

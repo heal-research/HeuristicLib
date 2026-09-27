@@ -75,21 +75,21 @@ internal sealed class ObservingInterceptor<TCandidate, TSearchSpace, TProblem, T
     public bool Fits(ExecutionSignature execution) =>
         ObservationSignature.Fits<TSearchSpace, TProblem, TSearchState>(execution) && execution.Fits(childInterceptor);
 
-    public IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+    public IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TSearchState, TRunSearchSpace, TRunProblem, TRunSearchState>(this);
-        return new Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        return new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(
             observedInterceptor, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor), observe);
     }
 
-    private sealed class Instance<TRunSearchSpace, TRunProblem, TRunSearchState>(
+    private sealed class Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(
         IInterceptor<TCandidate> observedInterceptor,
-        IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childInterceptor,
+        IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childInterceptor,
         Action<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe)
-        : IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>
+        : IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState

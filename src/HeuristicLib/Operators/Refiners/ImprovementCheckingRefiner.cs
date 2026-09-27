@@ -47,7 +47,7 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     /// </summary>
     /// <remarks>
     /// The default is an unwrapped <see cref="ProblemEvaluator{TCandidate,TSearchSpace,TProblem}"/> and is therefore
-    /// invisible to budgets and analysis. Supply the same evaluator instance the algorithm uses to have these
+    /// invisible to budgets and analysis. Supply the same evaluator execution the algorithm uses to have these
     /// evaluations counted, limited or served from one shared cache.
     /// </remarks>
     public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
@@ -63,16 +63,16 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     /// </remarks>
     public IImprovementCriterion Criterion { get; init; } = ImprovementChecking.Default;
 
-    public IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Instance<TRunSearchSpace, TRunProblem>(typed.Resolve(Refiner), typed.Resolve(Evaluator), Criterion);
+        return new Execution<TRunSearchSpace, TRunProblem>(typed.Resolve(Refiner), typed.Resolve(Evaluator), Criterion);
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(IRefinerInstance<TCandidate, TSearchSpace, TProblem> refiner, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
-        : RefinerInstance<TCandidate, TSearchSpace, TProblem>
+    private sealed class Execution<TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> refiner, IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
+        : RefinerExecution<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

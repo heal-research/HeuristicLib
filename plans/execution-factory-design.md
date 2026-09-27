@@ -8,7 +8,7 @@ This document specifies a design rather than another alternatives survey. Code b
 
 Decision, 2026-09-27: use graph vocabulary for the common contracts and execution vocabulary for role-specific runtime types. The user selected `IConfigurationNode` and `IExecutionNode`; ordinary users continue to compose `IMutator`, `IOperator`, concrete mutators and algorithms. They do not need a general graph API. Implement the rename with the resolution/factory rework, in a separate behavior-preserving commit before the behavior change.
 
-| Current name or concept | Agreed name | Migration boundary |
+| Previous name or concept | Agreed name | Migration boundary |
 | --- | --- | --- |
 | `IExecutionConfiguration`, including its generic form | `IConfigurationNode`, including its generic form | Naming commit; preserve existing members and semantics. |
 | `IExecutionInstance` | `IExecutionNode` | Naming commit. |
@@ -28,7 +28,7 @@ In prose, a configuration node belongs to the configuration graph; an execution 
 
 Binding remains a descriptive word for constructing scope-specific dependencies and observations; it is not the public type family. `IExecutionBinding`, bare `IExecution`, bare `IConfiguration` and definition-based names are not selected. This does not change state-sharing policy or approve the remaining proposed control, child-scope or protected factory-hook APIs.
 
-The examples below use the agreed target names. Links and explicit descriptions of existing source retain current filenames/API names until the implementation migration. The [naming commit boundary](execution-bindings-and-shared-state.md#agreed-commit-boundaries) keeps the rename separate from the return-type and resolution changes.
+The naming migration now uses the agreed names in source, links and examples. Object-returning creation methods retain their existing names for this intermediate revision. The factory examples below remain proposals for the next proof package. The [naming commit boundary](execution-bindings-and-shared-state.md#agreed-commit-boundaries) keeps the rename separate from the return-type and resolution changes.
 
 ## 1. What changes for each audience
 
@@ -128,7 +128,7 @@ Two M states are consequently reachable from C through different logical graphs.
 
 The logical domain of an already-shared G remains its original one; C supplies observation context rather than adopting G's dependency ownership. A previously unselected dependency resolved directly through G's retained frame belongs to that original domain, even if first triggered by a C binding. This explicitly extends the original execution graph; it is not a direct `C.Resolve(M)` request. New per-invocation children must use a fresh child domain and stay there. Include this distinction in the late-resolution tests and review: otherwise the phrase "no hoisting" hides an unresolved policy for delayed dependencies.
 
-Repeated resolution of the same source in one frame means the same logical dependency. Two independent children using the same configuration reference require distinct child domains; call order is not a dependency identifier. Recreating a derived configuration inside every binder would create another reference: authors must prepare it once. Existing guidance allowing explicit children on execution instances becomes a rule about binding-local children, not shared persistent data.
+Repeated resolution of the same source in one frame means the same logical dependency. Two independent children using the same configuration reference require distinct child domains; call order is not a dependency identifier. Recreating a derived configuration inside every binder would create another reference: authors must prepare it once. Existing guidance allowing explicit children on execution nodes becomes a rule about binding-local children, not shared persistent data.
 
 ### Cache and lifetime rules
 
@@ -162,7 +162,7 @@ public sealed override ExecutionFactory<IMutatorExecution<TCandidate, TSearchSpa
 }
 ```
 
-`CreateInitialState` therefore runs once per execution record, not once per observer context. Framework-managed leaf state still must not retain configurations, scopes, child execution instances or child-bound delegates. An explicit stateful leaf such as GaussianMutator can also create its raw instance in preparation, so its current strength survives every decorated binding without a separate empty state wrapper.
+`CreateInitialState` therefore runs once per execution record, not once per observer context. Framework-managed leaf state still must not retain configurations, scopes, child execution nodes or child-bound delegates. An explicit stateful leaf such as GaussianMutator can also create its raw instance in preparation, so its current strength survives every decorated binding without a separate empty state wrapper.
 
 ### A stateful non-terminal: predefined candidates
 
@@ -421,7 +421,7 @@ A wrapper which keeps its own mutable counter moves it into preparation, just li
 
 ## 7. Specialized capabilities
 
-Handwritten role wrappers cannot automatically implement an unknown extra interface. The existing observing mutator already hides `IAdaptableMutationStrengthInstance`, disabling EvolutionStrategy's adaptation. The factory itself does not fix that. Do not claim arbitrary extra-interface preservation.
+Handwritten role wrappers cannot automatically implement an unknown extra interface. The existing observing mutator already hides `IAdaptableMutationStrengthExecution`, disabling EvolutionStrategy's adaptation. The factory itself does not fix that. Do not claim arbitrary extra-interface preservation.
 
 Propose separating the existing strength control from `Mutate` into an operation-free interface, provisionally `IMutationStrengthControl`, with `double CurrentMutationStrength { get; set; }`. GaussianMutator's raw leaf offers this control over its persistent data. EvolutionStrategy stores two typed references: the decorated `IMutatorExecution` for calls, and the control for adaptation. No operation is called through an undecorated reference.
 

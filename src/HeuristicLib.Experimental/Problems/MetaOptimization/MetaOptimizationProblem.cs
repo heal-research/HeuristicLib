@@ -36,7 +36,7 @@ public class MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, TSearch
 
     /// <remarks>
     /// The builder hands back an <see cref="IAlgorithm{TCandidate}"/>, which says nothing about the state a run
-    /// yields, so the algorithm is resolved explicitly and its execution instance run.
+    /// yields, so the algorithm is resolved explicitly and its execution node run.
     /// </remarks>
     public override ObjectiveVector Evaluate(CompositeGenotype<RealVector, IntegerVector> solution, IRandomNumberGenerator random)
     {

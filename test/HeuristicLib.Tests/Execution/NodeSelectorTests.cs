@@ -106,7 +106,7 @@ public class NodeSelectorTests
         var original = NodeSelector.Reference<ISizedConfiguration>(preferred);
         var matchingSizes = new NodeSelector<ISizedConfiguration>(node => node.Size == 3);
         var selected = original.Or(matchingSizes);
-        IExecutionConfiguration[] nodes = [preferred, equalCopy, anotherImplementation, new SizedConfiguration(5)];
+        IConfigurationNode[] nodes = [preferred, equalCopy, anotherImplementation, new SizedConfiguration(5)];
 
         var matches = nodes.Where(selected.Matches).ToArray();
 
@@ -207,7 +207,7 @@ public class NodeSelectorTests
         small.Matches(preferred).ShouldBeTrue();
     }
 
-    private interface ISizedConfiguration : IExecutionConfiguration
+    private interface ISizedConfiguration : IConfigurationNode
     {
         int Size { get; }
     }
@@ -218,5 +218,5 @@ public class NodeSelectorTests
 
     private sealed record AlternateSizedConfiguration(int Size) : ISizedConfiguration;
 
-    private sealed record OtherConfiguration(int Size) : IExecutionConfiguration;
+    private sealed record OtherConfiguration(int Size) : IConfigurationNode;
 }

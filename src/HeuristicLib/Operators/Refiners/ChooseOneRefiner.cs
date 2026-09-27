@@ -29,18 +29,18 @@ public sealed record ChooseOneRefiner<TCandidate>
     {
     }
 
-    protected override IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem>> childRefiners)
+    protected override IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> childRefiners)
     {
         if (ChildRefiners.Count == 0)
             throw new InvalidOperationException("At least one refiner must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildRefiners.Count)
             throw new InvalidOperationException("Weights must have the same length as refiners.");
 
-        return new Instance<TRunSearchSpace, TRunProblem>(childRefiners, new WeightedBatchDispatcher(childRefiners.Length, Weights));
+        return new Execution<TRunSearchSpace, TRunProblem>(childRefiners, new WeightedBatchDispatcher(childRefiners.Length, Weights));
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners, WeightedBatchDispatcher dispatcher)
-        : MultiRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiners)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> childRefiners, WeightedBatchDispatcher dispatcher)
+        : MultiRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiners)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

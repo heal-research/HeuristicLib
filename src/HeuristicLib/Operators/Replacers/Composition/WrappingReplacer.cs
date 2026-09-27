@@ -25,21 +25,21 @@ public abstract record WrappingReplacer<TCandidate>
     /// Resolves the child over the run's search space and problem and hands it to
     /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
-    public IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
         WrapExecutionInstance(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildReplacer));
 
-    /// <summary>Wraps the child's execution instance in this operator's own.</summary>
-    protected abstract IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> childReplacer)
+    /// <summary>Wraps the child's execution node in this operator's own.</summary>
+    protected abstract IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem> childReplacer)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem>(IReplacerInstance<TCandidate, TSearchSpace, TProblem> childReplacer)
-    : ReplacerInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class WrappingReplacerExecution<TCandidate, TSearchSpace, TProblem>(IReplacerExecution<TCandidate, TSearchSpace, TProblem> childReplacer)
+    : ReplacerExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IReplacerInstance<TCandidate, TSearchSpace, TProblem> ChildReplacer { get; } = childReplacer;
+    protected IReplacerExecution<TCandidate, TSearchSpace, TProblem> ChildReplacer { get; } = childReplacer;
 }

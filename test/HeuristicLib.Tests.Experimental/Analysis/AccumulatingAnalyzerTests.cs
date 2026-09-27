@@ -47,9 +47,9 @@ public class AccumulatingAnalyzerTests
     /// <summary>Scores a candidate against two conflicting objectives, so every candidate stays on the front.</summary>
     private sealed record SketchEvaluator : Evaluator<int, SketchSearchSpace, SketchProblem>
     {
-        public override IEvaluatorInstance<int, SketchSearchSpace, SketchProblem> CreateExecutionInstance(ResolutionScope scope) => new Instance();
+        public override IEvaluatorExecution<int, SketchSearchSpace, SketchProblem> CreateExecutionInstance(ResolutionScope scope) => new Execution();
 
-        private sealed class Instance : IEvaluatorInstance<int, SketchSearchSpace, SketchProblem>
+        private sealed class Execution : IEvaluatorExecution<int, SketchSearchSpace, SketchProblem>
         {
             public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random,
                 SketchSearchSpace searchSpace, SketchProblem problem) =>

@@ -8,8 +8,8 @@ namespace HEAL.HeuristicLib.Encodings.RealVectors;
 /// A capability, not a role, so it has no configuration counterpart. Any mutator may offer it by returning an instance
 /// that implements it, and an algorithm that adapts strength tests its resolved mutator for it.
 /// </remarks>
-public interface IAdaptableMutationStrengthInstance<TCandidate, in TSearchSpace, in TProblem>
-    : IMutatorInstance<TCandidate, TSearchSpace, TProblem>
+public interface IAdaptableMutationStrengthExecution<TCandidate, in TSearchSpace, in TProblem>
+    : IMutatorExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {

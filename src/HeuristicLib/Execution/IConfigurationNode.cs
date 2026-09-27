@@ -1,9 +1,9 @@
 namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>
-/// A configuration the <see cref="ResolutionScope"/> can resolve into an execution instance.
+/// A configuration the <see cref="ResolutionScope"/> can resolve into an execution node.
 /// </summary>
-public interface IExecutionConfiguration
+public interface IConfigurationNode
 {
     /// <summary>
     /// Whether this configuration, and everything it resolves under the same signature, was written for
@@ -17,7 +17,7 @@ public interface IExecutionConfiguration
     /// later.
     /// <para>
     /// A composition that passes its signature through to its children answers for them with
-    /// <see cref="ExecutionSignature.Fits(ReadOnlySpan{IExecutionConfiguration})"/>. One that adapts them does
+    /// <see cref="ExecutionSignature.Fits(ReadOnlySpan{IConfigurationNode})"/>. One that adapts them does
     /// not, and needs no code to say so.
     /// </para>
     /// </remarks>
@@ -25,19 +25,19 @@ public interface IExecutionConfiguration
 }
 
 /// <summary>
-/// A configuration whose execution instance type is known without a run's types, so it can create that instance
+/// A configuration whose execution node type is known without a run's types, so it can create that execution
 /// itself.
 /// </summary>
 /// <remarks>
-/// Role configurations such as mutators are not of this kind: their instance type depends on the run's search space
+/// Role configurations such as mutators are not of this kind: their execution type depends on the run's search space
 /// and problem, so they are resolved through
-/// <see cref="ResolutionScope.Resolve{TConfiguration, TExecutionInstance}(TConfiguration, Func{TConfiguration, ResolutionScope, TExecutionInstance})"/>
+/// <see cref="ResolutionScope.Resolve{TConfiguration, TExecution}(TConfiguration, Func{TConfiguration, ResolutionScope, TExecution})"/>
 /// instead.
 /// </remarks>
-public interface IExecutionConfiguration<out TExecutionInstance> : IExecutionConfiguration
-  where TExecutionInstance : IExecutionInstance
+public interface IConfigurationNode<out TExecution> : IConfigurationNode
+  where TExecution : IExecutionNode
 {
-    TExecutionInstance CreateExecutionInstance(ResolutionScope scope);
+    TExecution CreateExecutionInstance(ResolutionScope scope);
 }
 
-public interface IExecutionInstance;
+public interface IExecutionNode;

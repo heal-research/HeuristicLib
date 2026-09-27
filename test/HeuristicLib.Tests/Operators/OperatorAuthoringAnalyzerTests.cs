@@ -50,14 +50,14 @@ public class OperatorAuthoringAnalyzerTests
     }
 
     [Fact]
-    public async Task StatefulMutator_RejectsExecutionInstanceMember()
+    public async Task StatefulMutator_RejectsExecutionMember()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
           file sealed record InvalidMutator : StatefulMutator<int, InvalidMutator.State>
           {
               public sealed class State
               {
-                  public IExecutionInstance? ChildInstance { get; set; }
+                  public IExecutionNode? ChildExecution { get; set; }
               }
 
               protected override State CreateInitialState() => new();
@@ -71,7 +71,7 @@ public class OperatorAuthoringAnalyzerTests
 
         var diagnostic = diagnostics.ShouldHaveSingleItem();
         diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
-        diagnostic.GetMessage().ShouldContain("ChildInstance");
+        diagnostic.GetMessage().ShouldContain("ChildExecution");
     }
 
     [Fact]
@@ -138,8 +138,8 @@ public class OperatorAuthoringAnalyzerTests
           {
               public sealed class State
               {
-                  public IExecutionInstance[] Instances { get; set; } = [];
-                  public (int Count, IExecutionInstance? Instance) Snapshot { get; set; }
+                  public IExecutionNode[] Instances { get; set; } = [];
+                  public (int Count, IExecutionNode? Instance) Snapshot { get; set; }
               }
 
               protected override State CreateInitialState() => new();
@@ -166,10 +166,10 @@ public class OperatorAuthoringAnalyzerTests
           {
               protected abstract TState CreateInitialState();
 
-              public CustomOperatorInstance CreateExecutionInstance(ResolutionScope scope) => new();
+              public CustomOperatorExecution CreateExecutionInstance(ResolutionScope scope) => new();
           }
 
-          file sealed class CustomOperatorInstance : IOperatorInstance;
+          file sealed class CustomOperatorExecution : IOperatorExecution;
 
           file sealed record InvalidOperator : CustomStatefulOperator<InvalidOperator.State>
           {
@@ -281,7 +281,7 @@ public class OperatorAuthoringAnalyzerTests
     public async Task StatelessOperatorRule_UsesAuthoringShapeWithoutKnownBase()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record InvalidOperator : IOperator, IOperatorInstance
+          file sealed record InvalidOperator : IOperator, IOperatorExecution
           {
               private int calls;
 

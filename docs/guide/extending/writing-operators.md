@@ -57,9 +57,9 @@ Reduced arity bases such as `SingleCandidateMutator<Permutation>` omit inputs th
 
 Operator records are reusable configuration. Do not store counters, caches or other changing run data in their properties.
 
-Use a stateful base when the framework only needs to create one fresh state object per run. Use an explicit execution instance when the operator owns child operators or more complex run resources.
+Use a stateful base when the framework only needs to create one fresh state object per run. Use an explicit execution node when the operator owns child operators or more complex run resources.
 
-The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), execution instances and repository analyzer rules.
+The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), execution nodes and repository analyzer rules.
 
 ## Test the contract
 

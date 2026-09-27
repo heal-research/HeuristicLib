@@ -10,7 +10,7 @@ Start with the repository `AGENTS.md` file for validation commands and test plac
 | [Requirements](/contributing/requirements)                                    | Supported capabilities and package boundaries                   |
 | [Developer guidelines](/contributing/developer-guidelines)                    | Implementation rules, public API conventions and design changes |
 | [Analyzer architecture](/contributing/architecture/analyzers)                 | Analyzer configuration, observation and result ownership        |
-| [Execution instances](/contributing/architecture/execution-instances)         | Run scoped state and dependency resolution                      |
+| [Execution nodes](/contributing/architecture/execution-nodes)         | Run scoped state and dependency resolution                      |
 | [Operator implementation](/contributing/architecture/operator-implementation) | Internal operator bases and analyzer rules                      |
 
 Open work and unresolved decisions live in `plans/developer-backlog.md`, outside the published documentation source.

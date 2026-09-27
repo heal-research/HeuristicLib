@@ -1,12 +1,12 @@
-# Instance resolution
+# Execution resolution
 
-This page documents how a configuration graph becomes an execution graph, and why the lookup works the way it does. It matters because observation, budgets, racing and per-cycle instance freshness all rest on these rules, and several plausible-looking alternatives break one of them silently.
+This page documents how a configuration graph becomes an execution graph, and why the lookup works the way it does. It matters because observation, budgets, racing and per-cycle execution freshness all rest on these rules, and several plausible-looking alternatives break one of them silently.
 
-For the surrounding concepts, read [configuration vs execution instances](/contributing/architecture/execution-instances) first.
+For the surrounding concepts, read [configuration vs execution nodes](/contributing/architecture/execution-nodes) first.
 
 ## Two phases, two types
 
-Declaring decorations and resolving instances are separate types, not separate moments.
+Declaring decorations and resolving executions are separate types, not separate moments.
 
 <!-- prettier-ignore -->
 <figure>
@@ -42,26 +42,26 @@ return new(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchS
 
 `ResolutionScope.Create(declare)` does the same for the root. Both take a callback, then snapshot the builder's declarations into the scope. A callback can retain the builder, but later changes to it cannot affect that snapshot. Treat the builder as valid only during declaration.
 
-**Why the split.** The scope exposes resolution and has no decoration-registration method. Its declaration snapshot stays fixed while instances are resolved, so the cache and decorations cannot diverge through changes to that scope. An escaped builder can still accept declarations, but they have no effect on an already-built scope; this is snapshot isolation, not a language restriction preventing the builder from escaping.
+**Why the split.** The scope exposes resolution and has no decoration-registration method. Its declaration snapshot stays fixed while executions are resolved, so the cache and decorations cannot diverge through changes to that scope. An escaped builder can still accept declarations, but they have no effect on an already-built scope; this is snapshot isolation, not a language restriction preventing the builder from escaping.
 
 `ResolutionScope.Create()` and `CreateChildScope()` take no callback, for the common case of a scope that declares nothing.
 
 ## What a scope resolves
 
-Anything implementing `IExecutionConfiguration` can be resolved. Decorations, the instance cache and `Decorate` all key on that non-generic interface, by reference.
+Anything implementing `IConfigurationNode` can be resolved. Decorations, the execution cache and `Decorate` all key on that non-generic interface, by reference.
 
-Role configurations such as `IMutator<TCandidate>` name only their candidate. Their execution instance type exists only once a run's search space and problem are known, so they cannot create an instance on their own. The primary entry point therefore takes the creation step as an argument:
+Role configurations such as `IMutator<TCandidate>` name only their candidate. Their execution node type exists only once a run's search space and problem are known, so they cannot create an execution on their own. The primary entry point therefore takes the creation step as an argument:
 
 ```csharp
 scope.Resolve(mutator, static (target, childScope) =>
     target.CreateExecutionInstance<TSearchSpace, TProblem>(childScope));
 ```
 
-The role extensions wrap exactly that call, so an author writes `scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(Mutator)`, or binds the types once with `scope.For<TCandidate, TRunSearchSpace, TRunProblem>()` and resolves every slot through the returned `ResolutionScope` without type arguments. A configuration whose instance type is fixed implements `IExecutionConfiguration<TExecutionInstance>` and resolves through the convenience `Resolve(configuration)`; `ResolveOptional` does the same for an optional slot.
+The role extensions wrap exactly that call, so an author writes `scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(Mutator)`, or binds the types once with `scope.For<TCandidate, TRunSearchSpace, TRunProblem>()` and resolves every slot through the returned `ResolutionScope` without type arguments. A configuration whose execution type is fixed implements `IConfigurationNode<TExecution>` and resolves through the convenience `Resolve(configuration)`; `ResolveOptional` does the same for an optional slot.
 
 The creation step runs for the configuration and then once for each decoration, innermost first, so every decoration must produce the same role type as the configuration it wraps.
 
-A scope serves one run, and therefore one execution signature. An instance found in the cache that is not the requested type was built for a different search space or problem; resolution reports that instead of casting. Whether a configuration was written for the run's types is one question, answered by `IExecutionConfiguration.Fits(ExecutionSignature)` from type arguments alone, so pre-flight validation can ask it before anything is built. The authoring bases apply the same rule when they bridge to the run's types, and an observation applies it when it is resolved; a configuration that does not fit fails with `ExecutionSignature.Mismatch`, which names the types it was written for and the run's.
+A scope serves one run, and therefore one execution signature. An execution found in the cache that is not the requested type was built for a different search space or problem; resolution reports that instead of casting. Whether a configuration was written for the run's types is one question, answered by `IConfigurationNode.Fits(ExecutionSignature)` from type arguments alone, so pre-flight validation can ask it before anything is built. The authoring bases apply the same rule when they bridge to the run's types, and an observation applies it when it is resolved; a configuration that does not fit fails with `ExecutionSignature.Mismatch`, which names the types it was written for and the run's.
 
 ## Decorations
 
@@ -84,7 +84,7 @@ Analyzers implement the module contract. Runs install their single attachment li
 
 <!-- prettier-ignore -->
 <figure>
-<svg viewBox="0 0 620 496" role="img" aria-label="The walk goes from the resolving scope towards the root and stops at the first scope declaring a decoration. At each scope three questions are asked in order: under construction, instance held, declares decorations." style="width:100%;height:auto">
+<svg viewBox="0 0 620 496" role="img" aria-label="The walk goes from the resolving scope towards the root and stops at the first scope declaring a decoration. At each scope three questions are asked in order: under construction, execution held, declares decorations." style="width:100%;height:auto">
 <defs><marker id="reg-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
 <text x="20" y="32" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11.5" letter-spacing="0.09em" fill="var(--vp-c-text-3,#8e8e93)">THE WALK</text>
 <rect x="20" y="56" width="160" height="62" rx="5" fill="var(--vp-c-bg-soft,#f6f6f7)" stroke="currentColor" stroke-width="1.4"/>
@@ -107,7 +107,7 @@ Analyzers implement the module contract. Runs install their single attachment li
 <text x="38" y="206" font-size="13" fill="currentColor">1 · is r under construction here?</text>
 <text x="582" y="206" text-anchor="end" font-size="12" fill="var(--vp-c-text-3,#8e8e93)">return the partial</text>
 <rect x="20" y="234" width="580" height="48" rx="5" fill="none" stroke="var(--vp-c-divider,#c2c2c4)"/>
-<text x="38" y="264" font-size="13" fill="currentColor">2 · is an instance of r held here?</text>
+<text x="38" y="264" font-size="13" fill="currentColor">2 · is an execution of r held here?</text>
 <text x="582" y="264" text-anchor="end" font-size="12" fill="var(--vp-c-text-3,#8e8e93)">return it</text>
 <rect x="20" y="292" width="580" height="48" rx="5" fill="none" stroke="var(--vp-c-danger-1,#b8272c)" stroke-width="1.4"/>
 <text x="38" y="322" font-size="13" fill="currentColor">3 · are decorations for r declared here?</text>
@@ -115,7 +115,7 @@ Analyzers implement the module contract. Runs install their single attachment li
 <rect x="20" y="362" width="580" height="58" rx="5" fill="var(--vp-c-bg-soft,#f6f6f7)" stroke="var(--vp-c-brand-1,#3451b2)" stroke-width="1.4"/>
 <text x="38" y="387" font-size="13" font-weight="600" fill="var(--vp-c-brand-1,#3451b2)">otherwise</text>
 <text x="38" y="409" font-size="12.5" fill="currentColor">build from the chain that applies at X, and store it at X</text>
-<text x="20" y="452" font-size="12.5" fill="var(--vp-c-text-3,#8e8e93)">2 before 3: a scope's own instance already includes its own decorations.</text>
+<text x="20" y="452" font-size="12.5" fill="var(--vp-c-text-3,#8e8e93)">2 before 3: a scope's own execution already includes its own decorations.</text>
 <text x="20" y="474" font-size="12.5" fill="var(--vp-c-text-3,#8e8e93)">3 makes 2 sound: reaching an ancestor without stopping proves the chains match.</text>
 </svg>
 <figcaption>The walk, and the three questions asked at every scope along it.</figcaption>
@@ -123,58 +123,58 @@ Analyzers implement the module contract. Runs install their single attachment li
 
 No runtime chain comparison is needed. The walk establishes the equality structurally: if it never stopped, the chains are the same by construction.
 
-## When two resolves share an instance
+## When two resolves share an execution
 
-> A resolve reuses the first eligible instance found in its own scope or an ancestor. Identical decoration chains permit ancestor reuse; they do not by themselves guarantee a shared instance.
+> A resolve reuses the first eligible execution found in its own scope or an ancestor. Identical decoration chains permit ancestor reuse; they do not by themselves guarantee a shared execution.
 
-A decoration does not by itself prevent reuse. An intervening declaration for `r` blocks reuse from above it because the chains differ. Declarations for other configurations do not block that lookup. If no eligible instance exists yet, the resolving scope builds and stores its own; resolution order therefore matters.
+A decoration does not by itself prevent reuse. An intervening declaration for `r` blocks reuse from above it because the chains differ. Declarations for other configurations do not block that lookup. If no eligible execution exists yet, the resolving scope builds and stores its own; resolution order therefore matters.
 
 <!-- prettier-ignore -->
 <figure>
-<svg viewBox="0 0 620 364" role="img" aria-label="A child that adds no decoration for the target reuses the parent's cached decorated instance; a child that adds one builds its own. Siblings cannot read each other's caches." style="width:100%;height:auto">
+<svg viewBox="0 0 620 364" role="img" aria-label="A child that adds no decoration for the target reuses the parent's cached decorated execution; a child that adds one builds its own. Siblings cannot read each other's caches." style="width:100%;height:auto">
 <defs><marker id="reg-a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--vp-c-text-3,#8e8e93)"/></marker></defs>
 <rect x="170" y="28" width="280" height="88" rx="6" fill="var(--vp-c-bg-soft,#f6f6f7)" stroke="var(--vp-c-brand-1,#3451b2)" stroke-width="1.5"/>
 <text x="310" y="54" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">parent</text>
 <text x="310" y="78" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="var(--vp-c-brand-1,#3451b2)">declares [ fP ]</text>
-<text x="310" y="100" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" fill="var(--vp-c-text-3,#8e8e93)">holds instance fP(r)</text>
+<text x="310" y="100" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" fill="var(--vp-c-text-3,#8e8e93)">holds execution fP(r)</text>
 <line x1="250" y1="116" x2="165" y2="186" stroke="var(--vp-c-text-3,#8e8e93)" stroke-width="1.2" marker-end="url(#reg-a3)"/>
 <line x1="370" y1="116" x2="465" y2="186" stroke="var(--vp-c-text-3,#8e8e93)" stroke-width="1.2" marker-end="url(#reg-a3)"/>
 <rect x="10" y="192" width="280" height="112" rx="6" fill="none" stroke="var(--vp-c-success-1,#18794e)" stroke-width="1.5"/>
 <text x="150" y="219" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">child A</text>
 <text x="150" y="243" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12.5" fill="var(--vp-c-text-3,#8e8e93)">declares nothing</text>
 <text x="150" y="266" text-anchor="middle" font-size="12" fill="currentColor">applies [ fP ] — same as parent</text>
-<text x="150" y="290" text-anchor="middle" font-size="13" font-weight="600" fill="var(--vp-c-success-1,#18794e)">reuses the parent's instance</text>
+<text x="150" y="290" text-anchor="middle" font-size="13" font-weight="600" fill="var(--vp-c-success-1,#18794e)">reuses the parent's execution</text>
 <rect x="340" y="192" width="280" height="112" rx="6" fill="none" stroke="var(--vp-c-divider,#c2c2c4)" stroke-width="1.4"/>
 <text x="480" y="219" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">child B</text>
 <text x="480" y="243" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12.5" fill="var(--vp-c-brand-1,#3451b2)">declares [ fC ]</text>
 <text x="480" y="266" text-anchor="middle" font-size="12" fill="currentColor">applies [ fP, fC ] — differs</text>
-<text x="480" y="290" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">builds its own instance</text>
+<text x="480" y="290" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">builds its own execution</text>
 <path d="M150 308 V 328 H 480 V 308" fill="none" stroke="var(--vp-c-text-3,#8e8e93)" stroke-width="1.2" stroke-dasharray="4 3"/>
 <line x1="306" y1="320" x2="324" y2="336" stroke="var(--vp-c-danger-1,#b8272c)" stroke-width="2"/>
 <line x1="324" y1="320" x2="306" y2="336" stroke="var(--vp-c-danger-1,#b8272c)" stroke-width="2"/>
 <text x="315" y="356" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--vp-c-danger-1,#b8272c)">no lookup across sibling caches</text>
 </svg>
-<figcaption>Existing ancestor instances can be reused. Instances built in a child stay in that child.</figcaption>
+<figcaption>Existing ancestor executions can be reused. Executions built in a child stay in that child.</figcaption>
 </figure>
 
 Representative cases (resolve order is left to right):
 
 | Decorations      | Resolves      | Outcome                                                    |
 | ---------------- | ------------- | ---------------------------------------------------------- |
-| none             | parent, child | child reuses the parent's instance                         |
-| none             | two siblings, no ancestor instance | each sibling builds its own instance |
-| none             | parent, then two siblings | both siblings reuse the parent's instance |
-| none             | child, then parent | each builds its own instance; the child retains its cached instance |
-| parent only      | parent, child | child reuses the parent's **decorated** instance           |
+| none             | parent, child | child reuses the parent's execution                         |
+| none             | two siblings, no ancestor execution | each sibling builds its own execution |
+| none             | parent, then two siblings | both siblings reuse the parent's execution |
+| none             | child, then parent | each builds its own execution; the child retains its cached execution |
+| parent only      | parent, child | child reuses the parent's **decorated** execution           |
 | parent only      | child only    | child builds and keeps it                                  |
-| child only       | parent, child | parent gets an undecorated instance, child a decorated one |
-| parent and child | child         | both decorations apply; the child builds its own instance  |
+| child only       | parent, child | parent gets an undecorated execution, child a decorated one |
+| parent and child | child         | both decorations apply; the child builds its own execution  |
 
-**Instances are stored where they are built, never hoisted.** Hoisting a child's new instance to an ancestor would expose it to later sibling resolves. Keeping it local is what lets `CycleAlgorithm.NewExecutionInstancesPerCycle` build fresh instances when the parent has not already resolved those configurations. A fresh child scope can still reuse an eligible instance already held by an ancestor.
+**Executions are stored where they are built, never hoisted.** Hoisting a child's new execution to an ancestor would expose it to later sibling resolves. Keeping it local is what lets `CycleAlgorithm.NewExecutionInstancesPerCycle` build fresh executions when the parent has not already resolved those configurations. A fresh child scope can still reuse an eligible execution already held by an ancestor.
 
-Reusing a cached composite also reuses the children it already holds. The resolver does not traverse those children again under the requesting scope. Scope nesting describes lookup ancestry; it does not identify which caller invokes a shared instance.
+Reusing a cached composite also reuses the children it already holds. The resolver does not traverse those children again under the requesting scope. Scope nesting describes lookup ancestry; it does not identify which caller invokes a shared execution.
 
-For example, a parent scope observes mutator M and constructs algorithm G, which retains its resolved M instance. A child scope adds another observation of M and resolves G. If G is reused from the parent, its stored M reference is unchanged: the parent's observation still receives calls through G, but the child's additional observation does not. Resolving M directly is a different operation from invoking G's already-bound child. Child registrations do not modify a reused composite's dependencies.
+For example, a parent scope observes mutator M and constructs algorithm G, which retains its resolved M execution. A child scope adds another observation of M and resolves G. If G is reused from the parent, its stored M reference is unchanged: the parent's observation still receives calls through G, but the child's additional observation does not. Resolving M directly is a different operation from invoking G's already-bound child. Child registrations do not modify a reused composite's dependencies.
 
 This limitation does not hide deferred descendants from parent observers. `CycleAlgorithm` and `PipelineAlgorithm` retain their creating scope and use it to create scopes for delayed child resolution. Observations inherited from that creating scope apply to those later resolutions. Reusing the algorithm from a different child scope does not replace its retained scope or add that requesting scope's observations to its future children. The distinction is which scope binds the dependencies, not whether execution has started.
 
@@ -243,27 +243,27 @@ Two nested duration budgets on one operator, an outer 10s and an inner 2s. Which
 
 ## Building the chain
 
-A decoration produces a _configuration_, and that wrapper resolves what it wraps through the scope, so building a chain is re-entrant. Each link is published as **under construction** while the chain is built, so a wrapper receives the instance already created for its child instead of starting over.
+A decoration produces a _configuration_, and that wrapper resolves what it wraps through the scope, so building a chain is re-entrant. Each link is published as **under construction** while the chain is built, so a wrapper receives the execution already created for its child instead of starting over.
 
 <!-- prettier-ignore -->
 <figure>
-<svg viewBox="0 0 620 424" role="img" aria-label="Building a chain of two decorations: the raw instance is created and pinned, then each wrapper is created and pinned in turn, with each wrapper's own resolve answered by the pin below it." style="width:100%;height:auto">
+<svg viewBox="0 0 620 424" role="img" aria-label="Building a chain of two decorations: the raw execution is created and pinned, then each wrapper is created and pinned in turn, with each wrapper's own resolve answered by the pin below it." style="width:100%;height:auto">
 <rect x="20" y="40" width="580" height="88" rx="6" fill="var(--vp-c-bg-soft,#f6f6f7)" stroke="var(--vp-c-divider,#c2c2c4)"/>
 <text x="38" y="66" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11.5" letter-spacing="0.08em" fill="var(--vp-c-brand-1,#3451b2)">STEP 1</text>
-<text x="38" y="92" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">creates instance₀ from r</text>
-<text x="38" y="116" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" fill="var(--vp-c-brand-1,#3451b2)">pinned:  r → instance₀</text>
+<text x="38" y="92" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">creates execution₀ from r</text>
+<text x="38" y="116" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" fill="var(--vp-c-brand-1,#3451b2)">pinned:  r → execution₀</text>
 <rect x="20" y="146" width="580" height="104" rx="6" fill="var(--vp-c-bg-soft,#f6f6f7)" stroke="var(--vp-c-divider,#c2c2c4)"/>
 <text x="38" y="172" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11.5" letter-spacing="0.08em" fill="var(--vp-c-brand-1,#3451b2)">STEP 2</text>
-<text x="38" y="198" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">creates instance₁ from fInner(r)</text>
-<text x="38" y="218" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11.5" fill="var(--vp-c-text-3,#8e8e93)">its Resolve(r) is answered by the pin → instance₀</text>
-<text x="38" y="240" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" fill="var(--vp-c-brand-1,#3451b2)">pinned:  r → instance₀ ,  fInner(r) → instance₁</text>
+<text x="38" y="198" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">creates execution₁ from fInner(r)</text>
+<text x="38" y="218" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11.5" fill="var(--vp-c-text-3,#8e8e93)">its Resolve(r) is answered by the pin → execution₀</text>
+<text x="38" y="240" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" fill="var(--vp-c-brand-1,#3451b2)">pinned:  r → execution₀ ,  fInner(r) → execution₁</text>
 <rect x="20" y="268" width="580" height="104" rx="6" fill="var(--vp-c-bg-soft,#f6f6f7)" stroke="var(--vp-c-divider,#c2c2c4)"/>
 <text x="38" y="294" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11.5" letter-spacing="0.08em" fill="var(--vp-c-brand-1,#3451b2)">STEP 3</text>
-<text x="38" y="320" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">creates instance₂ from fOuter(fInner(r))</text>
-<text x="38" y="340" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11.5" fill="var(--vp-c-text-3,#8e8e93)">its Resolve(fInner(r)) is answered by the pin → instance₁</text>
-<text x="38" y="362" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" fill="var(--vp-c-brand-1,#3451b2)">pinned:  + fOuter(…) → instance₂</text>
-<text x="20" y="396" font-size="12.5" fill="currentColor">Every pin is then removed, and instance₂ is stored under r.</text>
-<text x="20" y="416" font-size="12.5" fill="var(--vp-c-text-3,#8e8e93)">The undecorated instance is created exactly once.</text>
+<text x="38" y="320" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="currentColor">creates execution₂ from fOuter(fInner(r))</text>
+<text x="38" y="340" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11.5" fill="var(--vp-c-text-3,#8e8e93)">its Resolve(fInner(r)) is answered by the pin → execution₁</text>
+<text x="38" y="362" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" fill="var(--vp-c-brand-1,#3451b2)">pinned:  + fOuter(…) → execution₂</text>
+<text x="20" y="396" font-size="12.5" fill="currentColor">Every pin is then removed, and execution₂ is stored under r.</text>
+<text x="20" y="416" font-size="12.5" fill="var(--vp-c-text-3,#8e8e93)">The undecorated execution is created exactly once.</text>
 </svg>
 <figcaption>Building a two-decoration chain. The pins exist only for the duration of the build.</figcaption>
 </figure>
@@ -275,14 +275,14 @@ Each rule above exists because a simpler-looking rule fails somewhere:
 | Alternative rule                                          | What it breaks                                                                                  |
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | Nearest scope's decorations win, ignore ancestors      | An analyzer at the root vanishes as soon as any child scope decorates the same configuration |
-| Check ancestor instances before decorations               | A child's own decoration is skipped — a budget resolves an undecorated operator and never fires |
-| Check decorations before ancestor instances, always build | Parent and child build two identical decorated instances and split any state they hold          |
-| Hoist new instances to the ancestor owning the chain      | Siblings start sharing, so recreating execution instances per cycle stops working               |
+| Check ancestor executions before decorations               | A child's own decoration is skipped — a budget resolves an undecorated operator and never fires |
+| Check decorations before ancestor executions, always build | Parent and child build two identical decorated executions and split any state they hold          |
+| Hoist new executions to the ancestor owning the chain      | Siblings start sharing, so recreating execution nodes per cycle stops working               |
 | Order decorations purely by install time                  | Budgets measure the analyzers observing them                                                    |
 | One type for declaring and resolving                      | Decorating after resolving is accepted and silently ignored                                     |
 
 ## Related pages
 
-- [Configuration vs execution instances](/contributing/architecture/execution-instances)
+- [Configuration vs execution nodes](/contributing/architecture/execution-nodes)
 - [Analyzers](/contributing/architecture/analyzers)
 - [Operator implementation](/contributing/architecture/operator-implementation)

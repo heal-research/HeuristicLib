@@ -17,11 +17,11 @@ public sealed record CountingMutator<TCandidate> : WrappingMutator<TCandidate>
         Metric = metric;
     }
 
-    protected override IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childMutator) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childMutator, Counter, Metric);
+    protected override IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childMutator) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childMutator, Counter, Metric);
 
-    private sealed class Instance<TSearchSpace, TProblem>(IMutatorInstance<TCandidate, TSearchSpace, TProblem> childMutator, CountAccumulator counter, OperatorCountMetric metric)
-        : WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem>(childMutator)
+    private sealed class Execution<TSearchSpace, TProblem>(IMutatorExecution<TCandidate, TSearchSpace, TProblem> childMutator, CountAccumulator counter, OperatorCountMetric metric)
+        : WrappingMutatorExecution<TCandidate, TSearchSpace, TProblem>(childMutator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

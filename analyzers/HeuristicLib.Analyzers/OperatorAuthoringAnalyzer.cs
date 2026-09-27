@@ -19,7 +19,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor StatefulStateRule = new(
         id: StatefulStateDiagnosticId,
         title: "Stateful operator state must not contain execution graph dependencies",
-        messageFormat: "State member '{0}' exposes execution graph dependency '{1}'. Use the explicit execution instance operator path instead.",
+        messageFormat: "State member '{0}' exposes execution graph dependency '{1}'. Use the explicit execution node operator path instead.",
         category: "Architecture",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -27,7 +27,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor ConfigurationMutationRule = new(
         id: ConfigurationMutationDiagnosticId,
         title: "Operator configurations must not be mutated during operation logic",
-        messageFormat: "Operator configuration member '{0}' is mutated during operation logic. Store mutable execution data in state or an explicit execution instance instead.",
+        messageFormat: "Operator configuration member '{0}' is mutated during operation logic. Store mutable execution data in state or an explicit execution node instead.",
         category: "Architecture",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -84,8 +84,8 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
     {
         var metadataNames = new[]
         {
-            "HEAL.HeuristicLib.Execution.IExecutionInstance",
-            "HEAL.HeuristicLib.Execution.IExecutionConfiguration",
+            "HEAL.HeuristicLib.Execution.IExecutionNode",
+            "HEAL.HeuristicLib.Execution.IConfigurationNode",
             "HEAL.HeuristicLib.Execution.ResolutionScope",
             "HEAL.HeuristicLib.Operators.IOperator"
         };
@@ -103,7 +103,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
             "HEAL.HeuristicLib.Problems.IProblem`2",
             "HEAL.HeuristicLib.SearchSpaces.ISearchSpace",
             "HEAL.HeuristicLib.Algorithms.ISearchState",
-            "HEAL.HeuristicLib.Operators.IOperatorInstance"
+            "HEAL.HeuristicLib.Operators.IOperatorExecution"
         };
 
         return [.. forbiddenTypes.Concat(metadataNames

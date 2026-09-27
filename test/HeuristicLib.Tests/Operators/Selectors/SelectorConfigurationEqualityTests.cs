@@ -258,11 +258,11 @@ public class SelectorConfigurationEqualityTests
         {
         }
 
-        protected override ISelectorInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ISelectorInstance<int, TRunSearchSpace, TRunProblem>> childSelectors) =>
-            new Instance<TRunSearchSpace, TRunProblem>(childSelectors);
+        protected override ISelectorExecution<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ISelectorExecution<int, TRunSearchSpace, TRunProblem>> childSelectors) =>
+            new Execution<TRunSearchSpace, TRunProblem>(childSelectors);
 
-        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ISelectorInstance<int, TSearchSpace, TProblem>> childSelectors)
-            : MultiSelectorInstance<int, TSearchSpace, TProblem>(childSelectors)
+        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ISelectorExecution<int, TSearchSpace, TProblem>> childSelectors)
+            : MultiSelectorExecution<int, TSearchSpace, TProblem>(childSelectors)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

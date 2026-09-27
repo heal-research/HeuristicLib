@@ -23,11 +23,11 @@ public sealed record DurationMeasuringCrossover<TCandidate>
         TimeProvider = timeProvider;
     }
 
-    protected override ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> childCrossover) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childCrossover, Duration, TimeProvider);
+    protected override ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> childCrossover) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childCrossover, Duration, TimeProvider);
 
-    private sealed class Instance<TSearchSpace, TProblem>(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> childCrossover, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(childCrossover)
+    private sealed class Execution<TSearchSpace, TProblem>(ICrossoverExecution<TCandidate, TSearchSpace, TProblem> childCrossover, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingCrossoverExecution<TCandidate, TSearchSpace, TProblem>(childCrossover)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

@@ -24,11 +24,11 @@ public sealed record DurationMeasuringSelector<TCandidate>
         TimeProvider = timeProvider;
     }
 
-    protected override ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> childSelector) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childSelector, Duration, TimeProvider);
+    protected override ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem> childSelector) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childSelector, Duration, TimeProvider);
 
-    private sealed class Instance<TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(childSelector)
+    private sealed class Execution<TSearchSpace, TProblem>(ISelectorExecution<TCandidate, TSearchSpace, TProblem> childSelector, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingSelectorExecution<TCandidate, TSearchSpace, TProblem>(childSelector)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

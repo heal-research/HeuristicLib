@@ -39,7 +39,7 @@ The public model should revolve around a deliberately small vocabulary such as:
 - operator
 - run
 - search state
-- execution instance
+- execution node
 
 Prefer one honest concept over parallel hierarchies when their semantics are truly shared.
 

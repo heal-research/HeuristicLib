@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Tests.Operators.Refiners;
 
 public class RefinerEvaluatorAccountingTests
 {
-    // One configuration object resolves to one execution instance, which is what makes one counter, budget and cache
+    // One configuration object resolves to one execution node, which is what makes one counter, budget and cache
     // shared.
     [Fact]
     public void EvaluationAccounting_FollowsConfigurationInstanceIdentityRatherThanEquality()
@@ -46,11 +46,11 @@ public class RefinerEvaluatorAccountingTests
         var algorithmEvaluator = CreateEvaluator().LimitEvaluations(2);
         var scope = ResolutionScope.Create();
         var refiner = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().LimitEvaluations(2)));
-        var evaluatorInstance = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(algorithmEvaluator);
+        var evaluatorExecution = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(algorithmEvaluator);
 
         refiner.Refine([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        evaluatorInstance.Evaluate([10], RandomNumberGenerator.Create(2), problem.SearchSpace, problem)
+        evaluatorExecution.Evaluate([10], RandomNumberGenerator.Create(2), problem.SearchSpace, problem)
             .ShouldBe([new ObjectiveVector(10.0)]);
     }
 
@@ -80,13 +80,13 @@ public class RefinerEvaluatorAccountingTests
     public void InAPipeline_OnlyTheStageWithAnEvaluatorEvaluates()
     {
         var counter = new CountAccumulator();
-        var instance = PipelineRefiner.Create(
+        var execution = PipelineRefiner.Create(
                 new AddOffsetRefiner(-1),
                 new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().CountCandidates(counter)))
             .CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
         var problem = CreateProblem();
 
-        instance.Refine([10, 20], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        execution.Refine([10, 20], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         // Two candidates, evaluated once as supplied and once as refined, by the checking stage alone.
         counter.CurrentCount.ShouldBe(4);

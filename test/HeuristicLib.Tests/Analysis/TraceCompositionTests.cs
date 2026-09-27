@@ -93,7 +93,7 @@ public class TraceCompositionTests
 
     private sealed record FailingCreator : Creator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ICreatorInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ResolutionScope scope) =>
+        public override ICreatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ResolutionScope scope) =>
             throw new InvalidOperationException("Resolution failed.");
     }
 
@@ -545,12 +545,12 @@ public class TraceCompositionTests
         ICreator<RealVector> Child,
         Action<int> Observe) : WrappingCreator<RealVector>(Child)
     {
-        protected override ICreatorInstance<RealVector, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICreatorInstance<RealVector, TRunSearchSpace, TRunProblem> childCreator) =>
-            new Instance<TRunSearchSpace, TRunProblem>(childCreator, Observe);
+        protected override ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem> childCreator) =>
+            new Execution<TRunSearchSpace, TRunProblem>(childCreator, Observe);
 
-        private sealed class Instance<TSearchSpace, TProblem>(
-            ICreatorInstance<RealVector, TSearchSpace, TProblem> childCreator,
-            Action<int> observe) : ICreatorInstance<RealVector, TSearchSpace, TProblem>
+        private sealed class Execution<TSearchSpace, TProblem>(
+            ICreatorExecution<RealVector, TSearchSpace, TProblem> childCreator,
+            Action<int> observe) : ICreatorExecution<RealVector, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
         {

@@ -28,16 +28,16 @@ public sealed record RepeatingEvaluator<TCandidate>
         Repetitions = repetitions;
     }
 
-    protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator)
+    protected override IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator)
     {
         if (Repetitions <= 0)
             throw new InvalidOperationException("Repetitions must be positive.");
 
-        return new Instance<TRunSearchSpace, TRunProblem>(childEvaluator, Repetitions, Aggregator, Concurrency);
+        return new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, Repetitions, Aggregator, Concurrency);
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency)
-        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
+    private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency)
+        : WrappingEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(childEvaluator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -45,8 +45,8 @@ public sealed record RepeatingEvaluator<TCandidate>
         {
             var repetitionResults = BatchExecution.Execute(
                 repetitions,
-                (instance: this, candidates, searchSpace, problem),
-                static (itemRandom, state) => state.instance.ChildEvaluator.Evaluate(state.candidates, itemRandom, state.searchSpace, state.problem),
+                (execution: this, candidates, searchSpace, problem),
+                static (itemRandom, state) => state.execution.ChildEvaluator.Evaluate(state.candidates, itemRandom, state.searchSpace, state.problem),
                 random,
                 concurrency);
 

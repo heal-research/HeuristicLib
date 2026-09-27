@@ -18,11 +18,11 @@ public sealed record CountingCrossover<TCandidate>
         Metric = metric;
     }
 
-    protected override ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> childCrossover) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childCrossover, Counter, Metric);
+    protected override ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> childCrossover) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childCrossover, Counter, Metric);
 
-    private sealed class Instance<TSearchSpace, TProblem>(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> childCrossover, CountAccumulator counter, OperatorCountMetric metric)
-        : WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(childCrossover)
+    private sealed class Execution<TSearchSpace, TProblem>(ICrossoverExecution<TCandidate, TSearchSpace, TProblem> childCrossover, CountAccumulator counter, OperatorCountMetric metric)
+        : WrappingCrossoverExecution<TCandidate, TSearchSpace, TProblem>(childCrossover)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

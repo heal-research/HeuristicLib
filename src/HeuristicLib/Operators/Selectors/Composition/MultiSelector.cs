@@ -25,7 +25,7 @@ public abstract record MultiSelector<TCandidate>
     /// Resolves each child over the run's search space and problem and hands them to <see
     /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
-    public ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -33,16 +33,16 @@ public abstract record MultiSelector<TCandidate>
         return CombineExecutionInstances([.. ChildSelectors.Select(child => typed.Resolve(child))]);
     }
 
-    /// <summary>Combines the children's execution instances into this operator's own.</summary>
-    protected abstract ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem>> childSelectors)
+    /// <summary>Combines the children's execution nodes into this operator's own.</summary>
+    protected abstract ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> childSelectors)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class MultiSelectorInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> childSelectors)
-    : SelectorInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiSelectorExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> childSelectors)
+    : SelectorExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> ChildSelectors { get; } = childSelectors;
+    protected ImmutableArray<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> ChildSelectors { get; } = childSelectors;
 }

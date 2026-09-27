@@ -103,11 +103,11 @@ public class EvaluatorConfigurationEqualityTests
         {
         }
 
-        protected override IEvaluatorInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IEvaluatorInstance<int, TRunSearchSpace, TRunProblem>> childEvaluators) =>
-            new Instance<TRunSearchSpace, TRunProblem>(childEvaluators);
+        protected override IEvaluatorExecution<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IEvaluatorExecution<int, TRunSearchSpace, TRunProblem>> childEvaluators) =>
+            new Execution<TRunSearchSpace, TRunProblem>(childEvaluators);
 
-        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IEvaluatorInstance<int, TSearchSpace, TProblem>> childEvaluators)
-            : MultiEvaluatorInstance<int, TSearchSpace, TProblem>(childEvaluators)
+        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IEvaluatorExecution<int, TSearchSpace, TProblem>> childEvaluators)
+            : MultiEvaluatorExecution<int, TSearchSpace, TProblem>(childEvaluators)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

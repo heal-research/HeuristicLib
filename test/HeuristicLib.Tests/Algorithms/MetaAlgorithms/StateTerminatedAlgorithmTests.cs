@@ -108,27 +108,27 @@ public class StateTerminatedAlgorithmTests
     }
 
     [Fact]
-    public void AfterElapsedTimeTerminator_UsesElapsedTimeFromExecutionInstanceCreation()
+    public void AfterElapsedTimeTerminator_UsesElapsedTimeFromExecutionCreation()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var timeProvider = new ManualTimeProvider();
         var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5)) { TimeProvider = timeProvider };
-        var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator);
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator);
 
-        instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeFalse();
+        execution.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeFalse();
 
         timeProvider.Advance(TimeSpan.FromSeconds(5));
 
-        instance.IsTerminalState(CreateState(2), problem.SearchSpace, problem).ShouldBeTrue();
+        execution.IsTerminalState(CreateState(2), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Fact]
     public void AfterElapsedTimeTerminator_StopsOnFirstCheck_WhenMaximumElapsedTimeIsNotPositive()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
 
-        instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeTrue();
+        execution.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Fact]
@@ -185,14 +185,14 @@ public class StateTerminatedAlgorithmTests
     private sealed record RecordingAlgorithm(List<string> Events)
         : Algorithm<RecordingAlgorithm, int, PopulationState<int>>
     {
-        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+        public override IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         {
             Events.Add("algorithm");
-            return new Instance<TRunSearchSpace, TRunProblem>();
+            return new Execution<TRunSearchSpace, TRunProblem>();
         }
 
-        private sealed class Instance<TSearchSpace, TProblem>
-            : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+        private sealed class Execution<TSearchSpace, TProblem>
+            : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
@@ -207,16 +207,16 @@ public class StateTerminatedAlgorithmTests
     private sealed record RecordingResolveTerminator(List<string> Events)
         : ITerminator<int>
     {
-        public ITerminatorInstance<int, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+        public ITerminatorExecution<int, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
             where TRunSearchSpace : class, ISearchSpace<int>
             where TRunProblem : class, IProblem<int, TRunSearchSpace>
             where TRunSearchState : class, ISearchState
         {
             Events.Add("terminator");
-            return (ITerminatorInstance<int, TRunSearchSpace, TRunProblem, TRunSearchState>)(object)new Instance();
+            return (ITerminatorExecution<int, TRunSearchSpace, TRunProblem, TRunSearchState>)(object)new Execution();
         }
 
-        private sealed class Instance : ITerminatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        private sealed class Execution : ITerminatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
         {
             public bool IsTerminalState(PopulationState<int> state, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
             {

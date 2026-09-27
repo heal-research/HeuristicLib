@@ -11,9 +11,9 @@ public class RepeatedEvaluatorTests
     {
         var problem = CreateProblem();
         var evaluator = new StatefulObjectiveEvaluator().AsRepeated(repetitions: 3);
-        var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
 
-        var objectiveVectors = instance.Evaluate([7], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var objectiveVectors = execution.Evaluate([7], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         objectiveVectors.Single().ShouldBe(new ObjectiveVector(2.0));
     }
@@ -24,9 +24,9 @@ public class RepeatedEvaluatorTests
         var problem = CreateProblem();
         var evaluator = new ProblemEvaluator<int>()
             .AsRepeated(repetitions: 2);
-        var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
 
-        var objectiveVectors = instance.Evaluate([3, 5, 8], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var objectiveVectors = execution.Evaluate([3, 5, 8], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         objectiveVectors.ShouldBe([new ObjectiveVector(3.0), new ObjectiveVector(5.0), new ObjectiveVector(8.0)]);
     }

@@ -28,18 +28,18 @@ public sealed record ChooseOneMutator<TCandidate> : MultiMutator<TCandidate>
     {
     }
 
-    protected override IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem>> childMutators)
+    protected override IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> childMutators)
     {
         if (ChildMutators.Count == 0)
             throw new InvalidOperationException("At least one mutator must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildMutators.Count)
             throw new InvalidOperationException("Weights must have the same length as mutators.");
 
-        return new Instance<TRunSearchSpace, TRunProblem>(childMutators, new WeightedBatchDispatcher(childMutators.Length, Weights));
+        return new Execution<TRunSearchSpace, TRunProblem>(childMutators, new WeightedBatchDispatcher(childMutators.Length, Weights));
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedBatchDispatcher dispatcher)
-        : MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(childMutators)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedBatchDispatcher dispatcher)
+        : MultiMutatorExecution<TCandidate, TSearchSpace, TProblem>(childMutators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

@@ -91,11 +91,11 @@ public class ReplacerConfigurationEqualityTests
         {
         }
 
-        protected override IReplacerInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IReplacerInstance<int, TRunSearchSpace, TRunProblem>> childReplacers) =>
-            new Instance<TRunSearchSpace, TRunProblem>(childReplacers);
+        protected override IReplacerExecution<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IReplacerExecution<int, TRunSearchSpace, TRunProblem>> childReplacers) =>
+            new Execution<TRunSearchSpace, TRunProblem>(childReplacers);
 
-        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IReplacerInstance<int, TSearchSpace, TProblem>> childReplacers)
-            : MultiReplacerInstance<int, TSearchSpace, TProblem>(childReplacers)
+        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IReplacerExecution<int, TSearchSpace, TProblem>> childReplacers)
+            : MultiReplacerExecution<int, TSearchSpace, TProblem>(childReplacers)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

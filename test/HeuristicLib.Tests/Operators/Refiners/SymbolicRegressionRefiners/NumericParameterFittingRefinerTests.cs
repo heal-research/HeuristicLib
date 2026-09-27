@@ -45,7 +45,7 @@ public sealed class NumericParameterFittingRefinerTests
         Refine(new NumericParameterFittingRefiner { MaximumIterations = 0 }, problem, expression).ShouldBeSameAs(expression);
     }
 
-    // A stateless refiner seals the execution-instance factory, so a negative iteration count is rejected by the role
+    // A stateless refiner seals the execution-node factory, so a negative iteration count is rejected by the role
     // method rather than at configuration time.
     [Fact]
     public void RefineCandidate_WithNegativeIterations_Throws()
@@ -152,11 +152,11 @@ public sealed class NumericParameterFittingRefinerTests
         var problem = CreateProblem(useLinearScaling: true);
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var instance = new NumericParameterFittingRefiner { MaximumIterations = 100 }
+        var execution = new NumericParameterFittingRefiner { MaximumIterations = 100 }
             .CheckedForImprovement()
             .CreateExecutionInstance<ExpressionTreeSearchSpace, SymbolicRegressionProblem>(ResolutionScope.Create());
 
-        var refined = instance.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        var refined = execution.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
         refined.ShouldHaveSingleItem().ShouldBeSameAs(expression);
     }
@@ -167,11 +167,11 @@ public sealed class NumericParameterFittingRefinerTests
         var problem = CreateProblem();
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var instance = new NumericParameterFittingRefiner { MaximumIterations = 100 }
+        var execution = new NumericParameterFittingRefiner { MaximumIterations = 100 }
             .CheckedForImprovement()
             .CreateExecutionInstance<ExpressionTreeSearchSpace, SymbolicRegressionProblem>(ResolutionScope.Create());
 
-        var refined = instance.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        var refined = execution.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
         Predictions(refined.ShouldHaveSingleItem(), problem).ShouldBe(Targets, tolerance: 1e-8);
     }

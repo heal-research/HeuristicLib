@@ -7,9 +7,9 @@ Create an algorithm only when the state transition or control flow is new. Put d
 An algorithm has two parts:
 
 1. An immutable configuration record that holds operators and settings.
-2. An execution instance that owns resolved operators and mutable run data.
+2. An execution node that owns resolved operators and mutable run data.
 
-Each call to `Stream` or `CompleteAsync` creates a new execution instance. Reusing one configuration therefore starts independent runs.
+Each call to `Stream` or `CompleteAsync` creates a new execution node. Reusing one configuration therefore starts independent runs.
 
 ## Implement an iterative algorithm
 
@@ -31,24 +31,24 @@ public sealed record SingleCreateAlgorithm
 
     public IEvaluator<RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
-    protected override IterativeAlgorithmInstance<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>
+    protected override IterativeAlgorithmExecution<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>
         CreateExecutionInstance<TRunSearchSpace, TRunProblem>(
             ResolutionScope scope,
-            IInterceptorInstance<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
+            IInterceptorExecution<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
     {
         var typed = scope.For<RealVector, TRunSearchSpace, TRunProblem>();
 
-        return new Instance<TRunSearchSpace, TRunProblem>(
+        return new Execution<TRunSearchSpace, TRunProblem>(
             resolvedInterceptor,
             typed.Resolve(Creator),
             typed.Resolve(Evaluator));
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(
-        IInterceptorInstance<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>? interceptor,
-        ICreatorInstance<RealVector, TSearchSpace, TProblem> creator,
-        IEvaluatorInstance<RealVector, TSearchSpace, TProblem> evaluator)
-        : IterativeAlgorithmInstance<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>(interceptor)
+    private sealed class Execution<TSearchSpace, TProblem>(
+        IInterceptorExecution<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>? interceptor,
+        ICreatorExecution<RealVector, TSearchSpace, TProblem> creator,
+        IEvaluatorExecution<RealVector, TSearchSpace, TProblem> evaluator)
+        : IterativeAlgorithmExecution<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>(interceptor)
         where TSearchSpace : class, ISearchSpace<RealVector>
         where TProblem : class, IProblem<RealVector, TSearchSpace>
     {
@@ -70,9 +70,9 @@ public sealed record SingleCreateAlgorithm
 
 `SingleCreateAlgorithm` never reads a member of a particular problem. It hands the search space and the problem straight to its operators, so it does not need to name either, and the base above takes three type arguments: the algorithm's own type, the candidate, and the state it produces.
 
-That choice is what keeps the operator slots at one type argument each. `ICreator<RealVector>` accepts any creator written for real vectors, including one written against `BoundedRealVectorSearchSpace`, because the run supplies the space when the execution instance is created.
+That choice is what keeps the operator slots at one type argument each. `ICreator<RealVector>` accepts any creator written for real vectors, including one written against `BoundedRealVectorSearchSpace`, because the run supplies the space when the execution node is created.
 
-The cost is visible in the example and worth naming: the run's search space and problem arrive as *method* type arguments on `CreateExecutionInstance`, so the nested instance class is generic in them and carries two constraints. That is the whole price, it is paid once by the algorithm's author, and it is paid nowhere by anyone configuring or holding the algorithm.
+The cost is visible in the example and worth naming: the run's search space and problem arrive as *method* type arguments on `CreateExecutionInstance`, so the nested execution class is generic in them and carries two constraints. That is the whole price, it is paid once by the algorithm's author, and it is paid nowhere by anyone configuring or holding the algorithm.
 
 ### When to name the search space and problem instead
 
@@ -88,15 +88,15 @@ public sealed record MatrixAwareAlgorithm
         SingleSolutionState<Permutation>>
 ```
 
-Its `CreateExecutionInstance` takes no type arguments and its instance class is not generic, so authoring is simpler. In exchange, every mention of the configuration names five types, its operator slots name three each, and it runs over exactly one problem type; anything else is refused when the execution graph is built. Choose this base when the algorithm genuinely reads the problem, not to avoid the generic instance class.
+Its `CreateExecutionInstance` takes no type arguments and its execution class is not generic, so authoring is simpler. In exchange, every mention of the configuration names five types, its operator slots name three each, and it runs over exactly one problem type; anything else is refused when the execution graph is built. Choose this base when the algorithm genuinely reads the problem, not to avoid the generic execution class.
 
 Use `.TerminatedAfterIterations(count)` or another terminator when the algorithm does not stop itself.
 
 ## Resolve operators once
 
-Resolve every configured child operator through `ResolutionScope` while creating the algorithm instance. Do not call operator configurations directly from `ExecuteStep` and do not create new child instances for every iteration.
+Resolve every configured child operator through `ResolutionScope` while creating the algorithm execution. Do not call operator configurations directly from `ExecuteStep` and do not create new child executions for every iteration.
 
-Store counters and other changing values on the nested execution instance. Never mutate the configuration record.
+Store counters and other changing values on the nested execution node. Never mutate the configuration record.
 
 ## Preserve run behavior
 
@@ -108,6 +108,6 @@ A custom algorithm should:
 4. Keep simultaneous runs independent.
 5. Work with interceptors when it derives from `IterativeAlgorithm`.
 
-Read [Running algorithms](/guide/execution/running-algorithms) for the consumer model and [Configuration vs execution instances](/contributing/architecture/execution-instances) for the internal ownership rules.
+Read [Running algorithms](/guide/execution/running-algorithms) for the consumer model and [Configuration vs execution nodes](/contributing/architecture/execution-nodes) for the internal ownership rules.
 
 To write an algorithm that coordinates other algorithms rather than operators, continue with [Write a meta-algorithm](/guide/extending/writing-meta-algorithms).

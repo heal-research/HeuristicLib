@@ -128,12 +128,12 @@ export default defineConfig({
                         { text: "Layering", link: "/contributing/architecture/layering" },
                         { text: "Analyzers", link: "/contributing/architecture/analyzers" },
                         {
-                            text: "Execution instances",
-                            link: "/contributing/architecture/execution-instances",
+                            text: "Execution nodes",
+                            link: "/contributing/architecture/execution-nodes",
                         },
                         {
-                            text: "Instance resolution",
-                            link: "/contributing/architecture/instance-resolution",
+                            text: "Execution resolution",
+                            link: "/contributing/architecture/execution-resolution",
                         },
                         {
                             text: "Operator implementation",

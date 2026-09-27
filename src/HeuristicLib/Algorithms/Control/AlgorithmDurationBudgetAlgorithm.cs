@@ -21,21 +21,21 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override AlgorithmDurationBudgetAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope) =>
+    public override AlgorithmDurationBudgetAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope) =>
         new(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), MaximumDuration, TimeProvider);
 }
 
-public sealed class AlgorithmDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+public sealed class AlgorithmDurationBudgetAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    private readonly IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
+    private readonly IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
     private readonly TimeSpan maximumDuration;
     private readonly TimeProvider timeProvider;
 
-    public AlgorithmDurationBudgetAlgorithmInstance(IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, TimeSpan maximumDuration, TimeProvider timeProvider)
+    public AlgorithmDurationBudgetAlgorithmExecution(IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, TimeSpan maximumDuration, TimeProvider timeProvider)
     {
         this.algorithm = algorithm;
         this.maximumDuration = maximumDuration;

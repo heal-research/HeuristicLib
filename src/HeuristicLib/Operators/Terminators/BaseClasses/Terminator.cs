@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 /// <remarks>
-/// Derive directly from this base when the terminator owns child execution instances or needs direct control over its execution structure.
+/// Derive directly from this base when the terminator owns child execution nodes or needs direct control over its execution structure.
 /// Use <see cref="StatelessTerminator{TCandidate,TSearchSpace,TProblem,TSearchState}"/> when no mutable execution data is needed.
 /// Use <see cref="StatefulTerminator{TCandidate,TSearchSpace,TProblem,TSearchState,TState}"/> when only ordinary execution data is needed.
 /// </remarks>
@@ -16,14 +16,14 @@ public abstract record Terminator<TCandidate, TSearchSpace, TProblem, TSearchSta
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope);
+    public abstract ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope);
 
     public bool Fits(ExecutionSignature execution) =>
         execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
         && execution.Problem.IsAssignableTo(typeof(TProblem))
         && execution.SearchState.IsAssignableTo(typeof(TSearchState));
 
-    ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> ITerminator<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+    ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> ITerminator<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
     {
         if (!Fits(ExecutionSignature.For<TRunSearchSpace, TRunProblem, TRunSearchState>()))
         {
@@ -33,7 +33,7 @@ public abstract record Terminator<TCandidate, TSearchSpace, TProblem, TSearchSta
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem), typeof(TRunSearchState)));
         }
 
-        return (ITerminatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>)CreateExecutionInstance(scope);
+        return (ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>)CreateExecutionInstance(scope);
     }
 }
 
@@ -49,8 +49,8 @@ public abstract record Terminator<TCandidate, TSearchState>
 public abstract record Terminator<TCandidate>
     : Terminator<TCandidate, ISearchState>;
 
-public abstract class TerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+public abstract class TerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -58,32 +58,32 @@ public abstract class TerminatorInstance<TCandidate, TSearchSpace, TProblem, TSe
     public abstract bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem);
 }
 
-public abstract class TerminatorInstance<TCandidate, TSearchSpace, TSearchState>
-    : ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
+public abstract class TerminatorExecution<TCandidate, TSearchSpace, TSearchState>
+    : ITerminatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public abstract bool IsTerminalState(TSearchState state, TSearchSpace searchSpace);
 
-    bool ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>.IsTerminalState(TSearchState state, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
+    bool ITerminatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>.IsTerminalState(TSearchState state, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
         IsTerminalState(state, searchSpace);
 }
 
-public abstract class TerminatorInstance<TCandidate, TSearchState>
-    : ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
+public abstract class TerminatorExecution<TCandidate, TSearchState>
+    : ITerminatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
     where TSearchState : class, ISearchState
 {
     public abstract bool IsTerminalState(TSearchState state);
 
-    bool ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>.IsTerminalState(TSearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+    bool ITerminatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>.IsTerminalState(TSearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         IsTerminalState(state);
 }
 
-public abstract class TerminatorInstance<TCandidate>
-    : ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>
+public abstract class TerminatorExecution<TCandidate>
+    : ITerminatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>
 {
     public abstract bool IsTerminalState();
 
-    bool ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>.IsTerminalState(ISearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+    bool ITerminatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>.IsTerminalState(ISearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         IsTerminalState();
 }

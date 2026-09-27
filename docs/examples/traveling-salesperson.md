@@ -43,7 +43,7 @@ await run.CompleteAsync();
 var qualityCurve = qualityAnalyzer.Snapshot().Values;
 var best = qualityAnalyzer.RequireLatestValue().Best;
 
-Console.WriteLine($"Instance: {instance.Name}");
+Console.WriteLine($"Execution: {instance.Name}");
 Console.WriteLine($"Best tour length: {best.ObjectiveVector[0]:F0}");
 
 foreach (var (entry, generation) in
@@ -62,7 +62,7 @@ foreach (var (entry, generation) in
 Run it with `dotnet run`. The search takes a few seconds:
 
 ```
-Instance: berlin52
+Execution: berlin52
 Best tour length: 7797
  100: best     8283  median     9686  worst    14004
  200: best     7798  median     7926  worst    10318

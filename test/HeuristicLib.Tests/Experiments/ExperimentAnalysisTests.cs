@@ -11,10 +11,10 @@ public class ExperimentAnalysisTests
     public async Task ModulesAndAnalyzersPerTrial_ShareAttachmentOrderAndTypedLookup()
     {
         var invocationOrder = new List<int>();
-        var algorithm = new CountingInstanceAlgorithm(1, new CountingResolutionEvaluator());
-        var first = TrialModule.Create((CountingInstanceAlgorithm alg) => new OrderedEvaluationModule(alg.Evaluator, 1, invocationOrder));
-        var middle = TrialAnalyzer.Create((CountingInstanceAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 2, invocationOrder));
-        var last = TrialModule.Create((CountingInstanceAlgorithm alg) => new OrderedEvaluationModule(alg.Evaluator, 3, invocationOrder));
+        var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
+        var first = TrialModule.Create((CountingExecutionAlgorithm alg) => new OrderedEvaluationModule(alg.Evaluator, 1, invocationOrder));
+        var middle = TrialAnalyzer.Create((CountingExecutionAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 2, invocationOrder));
+        var last = TrialModule.Create((CountingExecutionAlgorithm alg) => new OrderedEvaluationModule(alg.Evaluator, 3, invocationOrder));
         var run = algorithm.Repeat(2)
             .CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42))
             .AttachPerTrial(first).AttachPerTrial(middle).AttachPerTrial(last);
@@ -49,10 +49,10 @@ public class ExperimentAnalysisTests
     {
         var invocationOrder = new List<int>();
         var evaluator = new CountingResolutionEvaluator();
-        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var experiment = algorithm.Repeat(2);
-        var first = TrialAnalyzer.Create((CountingInstanceAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, invocationOrder));
-        var second = TrialAnalyzer.Create((CountingInstanceAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 2, invocationOrder));
+        var first = TrialAnalyzer.Create((CountingExecutionAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, invocationOrder));
+        var second = TrialAnalyzer.Create((CountingExecutionAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 2, invocationOrder));
         var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42)).AttachPerTrial(first).AttachPerTrial(second);
 
         Should.Throw<InvalidOperationException>(() =>
@@ -72,14 +72,14 @@ public class ExperimentAnalysisTests
     public async Task FailingAnalyzerFactory_AttachesNoPartialAnalysis()
     {
         var invocations = new List<int>();
-        var firstAlgorithm = new CountingInstanceAlgorithm(1, new CountingResolutionEvaluator());
-        var secondAlgorithm = new CountingInstanceAlgorithm(2, new CountingResolutionEvaluator());
-        var experiment = new FixedExperiment<CountingInstanceAlgorithm>([
+        var firstAlgorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
+        var secondAlgorithm = new CountingExecutionAlgorithm(2, new CountingResolutionEvaluator());
+        var experiment = new FixedExperiment<CountingExecutionAlgorithm>([
             ExperimentCase.From(firstAlgorithm, 0, [0]),
             ExperimentCase.From(secondAlgorithm, 1, [1])
         ]);
         var failing = TrialAnalyzer.Create(
-            (CountingInstanceAlgorithm algorithm) => algorithm.Increment == 2
+            (CountingExecutionAlgorithm algorithm) => algorithm.Increment == 2
                 ? throw new InvalidOperationException("Analyzer creation failed.")
                 : new OrderedEvaluationAnalyzer(algorithm.Evaluator, 1, invocations));
 
@@ -96,9 +96,9 @@ public class ExperimentAnalysisTests
     public async Task ExistingTrialAnalyzer_CanBeAttachedToAnotherRun()
     {
         var invocations = new List<int>();
-        var algorithm = new CountingInstanceAlgorithm(1, new CountingResolutionEvaluator());
+        var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
         var experiment = algorithm.Repeat(2);
-        var trialAnalyzer = TrialAnalyzer.Create((CountingInstanceAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, invocations));
+        var trialAnalyzer = TrialAnalyzer.Create((CountingExecutionAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, invocations));
         _ = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(1)).AttachPerTrial(trialAnalyzer);
         var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(2)).AttachPerTrial(trialAnalyzer);
 
@@ -111,8 +111,8 @@ public class ExperimentAnalysisTests
     [Fact]
     public async Task TrialAnalyzers_CollectPerTrialAsEachTrialCompletes()
     {
-        var algorithm = new CountingInstanceAlgorithm(1, new CountingResolutionEvaluator());
-        var trialAnalyzer = TrialAnalyzer.Create((CountingInstanceAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, []));
+        var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
+        var trialAnalyzer = TrialAnalyzer.Create((CountingExecutionAlgorithm alg) => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, []));
         var run = algorithm.Repeat(2)
             .CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42)).AttachPerTrial(trialAnalyzer);
 

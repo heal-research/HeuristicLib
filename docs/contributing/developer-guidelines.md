@@ -108,13 +108,13 @@ recommendations.
 
 Follow the [layering rules](/contributing/architecture/layering) when adding or moving types. Assign a type by its
 responsibility, including where a namespace contains both contracts and implementations, and keep dependencies directed
-from higher layers to lower ones. Treat configuration and execution instance as phases within those responsibilities.
+from higher layers to lower ones. Treat configuration and execution node as phases within those responsibilities.
 
 ## § 4 Configuration and execution ownership
 
-### § 4.1 Separate reusable configurations from execution instances
+### § 4.1 Separate reusable configurations from execution nodes
 
-Configurations own immutable settings and child configurations. Execution instances own resolved children, mutable run data and behavior. Never store run data on a configuration.
+Configurations own immutable settings and child configurations. Execution nodes own resolved children, mutable run data and behavior. Never store run data on a configuration.
 
 ### § 4.2 Keep execution data out of search states
 
@@ -122,13 +122,13 @@ Search states are public progress values. Do not use them to carry private count
 
 ### § 4.3 Resolve declared children through the resolution scope
 
-Creation methods receive the full `ResolutionScope`. Resolve declared children during instance creation. Retain the scope only for child scopes, decorations or delayed child algorithm creation. Do not add another scope abstraction.
+Creation methods receive the full `ResolutionScope`. Resolve declared children during execution creation. Retain the scope only for child scopes, decorations or delayed child algorithm creation. Do not add another scope abstraction.
 
-### § 4.4 Expose one execution instance factory
+### § 4.4 Expose one execution node factory
 
-Expose one public `CreateExecutionInstance(...)` method with the exact execution instance role as its return type. Do not add role named alternatives such as `CreateSelectorInstance` or hide the factory behind explicit interface implementation.
+Expose one public `CreateExecutionInstance(...)` method with the exact execution node role as its return type. Do not add role named alternatives such as `CreateSelectorExecution` or hide the factory behind explicit interface implementation.
 
-A topology base may seal the public method and expose one protected overload after child resolution. Return the most concrete accessible instance type useful to derived authors. This rule applies to algorithms and operators.
+A topology base may seal the public method and expose one protected overload after child resolution. Return the most concrete accessible execution type useful to derived authors. This rule applies to algorithms and operators.
 
 ### § 4.5 Keep construction entry points semantically equivalent
 
@@ -141,9 +141,9 @@ A setting has one input path.
 - Required values are constructor parameters without defaults.
 - Optional values are `init` properties with defaults. Do not also put them in the constructor.
 - Every configuration property is `{ get; init; }` so `with` can vary it.
-- Execution instance children and run data are `{ get; }` because instances are not reconfigured.
+- Execution node children and run data are `{ get; }` because executions are not reconfigured.
 
-### § 4.7 Validate complete configurations during instance creation
+### § 4.7 Validate complete configurations during execution creation
 
 Retain configuration values unchanged during construction and `with`. Validate the complete configuration in `CreateExecutionInstance` and throw `InvalidOperationException` before execution begins. Do not add a separate validation API.
 
@@ -155,21 +155,21 @@ Represent configured behavior with a strategy interface whose implementations ar
 
 ### § 4.9 Use records only for value semantics
 
-Use a record only when structural equality is the contract. Use a class for a carrier that holds identity bearing dependencies such as an RNG, execution instance or registry.
+Use a record only when structural equality is the contract. Use a class for a carrier that holds identity bearing dependencies such as an RNG, execution node or registry.
 
 ### § 4.10 Validate operation inputs before side effects
 
-Validate problem, search space and operation inputs in the role method before random draws, state changes or substantial work. Configuration checks belong in instance creation.
+Validate problem, search space and operation inputs in the role method before random draws, state changes or substantial work. Configuration checks belong in execution creation.
 
 ### § 4.11 Expose configuration and hide execution machinery
 
 Configurations expose their settings and child configurations. Wrapping and multi bases own `ChildOperator` and `ChildOperators` or role specific equivalents.
 
-Execution instances keep resolved children and machinery private or protected. Use nested operator only for descendants at any depth.
+Execution nodes keep resolved children and machinery private or protected. Use nested operator only for descendants at any depth.
 
 ### § 4.12 Keep role authoring hierarchies symmetric
 
-Keep configuration and instance authoring hierarchies symmetric. Full role, wrapping and multi bases have matching instance bases. Derived configurations and instances use the matching pair. Pass required resolved children through constructors.
+Keep configuration and execution authoring hierarchies symmetric. Full role, wrapping and multi bases have matching execution bases. Derived configurations and executions use the matching pair. Pass required resolved children through constructors.
 
 ### § 4.13 Give each child slot one public name
 
@@ -184,9 +184,9 @@ Choose an authoring base by ownership. See [Operator implementation](/contributi
 
 - Use a stateless base for configuration data without mutable run data.
 - Use a stateful base for ordinary run data without execution graph dependencies.
-- Author an instance explicitly for child instances, disposable resources or custom execution structure.
+- Author an execution explicitly for child executions, disposable resources or custom execution structure.
 - Use a single item base for independent per item work.
-- Never put configurations, instances, registries or child bound delegates in framework managed operator state.
+- Never put configurations, executions, registries or child bound delegates in framework managed operator state.
 
 ### § 4.15 Keep single item batching explicit and deterministic
 
@@ -196,9 +196,9 @@ A single item base seals the batch operation and exposes `ExecutionConcurrency C
 
 Operator scaffolding remains checked in source. Do not add source generators, IDE actions or scaffolding commands for operator families. Coding agents may prepare ordinary source. Review, test and maintain it like handwritten code.
 
-### § 4.17 Give algorithms explicit execution instances
+### § 4.17 Give algorithms explicit execution nodes
 
-Algorithms use a configuration paired with an explicitly authored execution instance. See [Algorithms](/guide/fundamentals/algorithms).
+Algorithms use a configuration paired with an explicitly authored execution node. See [Algorithms](/guide/fundamentals/algorithms).
 
 ### § 4.18 Treat Roslyn analyzers as guardrails
 
@@ -206,9 +206,9 @@ Roslyn analyzers catch recognizable mistakes. They do not prove ownership invari
 
 ### § 4.19 Keep role execution contracts role specific
 
-Role instances expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
+Role executions expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
 
-Matching signatures do not satisfy another nominal role. `IOperator<TExecutionInstance>` only connects a configuration to its instance role.
+Matching signatures do not satisfy another nominal role. `IOperator<TExecution>` only connects a configuration to its execution role.
 
 ## § 5 Immutability and collection ownership
 
@@ -240,10 +240,10 @@ Choose collection types by meaning and ownership.
 | Parameter accepting a finite ordered collection        | `IReadOnlyList<T>`, snapshotted with `ToValueArray()` |
 | Mathematical coordinates with broadcasting             | `RealVector`, `IntegerVector`, `BoolVector`           |
 | Transient batch inside one operation, never retained   | `IReadOnlyList<T>`                                    |
-| Collection held by an execution instance               | `ImmutableArray<T>`                                   |
+| Collection held by an execution node               | `ImmutableArray<T>`                                   |
 | Lazy or sequence oriented API                          | `IEnumerable<T>`                                      |
 
-`ValueArray<T>` gives configuration records structural equality. `ImmutableArray<T>` compares backing array identity and belongs on execution instances, where structural equality is unnecessary.
+`ValueArray<T>` gives configuration records structural equality. `ImmutableArray<T>` compares backing array identity and belongs on execution nodes, where structural equality is unnecessary.
 
 ### § 5.5 Construct value arrays without accidental nesting
 
@@ -371,14 +371,14 @@ contracts — every role is `I<Role><TCandidate>` — but an authoring base that
 names it, deliberately, for two reasons. The base performs the type check, bridging the authored member into the
 candidate-only contract and reporting a mismatch when a run supplies types the operator was not written for, so the
 pair costs the author two type arguments and costs every consumer none. And for a stateless operator the
-configuration **is** the executable part: it has no separate execution instance to receive those values later, so it
+configuration **is** the executable part: it has no separate execution node to receive those values later, so it
 needs them in scope where it is written. Erasing them from the authoring layer would force stateless operators to
-grow an execution instance purely to carry types, which is the boilerplate this ladder exists to remove.
+grow an execution node purely to carry types, which is the boilerplate this ladder exists to remove.
 
 - A reduced configuration base derives from the next fuller configuration base.
-- A reduced instance base implements the full interface directly and forwards explicitly to one narrower abstract operation. It does not derive from the fuller instance base.
-- A reduced stateless base derives from the reduced configuration base and implements the role instance interface directly.
-- A reduced stateful base derives from the reduced configuration base. Its nested instance derives from the reduced instance base.
+- A reduced execution base implements the full interface directly and forwards explicitly to one narrower abstract operation. It does not derive from the fuller execution base.
+- A reduced stateless base derives from the reduced configuration base and implements the role execution interface directly.
+- A reduced stateful base derives from the reduced configuration base. Its nested execution derives from the reduced execution base.
 
 ### § 8.5 Reduce only arities that describe operation inputs
 
@@ -386,7 +386,7 @@ Reduce type arguments consumed by the operator's own code. Do not reduce type ar
 
 | Base                                                            | Reduced arities | Why                                    |
 | --------------------------------------------------------------- | :-------------: | -------------------------------------- |
-| `Mutator`, `MutatorInstance`                                    |       Yes       | No owned child                         |
+| `Mutator`, `MutatorExecution`                                    |       Yes       | No owned child                         |
 | `StatelessMutator`, `StatefulMutator`, `SingleCandidateMutator` |       Yes       | Type arguments describe operation data |
 | `WrappingMutator`, `MultiMutator`                               |       No        | Type arguments describe child slots    |
 
@@ -418,7 +418,7 @@ Order parameters as primary inputs, RNG, search space and problem. Omit groups t
 Expose a direct static implementation when the candidate or genotype does not already own the operation.
 
 - Do not add a static method that only forwards to the candidate or genotype.
-- Name the static method for the operation, such as `Create`, `Mutate`, `Cross`, `Select` or `Evaluate`. Let the instance method delegate to it.
+- Name the static method for the operation, such as `Create`, `Mutate`, `Cross`, `Select` or `Evaluate`. Let the execution method delegate to it.
 - Provide one core overload that accepts the direct inputs needed by the operation.
 - Use search space overloads as thin adapters unless the search space is the true dependency.
 - Order adapters before the core overload and delegate inward.
@@ -459,7 +459,7 @@ infer the triple. `typed.Resolve(config)` goes through a `ResolutionScope` that 
 everything and relays to the canonical form. One mechanism, two spellings; keep both.
 
 Whatever the declaration count, the call site stays minimal: `typed.Resolve(config)` or
-`typed.TryResolve(config, out var instance, out var reason)`, with nothing the caller is forced to supply to make inference work.
+`typed.TryResolve(config, out var execution, out var reason)`, with nothing the caller is forced to supply to make inference work.
 An overload that exists so a type argument can be inferred is justified; one that exists only so a call site reads
 differently needs a separate argument.
 

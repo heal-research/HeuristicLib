@@ -35,7 +35,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
     where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
 {
     /// <summary>
-    /// Gets the dynamic problem this evaluator is bound to. Execution instances observe its epoch clock and can only evaluate this problem.
+    /// Gets the dynamic problem this evaluator is bound to. Execution nodes observe its epoch clock and can only evaluate this problem.
     /// </summary>
     public TProblem SourceProblem { get; init; }
 
@@ -53,10 +53,10 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
         BestKnownProvider = bestKnownProvider;
     }
 
-    protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy);
+    protected override IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy);
 
-    private sealed class Instance<TRunSearchSpace, TRunProblem> : WrappingEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem>
+    private sealed class Execution<TRunSearchSpace, TRunProblem> : WrappingEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -66,7 +66,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
         private ObjectiveVector? bestKnown;
         private int bestKnownEpoch = -1;
 
-        public Instance(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
+        public Execution(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
             : base(childEvaluator)
         {
             this.sourceProblem = sourceProblem;
@@ -77,7 +77,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TRunSearchSpace searchSpace, TRunProblem problem)
         {
             if (!ReferenceEquals(problem, sourceProblem))
-                throw new InvalidOperationException("Dynamic relative quality evaluator instances can only evaluate the dynamic problem they were created for.");
+                throw new InvalidOperationException("Dynamic relative quality evaluator executions can only evaluate the dynamic problem they were created for.");
 
             var objectiveVectors = ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
             // A deferred batch update is applied inside Evaluate. Read its reference afterwards, while that

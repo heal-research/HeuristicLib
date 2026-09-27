@@ -16,24 +16,24 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchState>
 {
     internal TSelf Self => (TSelf)this;
 
-    public abstract IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public abstract IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
     /// <summary>
     /// Agnostic in the search space and problem, so this base answers on the search state alone, which
-    /// <see cref="IAlgorithmInstance{TCandidate, TSearchSpace, TProblem, TSearchState}"/> is invariant in.
+    /// <see cref="IAlgorithmExecution{TCandidate, TSearchSpace, TProblem, TSearchState}"/> is invariant in.
     /// </summary>
     public virtual bool Fits(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState);
 
-    IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> IAlgorithm<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+    IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> IAlgorithm<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
     {
         if (typeof(TRunSearchState) != typeof(TSearchState))
         {
             throw new InvalidOperationException($"{GetType().Name} produces {typeof(TSearchState).Name}, and cannot run producing {typeof(TRunSearchState).Name}.");
         }
 
-        return (IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>)CreateExecutionInstance<TRunSearchSpace, TRunProblem>(scope);
+        return (IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>)CreateExecutionInstance<TRunSearchSpace, TRunProblem>(scope);
     }
 }
 
@@ -52,14 +52,14 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public abstract AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope);
+    public abstract AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope);
 
     public override bool Fits(ExecutionSignature execution) =>
         base.Fits(execution)
         && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
         && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    public sealed override IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public sealed override IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -69,12 +69,12 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (IAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>)CreateExecutionInstance(scope);
+        return (IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>)CreateExecutionInstance(scope);
     }
 }
 
-public abstract class AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+public abstract class AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState

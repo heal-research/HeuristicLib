@@ -29,18 +29,18 @@ public class PipelineAlgorithmTests
     }
 
     [Fact]
-    public void PipelineAlgorithm_ChecksCancellationBeforeCreatingAStageInstance()
+    public void PipelineAlgorithm_ChecksCancellationBeforeCreatingAStageExecution()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
-        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var pipeline = PipelineAlgorithm.Create(algorithm);
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         Should.Throw<OperationCanceledException>(() => pipeline.Stream(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
 
-        algorithm.InstanceCount.ShouldBe(0);
+        algorithm.ExecutionCount.ShouldBe(0);
     }
 
     [Fact]
@@ -73,21 +73,21 @@ public class PipelineAlgorithmTests
     }
 
     [Fact]
-    public void PipelineAlgorithm_CreatesEachStageInstanceWhileReusingResolvedParentDependencies()
+    public void PipelineAlgorithm_CreatesEachStageExecutionWhileReusingResolvedParentDependencies()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
-        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var pipeline = algorithm.Then(algorithm);
         var scope = ResolutionScope.Create();
         _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
-        var pipelineInstance = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(pipeline);
+        var pipelineExecution = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(pipeline);
 
-        var states = pipelineInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = pipelineExecution.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
-        algorithm.InstanceCount.ShouldBe(2);
-        evaluator.InstanceCount.ShouldBe(1);
+        algorithm.ExecutionCount.ShouldBe(2);
+        evaluator.ExecutionCount.ShouldBe(1);
     }
 
     private sealed record ForwardingEvaluator

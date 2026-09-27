@@ -13,14 +13,14 @@ public class DynamicAnalysisTests
         var problem = new IntegerDynamicProblem(epochLength: 2);
         var provider = new EpochBestKnown();
         var evaluator = new ProblemEvaluator().ScaledToDynamicBestKnown(problem, provider);
-        var instance = ResolutionScope.Create().Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(evaluator);
+        var execution = ResolutionScope.Create().Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(evaluator);
 
-        instance.ShouldNotBeAssignableTo<IDisposable>();
-        instance.Evaluate([2, 2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+        execution.ShouldNotBeAssignableTo<IDisposable>();
+        execution.Evaluate([2, 2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
             .Select(value => value[0]).ShouldBe([1d, 1d]);
-        instance.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+        execution.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
             .Single()[0].ShouldBe(0);
-        instance.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+        execution.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
             .Single()[0].ShouldBe(0);
         provider.Epochs.ShouldBe([0, 1]);
     }
@@ -260,14 +260,14 @@ public class DynamicAnalysisTests
     {
         public IEvaluator<int> Evaluator { get; } = new ProblemEvaluator();
 
-        public override AlgorithmInstance<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
+        public override AlgorithmExecution<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
             CreateExecutionInstance(ResolutionScope scope) =>
-            new Instance(scope.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(Evaluator), Batches);
+            new Execution(scope.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(Evaluator), Batches);
 
-        private sealed class Instance(
-            IEvaluatorInstance<int, IntegerSearchSpace, IntegerDynamicProblem> evaluator,
+        private sealed class Execution(
+            IEvaluatorExecution<int, IntegerSearchSpace, IntegerDynamicProblem> evaluator,
             IReadOnlyList<IReadOnlyList<int>> batches)
-            : AlgorithmInstance<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
+            : AlgorithmExecution<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
         {
             public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
                 IntegerDynamicProblem problem,

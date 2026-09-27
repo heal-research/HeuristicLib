@@ -18,8 +18,8 @@ public abstract record MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TS
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    private sealed record Instance(MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TState> MoveApplier, TState State)
-        : IMoveApplierInstance<TCandidate, TSearchSpace, TProblem, TMove>
+    private sealed record Execution(MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TState> MoveApplier, TState State)
+        : IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove>
     {
         public TCandidate Apply(TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             MoveApplier.Apply(candidate, move, State, searchSpace, problem, random);
@@ -29,12 +29,12 @@ public abstract record MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TS
 
     protected abstract TState InitialState();
 
-    public virtual IMoveApplierInstance<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ResolutionScope scope) =>
-        new Instance(this, InitialState());
+    public virtual IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ResolutionScope scope) =>
+        new Execution(this, InitialState());
 
     public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    IMoveApplierInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove> IMoveApplier<TCandidate, TMove>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    IMoveApplierExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove> IMoveApplier<TCandidate, TMove>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -44,6 +44,6 @@ public abstract record MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TS
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (IMoveApplierInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove>)CreateExecutionInstance(scope);
+        return (IMoveApplierExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>)CreateExecutionInstance(scope);
     }
 }

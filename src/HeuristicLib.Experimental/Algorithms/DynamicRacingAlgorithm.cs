@@ -88,17 +88,17 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     /// <see cref="DynamicProblem{TSelf, TCandidate, TSearchSpace}"/>, so it names the search space and problem it is
     /// written for and the base reconciles them with the run's.
     /// </remarks>
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(
+    protected override IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(
         ResolutionScope scope,
-        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor) =>
-        new Instance(scope, resolvedInterceptor, scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Creator), scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Mutator), MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
+        IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor) =>
+        new Execution(scope, resolvedInterceptor, scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Creator), scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Mutator), MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
             EvaluatorSelector, NoRacers, HallOfFameStrength, EarlyTerminationStrength, BurnInEpochs, MinimumModelObservationCount, ModelObservationInterval, ObjectiveValueSelector);
 
-    private sealed class Instance(
+    private sealed class Execution(
         ResolutionScope scope,
-        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor,
-        ICreatorInstance<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> creator,
-        IMutatorInstance<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> mutator,
+        IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor,
+        ICreatorExecution<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> creator,
+        IMutatorExecution<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> mutator,
         MetaOptimizationSearchSpace metaSpace,
         EmptyMetaOptProblem emptyMetaOptProblem,
         IRacingStateMerger<TCandidate, TSearchState> stateMerger,
@@ -111,7 +111,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         int minimumModelObservationCount,
         int modelObservationInterval,
         Func<ObjectiveVector, double> objectiveValueSelector)
-        : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor)
+        : IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor)
     {
         private readonly Dictionary<string, HallOfFameEntry> hallOfFame = [];
         private MetaOptimizationGenotype? incumbent;
@@ -382,14 +382,14 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         PerformanceTrackingEvaluatorObserver Observer)
         : Evaluator<TCandidate, TSearchSpace, TProblem>
     {
-        public override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope) =>
-            new PerformanceTrackingEvaluatorInstance(scope.Resolve<TCandidate, TSearchSpace, TProblem>(ChildEvaluator), Observer);
+        public override IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope) =>
+            new PerformanceTrackingEvaluatorExecution(scope.Resolve<TCandidate, TSearchSpace, TProblem>(ChildEvaluator), Observer);
     }
 
-    private sealed class PerformanceTrackingEvaluatorInstance(
-        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator,
+    private sealed class PerformanceTrackingEvaluatorExecution(
+        IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> innerEvaluator,
         PerformanceTrackingEvaluatorObserver observer)
-        : IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>
+        : IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>
     {
         public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {

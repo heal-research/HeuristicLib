@@ -64,19 +64,19 @@ internal sealed class ObservingMutator<TCandidate, TSearchSpace, TProblem>(
     public bool Fits(ExecutionSignature execution) =>
         ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(childMutator);
 
-    public IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return new Instance<TRunSearchSpace, TRunProblem>(observedMutator, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childMutator), observe);
+        return new Execution<TRunSearchSpace, TRunProblem>(observedMutator, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childMutator), observe);
     }
 
-    private sealed class Instance<TRunSearchSpace, TRunProblem>(
+    private sealed class Execution<TRunSearchSpace, TRunProblem>(
         IMutator<TCandidate> observedMutator,
-        IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childMutator,
+        IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childMutator,
         Action<MutatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
-        : IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem>
+        : IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {

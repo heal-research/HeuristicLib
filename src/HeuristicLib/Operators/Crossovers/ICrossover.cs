@@ -11,13 +11,13 @@ public readonly record struct Parents<T>(T Parent1, T Parent2);
 
 public interface ICrossover<TCandidate> : IOperator
 {
-    ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public interface ICrossoverInstance<TCandidate, in TSearchSpace, in TProblem>
-    : IOperatorInstance
+public interface ICrossoverExecution<TCandidate, in TSearchSpace, in TProblem>
+    : IOperatorExecution
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -91,7 +91,7 @@ public static class CrossoverResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public ICrossoverInstance<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate> crossover)
+        public ICrossoverExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate> crossover)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             scope.Resolve(crossover, static (creationTarget, childScope) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childScope));
@@ -99,27 +99,27 @@ public static class CrossoverResolutionExtensions
         /// <remarks>A true result carries the instance the run will use, so validating and creating are one step.</remarks>
         public bool TryResolve<TCandidate, TSearchSpace, TProblem>(
             ICrossover<TCandidate> crossover,
-            [NotNullWhen(true)] out ICrossoverInstance<TCandidate, TSearchSpace, TProblem>? instance,
+            [NotNullWhen(true)] out ICrossoverExecution<TCandidate, TSearchSpace, TProblem>? execution,
             [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
         {
             try
             {
-                instance = scope.Resolve<TCandidate, TSearchSpace, TProblem>(crossover);
+                execution = scope.Resolve<TCandidate, TSearchSpace, TProblem>(crossover);
                 reason = null;
                 return true;
             }
             catch (InvalidOperationException exception)
             {
-                instance = null;
+                execution = null;
                 reason = exception.Message;
                 return false;
             }
         }
 
         /// <remarks>For an optional slot such as the crossover of an evolution strategy.</remarks>
-        public ICrossoverInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate>? crossover)
+        public ICrossoverExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate>? crossover)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             crossover is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem>(crossover);
@@ -129,16 +129,16 @@ public static class CrossoverResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public ICrossoverInstance<TCandidate, TSearchSpace, TProblem> Resolve(ICrossover<TCandidate> crossover) =>
+        public ICrossoverExecution<TCandidate, TSearchSpace, TProblem> Resolve(ICrossover<TCandidate> crossover) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(crossover);
 
-        public ICrossoverInstance<TCandidate, TSearchSpace, TProblem>? ResolveOptional(ICrossover<TCandidate>? crossover) =>
+        public ICrossoverExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(ICrossover<TCandidate>? crossover) =>
             crossover is null ? null : scope.Resolve(crossover);
 
         public bool TryResolve(
             ICrossover<TCandidate> crossover,
-            [NotNullWhen(true)] out ICrossoverInstance<TCandidate, TSearchSpace, TProblem>? instance,
+            [NotNullWhen(true)] out ICrossoverExecution<TCandidate, TSearchSpace, TProblem>? execution,
             [NotNullWhen(false)] out string? reason) =>
-            scope.Scope.TryResolve(crossover, out instance, out reason);
+            scope.Scope.TryResolve(crossover, out execution, out reason);
     }
 }

@@ -25,7 +25,7 @@ public abstract record MultiRefiner<TCandidate>
     /// Resolves each child over the run's search space and problem and hands them to <see
     /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
-    public IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -33,16 +33,16 @@ public abstract record MultiRefiner<TCandidate>
         return CombineExecutionInstances([.. ChildRefiners.Select(child => typed.Resolve(child))]);
     }
 
-    /// <summary>Combines the children's execution instances into this operator's own.</summary>
-    protected abstract IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem>> childRefiners)
+    /// <summary>Combines the children's execution nodes into this operator's own.</summary>
+    protected abstract IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> childRefiners)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class MultiRefinerInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners)
-    : RefinerInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiRefinerExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> childRefiners)
+    : RefinerExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> ChildRefiners { get; } = childRefiners;
+    protected ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> ChildRefiners { get; } = childRefiners;
 }

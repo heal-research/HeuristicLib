@@ -29,18 +29,18 @@ public sealed record ChooseOneCrossover<TCandidate>
     {
     }
 
-    protected override ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem>> childCrossovers)
+    protected override ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> childCrossovers)
     {
         if (ChildCrossovers.Count == 0)
             throw new InvalidOperationException("At least one crossover must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildCrossovers.Count)
             throw new InvalidOperationException("Weights must have the same length as crossovers.");
 
-        return new Instance<TRunSearchSpace, TRunProblem>(childCrossovers, new WeightedBatchDispatcher(childCrossovers.Length, Weights));
+        return new Execution<TRunSearchSpace, TRunProblem>(childCrossovers, new WeightedBatchDispatcher(childCrossovers.Length, Weights));
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> childCrossovers, WeightedBatchDispatcher dispatcher)
-        : MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem>(childCrossovers)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICrossoverExecution<TCandidate, TSearchSpace, TProblem>> childCrossovers, WeightedBatchDispatcher dispatcher)
+        : MultiCrossoverExecution<TCandidate, TSearchSpace, TProblem>(childCrossovers)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

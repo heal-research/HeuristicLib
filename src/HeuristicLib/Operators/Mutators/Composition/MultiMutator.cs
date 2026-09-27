@@ -25,7 +25,7 @@ public abstract record MultiMutator<TCandidate>
     /// Resolves each child over the run's search space and problem and hands them to
     /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
     /// </summary>
-    public IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -33,8 +33,8 @@ public abstract record MultiMutator<TCandidate>
         return CombineExecutionInstances([.. ChildMutators.Select(child => typed.Resolve(child))]);
     }
 
-    /// <summary>Combines the children's execution instances into this operator's own.</summary>
-    protected abstract IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem>> childMutators)
+    /// <summary>Combines the children's execution nodes into this operator's own.</summary>
+    protected abstract IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> childMutators)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
@@ -50,10 +50,10 @@ public abstract record MultiMutator<TCandidate>
         OperatorContractComposition.Requires<TCandidate>(ChildMutators);
 }
 
-public abstract class MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators)
-    : MutatorInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiMutatorExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> childMutators)
+    : MutatorExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> ChildMutators { get; } = childMutators;
+    protected ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> ChildMutators { get; } = childMutators;
 }

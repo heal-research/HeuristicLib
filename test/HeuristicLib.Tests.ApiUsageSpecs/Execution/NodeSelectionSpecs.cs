@@ -46,24 +46,24 @@ public class NodeSelectionSpecs
             .And(mutator => mutator is NamedMutator<RealVector> { Name: "exploration" });
 
         // These are explicitly supplied nodes; resolver integration is a later package.
-        IExecutionConfiguration[] nodes = [child, exploration, refinement];
+        IConfigurationNode[] nodes = [child, exploration, refinement];
         nodes.Where(selected.Matches).ShouldBe([exploration]);
         nodes.Where(allMutators.Matches).ShouldBe(nodes);
     }
 
     [Fact]
-    public void NamingWrappersCanRetainTheirSharedChildInstance()
+    public void NamingWrappersCanRetainTheirSharedChildExecution()
     {
         var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
         var exploration = new NamedMutator<RealVector>(child, "exploration");
         var refinement = new NamedMutator<RealVector>(child, "refinement");
         var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
 
-        var explorationInstance = scope.Resolve(exploration);
-        var refinementInstance = scope.Resolve(refinement);
+        var explorationExecution = scope.Resolve(exploration);
+        var refinementExecution = scope.Resolve(refinement);
 
-        explorationInstance.ShouldBeSameAs(refinementInstance);
-        scope.Resolve(child).ShouldBeSameAs(explorationInstance);
+        explorationExecution.ShouldBeSameAs(refinementExecution);
+        scope.Resolve(child).ShouldBeSameAs(explorationExecution);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class NodeSelectionSpecs
 
         NodeSelector<IMutator<RealVector>> selected = exactReference.Or(smallMutations);
         NodeSelector<IMutator<RealVector>> sameSelection = exactReference | smallMutations;
-        IExecutionConfiguration[] nodes = [preferred, alternative];
+        IConfigurationNode[] nodes = [preferred, alternative];
 
         nodes.Where(selected.Matches).ShouldBe([preferred]);
         nodes.Where(sameSelection.Matches).ShouldBe([preferred]);
@@ -96,7 +96,7 @@ public class NodeSelectionSpecs
         NodeSelector<IMutator<RealVector>> selected = namedReferences & namedExploration;
         var sameSelection = namedReferences.And(
             mutator => mutator is NamedMutator<RealVector> { Name: "exploration" });
-        IExecutionConfiguration[] nodes = [child, exploration, refinement];
+        IConfigurationNode[] nodes = [child, exploration, refinement];
 
         nodes.Where(selected.Matches).ShouldBe([exploration]);
         nodes.Where(sameSelection.Matches).ShouldBe([exploration]);
@@ -113,7 +113,7 @@ public class NodeSelectionSpecs
 
         public string Name { get; init; }
 
-        protected override IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(
-            IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childMutator) => childMutator;
+        protected override IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(
+            IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childMutator) => childMutator;
     }
 }

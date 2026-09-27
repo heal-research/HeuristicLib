@@ -27,20 +27,20 @@ public sealed record ChooseOneReplacer<TCandidate>
     {
     }
 
-    protected override IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IReplacerInstance<TCandidate, TRunSearchSpace, TRunProblem>> childReplacers)
+    protected override IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> childReplacers)
     {
         if (ChildReplacers.Count == 0)
             throw new InvalidOperationException("At least one replacer must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildReplacers.Count)
             throw new InvalidOperationException("Weights must have the same length as replacers.");
 
-        return new Instance<TRunSearchSpace, TRunProblem>(
+        return new Execution<TRunSearchSpace, TRunProblem>(
             childReplacers,
             WeightedDispatcher.Create(childReplacers, Weights));
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> childReplacers, WeightedDispatcher<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> dispatcher)
-        : MultiReplacerInstance<TCandidate, TSearchSpace, TProblem>(childReplacers)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> childReplacers, WeightedDispatcher<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> dispatcher)
+        : MultiReplacerExecution<TCandidate, TSearchSpace, TProblem>(childReplacers)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

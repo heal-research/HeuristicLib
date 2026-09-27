@@ -17,11 +17,11 @@ public record NoSameMatesSelector<TCandidate>
 
     public int MaxAttempts { get; init; }
 
-    protected override ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> childSelector) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childSelector, MaxAttempts);
+    protected override ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem> childSelector) =>
+        new Execution<TRunSearchSpace, TRunProblem>(childSelector, MaxAttempts);
 
-    private sealed class Instance<TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector, int maxAttempts)
-        : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(childSelector)
+    private sealed class Execution<TSearchSpace, TProblem>(ISelectorExecution<TCandidate, TSearchSpace, TProblem> childSelector, int maxAttempts)
+        : WrappingSelectorExecution<TCandidate, TSearchSpace, TProblem>(childSelector)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

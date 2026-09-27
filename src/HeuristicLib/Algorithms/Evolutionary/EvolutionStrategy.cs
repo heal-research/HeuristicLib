@@ -34,26 +34,26 @@ public record EvolutionStrategy<TCandidate>
     /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
     public int? MaximumGenerations { get; init; } = EvolutionStrategyDefaults.MaximumGenerations;
 
-    protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>? resolvedInterceptor)
+    protected override IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope, IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
         var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Instance<TRunSearchSpace, TRunProblem>(resolvedInterceptor, typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Mutator), typed.Resolve(Selector),
+        return new Execution<TRunSearchSpace, TRunProblem>(resolvedInterceptor, typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Mutator), typed.Resolve(Selector),
             typed.ResolveOptional(Crossover), typed.ResolveOptional(Refiner), PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(
-        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
-        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
-        IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator,
-        ISelectorInstance<TCandidate, TSearchSpace, TProblem> selector,
-        ICrossoverInstance<TCandidate, TSearchSpace, TProblem>? crossover,
-        IRefinerInstance<TCandidate, TSearchSpace, TProblem>? refiner,
+    private sealed class Execution<TSearchSpace, TProblem>(
+        IInterceptorExecution<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
+        IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator,
+        ICreatorExecution<TCandidate, TSearchSpace, TProblem> creator,
+        IMutatorExecution<TCandidate, TSearchSpace, TProblem> mutator,
+        ISelectorExecution<TCandidate, TSearchSpace, TProblem> selector,
+        ICrossoverExecution<TCandidate, TSearchSpace, TProblem>? crossover,
+        IRefinerExecution<TCandidate, TSearchSpace, TProblem>? refiner,
         int populationSize,
         int numberOfChildren,
         EvolutionStrategyType strategy,
         int? maximumGenerations)
-        : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
+        : IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -98,7 +98,7 @@ public record EvolutionStrategy<TCandidate>
 
             var evaluatedChildren = children.ToEvaluated(evaluator.Evaluate(children, random, problem.SearchSpace, problem));
 
-            if (mutator is IAdaptableMutationStrengthInstance<TCandidate, TSearchSpace, TProblem> adaptableMutator)
+            if (mutator is IAdaptableMutationStrengthExecution<TCandidate, TSearchSpace, TProblem> adaptableMutator)
             {
                 // The rate is over the parent/child pairs actually compared, which is the number of children rather
                 // than the population size; the two differ whenever the strategy is configured with more or fewer

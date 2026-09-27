@@ -39,7 +39,7 @@ public sealed class FullTreeCreatorTests
     }
 
     [Fact]
-    public void CreatorInstance_UsesTheConfiguredExactDepth()
+    public void CreatorExecution_UsesTheConfiguredExactDepth()
     {
         var searchSpace = new ExpressionTreeSearchSpace(
             maximumLength: 31,
@@ -65,7 +65,7 @@ public sealed class FullTreeCreatorTests
     }
 
     [Fact]
-    public void CreatorInstance_RejectsDepthBeyondTheSearchSpaceMaximum()
+    public void CreatorExecution_RejectsDepthBeyondTheSearchSpaceMaximum()
     {
         var searchSpace = new ExpressionTreeSearchSpace(
             maximumLength: 3,
@@ -79,7 +79,7 @@ public sealed class FullTreeCreatorTests
     }
 
     [Fact]
-    public void CreatorInstance_RejectsDepthThatCannotFitWithinTheSearchSpaceLength()
+    public void CreatorExecution_RejectsDepthThatCannotFitWithinTheSearchSpaceLength()
     {
         var searchSpace = new ExpressionTreeSearchSpace(
             maximumLength: 3,
