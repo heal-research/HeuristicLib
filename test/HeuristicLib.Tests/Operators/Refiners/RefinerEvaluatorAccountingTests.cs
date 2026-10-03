@@ -80,10 +80,10 @@ public class RefinerEvaluatorAccountingTests
     public void InAPipeline_OnlyTheStageWithAnEvaluatorEvaluates()
     {
         var counter = new CountAccumulator();
-        var execution = PipelineRefiner.Create(
-                new AddOffsetRefiner(-1),
-                new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().CountCandidates(counter)))
-            .CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
+        var refiner = PipelineRefiner.Create(
+            new AddOffsetRefiner(-1),
+            new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().CountCandidates(counter)));
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
         var problem = CreateProblem();
 
         execution.Refine([10, 20], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

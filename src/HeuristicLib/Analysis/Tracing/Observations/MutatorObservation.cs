@@ -64,12 +64,12 @@ internal sealed class ObservingMutator<TCandidate, TSearchSpace, TProblem>(
     public bool Fits(ExecutionSignature execution) =>
         ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(childMutator);
 
-    public IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public ExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return new Execution<TRunSearchSpace, TRunProblem>(observedMutator, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childMutator), observe);
+        return scope => new Execution<TRunSearchSpace, TRunProblem>(observedMutator, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childMutator), observe);
     }
 
     private sealed class Execution<TRunSearchSpace, TRunProblem>(

@@ -278,8 +278,12 @@ public partial class ExecutionFactoryResolutionTests
 
     private static void Collect()
     {
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
+        // Allow objects released by finalization to become collectible before checking weak references.
+        for (var pass = 0; pass < 3; pass++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
         GC.Collect();
     }
 

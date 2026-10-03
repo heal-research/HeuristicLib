@@ -16,7 +16,7 @@ public class RefinerBatchSemanticsTests
 
         foreach (var (name, topology) in PassThroughTopologies())
         {
-            var refined = topology.CreateExecutionInstance<DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ResolutionScope.Create()).Refine(population, RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
+            var refined = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(topology).Refine(population, RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
 
             refined.Count.ShouldBe(population.Length, name);
             for (var index = 0; index < population.Length; index++)
@@ -30,8 +30,7 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void PipelineRefiner_PassesAResizedPopulationToTheNextStage()
     {
-        var execution = PipelineRefiner.Create(new DropLastRefiner(), new AddOffsetRefiner(1))
-            .CreateExecutionInstance<DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ResolutionScope.Create());
+        var execution = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(PipelineRefiner.Create(new DropLastRefiner(), new AddOffsetRefiner(1)));
 
         Refine(execution, 1, 2, 3).Select(individual => individual.Value).ShouldBe([2, 3]);
     }
@@ -39,7 +38,7 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void IteratedRefiner_ResizesThePopulationOncePerIteration()
     {
-        var execution = new DropLastRefiner().AsIterated(2).CreateExecutionInstance<DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ResolutionScope.Create());
+        var execution = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(new DropLastRefiner().AsIterated(2));
 
         Refine(execution, 1, 2, 3, 4).Select(individual => individual.Value).ShouldBe([1, 2]);
     }
@@ -48,9 +47,7 @@ public class RefinerBatchSemanticsTests
     public void InstrumentationRefiners_ReportThePopulationTheRefinerActuallyReturned()
     {
         var counter = new CountAccumulator();
-        var execution = new DropLastRefiner()
-            .CountCandidates(counter)
-            .CreateExecutionInstance<DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ResolutionScope.Create());
+        var execution = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(new DropLastRefiner().CountCandidates(counter));
 
         Refine(execution, 1, 2, 3);
 
@@ -62,8 +59,7 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void ChooseOneRefiner_RequiresOneResultPerCandidateAssignedToAChild()
     {
-        var execution = ChooseOneRefiner.Create(new DropLastRefiner())
-            .CreateExecutionInstance<DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ResolutionScope.Create());
+        var execution = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ChooseOneRefiner.Create(new DropLastRefiner()));
 
         Should.Throw<InvalidOperationException>(() => Refine(execution, 1, 2, 3));
     }

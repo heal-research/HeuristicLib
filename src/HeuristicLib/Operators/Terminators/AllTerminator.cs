@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -13,8 +14,8 @@ public sealed record AllTerminator<TCandidate>
     {
     }
 
-    protected override ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CombineExecutionInstances<TRunSearchSpace, TRunProblem, TRunSearchState>(ImmutableArray<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> childTerminators) =>
-        new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminators);
+    protected override CompositeExecutionFactory<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
+        childTerminators => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminators);
 
     private sealed class Execution<TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
         : MultiTerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminators)

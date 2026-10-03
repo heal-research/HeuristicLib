@@ -16,11 +16,11 @@ public abstract record Evaluator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope);
+    public abstract ExecutionFactory<IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory();
 
     public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> IEvaluator<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    ExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> IEvaluator<TCandidate>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -30,7 +30,7 @@ public abstract record Evaluator<TCandidate, TSearchSpace, TProblem>
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>)CreateExecutionInstance(scope);
+        return (ExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>>)CreateExecutionFactory();
     }
 }
 

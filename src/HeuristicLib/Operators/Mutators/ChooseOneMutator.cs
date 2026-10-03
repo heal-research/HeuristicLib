@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -28,14 +29,15 @@ public sealed record ChooseOneMutator<TCandidate> : MultiMutator<TCandidate>
     {
     }
 
-    protected override IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> childMutators)
+    protected override CompositeExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildMutators.Count == 0)
             throw new InvalidOperationException("At least one mutator must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildMutators.Count)
             throw new InvalidOperationException("Weights must have the same length as mutators.");
 
-        return new Execution<TRunSearchSpace, TRunProblem>(childMutators, new WeightedBatchDispatcher(childMutators.Length, Weights));
+        var dispatcher = new WeightedBatchDispatcher(ChildMutators.Count, Weights);
+        return childMutators => new Execution<TRunSearchSpace, TRunProblem>(childMutators, dispatcher);
     }
 
     private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedBatchDispatcher dispatcher)

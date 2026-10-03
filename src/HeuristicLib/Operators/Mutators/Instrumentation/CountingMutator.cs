@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -17,8 +18,8 @@ public sealed record CountingMutator<TCandidate> : WrappingMutator<TCandidate>
         Metric = metric;
     }
 
-    protected override IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childMutator) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childMutator, Counter, Metric);
+    protected override WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        childMutator => new Execution<TRunSearchSpace, TRunProblem>(childMutator, Counter, Metric);
 
     private sealed class Execution<TSearchSpace, TProblem>(IMutatorExecution<TCandidate, TSearchSpace, TProblem> childMutator, CountAccumulator counter, OperatorCountMetric metric)
         : WrappingMutatorExecution<TCandidate, TSearchSpace, TProblem>(childMutator)

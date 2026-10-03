@@ -16,11 +16,11 @@ public abstract record Replacer<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract IReplacerExecution<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope);
+    public abstract ExecutionFactory<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory();
 
     public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem> IReplacer<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    ExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> IReplacer<TCandidate>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -30,7 +30,7 @@ public abstract record Replacer<TCandidate, TSearchSpace, TProblem>
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>)CreateExecutionInstance(scope);
+        return (ExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>>)CreateExecutionFactory();
     }
 }
 

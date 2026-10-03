@@ -21,19 +21,19 @@ public abstract record MultiTerminator<TCandidate>
 
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildTerminators]);
 
-
-    /// <summary>
-    /// Resolves each child over the run's search space and problem and hands them to <see
-    /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
-    /// </summary>
-    public ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+    /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
+    public ExecutionFactory<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
-        where TRunSearchState : class, ISearchState =>
-        CombineExecutionInstances([.. ChildTerminators.Select(child => scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(child))]);
+        where TRunSearchState : class, ISearchState
+    {
+        var create = CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>();
+        return scope => create([.. ChildTerminators.Select(child => scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(child))]);
+    }
 
-    /// <summary>Combines the children's execution nodes into this operator's own.</summary>
-    protected abstract ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CombineExecutionInstances<TRunSearchSpace, TRunProblem, TRunSearchState>(ImmutableArray<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> childTerminators)
+    /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
+    /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
+    protected abstract CompositeExecutionFactory<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState;

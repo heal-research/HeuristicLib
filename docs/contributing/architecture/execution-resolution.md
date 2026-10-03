@@ -1,6 +1,6 @@
 # Execution resolution
 
-This page describes the typed factory contract and resolver implementation. The role interfaces, authoring bases and built-in algorithms/operators are still being migrated; the current review checkpoint does not build until those consumers adopt the contract. The repository work plan, `plans/execution-bindings-and-shared-state.md`, records the remaining packages.
+Execution resolution selects persistent state by configuration reference and binds typed execution nodes to the children and observations supplied by a resolution context. Typed factories separate state preparation from node binding.
 
 For the surrounding concepts, read [configuration vs execution nodes](/contributing/architecture/execution-nodes).
 
@@ -17,7 +17,7 @@ The resolver answers two different questions: **which prepared state does this c
 
 These are internal storage owners with different lifetimes. A single preparation can supply nodes to several observation contexts. Each context needs its own node cache, while the shared factory and chosen dependencies survive. The sharing scope remembers which preparations belong together; it does not own their bound-node caches. A registration owns per-source wrapper preparation so another context does not reset the wrapper's state.
 
-`WrappedNodes`, nested in `ExecutionBindings`, holds the original source and its already-built inner chain for one wrapper. `RetainedChildScope`, nested in `ExecutionSharingScope`, holds a retained child's once-only declaration snapshot. Construction and preparation failures are private records within their owners. These helpers are implementation details; users and factory authors continue using `ResolutionScope`.
+`WrappedNodes`, nested in `ExecutionBindings`, holds the original source and its already-built inner chain for one wrapper. `RetainedChildScope`, nested in `ExecutionSharingScope`, holds a retained child's once-only declaration snapshot. Construction and preparation failures are private records within their owners. These helpers are implementation details; users and factory authors use `ResolutionScope`.
 
 ## Declaration, preparation and binding
 
@@ -36,7 +36,7 @@ execution = scope.Resolve(configuration, static target => target.CreateExecution
 
 Run-typed roles use the same generic resolver with their own preparation adapter. Every generated wrapper must satisfy that adapter's configuration contract. The selected execution contract is recorded before preparation; an incompatible later request fails before binding another node.
 
-`IConfigurationNode.Fits(ExecutionSignature)` remains a type-only check for pre-flight validation and authoring bridges. The scope is keyed by configuration reference, with explicit child resolution. It does not discover dependencies by type or invoke operations.
+`IConfigurationNode.Fits(ExecutionSignature)` is a type-only check for pre-flight validation and authoring bridges. The scope is keyed by configuration reference, with explicit child resolution. It does not discover dependencies by type or invoke operations.
 
 <!-- prettier-ignore -->
 <figure>
@@ -227,7 +227,7 @@ Wrappers are sorted innermost to outermost by three keys, in this order:
 
 Registration kind outranks depth: configuration declared in an ancestor still binds tighter than a module declared below it.
 
-For the same registration kind and depth, declarations A then B produce `B(A(target))`. Entry work runs B then A; successful exit callbacks run A then B. This is the current wrapper order. General before, throwing, finally and around advice APIs are proposed work and need their own documented contracts.
+For the same registration kind and depth, declarations A then B produce `B(A(target))`. Entry work runs B then A; successful exit callbacks run A then B.
 
 Depth follows the current observation path. A retained child D viewed below a new child C orders as `P -> C -> D`, even when D's sharing scope was first created under P.
 
@@ -296,9 +296,7 @@ Two nested duration budgets on one operator, an outer 10s and an inner 2s. Which
 
 Node caches belong to their execution bindings. Declarations hold prepared wrappers through weak source keys. Preparations refer weakly to their sharing owners, and a prepared wrapper avoids a strong path back into the declaration that owns it. Live scopes and deferred factory frames retain the sharing scopes they need. This supports collection of both fresh child state beneath a long-lived declaration and discarded observing contexts around a long-lived source.
 
-These diagrams describe the implemented resolver rules during the M1a cutover. Built-in role and lifecycle migration is still incomplete. Keep the diagrams in this guide and update them if later review changes these rules; they are part of the resolution documentation, not disposable planning sketches.
-
-The resolver supplies no general disposal contract and does not make shared state safe for concurrent operations. Iterators and problem subscriptions retain their existing explicit lifecycle owners.
+The resolver supplies no general disposal contract and does not make shared state safe for concurrent operations. Iterators and problem subscriptions have explicit lifecycle owners.
 
 ## Related pages
 

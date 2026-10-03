@@ -15,11 +15,11 @@ public abstract record Refiner<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract IRefinerExecution<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope);
+    public abstract ExecutionFactory<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory();
 
     public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> IRefiner<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    ExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> IRefiner<TCandidate>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -29,7 +29,7 @@ public abstract record Refiner<TCandidate, TSearchSpace, TProblem>
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>)CreateExecutionInstance(scope);
+        return (ExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>>)CreateExecutionFactory();
     }
 }
 

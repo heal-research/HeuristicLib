@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -29,14 +30,15 @@ public sealed record ChooseOneRefiner<TCandidate>
     {
     }
 
-    protected override IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> childRefiners)
+    protected override CompositeExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildRefiners.Count == 0)
             throw new InvalidOperationException("At least one refiner must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildRefiners.Count)
             throw new InvalidOperationException("Weights must have the same length as refiners.");
 
-        return new Execution<TRunSearchSpace, TRunProblem>(childRefiners, new WeightedBatchDispatcher(childRefiners.Length, Weights));
+        var dispatcher = new WeightedBatchDispatcher(ChildRefiners.Count, Weights);
+        return childRefiners => new Execution<TRunSearchSpace, TRunProblem>(childRefiners, dispatcher);
     }
 
     private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> childRefiners, WeightedBatchDispatcher dispatcher)

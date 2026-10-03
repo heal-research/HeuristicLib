@@ -42,12 +42,15 @@ public record AlpsGeneticAlgorithm<TCandidate>
     /// </remarks>
     public double MutationRate { get; init; } = 0.1;
 
-    protected override IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope, IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>>? resolvedInterceptor)
+    protected override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>()
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
         var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.AppliedAtRate(MutationRate);
-        return new Execution<TRunSearchSpace, TRunProblem>(resolvedInterceptor, typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover),
-            typed.Resolve(effectiveMutator), typed.Resolve(Selector), typed.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations);
+        return scope =>
+        {
+            var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>>();
+            return new Execution<TRunSearchSpace, TRunProblem>(typed.ResolveOptional(Interceptor), typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover),
+                typed.Resolve(effectiveMutator), typed.Resolve(Selector), typed.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations);
+        };
     }
 
     private sealed class Execution<TSearchSpace, TProblem>(

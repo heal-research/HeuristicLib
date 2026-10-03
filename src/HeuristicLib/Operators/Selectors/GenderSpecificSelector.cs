@@ -27,13 +27,13 @@ public record GenderSpecificSelector<TCandidate>
 
     public ISelector<TCandidate> MaleSelector { get; init; }
 
-    public ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public ExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> => scope =>
     {
         var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
         return new Execution<TRunSearchSpace, TRunProblem>(typed.Resolve(FemaleSelector), typed.Resolve(MaleSelector));
-    }
+    };
 
     private sealed class Execution<TSearchSpace, TProblem>(ISelectorExecution<TCandidate, TSearchSpace, TProblem> femaleSelector, ISelectorExecution<TCandidate, TSearchSpace, TProblem> maleSelector)
         : SelectorExecution<TCandidate, TSearchSpace, TProblem>

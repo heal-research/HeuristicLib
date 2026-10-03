@@ -22,10 +22,13 @@ public record PredefinedCandidatesCreator<TCandidate>
         CreatorForRemainingCandidates = creatorForRemainingCandidates;
     }
 
-    public ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public ExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
-        new Execution<TRunSearchSpace, TRunProblem>(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(CreatorForRemainingCandidates), PredefinedCandidates, new ExecutionState());
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    {
+        var state = new ExecutionState();
+        return scope => new Execution<TRunSearchSpace, TRunProblem>(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(CreatorForRemainingCandidates), PredefinedCandidates, state);
+    }
 
     private sealed class ExecutionState
     {

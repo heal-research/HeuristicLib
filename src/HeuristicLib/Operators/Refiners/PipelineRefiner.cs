@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -13,8 +14,8 @@ public sealed record PipelineRefiner<TCandidate>
     {
     }
 
-    protected override IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> childRefiners) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childRefiners);
+    protected override CompositeExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+        childRefiners => new Execution<TRunSearchSpace, TRunProblem>(childRefiners);
 
     private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> childRefiners)
         : MultiRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiners)

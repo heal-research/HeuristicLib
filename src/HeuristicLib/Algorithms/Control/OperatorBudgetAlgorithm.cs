@@ -34,13 +34,16 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchState, TOperator>
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public int MaximumCount { get; init; }
 
-    public override OperatorBudgetAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         var counter = new CountAccumulator();
-        var childScope = scope.CreateChildScope(child =>
-            child.Wrap(ObservedOperator, current => CountedOperatorFactory(current, counter)));
-
-        return new(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
+        var childKey = new object();
+        return scope =>
+        {
+            var childScope = scope.GetOrCreateChildScope(childKey, child =>
+                child.Wrap(ObservedOperator, current => CountedOperatorFactory(current, counter)));
+            return new OperatorBudgetAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
+        };
     }
 }
 

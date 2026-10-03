@@ -29,12 +29,15 @@ public abstract record MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TS
 
     protected abstract TState InitialState();
 
-    public virtual IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ResolutionScope scope) =>
-        new Execution(this, InitialState());
+    public virtual ExecutionFactory<IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, InitialState());
+        return _ => execution;
+    }
 
     public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    IMoveCreatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove> IMoveCreator<TCandidate, TMove>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    ExecutionFactory<IMoveCreatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveCreator<TCandidate, TMove>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -44,6 +47,6 @@ public abstract record MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TS
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (IMoveCreatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>)CreateExecutionInstance(scope);
+        return (ExecutionFactory<IMoveCreatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutionFactory();
     }
 }

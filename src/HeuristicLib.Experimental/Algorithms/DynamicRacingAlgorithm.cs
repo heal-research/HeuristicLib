@@ -88,11 +88,12 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     /// <see cref="DynamicProblem{TSelf, TCandidate, TSearchSpace}"/>, so it names the search space and problem it is
     /// written for and the base reconciles them with the run's.
     /// </remarks>
-    protected override IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(
-        ResolutionScope scope,
-        IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor) =>
-        new Execution(scope, resolvedInterceptor, scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Creator), scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Mutator), MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
-            EvaluatorSelector, NoRacers, HallOfFameStrength, EarlyTerminationStrength, BurnInEpochs, MinimumModelObservationCount, ModelObservationInterval, ObjectiveValueSelector, new ExecutionState());
+    protected override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateIterationFactory()
+    {
+        var state = new ExecutionState();
+        return scope => new Execution(scope, scope.ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(Interceptor), scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Creator), scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Mutator), MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
+            EvaluatorSelector, NoRacers, HallOfFameStrength, EarlyTerminationStrength, BurnInEpochs, MinimumModelObservationCount, ModelObservationInterval, ObjectiveValueSelector, state);
+    }
 
     private sealed class ExecutionState
     {
@@ -386,8 +387,8 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         PerformanceTrackingEvaluatorObserver Observer)
         : Evaluator<TCandidate, TSearchSpace, TProblem>
     {
-        public override IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope) =>
-            new PerformanceTrackingEvaluatorExecution(scope.Resolve<TCandidate, TSearchSpace, TProblem>(ChildEvaluator), Observer);
+        public override ExecutionFactory<IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory() =>
+            scope => new PerformanceTrackingEvaluatorExecution(scope.Resolve<TCandidate, TSearchSpace, TProblem>(ChildEvaluator), Observer);
     }
 
     private sealed class PerformanceTrackingEvaluatorExecution(

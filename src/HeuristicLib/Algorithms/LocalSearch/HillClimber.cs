@@ -21,11 +21,12 @@ public record HillClimber<TCandidate>
     public int MaxNeighbors { get; init; } = HillClimberDefaults.MaxNeighbors;
     public int BatchSize { get; init; } = HillClimberDefaults.BatchSize;
 
-    protected override IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope, IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor)
-    {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Execution<TRunSearchSpace, TRunProblem>(resolvedInterceptor, typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Mutator), typed.ResolveOptional(Refiner), Direction, MaxNeighbors, BatchSize);
-    }
+    protected override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
+        scope =>
+        {
+            var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>>();
+            return new Execution<TRunSearchSpace, TRunProblem>(typed.ResolveOptional(Interceptor), typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Mutator), typed.ResolveOptional(Refiner), Direction, MaxNeighbors, BatchSize);
+        };
 
     private sealed class Execution<TSearchSpace, TProblem>(
         IInterceptorExecution<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor,

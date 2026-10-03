@@ -9,7 +9,8 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 /// <remarks>
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
 /// It must not contain operator or algorithm configurations, execution nodes or execution node resolution facilities.
-/// <see cref="CreateInitialState"/> must return a fresh state object for every execution node. Calls are not inherently thread safe.
+/// <see cref="CreateInitialState"/> must return a fresh state object for each preparation. Bindings of that execution share the state.
+/// Calls are not inherently thread safe.
 /// </remarks>
 public abstract record StatefulSelector<TCandidate, TSearchSpace, TProblem, TState>
     : Selector<TCandidate, TSearchSpace, TProblem>
@@ -21,7 +22,11 @@ public abstract record StatefulSelector<TCandidate, TSearchSpace, TProblem, TSta
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override ISelectorExecution<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope) => new Execution(this, CreateInitialState());
+    public sealed override ExecutionFactory<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, CreateInitialState());
+        return _ => execution;
+    }
 
     private sealed class Execution(StatefulSelector<TCandidate, TSearchSpace, TProblem, TState> selector, TState state)
         : SelectorExecution<TCandidate, TSearchSpace, TProblem>
@@ -40,7 +45,11 @@ public abstract record StatefulSelector<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override ISelectorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ResolutionScope scope) => new Execution(this, CreateInitialState());
+    public sealed override ExecutionFactory<ISelectorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, CreateInitialState());
+        return _ => execution;
+    }
 
     private sealed class Execution(StatefulSelector<TCandidate, TSearchSpace, TState> selector, TState state)
         : SelectorExecution<TCandidate, TSearchSpace>
@@ -58,7 +67,11 @@ public abstract record StatefulSelector<TCandidate, TState>
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random);
 
-    public sealed override ISelectorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ResolutionScope scope) => new Execution(this, CreateInitialState());
+    public sealed override ExecutionFactory<ISelectorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, CreateInitialState());
+        return _ => execution;
+    }
 
     private sealed class Execution(StatefulSelector<TCandidate, TState> selector, TState state)
         : SelectorExecution<TCandidate>

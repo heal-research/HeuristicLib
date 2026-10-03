@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -29,14 +30,15 @@ public sealed record ChooseOneCrossover<TCandidate>
     {
     }
 
-    protected override ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> childCrossovers)
+    protected override CompositeExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildCrossovers.Count == 0)
             throw new InvalidOperationException("At least one crossover must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildCrossovers.Count)
             throw new InvalidOperationException("Weights must have the same length as crossovers.");
 
-        return new Execution<TRunSearchSpace, TRunProblem>(childCrossovers, new WeightedBatchDispatcher(childCrossovers.Length, Weights));
+        var dispatcher = new WeightedBatchDispatcher(ChildCrossovers.Count, Weights);
+        return childCrossovers => new Execution<TRunSearchSpace, TRunProblem>(childCrossovers, dispatcher);
     }
 
     private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICrossoverExecution<TCandidate, TSearchSpace, TProblem>> childCrossovers, WeightedBatchDispatcher dispatcher)

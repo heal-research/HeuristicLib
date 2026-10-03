@@ -75,13 +75,13 @@ internal sealed class ObservingInterceptor<TCandidate, TSearchSpace, TProblem, T
     public bool Fits(ExecutionSignature execution) =>
         ObservationSignature.Fits<TSearchSpace, TProblem, TSearchState>(execution) && execution.Fits(childInterceptor);
 
-    public IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+    public ExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TSearchState, TRunSearchSpace, TRunProblem, TRunSearchState>(this);
-        return new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        return scope => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(
             observedInterceptor, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor), observe);
     }
 

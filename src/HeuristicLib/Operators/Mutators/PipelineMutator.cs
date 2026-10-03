@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -12,8 +13,8 @@ public sealed record PipelineMutator<TCandidate> : MultiMutator<TCandidate>
     {
     }
 
-    protected override IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> childMutators) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childMutators);
+    protected override CompositeExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+        childMutators => new Execution<TRunSearchSpace, TRunProblem>(childMutators);
 
     private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> childMutators)
         : MultiMutatorExecution<TCandidate, TSearchSpace, TProblem>(childMutators)

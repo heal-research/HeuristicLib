@@ -64,6 +64,93 @@ file sealed record DummyGenotypeValueCacheKeySelector : ICacheKeySelector<DummyG
 
 public class DynamicEvaluationCacheTests
 {
+    [Fact]
+    public void CacheRebinding_SharesEntriesAndKeepsChildObservationContexts()
+    {
+        using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
+        var evaluator = new CountingEvaluator();
+        var source = evaluator.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance);
+        var root = ResolutionScope.Create();
+        var outer = root.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        var calls = new CountAccumulator();
+        var child = root.CreateChildScope(builder => builder.Wrap<IEvaluator<DummyGenotype>>(evaluator, original => original.CountCalls(calls)));
+        var inner = child.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        inner.ShouldNotBeSameAs(outer);
+
+        outer.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        inner.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        evaluator.Calls.ShouldBe(1);
+        calls.CurrentCount.ShouldBe(0);
+        inner.Evaluate([new DummyGenotype(2)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        outer.Evaluate([new DummyGenotype(2)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        evaluator.Calls.ShouldBe(2);
+        calls.CurrentCount.ShouldBe(1);
+
+        ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source)
+            .Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        evaluator.Calls.ShouldBe(3);
+        problem.UpdateOnce();
+        inner.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        outer.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        evaluator.Calls.ShouldBe(4);
+        calls.CurrentCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public void RelativeQualityRebinding_SharesTheBestKnownReferencePerEpoch()
+    {
+        using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
+        var evaluator = new CountingEvaluator();
+        var references = 0;
+        var provider = new FuncBestKnownObjectiveProvider<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(_ => { references++; return new ObjectiveVector(2); });
+        var source = new DynamicRelativeQualityEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(evaluator, problem, provider);
+        var root = ResolutionScope.Create();
+        var outer = root.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        var calls = new CountAccumulator();
+        var child = root.CreateChildScope(builder => builder.Wrap<IEvaluator<DummyGenotype>>(evaluator, original => original.CountCalls(calls)));
+        var inner = child.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+
+        outer.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        inner.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        references.ShouldBe(1);
+        ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source)
+            .Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        references.ShouldBe(2);
+        problem.UpdateOnce();
+        inner.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        outer.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        references.ShouldBe(3);
+        calls.CurrentCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public void ReevaluationRebinding_SharesPendingRequestsAndIsolatesIndependentRoots()
+    {
+        using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
+        var evaluator = new CountingEvaluator();
+        var source = new ReevaluationInterceptor<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(evaluator, problem);
+        var root = ResolutionScope.Create();
+        var outer = root.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
+        var independent = ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
+        var calls = new CountAccumulator();
+        var child = root.CreateChildScope(builder => builder.Wrap<IEvaluator<DummyGenotype>>(evaluator, original => original.CountCalls(calls)));
+        var inner = child.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
+        var state = Population.From([EvaluatedCandidate.From(new DummyGenotype(1), new ObjectiveVector(99))]).ToPopulationState();
+        inner.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).ShouldBeSameAs(state);
+
+        problem.UpdateOnce();
+        inner.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).Population.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1));
+        outer.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).ShouldBeSameAs(state);
+        independent.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).Population.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1));
+        evaluator.Calls.ShouldBe(2);
+        calls.CurrentCount.ShouldBe(1);
+        problem.UpdateOnce();
+        outer.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem);
+        inner.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).ShouldBeSameAs(state);
+        evaluator.Calls.ShouldBe(3);
+        calls.CurrentCount.ShouldBe(1);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

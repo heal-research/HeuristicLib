@@ -57,9 +57,11 @@ Reduced arity bases such as `SingleCandidateMutator<Permutation>` omit inputs th
 
 Operator records are reusable configuration. Do not store counters, caches or other changing run data in their properties.
 
-Use a stateful base when the framework only needs to create one fresh state object per run. Use an explicit execution node when the operator owns child operators or more complex run resources.
+Use a stateful base for ordinary mutable execution data. It prepares one state object per selected logical execution; descendant bindings can share ancestor state, while independent root scopes start fresh. Keep `CreateInitialState()` and the ordinary operation override. Use an explicit execution node when the operator owns child operators or more complex run resources.
 
 The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), execution nodes and repository analyzer rules.
+
+For a wrapping operator, override `CreateWrapperFactory` and return `WrapperExecutionFactory<TExecution>`; for a multi operator, override `CreateCompositeFactory` and return `CompositeExecutionFactory<TExecution>`. The execution type is the role interface shared by the children and result. Prepare counters or caches in that hook, then return a factory that receives the resolved child or ordered child array. The base resolves those children for each context. Keep persistent data outside the returned delegate so a child observation does not reset it.
 
 ## Test the contract
 

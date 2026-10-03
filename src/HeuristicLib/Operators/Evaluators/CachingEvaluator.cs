@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
@@ -30,8 +31,11 @@ public record CachingEvaluator<TCandidate, TKey>
         KeySelector = keySelector;
     }
 
-    protected override IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, new MemoryCache(new MemoryCacheOptions { SizeLimit = SizeLimit, TrackStatistics = true }));
+    protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    {
+        var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = SizeLimit, TrackStatistics = true });
+        return childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, cache);
+    }
 
     private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, MemoryCache cache)
         : WrappingEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(childEvaluator)

@@ -9,7 +9,8 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 /// <remarks>
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
 /// It must not contain operator or algorithm configurations, execution nodes or execution node resolution facilities.
-/// <see cref="CreateInitialState"/> must return a fresh state object for every execution node. Calls are not inherently thread safe.
+/// <see cref="CreateInitialState"/> must return a fresh state object for each preparation. Bindings of that execution share the state.
+/// Calls are not inherently thread safe.
 /// </remarks>
 public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TState>
     : Interceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
@@ -22,7 +23,11 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TProblem, T
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope) => new Execution(this, CreateInitialState());
+    public sealed override ExecutionFactory<IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, CreateInitialState());
+        return _ => execution;
+    }
 
     private sealed class Execution(StatefulInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TState> interceptor, TState state)
         : InterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
@@ -42,7 +47,11 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TSearchStat
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override IInterceptorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutionInstance(ResolutionScope scope) => new Execution(this, CreateInitialState());
+    public sealed override ExecutionFactory<IInterceptorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, CreateInitialState());
+        return _ => execution;
+    }
 
     private sealed class Execution(StatefulInterceptor<TCandidate, TSearchSpace, TSearchState, TState> interceptor, TState state)
         : InterceptorExecution<TCandidate, TSearchSpace, TSearchState>
@@ -61,7 +70,11 @@ public abstract record StatefulInterceptor<TCandidate, TSearchState, TState>
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random);
 
-    public sealed override IInterceptorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutionInstance(ResolutionScope scope) => new Execution(this, CreateInitialState());
+    public sealed override ExecutionFactory<IInterceptorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, CreateInitialState());
+        return _ => execution;
+    }
 
     private sealed class Execution(StatefulInterceptor<TCandidate, TSearchState, TState> interceptor, TState state)
         : InterceptorExecution<TCandidate, TSearchState>

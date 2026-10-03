@@ -40,9 +40,9 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     public record Creator(ICreator<T1> Operator1, ICreator<T2> Operator2)
         : ICreator<CompositeGenotype<T1, T2>>
     {
-        public ICreatorExecution<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ResolutionScope scope)
+        public ExecutionFactory<ICreatorExecution<CompositeGenotype<T1, T2>, TSearchSpace, TProblem>> CreateExecutionFactory<TSearchSpace, TProblem>()
             where TSearchSpace : class, ISearchSpace<CompositeGenotype<T1, T2>>
-            where TProblem : class, IProblem<CompositeGenotype<T1, T2>, TSearchSpace>
+            where TProblem : class, IProblem<CompositeGenotype<T1, T2>, TSearchSpace> => scope =>
         {
             var execution = new Execution(
                 scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
@@ -55,7 +55,7 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
             }
 
             return typed;
-        }
+        };
 
         private sealed class Execution(ICreatorExecution<T1, TS1, IProblem<T1, TS1>> operatorExecution1, ICreatorExecution<T2, TS2, IProblem<T2, TS2>> operatorExecution2)
             : ICreatorExecution<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>
@@ -78,9 +78,9 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     public record Crossover(ICrossover<T1> Operator1, ICrossover<T2> Operator2)
         : ICrossover<CompositeGenotype<T1, T2>>
     {
-        public ICrossoverExecution<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ResolutionScope scope)
+        public ExecutionFactory<ICrossoverExecution<CompositeGenotype<T1, T2>, TSearchSpace, TProblem>> CreateExecutionFactory<TSearchSpace, TProblem>()
             where TSearchSpace : class, ISearchSpace<CompositeGenotype<T1, T2>>
-            where TProblem : class, IProblem<CompositeGenotype<T1, T2>, TSearchSpace>
+            where TProblem : class, IProblem<CompositeGenotype<T1, T2>, TSearchSpace> => scope =>
         {
             var execution = new Execution(
                 scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
@@ -93,7 +93,7 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
             }
 
             return typed;
-        }
+        };
 
         private sealed class Execution(ICrossoverExecution<T1, TS1, IProblem<T1, TS1>> operatorExecution1, ICrossoverExecution<T2, TS2, IProblem<T2, TS2>> operatorExecution2)
             : ICrossoverExecution<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>
@@ -121,9 +121,9 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     {
         public bool All { get; init; } = true;
 
-        public IMutatorExecution<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ResolutionScope scope)
+        public ExecutionFactory<IMutatorExecution<CompositeGenotype<T1, T2>, TSearchSpace, TProblem>> CreateExecutionFactory<TSearchSpace, TProblem>()
             where TSearchSpace : class, ISearchSpace<CompositeGenotype<T1, T2>>
-            where TProblem : class, IProblem<CompositeGenotype<T1, T2>, TSearchSpace>
+            where TProblem : class, IProblem<CompositeGenotype<T1, T2>, TSearchSpace> => scope =>
         {
             var execution = new Execution(
                 scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
@@ -137,7 +137,7 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
             }
 
             return typed;
-        }
+        };
 
         private sealed class Execution(IMutatorExecution<T1, TS1, IProblem<T1, TS1>> operatorExecution1, IMutatorExecution<T2, TS2, IProblem<T2, TS2>> operatorExecution2, bool all)
             : IMutatorExecution<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>

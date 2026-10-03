@@ -20,18 +20,18 @@ public abstract record WrappingMutator<TCandidate>
 
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildMutator);
 
-
-    /// <summary>
-    /// Resolves the child over the run's search space and problem and hands it to
-    /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
-    /// </summary>
-    public IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    /// <summary>Prepares this operator once, then binds its child in each construction scope.</summary>
+    public ExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
-        WrapExecutionInstance(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildMutator));
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    {
+        var create = CreateWrapperFactory<TRunSearchSpace, TRunProblem>();
+        return scope => create(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildMutator));
+    }
 
-    /// <summary>Wraps the child's execution node in this operator's own.</summary>
-    protected abstract IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childMutator)
+    /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved child.</summary>
+    /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
+    protected abstract WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 

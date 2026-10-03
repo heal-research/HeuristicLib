@@ -21,19 +21,19 @@ public abstract record WrappingInterceptor<TCandidate>
 
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildInterceptor);
 
-
-    /// <summary>
-    /// Resolves the child over the run's search space and problem and hands it to <see
-    /// cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
-    /// </summary>
-    public IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+    /// <summary>Prepares this operator once, then binds its child in each construction scope.</summary>
+    public ExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
-        where TRunSearchState : class, ISearchState =>
-        WrapExecutionInstance(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(ChildInterceptor));
+        where TRunSearchState : class, ISearchState
+    {
+        var create = CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>();
+        return scope => create(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(ChildInterceptor));
+    }
 
-    /// <summary>Wraps the child's execution node in this operator's own.</summary>
-    protected abstract IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childInterceptor)
+    /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved child.</summary>
+    /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
+    protected abstract WrapperExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState;

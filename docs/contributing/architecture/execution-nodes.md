@@ -1,10 +1,8 @@
 # Configuration vs execution nodes
 
-This page documents the common typed factory contract and resolver. Built-in role interfaces and authoring bases are still migrating, so this review checkpoint does not yet build. The repository work plan, `plans/execution-bindings-and-shared-state.md`, records the remaining packages.
-
 Resolution works like a DI container keyed by configuration object reference: configurations describe what to create, and a scope creates and reuses execution nodes through explicit factories. Child configurations are resolved explicitly; there is no lookup by service type or constructor auto-wiring.
 
-Wrapper registration supplies an AOP-like part of that model. Execution modules register wrappers while the scope is being configured, and resolution composes those wrappers as it builds executions. The wrappers implement ordinary typed algorithm or operator contracts. The current API selects individual configuration references; general pointcuts and advice kinds remain proposed work.
+Wrapper registration supplies an AOP-like part of that model. Execution modules register wrappers for individual configuration references while the scope is being configured, and resolution composes those wrappers as it builds executions. The wrappers implement ordinary typed algorithm or operator contracts.
 
 | Current concept | DI or AOP analogy | Boundary of the analogy |
 | --- | --- | --- |
@@ -77,17 +75,17 @@ This gives one-time resolution cost per execution node and avoids per-call dicti
 
 ## Framework managed state lifecycle
 
-Under the factory contract, a stateful leaf prepares state once and can retain one raw execution behind its generated observations. Ordinary leaf overrides do not need to expose this machinery. The role-base migration moves existing state allocation into preparation; until then those bases still have object-returning creation methods.
+The stateful leaf bases prepare state and one raw execution once, then retain that execution behind their generated observations. Ordinary leaf overrides do not need to expose this machinery: `CreateInitialState()` and the typed operation remain the authoring hooks. Stateless bases return their configuration through the prepared factory, and single-item bases inherit that behavior while preserving their batching and random forks.
 
 Logical selection determines state sharing independently of wrappers. Parent-first selection lets descendants reuse state. Child-first selection stays local even if the parent later selects that configuration, and siblings cannot read each other's local selections.
 
 A new observation context can bind another node using the same state. It can also bind a composite's pinned children with the new observations. A parent caller retains its original node and observations. An empty child context can reuse an already-completed ancestor binding, while any added declaration causes contextual rebinding.
 
-Fresh child scopes inherit existing ancestor state but select missing state locally. Retained child slots preserve a sharing scope across bindings and apply the requesting context's observations. Cycle, Pipeline and budget implementations adopt these operations in their own migration packages.
+Fresh child scopes inherit existing ancestor state but select missing state locally. Retained child slots preserve a sharing scope across bindings and apply the requesting context's observations.
 
 Stateful operator calls are not inherently thread safe. An operator may use ordinary mutable state, but concurrent use is valid only when the owning execution path provides suitable synchronization or the state implementation is itself safe for concurrent access.
 
-Execution nodes currently have no disposal contract. Framework managed state must therefore not own resources that require deterministic cleanup. Such ownership requires an explicitly authored execution node and a defined lifecycle mechanism.
+Execution nodes have no disposal contract. Framework managed state must therefore not own resources that require deterministic cleanup. Such ownership requires an explicitly authored execution node and a defined lifecycle mechanism.
 
 ## When you should care
 

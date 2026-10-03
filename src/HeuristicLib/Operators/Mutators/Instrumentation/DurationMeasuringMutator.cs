@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -22,8 +23,8 @@ public sealed record DurationMeasuringMutator<TCandidate> : WrappingMutator<TCan
         TimeProvider = timeProvider;
     }
 
-    protected override IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childMutator) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childMutator, Duration, TimeProvider);
+    protected override WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        childMutator => new Execution<TRunSearchSpace, TRunProblem>(childMutator, Duration, TimeProvider);
 
     private sealed class Execution<TSearchSpace, TProblem>(IMutatorExecution<TCandidate, TSearchSpace, TProblem> childMutator, DurationAccumulator duration, TimeProvider timeProvider)
         : WrappingMutatorExecution<TCandidate, TSearchSpace, TProblem>(childMutator)

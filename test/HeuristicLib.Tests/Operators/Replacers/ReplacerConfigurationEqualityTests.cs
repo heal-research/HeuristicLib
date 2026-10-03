@@ -91,8 +91,8 @@ public class ReplacerConfigurationEqualityTests
         {
         }
 
-        protected override IReplacerExecution<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IReplacerExecution<int, TRunSearchSpace, TRunProblem>> childReplacers) =>
-            new Execution<TRunSearchSpace, TRunProblem>(childReplacers);
+        protected override CompositeExecutionFactory<IReplacerExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childReplacers => new Execution<TRunSearchSpace, TRunProblem>(childReplacers);
 
         private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IReplacerExecution<int, TSearchSpace, TProblem>> childReplacers)
             : MultiReplacerExecution<int, TSearchSpace, TProblem>(childReplacers)

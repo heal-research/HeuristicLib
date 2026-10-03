@@ -8,7 +8,8 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 /// <remarks>
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
 /// It must not contain operator or algorithm configurations, execution nodes or execution node resolution facilities.
-/// <see cref="CreateInitialState"/> must return a fresh state object for every execution node. Calls are not inherently thread safe.
+/// <see cref="CreateInitialState"/> must return a fresh state object for each preparation. Bindings of that execution share the state.
+/// Calls are not inherently thread safe.
 /// Use <see cref="Creator{TCandidate,TSearchSpace,TProblem}"/> when the creator needs execution graph dependencies.
 /// </remarks>
 public abstract record StatefulCreator<TCandidate, TSearchSpace, TProblem, TState>
@@ -21,8 +22,11 @@ public abstract record StatefulCreator<TCandidate, TSearchSpace, TProblem, TStat
 
     protected abstract IReadOnlyList<TCandidate> Create(int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override ICreatorExecution<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope) =>
-        new Execution(this, CreateInitialState());
+    public sealed override ExecutionFactory<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, CreateInitialState());
+        return _ => execution;
+    }
 
     private sealed class Execution(StatefulCreator<TCandidate, TSearchSpace, TProblem, TState> creator, TState state)
         : CreatorExecution<TCandidate, TSearchSpace, TProblem>
@@ -41,8 +45,11 @@ public abstract record StatefulCreator<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<TCandidate> Create(int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override ICreatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ResolutionScope scope) =>
-        new Execution(this, CreateInitialState());
+    public sealed override ExecutionFactory<ICreatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, CreateInitialState());
+        return _ => execution;
+    }
 
     private sealed class Execution(StatefulCreator<TCandidate, TSearchSpace, TState> creator, TState state)
         : CreatorExecution<TCandidate, TSearchSpace>
@@ -60,8 +67,11 @@ public abstract record StatefulCreator<TCandidate, TState>
 
     protected abstract IReadOnlyList<TCandidate> Create(int count, TState state, IRandomNumberGenerator random);
 
-    public sealed override ICreatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ResolutionScope scope) =>
-        new Execution(this, CreateInitialState());
+    public sealed override ExecutionFactory<ICreatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, CreateInitialState());
+        return _ => execution;
+    }
 
     private sealed class Execution(StatefulCreator<TCandidate, TState> creator, TState state)
         : CreatorExecution<TCandidate>

@@ -294,8 +294,8 @@ public class CrossoverConfigurationEqualityTests
         {
         }
 
-        protected override ICrossoverExecution<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICrossoverExecution<int, TRunSearchSpace, TRunProblem>> childCrossovers) =>
-            new Execution<TRunSearchSpace, TRunProblem>(childCrossovers);
+        protected override CompositeExecutionFactory<ICrossoverExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childCrossovers => new Execution<TRunSearchSpace, TRunProblem>(childCrossovers);
 
         private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICrossoverExecution<int, TSearchSpace, TProblem>> childCrossovers)
             : MultiCrossoverExecution<int, TSearchSpace, TProblem>(childCrossovers)

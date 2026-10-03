@@ -354,6 +354,8 @@ Every operator role provides public `Observable*`, `Counting*` and `DurationMeas
 
 Wrapping a complete composition observes the outer operation boundary and includes all nested work. Wrapping one child observes only calls that reach that child. For example, measuring a `TransformedCrossover` includes both crossover and mutation work, while measuring its child crossover includes only crossover work.
 
+Counting and duration wrappers bind contextual children while retaining the supplied result accumulator. Independent root executions using the same accumulator also contribute to it. Counters increment after a successful child call. Duration measurement keeps timestamps local to each invocation and records elapsed time even when the child throws.
+
 See [Observability and analysis](/guide/execution/observability-and-analysis) for observer, counter and duration APIs.
 
 ## Specialized execution node capabilities

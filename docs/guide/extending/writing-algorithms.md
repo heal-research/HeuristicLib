@@ -7,9 +7,9 @@ Create an algorithm only when the state transition or control flow is new. Put d
 An algorithm has two parts:
 
 1. An immutable configuration record that holds operators and settings.
-2. An execution node that owns resolved operators and mutable run data.
+2. Prepared execution state and an execution node bound to resolved operators and interceptors.
 
-Each call to `Stream` or `CompleteAsync` creates a new execution node. Reusing one configuration therefore starts independent runs.
+Each call to `Stream` or `CompleteAsync` starts an independent root execution. Preparation creates persistent state once for that logical execution; contextual bindings share it while receiving their own resolved children.
 
 ## Implement an iterative algorithm
 
@@ -31,18 +31,16 @@ public sealed record SingleCreateAlgorithm
 
     public IEvaluator<RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
-    protected override IterativeAlgorithmExecution<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>
-        CreateExecutionInstance<TRunSearchSpace, TRunProblem>(
-            ResolutionScope scope,
-            IInterceptorExecution<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>? resolvedInterceptor)
-    {
-        var typed = scope.For<RealVector, TRunSearchSpace, TRunProblem>();
+    protected override ExecutionFactory<IterativeAlgorithmExecution<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
+        scope =>
+        {
+            var typed = scope.For<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>();
 
-        return new Execution<TRunSearchSpace, TRunProblem>(
-            resolvedInterceptor,
-            typed.Resolve(Creator),
-            typed.Resolve(Evaluator));
-    }
+            return new Execution<TRunSearchSpace, TRunProblem>(
+                typed.ResolveOptional(Interceptor),
+                typed.Resolve(Creator),
+                typed.Resolve(Evaluator));
+        };
 
     private sealed class Execution<TSearchSpace, TProblem>(
         IInterceptorExecution<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>? interceptor,
@@ -72,7 +70,9 @@ public sealed record SingleCreateAlgorithm
 
 That choice is what keeps the operator slots at one type argument each. `ICreator<RealVector>` accepts any creator written for real vectors, including one written against `BoundedRealVectorSearchSpace`, because the run supplies the space when the execution node is created.
 
-The cost is visible in the example and worth naming: the run's search space and problem arrive as *method* type arguments on `CreateExecutionInstance`, so the nested execution class is generic in them and carries two constraints. That is the whole price, it is paid once by the algorithm's author, and it is paid nowhere by anyone configuring or holding the algorithm.
+The run's search space and problem arrive as method type arguments on `CreateIterationFactory`. The nested execution class is generic in them and carries the matching constraints. Configurations retain candidate-only operator roles.
+
+The public `CreateExecutionFactory` forwards to this protected preparation hook without a construction scope. The hook returns an ordinary `ExecutionFactory` whose result must derive from `IterativeAlgorithmExecution`. Inside that factory, resolve the optional `Interceptor` alongside the other configured children and pass it to the execution constructor. The execution base applies it in the iteration loop, before checking terminal state and yielding; its result becomes the next iteration's previous state.
 
 ### When to name the search space and problem instead
 
@@ -88,15 +88,15 @@ public sealed record MatrixAwareAlgorithm
         SingleSolutionState<Permutation>>
 ```
 
-Its `CreateExecutionInstance` takes no type arguments and its execution class is not generic, so authoring is simpler. In exchange, every mention of the configuration names five types, its operator slots name three each, and it runs over exactly one problem type; anything else is refused when the execution graph is built. Choose this base when the algorithm genuinely reads the problem, not to avoid the generic execution class.
+Its protected `CreateIterationFactory` takes no method type arguments and its execution class can be nongeneric. The hook returns `ExecutionFactory<IterativeAlgorithmExecution<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SingleSolutionState<Permutation>>>`. Operator slots still use candidate-only roles. The public factory checks run compatibility with the declared search-space and problem contracts before preparation. Choose this base when the algorithm reads those contracts itself.
 
 Use `.TerminatedAfterIterations(count)` or another terminator when the algorithm does not stop itself.
 
-## Resolve operators once
+## Prepare state and bind children
 
-Resolve every configured child operator through `ResolutionScope` while creating the algorithm execution. Do not call operator configurations directly from `ExecuteStep` and do not create new child executions for every iteration.
+Resolve the optional interceptor and every other configured child operator through the construction scope supplied to the prepared execution factory. Retain the resolved children on that execution node. Do not call operator configurations directly from `ExecuteStep` or resolve children on every iteration.
 
-Store counters and other changing values on the nested execution node. Never mutate the configuration record.
+Allocate persistent counters and helper data in `CreateIterationFactory`, before returning its delegate, and capture that data for each binding. Keep iteration position, previous search state and per-invocation values in the operation or iterator. A paused iterator retains its original children and interceptor when another context binds an execution. Never mutate the configuration record.
 
 ## Preserve run behavior
 

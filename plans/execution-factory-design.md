@@ -1,8 +1,8 @@
 # Typed execution factories: concrete design
 
-Status: implementation authorized, 2026-09-27. The naming migration was reviewed and committed as `d5ad7fb2`; the C2 core and C3 deferred/lifecycle proofs were completed and validated locally. The selected direction is option C from [container and aspect framing](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings), implemented through candidate 1 from the [comparison](execution-bindings-design-investigation.md). M1a now introduces the common factory contract and replaces the real resolver. Built-in role contracts, authoring bases and consumers are not yet migrated, so this is a temporarily non-compiling review checkpoint. The user has authorized direct implementation in the library, including temporary breaking checkpoints for review. The [work plan](execution-bindings-and-shared-state.md) owns the package stops and validation gates; C4 compares the integrated implementation against the previous version in a temporary worktree before final acceptance.
+Status: implementation authorized, 2026-09-27. The naming migration was reviewed and committed as `d5ad7fb2`; the C2 core and C3 deferred/lifecycle proofs were completed and validated locally. The selected direction is option C from [container and aspect framing](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings), implemented through candidate 1 from the [comparison](execution-bindings-design-investigation.md). M1a introduces the common factory contract and real resolver and is committed as `aa72a5a7`. M1b's core role, adapter and ordinary leaf-base cutover is committed as `01126da1`. M1c is committed as `3ba6a197`. M2a migrates 17 core concrete composition operators in the working tree. Iterative hooks, instrumentation wrappers, other concrete implementations and Experimental roles remain unmigrated, so this is still a temporarily non-compiling review checkpoint. The user has authorized direct implementation in the library, including temporary breaking checkpoints for review. The [work plan](execution-bindings-and-shared-state.md) owns the package stops and validation gates; C4 compares the integrated implementation against the previous version in a temporary worktree before final acceptance.
 
-This document specifies the design. C2 validated the core authoring examples and typed operations; C3 validated deferred children, budgets, iterator continuity and lifetime ownership. The common factory/resolver cutover is in progress, with new regression tests in the normal core test project. Those tests cannot run until the dependent contracts compile. Local proof results remain reference evidence and do not establish that integrated validation has passed. Performance claims still require C4 evidence.
+This document specifies the design. C2 validated the core authoring examples and typed operations; C3 validated deferred children, budgets, iterator continuity and lifetime ownership. The common factory/resolver and core role cutover is in progress, with new regression tests in the normal core test project. Those tests cannot run until the dependent implementations compile. Local proof results remain reference evidence and do not establish that integrated validation has passed. Performance claims still require C4 evidence.
 
 ## Agreed naming family
 
@@ -299,8 +299,7 @@ Before the change, preparation and the lambda body were one `CreateExecutionInst
 Keep child resolution centralized, but move the protected hook outside per-binding construction. On `WrappingMutator<TCandidate>`:
 
 ```csharp
-public ExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>>
-    CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+public ExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     where TRunSearchSpace : class, ISearchSpace<TCandidate>
     where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
 {
@@ -308,40 +307,28 @@ public ExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProbl
     return scope => wrap(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildMutator));
 }
 
-protected abstract Func<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>,
-    IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>>
-    CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+protected abstract WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
     where TRunSearchSpace : class, ISearchSpace<TCandidate>
     where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 ```
 
 A stateless wrapper returns `child => new Execution<TRunSearchSpace, TRunProblem>(child, setting)`. A stateful wrapper creates its shared cache/counter first, then returns `child => new Execution<...>(child, cache)`. For example, [CachingEvaluator](../src/HeuristicLib/Operators/Evaluators/CachingEvaluator.cs) moves its `MemoryCache` allocation out of the binding instance's field initializer into preparation. Its transient batch lists stay invocation-local.
 
-Multi bases apply the same pattern with the existing ordered typed child collection. Matching execution bases and protected child properties remain. This replaces `WrapExecutionInstance`, rather than adding another optional authoring route alongside it. The additional delegate is construction-only and must be included in allocation measurements.
+Multi bases apply the same pattern through `CreateCompositeFactory`, returning `CompositeExecutionFactory<TExecution>` with the existing ordered `ImmutableArray<TExecution>` as its input. Order, repeated references and empty arrays are preserved. Matching execution bases and protected child properties remain. `WrapperExecutionFactory<TExecution>` and `CompositeExecutionFactory<TExecution>` use one execution role interface for their children and result. Derived authors construct the matching execution class inside the delegate rather than declaring a more specific result type on the factory. This replaces `WrapExecutionInstance` and `CombineExecutionInstances`, rather than adding another optional authoring route alongside them. The additional delegate is construction-only and must be included in allocation measurements.
+
+Decision, 2026-09-30: the user approved a named factory family to replace the raw `Func` hook signatures. `ExecutionFactory<TExecution>` remains the scope-to-node factory. `WrapperExecutionFactory<TExecution>` accepts one typed child; `CompositeExecutionFactory<TExecution>` accepts an immutable array of typed children. These two delegates are invariant because their type parameter describes both inputs and output. This intentionally supersedes the M1c covariance option: all topology hooks use the exact role interface for their named factory. Preparation timing, binding inputs and lambda bodies are unchanged.
 
 ### Algorithms and interceptors
 
-Algorithm role methods return `ExecutionFactory<IAlgorithmExecution<...>>`. Keep one protected hook on iterative bases which prepares a constructor receiving the newly resolved interceptor:
+Algorithm role methods return `ExecutionFactory<IAlgorithmExecution<...>>`. Keep one protected hook on iterative bases returning the common factory with a concrete iterative execution result:
 
 ```csharp
 // On IterativeAlgorithm<TSelf, TCandidate, TSearchState>:
-protected abstract Func<ResolutionScope,
-    IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>?,
-    IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>>
-    CreateIterationFactory<TRunSearchSpace, TRunProblem>()
+protected abstract ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateIterationFactory<TRunSearchSpace, TRunProblem>()
     where TRunSearchSpace : class, ISearchSpace<TCandidate>
     where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
-public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>>
-    CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
-{
-    var create = CreateIterationFactory<TRunSearchSpace, TRunProblem>();
-    return scope =>
-    {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
-        return create(scope, typed.ResolveOptional(Interceptor));
-    };
-}
+public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() => CreateIterationFactory<TRunSearchSpace, TRunProblem>();
 ```
 
 The bound iterative base offers the nongeneric protected hook and validates the bridge before any preparation; mirror today's supported run-type relationships. C2 must prove both base variants compile. Do not implement the bound variant by resolving an interceptor early and capturing it in the prepared factory.
@@ -349,33 +336,29 @@ The bound iterative base offers the nongeneric protected hook and validates the 
 For [HillClimber](../src/HeuristicLib/Algorithms/LocalSearch/HillClimber.cs), the replacement override is:
 
 ```csharp
-protected override Func<ResolutionScope,
-    IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>>?,
-    IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>>>
-    CreateIterationFactory<TRunSearchSpace, TRunProblem>() => (scope, interceptor) =>
+protected override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() => scope =>
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Execution<TRunSearchSpace, TRunProblem>(interceptor,
+        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, SingleSolutionState<TCandidate>>();
+        return new Execution<TRunSearchSpace, TRunProblem>(typed.ResolveOptional(Interceptor),
             typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Mutator),
             typed.ResolveOptional(Refiner), Direction, MaxNeighbors, BatchSize);
     };
 ```
 
-Its existing nested instance and step methods need no state class. Iteration position and previous search state already belong to `RunStreamingAsync`'s enumerator. The longer protected return type is the visible cost of keeping interceptor wiring in the base; do not introduce a new public delegate for every topology unless the proof shows a material readability benefit.
+Its existing nested execution and step methods need no state class. Iteration position and previous search state already belong to `RunStreamingAsync`'s enumerator. The protected hook requires the matching iterative execution result while using the common scope-to-execution factory contract.
+
+Settled authoring decision, 2026-10-01: after reviewing M1d, the user approved using `ExecutionFactory<IterativeAlgorithmExecution<...>>` instead of the algorithm-specific `IterationExecutionFactory`. No separate interceptor argument or raw `Func` remains. Derived authors resolve the optional interceptor alongside their other configured children inside the returned factory. Preparation remains scope-free, and the execution base retains the interceptor as a constructor-supplied child and applies it in the loop. The public factory forwards directly to `CreateIterationFactory`; the protected hook enforces the matching iterative execution result. The bound base mirrors `Algorithm`'s checked public bridge and keeps its nongeneric preparation method.
 
 [GeneticAlgorithm](../src/HeuristicLib/Algorithms/Evolutionary/GeneticAlgorithm.cs) uses the same hook, but prepares its effective mutator before the lambda:
 
 ```csharp
-protected override Func<ResolutionScope,
-    IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>?,
-    IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>>
-    CreateIterationFactory<TRunSearchSpace, TRunProblem>()
+protected override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>()
 {
     var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.AppliedAtRate(MutationRate);
-    return (scope, interceptor) =>
+    return scope =>
     {
         var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>();
-        return new Execution<TRunSearchSpace, TRunProblem>(interceptor,
+        return new Execution<TRunSearchSpace, TRunProblem>(typed.ResolveOptional(Interceptor),
             typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover),
             typed.Resolve(effectiveMutator), typed.Resolve(Selector), typed.ResolveOptional(Terminator),
             typed.ResolveOptional(Refiner), PopulationSize, MaximumGenerations, Elites);
@@ -532,7 +515,7 @@ The constructor audit found no need for child-dependent binding initialization o
 | ID | Proposed choice to review | Evidence required before rollout |
 | --- | --- | --- |
 | D1 | Preserve G's pinned M even when direct C resolution selects another M; keep original logical ownership for delayed dependencies. | Collision, late dependency and no-hoisting tests; clear direct-versus-composite behavior. |
-| D2 | `CreateWrapperFactory` / `CreateIterationFactory` prepare once and receive typed children later. | Full compilation of agnostic/bound bases, custom roles, representative algorithms; author ceremony comparison. |
+| D2 | `CreateWrapperFactory` prepares once and receives a typed child later; `CreateIterationFactory` prepares the common execution factory, which resolves its interceptor and other children per binding. | Full compilation of agnostic/bound bases, custom roles, representative algorithms; author ceremony comparison. |
 | D3 | Retained child domains keyed explicitly, returning contextual views. | Both Cycle modes, repeated source references, two Cycle nodes, two invocations, Pipeline and budget composition. |
 | D4 | Wrapper callback receives original source; generated occurrence has a per-binding predecessor, private extra-child domain and weak-key lifetime. | Stateful A/B chain insertion, deferred predecessor, extra-child isolation, unrelated child, attribution, contextual depth, timing order and both collection directions. |
 | D5 | Operation-free controls projected during resolution. | EvolutionStrategy/Gaussian with observation, consumer control, explicit wrapper absence/forwarding, inference. |

@@ -53,9 +53,8 @@ public class CompositeBindingTests
     /// <summary>How not to write it: the base fixes the triple, so the child is resolved at the wrong one.</summary>
     private sealed record LeafLadderTransformedCreator(ICreator<RealVector> Source) : Creator<RealVector>
     {
-        public override ICreatorExecution<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
-            CreateExecutionInstance(ResolutionScope scope) =>
-            new Execution(scope.Resolve<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(Source));
+        public override ExecutionFactory<ICreatorExecution<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>> CreateExecutionFactory() =>
+            scope => new Execution(scope.Resolve<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(Source));
 
         private sealed class Execution(ICreatorExecution<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> source)
             : CreatorExecution<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
@@ -68,10 +67,10 @@ public class CompositeBindingTests
     /// <summary>How to write it: the run's types are method type arguments, so they reach the child.</summary>
     private sealed record AgnosticTransformedCreator(ICreator<RealVector> Source) : ICreator<RealVector>
     {
-        public ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+        public ExecutionFactory<ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
             where TRunSearchSpace : class, ISearchSpace<RealVector>
             where TRunProblem : class, IProblem<RealVector, TRunSearchSpace> =>
-            new Execution<TRunSearchSpace, TRunProblem>(scope.Resolve<RealVector, TRunSearchSpace, TRunProblem>(Source));
+            scope => new Execution<TRunSearchSpace, TRunProblem>(scope.Resolve<RealVector, TRunSearchSpace, TRunProblem>(Source));
 
         private sealed class Execution<TSearchSpace, TProblem>(ICreatorExecution<RealVector, TSearchSpace, TProblem> source)
             : CreatorExecution<RealVector, TSearchSpace, TProblem>

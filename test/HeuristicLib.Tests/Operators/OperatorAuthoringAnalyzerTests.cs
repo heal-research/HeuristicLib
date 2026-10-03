@@ -166,7 +166,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               protected abstract TState CreateInitialState();
 
-              public CustomOperatorExecution CreateExecutionInstance(ResolutionScope scope) => new();
+              public ExecutionFactory<CustomOperatorExecution> CreateExecutionFactory() => _ => new();
           }
 
           file sealed class CustomOperatorExecution : IOperatorExecution;
@@ -285,7 +285,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               private int calls;
 
-              public InvalidOperator CreateExecutionInstance(ResolutionScope scope) => this;
+              public ExecutionFactory<InvalidOperator> CreateExecutionFactory() => _ => this;
 
               public void Execute()
               {

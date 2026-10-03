@@ -15,13 +15,13 @@ public abstract record StatelessMoveApplier<TCandidate, TSearchSpace, TProblem, 
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public virtual IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ResolutionScope scope) => this;
+    public virtual ExecutionFactory<IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutionFactory() => _ => this;
 
     public abstract TCandidate Apply(TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    IMoveApplierExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove> IMoveApplier<TCandidate, TMove>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    ExecutionFactory<IMoveApplierExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveApplier<TCandidate, TMove>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -31,6 +31,6 @@ public abstract record StatelessMoveApplier<TCandidate, TSearchSpace, TProblem, 
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (IMoveApplierExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>)CreateExecutionInstance(scope);
+        return (ExecutionFactory<IMoveApplierExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutionFactory();
     }
 }

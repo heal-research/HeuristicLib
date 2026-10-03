@@ -257,8 +257,8 @@ public class RefinerConfigurationEqualityTests
         {
         }
 
-        protected override IRefinerExecution<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerExecution<int, TRunSearchSpace, TRunProblem>> childRefiners) =>
-            new Execution<TRunSearchSpace, TRunProblem>(childRefiners);
+        protected override CompositeExecutionFactory<IRefinerExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childRefiners => new Execution<TRunSearchSpace, TRunProblem>(childRefiners);
 
         private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<int, TSearchSpace, TProblem>> childRefiners)
             : MultiRefinerExecution<int, TSearchSpace, TProblem>(childRefiners)

@@ -53,10 +53,13 @@ public class HillClimberTests
         : ICreator<int>,
         ICreatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public ICreatorExecution<int, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+        public ExecutionFactory<ICreatorExecution<int, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
             where TRunSearchSpace : class, ISearchSpace<int>
-            where TRunProblem : class, IProblem<int, TRunSearchSpace> =>
-            (ICreatorExecution<int, TRunSearchSpace, TRunProblem>)(object)this;
+            where TRunProblem : class, IProblem<int, TRunSearchSpace>
+        {
+            var execution = (ICreatorExecution<int, TRunSearchSpace, TRunProblem>)(object)this;
+            return _ => execution;
+        }
 
         public IReadOnlyList<int> Create(
             int count,
@@ -70,10 +73,13 @@ public class HillClimberTests
         : IMutator<int>,
         IMutatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public IMutatorExecution<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ResolutionScope scope)
+        public ExecutionFactory<IMutatorExecution<int, TSearchSpace, TProblem>> CreateExecutionFactory<TSearchSpace, TProblem>()
             where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace> =>
-            (IMutatorExecution<int, TSearchSpace, TProblem>)CreateBoundExecution();
+            where TProblem : class, IProblem<int, TSearchSpace>
+        {
+            var execution = (IMutatorExecution<int, TSearchSpace, TProblem>)CreateBoundExecution();
+            return _ => execution;
+        }
 
         private IMutatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecution() => this;
 

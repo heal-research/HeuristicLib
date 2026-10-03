@@ -20,21 +20,22 @@ public abstract record MultiCrossover<TCandidate>
 
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildCrossovers]);
 
-
-    /// <summary>
-    /// Resolves each child over the run's search space and problem and hands them to
-    /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
-    /// </summary>
-    public ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
+    public ExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return CombineExecutionInstances([.. ChildCrossovers.Select(child => typed.Resolve(child))]);
+        var create = CreateCompositeFactory<TRunSearchSpace, TRunProblem>();
+        return scope =>
+        {
+            var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
+            return create([.. ChildCrossovers.Select(child => typed.Resolve(child))]);
+        };
     }
 
-    /// <summary>Combines the children's execution nodes into this operator's own.</summary>
-    protected abstract ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> childCrossovers)
+    /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
+    /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
+    protected abstract CompositeExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }

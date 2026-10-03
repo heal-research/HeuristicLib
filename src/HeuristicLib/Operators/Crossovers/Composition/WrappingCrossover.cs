@@ -20,18 +20,18 @@ public abstract record WrappingCrossover<TCandidate>
 
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildCrossover);
 
-
-    /// <summary>
-    /// Resolves the child over the run's search space and problem and hands it to
-    /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
-    /// </summary>
-    public ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    /// <summary>Prepares this operator once, then binds its child in each construction scope.</summary>
+    public ExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
-        WrapExecutionInstance(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildCrossover));
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    {
+        var create = CreateWrapperFactory<TRunSearchSpace, TRunProblem>();
+        return scope => create(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildCrossover));
+    }
 
-    /// <summary>Wraps the child's execution node in this operator's own.</summary>
-    protected abstract ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> childCrossover)
+    /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved child.</summary>
+    /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
+    protected abstract WrapperExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }

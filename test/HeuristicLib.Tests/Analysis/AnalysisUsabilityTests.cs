@@ -148,7 +148,7 @@ public class AnalysisUsabilityTests
 
     private sealed record ManualEvaluator : Evaluator<int, DummySearchSpace<int>, TestProblem>
     {
-        public override IEvaluatorExecution<int, DummySearchSpace<int>, TestProblem> CreateExecutionInstance(ResolutionScope scope) => new Execution();
+        public override ExecutionFactory<IEvaluatorExecution<int, DummySearchSpace<int>, TestProblem>> CreateExecutionFactory() => _ => new Execution();
 
         private sealed class Execution : IEvaluatorExecution<int, DummySearchSpace<int>, TestProblem>
         {
