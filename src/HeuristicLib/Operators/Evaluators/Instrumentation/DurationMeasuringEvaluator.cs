@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
@@ -24,8 +25,8 @@ public sealed record DurationMeasuringEvaluator<TCandidate>
         TimeProvider = timeProvider;
     }
 
-    protected override IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, Duration, TimeProvider);
+    protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, Duration, TimeProvider);
 
     private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator, DurationAccumulator duration, TimeProvider timeProvider)
         : WrappingEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(childEvaluator)

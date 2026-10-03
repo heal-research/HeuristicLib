@@ -152,9 +152,8 @@ public sealed class NumericParameterFittingRefinerTests
         var problem = CreateProblem(useLinearScaling: true);
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var execution = new NumericParameterFittingRefiner { MaximumIterations = 100 }
-            .CheckedForImprovement()
-            .CreateExecutionInstance<ExpressionTreeSearchSpace, SymbolicRegressionProblem>(ResolutionScope.Create());
+        var refiner = new NumericParameterFittingRefiner { MaximumIterations = 100 }.CheckedForImprovement();
+        var execution = ResolutionScope.Create().Resolve<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(refiner);
 
         var refined = execution.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
@@ -167,9 +166,8 @@ public sealed class NumericParameterFittingRefinerTests
         var problem = CreateProblem();
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var execution = new NumericParameterFittingRefiner { MaximumIterations = 100 }
-            .CheckedForImprovement()
-            .CreateExecutionInstance<ExpressionTreeSearchSpace, SymbolicRegressionProblem>(ResolutionScope.Create());
+        var refiner = new NumericParameterFittingRefiner { MaximumIterations = 100 }.CheckedForImprovement();
+        var execution = ResolutionScope.Create().Resolve<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(refiner);
 
         var refined = execution.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
@@ -184,8 +182,7 @@ public sealed class NumericParameterFittingRefinerTests
         var unsolvable = (FixedConstant(1.0) / Constant(0.0)).Build();
         var fittable = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var refined = new NumericParameterFittingRefiner { MaximumIterations = 100 }
-            .CreateExecutionInstance(ResolutionScope.Create())
+        var refined = ResolutionScope.Create().Resolve<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(new NumericParameterFittingRefiner { MaximumIterations = 100 })
             .Refine([unsolvable, fittable], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
         refined[0].ShouldBeSameAs(unsolvable);

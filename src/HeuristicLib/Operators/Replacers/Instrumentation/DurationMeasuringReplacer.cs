@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
@@ -24,8 +25,8 @@ public sealed record DurationMeasuringReplacer<TCandidate>
         TimeProvider = timeProvider;
     }
 
-    protected override IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem> childReplacer) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childReplacer, Duration, TimeProvider);
+    protected override WrapperExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        childReplacer => new Execution<TRunSearchSpace, TRunProblem>(childReplacer, Duration, TimeProvider);
 
     private sealed class Execution<TSearchSpace, TProblem>(IReplacerExecution<TCandidate, TSearchSpace, TProblem> childReplacer, DurationAccumulator duration, TimeProvider timeProvider)
         : WrappingReplacerExecution<TCandidate, TSearchSpace, TProblem>(childReplacer)

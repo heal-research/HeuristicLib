@@ -32,11 +32,14 @@ public record GaussianMutator
     public double MutationStrength { get; init; }
 
     /// <summary>
-    /// The instance offers an adaptable strength, which an algorithm reaches by testing for
+    /// The execution offers an adaptable strength, which an algorithm reaches by testing for
     /// <see cref="IAdaptableMutationStrengthExecution{TCandidate,TSearchSpace,TProblem}"/>.
     /// </summary>
-    public override IMutatorExecution<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> CreateExecutionInstance(ResolutionScope scope) =>
-        new Execution(MutationRate, new ExecutionState(MutationStrength));
+    public override ExecutionFactory<IMutatorExecution<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>> CreateExecutionFactory()
+    {
+        var execution = new Execution(MutationRate, new ExecutionState(MutationStrength));
+        return _ => execution;
+    }
 
     private sealed class ExecutionState(double mutationStrength)
     {

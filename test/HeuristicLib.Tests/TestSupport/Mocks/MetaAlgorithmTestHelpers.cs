@@ -24,10 +24,11 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
 {
     public int ExecutionCount { get; private set; }
 
-    public override IEvaluatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ResolutionScope scope)
+    public override ExecutionFactory<IEvaluatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> CreateExecutionFactory()
     {
         ExecutionCount++;
-        return new Execution();
+        var execution = new Execution();
+        return _ => execution;
     }
 
     private sealed class Execution : EvaluatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
@@ -42,10 +43,10 @@ public sealed record CountingExecutionAlgorithm(int Increment, IEvaluator<int> E
 {
     public int ExecutionCount { get; private set; }
 
-    public override IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         ExecutionCount++;
-        return new Execution<TRunSearchSpace, TRunProblem>(Increment, scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator));
+        return scope => new Execution<TRunSearchSpace, TRunProblem>(Increment, scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator));
     }
 
     private sealed class Execution<TSearchSpace, TProblem>(int increment, IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator)

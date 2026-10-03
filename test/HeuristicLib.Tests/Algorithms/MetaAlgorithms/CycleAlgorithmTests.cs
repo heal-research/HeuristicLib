@@ -162,10 +162,11 @@ public class CycleAlgorithmTests
     {
         public int ExecutionCount { get; private set; }
 
-        public override IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+        public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         {
             ExecutionCount++;
-            return new Execution<TRunSearchSpace, TRunProblem>();
+            var execution = new Execution<TRunSearchSpace, TRunProblem>();
+            return _ => execution;
         }
 
         private sealed class Execution<TSearchSpace, TProblem> : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>

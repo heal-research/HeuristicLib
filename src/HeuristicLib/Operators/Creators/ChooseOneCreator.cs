@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -30,14 +31,15 @@ public sealed record ChooseOneCreator<TCandidate>
     {
     }
 
-    protected override ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> childCreators)
+    protected override CompositeExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildCreators.Count == 0)
             throw new InvalidOperationException("At least one creator must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildCreators.Count)
             throw new InvalidOperationException("Weights must have the same length as creators.");
 
-        return new Execution<TRunSearchSpace, TRunProblem>(childCreators, new WeightedBatchDispatcher(childCreators.Length, Weights));
+        var dispatcher = new WeightedBatchDispatcher(ChildCreators.Count, Weights);
+        return childCreators => new Execution<TRunSearchSpace, TRunProblem>(childCreators, dispatcher);
     }
 
     private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> childCreators, WeightedBatchDispatcher dispatcher)

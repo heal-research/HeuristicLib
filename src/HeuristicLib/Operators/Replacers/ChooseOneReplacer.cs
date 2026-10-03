@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Problems;
@@ -27,16 +28,14 @@ public sealed record ChooseOneReplacer<TCandidate>
     {
     }
 
-    protected override IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> childReplacers)
+    protected override CompositeExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildReplacers.Count == 0)
             throw new InvalidOperationException("At least one replacer must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildReplacers.Count)
             throw new InvalidOperationException("Weights must have the same length as replacers.");
 
-        return new Execution<TRunSearchSpace, TRunProblem>(
-            childReplacers,
-            WeightedDispatcher.Create(childReplacers, Weights));
+        return childReplacers => new Execution<TRunSearchSpace, TRunProblem>(childReplacers, WeightedDispatcher.Create(childReplacers, Weights));
     }
 
     private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> childReplacers, WeightedDispatcher<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> dispatcher)

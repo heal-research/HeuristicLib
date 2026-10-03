@@ -21,6 +21,8 @@ Each steering document has one responsibility:
 
 Topic pages must not become alternative policy documents.
 
+User-facing documentation describes current behavior and contracts. Keep library history, migration status, review checkpoints and proposed changes in `plans/`. Describe how the library works without announcing that it "now" works that way.
+
 ## § 1 Project posture
 
 ### § 1.1 Treat alpha APIs as provisional
@@ -112,7 +114,7 @@ from higher layers to lower ones. Treat configuration and execution node as phas
 
 ## § 4 Configuration and execution ownership
 
-The common typed factory contract and resolver are implemented; role interfaces and authoring bases are still being migrated. The rules below describe the factory contract. Unmigrated roles retain their existing method names until their review package; do not add a compatibility creation path. See [execution resolution](/contributing/architecture/execution-resolution) for the current boundary.
+See [execution resolution](/contributing/architecture/execution-resolution) for factory preparation, state sharing and contextual node binding.
 
 ### § 4.1 Separate reusable configurations from execution nodes
 
@@ -130,7 +132,7 @@ Preparation receives no scope. The returned `ExecutionFactory<TExecution>` recei
 
 Expose one public `CreateExecutionFactory(...)` method returning `ExecutionFactory<TExecution>` for the exact execution role. Do not add role named alternatives or hide it behind explicit interface implementation. Preparation runs once per selected logical execution; its returned factory may bind several nodes.
 
-A topology base may seal the public method and expose one protected preparation hook. That hook prepares persistent state and returns a constructor accepting the newly resolved children. Preserve the most concrete accessible execution type useful to derived authors. The role/base packages introduce these hooks; ordinary leaf operation overrides remain unchanged.
+A topology base owns the public method and exposes one protected preparation hook: `CreateWrapperFactory` returns `WrapperExecutionFactory<TExecution>` for a wrapping base; `CreateCompositeFactory` returns `CompositeExecutionFactory<TExecution>` for a multi base. The hook prepares persistent state and returns a factory accepting the newly resolved children. Use the same execution role interface for the children and result. Derived authors construct their matching execution classes inside the returned delegate. Ordinary leaf operation overrides remain unchanged.
 
 ### § 4.5 Keep construction entry points semantically equivalent
 
@@ -203,6 +205,8 @@ Operator scaffolding remains checked in source. Do not add source generators, ID
 ### § 4.17 Give algorithms explicit execution nodes
 
 Algorithms use a configuration paired with an explicitly authored execution node. Persistent counters and derived configurations are prepared once; child operators and interceptors bind per context. Active iterators retain their original children, RNG forks, progress and timers when another binding is created. See [Algorithms](/guide/fundamentals/algorithms).
+
+Iterative bases expose public `CreateExecutionFactory` and a protected, scope-free `CreateIterationFactory` returning `ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>>`. Prepare persistent data in that hook. The returned factory resolves the optional interceptor and other declared children through its construction scope and passes them to the execution constructor. Derived algorithm authors own this wiring; the execution base applies the interceptor in its iteration loop. Bound bases check run-type compatibility before preparation.
 
 ### § 4.18 Treat Roslyn analyzers as guardrails
 
@@ -492,8 +496,7 @@ Prefer a member name that reads as the predicate at the call site: `invariant.Ho
 
 Name an interface for what it is about, not only for its role in a system: `ICandidateInvariant<TCandidate>` says
 which thing the invariant constrains, and `IOperatorContract<TCandidate>` says whose contract it is. Verify the verb
-covers every implementer — `Ensures` survived a rename to `Preserves` precisely because a creator establishes an
-invariant rather than preserving one.
+covers every implementer: `Ensures` includes creators that establish an invariant as well as operators that preserve it.
 
 ## § 9 Documentation and source organization
 

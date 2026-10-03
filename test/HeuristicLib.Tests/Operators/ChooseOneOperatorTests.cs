@@ -627,10 +627,13 @@ public class ChooseOneOperatorTests
     {
         public int ExecutionsCreated { get; private set; }
 
-        public IMutatorExecution<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ResolutionScope scope)
+        public ExecutionFactory<IMutatorExecution<int, TSearchSpace, TProblem>> CreateExecutionFactory<TSearchSpace, TProblem>()
             where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace> =>
-            (IMutatorExecution<int, TSearchSpace, TProblem>)CreateBoundExecution();
+            where TProblem : class, IProblem<int, TSearchSpace>
+        {
+            var execution = (IMutatorExecution<int, TSearchSpace, TProblem>)CreateBoundExecution();
+            return _ => execution;
+        }
 
         private IMutatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecution()
         {
@@ -659,10 +662,13 @@ public class ChooseOneOperatorTests
     private sealed record CallbackExecutionMutator(MutationCallback Callback)
         : IMutator<int>
     {
-        public IMutatorExecution<int, TSearchSpace, TProblem> CreateExecutionInstance<TSearchSpace, TProblem>(ResolutionScope scope)
+        public ExecutionFactory<IMutatorExecution<int, TSearchSpace, TProblem>> CreateExecutionFactory<TSearchSpace, TProblem>()
             where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace> =>
-            (IMutatorExecution<int, TSearchSpace, TProblem>)CreateBoundExecution();
+            where TProblem : class, IProblem<int, TSearchSpace>
+        {
+            var execution = (IMutatorExecution<int, TSearchSpace, TProblem>)CreateBoundExecution();
+            return _ => execution;
+        }
 
         private IMutatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecution() =>
             new Execution(Callback);

@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Operators.Creators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Mutators;
@@ -42,6 +43,31 @@ public class AdaptableMutationStrengthTests
         var offspring = execution.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, CreateProblem(searchSpace));
 
         offspring.Single().ShouldBe(new RealVector(2.0));
+    }
+
+    [Fact]
+    public void GaussianMutator_RebindingPreservesStrengthAndObservesOnlyContextualCalls()
+    {
+        var mutator = new GaussianMutator(1.0, 2.0);
+        var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
+        var problem = CreateProblem(searchSpace);
+        var parent = ResolutionScope.Create();
+        var outer = parent.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(mutator);
+        var strength = outer.ShouldBeAssignableTo<IAdaptableMutationStrengthExecution<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>();
+        strength.CurrentMutationStrength = 4.0;
+        var observedCalls = new CountAccumulator();
+        var child = parent.CreateChildScope(builder => builder.Wrap<IMutator<RealVector>>(mutator, original => original.CountCalls(observedCalls)));
+        var inner = child.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(mutator);
+
+        inner.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, problem).ShouldBe([new RealVector(2.0)]);
+        observedCalls.CurrentCount.ShouldBe(1);
+        strength.CurrentMutationStrength = 6.0;
+        outer.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, problem).ShouldBe([new RealVector(3.0)]);
+        observedCalls.CurrentCount.ShouldBe(1);
+        inner.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, problem).ShouldBe([new RealVector(3.0)]);
+        observedCalls.CurrentCount.ShouldBe(2);
+        Resolve(mutator).CurrentMutationStrength.ShouldBe(2.0);
+        mutator.MutationStrength.ShouldBe(2.0);
     }
 
     [Fact]

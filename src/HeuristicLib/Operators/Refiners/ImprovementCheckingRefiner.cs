@@ -47,7 +47,7 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     /// </summary>
     /// <remarks>
     /// The default is an unwrapped <see cref="ProblemEvaluator{TCandidate,TSearchSpace,TProblem}"/> and is therefore
-    /// invisible to budgets and analysis. Supply the same evaluator execution the algorithm uses to have these
+    /// invisible to budgets and analysis. Supply the same evaluator configuration the algorithm uses to have these
     /// evaluations counted, limited or served from one shared cache.
     /// </remarks>
     public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
@@ -63,13 +63,13 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     /// </remarks>
     public IImprovementCriterion Criterion { get; init; } = ImprovementChecking.Default;
 
-    public IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public ExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> => scope =>
     {
         var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
         return new Execution<TRunSearchSpace, TRunProblem>(typed.Resolve(Refiner), typed.Resolve(Evaluator), Criterion);
-    }
+    };
 
     private sealed class Execution<TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> refiner, IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
         : RefinerExecution<TCandidate, TSearchSpace, TProblem>

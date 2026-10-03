@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
 
 public interface IMoveEvaluator<TCandidate, in TMove> : IOperator
 {
-    IMoveEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    ExecutionFactory<IMoveEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
@@ -41,7 +41,7 @@ public static class MoveEvaluatorResolutionExtensions
         public IMoveEvaluatorExecution<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TCandidate, TSearchSpace, TProblem, TMove>(IMoveEvaluator<TCandidate, TMove> moveEvaluator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(moveEvaluator, static (creationTarget, childScope) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childScope));
+            scope.Resolve(moveEvaluator, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
 
         public IMoveEvaluatorExecution<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TMove>(IMoveEvaluator<TCandidate, TMove>? moveEvaluator)
             where TSearchSpace : class, ISearchSpace<TCandidate>

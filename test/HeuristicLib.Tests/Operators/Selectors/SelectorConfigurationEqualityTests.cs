@@ -258,8 +258,8 @@ public class SelectorConfigurationEqualityTests
         {
         }
 
-        protected override ISelectorExecution<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ISelectorExecution<int, TRunSearchSpace, TRunProblem>> childSelectors) =>
-            new Execution<TRunSearchSpace, TRunProblem>(childSelectors);
+        protected override CompositeExecutionFactory<ISelectorExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childSelectors => new Execution<TRunSearchSpace, TRunProblem>(childSelectors);
 
         private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ISelectorExecution<int, TSearchSpace, TProblem>> childSelectors)
             : MultiSelectorExecution<int, TSearchSpace, TProblem>(childSelectors)

@@ -6,6 +6,8 @@ Most applications only configure built-in operators. Use this page when your can
 
 Operator configurations are reusable descriptions. Operator execution nodes perform the work and own any run scoped data. HeuristicLib provides three authoring paths so an operator can use the smallest execution model that fits its responsibilities.
 
+Operator configurations prepare typed execution factories. Each factory binds an execution node to resolved children and observations.
+
 ## Choose an authoring path
 
 | Path                        | Typical base                     | Use when                                                                                     |
@@ -48,7 +50,7 @@ public record SwapMutator : SingleCandidateMutator<Permutation>
 
 Reduction changes what the author declares, not where the operator fits. **The role contract names only the candidate.** `IMutator<Permutation>` is the whole contract, so the `SwapMutator` above fills any mutator slot over permutations, and so does an operator authored at the fullest rung against a specific problem.
 
-That is what the ladder buys and it is worth being precise about who pays. The arity lives in the authoring bases, where it does work: the base performs the type check when a run supplies types the operator was not written for, and for a stateless operator the configuration *is* the executable part, so it needs the search space and problem in scope where it is written. A consumer, field or child property never names them. Earlier revisions of this page described the opposite arrangement, where the contracts carried the full triple and reduction was an authoring convenience only; that was reversed by the arity migration.
+The arity lives in the authoring bases: the base performs the type check when a run supplies types the operator was not written for, and for a stateless operator the configuration *is* the executable part, so it needs the search space and problem in scope where it is written. A consumer, field or child property never names them.
 
 Wrapping and multi bases are agnostic in the search space and the problem, and take **one** type argument:
 
@@ -56,16 +58,14 @@ Wrapping and multi bases are agnostic in the search space and the problem, and t
 public sealed record RetryingMutator<TCandidate>(IMutator<TCandidate> ChildMutator, int Attempts)
     : WrappingMutator<TCandidate>(ChildMutator)
 {
-    protected override IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>
-        WrapExecutionInstance<TRunSearchSpace, TRunProblem>(
-            IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childMutator) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childMutator, Attempts);
+    protected override WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        childMutator => new Execution<TRunSearchSpace, TRunProblem>(childMutator, Attempts);
 
     // Nested execution, generic in the run's types and constrained the same way.
 }
 ```
 
-Binding is a leaf concept, so a composite never names what its children were written for. The run's search space and problem arrive as *method* type arguments on `WrapExecutionInstance`, are threaded into a nested generic execution class, and the child is resolved against them. A problem-specific child composes in exactly as a universal one does, because the child slot is `IMutator<TCandidate>` either way.
+Leaf authors may name fixed search-space and problem types; a composite forwards the run's types rather than naming what its children were written for. The run's search space and problem arrive as *method* type arguments on `CreateWrapperFactory`, are threaded into a nested generic execution class, and the child is resolved against them. A problem-specific child composes in exactly as a universal one does, because the child slot is `IMutator<TCandidate>` either way.
 
 The cost of that agnosticism falls on the composite's author, and only there: a generic method with a constraint clause and a nested generic execution class, instead of a plain nested class. Leaf authoring is unchanged, and every consumer of the composite names one type argument.
 
@@ -92,7 +92,7 @@ Use specialized helpers such as `SingleCandidateEvaluator` when the role offers 
 
 ## Stateful operators
 
-A stateful operator receives one fresh `TState` for each execution node. The state can contain counters, caches and ordinary helper data structures.
+A stateful operator receives one fresh `TState` for each selected logical execution. Its base calls `CreateInitialState()` during preparation and retains one raw execution across observation contexts. Independent logical executions receive independent state. The state can contain counters, caches and ordinary helper data structures.
 
 ```csharp
 private sealed record CountingEvaluator
@@ -124,14 +124,14 @@ Framework managed state does not have a disposal lifecycle. Do not put disposabl
 
 ## Explicit execution nodes
 
-The configuration describes reusable parameters and graph structure. Its execution creation method resolves child configurations through the scope and creates an execution node. The execution owns operation logic, resolved child executions and mutable execution data.
+The configuration describes reusable parameters and graph structure. `CreateExecutionFactory()` prepares persistent execution data without a scope. Its returned factory resolves child configurations through the supplied scope and creates a node for that context. The execution owns typed operation logic and resolved child references; prepared mutable data survives contextual rebinding.
 
 ```csharp
 private sealed record ForwardingEvaluator(IEvaluator<RealVector> Inner)
     : Evaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
 {
-    public override EvaluatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ResolutionScope scope) =>
-        new Execution(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
+    public override ExecutionFactory<EvaluatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutionFactory() =>
+        scope => new Execution(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
 
     private sealed class Execution(IEvaluatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> inner)
         : EvaluatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
@@ -146,7 +146,7 @@ private sealed record ForwardingEvaluator(IEvaluator<RealVector> Inner)
 }
 ```
 
-Resolve ordinary child operators while creating the execution. Retain the scope only when runtime graph construction is an intentional part of the operator.
+Resolve ordinary child operators inside the returned factory. Allocate persistent counters, caches and derived configurations before returning it. Retain the scope only when deferred graph construction is an intentional part of the operator.
 
 Return the most concrete accessible execution type that is useful to callers. A private nested execution is returned through its role specific execution base.
 
@@ -164,10 +164,26 @@ The same mutator configuration can therefore be reused for independent runs with
 
 Wrapping and multi bases are shortcuts for common explicit execution topologies:
 
-- A wrapping base resolves one child once.
-- A multi base resolves several children once.
+Their public `CreateExecutionFactory` method calls a protected preparation hook without a scope or live children. The hook allocates persistent data once and returns a typed constructor:
 
-Each topology is represented by a matching configuration and execution-node pair, such as `WrappingSelector<...>` with `WrappingSelectorExecution<...>`. Derived configurations and their nested executions use the corresponding pair consistently. The execution base provides canonical protected child storage and preserves the same topology at the type level, even when it does not currently add shared execution behavior. Required resolved children are constructor dependencies rather than optionally initialized properties.
+- `CreateWrapperFactory` returns a `WrapperExecutionFactory<TExecution>` receiving one resolved child.
+- `CreateCompositeFactory` returns a `CompositeExecutionFactory<TExecution>` receiving an ordered immutable array of resolved children, preserving repeated references and empty collections.
+
+Both factories use the same execution role for the children and the returned node. The public `ExecutionFactory<TExecution>` receives a construction scope; the topology factories receive children that the base resolves through that scope.
+
+The returned execution factory resolves children through its construction scope and invokes that constructor for each binding. A new observation context can therefore supply new child nodes without recreating state or changing an existing node's children. Allocate shared counters, caches and helper data before returning the constructor; transient operation data stays in the operation.
+
+```csharp
+protected override WrapperExecutionFactory<IMutatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+{
+    var state = new ExecutionState();
+    return child => new Execution<TRunSearchSpace, TRunProblem>(child, state);
+}
+```
+
+`test/HeuristicLib.Tests.ApiUsageSpecs/Operators/OperatorAuthoringSpecs.cs` includes stateful and stateless examples.
+
+Each topology is represented by a matching configuration and execution-node pair, such as `WrappingSelector<...>` with `WrappingSelectorExecution<...>`. Derived configurations and their nested executions use the corresponding pair consistently. The execution base provides canonical protected child storage and preserves the same topology at the type level. Required resolved children are constructor dependencies rather than optionally initialized properties.
 
 These bases do not have separate stateless and stateful variants. Their purpose is already to coordinate an execution graph. Use the unprefixed role base when a wrapping or multi topology does not fit.
 
@@ -181,11 +197,11 @@ public record EliteSelector<TCandidate> : ISelector<TCandidate>
     public ISelector<TCandidate> SelectorForRemaining { get; init; }
     public int Elites { get; init; } = 1;
 
-    public ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>
-        CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public ExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>>
+        CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
-        new Execution<TRunSearchSpace, TRunProblem>(
+        scope => new Execution<TRunSearchSpace, TRunProblem>(
             scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(SelectorForRemaining), Elites);
     // ...
 }
@@ -210,8 +226,8 @@ An agent will not settle a concern's semantics for you. Implement and review the
 - Keep configuration values unchanged during execution. Retained collection inputs are immutable snapshots.
 - Keep randomness, the search space and the problem explicit in operation calls.
 - Store mutable run data in framework managed state or an explicitly authored execution node.
-- Resolve the same configuration through one scope when sharing its execution node is intentional.
-- Use scopes that are not ancestors of one another, such as sibling child scopes, when independent execution nodes are required.
+- Resolve the same configuration through one scope when sharing its logical execution state is intentional.
+- Use independent root scopes for independent executions. Sibling scopes select independent state only when no ancestor already owns that configuration.
 - Do not assume stateful operation calls are serialized unless the owning execution path guarantees it.
 
 ## Roslyn analyzer guardrails

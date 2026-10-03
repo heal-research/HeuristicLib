@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -23,8 +24,8 @@ public sealed record DurationMeasuringTerminator<TCandidate>
         TimeProvider = timeProvider;
     }
 
-    protected override ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childTerminator) =>
-        new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminator, Duration, TimeProvider);
+    protected override WrapperExecutionFactory<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
+        childTerminator => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminator, Duration, TimeProvider);
 
     private sealed class Execution<TSearchSpace, TProblem, TSearchState>(ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, DurationAccumulator duration, TimeProvider timeProvider)
         : WrappingTerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminator)

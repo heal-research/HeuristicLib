@@ -17,7 +17,7 @@ public abstract record Interceptor<TCandidate, TSearchSpace, TProblem, TSearchSt
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope);
+    public abstract ExecutionFactory<IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutionFactory();
 
     /// <summary>An interceptor returns the search state, so that one must match exactly rather than convert.</summary>
     public bool Fits(ExecutionSignature execution) =>
@@ -25,7 +25,7 @@ public abstract record Interceptor<TCandidate, TSearchSpace, TProblem, TSearchSt
         && execution.Problem.IsAssignableTo(typeof(TProblem))
         && execution.SearchState == typeof(TSearchState);
 
-    IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> IInterceptor<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+    ExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> IInterceptor<TCandidate>.CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
     {
         if (!Fits(ExecutionSignature.For<TRunSearchSpace, TRunProblem, TRunSearchState>()))
         {
@@ -35,7 +35,7 @@ public abstract record Interceptor<TCandidate, TSearchSpace, TProblem, TSearchSt
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem), typeof(TRunSearchState)));
         }
 
-        return (IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>)CreateExecutionInstance(scope);
+        return (ExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>>)CreateExecutionFactory();
     }
 }
 

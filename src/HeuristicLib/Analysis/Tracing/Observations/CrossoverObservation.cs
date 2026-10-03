@@ -55,12 +55,12 @@ internal sealed class ObservingCrossover<TCandidate, TSearchSpace, TProblem>(
     public bool Fits(ExecutionSignature execution) =>
         ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(childCrossover);
 
-    public ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public ExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return new Execution<TRunSearchSpace, TRunProblem>(observedCrossover, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childCrossover), observe);
+        return scope => new Execution<TRunSearchSpace, TRunProblem>(observedCrossover, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childCrossover), observe);
     }
 
     private sealed class Execution<TRunSearchSpace, TRunProblem>(

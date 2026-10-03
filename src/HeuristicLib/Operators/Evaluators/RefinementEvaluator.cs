@@ -23,8 +23,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// </para>
 /// <para>
 /// The evaluations issued here belong to <see cref="Evaluator"/>, so counting, limiting and caching attach in the usual
-/// way. Passing the same evaluator configuration instance that the algorithm uses resolves to one execution node,
-/// and therefore to one counter and one cache.
+/// way. Resolving the same evaluator configuration in a shared scope shares its execution state, including counters and caches.
 /// </para>
 /// </remarks>
 public sealed record RefinementEvaluator<TCandidate>
@@ -45,18 +44,18 @@ public sealed record RefinementEvaluator<TCandidate>
     /// </summary>
     /// <remarks>
     /// The default is an unwrapped <see cref="ProblemEvaluator{TCandidate,TSearchSpace,TProblem}"/> and is therefore
-    /// invisible to budgets and analysis. Supply the same evaluator execution the algorithm uses to have these
+    /// invisible to budgets and analysis. Supply the same evaluator configuration the algorithm uses to have these
     /// evaluations counted, limited or served from one shared cache.
     /// </remarks>
     public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
-    public IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public ExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> => scope =>
     {
         var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
         return new Execution<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Refiner));
-    }
+    };
 
     private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator, IRefinerExecution<TCandidate, TSearchSpace, TProblem> refiner)
         : EvaluatorExecution<TCandidate, TSearchSpace, TProblem>

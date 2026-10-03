@@ -103,8 +103,8 @@ public class EvaluatorConfigurationEqualityTests
         {
         }
 
-        protected override IEvaluatorExecution<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IEvaluatorExecution<int, TRunSearchSpace, TRunProblem>> childEvaluators) =>
-            new Execution<TRunSearchSpace, TRunProblem>(childEvaluators);
+        protected override CompositeExecutionFactory<IEvaluatorExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childEvaluators => new Execution<TRunSearchSpace, TRunProblem>(childEvaluators);
 
         private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IEvaluatorExecution<int, TSearchSpace, TProblem>> childEvaluators)
             : MultiEvaluatorExecution<int, TSearchSpace, TProblem>(childEvaluators)

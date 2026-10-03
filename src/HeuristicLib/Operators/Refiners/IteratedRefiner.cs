@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -29,12 +30,12 @@ public sealed record IteratedRefiner<TCandidate>
         Iterations = iterations;
     }
 
-    protected override IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> childRefiner)
+    protected override WrapperExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
     {
         if (Iterations <= 0)
             throw new InvalidOperationException("Iterations must be positive.");
 
-        return new Execution<TRunSearchSpace, TRunProblem>(childRefiner, Iterations);
+        return childRefiner => new Execution<TRunSearchSpace, TRunProblem>(childRefiner, Iterations);
     }
 
     private sealed class Execution<TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> childRefiner, int iterations)

@@ -237,8 +237,8 @@ public class MutatorConfigurationEqualityTests
         {
         }
 
-        protected override IMutatorExecution<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorExecution<int, TRunSearchSpace, TRunProblem>> childMutators) =>
-            new Execution<TRunSearchSpace, TRunProblem>(childMutators);
+        protected override CompositeExecutionFactory<IMutatorExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childMutators => new Execution<TRunSearchSpace, TRunProblem>(childMutators);
 
         private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<int, TSearchSpace, TProblem>> childMutators)
             : MultiMutatorExecution<int, TSearchSpace, TProblem>(childMutators)

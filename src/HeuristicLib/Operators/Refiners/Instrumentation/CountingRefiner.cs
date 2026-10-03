@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -18,8 +19,8 @@ public sealed record CountingRefiner<TCandidate>
         Metric = metric;
     }
 
-    protected override IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem> childRefiner) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childRefiner, Counter, Metric);
+    protected override WrapperExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        childRefiner => new Execution<TRunSearchSpace, TRunProblem>(childRefiner, Counter, Metric);
 
     private sealed class Execution<TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> childRefiner, CountAccumulator counter, OperatorCountMetric metric)
         : WrappingRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiner)

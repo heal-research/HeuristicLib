@@ -93,7 +93,7 @@ public class TraceCompositionTests
 
     private sealed record FailingCreator : Creator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ICreatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ResolutionScope scope) =>
+        public override ExecutionFactory<ICreatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutionFactory() =>
             throw new InvalidOperationException("Resolution failed.");
     }
 
@@ -545,8 +545,8 @@ public class TraceCompositionTests
         ICreator<RealVector> Child,
         Action<int> Observe) : WrappingCreator<RealVector>(Child)
     {
-        protected override ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem> childCreator) =>
-            new Execution<TRunSearchSpace, TRunProblem>(childCreator, Observe);
+        protected override WrapperExecutionFactory<ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+            childCreator => new Execution<TRunSearchSpace, TRunProblem>(childCreator, Observe);
 
         private sealed class Execution<TSearchSpace, TProblem>(
             ICreatorExecution<RealVector, TSearchSpace, TProblem> childCreator,

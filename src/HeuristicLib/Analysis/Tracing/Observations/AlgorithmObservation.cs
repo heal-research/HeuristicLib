@@ -64,11 +64,12 @@ internal sealed record ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TS
     public override bool Fits(ExecutionSignature execution) =>
         base.Fits(execution) && ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(ChildAlgorithm);
 
-    public override IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return new Execution<TRunSearchSpace, TRunProblem>(
-            ObservedAlgorithm, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(ChildAlgorithm), Observe, new ExecutionState());
+        var state = new ExecutionState();
+        return scope => new Execution<TRunSearchSpace, TRunProblem>(
+            ObservedAlgorithm, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(ChildAlgorithm), Observe, state);
     }
 
     private sealed class ExecutionState

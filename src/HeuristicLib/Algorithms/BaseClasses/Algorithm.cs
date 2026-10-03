@@ -16,7 +16,7 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchState>
 {
     internal TSelf Self => (TSelf)this;
 
-    public abstract IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public abstract ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
@@ -26,14 +26,14 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchState>
     /// </summary>
     public virtual bool Fits(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState);
 
-    IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> IAlgorithm<TCandidate>.CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+    ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> IAlgorithm<TCandidate>.CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
     {
         if (typeof(TRunSearchState) != typeof(TSearchState))
         {
             throw new InvalidOperationException($"{GetType().Name} produces {typeof(TSearchState).Name}, and cannot run producing {typeof(TRunSearchState).Name}.");
         }
 
-        return (IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>)CreateExecutionInstance<TRunSearchSpace, TRunProblem>(scope);
+        return (ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>>)CreateExecutionFactory<TRunSearchSpace, TRunProblem>();
     }
 }
 
@@ -52,14 +52,14 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public abstract AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope);
+    public abstract ExecutionFactory<AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutionFactory();
 
     public override bool Fits(ExecutionSignature execution) =>
         base.Fits(execution)
         && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
         && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    public sealed override IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public sealed override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -69,7 +69,7 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>)CreateExecutionInstance(scope);
+        return (ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>>)CreateExecutionFactory();
     }
 }
 

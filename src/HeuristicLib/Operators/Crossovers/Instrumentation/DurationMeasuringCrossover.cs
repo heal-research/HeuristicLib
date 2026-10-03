@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -23,8 +24,8 @@ public sealed record DurationMeasuringCrossover<TCandidate>
         TimeProvider = timeProvider;
     }
 
-    protected override ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> childCrossover) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childCrossover, Duration, TimeProvider);
+    protected override WrapperExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        childCrossover => new Execution<TRunSearchSpace, TRunProblem>(childCrossover, Duration, TimeProvider);
 
     private sealed class Execution<TSearchSpace, TProblem>(ICrossoverExecution<TCandidate, TSearchSpace, TProblem> childCrossover, DurationAccumulator duration, TimeProvider timeProvider)
         : WrappingCrossoverExecution<TCandidate, TSearchSpace, TProblem>(childCrossover)

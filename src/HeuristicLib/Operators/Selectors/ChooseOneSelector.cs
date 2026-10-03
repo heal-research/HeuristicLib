@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
@@ -27,16 +28,14 @@ public sealed record ChooseOneSelector<TCandidate>
     {
     }
 
-    protected override ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> childSelectors)
+    protected override CompositeExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildSelectors.Count == 0)
             throw new InvalidOperationException("At least one selector must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildSelectors.Count)
             throw new InvalidOperationException("Weights must have the same length as selectors.");
 
-        return new Execution<TRunSearchSpace, TRunProblem>(
-            childSelectors,
-            WeightedDispatcher.Create(childSelectors, Weights));
+        return childSelectors => new Execution<TRunSearchSpace, TRunProblem>(childSelectors, WeightedDispatcher.Create(childSelectors, Weights));
     }
 
     private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> childSelectors, WeightedDispatcher<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> dispatcher)

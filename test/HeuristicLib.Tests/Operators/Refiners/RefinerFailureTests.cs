@@ -95,10 +95,11 @@ public class RefinerFailureTests
 
     private sealed record FailingAfterBatchesRefiner(int SuccessfulBatches) : Refiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        private readonly Counter counter = new();
-
-        public override IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ResolutionScope scope) =>
-            new Execution(counter, SuccessfulBatches);
+        public override ExecutionFactory<IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutionFactory()
+        {
+            var counter = new Counter();
+            return _ => new Execution(counter, SuccessfulBatches);
+        }
 
         private sealed class Counter
         {

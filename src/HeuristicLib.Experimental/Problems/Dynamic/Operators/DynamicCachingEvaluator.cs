@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -21,6 +22,12 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
         public ExecutionState(long? sizeLimit)
         {
             Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
+        }
+
+        public void OnEpochChanged(object? sender, int epoch)
+        {
+            Cache.Clear();
+            HitCount = 0;
         }
     }
 
@@ -55,16 +62,12 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// <remarks>
     /// This evaluator serves exactly one problem instance, matched by identity, which <c>Evaluate</c> checks.
     /// </remarks>
-    protected override IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator)
+    protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
     {
         var state = new ExecutionState(SizeLimit);
-        var execution = new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, GraceCount, state);
-        SourceProblem.OnEpochChange += (_, _) =>
-        {
-            state.Cache.Clear();
-            state.HitCount = 0;
-        };
-        return execution;
+        // Bind the event to state to avoid retaining the factory closure.
+        SourceProblem.OnEpochChange += state.OnEpochChanged;
+        return childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, GraceCount, state);
     }
 
     private sealed class Execution<TRunSearchSpace, TRunProblem> : WrappingEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
@@ -19,8 +20,8 @@ public sealed record CountingReplacer<TCandidate>
         Metric = metric;
     }
 
-    protected override IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem> childReplacer) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childReplacer, Counter, Metric);
+    protected override WrapperExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        childReplacer => new Execution<TRunSearchSpace, TRunProblem>(childReplacer, Counter, Metric);
 
     private sealed class Execution<TSearchSpace, TProblem>(IReplacerExecution<TCandidate, TSearchSpace, TProblem> childReplacer, CountAccumulator counter, OperatorCountMetric metric)
         : WrappingReplacerExecution<TCandidate, TSearchSpace, TProblem>(childReplacer)

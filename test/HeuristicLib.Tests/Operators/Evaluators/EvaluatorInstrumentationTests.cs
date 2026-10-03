@@ -61,7 +61,7 @@ public class EvaluatorInstrumentationTests
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            evaluator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create()).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -74,7 +74,7 @@ public class EvaluatorInstrumentationTests
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            evaluator.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create()).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }

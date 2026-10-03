@@ -31,8 +31,8 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override CycleAlgorithmExecution<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope) =>
-        new(scope, Algorithms, MaximumCycles, NewExecutionInstancesPerCycle);
+    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
+        scope => new CycleAlgorithmExecution<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(scope, Algorithms, MaximumCycles, NewExecutionInstancesPerCycle);
 }
 
 public static class CycleAlgorithm
@@ -85,16 +85,12 @@ public class CycleAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TProb
     protected readonly int? MaximumCycles;
     protected readonly bool NewExecutionInstancesPerCycle;
 
-    private readonly Dictionary<IAlgorithm<TCandidate>, IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithmExecutions;
-
     public CycleAlgorithmExecution(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle)
     {
         this.scope = scope;
         Algorithms = algorithms.ToImmutableArray();
         MaximumCycles = maximumCycles;
         NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle;
-
-        algorithmExecutions = new(capacity: NewExecutionInstancesPerCycle ? 0 : Algorithms.Length, ReferenceEqualityComparer.Instance);
     }
 
     public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
@@ -133,21 +129,7 @@ public class CycleAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TProb
 
     private IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> ResolveAlgorithmExecution(TAlgorithm algorithm)
     {
-        if (NewExecutionInstancesPerCycle)
-        {
-            return CreateChildAlgorithmExecution(algorithm);
-        }
-
-        if (algorithmExecutions.TryGetValue(algorithm, out var existingExecution))
-        {
-            return existingExecution;
-        }
-
-        var newExecution = CreateChildAlgorithmExecution(algorithm);
-        algorithmExecutions[algorithm] = newExecution;
-        return newExecution;
+        var childScope = NewExecutionInstancesPerCycle ? scope.CreateChildScope() : scope.GetOrCreateChildScope(algorithm);
+        return childScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
     }
-
-    private IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> CreateChildAlgorithmExecution(TAlgorithm algorithm) =>
-        scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 }

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
@@ -17,8 +18,8 @@ public record NoSameMatesSelector<TCandidate>
 
     public int MaxAttempts { get; init; }
 
-    protected override ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem> childSelector) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childSelector, MaxAttempts);
+    protected override WrapperExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        childSelector => new Execution<TRunSearchSpace, TRunProblem>(childSelector, MaxAttempts);
 
     private sealed class Execution<TSearchSpace, TProblem>(ISelectorExecution<TCandidate, TSearchSpace, TProblem> childSelector, int maxAttempts)
         : WrappingSelectorExecution<TCandidate, TSearchSpace, TProblem>(childSelector)

@@ -2,9 +2,15 @@
 
 Status: implementation authorized on 2026-09-27. The naming migration is committed as `d5ad7fb2`; C2 and C3 were completed and validated locally. The user has authorized continuing directly in the library and its normal tests, with temporary non-compiling review checkpoints where the contract cutover requires them. The selected direction is option C using typed execution factories (candidate 1 in the [design comparison](execution-bindings-design-investigation.md)), superseding option A in the [container and aspect rework](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings). End the turn for explicit review after every migration package and C4. C4 remains a performance and final acceptance gate for the integrated implementation. Leave index and commit operations to the user unless explicitly authorized.
 
-C1 has a [concrete design](execution-factory-design.md), including authoring examples, resolver ownership, retained child scopes, decoration construction, capabilities and failure behavior. C2 validated its core authoring examples; C3 validated deferred execution and lifecycle ownership locally. M0a/M0b are committed together as `23d65748`. M1a replaces the common factory contract and real resolver, with regression tests in the normal core suite. The role-adapter cutover is incomplete, so those tests have not run against the new resolver. Integrated runtime validation and C4 cost evidence remain outstanding before final acceptance.
+C1 has a [concrete design](execution-factory-design.md), including authoring examples, resolver ownership, retained child scopes, decoration construction, capabilities and failure behavior. C2 validated its core authoring examples; C3 validated deferred execution and lifecycle ownership locally. M0a/M0b are committed together as `23d65748`; M1a is committed as `aa72a5a7`; M1b is committed as `01126da1`. M1c is committed as `3ba6a197`; M2a and the named topology factories as `3da86299`; M2b as `705cb4a3`; and M1d with the common iterative factory revision as `38550590`. M2c through M2m are reviewed and committed as `cc69510c`, `c82c6d69`, `90c1b961`, `c4d91e2f`, `3b95f8d5`, `1998a0a2`, `3af2e5cb`, `e692802c`, `b2d9a87f`, `21eaff60` and `64fb4ed3`. M2n completes the scenario consumer migration in the working tree. The normal Release solution builds and its complete test run passes all 2,885 cases across core, Experimental, API usage and scenario projects, with no failures or reported skips. The optional activated-TSP scenario returns before execution because its external prerequisites are absent; other test results are not evidence for that external workflow. The migration part is complete pending M2n review and commit. The requested history squash follows that checkpoint; C4 cost/final acceptance evidence and remaining design work are outstanding.
 
 Naming decision, 2026-09-27: adopt the [graph naming family](execution-factory-design.md#agreed-naming-family): `IConfigurationNode`, `IExecutionNode` and role-specific `...Execution` types, retaining ordinary algorithm/operator configuration names. The [commit boundaries](#agreed-commit-boundaries) separate a behavior-preserving rename from the factory/resolution rework. The naming migration is the first implementation review package; it retains the existing object-returning creation methods and behavior.
+
+### Pending migration history cleanup
+
+User instruction, 2026-10-03: after the current migration part is complete, squash its small implementation checkpoints into one coherent `migrate` commit. Keep the review checkpoints while migration is in progress. Do not rewrite history yet; identify the migration boundaries, preserve a recoverable backup and verify the final tree is unchanged when performing the squash. This cleanup precedes moving on from migration to the remaining design work.
+
+M2n identifies the contiguous migration range after `aa72a5a7`: M1b (`01126da1`) through the reviewed M2n checkpoint once committed. It contains sixteen committed migration checkpoints plus the pending M2n changes. Preserve `aa72a5a7` and the earlier preparation/naming/design history. After M2n review and commit, create a recoverable backup of the unsquashed tip, replace that range with one migration commit and prove its final tree equals the backed-up tip. No history rewrite or index mutation is performed in M2n.
 
 ## Problem and current decision
 
@@ -326,6 +332,565 @@ The user approved `Wrap`, `WrapperRegistration` and `WrappedNodes`, while asking
 Validation: baseline and renamed Release builds report the same ten CS0411 role-adapter errors and 28 warnings. The focused normal resolver/factory/architecture/observation test command is blocked at production compilation; its compiler errors match the baseline exactly. No test result is claimed. Whitespace, style (warning severity), analyzer (error severity), documentation build and `git diff --check` pass. Format commands report workspace-loading warnings. A read-only Astra review found no actionable semantic or lifetime regression; it does not replace runtime validation. Logs are in ignored `artifacts/execution-factory/m1a-wrap-*` files.
 
 The Git index remains unchanged. Stop at M1a for review; M1b role/base migration remains the proposed next implementation package.
+
+### M1b role and leaf-base review record, 2026-09-29
+
+Reviewed and committed as `01126da1` on 2026-09-30, including the reviewed one-line direct factory casts in bound role and algorithm bridges. The validation and working-tree notes below describe the original review handoff.
+
+The user authorized this package after reviewing the proposed next step. M1b changes 38 production files: the nine operator role contracts/resolution adapters, `IAlgorithm.cs`, `Algorithm.cs`, and the unprefixed, stateless and stateful base files for all nine operator roles. The five single-item base files inherit the migrated stateless factories and require no changes to their sealed batching methods or random forks.
+
+- Replaced the migrated object-returning creation methods with scope-free `CreateExecutionFactory` preparation returning the exact typed `ExecutionFactory<TExecution>`. The canonical role resolution adapters now pass static preparation callbacks to the real resolver. `Resolve`, `ResolveOptional`, `TryResolve`, typed scope conveniences and role operation signatures retain their call shapes.
+- Kept each bound role's checked bridge and both algorithm bridges. They check run search-space/problem compatibility and the role's existing search-state variance rule before calling preparation, then adapt the returned factory's node for each binding. The bound algorithm's public factory retains its concrete `AlgorithmExecution` return family. No state allocation is moved into a bridge's binding lambda.
+- Stateless bases prepare a factory returning `this`. Stateful bases create `TState` and their raw execution during preparation, then return that execution for every binding. `CreateInitialState()` and all ordinary operation overrides remain unchanged. Updated their XML ownership wording to describe one fresh state per preparation rather than per contextual node.
+- Added 20 normal core regression cases in `RoleExecutionFactoryTests`: all three mutator leaf arities, parent/child observations and state continuity, child-first ownership, independent preparations, compatible problem contracts, preparation-fault identity, input-free terminator variance, interceptor invariance, and bound/agnostic algorithm bridges. Added nine discovered-role architecture cases for scope-free typed preparation and one ordinary stateful authoring spec. These are pending tests, not completed proof results.
+- Updated the glossary, contributor rules, execution guides and operator authoring examples together. The pages explicitly identify wrapping/multi bases, iterative hooks, concrete implementations and Experimental roles as the remaining cutover. Existing topology-hook examples remain labelled as that migration baseline.
+
+Validation:
+
+- `dotnet build --configuration Release --no-restore` stops at 68 errors in unchanged production consumers: missing new interface/abstract members, obsolete overrides, and lost inherited generic constraints on those obsolete overrides (`CS0535`, `CS0534`, `CS0115`, `CS0452`). No diagnostic names an edited production file. The failure precedes complete semantic/XML validation, so this is not proof that the changed files compile independently.
+- Focused core resolver/factory/role-binding tests and `OperatorAuthoringSpecs` both stop at the same 68-error production compilation barrier. No normal test compiled or ran. Full core, API usage, Experimental and scenario results remain pending; previously built binaries were not used.
+- Repository whitespace, style at warning severity and analyzer verification at error severity exit successfully. All three report workspace-loading warnings; their assurance remains limited while compilation is incomplete. `npm run docs:build` and `git diff --check` pass.
+- Logs are under ignored `artifacts/execution-factory/m1b-*`. The Git index's SHA256 is unchanged from package start. Changes remain unstaged and uncommitted; the unrelated `.claude/settings.local.json` is untouched.
+
+Commands attempted for focused tests:
+
+```powershell
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*RoleExecutionFactoryTests' --filter-class '*RoleBindingTests' --filter-class '*ResolutionScopeTests' --filter-class '*ExecutionFactoryResolutionTests'
+dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore --filter-class '*OperatorAuthoringSpecs'
+```
+
+Stop for M1b review. Proposed M1c is the 18 core wrapping/multi configuration-base files, introducing once-only preparation hooks and contextual child resolution. Iterative algorithm hooks follow in a separate review package, then concrete implementations and consumers. These later packages must resolve the temporary compilation barrier through the reviewed preparation model; no compatibility method or old state-resetting factory replay is introduced here.
+
+### M1c wrapping and multi-base review record, 2026-09-30
+
+The user authorized this package after reviewing and committing M1b. This package changes the 18 `Wrapping*` and `Multi*` configuration-base files under the nine core operator roles' `Composition` directories. Matching execution bases, child properties, configuration arities, role operations and contract composition are retained.
+
+- Each public, scope-free `CreateExecutionFactory` calls one protected preparation hook before returning its binding factory. `CreateWrapperFactory` returns a constructor receiving one typed child; `CreateCompositeFactory` returns a constructor receiving the existing ordered `ImmutableArray` of typed children. This replaces `WrapExecutionInstance` and `CombineExecutionInstances`, with no compatibility hook.
+- Persistent state is allocated in the preparation hook. Child resolution and constructor invocation occur inside the returned factory using its construction scope. Multi bases preserve child order, repeated references and empty arrays. Interceptor and terminator factories forward the run's search-state type through child resolution and constructor signatures.
+- The hooks return the exact role execution interface, as in the reviewed wrapper design. Derived authors can retain a more concrete matching execution base through `Func` result covariance; the authoring specs exercise both shapes. `CreateCompositeFactory` is the matching multi-base name for the reviewed constructor-preparation pattern.
+- Added 15 core topology cases covering preparation before child resolution, descendant child observations and both state counters, pinned children despite a prior child-local selection, independent roots, preparation and binding fault ownership, child order, repeated references and empty children. Added 18 discovered-topology architecture cases protecting scope-free public and protected preparation. These tests use the real public resolver and remain pending until normal production compilation succeeds.
+- Migrated the 14 existing topology authoring overrides in `OperatorAuthoringSpecs` and added one stateful wrapper usage spec. Updated the operator authoring guide, contributor rules, glossary and migration status together. Concrete library operators, iterative hooks, Experimental implementations and other consumer migrations remain outside M1c.
+
+Validation:
+
+- `dotnet build --configuration Release --no-restore` stops at 274 errors in the unmigrated consumers: 44 obsolete-override errors (`CS0115`), 172 inherited-constraint errors on those obsolete overrides (`CS0452`), 47 missing abstract hook implementations (`CS0534`) and 11 missing role factory implementations (`CS0535`). No diagnostic names an edited production base. The four warnings are analyzer release-tracking warnings (`RS2008`) in unchanged analyzer files. The increased declaration errors expose consumers of the replaced hooks; this is not complete semantic validation of the changed bases.
+- Both focused test commands below stop at exactly the same 274 production errors. No normal test compiled or ran. The 34 added core/architecture/usage cases remain pending. Full core, API usage, Experimental and scenario execution is deferred until production compilation succeeds; old binaries were not used.
+- Parsed all 21 changed C# files, including the new topology test file, with no syntax error. A small compiler check confirmed that a matching execution base is a valid covariant result for a `Func` override. This checks authoring syntax and the return-type mechanism, not integrated runtime behavior.
+- Repository whitespace, style at warning severity and analyzer verification at error severity passed. All three report workspace-loading warnings, limiting assurance while compilation is incomplete. `npm run docs:build` and `git diff --check` passed. Logs are under ignored `artifacts/execution-factory/m1c-*`.
+- The Git index's SHA256 remains unchanged from package start. No staging, unstaging, reset or commit was performed. Changes remain in the working tree; the unrelated `.claude/settings.local.json` is untouched.
+
+Commands attempted for focused tests:
+
+```powershell
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*TopologyExecutionFactoryTests' --filter-class '*RoleExecutionFactoryTests' --filter-class '*RoleContractArityTests' --filter-class '*ResolutionScopeTests'
+dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore --filter-class '*OperatorAuthoringSpecs'
+```
+
+Stop for M1c review. Proposed M1d migrates the two iterative algorithm authoring forms in `Algorithms/BaseClasses/IterativeAlgorithm.cs`, using once-only iteration preparation and contextual interceptor binding. Concrete algorithms, operators, observations and consumers follow in separately reviewed groups. No later package is started here.
+
+### M2a core concrete composition operators review record, 2026-09-30
+
+Reviewed and committed with the named factory contracts as `3da86299` on 2026-09-30. The validation and working-tree notes below describe the original review handoff.
+
+The user reviewed M1c and authorized committing or continuing on the same commit. M1c, including the documentation corrections, was committed as `3ba6a197`. The continuation addresses concrete operators before M1d because these operators depend only on the reviewed wrapping/multi bases. The iterative algorithm bases remain a separate package.
+
+Production scope is the following 17 files under `src/HeuristicLib/Operators`:
+
+- `Creators/ChooseOneCreator.cs`, `Crossovers/ChooseOneCrossover.cs`, `Mutators/ChooseOneMutator.cs`, `Refiners/ChooseOneRefiner.cs`, `Selectors/ChooseOneSelector.cs` and `Replacers/ChooseOneReplacer.cs`.
+- `Mutators/PipelineMutator.cs`, `Refiners/PipelineRefiner.cs` and `Interceptors/PipelineInterceptor.cs`.
+- `Terminators/AllTerminator.cs` and `Terminators/AnyTerminator.cs`.
+- `Evaluators/CachingEvaluator.cs`, `Evaluators/LimitEvaluator.cs`, `Evaluators/RepeatingEvaluator.cs` and `Evaluators/RelativeQualityEvaluator.cs`.
+- `Refiners/IteratedRefiner.cs` and `Selectors/NoSameMatesSelector.cs`.
+
+Each implementation adopts `CreateWrapperFactory` or `CreateCompositeFactory`. Cache storage and the evaluation-limit counter are allocated once in preparation and captured by the returned constructor. Each binding receives newly resolved children. Cache lifetime follows the selected logical execution; bindings do not dispose shared cache storage and no resolver-wide disposal protocol is introduced.
+
+Batch choose-one dispatchers contain only compiled index-sampling data and are prepared once. Selector/replacer dispatchers retain resolved children and therefore remain binding-local. Weight shape, nonempty choice sets, repetitions and iteration counts are validated in preparation. Child arrays, operator dispatch, RNG use, batching, aggregation, fallback behavior and existing constructor/configuration APIs are retained.
+
+Added five regression cases through the real public factories/resolver: concrete choose-one/pipeline child rebinding, configuration validation before child resolution, shared cache hits across observation contexts, and shared evaluation limits across contexts. The cache and limit cases also check independent roots and preserve the child's advancing state. Migrated the two direct-role fixtures in `ChooseOneOperatorTests` to prepare their raw nodes once and the six direct creation calls in `RepeatingEvaluatorTests` to resolution or preparation.
+
+Validation:
+
+- `dotnet build --configuration Release --no-restore` stops at 166 errors in the remaining consumers, down from M1c's 274: 27 obsolete-override errors (`CS0115`), 98 inherited-constraint errors on those obsolete overrides (`CS0452`), 30 missing abstract hook implementations (`CS0534`) and 11 missing role factory implementations (`CS0535`). No diagnostic names one of the 17 edited production files. Four unchanged analyzer release-tracking warnings (`RS2008`) remain. This is limited compiler evidence while the migration is incomplete.
+- Focused core tests for `EvaluatorExecutionFactoryTests`, `TopologyExecutionFactoryTests`, `ChooseOneOperatorTests` and `RepeatingEvaluatorTests`, and focused API usage specs for `OperatorAuthoringSpecs`, stop at the same 166 production errors. No normal test compiled or ran; the five added cases remain pending. Full core, API usage, Experimental and scenario execution remains deferred until production compilation succeeds. No stale binaries or isolated replacement engine were used as runtime evidence.
+- Parsed all 21 changed C# files without syntax errors. A Roslyn token comparison against `3ba6a197` confirmed that all non-factory methods and constructors in the 17 production files are unchanged. This verifies the unchanged operation source, not integrated behavior or the new tests' semantic compilation.
+- Repository whitespace, style at warning severity and analyzer verification at error severity passed. All three reported workspace-loading warnings, limiting assurance while compilation is incomplete. `npm run docs:build` and `git diff --check` passed. Logs and the read-only syntax/token audit are under ignored `artifacts/execution-factory/m2a-*` and `artifacts/execution-factory/migration-audit/`.
+- The Git index's SHA256 remains unchanged from immediately after the authorized M1c commit. M2a is left unstaged and uncommitted for review. The unrelated `.claude/settings.local.json` is untouched.
+
+Focused checks:
+
+```text
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*EvaluatorExecutionFactoryTests' --filter-class '*TopologyExecutionFactoryTests' --filter-class '*ChooseOneOperatorTests' --filter-class '*RepeatingEvaluatorTests'
+dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore --filter-class '*OperatorAuthoringSpecs'
+```
+
+Instrumentation wrappers, iterative bases, other explicit composite/leaf implementations, algorithms, observations, capabilities, Experimental roles and remaining consumers are outside this package.
+
+Stop for M2a review. Proposed M2b migrates the 18 core counting and duration-measuring wrappers in the nine role `Instrumentation` folders, preserving their external result sinks and invocation-local timing. M1d's iterative authoring bases remain outstanding and follow separately. No later package is started here.
+
+### Named execution factories review record, 2026-09-30
+
+Reviewed and committed with M2a as `3da86299` on 2026-09-30. The validation and working-tree notes below describe the original review handoff.
+
+The user approved replacing the raw `Func` signatures with the proposed named factory family. `ExecutionFactory<TExecution>` retains its scope input and covariance. New `WrapperExecutionFactory<TExecution>` and `CompositeExecutionFactory<TExecution>` accept one execution or an ordered immutable execution array and return the same execution role. Their type parameter is invariant. This supersedes M1c's optional covariant hook result; the three authoring examples using a more concrete result now declare the role interface while constructing the same execution classes.
+
+Migrated 54 protected hook declarations in 38 existing C# files: the 18 core topology bases, M2a's 17 concrete composition operators, the topology/evaluator fixtures and the 15 topology authoring examples. Added the two public delegate files under `Execution`. Updated the 18 discovered-topology architecture cases to check the named delegate, its input topology and its matching result role. Contributor rules, operator guides, glossary and the selected design describe the named contracts. Preparation, child resolution, constructor calls and operation bodies are unchanged.
+
+Validation:
+
+- Before and after Release builds report exactly the same 166 errors, with identical error text and locations. Neither build reports a warning at this incremental checkpoint. No additional compiler diagnostic appears after replacing the return types.
+- Focused core factory/architecture tests and `OperatorAuthoringSpecs` both stop at those same 166 production errors. No normal test compiled or ran. Integrated core, API usage, Experimental and scenario validation remains pending until the remaining consumers compile.
+- A Roslyn audit verified all 54 return-type replacements against snapshots taken immediately before this change. All other declaration/body tokens in those 38 files are identical except for required namespace imports. All 43 changed C# files, including the new delegates and the existing M2a changes, parse without syntax errors. This does not establish semantic compilation of the tests or integrated runtime behavior.
+- Documentation build, `git diff --check`, whitespace verification, style verification and analyzer verification passed. The formatter commands reported workspace-loading warnings; their success does not establish compilation or runtime behavior. Verification logs and the AST migration/audit helpers are under ignored `artifacts/execution-factory/named-factory-*` paths.
+- The Git index remains unchanged from this package's start; the user's four staged documentation/plan files and the unrelated `.claude/settings.local.json` are untouched by index operations. New code and documentation changes remain unstaged. No commit was made.
+
+This is an API-shape revision to M1c/M2a, not the start of M2b or M1d. Stop for review of the named factory contracts. Instrumentation wrappers and iterative bases remain separate packages.
+
+### M2b core instrumentation wrappers review record, 2026-10-01
+
+Reviewed and committed as `705cb4a3`. The validation and working-tree notes below describe the original review handoff.
+
+The user reviewed and committed M2a and the named factories, then authorized this package. Migrated the 18 `Counting*` and `DurationMeasuring*` configuration classes in the nine core operator roles' `Instrumentation` folders. Each replaces `WrapExecutionInstance` with scope-free `CreateWrapperFactory`, returning the role's `WrapperExecutionFactory` and constructing the existing execution with its contextual child. Interceptor and terminator factories retain the run's search-state type.
+
+The supplied count/duration accumulators, count metric and time provider are retained. These accumulators are external result sinks, not fresh private state allocated during preparation. Every binding and independent root configured with the same sink contributes to it. Operation bodies, constructor arguments, fluent/configuration APIs, count placement and timing are unchanged: failed child calls do not increment counters, and elapsed time is recorded in `finally` using an invocation-local timestamp.
+
+Added three core regression cases in `OperatorInstrumentationTests`: call and candidate counts across contextual bindings, and duration accumulation across those bindings. All three check child state continuity, child-only counting in the observed scope, one child preparation across related scopes, fresh child state in an independent root and continued accumulation into the supplied result sink. Existing nested-duration and exception cases are retained. Migrated the ten obsolete direct creation calls in the two instrumentation test files to resolution, and the callback mutator fixture to once-only factory preparation. The operator composition guide describes accumulator ownership and invocation-local timing without migration history.
+
+Validation:
+
+- Release compilation falls from 166 to 50 errors: nine `CS0115`, 18 `CS0452`, 12 `CS0534` and 11 `CS0535`. Comparing the error text and locations shows exactly 116 removed diagnostics and no added diagnostic. No remaining error names an edited production file. The baseline reports four unchanged analyzer release-tracking warnings; the post-edit incremental build reports no warnings. This is limited compiler evidence while migration remains incomplete.
+- Focused core instrumentation/topology tests and API authoring/practitioner usage specs both stop at the same 50 production errors, with identical text and locations to the post-edit Release build. No normal test compiled or ran. The three new cases remain pending, and full core, API usage, Experimental and scenario execution remains deferred until production compilation succeeds.
+- The Roslyn source audit parses all 20 changed C# files without syntax errors and confirms that all non-factory methods and constructors in the 18 production files match `3da86299`. This verifies unchanged operation source, not integrated runtime behavior or semantic compilation of the tests.
+- Documentation build, `git diff --check`, whitespace verification, style verification and analyzer verification pass. All three formatter commands report workspace-loading warnings, limiting assurance while compilation remains incomplete. Verification logs are under ignored `artifacts/execution-factory/m2b-*`; the existing read-only Roslyn audit is under `artifacts/execution-factory/migration-audit/`.
+- The Git index remains unchanged from package start. Changes are unstaged and uncommitted; the unrelated `.claude/settings.local.json` is untouched.
+
+Focused checks:
+
+```text
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*OperatorInstrumentationTests' --filter-class '*EvaluatorInstrumentationTests' --filter-class '*TopologyExecutionFactoryTests'
+
+dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore --filter-class '*OperatorAuthoringSpecs' --filter-class '*PractitionerUsageSpecs'
+```
+
+Stop for M2b review. M1d follows separately: migrate the two iterative algorithm authoring forms in `Algorithms/BaseClasses/IterativeAlgorithm.cs` to once-only iteration preparation and contextual interceptor binding. No iterative bases, concrete algorithms, other operator implementations, observations, Experimental roles, selector/advice work or C4 were started here.
+
+### M1d iterative algorithm bases review record, 2026-10-01
+
+The user reviewed and committed M2b, then authorized both iterative algorithm bases, a named iteration factory and focused preparation/interceptor/iterator coverage. The initial package added `IterationExecutionFactory.cs` beside `Algorithms/BaseClasses/IterativeAlgorithm.cs`. The delegate received a construction scope and an optional typed interceptor and returned the matching iterative execution; its four run type parameters were invariant. The common-factory revision below replaces this initial authoring shape within the same uncommitted package.
+
+Both bases expose scope-free `CreateExecutionFactory` preparation. The agnostic base calls generic `CreateIterationFactory`; the bound base calls its nongeneric hook and exposes the matching public factory. Each returned execution factory resolves the optional interceptor inside its supplied construction scope, then invokes the prepared iteration factory. The bound public bridge preserves the existing search-space/problem compatibility guard and checks it before preparation; its direct one-line factory cast mirrors the common algorithm bridge. The sealed generic hook on the bound base retains the existing unsupported-route guard, while the sealed public bridge uses its nongeneric preparation path.
+
+Persistent state is prepared before any binding. No child execution is captured from the first scope and no shared execution node's interceptor is changed. The complete `IterativeAlgorithmExecution` class is unchanged, including cancellation, termination, previous-state handling, RNG forks, yielding and interceptor invocation. Both bound authoring examples in `AlgorithmAuthoringSpecs` adopt the named hook; the stateful example prepares its step counter once and shares it across bindings. Three direct-role fixtures prepare their raw nodes once. Contributor rules, the algorithm authoring guide, glossary and selected design describe the implemented contracts without migration history in user-facing pages.
+
+Added 14 core regression cases in `IterativeAlgorithmFactoryTests`: both base variants cover preparation before interceptor resolution, repeat binding versus independent factories, descendant interceptor observations with shared algorithm/interceptor state, paused iterators retaining their original observation context and previous state/RNG fork sequence, absent interceptors and preparation failure before child preparation/binding. Further cases check rejected search-space/problem/search-state contracts before preparation and a compatible concrete problem through the bound factory cast. Added two architecture cases checking the public/protected factory contracts for both bases. These 16 cases remain pending until normal compilation succeeds.
+
+Validation:
+
+- The Release baseline reports 50 production errors. The post-edit build reports 65: 12 `CS0115`, 30 `CS0452`, 12 `CS0534` and 11 `CS0535`. Nine prior diagnostics disappear and 24 are exposed in unmigrated concrete iterative algorithms that override the retired hooks or lack `CreateIterationFactory`. No error names either edited production file. The baseline has four unchanged analyzer release-tracking warnings; the post-edit incremental build has none. This is limited compiler evidence, not successful compilation of the migrated API or tests.
+- Focused iterative factory/loop/architecture tests and `AlgorithmAuthoringSpecs` stop at the same 65 production errors, with identical text and locations to the post-edit Release build. No normal test compiled or ran. Full core, API usage, Experimental and scenario execution remains pending until the remaining consumers compile; old binaries were not used.
+- A Roslyn audit parses all five changed C# files without syntax errors. It verifies that non-factory methods/constructors in the edited base match `705cb4a3`, and separately compares the complete iterative execution class and bound compatibility guard token-for-token. This checks preserved source, not the new tests' semantic compilation or integrated behavior.
+- Documentation build, `git diff --check`, whitespace verification, style verification and analyzer verification pass. All three formatter commands report workspace-loading warnings, limiting assurance while compilation remains incomplete. Logs are under ignored `artifacts/execution-factory/m1d-*`; the existing read-only source audit is under `artifacts/execution-factory/migration-audit/`.
+- The Git index remains unchanged from package start. Changes are unstaged and uncommitted; the unrelated `.claude/settings.local.json` is untouched.
+
+Focused checks:
+
+```text
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*IterativeAlgorithmFactoryTests' --filter-class '*IterativeAlgorithmExecutionTests' --filter-class '*RoleContractArityTests'
+
+dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore --filter-class '*AlgorithmAuthoringSpecs'
+```
+
+Stop for M1d review. Proposed M2c migrates the four core concrete iterative algorithms: `HillClimber`, `GeneticAlgorithm`, `EvolutionStrategy` and `NSGA2`, including once-only preparation of their persistent state and stable derived configurations. Meta-algorithms, remaining operators, observations, Experimental consumers, selector/advice work and C4 remain separately reviewed packages. No later package is started here.
+
+### M1d common execution factory revision, 2026-10-01
+
+The user rejected the algorithm-specific delegate accepting a resolved interceptor and approved the common `ExecutionFactory<IterativeAlgorithmExecution<...>>` instead. Both protected `CreateIterationFactory` forms return this factory, receiving only the construction scope at binding time. The public methods forward directly to the preparation hook without another binding lambda. Derived algorithm authors resolve the optional interceptor alongside their other configured children and pass it to the execution constructor. Keeping the protected hook requires the matching iterative execution result. The separate delegate file is removed; no raw `Func` or compatibility route is added.
+
+Updated all five authoring overrides in this package: three focused core fixtures and two API usage examples. State is still allocated before the returned factory; interceptor resolution remains inside it and precedes execution construction. The two architecture cases require the common factory, its single scope parameter and the matching iterative result. Contributor rules, the glossary, the algorithm authoring guide and the selected design describe this wiring responsibility. The complete iteration loop and bound compatibility guard remain unchanged. Concrete production algorithms and later migration packages are outside this revision.
+
+The bound public-factory usage spec calls the nongeneric public method directly. It avoids reflective overload lookup, which is ambiguous when both generic and nongeneric public factories take no arguments. The focused core cases already exercise the generic bridge.
+
+Revision validation:
+
+- Release build and both focused test commands above stop at the same 65 production errors as the initial M1d package, with identical diagnostic text and locations. No diagnostic names the edited production base. No normal test compiled or ran; integrated runtime validation remains pending.
+- The Roslyn source audit parses all four changed C# files without syntax errors and confirms the complete iterative execution class and bound compatibility guard still match `705cb4a3`. This is source preservation evidence, not semantic compilation or runtime proof.
+- Documentation build, whitespace verification, style verification, analyzer verification and `git diff --check` pass. Each formatter reports workspace-loading warnings, limiting assurance while compilation remains incomplete. Revision logs are under ignored `artifacts/execution-factory/m1d-common-factory-*`.
+- The Git index remains unchanged. Changes are unstaged and uncommitted, and `.claude/settings.local.json` is untouched. Stop for review of this revision; M2c has not started.
+
+### M2c core concrete iterative algorithms review record, 2026-10-02
+
+The user reviewed and committed M1d and its common-factory revision as `38550590`, then authorized the four core concrete algorithms: `HillClimber`, `GeneticAlgorithm`, `EvolutionStrategy` and `NSGA2`. Each protected override returns `ExecutionFactory<IterativeAlgorithmExecution<...>>` through `CreateIterationFactory`. The returned factory resolves the optional interceptor first, followed by the algorithm's other children, and constructs the matching typed execution in the supplied context.
+
+GeneticAlgorithm and NSGA2 prepare their effective mutation-rate wrapper before returning the factory, preserving its reference identity across bindings. The configured rate comparison and wrapper weights are unchanged, including unusual-rate semantics. HillClimber and EvolutionStrategy have no additional persistent mutable state to extract; all four nested executions retain their existing constructors, state transitions, selection, replacement, termination, random-source use and invocation-local data. No execution-state class or additional factory contract is introduced.
+
+Two private direct-role fixtures in `HillClimberTests` prepare their stateless execution references once and return them from factories. Added eight normal core regression cases in `ConcreteAlgorithmFactoryTests`: each algorithm exercises contextual creator/interceptor observations with shared creator state and independent-root preparation, plus a paused iterator retaining its original interceptor context and previous state when another context binds. These cases remain pending until normal compilation succeeds.
+
+Validation:
+
+- Release build errors fall from 65 to 41. The 24 removed diagnostics all belong to the four migrated algorithms; no new diagnostic appears and none names those files. The remaining errors belong to other unmigrated core consumers. This is limited compiler evidence while the core assembly still cannot build.
+- Focused core algorithm tests and the algorithm authoring/practitioner API specs stop at the same 41 production errors, with identical diagnostic text and locations to the Release build. No normal test compiled or ran. Full core, Experimental and scenario execution remains pending until compilation succeeds.
+- The Roslyn source audit parses all six changed C# files without syntax errors and compares every non-factory method and constructor in the four production files against `38550590`, with no differences. This confirms preserved operation source, not semantic compilation of the new tests or integrated runtime behavior.
+- Documentation build, whitespace verification, style verification, analyzer verification and `git diff --check` pass. All three formatter commands report workspace-loading warnings, limiting assurance while compilation is incomplete. Logs are under ignored `artifacts/execution-factory/m2c-*`.
+- The Git index hash matches package start, and the unrelated `.claude/settings.local.json` is untouched.
+
+Focused commands:
+
+```text
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*ConcreteAlgorithmFactoryTests' --filter-class '*HillClimberTests' --filter-class '*GeneticAlgorithmSolvingTests' --filter-class '*GeneticAlgorithmTests' --filter-class '*NSGA2Tests' --filter-class '*IterativeAlgorithmFactoryTests'
+
+dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore --filter-class '*AlgorithmAuthoringSpecs' --filter-class '*PractitionerUsageSpecs'
+```
+
+Production scope is the four algorithm files. Meta-algorithms, remaining operator implementations, shared test-support migrations, Experimental consumers, selector/advice work and C4 are separate packages. Stop for M2c review; changes remain unstaged and uncommitted.
+
+### M2d remaining core operators review record, 2026-10-02
+
+The user reviewed and committed M2c as `cc69510c`, then authorized the eight remaining concrete core operators: `GaussianMutator`, `PredefinedCandidatesCreator`, `TransformedCreator`, `TransformedCrossover`, `RefinementEvaluator`, `ImprovementCheckingRefiner`, `EliteSelector` and `GenderSpecificSelector`. Each creation hook returns the ordinary named `ExecutionFactory` for its execution role. No additional authoring contract is introduced.
+
+GaussianMutator prepares its raw execution and existing strength state before returning the factory, retaining the adaptable-strength capability. PredefinedCandidatesCreator allocates its existing cursor state during preparation and resolves its fallback inside the returned factory. The six other composites resolve their configured children at binding time, preserving resolution order and immutable child references. All eight retain their existing operation methods and execution constructors. The separate mutation-strength control redesign remains pending.
+
+Existing refinement-evaluator, improvement-checking-refiner and elite-selector callers use `ResolutionScope.Resolve`. Eight added regression cases cover contextual observations on every child of the six composites, predefined-candidate cursor continuity with a contextual fallback, and Gaussian strength continuity through observed bindings. Each also checks independent-root behavior. Evaluator XML describes configuration sharing and shared state without promising identical bound nodes. These tests remain pending until normal compilation succeeds.
+
+Validation:
+
+- `dotnet build --configuration Release --no-restore`: errors fall from 41 to 32. All nine removed diagnostics belong to the eight migrated operators; the remaining diagnostics have identical text and locations, with none added. This is limited compiler evidence while the core assembly still cannot build.
+- Both focused commands below stop at the same remaining production errors. No normal tests compile or run. Complete core, Experimental and scenario runs would hit the same barrier and are deferred.
+- The Roslyn source audit parses all 14 changed C# files without syntax errors and verifies that all non-factory methods and constructors in the eight production files match `cc69510c`. This establishes source preservation, not semantic compilation or runtime behavior.
+- Whitespace, style at warning severity, analyzer verification at error severity and `git diff --check` pass. The format tools report workspace-loading warnings, limiting assurance while compilation remains incomplete. Logs are under ignored `artifacts/execution-factory/m2d-*`.
+- The Git index is unchanged; changes remain unstaged and uncommitted. The unrelated `.claude/settings.local.json` is untouched.
+
+Focused commands:
+
+```text
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*ConcreteOperatorFactoryTests' --filter-class '*PredefinedCandidatesCreatorTests' --filter-class '*AdaptableMutationStrengthTests' --filter-class '*RefinementEvaluatorTests' --filter-class '*ImprovementCheckingRefinerTests' --filter-class '*EliteSelectorTests' --filter-class '*SelectorCompositionTests'
+
+dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore --filter-class '*InferenceConstructionSpecs'
+```
+
+Stop for M2d review. Deferred algorithms, control wrappers, observations, remaining test-support migrations, Experimental consumers, specialized control capabilities, selector/advice work and C4 remain separate packages.
+
+### M2e deferred algorithms and control wrappers review record, 2026-10-02
+
+The user reviewed M2d and authorized its commit and continuation. It is committed as `c82c6d69`. This package migrates the six core algorithms named before editing: `CycleAlgorithm`, `PipelineAlgorithm`, `StateTerminatedAlgorithm`, `AlgorithmDurationBudgetAlgorithm`, `OperatorBudgetAlgorithm` and `OperatorDurationBudgetAlgorithm`. All public preparation methods return the ordinary typed `ExecutionFactory`.
+
+Cycle removes its per-binding cache of wrapped child executions. Its deferred resolver uses a fresh child domain for each reset-mode activation, or a retained domain keyed by the child algorithm reference for reuse mode. Repeated references share a reuse slot; equal but distinct references and different Cycle preparations have independent slots. A fresh activation still inherits state already owned by an ancestor. Pipeline retains its existing fresh child activation scopes and delayed child resolution. Neither streaming loop changes its state handoff, random forks, cycle/stage order, cancellation checks or yielding behavior.
+
+Count and operator-duration budgets allocate their accumulators and private child keys during preparation, then obtain their retained child domains through each binding's construction scope. Rebinding neither reinstalls the measurement declaration nor resets usage. Algorithm-duration budgets preserve invocation-local duration tracking. StateTerminatedAlgorithm resolves its terminator before the wrapped algorithm at binding time. All four control-wrapper streaming loops and constructors are unchanged. No iterator resources or resolved children are added to persistent state.
+
+Migrated the seven authoring hooks in AdditiveStepAlgorithm, the shared meta-algorithm test helpers, and the private fixtures in CycleAlgorithmTests, CycleAlgorithmAnalysisTests and StateTerminatedAlgorithmTests. The terminator-order test uses public scope resolution; its private recording terminator constructs the requested typed execution directly. The meta-algorithm guide describes factory preparation/binding and fresh/retained domains, with no migration-history wording. It states the current analyzer limitation without promising factory-call enforcement.
+
+Added 14 normal regression cases in DeferredAlgorithmFactoryTests: both Cycle modes across repeated references and invocations, reference identity and owner isolation, ancestor reuse, fresh Pipeline stages with no upward state publication, paused Cycle/Pipeline observation paths, count/duration budget rebinding with single measurement declarations and independent roots, nested count/duration budgets, shared state termination, and invocation-local duration under a paused stream. These cases remain pending until normal compilation succeeds.
+
+Validation:
+
+- `dotnet build --configuration Release --no-restore`: errors fall from 32 to eight. All 24 removed diagnostics belong to the six migrated production files. The remaining diagnostics have identical text and locations; none is added. The remaining failures belong to AlgorithmObservation and the crossover, evaluator, interceptor and mutator observation adapters. This remains limited compiler evidence while the core assembly cannot build.
+- Both focused commands below stop at those same eight production errors. No normal tests compile or run. Complete core, Experimental and scenario validation is deferred while the production barrier remains.
+- The Roslyn source audit parses all 12 changed C# files and the guide's five C# code blocks without syntax errors. Non-factory methods and constructors in the six production files match `c82c6d69`, except for Cycle's deliberately replaced private resolver/cache helpers and its execution constructor's removed cache allocation. All six complete streaming loops remain compared and unchanged. This is source preservation evidence, not semantic compilation or runtime proof.
+- `npm run docs:build`, whitespace verification, style verification at warning severity, analyzer verification at error severity and `git diff --check` pass. Format tools report workspace-loading warnings, limiting assurance while compilation remains incomplete. Logs are under ignored `artifacts/execution-factory/m2e-*`.
+- The Git index hash matches the start of M2e. M2e changes are unstaged and uncommitted; the unrelated `.claude/settings.local.json` is untouched.
+
+Focused commands:
+
+```text
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*DeferredAlgorithmFactoryTests' --filter-class '*CycleAlgorithmTests' --filter-class '*PipelineAlgorithmTests' --filter-class '*OperatorBudgetAlgorithmTests' --filter-class '*DurationBudgetTests' --filter-class '*StateTerminatedAlgorithmTests'
+
+dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore --filter-class '*CompositionSpecs' --filter-class '*BudgetSpecs' --filter-class '*AlgorithmAuthoringSpecs'
+```
+
+Stop for M2e review. The next proposed package is the five core observation adapter files: AlgorithmObservation, CrossoverObservation, EvaluatorObservation, InterceptorObservation and MutatorObservation. Remaining test-support/consumer migrations, Experimental code, specialized control capabilities, selector/advice work and C4 remain separate packages. No observation adapter or later package is changed here.
+
+### M2f core observation adapters review record, 2026-10-02
+
+The user approved M2e as `90c1b961` and authorized the proposed observation package. The current `GetOrCreateChildScope` design remains unchanged. Migrated these five files:
+
+- `src/HeuristicLib/Analysis/Tracing/Observations/AlgorithmObservation.cs`
+- `src/HeuristicLib/Analysis/Tracing/Observations/CrossoverObservation.cs`
+- `src/HeuristicLib/Analysis/Tracing/Observations/EvaluatorObservation.cs`
+- `src/HeuristicLib/Analysis/Tracing/Observations/InterceptorObservation.cs`
+- `src/HeuristicLib/Analysis/Tracing/Observations/MutatorObservation.cs`
+
+Each adapter returns the common typed execution factory. The existing signature check runs during preparation, and the returned factory resolves the predecessor through the current binding scope. Algorithm observation prepares its `ExecutionState` once, retaining iteration numbering across bindings. Its previous search state remains invocation-local. All five typed operation bodies, callbacks, original-source references and `Fits` checks are unchanged. Public observation registration overloads are unchanged.
+
+Added five cases in `ObservationFactoryTests`: algorithm iteration continuity across rebinding, a paused parent stream retaining its own child observations and previous state, independent-root counters, and predecessor binding/source attribution/result identity/callback order for all four operator observation roles. The algorithm assertions cover those lifetime cases together. Also corrected the missing `HEAL.HeuristicLib.Operators.Terminators` import in M2e's `DeferredAlgorithmFactoryTests`, exposed when those tests first compiled.
+
+Validation:
+
+- The baseline Release solution build stopped at eight errors in the five observation adapters. After migration, `dotnet build --configuration Release --no-restore` compiles the core library and reports 106 errors in remaining consumers: 33 in Experimental and 73 in the core test project. These are newly reachable migration diagnostics, not an increase in core errors. Later compilation phases may expose further issues.
+- `dotnet build src/HeuristicLib/HeuristicLib.csproj --configuration Release --no-restore` passes. The normal focused core test command below fails during compilation of old test authoring fixtures. The normal API usage command is blocked by Experimental compilation. Neither normal suite runs; complete core, Experimental and scenario validation remains pending.
+- An ignored MSBuild source-selection file compiles the actual core test project against the actual core library, including `ObservationFactoryTests`, `ObservationModuleTests`, `AlgorithmObservationTests`, `DeferredAlgorithmFactoryTests`, normal global usings and their three existing mock/helper files. All 41 selected cases pass, including all five new cases and all 14 M2e deferred-algorithm cases. The selected compilation excludes the other core tests; it is limited runtime evidence, not a successful normal-project or full-suite run. No alternate production implementation, tracked project edit or expansion of the earlier C2/C3 proofs is involved.
+- Whole-solution whitespace verification, style verification at warning severity, analyzer verification at error severity and `git diff --check` pass. Format tools report workspace-loading warnings, limiting assurance for unbuildable consumers. No diagnostics refer to the migrated production files or the new test file. Existing floating-point comparison warnings occur in unchanged AlgorithmObservationTests.
+- Logs and the temporary source-selection file are under ignored `artifacts/execution-factory/m2f-*`. The Git index hash remains `1A976BF27D7119E43BB502C9AD7FA8E452BB01E0ABF82F83F91E52C1BB23CBE9`. Changes remain unstaged and uncommitted; `.claude/settings.local.json` is untouched.
+
+Commands:
+
+```text
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*ObservationFactoryTests' --filter-class '*ObservationModuleTests' --filter-class '*AlgorithmObservationTests' --filter-class '*DeferredAlgorithmFactoryTests'
+dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore -p:CustomAfterMicrosoftCommonTargets=C:/Users/phili/Repositories/HeuristicLib/artifacts/execution-factory/m2f-selected-tests.targets
+```
+
+Stop for M2f review. The next proposed package migrates remaining core test authoring fixtures and their direct-creation consumers, then retries the normal core suite. The first exposed fixture files are AnalysisUsabilityTests, TraceCompositionTests, AlgorithmRunTests, ExperimentTestSupport, CompositeBindingTests, OperatorCompatibilityTests, RefinerFailureTests and the seven creator/crossover/evaluator/mutator/refiner/replacer/selector configuration-equality test files. Identify the final bounded scope before editing; later compiler phases may expose additional callers. Experimental code, specialized control capabilities, selector/advice work and C4 remain separate packages.
+
+### M2g core test fixtures and callers review record, 2026-10-03
+
+The user approved M2f as `c4d91e2f` and authorized migrating the remaining core test authoring fixtures and direct callers, then retrying the normal core suite. This package changes 26 C# files under `test/HeuristicLib.Tests` and these two plans. No production, analyzer implementation, Experimental source or project file changes are included.
+
+Scope:
+
+- Fourteen fixture files: AnalysisUsabilityTests, TraceCompositionTests, AlgorithmRunTests, ExperimentTestSupport, CompositeBindingTests, OperatorCompatibilityTests, RefinerFailureTests and the seven creator/crossover/evaluator/mutator/refiner/replacer/selector configuration-equality test files. Creation hooks return `ExecutionFactory`, `WrapperExecutionFactory` or `CompositeExecutionFactory` as appropriate. CompositeBindingTests retain both the deliberately invalid leaf-ladder fixture and the correctly typed generic fixture. Children resolve inside the returned binding lambda. Probe setup recording and setup exceptions remain in preparation. RefinerFailureTests prepares its private counter once per logical execution rather than retaining mutable runtime state on the reusable configuration.
+- Six existing regression files: IterativeAlgorithmFactoryTests, TopologyExecutionFactoryTests, EvaluatorExecutionFactoryTests and OperatorInstrumentationTests specify the role interface in `Wrap<TSource>`, allowing the callback to return another implementation of that role. ConcreteAlgorithmFactoryTests and AdaptableMutationStrengthTests import the extension namespaces for their existing counting calls.
+- Five refiner caller files: ImprovementCheckingCompositionTests (one call), RefinerBatchSemanticsTests (five), RefinerCompositionTests (21), RefinerEvaluatorAccountingTests (one) and NumericParameterFittingRefinerTests (three). All 31 direct creation calls use the public `ResolutionScope.Create().Resolve<TCandidate, TSearchSpace, TProblem>(source)` route, preserving their concrete run types and fresh root scope per construction.
+- ExecutionFactoryResolutionTests.Lifetimes changes only the collection helper. The initial full run and a focused rerun both failed the two `LongLivedSource_DoesNotRetainDiscardedDeclarationDomains` cases. Three bounded collection/finalization cycles followed by a final collection make both pass. Weak-reference assertions are unchanged, and no resolver behavior or retained-object condition is relaxed. This establishes that additional cleanup cycles suffice in this runtime; it does not establish a particular internal finalization cause.
+
+Existing typed operations and assertions are preserved. The old-name references remaining in the core test sources are analyzer/code-fix example strings, analyzer test names and intentional architecture assertions rejecting retired members. Migrating analyzer semantics and those examples is a separate package; removing their compilation assertions would conceal the outstanding work.
+
+Validation:
+
+- The baseline normal core test build reported 73 errors and 33 warnings. Migrating fixture hooks exposed 54 errors in later compilation phases. After correcting the direct callers, role inference and missing imports, the final normal Release core test project build passes with zero errors and 25 warnings. Existing warning categories include Sonar and xUnit diagnostics; explicit collection in the lifetime helper retains its GC warning. No warning suppression is added.
+- The focused normal core test run with the single class filter `*ExecutionFactoryTests` passes all 40 cases. The focused lifetime rerun passes both cases after the cleanup-helper correction.
+- The initial full normal core run executed 2,457 cases, with 2,444 passing and 13 failing. The final full run executes the same 2,457 cases, with 2,446 passing, 11 failing and none skipped. The failures are eight CreateExecutionInstanceAnalyzerTests and two CreateExecutionInstanceCodeFixTests whose embedded source uses retired hooks, plus LayerDependencyTests.SourceDependencies_HaveOnlyTheDocumentedException. The architecture test fails while compiling Experimental sources (60 semantic diagnostics), before it can validate dependencies. No layer violation is established by that failure.
+- `dotnet build --configuration Release --no-restore` reports 33 errors, all in unmigrated Experimental declarations. The normal API usage test command encounters the same 33 errors and does not run tests. Later consumer compilation phases remain unverified. Experimental, scenario and final solution runtime validation remain pending.
+- Whole-solution whitespace verification, style verification at warning severity, analyzer verification at error severity and `git diff --check` pass. Format tools report workspace-loading warnings, limiting assurance for unbuildable consumers.
+- Every runtime result above uses the normal core test project and actual core library, without source selection, skipped failures or an alternate production implementation. An ignored Roslyn tool under `artifacts/execution-factory/m2g-call-migration/` rewrote only the 31 inspected invocation nodes; it is an editing aid, not a runtime proof. Validation logs are under ignored `artifacts/execution-factory/m2g-*`. The Git index SHA256 remains `6B326D26E3AA6751F60B870FDEEA9E08F379658E24AE01CE0AB716C2CD4743D4`. Changes remain unstaged and uncommitted; `.claude/settings.local.json` is untouched.
+
+Commands:
+
+```text
+dotnet build test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --no-build --filter-class '*ExecutionFactoryTests'
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-method '*LongLivedSource_DoesNotRetainDiscardedDeclarationDomains'
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore
+dotnet build --configuration Release --no-restore
+```
+
+Stop for M2g review. The next proposed package migrates HLib0001, its code fix and their executable examples to the factory contract: recognize direct child factory creation/invocation, including returned lambdas and deferred methods, preserve legitimate self/base bridges and resolver adapters, and compile the fixed source against the actual library. Experimental migration remains separate and is required to unblock the remaining architecture case and API usage specs. Specialized control capabilities, selector/advice work and C4 remain later packages. None is started here.
+
+### M2h execution-factory analyzer and code fix review record, 2026-10-03
+
+The user reviewed M2g, authorized a commit and authorized continuing with the next error-fixing package. Committed the already-staged M2g changes as `3b95f8d5`, then migrated the analyzer package without further index changes. Experimental implementation remains outside this package.
+
+Scope:
+
+- Replace CreateExecutionInstanceAnalyzer with `ExecutionFactoryAnalyzer`, retaining the diagnostic ID `HLib0001`. The rule binds the actual invocation: an instance, parameterless `CreateExecutionFactory` returning the common library factory on a configuration contract. Construction context includes factory-returning methods and their lambdas/local functions, methods with a library resolution-scope parameter, and execution-node methods, including deferred activation. Consumer-defined configuration and execution contracts participate through the common contracts, without a built-in role list. Unrelated methods with matching names and deliberate calls outside construction are not diagnosed.
+- Preserve implicit, explicit `this` and `base` preparation bridges. A child sharing its holder's type is still diagnosed. Typed `ResolutionScope.Resolve`/`TryResolve` preparation adapters can call the hook on their own callback source parameter; calling a different child inside that adapter remains a bypass.
+- Replace CreateExecutionInstanceCodeFixProvider with `ExecutionFactoryCodeFixProvider`. Immediate factory invocation, including parenthesized delegates and explicit `Invoke`, becomes typed resolution on the supplied scope expression. A hook directly returning a child's factory becomes `scope => scope.Resolve<...>(child)`. The common generic configuration contract supports inferred resolution; role fixes use the execution type arguments and names valid at the call site. Generated fixes are semantically checked before being offered. Stored factories receive a diagnostic without a partial rewrite; custom roles without a usable resolver receive no uncompilable fix.
+- Replace both old analyzer/code-fix fixture files with ExecutionFactoryAnalyzerTests and ExecutionFactoryCodeFixTests. The 18 analyzer cases cover generic/bound hooks, direct and stored preparation, local functions, scope resolution, outside callers, self/base delegation, explicit bridges, same-type children, deferred methods, preparation adapters, custom contracts and unrelated methods. The 11 code-fix cases compile the input and fixed output against the actual library, including deferred scope expressions, four-argument roles, consumer-defined contracts/resolvers and withheld fixes. Assertions that detect compilation errors and analyzer exceptions remain active. Two source examples in OperatorAuthoringAnalyzerTests use factory hooks while preserving their original HLib0002/HLib0003 assertions.
+- Update writing-meta-algorithms.md to describe the current HLib0001 coverage and its limits. The rule recognizes direct calls; it is not a provenance analysis of arbitrary helper/delegate flows and does not prove correct shared-state ownership. No runtime resolver or algorithm operation changes are included.
+
+Validation:
+
+- The normal Release core test project build passes with zero errors. Its final build reports 54 existing warnings across rebuilt projects. An initially introduced loop-style warning in the fixer was corrected; no new warning remains in the changed implementation. HLib0001 retains the analyzer project's existing release-tracking warning when that project rebuilds.
+- Focused normal-project runs pass all 18 analyzer cases and all 11 code-fix cases. The final full core run, after simplifying the generated binding lambda, executes 2,476 cases: 2,475 pass, one fails, none are skipped. All ten M2g analyzer/code-fix failures are resolved. The remaining failure is LayerDependencyTests.SourceDependencies_HaveOnlyTheDocumentedException, which stops while compiling unchanged Experimental sources before it can validate dependency rules.
+- `npm run docs:build`, whole-solution whitespace verification, style verification at warning severity, analyzer verification at error severity and `git diff --check` pass. Format tools report workspace-loading warnings, limiting assurance for unbuildable consumers.
+- The final Release solution build reports 33 errors, all in unmigrated Experimental declarations. The normal API usage test command encounters the same 33 errors and does not run tests. These are the same remaining declaration failures as M2g; later consumer compilation and Experimental/scenario runtime validation remain pending.
+- Runtime results use the normal project and actual library; no source selection, alternate implementation or skipped failure is used. Logs are under ignored `artifacts/execution-factory/m2h-*`. The post-commit Git index SHA256 remains `0BCAF6A133CE57514E2B1C1BB2EA5F34F4D9947816D738DE93FCEB735C91D833`. M2h changes remain unstaged and uncommitted; `.claude/settings.local.json` is untouched.
+
+Commands:
+
+```text
+dotnet build test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --no-build --filter-class '*ExecutionFactoryAnalyzerTests'
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*ExecutionFactoryCodeFixTests'
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --no-build
+dotnet build --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore
+npm run docs:build
+```
+
+Stop for M2h review. The next proposed package migrates 14 Experimental role/operator files: the three move-role interfaces, their six ordinary/stateless bases, Swap2Neighborhood, CompositeSearchSpace, DynamicCachingEvaluator, DynamicRelativeQualityEvaluator and ReevaluationInterceptor. Preserve typed operations, prepare persistent data once and bind children through the current scope. The three Experimental algorithms (ALPSGeneticAlgorithm, OpenEndedRelevantAllelesPreservingGeneticAlgorithm and DynamicRacingAlgorithm) remain separate packages; normal Experimental/API/scenario compilation may expose further consumers after their declarations migrate. Specialized control capabilities, selector/advice work and C4 remain later work. None of those implementations is changed here.
+
+### M2i Experimental role and operator consumers review record, 2026-10-03
+
+The user reviewed M2h, authorized committing it and continuing with the proposed Experimental role/operator package. Committed the already-staged M2h changes as `1998a0a2`, then left the index untouched. The proposed 14-file inventory contains 13 active implementations: Swap2Neighborhood is entirely commented-out legacy code and is not changed or revived.
+
+Migrated:
+
+- IMoveCreator, IMoveEvaluator and IMoveApplier return the common `ExecutionFactory` and their typed resolution adapters prepare it through the normal resolver overload. Optional/try resolution, variance, type arguments and typed operations are unchanged.
+- MoveCreator, MoveEvaluator and MoveApplier prepare their existing execution node and initial state once, then return that node for every binding. StatelessMoveCreator, StatelessMoveEvaluator and StatelessMoveApplier return factories binding to `this`. All six retain their existing virtual public hook, protected state/operation hooks, signature checks and explicit generic bridges. The bridges cast the typed factory, matching core leaf bases; no replacement creation API or compatibility shim is added.
+- CompositeSearchSpace's creator, crossover and mutator return factories that resolve both adapted child signatures per binding. Child resolution order, the outer execution-type check and its exception, no-problem adaptation, result construction and the mutator's `All` option are unchanged. These configurations have no separate persistent mutable data to extract.
+- DynamicCachingEvaluator and DynamicRelativeQualityEvaluator use named wrapper factories, preparing the cache/hit count and the best-known reference/epoch once respectively. Their typed evaluation bodies, problem-identity checks, normalization, grace-count and cache-invalidation logic are unchanged. ReevaluationInterceptor prepares its pending request counter once and resolves its evaluator per binding; transformation and atomic request consumption are unchanged.
+
+DynamicCachingEvaluator and ReevaluationInterceptor subscribe once during preparation. Their handlers are methods on the small state objects, rather than lambdas sharing the binding factory's closure. This avoids introducing a path from the problem event to a captured configuration or child. Existing weak-reference assertions for discarded execution nodes and children remain unchanged. Subscription cleanup and state/cache disposal retain the existing lifecycle limitation and remain follow-up work; this package does not claim to solve that ownership problem.
+
+Added eight cases in the normal Experimental test project: three stateful move-role cases for preparation count, ancestor/child continuity and independent roots; two composite creator cases for adapted child rebinding/cursor continuity/observation context and incompatible outer search-space rejection; and three dynamic cases for cache/epoch sharing, best-known reference sharing and shared reevaluation requests with independent-root isolation. A small unrestricted search-space fixture supports the move/composite cases. These are authored regression cases, not executed evidence: the normal project remains blocked before test compilation by the remaining algorithm declarations. No existing test assertions are weakened or skipped.
+
+Validation:
+
+- The baseline normal Release Experimental build reports 33 errors. After migration it reports 16 errors, all in ALPSGeneticAlgorithm, OpenEndedRelevantAllelesPreservingGeneticAlgorithm and DynamicRacingAlgorithm (including its nested performance evaluator). No error points to a migrated declaration. Remaining declaration errors prevent normal compiler validation of later consumer phases.
+- The focused normal core LayerDependencyTests run executes 14 cases: 13 pass and SourceDependencies_HaveOnlyTheDocumentedException fails while compiling Experimental source. Its complete semantic diagnostic list contains 36 errors, all in those same three algorithm files, and none in the 13 migrated production files. This supplies source-level semantic evidence for the migrated files, not a green Experimental project, successful layer validation or runtime proof of the new behavior.
+- The full normal core run executes 2,476 cases: 2,475 pass, one fails, none are skipped. The same Experimental-dependent architecture failure remains. The normal Experimental test command fails during dependency compilation and runs no tests; the eight new cases and existing dynamic lifetime cases remain unexecuted.
+- Whole-solution whitespace verification, style verification at warning severity, analyzer verification at error severity and `git diff --check` pass. Format tools report workspace-loading warnings, limiting assurance for unbuildable consumers.
+- The final normal Release solution build reports the same 16 Experimental declaration errors. The normal API usage test command encounters those 16 errors and does not run tests. Experimental tests, API usage specs, later consumer compilation and final scenario/integration validation remain pending; the absence of diagnostics in the migrated production files is not complete cross-project validation.
+- All runtime results use normal projects and the actual library. No source selection, alternate production implementation or temporary runtime proof is used. Logs are under ignored `artifacts/execution-factory/m2i-*`. The post-commit Git index SHA256 remains `E66FB825D74FA6511F24BEF8A73AA02157A5D4F86ACD832945A9F1C0C84D4DB4`. M2i changes remain unstaged and uncommitted; `.claude/settings.local.json` is untouched.
+
+Commands:
+
+```text
+dotnet build src/HeuristicLib.Experimental/HeuristicLib.Experimental.csproj --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --no-build --filter-class '*LayerDependencyTests'
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Experimental.csproj --configuration Release --no-restore
+```
+
+The final broader checks also use `dotnet build --configuration Release --no-restore` and `dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore`.
+
+Stop for M2i review. The next proposed package migrates the two Experimental genetic algorithms: ALPSGeneticAlgorithm and OpenEndedRelevantAllelesPreservingGeneticAlgorithm. Prepare stable generated operators and persistent algorithm data once, resolve the interceptor and other children inside the returned common execution factory, and preserve invocation-local iteration data. DynamicRacingAlgorithm, its nested performance evaluator and its deferred contenders remain a separate package. Remaining test/API usage/scenario consumers, subscription lifecycle work, selector/advice work and C4 remain later work. No algorithm or later consumer migration is started here.
+
+### M2j Experimental genetic algorithms review record, 2026-10-03
+
+M2i was reviewed and committed as `3af2e5cb`. The user authorized the next bounded package: ALPS and OpenEndedRelevantAllelesPreservingGeneticAlgorithm. Dynamic Racing remains a separate migration and review package.
+
+Scope and ownership:
+
+- Both genetic algorithms implement the scope-free `CreateIterationFactory` hook returning the common `ExecutionFactory<IterativeAlgorithmExecution<...>>`. Each returned factory resolves the optional interceptor and all other declared children in its requesting context.
+- ALPS prepares its effective mutation-rate configuration once, outside the returned factory, following the core GeneticAlgorithm pattern. Rebinding resolves the same prepared wrapper reference, preserving child selection and observation context.
+- Neither algorithm has mutable node-owned fields to extract. Generation populations, ages, selection buffers and offspring remain operation-local values or public search states. Generation limits, refinement, elitism, strictness, random draws and population algorithms are unchanged; paused iterators retain their original execution nodes and children.
+- Four new Experimental cases cover root/child/root creator state continuity, contextual creator/interceptor counts, independent roots and paused iterator progress for both algorithms. They are authored but have not compiled or run. Existing generation-budget, refinement and usage cases remain unchanged and pending normal Experimental compilation.
+
+Validation:
+
+- The baseline normal Release Experimental build reports 16 declaration errors. The migrated project reports four errors, all in DynamicRacingAlgorithm and its nested PerformanceTrackingEvaluator. No declaration error points to either migrated algorithm. Remaining declaration failures still prevent later-phase normal compiler validation.
+- The full normal core suite executes 2,476 cases: 2,475 pass, one fails, none are skipped. SourceDependencies_HaveOnlyTheDocumentedException fails while compiling Experimental source; its complete semantic diagnostic list contains the same four errors, all in DynamicRacingAlgorithm. There are no semantic diagnostics in the two migrated algorithms. This is source-level evidence, not a green Experimental build, successful layer validation or runtime proof of the new cases.
+- The focused Experimental test command stops during dependency compilation at those four errors and runs no tests. M2i's eight new cases, M2j's four new cases and existing Experimental algorithm regressions await normal-project compilation.
+- The normal Release solution build and API usage test command stop at the same four Experimental errors. API usage specs run no tests. Later consumer compilation and final scenario/integration validation remain pending.
+- Whole-solution whitespace verification, style verification at warning severity, analyzer verification at error severity and `git diff --check` pass. Format tools report workspace-loading warnings, limiting assurance for unbuildable consumers.
+- Logs are under ignored `artifacts/execution-factory/m2j-*`. All checks use normal projects and actual library sources; no temporary source selection or alternate runtime implementation is used. M2j stays unstaged and uncommitted. The post-M2i-commit index SHA256 is `3EB9B0A01FC9C437D382111A87AB55705B04E163FDBB51B412E60395526CCDC8`; `.claude/settings.local.json` remains untouched.
+
+Commands:
+
+```text
+dotnet build src/HeuristicLib.Experimental/HeuristicLib.Experimental.csproj --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Experimental.csproj --configuration Release --no-restore --filter-class '*GeneticAlgorithmFactoryTests'
+```
+
+Stop for M2j review. The next proposed package migrates DynamicRacingAlgorithm, its nested performance evaluator and its deferred contenders. Prepare persistent performance statistics and stable generated configurations once, bind interceptors and direct children per context, and preserve deferred contender ownership and invocation-local progress. Remaining test/API usage/scenario consumers, subscription lifecycle work, selector/advice work and C4 remain later work. Dynamic Racing and later consumers are not changed here.
+
+### M2k Dynamic Racing review record, 2026-10-03
+
+M2j was reviewed and committed as `e692802c`. The user authorized the Dynamic Racing package and requested squashing the small migration checkpoints into one `migrate` commit after the migration part is complete; see the pending history-cleanup note above. No history rewrite is performed here.
+
+Scope and ownership:
+
+- DynamicRacingAlgorithm implements the common scope-free `CreateIterationFactory`. Its existing ExecutionState is prepared once, preserving the incumbent, incumbent algorithm configuration, hall of fame and completed race/epoch counters across contextual bindings and separating independent roots.
+- The returned factory binds the optional interceptor, meta creator and meta mutator and passes its construction frame to the execution for deferred contender construction. The frame is binding-local; shared state retains no resolved child or scope.
+- PerformanceTrackingEvaluator returns the named common execution factory and resolves its child evaluator within the requesting context. Its performance observer remains explicitly owned by one contender Entry, including when a completed contender iterator is restarted.
+- Contender creation and iterator restart retain fresh child scopes with per-contender wrapper registrations. No scope is added to shared state and no global performance observer is introduced. Race entries, performance models, event handlers, active contender iterators, random inputs and progress remain activation/invocation-local; winner selection, burn-in, early termination, hall-of-fame logic and merger behavior are unchanged.
+- Two new cases cover one/two contenders, one-generation contender restarts, a prebound shared contender, preserved incumbent/burn-in state across rebinding, independent roots, contextual evaluator/interceptor counts and resuming an outer iterator after a child binding is used. These cases are authored but have not compiled or run; normal Experimental test compilation stops in older fixture declarations.
+
+Validation:
+
+- The preceding checkpoint has four Experimental production errors, all in Dynamic Racing. The normal Release Experimental library build succeeds with zero errors and 41 warnings, including existing Experimental warnings and unused event-handler-parameter warnings in M2i. No production compatibility shim is added. A source scan finds no active retired execution-creation hooks in `src`; the only match is the entirely commented-out Swap2Neighborhood file.
+- The full normal core suite passes all 2,476 cases, with no failures or skips, including the previously blocked source-level layer check. This proves the migrated production sources compile semantically and the existing core suite passes; it does not supply runtime proof for the pending Experimental cases.
+- The normal Experimental test project build reports six errors in AccumulatingAnalyzerTests.SketchEvaluator, AlgorithmRefinementTests.CountingRefiner and DynamicAnalysisTests.BatchEvaluationAlgorithm. The focused DynamicRacingFactoryTests command stops at the same declaration failures and runs no tests. The fourteen new Experimental cases from M2i/M2j/M2k and existing Experimental algorithm/dynamic lifetime cases still await normal-project test compilation.
+- The normal solution build reports 28 declaration errors: six in Experimental tests, eighteen in API usage specs and four in the scenario CycleAlgorithmAnalysisScenarios fixture. These consumers remain outside this package; later compiler phases may expose additional callers once those declarations are migrated. Integrated Experimental, API usage, scenario and C4 validation remain pending.
+- Whole-solution whitespace verification, style verification at warning severity, analyzer verification at error severity and `git diff --check` pass. Format tools report workspace-loading warnings, limiting assurance for unbuildable test consumers.
+- Logs are under ignored `artifacts/execution-factory/m2k-*`. All checks use normal projects and actual library sources. No temporary source selection or alternate runtime implementation is used. M2k remains unstaged and uncommitted; the post-M2j-commit index SHA256 is `B7C3166E741EDE0A085F9CD26D2DF81AD5A18555C629F12609D1E416862C528C`. `.claude/settings.local.json` remains untouched.
+
+Commands:
+
+```text
+dotnet build src/HeuristicLib.Experimental/HeuristicLib.Experimental.csproj --configuration Release --no-restore
+dotnet build test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Experimental.csproj --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore
+dotnet build --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Experimental.csproj --configuration Release --no-restore --filter-class '*DynamicRacingFactoryTests'
+```
+
+Stop for M2k review. The next proposed package migrates the remaining Experimental test fixtures and callers, then runs the normal Experimental suite including all new factory and dynamic lifetime cases. API usage specs and the scenario fixture follow as separate consumer packages. Complete migration validation precedes the requested history squash. Subscription lifecycle work, selector/advice work and C4 remain later work.
+
+### M2l Experimental test consumers review record, 2026-10-03
+
+M2k was reviewed and committed as `b2d9a87f`. The user authorized the next bounded package: remaining Experimental test fixtures and callers, followed by normal-project validation of the pending factory and lifetime cases. API usage specs and the scenario fixture remain separate consumer packages.
+
+Scope:
+
+- AccumulatingAnalyzerTests.SketchEvaluator and AlgorithmRefinementTests.CountingRefiner expose the typed execution factory. Their scoring/refinement operations and existing counter probe are unchanged.
+- DynamicAnalysisTests.BatchEvaluationAlgorithm returns a factory that resolves its evaluator inside the requesting context; batching, iteration and progress assertions are unchanged.
+- The Experimental test project imports Instrumentation for CountAccumulator. GeneticAlgorithmFactoryTests imports interceptor instrumentation extensions, and DynamicRacingFactoryTests imports evaluator/interceptor instrumentation extensions. Normal compilation exposed these missing imports once the retired fixture declarations were migrated.
+- No assertions are weakened, no tests are skipped and no new tests are added in this package. Production code, API usage specs and scenario fixtures are unchanged. A source scan finds no retired creation hooks in Experimental test sources.
+
+Validation:
+
+- The initial normal Experimental test build advances past the six old declaration errors and exposes eleven missing CountAccumulator import errors, followed by four missing role-instrumentation extension import errors. After the import fixes, the normal Release test project builds with zero errors and 21 warnings.
+- The focused factory-class run passes all eleven cases from MoveExecutionFactoryTests, CompositeExecutionFactoryTests, GeneticAlgorithmFactoryTests and DynamicRacingFactoryTests.
+- The focused DynamicEvaluationCacheTest run passes all thirteen cases, including the three new dynamic rebinding cases and both existing weak-reference lifetime cases. Lifetime assertions and collection helpers are unchanged.
+- The full normal Experimental suite passes all 192 cases, with no failures or skips. All fourteen previously pending factory regressions from M2i/M2j/M2k have compiled and run against the actual library. Existing generation-budget, refinement, dynamic analysis and Experimental usage cases pass as part of that suite.
+- The normal solution build reports 22 remaining declaration errors: eighteen in API usage specs and four in CycleAlgorithmAnalysisScenarios. Experimental compilation is no longer a blocker. Later compiler phases may expose additional API usage/scenario callers after those declarations migrate; final solution, API usage and scenario runtime validation remain pending.
+- M2k's full normal core run passed all 2,476 cases; core production and tests are unchanged in this package, so that suite is not repeated here.
+- Whole-solution whitespace verification, style verification at warning severity, analyzer verification at error severity and `git diff --check` pass. Format tools report workspace-loading warnings, limiting assurance for the remaining unbuildable consumer projects.
+- Logs are under ignored `artifacts/execution-factory/m2l-*`. All runtime results use normal projects and actual production sources, without source selection or temporary alternative implementations. M2l remains unstaged and uncommitted. The post-M2k-commit index SHA256 is `2CB51CEBC328899FDC529650E9CE25C3B1873F225546A93FCD1506F14A9BF39C`; `.claude/settings.local.json` is untouched.
+
+Commands:
+
+```text
+dotnet build test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Experimental.csproj --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Experimental.csproj --configuration Release --no-restore --no-build --filter-class '*FactoryTests'
+dotnet test --project test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Experimental.csproj --configuration Release --no-restore --no-build --filter-class '*DynamicEvaluationCacheTest*'
+dotnet test --project test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Experimental.csproj --configuration Release --no-restore
+dotnet build --configuration Release --no-restore
+```
+
+Stop for M2l review. The next proposed package migrates API usage authoring fixtures and direct creation calls, then runs the normal API usage suite. The scenario fixture follows as the last identified consumer package. Complete migration validation precedes the requested history squash; the reminder remains active. Subscription lifecycle work, selector/advice work and C4 remain later work.
+
+### M2m API usage consumers review record, 2026-10-03
+
+M2l was reviewed and committed as `21eaff60`. The user authorized the API usage migration package. The remaining scenario fixture and final migration validation follow separately; the history-squash reminder remains active.
+
+Scope:
+
+- NodeSelectionSpecs.NamedMutator implements `CreateWrapperFactory` returning the named `WrapperExecutionFactory`. Its factory returns the supplied child execution unchanged, preserving the naming example's shared-child identity assertions. Selection semantics and selector/resolver integration are unchanged.
+- Six forwarding configurations in OperatorAuthoringSpecs return typed execution factories: evaluator, selector, replacer, interceptor, terminator and crossover. Child resolution happens inside each returned factory. Their operations and execution bases are unchanged.
+- Eight direct retired-creation calls in evaluator, replacer, interceptor and terminator topology specs use canonical `ResolutionScope.Resolve` instead. Each retains its independently created scope and original operation inputs and assertions.
+- Existing named topology factory examples and ordinary stateful leaf hooks were already migrated and remain unchanged. No API usage setup or assertions are removed, weakened or skipped. No production or scenario source is changed; a source scan finds no retired execution-creation hooks in the API usage project.
+
+Validation:
+
+- The normal Release API usage project builds with zero errors and 43 warnings across dependencies and specs. All 193 normal API usage specs pass, with no failures or skips, including authoring, topology, node selection and usage flows.
+- The normal solution build reports four remaining declaration errors, all in CycleAlgorithmAnalysisScenarios.SingleStepAlgorithm. API usage and Experimental consumers compile. Later scenario compiler phases may expose additional callers after that declaration migrates; final solution and scenario runtime validation remain pending.
+- M2k's full normal core run passed all 2,476 cases and M2l's full Experimental run passed all 192 cases. Those projects and production sources are unchanged here, so the suites are not repeated in this package.
+- Whole-solution whitespace verification, style verification at warning severity, analyzer verification at error severity and `git diff --check` pass. Format tools report workspace-loading warnings, limiting assurance for the remaining unbuildable scenario project.
+- Logs are under ignored `artifacts/execution-factory/m2m-*`. All results use normal projects and actual library sources, without source selection or alternative implementations. M2m remains unstaged and uncommitted. The post-M2l-commit index SHA256 is `B163EDAFF72394013CE42E40022C786DF718049EF84D94045B7BB5E6699186EC`; `.claude/settings.local.json` remains untouched.
+
+Commands:
+
+```text
+dotnet build test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore
+dotnet build --configuration Release --no-restore
+```
+
+Stop for M2m review. The next proposed package migrates CycleAlgorithmAnalysisScenarios.SingleStepAlgorithm and any scenario callers exposed by compilation, then performs final migration validation through the normal solution and scenario suite. Complete migration validation precedes the requested squash of the small migration commits into one `migrate` commit. Subscription lifecycle work, selector/advice work and C4 remain later work.
+
+### M2n Scenario consumer and final migration validation review record, 2026-10-03
+
+M2m was reviewed and committed as `64fb4ed3`. The user authorized the remaining scenario fixture and final migration checks. The migration is complete at this review checkpoint; history cleanup remains pending review/commit of M2n.
+
+Scope:
+
+- CycleAlgorithmAnalysisScenarios.SingleStepAlgorithm returns a common typed execution factory and resolves its evaluator and interceptor in the requesting context. Its operation, streaming loop, inputs and assertions are unchanged; it owns no mutable persistent data to extract.
+- No additional scenario consumers are exposed by normal compilation. The source scan over `src`, `test`, `samples` and `docs` finds no active retired execution-creation hooks. Remaining textual matches are the entirely commented-out Swap2Neighborhood file and architecture assertions forbidding the retired API.
+- No production source, test assertions, skips or external-prerequisite checks change. The full solution validation runs against actual projects and library sources.
+
+Validation:
+
+- Normal solution restore succeeds with all projects up to date. The normal Release solution build succeeds with zero errors and 93 warnings. All samples and consumers included in the solution compile.
+- The focused CycleAlgorithmAnalysisScenarios run passes both cases, preserving analyzer observations with fresh and retained child scopes.
+- The complete normal Release solution test run passes all 2,885 cases across core, Experimental, API usage and scenarios, with zero failures and zero reported skips. This includes the previously pending factory, dynamic lifetime, authoring and scenario checks. The four projects each report success; the complete run takes about 30 seconds.
+- AutoEcPaperScenarioTests.DynamicRacingGa_OnActivatedTsp_UsesPaperLikeScenario retains its pre-existing early return when local `eil51.tsp`/Concorde files are absent. Those prerequisites are absent along its lookup path, so the passing suite does not prove that external-tool workflow ran. The in-memory Dynamic Racing cases and Moving Peaks paper scenario execute in the normal suite. C4 performance/final acceptance evidence remains separate.
+- Whole-solution whitespace verification, style verification at warning severity, analyzer verification at error severity and `git diff --check` pass. Format tools still report workspace-loading warnings; the normal solution build and complete runtime suite supply the compilation/runtime evidence independently.
+- Logs are under ignored `artifacts/execution-factory/m2n-*`. No source selection or alternate runtime implementation is used. M2n remains unstaged and uncommitted. The post-M2m-commit index SHA256 is `01C94C3CB2EFAFED41F4C5768EB8590749BB054B063C345FCB0B6D11F908623B`; `.claude/settings.local.json` remains untouched.
+
+Commands:
+
+```text
+dotnet restore
+dotnet build --configuration Release --no-restore
+dotnet test --project test/HeuristicLib.Tests.Scenarios/HeuristicLib.Tests.Scenarios.csproj --configuration Release --no-restore --no-build --filter-class '*CycleAlgorithmAnalysisScenarios'
+dotnet test --configuration Release --no-restore
+```
+
+Stop for M2n review. After review and commit, perform the requested squash of the migration range described above into one coherent `migrate` commit, with a recoverable backup and verified tree equality. No squash or later design work starts here. Subscription lifecycle work, selector/advice work and C4 remain outstanding after migration cleanup.
 
 ### Documentation and enforcement changes with implementation
 

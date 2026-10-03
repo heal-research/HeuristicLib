@@ -113,7 +113,6 @@ public class NodeSelectionSpecs
 
         public string Name { get; init; }
 
-        protected override IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(
-            IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childMutator) => childMutator;
+        protected override WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() => childMutator => childMutator;
     }
 }

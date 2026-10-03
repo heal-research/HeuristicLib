@@ -457,7 +457,7 @@ Use more specific terms when the context benefits from them:
 
 Related terms:
 
-- `Definition`: `Legacy`. Older docs may use definition for the reusable configured object graph. Prefer configuration in new text.
+- `Definition`: `Legacy`. Use configuration for the reusable configured object graph.
 
 See also: Algorithm, Execution node, Operator, Run.
 
@@ -469,7 +469,11 @@ A configuration node is a configuration considered as a node in the configuratio
 
 Configuration is accepted shorthand for configuration node when the context is clear. Use node when graph membership needs emphasis, or a role-specific term such as mutator when the role is known. The common interface is `IConfigurationNode`, including its generic form. Role-specific configuration names such as `IOperator` and `IMutator` do not acquire a `Node` suffix.
 
-The generic `IConfigurationNode<TExecution>` prepares an `ExecutionFactory<TExecution>` through `CreateExecutionFactory()`. The factory binds typed nodes to a resolution context; it is runtime machinery, not a configuration value strategy. Run-typed role contracts are migrating separately.
+The generic `IConfigurationNode<TExecution>` prepares an `ExecutionFactory<TExecution>` through `CreateExecutionFactory()`. Core run-typed roles expose the same preparation method with their run type parameters. This factory receives a construction scope and binds a typed execution node to its resolution context; it is runtime machinery, not a configuration value strategy.
+
+Wrapping and multi bases centralize preparation through `CreateWrapperFactory` and `CreateCompositeFactory`. Their returned `WrapperExecutionFactory<TExecution>` and `CompositeExecutionFactory<TExecution>` receive one resolved child or an ordered immutable array of children. The children and result share the same execution role interface.
+
+Iterative algorithm bases centralize preparation through `CreateIterationFactory`. Its returned `ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>>` receives a construction scope. The algorithm author resolves the optional interceptor and other declared children through that scope and passes them to the iterative execution constructor.
 
 The term does not imply a common child-enumeration API or a universal operation on all nodes.
 
@@ -489,13 +493,11 @@ See also: Configuration, Execution graph.
 
 Status: `Provisional`
 
-A node selector is a rule for selecting algorithm or operator configurations in a configuration graph. The first `NodeSelector<TConfiguration>` API supports matching individual supplied configurations; integration with attached behavior is planned.
+A node selector is a rule for selecting algorithm or operator configurations in a configuration graph. `NodeSelector<TConfiguration>` matches individual supplied configurations.
 
-The current forms select by configuration reference or assignable type, including role interfaces. Selectors with the same declared configuration type or role compose by union (`Or`, `|`) or intersection (`And`, `&`). `And(predicate)` intersects with a selector constructed from the typed configuration predicate. Composition creates a new definition without changing its operands or evaluating predicates; matching evaluates predicates from left to right only as needed. A node matching several union branches still matches once. The selector does not traverse a graph or resolve execution nodes. Combinations across different roles remain deferred.
+Selectors match by configuration reference or assignable type, including role interfaces. Selectors with the same declared configuration type or role compose by union (`Or`, `|`) or intersection (`And`, `&`). `And(predicate)` intersects with a selector constructed from the typed configuration predicate. Composition creates a new definition without changing its operands or evaluating predicates; matching evaluates predicates from left to right only as needed. A node matching several union branches still matches once. The selector does not traverse a graph or resolve execution nodes.
 
-The agreed integration design selects source configuration nodes. Wrappers introduced by wrapper are not additional selection targets, even when the wrapper machinery represents them as configurations. Explicit wrappers in the source configuration graph remain selectable nodes. Multiple modules select the same source independently and compose their behavior using the wrapper order; they do not select each other's generated wrappers. Resolver integration enforcing this boundary is planned.
-
-A selected configuration can be referenced by several callers and resolved into more than one execution node. Selecting that configuration does not select one caller path or one invocation. Nesting selection is separate deferred work.
+A selected configuration can be referenced by several callers and resolved into more than one execution node. Selecting that configuration does not select one caller path or one invocation.
 
 See also: Configuration, Configuration graph, Execution node, Execution module, Resolution scope.
 
@@ -545,7 +547,7 @@ See also: Configuration node, Execution graph, Execution state, Run.
 
 Status: `Legacy`
 
-The former term for an execution node. Prefer execution node or a role-specific form such as mutator execution. Object-returning creation methods temporarily retain `CreateExecutionInstance`, `WrapExecutionInstance` and `CombineExecutionInstances` until the separately reviewed typed-factory migration; references to those methods must use their actual names.
+A legacy alias for execution node. Use execution node or a role-specific form such as mutator execution.
 
 See also: Execution node.
 
@@ -555,7 +557,7 @@ Status: `Canonical`
 
 Execution state is private mutable data used by an execution node, such as counters, caches and buffers. It must not be shared through the reusable configuration.
 
-Under the typed factory contract, persistent state belongs to the selected logical execution and survives reconstruction of its nodes. Resolved children and construction frames belong to each binding; iterator progress and local timers belong to an invocation. Framework-managed leaf state cannot contain graph dependencies. Built-in role implementations are still migrating to this separation.
+Under the typed factory contract, persistent state belongs to the selected logical execution and survives reconstruction of its nodes. Resolved children and construction frames belong to each binding; iterator progress and local timers belong to an invocation. Framework-managed leaf state cannot contain graph dependencies.
 
 Use `ExecutionState` for an authored private state holder and `state` for its local variable or parameter when the context is clear.
 
@@ -581,7 +583,7 @@ A resolution scope resolves configurations to execution nodes during a run.
 
 The scope selects persistent execution state by configuration reference and obtains nodes bound to an observation context. Internally, sharing scopes determine state reuse, preparations retain factories and chosen dependencies, and execution bindings construct the callable nodes. A typed factory receives a construction frame that preserves its selected child identities while applying the requesting context's observations. Fresh child scopes create new local domains; retained child scopes preserve a domain under a stable reference key. Wrappers are snapshotted from a `ResolutionScopeBuilder` before resolution.
 
-The common factory and resolver implement this model; role interfaces and authoring bases are still migrating. See [execution resolution](/contributing/architecture/execution-resolution) for the current cutover boundary.
+See [execution resolution](/contributing/architecture/execution-resolution) for preparation, binding and observation rules.
 
 See also: Configuration, Wrapper chain, Execution graph, Execution node, Execution module, Run.
 
@@ -589,7 +591,7 @@ See also: Configuration, Wrapper chain, Execution graph, Execution node, Executi
 
 Status: `Canonical`
 
-A wrapper registration adds a recipe for wrapping a selected source configuration's execution. `ResolutionScopeBuilder.Wrap` currently selects one source by reference. The recipe receives the original source configuration, even when other wrappers also apply.
+A wrapper registration adds a recipe for wrapping a selected source configuration's execution. `ResolutionScopeBuilder.Wrap` selects one source by reference. The recipe receives the original source configuration, even when other wrappers also apply.
 
 One registration keeps its own prepared wrapper state for each selected execution, across observation contexts. Two registrations are separate contributions even when their recipes are equal. An execution module groups registrations through `Install`. Wrappers can observe operations or add other typed behavior; observation retains its narrower read-only meaning.
 

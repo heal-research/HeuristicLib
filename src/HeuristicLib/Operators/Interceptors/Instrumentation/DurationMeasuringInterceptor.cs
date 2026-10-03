@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -24,8 +25,8 @@ public sealed record DurationMeasuringInterceptor<TCandidate>
         TimeProvider = timeProvider;
     }
 
-    protected override IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> WrapExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childInterceptor) =>
-        new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor, Duration, TimeProvider);
+    protected override WrapperExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
+        childInterceptor => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor, Duration, TimeProvider);
 
     private sealed class Execution<TSearchSpace, TProblem, TSearchState>(IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, DurationAccumulator duration, TimeProvider timeProvider)
         : WrappingInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptor)

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -18,8 +19,8 @@ public sealed record CountingCrossover<TCandidate>
         Metric = metric;
     }
 
-    protected override ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> childCrossover) =>
-        new Execution<TRunSearchSpace, TRunProblem>(childCrossover, Counter, Metric);
+    protected override WrapperExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        childCrossover => new Execution<TRunSearchSpace, TRunProblem>(childCrossover, Counter, Metric);
 
     private sealed class Execution<TSearchSpace, TProblem>(ICrossoverExecution<TCandidate, TSearchSpace, TProblem> childCrossover, CountAccumulator counter, OperatorCountMetric metric)
         : WrappingCrossoverExecution<TCandidate, TSearchSpace, TProblem>(childCrossover)
