@@ -213,6 +213,72 @@ public sealed class DeferredAlgorithmFactoryTests
         observedCalls.CurrentCount.ShouldBe(1);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OperatorBudget_RebindingKeepsClockBeforeTraceAndExcludesObservationDuration(bool measureDuration)
+    {
+        var clock = new ManualClock();
+        var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
+        var calls = new MutationCallClock(algorithm.Mutator);
+        var trace = Analyzer.Trace(algorithm.Mutator, observation =>
+        {
+            clock.Advance(10);
+            return observation.Offspring[0];
+        }, clocks: [calls]);
+        var count = new CountAccumulator();
+        var duration = new DurationAccumulator();
+        var declarations = 0;
+        IAlgorithm<int, ProbeState> budget = measureDuration
+            ? new OperatorDurationBudgetAlgorithm<int, ProbeState, IMutator<int>>
+            {
+                Algorithm = algorithm,
+                ObservedOperator = algorithm.Mutator,
+                MaximumDuration = TimeSpan.FromSeconds(3),
+                TimeProvider = clock,
+                MeasuredOperatorFactory = (source, accumulator, timeProvider) =>
+                {
+                    declarations++;
+                    duration = accumulator;
+                    return source.MeasureDuration(accumulator, timeProvider);
+                }
+            }
+            : new OperatorBudgetAlgorithm<int, ProbeState, IMutator<int>>
+            {
+                Algorithm = algorithm,
+                ObservedOperator = algorithm.Mutator,
+                MaximumCount = 3,
+                CountedOperatorFactory = (source, accumulator) =>
+                {
+                    declarations++;
+                    count = accumulator;
+                    return source.CountCalls(accumulator);
+                }
+            };
+        var root = ResolutionScope.Create(builder => trace.Install(builder));
+        await using var paused = Resolve(root, budget).RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+            .GetAsyncEnumerator(TestContext.Current.CancellationToken);
+        (await paused.MoveNextAsync()).ShouldBeTrue();
+        var observed = 0;
+        var child = root.CreateChildScope(builder => builder.Observe(algorithm.Mutator, _ =>
+        {
+            observed++;
+            clock.Advance(20);
+        }));
+
+        (await Run(Resolve(child, budget))).Count.ShouldBe(2);
+        (await paused.MoveNextAsync()).ShouldBeFalse();
+
+        trace.By(calls).Select(point => point.Time).ShouldBe([1L, 2L, 3L]);
+        trace.By(calls).Select(point => point.Value).ShouldBe([1, 1, 2]);
+        observed.ShouldBe(2);
+        declarations.ShouldBe(1);
+        if (measureDuration)
+            duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        else
+            count.CurrentCount.ShouldBe(3);
+    }
+
     [Fact]
     public async Task StateTermination_RebindingSharesTheLimitAndObservesContextualChecks()
     {
@@ -324,10 +390,17 @@ public sealed class DeferredAlgorithmFactoryTests
         private long timestamp;
         public override long TimestampFrequency => TimeSpan.TicksPerSecond;
         public override long GetTimestamp() => timestamp;
-        public void Advance()
+        public void Advance(int seconds = 1)
         {
-            timestamp += TimeSpan.TicksPerSecond;
+            timestamp += seconds * TimeSpan.TicksPerSecond;
         }
+    }
+
+    private sealed class MutationCallClock(IMutator<int> mutator) : Clock<long>
+    {
+        private long calls;
+        protected override long ReadTime() => calls;
+        public override void Install(ResolutionScopeBuilder builder) => builder.Observe(mutator, _ => calls++);
     }
 
     private sealed record PassThroughMutator : StatelessMutator<int>

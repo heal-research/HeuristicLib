@@ -102,6 +102,8 @@ public sealed class ResolutionScope
 
     /// <summary>Resolves the wrapped operation and projects an optional control from the same source's raw binding.</summary>
     /// <remarks>
+    /// Role wrappers need not implement the source's additional control interfaces. Projecting from the raw binding
+    /// keeps observations from hiding those controls while operations still use the completed wrapper chain.
     /// The selector runs only after complete resolution succeeds. It must be a side-effect-free projection of an
     /// operation-free control. Invoke operations through the returned wrapped execution. Configured wrappers expose
     /// their own control deliberately; this overload does not search or unwrap their children.

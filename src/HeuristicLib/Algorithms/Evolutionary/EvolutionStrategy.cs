@@ -1,7 +1,7 @@
-using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -38,7 +38,11 @@ public record EvolutionStrategy<TCandidate>
         scope =>
         {
             var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>();
-            return new Execution<TRunSearchSpace, TRunProblem>(typed.ResolveOptional(Interceptor), typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Mutator), typed.Resolve(Selector),
+            var interceptor = typed.ResolveOptional(Interceptor);
+            var evaluator = typed.Resolve(Evaluator);
+            var creator = typed.Resolve(Creator);
+            var mutator = typed.Resolve(Mutator, out IMutationStrengthControl? strength);
+            return new Execution<TRunSearchSpace, TRunProblem>(interceptor, evaluator, creator, mutator, strength, typed.Resolve(Selector),
                 typed.ResolveOptional(Crossover), typed.ResolveOptional(Refiner), PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
         };
 
@@ -47,6 +51,7 @@ public record EvolutionStrategy<TCandidate>
         IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator,
         ICreatorExecution<TCandidate, TSearchSpace, TProblem> creator,
         IMutatorExecution<TCandidate, TSearchSpace, TProblem> mutator,
+        IMutationStrengthControl? strength,
         ISelectorExecution<TCandidate, TSearchSpace, TProblem> selector,
         ICrossoverExecution<TCandidate, TSearchSpace, TProblem>? crossover,
         IRefinerExecution<TCandidate, TSearchSpace, TProblem>? refiner,
@@ -99,7 +104,7 @@ public record EvolutionStrategy<TCandidate>
 
             var evaluatedChildren = children.ToEvaluated(evaluator.Evaluate(children, random, problem.SearchSpace, problem));
 
-            if (mutator is IAdaptableMutationStrengthExecution<TCandidate, TSearchSpace, TProblem> adaptableMutator)
+            if (strength is not null)
             {
                 // The rate is over the parent/child pairs actually compared, which is the number of children rather
                 // than the population size; the two differ whenever the strategy is configured with more or fewer
@@ -108,7 +113,7 @@ public record EvolutionStrategy<TCandidate>
                 var successes = comparisons.Count(
                     pair => pair.Second.ObjectiveVector.CompareTo(pair.First, problem.Objective) == DominanceRelation.Dominates);
                 var successRate = comparisons.Length == 0 ? 0.0 : successes / (double)comparisons.Length;
-                adaptableMutator.CurrentMutationStrength *= successRate switch
+                strength.CurrentMutationStrength *= successRate switch
                 {
                     > 0.2 => 1.5,
                     < 0.2 => 1 / 1.5,

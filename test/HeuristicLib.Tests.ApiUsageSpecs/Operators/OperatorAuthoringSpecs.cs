@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Instrumentation;
@@ -22,6 +23,25 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Operators;
 
 public class OperatorAuthoringSpecs
 {
+    [Fact]
+    public void AdaptiveMutator_ProjectsStrengthControlAndInvokesTheObservedExecution()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        var gaussian = new GaussianMutator(1.0, 3.0);
+        IMutator<RealVector> mutator = gaussian;
+        var observedCalls = 0;
+        var scope = ResolutionScope.Create(builder => builder.Observe(mutator, _ => observedCalls++));
+        var execution = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator, out IMutationStrengthControl? strength);
+        strength.ShouldNotBeNull();
+        strength.CurrentMutationStrength = 0.0;
+
+        var offspring = execution.Mutate([RealVector.Repeat(1.0, 3)], RandomNumberGenerator.Create(12), problem.SearchSpace, problem);
+
+        offspring.ShouldBe([RealVector.Repeat(1.0, 3)]);
+        observedCalls.ShouldBe(1);
+        gaussian.MutationStrength.ShouldBe(3.0);
+    }
+
     [Fact]
     public void StatelessMutator_AuthoringExample_UsesConfigurationAndExplicitInputs()
     {

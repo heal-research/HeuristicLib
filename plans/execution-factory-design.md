@@ -454,7 +454,7 @@ A wrapper which keeps its own mutable counter moves it into preparation, just li
 
 ## 7. Specialized capabilities
 
-Handwritten role wrappers cannot automatically implement an unknown extra interface. The existing observing mutator already hides `IAdaptableMutationStrengthExecution`, disabling EvolutionStrategy's adaptation. The factory itself does not fix that. Do not claim arbitrary extra-interface preservation.
+At the initial design checkpoint, the observing mutator hid `IAdaptableMutationStrengthExecution`, disabling EvolutionStrategy's adaptation. Handwritten role wrappers cannot automatically implement an unknown extra interface, and the execution factory alone does not fix that. Do not claim arbitrary extra-interface preservation.
 
 Propose separating the existing strength control from `Mutate` into an operation-free interface, provisionally `IMutationStrengthControl`, with `double CurrentMutationStrength { get; set; }`. GaussianMutator's raw leaf offers this control over its persistent data. EvolutionStrategy stores two typed references: the wrapped `IMutatorExecution` for calls, and the control for adaptation. No operation is called through an unwrapped reference.
 
@@ -476,11 +476,15 @@ var mutator = scope.Resolve(Mutator,
     static source => source as IMutationStrengthControl, out var strength);
 ```
 
-The result and control use the same pinned execution preparation and context; the selector runs on its cached raw binding after complete resolution succeeds. It must be a side-effect-free projection, not a second construction hook. This is explicit construction-time projection of one requested source, not an ambient type-keyed service lookup. Do not multiply every role extension over controls; advanced authors can use this generic form, while normal `typed.Resolve` is unchanged.
+The result and control use the same pinned execution preparation and context; the selector runs on its cached raw binding after complete resolution succeeds. It must be a side-effect-free projection, not a second construction hook. This is explicit construction-time projection of one requested source, not an ambient type-keyed service lookup. Do not multiply every role extension over controls; advanced authors can use this generic form.
+
+Decision, 2026-10-05: the user approved `typed.Resolve(Mutator, out IMutationStrengthControl? strength)` after reviewing the concrete EvolutionStrategy consumer. A mutator-specific typed `Resolve<TControl>` convenience overload hides preparation wiring and projects the requested operation-free control with a null result for an absent capability. It delegates to the same advanced projection implementation, preserving pinned selection, complete-binding failure behavior and observations. The generic projection remains available for consumer-defined bundles; no other role overloads are added without a concrete use case.
 
 Generated observations preserve access to that source control without implementing its interface. Explicit configured wrappers do not automatically inherit their child's control: they must deliberately expose a suitable control from their own raw binding, or report none. Automatic unwrapping could adapt the wrong child of a multi-operator composition. A consumer-defined control participates identically. Extra capabilities which themselves execute work need a declared typed role/adapter and observation semantics; they cannot be projected as an unobserved shortcut.
 
-This overload, control separation and configured-wrapper policy are a review point, not a settled feature. C2 must prove inference at this exact call site, optional absence, custom consumer controls and the child-first collision. If rejected, supply a concrete typed alternative before claiming capability preservation or rolling out the new resolver.
+Decision rationale confirmed by the user, 2026-10-05: control projection protects algorithm behavior from generated observation wrappers that hide source capability interfaces. Returning to an `is` check on the completed execution alone would reintroduce that limitation with the current wrappers. The separate operation-free control and wrapped operation are intentional: adaptation reaches the selected source state, and mutation remains observed. Projection is an explicit capability-preservation mechanism, not merely alternative API spelling. It also avoids requiring every generated wrapper to forward every known and consumer-defined control. Explicit configured wrappers retain their own capability boundary; no arbitrary child unwrapping is approved. The exact public convenience surface can be reconsidered independently of this mechanism.
+
+At the initial design checkpoint, this overload, control separation and configured-wrapper policy were review points. The C2 proofs and M3 integration records provide the subsequent evidence for inference, optional absence, custom consumer controls and the child-first collision.
 
 ## 8. Failures, iterators and resources
 

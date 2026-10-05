@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using HEAL.HeuristicLib.Algorithms.AutoEC;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.RealVectors;
@@ -131,33 +132,35 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
                 return ExecuteBurnInStep(previousState, problem, random);
 
             var entries = new List<Entry>(noRacers);
-            entries.Add(CreateEntry(state.Incumbent, state.IncumbentAlgorithm, previousState, problem, random));
-            for (var i = 1; i < noRacers; i++)
-            {
-                var challenger = CreateChallenger(state.Incumbent, random);
-                entries.Add(CreateEntry(challenger, entries[0].Algorithm, previousState, problem, random));
-            }
-
-            var raceEnded = false;
+            Exception? failure = null;
+            TSearchState? nextState = null;
             try
             {
-                problem.OnEpochChange += OnEpochChange;
-                while (!raceEnded)
+                entries.Add(CreateEntry(state.Incumbent, state.IncumbentAlgorithm, previousState, problem, random));
+                for (var i = 1; i < noRacers; i++)
                 {
-                    var lowest = entries.MinBy(x => x.UsedCount);
-                    _ = lowest!.MakeMove(problem, random, CancellationToken.None);
-
-                    // MakeMove can raise OnEpochChange, which ends the race. Never overwrite that signal.
-                    raceEnded |= CanTerminateRace(entries, problem);
+                    var challenger = CreateChallenger(state.Incumbent, random);
+                    entries.Add(CreateEntry(challenger, entries[0].Algorithm, previousState, problem, random));
                 }
-            }
-            finally
-            {
-                problem.OnEpochChange -= OnEpochChange;
-            }
 
-            try
-            {
+                var raceEnded = false;
+                try
+                {
+                    problem.OnEpochChange += OnEpochChange;
+                    while (!raceEnded)
+                    {
+                        var lowest = entries.MinBy(x => x.UsedCount);
+                        _ = lowest!.MakeMove(problem, random, CancellationToken.None);
+
+                        // MakeMove can raise OnEpochChange, which ends the race. Never overwrite that signal.
+                        raceEnded |= CanTerminateRace(entries, problem);
+                    }
+                }
+                finally
+                {
+                    problem.OnEpochChange -= OnEpochChange;
+                }
+
                 var winner = SelectWinner(entries, problem.Objective);
                 state.Incumbent = entries[winner].Candidate;
                 state.IncumbentAlgorithm = entries[winner].Algorithm;
@@ -165,15 +168,36 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
                 state.CompletedEpochs++;
                 RecordSuccess(state.Incumbent);
 
-                return stateMerger.Merge(entries.Select(x => x.LastState!).ToArray(), problem.Objective);
+                nextState = stateMerger.Merge(entries.Select(x => x.LastState!).ToArray(), problem.Objective);
+
+                void OnEpochChange(object? sender, int epoch) => raceEnded = true;
             }
-            finally
+            catch (Exception exception)
             {
-                foreach (var entry in entries)
-                    entry.Dispose();
+                failure = exception;
             }
 
-            void OnEpochChange(object? sender, int epoch) => raceEnded = true;
+            List<Exception> cleanupFailures = [];
+            foreach (var entry in entries)
+            {
+                try
+                {
+                    entry.Dispose();
+                }
+                catch (Exception exception)
+                {
+                    cleanupFailures.Add(exception);
+                }
+            }
+            if (cleanupFailures.Count > 0)
+            {
+                if (failure is not null)
+                    cleanupFailures.Insert(0, failure);
+                throw new AggregateException("Failed to dispose racing contenders.", cleanupFailures);
+            }
+            if (failure is not null)
+                ExceptionDispatchInfo.Capture(failure).Throw();
+            return nextState!;
         }
 
         private TSearchState ExecuteBurnInStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random)
@@ -330,7 +354,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     {
         private readonly IEvaluator<TCandidate> evaluator;
         private readonly PerformanceTrackingEvaluatorObserver performanceObserver;
-        private IEnumerator<TSearchState> running;
+        private IEnumerator<TSearchState>? running;
 
         public Entry(TAlgorithm algorithm, IEvaluator<TCandidate> evaluator, MetaOptimizationGenotype candidate, TProblem problem, IRandomNumberGenerator random,
                      TSearchState? initialState, CancellationToken ct, ResolutionScope parentRegistry, int modelObservationInterval, Func<ObjectiveVector, double> objectiveValueSelector)
@@ -357,19 +381,25 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
         public TSearchState MakeMove(TProblem problem, IRandomNumberGenerator random, CancellationToken ct)
         {
-            if (!running.MoveNext())
+            var current = running ?? throw new InvalidOperationException("Contender execution has been disposed.");
+            if (!current.MoveNext())
             {
-                running.Dispose();
-                running = CreateEnumerator(problem, random, LastState, ct);
-                if (!running.MoveNext())
+                Dispose();
+                current = running = CreateEnumerator(problem, random, LastState, ct);
+                if (!current.MoveNext())
                     throw new InvalidOperationException("Algorithm cannot start or resume execution");
             }
 
-            LastState = running.Current;
+            LastState = current.Current;
             return LastState;
         }
 
-        public void Dispose() => running.Dispose();
+        public void Dispose()
+        {
+            var current = running;
+            running = null;
+            current?.Dispose();
+        }
 
         private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct)
         {

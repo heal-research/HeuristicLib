@@ -154,11 +154,13 @@ Return the most concrete accessible execution type that is useful to callers. A 
 
 Some specialized operators expose a configured starting value and a mutable current value on their execution node. Variable strength mutation is the current example:
 
-- `IVariableStrengthMutator.MutationStrength` is immutable reusable configuration.
-- `IAdaptableMutationStrengthExecution.CurrentMutationStrength` is mutable execution node data initialized from that configuration.
-- `EvolutionStrategy` adapts only the current value on the resolved execution.
+- `GaussianMutator.MutationStrength` is immutable reusable configuration.
+- `IMutationStrengthControl.CurrentMutationStrength` is mutable execution data initialized from that configuration. This control has no mutation operation.
+- `EvolutionStrategy` projects the optional control from its selected mutator's raw binding and invokes mutation through the wrapped execution. Generated observations preserve adaptation and report each mutation once. The control and operation retain the same selected logical state across rebinding.
 
 The same mutator configuration can therefore be reused for independent runs without one run changing another run's starting strength. This is a specialized contract, not a general convention that operator configuration properties become mutable on execution nodes.
+
+Checking the wrapped mutator with `is IMutationStrengthControl` is insufficient: an observation wrapper can implement the mutation role without implementing the source's additional control interface. Resolve the control separately so installing an observer does not disable adaptation, and keep mutation calls on the wrapped execution. See [Why controls are resolved separately](/contributing/architecture/execution-resolution#why-controls-are-resolved-separately) for binding identity and wrapper boundaries.
 
 ## Wrapping and multi operators
 

@@ -163,6 +163,23 @@ public partial class ExecutionFactoryResolutionTests
     }
 
     [Fact]
+    public void UnmatchedReferenceDeclaration_DoesNotObserveOrRepeatPreparation()
+    {
+        var preparations = 0;
+        var observed = 0;
+        IConfigurationNode<ICounterExecution> source = new CounterConfiguration("source", () => preparations++);
+        IConfigurationNode<ICounterExecution> other = new CounterConfiguration("other");
+        var scope = ResolutionScope.Create(builder => builder.Wrap(other, original => new CounterWrapper(original, _ => observed++)));
+
+        var execution = scope.Resolve(source);
+        execution.Next().ShouldBe(1);
+        scope.Resolve(source).ShouldBeSameAs(execution);
+        execution.Next().ShouldBe(2);
+        observed.ShouldBe(0);
+        preparations.ShouldBe(1);
+    }
+
+    [Fact]
     public void PredecessorOverride_DoesNotLeakIntoAnAdditionalChildFrame()
     {
         IConfigurationNode<ICounterExecution> leaf = new CounterConfiguration("leaf");

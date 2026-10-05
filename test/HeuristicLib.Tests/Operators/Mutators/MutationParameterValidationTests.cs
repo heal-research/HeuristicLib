@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
@@ -57,7 +58,7 @@ public sealed class MutatorParameterSemanticsTests
         var execution = ResolutionScope.Create()
             .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>()
             .Resolve(gaussian)
-            .ShouldBeAssignableTo<IAdaptableMutationStrengthExecution<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>>();
+            .ShouldBeAssignableTo<IMutationStrengthControl>();
 
         execution.CurrentMutationStrength = value;
 
