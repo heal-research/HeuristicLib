@@ -65,6 +65,17 @@ public static class MutatorResolutionExtensions
         public IMutatorExecution<TCandidate, TSearchSpace, TProblem> Resolve(IMutator<TCandidate> mutator) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(mutator);
 
+        /// <summary>Resolves the wrapped mutator and an optional control from the same selected raw binding.</summary>
+        /// <remarks>
+        /// Observation wrappers need not implement the source's control interfaces. Resolving the control separately
+        /// preserves access to it without bypassing the wrapped mutation operation.
+        /// Request an operation-free control and invoke mutation through the returned execution. The control is null
+        /// when the raw binding does not implement its type. Configured wrappers expose their own controls explicitly.
+        /// </remarks>
+        public IMutatorExecution<TCandidate, TSearchSpace, TProblem> Resolve<TControl>(IMutator<TCandidate> mutator, out TControl? control)
+            where TControl : class =>
+            scope.Scope.Resolve(mutator, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>(), static execution => execution as TControl, out control);
+
         public IMutatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IMutator<TCandidate>? mutator) =>
             mutator is null ? null : scope.Resolve(mutator);
 

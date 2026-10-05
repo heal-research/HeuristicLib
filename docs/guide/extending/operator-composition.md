@@ -360,11 +360,21 @@ See [Observability and analysis](/guide/execution/observability-and-analysis) fo
 
 ## Specialized execution node capabilities
 
-General wrappers and compositions currently preserve the operator role contract, but they do not automatically preserve additional execution node capabilities. In particular, wrapping or composing an `IVariableStrengthMutator` such as `GaussianMutator` currently exposes an ordinary `IMutatorExecution` at the outer boundary.
+General wrappers and compositions preserve the operator role contract. Additional controls belong to the selected configuration's raw execution. `GaussianMutator` exposes `IMutationStrengthControl`, which changes execution-scoped mutation strength without providing a mutation operation.
 
-`EvolutionStrategy` adapts mutation strength only when its resolved mutator execution implements `IAdaptableMutationStrengthExecution`. Placing an observable, counting, duration measuring or other general mutator wrapper around a variable strength mutator therefore currently disables that adaptation. The wrapped mutator continues to use its configured mutation strength.
+An observation wrapper can implement `IMutatorExecution` without implementing `IMutationStrengthControl`. An `is` check on the wrapped mutator would then hide the source's adaptation capability. Resolving the control separately lets an algorithm keep adapting the selected source while every mutation call passes through the observation wrapper. The control interface contains no mutation operation, so it supplies no alternative path for mutation calls to bypass observations.
 
-This is a known limitation. Avoid wrapping an adaptive mutator when the evolution strategy must retain mutation strength adaptation. A future design must preserve specialized run scoped capabilities through composition without requiring every general wrapper to contain role specific type checks.
+`EvolutionStrategy` projects this optional control during resolution and invokes mutation through the wrapped execution. Observations, counters and duration measurements installed with a resolution scope therefore preserve adaptation. Rebinding preserves the selected strength state while applying the requesting scope's observations to mutation calls.
+
+An algorithm author can request a control through its typed scope without supplying factory wiring:
+
+```csharp
+var mutator = typed.Resolve(Mutator, out IMutationStrengthControl? strength);
+```
+
+Use `mutator` for mutation and `strength`, when non-null, to read or update the selected execution's strength.
+
+An explicitly configured wrapper is a separate selected configuration. For example, assigning `gaussian.CountCalls(counter)` to `EvolutionStrategy.Mutator` exposes the counting wrapper's ordinary mutation role, so that configuration has no strength adaptation. A custom configured wrapper must deliberately expose `IMutationStrengthControl` if its own mutation behavior supports that control; the resolver does not search its children for additional capabilities.
 
 ## Randomness and execution nodes
 

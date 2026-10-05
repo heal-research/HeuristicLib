@@ -211,7 +211,21 @@ Generated wrappers are not additional wrapper targets. Explicit configured wrapp
 
 Additional wrapper dependencies are selected in a private sharing scope. Its parent is the deeper of the source and declaring sharing scopes when they are comparable; otherwise it is the declaring sharing scope. Existing ancestors can supply dependencies, but missing children stay private and their selections remain pinned.
 
-A source's operation-free control can be projected through the advanced `Resolve(..., selectControl, out control)` overload. The projection sees the same source's raw binding only after the full chain succeeds. Invoke operations through the returned wrapped execution. An explicit configured wrapper must deliberately expose its own control; the resolver does not unwrap it or discover arbitrary interfaces on its children.
+### Why controls are resolved separately
+
+A generated observation wrapper implements the operation role it wraps, such as `IMutatorExecution`. It need not implement additional interfaces supported by the source execution. C# does not transfer a child's interfaces to its wrapper: checking the returned execution with `is IMutationStrengthControl` can therefore report no control even when the selected Gaussian execution supports strength adaptation. A counting or tracing wrapper must not disable adaptation merely by enclosing mutation calls.
+
+Control projection preserves that behavior by obtaining two references from one selected binding: the completed wrapped execution for operations, and an optional control from the raw source execution for its persistent data. Generated wrappers do not need to know or forward every source-specific or consumer-defined control interface. An operation-free control exposes no mutation operation, so mutation calls still traverse the observation chain.
+
+Both references belong to the same selected logical execution. Resolving the source independently to obtain a control could select different state, particularly when a child scope has its own source execution before inheriting an ancestor's composite. Projection uses the composite's pinned selection, and only supplies a control after the full wrapped binding succeeds. Rebinding can change observations while preserving the selected strength state.
+
+A typed scope resolves a mutator and its optional operation-free control together:
+
+```csharp
+var mutator = typed.Resolve(Mutator, out IMutationStrengthControl? strength);
+```
+
+The requested control is null when the selected raw binding does not implement that type. A source's control can also be projected through the advanced `Resolve(..., selectControl, out control)` overload, including a consumer-defined bundle of controls. Both forms obtain controls from the same source's raw binding only after the full chain succeeds. Invoke operations through the returned wrapped execution. Repeated resolution reuses the binding and can request another supported control without preparing another execution or duplicating observations. An explicit configured wrapper must deliberately expose its own control; the resolver does not unwrap it or discover arbitrary interfaces on its children.
 
 Each registration records internally whether it was made during `Install(module)`. The builder deduplicates module instances by reference and restores the previous installation state after nested installations. Registrations outside module installation belong to configuration setup. There is no public origin or precedence setting.
 
@@ -296,7 +310,9 @@ Two nested duration budgets on one operator, an outer 10s and an inner 2s. Which
 
 Node caches belong to their execution bindings. Declarations hold prepared wrappers through weak source keys. Preparations refer weakly to their sharing owners, and a prepared wrapper avoids a strong path back into the declaration that owns it. Live scopes and deferred factory frames retain the sharing scopes they need. This supports collection of both fresh child state beneath a long-lived declaration and discarded observing contexts around a long-lived source.
 
-The resolver supplies no general disposal contract and does not make shared state safe for concurrent operations. Iterators and problem subscriptions have explicit lifecycle owners.
+The resolver supplies no general disposal contract and does not make shared state safe for concurrent operations. Algorithms own their invocation's enumerators. Dynamic Racing disposes all contender entries after success or failure, including a failure during construction of a later contender. If cleanup fails, it reports all cleanup failures together with any original race failure; otherwise the original failure propagates unchanged.
+
+Experimental `DynamicCachingEvaluator` and `ReevaluationInterceptor` subscribe their prepared state to the source problem's epoch event. They have no unsubscribe owner, and the cache has no deterministic disposal owner. Discarding a resolution scope therefore does not release that problem-retained state.
 
 ## Related pages
 

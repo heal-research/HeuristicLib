@@ -1,10 +1,13 @@
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 using MetaCandidate = HEAL.HeuristicLib.Encodings.Composite.CompositeGenotype<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector>;
 using MetaSpace = HEAL.HeuristicLib.Encodings.Composite.CompositeSearchSpace<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, HEAL.HeuristicLib.Encodings.RealVectors.BoundedRealVectorSearchSpace, HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector, HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVectorSearchSpace>;
@@ -93,8 +96,107 @@ public sealed class DynamicRacingFactoryTests
         scope.Resolve<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(algorithm)
             .RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken);
 
-    private sealed class EpochProblem() : DynamicProblem<EpochProblem, int, UnrestrictedSearchSpace<int>>(
-        SingleObjective.Minimize, UnrestrictedSearchSpace<int>.Instance, RandomNumberGenerator.Create(0),
+    [Theory]
+    [InlineData("step")]
+    [InlineData("termination")]
+    [InlineData("merge")]
+    [InlineData("dispose")]
+    [InlineData("merge-and-dispose")]
+    public async Task FailedRace_DisposesEveryStartedContenderAndPreservesFailures(string phase)
+    {
+        var failure = new InvalidOperationException(phase);
+        var objective = phase == "termination"
+            ? new ObjectiveDirections([ObjectiveDirection.Minimize], Comparer<ObjectiveVector>.Create((_, _) => throw failure))
+            : SingleObjective.Minimize;
+        using var problem = new EpochProblem(objective);
+        var started = 0;
+        var disposed = 0;
+        var evaluations = 0;
+        var cleanupFailures = new List<Exception>();
+        var contender = new LifetimeProbeAlgorithm
+        {
+            BeforeMove = () =>
+            {
+                if (phase == "step" && ++evaluations == 3)
+                    throw failure;
+            },
+            Started = () => started++,
+            Disposed = () =>
+            {
+                disposed++;
+                if (phase is "dispose" or "merge-and-dispose")
+                {
+                    var cleanup = new InvalidOperationException($"cleanup {disposed}");
+                    cleanupFailures.Add(cleanup);
+                    throw cleanup;
+                }
+            }
+        };
+        var racing = new DynamicRacingAlgorithm<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>, LifetimeProbeAlgorithm>(
+            new MetaSpace(new BoundedRealVectorSearchSpace(1, 0, 1), new IntegerVectorSearchSpace(1, [0], [1])),
+            new MetaCreator(), new MetaMutator(),
+            new DelegatingRacingStateMerger<int, PopulationState<int>>((states, _) => phase is "merge" or "merge-and-dispose" ? throw failure : states[0]),
+            _ => contender, algorithm => algorithm.Evaluator)
+        {
+            NoRacers = 2,
+            EarlyTerminationStrength = phase == "termination" ? 0.1 : 0,
+            HallOfFameStrength = 0
+        };
+        await using var stream = Run(ResolutionScope.Create(), racing, problem).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+
+        var exception = await Should.ThrowAsync<Exception>(async () => await stream.MoveNextAsync());
+
+        started.ShouldBe(2);
+        disposed.ShouldBe(2);
+        if (phase is "dispose" or "merge-and-dispose")
+        {
+            var aggregate = exception.ShouldBeOfType<AggregateException>();
+            aggregate.InnerExceptions.ShouldBe(phase == "merge-and-dispose" ? [failure, .. cleanupFailures] : cleanupFailures);
+        }
+        else
+            exception.ShouldBeSameAs(failure);
+    }
+
+    private sealed record LifetimeProbeAlgorithm : Algorithm<LifetimeProbeAlgorithm, int, PopulationState<int>>
+    {
+        public IEvaluator<int> Evaluator { get; } = new ProblemEvaluator<int>();
+        public Action BeforeMove { get; init; } = static () => { };
+        public required Action Started { get; init; }
+        public required Action Disposed { get; init; }
+
+        public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
+            scope => new Execution<TRunSearchSpace, TRunProblem>(scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator), BeforeMove, Started, Disposed);
+
+        private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator, Action beforeMove, Action started, Action disposed)
+            : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
+        {
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            {
+                started();
+                try
+                {
+                    for (var step = 0; step < 10; step++)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        beforeMove();
+                        int[] candidates = [0];
+                        var qualities = evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
+                        yield return Population.From(candidates.ToEvaluated(qualities)).ToPopulationState();
+                        await Task.CompletedTask;
+                    }
+                }
+                finally
+                {
+                    disposed();
+                }
+            }
+        }
+    }
+
+    private sealed class EpochProblem(ObjectiveDirections? objective = null) : DynamicProblem<EpochProblem, int, UnrestrictedSearchSpace<int>>(
+        objective ?? SingleObjective.Minimize, UnrestrictedSearchSpace<int>.Instance, RandomNumberGenerator.Create(0),
         new EvaluationCountSchedule(3), UpdatePolicy.AfterEachBatchEvaluation)
     {
         protected override ObjectiveVector Evaluate(int candidate, IRandomNumberGenerator random, int epoch) => new(candidate);

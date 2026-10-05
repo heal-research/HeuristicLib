@@ -32,8 +32,8 @@ public record GaussianMutator
     public double MutationStrength { get; init; }
 
     /// <summary>
-    /// The execution offers an adaptable strength, which an algorithm reaches by testing for
-    /// <see cref="IAdaptableMutationStrengthExecution{TCandidate,TSearchSpace,TProblem}"/>.
+    /// The raw execution offers <see cref="IMutationStrengthControl"/> over its persistent strength.
+    /// Algorithms project this control during resolution and invoke mutation through the wrapped execution.
     /// </summary>
     public override ExecutionFactory<IMutatorExecution<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>> CreateExecutionFactory()
     {
@@ -47,7 +47,7 @@ public record GaussianMutator
     }
 
     private sealed class Execution(double mutationRate, ExecutionState state)
-        : MutatorExecution<RealVector, BoundedRealVectorSearchSpace>, IAdaptableMutationStrengthExecution<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>
+        : MutatorExecution<RealVector, BoundedRealVectorSearchSpace>, IMutationStrengthControl
     {
         public double CurrentMutationStrength
         {
