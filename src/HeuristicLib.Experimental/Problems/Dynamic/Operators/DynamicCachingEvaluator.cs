@@ -21,7 +21,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
 
         public ExecutionState(long? sizeLimit)
         {
-            Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
+            Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
         }
 
         public void OnEpochChanged(object? sender, int epoch)
@@ -94,10 +94,6 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
                 throw new InvalidOperationException("Dynamic caching evaluator executions can only evaluate the dynamic problem they were created for.");
 
             var cache = state.Cache;
-            var beforeCacheStatistics = cache.GetCurrentStatistics();
-            var beforeHits = beforeCacheStatistics?.TotalHits ?? 0;
-            var beforeMisses = beforeCacheStatistics?.TotalMisses ?? 0;
-
             var n = candidates.Count;
             var results = new ObjectiveVector[n];
 
@@ -147,21 +143,14 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
                 }
             }
 
-            var afterCacheStatistics = cache.GetCurrentStatistics();
-            var afterHits = afterCacheStatistics?.TotalHits ?? 0;
-            var afterMisses = afterCacheStatistics?.TotalMisses ?? 0;
-
-            var uniqueEvaluatedCount = afterMisses - beforeMisses;
-            var cachedSolutionsCount = afterHits - beforeHits;
-
-            if (candidates.Count == 0)
+            if (n == 0)
             {
                 return results;
             }
 
-            if (uniqueEvaluatedCount == 0)
+            if (uncachedCandidates.Count == 0)
             {
-                state.HitCount += cachedSolutionsCount;
+                state.HitCount += n;
                 if (state.HitCount >= graceCount)
                 {
                     ((IUpdateRequestable)sourceProblem).RequestUpdate();

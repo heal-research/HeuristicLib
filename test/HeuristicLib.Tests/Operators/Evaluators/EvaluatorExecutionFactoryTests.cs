@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -7,6 +8,52 @@ namespace HEAL.HeuristicLib.Tests.Operators.Evaluators;
 
 public sealed class EvaluatorExecutionFactoryTests
 {
+    [Theory]
+    [InlineData(null)]
+    [InlineData(2L)]
+    public void Cache_DiscardedExecutionReleasesCachedCandidatesAndResults(long? sizeLimit)
+    {
+        var source = new ProblemEvaluator<object>().Cached(sizeLimit);
+        var problem = FuncProblem.Create(static (object _) => 1.0, DummySearchSpace<object>.Instance, SingleObjective.Minimize);
+        var (candidate, result) = CreateCachedReferences(source, problem);
+
+        // Collection of discarded cache entries is the behavior under test.
+        for (var attempt = 0; attempt < 4 && (candidate.IsAlive || result.IsAlive); attempt++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+        }
+
+        candidate.IsAlive.ShouldBeFalse();
+        result.IsAlive.ShouldBeFalse();
+        GC.KeepAlive(source);
+        GC.KeepAlive(problem);
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        static (WeakReference Candidate, WeakReference Result) CreateCachedReferences(IEvaluator<object> source, FuncProblem<object, DummySearchSpace<object>> problem)
+        {
+            var scope = ResolutionScope.Create();
+            var execution = scope.Resolve<object, DummySearchSpace<object>, FuncProblem<object, DummySearchSpace<object>>>(source);
+            var candidate = new object();
+            var result = execution.Evaluate([candidate], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Single();
+            execution.Evaluate([candidate], RandomNumberGenerator.Create(2), problem.SearchSpace, problem).Single().ShouldBeSameAs(result);
+            return (new WeakReference(candidate), new WeakReference(result));
+        }
+    }
+
+    [Fact]
+    public void Cache_ZeroSizeLimitReturnsResultsWithoutCachingThem()
+    {
+        var calls = 0;
+        var source = new CachingEvaluator<int>(new CountingEvaluator(() => { }, () => calls++)) { SizeLimit = 0 };
+        var execution = Resolve(ResolutionScope.Create(), source);
+
+        Evaluate(execution, 1).ShouldBe([new ObjectiveVector(101)]);
+        Evaluate(execution, 1).ShouldBe([new ObjectiveVector(201)]);
+        calls.ShouldBe(2);
+    }
+
     [Fact]
     public void Cache_RebindingPreservesResultsAndObservesOnlyUncachedChildCalls()
     {
