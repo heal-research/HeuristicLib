@@ -33,7 +33,7 @@ public record CachingEvaluator<TCandidate, TKey>
 
     protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
     {
-        var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = SizeLimit, TrackStatistics = true });
+        var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = SizeLimit });
         return childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, cache);
     }
 

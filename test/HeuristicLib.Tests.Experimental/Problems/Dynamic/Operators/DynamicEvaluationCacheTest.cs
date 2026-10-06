@@ -65,6 +65,57 @@ file sealed record DummyGenotypeValueCacheKeySelector : ICacheKeySelector<DummyG
 public class DynamicEvaluationCacheTests
 {
     [Fact]
+    public void GraceCount_CountsRepeatedCachedCandidatesAndStartsFreshAfterEpochChange()
+    {
+        using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
+        var evaluator = new CountingEvaluator();
+        var source = evaluator.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance) with { GraceCount = 3 };
+        var execution = ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        var candidate = new DummyGenotype(1);
+
+        for (var epoch = 0; epoch < 2; epoch++)
+        {
+            execution.Evaluate([candidate], TestRandoms.NoRandom, problem.SearchSpace, problem);
+            execution.Evaluate([candidate, candidate], TestRandoms.NoRandom, problem.SearchSpace, problem);
+            problem.ApplyPendingUpdates();
+            problem.CurrentEpoch.ShouldBe(epoch);
+
+            execution.Evaluate([candidate], TestRandoms.NoRandom, problem.SearchSpace, problem);
+            evaluator.Calls.ShouldBe(epoch + 1);
+            problem.Evaluations.ShouldBe(epoch + 1L);
+            problem.ApplyPendingUpdates();
+            problem.CurrentEpoch.ShouldBe(epoch + 1);
+        }
+    }
+
+    [Fact]
+    public void GraceCount_MixedBatchWithRepeatedMissesResetsHitStreak()
+    {
+        using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
+        var evaluator = new CountingEvaluator();
+        var source = evaluator.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance) with { GraceCount = 3 };
+        var execution = ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        var cached = new DummyGenotype(1);
+        var uncached = new DummyGenotype(2);
+        execution.Evaluate([cached], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        execution.Evaluate([cached, cached], TestRandoms.NoRandom, problem.SearchSpace, problem);
+
+        var results = execution.Evaluate([cached, uncached, uncached], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        results.Select(result => result[0]).ShouldBe([1.0, 2.0, 2.0]);
+        evaluator.Calls.ShouldBe(2);
+        evaluator.LastBatchSize.ShouldBe(1);
+
+        execution.Evaluate([cached, uncached], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        problem.ApplyPendingUpdates();
+        problem.CurrentEpoch.ShouldBe(0);
+        execution.Evaluate([uncached], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        evaluator.Calls.ShouldBe(2);
+        problem.Evaluations.ShouldBe(2L);
+        problem.ApplyPendingUpdates();
+        problem.CurrentEpoch.ShouldBe(1);
+    }
+
+    [Fact]
     public void CacheRebinding_SharesEntriesAndKeepsChildObservationContexts()
     {
         using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
