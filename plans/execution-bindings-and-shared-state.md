@@ -1,8 +1,8 @@
 # Design execution factories and shared state
 
-Status: factory implementation and consumer migration complete. The selected direction is option C using typed execution factories (candidate 1 in the [design comparison](execution-bindings-design-investigation.md)), superseding option A in the [container and aspect rework](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings). The migration is reviewed and consolidated as `85c1b24f`. C4 performance costs are accepted for the intended long-running optimization workloads. M3 control integration, narrow evidence gaps and racing failure cleanup are reviewed and committed as `f7a89747`; cache statistics retention is repaired in reviewed commit `df23d1ec`. Reevaluation and dynamic cache epoch checks are reviewed and staged. Removing the dynamic-problem epoch event and migrating the remaining racing/scenario consumers extends that package and awaits review. Final foundation review remains before selector registration. End the turn for explicit review after each remaining package. Leave index and commit operations to the user unless explicitly authorized.
+Status: factory implementation, consumer migration and foundation verification complete. The selected direction is option C using typed execution factories (candidate 1 in the [design comparison](execution-bindings-design-investigation.md)), superseding option A in the [container and aspect rework](container-and-aspect-framing.md#case-5-a-shared-composite-retains-its-dependency-bindings). The migration is reviewed and consolidated as `85c1b24f`. C4 performance costs are accepted for the intended long-running optimization workloads. M3 repairs are reviewed and committed as `f7a89747`, `df23d1ec` and `4cc36826`. The final foundation gate below verifies the integrated contract at `4cc36826` and closes M3/package 4c.1 implementation validation. Stop for user review of this acceptance record before beginning selector registration (4c.2). Leave index and commit operations to the user unless explicitly authorized.
 
-C1 has a [concrete design](execution-factory-design.md), including authoring examples, resolver ownership, retained child scopes, decoration construction, capabilities and failure behavior. C2 and C3 supplied the local design proofs. The branch retains persistent-state preparation as `23d65748`, the factory/resolver implementation as `aa72a5a7` and the complete consumer migration as `85c1b24f`. Normal restore and the Release solution build succeed; all 2,885 tests across core, Experimental, API usage and scenarios pass, with no failures or reported skips. The optional activated-TSP scenario returns before execution because its external prerequisites are absent. These results close migration compilation/runtime validation. The reviewed C4 results close performance acceptance; resource-lifecycle questions and final foundation acceptance remain open. The review records below preserve the original package history; their pre-squash commit IDs are historical checkpoint identifiers rather than current branch boundaries.
+C1 has a [concrete design](execution-factory-design.md), including authoring examples, resolver ownership, retained child scopes, decoration construction, capabilities and failure behavior. C2 and C3 supplied the local design proofs. The branch retains persistent-state preparation as `23d65748`, the factory/resolver implementation as `aa72a5a7` and the complete consumer migration as `85c1b24f`. The final normal-project verification passes all 2,926 tests across core, Experimental, API usage and scenarios, with no failures or reported skips. The optional activated-TSP scenario returns before execution because its external prerequisites are absent. Lifecycle repairs and integrated evidence are reconciled below; deterministic shared-resource disposal and concurrent operation guarantees are outside the implemented contract. The review records preserve original package history; their pre-squash commit IDs are historical checkpoint identifiers rather than current branch boundaries.
 
 Naming decision, 2026-09-27: adopt the [graph naming family](execution-factory-design.md#agreed-naming-family): `IConfigurationNode`, `IExecutionNode` and role-specific `...Execution` types, retaining ordinary algorithm/operator configuration names. The [commit boundaries](#agreed-commit-boundaries) separate a behavior-preserving rename from the factory/resolution rework. The naming migration is the first implementation review package; it retains the existing object-returning creation methods and behavior.
 
@@ -26,7 +26,7 @@ A configuration prepares a typed factory once per logical execution. The factory
 
 The [design comparison](execution-bindings-design-investigation.md) supplies candidate sketches and source evidence. Its explicit-rebind and factory-replay alternatives remain comparison material, not parallel APIs to implement. The lambda return form was compiled successfully in a small standalone compiler check; that confirms C# target typing, not the proposed execution model.
 
-The original sequence of concrete design, local proofs and bounded migration is complete, and the pre-change comparison is measured and reviewed. The next work reconciles integrated acceptance evidence and resource-lifecycle limitations before final foundation review.
+The original sequence of concrete design, local proofs and bounded migration is complete, and the pre-change comparison is measured and reviewed. Integrated foundation verification is complete. After review of this record, the next package is selector registration; general advice and algorithm boundary work remain separately reviewed packages.
 
 Execution objects can be rebuildable glue around shared state. Two qualifications must be retained:
 
@@ -35,7 +35,9 @@ Execution objects can be rebuildable glue around shared state. Two qualification
 
 “Binding” and “state holder” are local descriptive terms here, not approved public types or replacements for glossary terms. State may remain a data object while typed operation logic lives on a configuration or execution object. This investigation does not decide that state objects implement operator roles.
 
-## Evidence from the current implementation
+## Pre-migration implementation evidence
+
+This section records the implementation inspected when the factory design was investigated. It is historical comparison material; the implemented contracts and current assertions are indexed in M3 and the final foundation gate below.
 
 | Existing pattern | Relevance and limit |
 | --- | --- |
@@ -46,7 +48,7 @@ Execution objects can be rebuildable glue around shared state. Two qualification
 | [IterativeAlgorithm](../src/HeuristicLib/Algorithms/BaseClasses/IterativeAlgorithm.cs) | The async iterator retains progress values and uses instance-bound child operations. Sharing an ordinary state holder does not automatically share, resume or replace that active enumeration correctly. |
 | [Mutator observations](../src/HeuristicLib/Analysis/Tracing/Observations/MutatorObservation.cs) | Thin wrappers retain a typed child and callback. Rebinding a wrapper can preserve a callback's accumulator, but arbitrary stateful advice still needs an ownership contract. |
 
-The [developer guidelines](../docs/contributing/developer-guidelines.md) currently put mutable data and resolved children on authored execution nodes (§ 4.1, § 4.12, § 4.17). Framework-managed operator state must not contain configurations, instances, registries or child-bound delegates (§ 4.14). These are current rules, not evidence that a future model has already been adopted. Any necessary change must be proposed explicitly and reviewed with replacement authoring examples.
+At investigation time, the developer guidelines put mutable data and resolved children on authored execution nodes. Their implemented rules (§ 4.1, § 4.12, § 4.17) distinguish once-prepared persistent state from bound children and invocation-local data. Framework-managed operator state must not contain configurations, execution nodes, registries or child-bound delegates (§ 4.14).
 
 ## Authoring requirements
 
@@ -154,7 +156,7 @@ Tests must assert externally meaningful identity, state transitions, call report
 
 ### M3: integrated acceptance reconciliation
 
-Migration checkpoint: `85c1b24f`. Migration and its normal-project validation are complete. The evidence reconciliation below includes the subsequent M3 repairs and preserves the remaining lifecycle questions; it does not introduce a cleanup API.
+Migration checkpoint: `85c1b24f`. The evidence reconciliation includes the subsequent reviewed M3 repairs through `4cc36826`. The final foundation gate below closes their integrated validation without introducing a cleanup API.
 
 The 2026-10-05 independent verification inspected R1-R16 against the integrated assertions and production paths. The following index retains its relevant findings with the subsequent repair evidence. Runtime validation is recorded in the repair and convenience records below. Passing suites alone do not establish final foundation acceptance.
 
@@ -174,12 +176,12 @@ The untimed pre-repair EvolutionStrategy/Gaussian reproduction produced `[0, -1.
 
 Record each reconciled case as covered, missing evidence or an explicit accepted limitation. Add focused tests only for identified behavioral gaps. Review current architecture/authoring docs against the implemented contracts and reconcile remaining local-proof references; preserve historical review records as history rather than current instructions.
 
-The M3 audit identified two production lifecycle issues:
+At the migration checkpoint, the M3 audit identified two production lifecycle issues, both addressed by the reviewed repairs below:
 
-- DynamicCachingEvaluator and ReevaluationInterceptor install epoch handlers once per preparation. The problem event retains their state until the problem releases the subscription; there is no unsubscribe owner, and the dynamic cache has no deterministic disposal owner. Existing weak-reference cases prove discarded nodes and child evaluators can be collected, not that subscribed state/cache resources are released. Establish the intended owner and end-of-lifetime behavior before proposing a focused fix; rebinding must not unsubscribe or dispose still-shared state.
-- DynamicRacing created contender entries before its race-loop `try`, and disposed them only in the later winner/merge `finally`. Failure while creating a later entry or during `MakeMove`/termination checks could bypass disposal of entries already created. The repair package below covers these phases and preserves epoch-handler removal; burn-in retains its scoped `using`.
+- DynamicCachingEvaluator and ReevaluationInterceptor installed epoch handlers once per preparation, and the problem event retained their state without an unsubscribe owner. The cache-statistics repair and removal of the epoch event eliminate the external retention paths. Entry collection is verified for both caching evaluators; deterministic cache disposal is not promised, and rebinding does not dispose still-shared state.
+- DynamicRacing created contender entries before its race-loop `try`, and disposed them only in the later winner/merge `finally`. Failure while creating a later entry or during `MakeMove`/termination checks could bypass disposal of entries already created. The repair covers these phases and cleanup-failure aggregation; burn-in retains its scoped `using`. The later event removal leaves both loops subscription-free.
 
-At M3 review, decide which lifecycle repairs are required for foundation acceptance and which, if any, can remain explicitly accepted follow-up work. A green suite does not silently close them. Do not add a resolver-wide disposal protocol or alter shared-state ownership as incidental cleanup. Review the reconciliation and any repair proposal before beginning its implementation. The user separately authorized C4 measurement while M3 remains open; final foundation acceptance still requires the M3 review.
+The user reviewed and committed the control, racing cleanup, cache-retention and epoch repairs. Their final evidence is reconciled in the foundation gate below. No resolver-wide disposal protocol, ownership change or additional production repair is required to close M3 for the implemented contract.
 
 ### M3 repair package, 2026-10-05
 
@@ -253,11 +255,52 @@ After reviewing the cache epoch checks, the user authorized extending the same p
 
 Validation: all 221 Experimental cases and all 194 API usage cases pass, with zero failures or skips. The selected AutoEcPaper scenario class reports four passes: Moving Peaks and both new counter cases execute; the optional TSP case returns early because neither its TSP fixture nor Concorde executable is available. The Release solution build, documentation build, whole-solution whitespace verification, style at warning severity, analyzers at error severity and `git diff --check` pass. Format tools retain workspace-loading warnings; build/tests provide independent compilation evidence. Existing diagnostics and intentional collection-test warnings remain. Core and full-solution/scenario runtime suites and benchmarks are not repeated; final foundation acceptance remains a separate step. Logs are under ignored `artifacts/execution-factory/m3-epoch-event-*`. The reviewed cache/interceptor work remains staged; extension edits stay unstaged and uncommitted. The index SHA256 remains `A88574C12B48A2A3A2D640BD0D740B9AD27C531582AD8C39E9E69DC064BAFCB6`, and unrelated local settings are untouched. Stop for review before final foundation acceptance or selector registration.
 
+### Final foundation gate, 2026-10-06
+
+The user authorized the final acceptance pass after reviewing and committing the epoch repairs as `4cc36826`. Rechecked the acceptance matrix against the implemented resolver/authoring contracts and integrated assertions, rather than treating a passing suite as evidence for untested future features. No production change or additional regression test was needed.
+
+| Case | Foundation disposition | Rechecked evidence |
+| --- | --- | --- |
+| R1 | Covered | Reference identity, equal-but-distinct configurations and cached binding identity in resolution tests. |
+| R2 | Covered | Parent/child/sibling selection order, pinned child-first selection and no hoisting. |
+| R3 | Covered | Stateful generated wrappers preserve one source and advice preparation; exact outer/inner reports are 5/2. |
+| R4 | Covered | Wrapper/multi and concrete algorithm composites reach descendant observations without changing parent bindings or resetting state. |
+| R5 | Covered | Collision tests retain the ancestor composite's dependency and control while direct child resolution keeps its local source. |
+| R6 | Covered | Deferred dependency tests use original logical ownership; fresh children isolate newly prepared state. |
+| R7 | Covered | Stateful chain insertion and deferred predecessor tests preserve outer advice state and context-specific predecessors. |
+| R8 | Covered with explicit boundary | Additional-child/private-domain and incomparable-domain assertions pass. The unrelated forwarding child follows ordinary resolution and diagnoses a structural cycle; successful recursive forwarding is not promised. |
+| R9 | Covered | Actual clock/trace/count-and-duration budget composition verifies trace times 1/2/3, one declaration and three seconds of operator duration excluding observation callbacks. |
+| R10 | Covered | Cycle reset/reuse, repeated references, owner/invocation isolation, Pipeline freshness, ancestor reuse, disposal and exact RNG fork paths. |
+| R11 | Covered with explicit boundary | Observed/unobserved EvolutionStrategy produces the same adapted sequence; rebinding projects its pinned control without changing child-local strength. Explicit configured wrappers deliberately expose their own capabilities. |
+| R12 | Covered | Paused iterative and deferred streams retain previous state, RNG forks and their original observation context; dynamic cache streams detect an epoch on resumption. |
+| R13 | Covered | Exact faults, attempt counts, no completed partial graph, retained declaration failures, projection failure and recursion across fresh domains. |
+| R14 | Covered | Custom preparation-adapter roles are wrapped without built-in role enumeration; supported concrete algorithm bindings advance shared state; incompatible contracts fail before preparation. |
+| R15 | Covered for the declared ownership contract | Both weak-reference lifetime directions, intentionally live deferred bindings, bounded/unbounded cache entry collection, and racing failure cleanup. Shared resources have no deterministic resolver disposal guarantee. |
+| R16 | Foundation covered; selector integration deferred | Repeated/unmatched ordinary declarations and generated-wrapper exclusion are asserted. Overlapping selector registrations and registered zero-match selections belong to 4c.2, which has not started. |
+
+The source paths checked alongside these assertions select by reference, pin dependencies on preparations, reserve sticky faults before publication, guard construction across frames and obtain controls only after a complete binding succeeds. Current architecture, authoring, glossary and XML contracts agree with those responsibilities. Active consumers use the factory API; one commented legacy incremental-neighborhood prototype still mentions the former creation API, and architecture tests intentionally assert that the old method is absent. Neither is an active migration caller.
+
+The reviewed lifecycle boundary is managed collection for the built-in caches after their factories/bindings are released, plus explicit disposal of invocation-owned enumerators. This is not deterministic disposal of arbitrary consumer resources, concurrent use of shared execution state, or per-result scoring-epoch metadata. Deferred grace requests and conservative mixed-epoch cache admission retain the policies recorded above. Those boundaries require no further foundation implementation; changes to them need concrete use cases and separate review.
+
+Validation at `4cc36826`:
+
+- `dotnet restore` succeeds with dependencies up to date.
+- `dotnet build --configuration Release --no-restore --no-incremental` succeeds with zero errors and 99 existing/intentional warnings, including the forced-collection assertions. This supplies compiler/XML verification independently of the format tools.
+- `dotnet test --configuration Release --no-restore --no-build --max-parallel-test-modules 1` passes all 2,926 cases across the four solution test projects, with zero failures or reported skips. The modules execute sequentially. The optional activated-TSP scenario returns early because its TSP data and Concorde executable are unavailable; its external workflow is not claimed as exercised.
+- Whole-solution `dotnet format whitespace`, `style --severity warn` and `analyzers --severity error` verification succeeds using `--verify-no-changes --no-restore`. The format tools retain their workspace-loading warnings.
+- `npm run docs:build`, relative-link target checks for all four changed plans and `git diff --check` pass. Current factory, authoring, control, failure and lifetime documentation agrees with the implementation; only plan/backlog status needed correction.
+
+Logs are under ignored `artifacts/execution-factory/foundation-*`. Only four plan/backlog files change; production, tests, user-facing docs and unrelated local settings remain unchanged. The Git index SHA256 remains `E808E56434A96DC3DA88F27E64375EA80376A005C657DD6EABEF29C3DDE0FF78`. Changes are unstaged and uncommitted.
+
+C4's reviewed performance acceptance remains attached to the measured `85c1b24f` checkpoint; this pass claims no new timing measurements and runs no benchmarks. The narrower lifecycle/control repairs are checked functionally, without attributing the original measured timings to the current revision.
+
+**Outcome:** M3 and package 4c.1 implementation/validation are complete for the stated contract. Stop for review of this acceptance record. Next is 4c.2: review selector-registration API and match-cache ownership choices, then prove one mutator integration and a consumer-defined role with overlap, empty selections, pinned/rebound composites, late children and generated-wrapper exclusion. General advice, caller-path nesting and algorithm-boundary work stay in their later packages.
+
 ### C4: cost evidence and final acceptance
 
 The pre-functional-change baseline is `edcf81d1c898c5e6b2ec0586b877783ba3b8c43a`; source is unchanged from the naming commit. At the start of direct implementation, the working tree adds only plan edits and an unrelated local tool-settings file. Record SDK/runtime, build configuration, machine and benchmark source with the results. The user authorized a temporary worktree at the previous version, with an equivalent benchmark harness added there and adapted only as needed for the old API. Inspect existing worktree attachments before creating one. Keep the active checkout and Git index intact; do not stage, commit or reset to obtain a baseline. Keep benchmark source and adaptations available as reviewable Git diffs and record exact run commands. Do not hide benchmark code in an ignored duplicate project or add a permanent benchmark framework without a concrete need.
 
-Status: the user explicitly authorized execution on 2026-10-04, and all sequential comparison/retention stages completed successfully. The [C4 results](execution-factory-cost-results-2026-10-04.md) preserve the measured environment, source hash, representative timing/allocation/retention results and local evidence locations. Already-bound operation calls show no regression or allocations; declaration, resolution and fresh-domain costs increase substantially in relative terms. After reviewing absolute costs and their estimated contribution to long-running GA/GP workloads, the user accepted the performance tradeoff. Resolver profiling/optimization is not a migration prerequisite. M3 lifecycle reconciliation and final foundation review remain open independently. The measured migrated checkpoint is `85c1b24f`; assess whether later behavior changes require affected workloads to be measured again. The removed migration-backup tag is not the old-version comparison baseline.
+Status: the user explicitly authorized execution on 2026-10-04, and all sequential comparison/retention stages completed successfully. The [C4 results](execution-factory-cost-results-2026-10-04.md) preserve the measured environment, source hash, representative timing/allocation/retention results and local evidence locations. At that measured checkpoint, already-bound operation calls show no regression or allocations; declaration, resolution and fresh-domain costs increase substantially in relative terms. After reviewing absolute costs and their estimated contribution to long-running GA/GP workloads, the user accepted the performance tradeoff. Resolver profiling/optimization is not a migration prerequisite. The later M3 repairs and final foundation verification are recorded above. The measured migrated checkpoint is `85c1b24f`; this acceptance pass adds functional validation, not new performance measurements. The removed migration-backup tag is not the old-version comparison baseline.
 
 Measure these cases separately:
 
