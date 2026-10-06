@@ -25,29 +25,23 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
 
     public override ExecutionFactory<InterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutionFactory()
     {
-        var state = new ExecutionState();
-
-        // The subscription lifetime is shared with DynamicCachingEvaluator and requires a common lifecycle design.
-        SourceProblem.OnEpochChange += state.OnEpochChanged;
-
-        return scope => new Execution(scope.Resolve<TCandidate, TSearchSpace, TProblem>(Evaluator), state);
+        var state = new ExecutionState(SourceProblem.CurrentEpoch);
+        return scope => new Execution(scope.Resolve<TCandidate, TSearchSpace, TProblem>(Evaluator), SourceProblem, state);
     }
 
-    private sealed class ExecutionState
+    private sealed class ExecutionState(int initialEpoch)
     {
-        private int requireReevaluation;
+        private int consumedEpoch = initialEpoch;
 
-        public void OnEpochChanged(object? sender, int epoch) => Interlocked.Increment(ref requireReevaluation);
-
-        public bool ConsumeReevaluationRequest() => Interlocked.Exchange(ref requireReevaluation, 0) != 0;
+        public bool ConsumeReevaluationRequest(int epoch) => Interlocked.Exchange(ref consumedEpoch, epoch) != epoch;
     }
 
-    private sealed class Execution(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator, ExecutionState state)
+    private sealed class Execution(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator, TProblem sourceProblem, ExecutionState state)
         : InterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            if (!state.ConsumeReevaluationRequest())
+            if (!state.ConsumeReevaluationRequest(sourceProblem.CurrentEpoch))
             {
                 return currentState;
             }

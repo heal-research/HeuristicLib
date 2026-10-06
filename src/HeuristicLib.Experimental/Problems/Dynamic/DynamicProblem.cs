@@ -47,11 +47,6 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     /// </summary>
     public int CurrentEpoch { get; private set; }
 
-    /// <summary>
-    /// Raised once an update has been applied, with the environment version now in effect.
-    /// </summary>
-    public event EventHandler<int>? OnEpochChange;
-
     protected IRandomNumberGenerator EnvironmentRandom { get; }
 
     /// <summary>
@@ -176,7 +171,7 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
 
 
     /// <summary>
-    /// Applies the updates that are due, once each, and raises <see cref="OnEpochChange"/> if any were.
+    /// Applies the updates that are due, advancing <see cref="CurrentEpoch"/> once for each applied update.
     /// </summary>
     internal void ApplyPendingUpdates()
     {
@@ -189,26 +184,14 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
         rwLock.EnterWriteLock();
         try
         {
-            int applied;
-            int reached;
             lock (epochLock)
             {
-                applied = pendingUpdates;
                 while (pendingUpdates > 0)
                 {
                     Update();
                     pendingUpdates--;
                     CurrentEpoch++;
                 }
-
-                reached = CurrentEpoch;
-            }
-
-            // One event per environment entered, not per resolution: a schedule can owe several at once, and an
-            // environment nothing was evaluated against is still an environment this run passed through.
-            for (var epoch = reached - applied + 1; epoch <= reached; epoch++)
-            {
-                OnEpochChange?.Invoke(this, epoch);
             }
         }
         finally { rwLock.ExitWriteLock(); }

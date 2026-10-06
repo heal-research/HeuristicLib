@@ -153,17 +153,14 @@ public class DynamicAnalysisTests
         // updates land before the batch.
         var problem = new IntegerDynamicProblem(new OwedEpochsSchedule(owed: 2));
         var algorithm = new BatchEvaluationAlgorithm([[5, 3]]);
-        var observed = new List<int>();
-        problem.OnEpochChange += (_, epoch) => observed.Add(epoch);
-
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         problem.Updates.ShouldBe(2);
         problem.ScoredAgainst.ShouldBe([2, 2]);
-        // Both environments the run passed through are announced, even though nothing was evaluated against the first.
-        observed.ShouldBe([1, 2]);
+        // Epochs count applied updates, including environments against which nothing was evaluated.
+        problem.CurrentEpoch.ShouldBe(2);
     }
 
     [Fact]
