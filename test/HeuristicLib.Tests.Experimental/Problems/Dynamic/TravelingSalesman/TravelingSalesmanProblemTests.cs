@@ -118,7 +118,7 @@ public class TravelingSalesmanProblemTests
     }
 
     [Fact]
-    public void DynamicRelativeQualityEvaluator_RefreshesBestKnownOnEpochChange()
+    public void DynamicRelativeQualityEvaluator_RefreshesBestKnownAfterEpochAdvance()
     {
         double[,] distances =
         {

@@ -8,6 +8,13 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
+/// <summary>
+/// Caches evaluation results for the source problem's current epoch.
+/// </summary>
+/// <remarks>
+/// An epoch change invalidates cached results before the next lookup. If the epoch changes during a child evaluation,
+/// its results are returned but not cached. The batch is not retried, and results already obtained from cache are not reevaluated.
+/// </remarks>
 public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     : WrappingEvaluator<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -18,16 +25,21 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     {
         public MemoryCache Cache { get; }
         public long HitCount { get; set; }
+        public int Epoch { get; private set; }
 
-        public ExecutionState(long? sizeLimit)
+        public ExecutionState(long? sizeLimit, int initialEpoch)
         {
             Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
+            Epoch = initialEpoch;
         }
 
-        public void OnEpochChanged(object? sender, int epoch)
+        public void SynchronizeEpoch(int epoch)
         {
+            if (Epoch == epoch)
+                return;
             Cache.Clear();
             HitCount = 0;
+            Epoch = epoch;
         }
     }
 
@@ -64,9 +76,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// </remarks>
     protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
     {
-        var state = new ExecutionState(SizeLimit);
-        // Bind the event to state to avoid retaining the factory closure.
-        SourceProblem.OnEpochChange += state.OnEpochChanged;
+        var state = new ExecutionState(SizeLimit, SourceProblem.CurrentEpoch);
         return childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, GraceCount, state);
     }
 
@@ -93,6 +103,8 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
             if (!ReferenceEquals(problem, sourceProblem))
                 throw new InvalidOperationException("Dynamic caching evaluator executions can only evaluate the dynamic problem they were created for.");
 
+            var epoch = sourceProblem.CurrentEpoch;
+            state.SynchronizeEpoch(epoch);
             var cache = state.Cache;
             var n = candidates.Count;
             var results = new ObjectiveVector[n];
@@ -127,10 +139,23 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
 
             if (uncachedCandidates.Count > 0)
             {
-                var newObjectiveVectors = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
-                for (var k = 0; k < uncachedKeys.Count; k++)
+                IReadOnlyList<ObjectiveVector> newObjectiveVectors;
+                try
                 {
-                    cache.Set(uncachedKeys[k], newObjectiveVectors[k], new MemoryCacheEntryOptions { Size = 1 });
+                    newObjectiveVectors = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
+                }
+                finally
+                {
+                    state.SynchronizeEpoch(sourceProblem.CurrentEpoch);
+                }
+
+                // Objective vectors carry no epoch; a batch crossing an update cannot be safely admitted.
+                if (state.Epoch == epoch)
+                {
+                    for (var k = 0; k < uncachedKeys.Count; k++)
+                    {
+                        cache.Set(uncachedKeys[k], newObjectiveVectors[k], new MemoryCacheEntryOptions { Size = 1 });
+                    }
                 }
 
                 foreach (var (_, entry) in uncachedMap)

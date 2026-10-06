@@ -312,8 +312,6 @@ Node caches belong to their execution bindings. Declarations hold prepared wrapp
 
 The resolver supplies no general disposal contract and does not make shared state safe for concurrent operations. Algorithms own their invocation's enumerators. Dynamic Racing disposes all contender entries after success or failure, including a failure during construction of a later contender. If cleanup fails, it reports all cleanup failures together with any original race failure; otherwise the original failure propagates unchanged.
 
-Experimental `DynamicCachingEvaluator` and `ReevaluationInterceptor` subscribe their prepared state to the source problem's epoch event. They have no unsubscribe owner, and the cache has no deterministic disposal owner. Discarding a resolution scope therefore does not release that problem-retained state.
-
 ## Related pages
 
 - [Configuration vs execution nodes](/contributing/architecture/execution-nodes)

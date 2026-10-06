@@ -17,6 +17,57 @@ namespace HEAL.HeuristicLib.Tests.Algorithms;
 public sealed class DynamicRacingFactoryTests
 {
     [Theory]
+    [InlineData(0, 1)]
+    [InlineData(0, 3)]
+    [InlineData(1, 1)]
+    [InlineData(1, 3)]
+    public async Task EpochChangeDuringMove_EndsTheStepAndEachStepCapturesAFreshBaseline(int burnInEpochs, int epochJump)
+    {
+        using var problem = new EpochProblem(epochLength: 10_000);
+        problem.UpdateOnce();
+        var moves = 0;
+        var started = 0;
+        var disposed = 0;
+        var contender = new LifetimeProbeAlgorithm
+        {
+            BeforeMove = () =>
+            {
+                if (++moves % 2 != 0)
+                    return;
+                for (var update = 0; update < epochJump; update++)
+                    problem.UpdateOnce();
+            },
+            Started = () => started++,
+            Disposed = () => disposed++
+        };
+        var racing = new DynamicRacingAlgorithm<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>, LifetimeProbeAlgorithm>(
+            new MetaSpace(new BoundedRealVectorSearchSpace(1, 0, 1), new IntegerVectorSearchSpace(1, [0], [1])),
+            new MetaCreator(), new MetaMutator(), new BestPopulationStateMerger<int>(),
+            _ => contender, algorithm => algorithm.Evaluator)
+        {
+            NoRacers = 2,
+            BurnInEpochs = burnInEpochs,
+            EarlyTerminationStrength = 0,
+            HallOfFameStrength = 0
+        };
+        await using var stream = Run(ResolutionScope.Create(), racing, problem).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+
+        (await stream.MoveNextAsync()).ShouldBeTrue();
+        moves.ShouldBe(2);
+        problem.CurrentEpoch.ShouldBe(1 + epochJump);
+        started.ShouldBe(burnInEpochs == 0 ? 2 : 1);
+        disposed.ShouldBe(started);
+
+        // A change while the outer stream is paused precedes the next step's baseline.
+        problem.UpdateOnce();
+        (await stream.MoveNextAsync()).ShouldBeTrue();
+        moves.ShouldBe(4);
+        problem.CurrentEpoch.ShouldBe(2 + 2 * epochJump);
+        started.ShouldBe(burnInEpochs == 0 ? 4 : 3);
+        disposed.ShouldBe(started);
+    }
+
+    [Theory]
     [InlineData(1)]
     [InlineData(2)]
     public async Task Rebinding_PreservesIncumbentAndBurnInProgressAndObservesDeferredContenders(int racers)
@@ -195,9 +246,9 @@ public sealed class DynamicRacingFactoryTests
         }
     }
 
-    private sealed class EpochProblem(ObjectiveDirections? objective = null) : DynamicProblem<EpochProblem, int, UnrestrictedSearchSpace<int>>(
+    private sealed class EpochProblem(ObjectiveDirections? objective = null, int epochLength = 3) : DynamicProblem<EpochProblem, int, UnrestrictedSearchSpace<int>>(
         objective ?? SingleObjective.Minimize, UnrestrictedSearchSpace<int>.Instance, RandomNumberGenerator.Create(0),
-        new EvaluationCountSchedule(3), UpdatePolicy.AfterEachBatchEvaluation)
+        new EvaluationCountSchedule(epochLength), UpdatePolicy.AfterEachBatchEvaluation)
     {
         protected override ObjectiveVector Evaluate(int candidate, IRandomNumberGenerator random, int epoch) => new(candidate);
         protected override void Update() { }

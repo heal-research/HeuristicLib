@@ -143,22 +143,13 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
                     entries.Add(CreateEntry(challenger, entries[0].Algorithm, previousState, problem, random));
                 }
 
-                var raceEnded = false;
-                try
+                var epoch = problem.CurrentEpoch;
+                while (problem.CurrentEpoch == epoch)
                 {
-                    problem.OnEpochChange += OnEpochChange;
-                    while (!raceEnded)
-                    {
-                        var lowest = entries.MinBy(x => x.UsedCount);
-                        _ = lowest!.MakeMove(problem, random, CancellationToken.None);
-
-                        // MakeMove can raise OnEpochChange, which ends the race. Never overwrite that signal.
-                        raceEnded |= CanTerminateRace(entries, problem);
-                    }
-                }
-                finally
-                {
-                    problem.OnEpochChange -= OnEpochChange;
+                    var lowest = entries.MinBy(x => x.UsedCount);
+                    _ = lowest!.MakeMove(problem, random, CancellationToken.None);
+                    if (CanTerminateRace(entries, problem))
+                        break;
                 }
 
                 var winner = SelectWinner(entries, problem.Objective);
@@ -169,8 +160,6 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
                 RecordSuccess(state.Incumbent);
 
                 nextState = stateMerger.Merge(entries.Select(x => x.LastState!).ToArray(), problem.Objective);
-
-                void OnEpochChange(object? sender, int epoch) => raceEnded = true;
             }
             catch (Exception exception)
             {
@@ -203,23 +192,13 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         private TSearchState ExecuteBurnInStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random)
         {
             using var entry = CreateEntry(state.Incumbent!, state.IncumbentAlgorithm, previousState, problem, random);
-            var epochEnded = false;
-            try
-            {
-                problem.OnEpochChange += OnEpochChange;
-                while (!epochEnded)
-                    _ = entry.MakeMove(problem, random, CancellationToken.None);
-            }
-            finally
-            {
-                problem.OnEpochChange -= OnEpochChange;
-            }
+            var epoch = problem.CurrentEpoch;
+            while (problem.CurrentEpoch == epoch)
+                _ = entry.MakeMove(problem, random, CancellationToken.None);
 
             state.IncumbentAlgorithm = entry.Algorithm;
             state.CompletedEpochs++;
             return entry.LastState!;
-
-            void OnEpochChange(object? sender, int epoch) => epochEnded = true;
         }
 
         private static int SelectWinner(IReadOnlyList<Entry> entries, ObjectiveDirections objective)
