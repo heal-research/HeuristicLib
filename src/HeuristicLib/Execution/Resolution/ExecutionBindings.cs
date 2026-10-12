@@ -90,7 +90,7 @@ internal sealed class ExecutionBindings
         var completed = raw;
         foreach (var declaration in registrations.Select(placement => placement.Registration))
         {
-            if (!declaration.Matches(source.Source))
+            if (!declaration.Matches(source))
                 continue;
 
             var wrapper = declaration.GetPreparation(source);

@@ -6,6 +6,8 @@ namespace HEAL.HeuristicLib.Execution;
 /// <remarks>
 /// Matching examines the supplied configuration only; it does not traverse a graph, resolve executions or install
 /// behavior. Predicates run on each matching query, without caching, and should depend only on configuration data.
+/// <see cref="ResolutionScopeBuilder.Wrap{TConfiguration}(NodeSelector{TConfiguration}, Func{TConfiguration, TConfiguration})"/>
+/// applies a wrapper to each source configuration that matches during resolution.
 /// </remarks>
 public sealed class NodeSelector<TConfiguration>
     where TConfiguration : class, IConfigurationNode

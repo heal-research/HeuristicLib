@@ -13,9 +13,12 @@ internal sealed class ExecutionSharingScope
     private readonly Dictionary<IConfigurationNode, ExecutionPreparation> selections = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<object, RetainedChildScope> retainedChildren = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<IConfigurationNode> constructing;
+    // Identifies the registration whose generated wrapper owns this private scope; null for ordinary scopes.
+    private readonly object? wrapperRegistration;
 
-    public ExecutionSharingScope(ExecutionSharingScope? parent, bool retainParent = true)
+    public ExecutionSharingScope(ExecutionSharingScope? parent, bool retainParent = true, object? wrapperRegistration = null)
     {
+        this.wrapperRegistration = wrapperRegistration;
         if (retainParent)
             this.parent = parent;
         else if (parent is not null)
@@ -68,6 +71,15 @@ internal sealed class ExecutionSharingScope
     {
         for (var current = this; current is not null; current = current.Parent)
             if (ReferenceEquals(current, ancestor))
+                return true;
+        return false;
+    }
+
+    /// <summary>Whether this scope lies beneath a generated wrapper of the identified registration.</summary>
+    public bool IsWithinWrapperOf(object registration)
+    {
+        for (var current = this; current is not null; current = current.Parent)
+            if (ReferenceEquals(current.wrapperRegistration, registration))
                 return true;
         return false;
     }

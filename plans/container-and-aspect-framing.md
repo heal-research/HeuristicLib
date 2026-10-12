@@ -1,6 +1,6 @@
 # Container and aspect framing
 
-Status: packages 1 and 2 are committed as `0236ab08`, and selector definitions/composition (4a/4b) as `79be85b0`. The selected option-C factory/resolver foundation is implemented in `aa72a5a7`, with its consumer migration consolidated as `85c1b24f` and reviewed M3 repairs through `4cc36826`. The [final foundation gate](execution-bindings-and-shared-state.md#final-foundation-gate-2026-10-06) verifies all 2,926 solution tests and closes 4c.1 implementation/validation; the optional activated-TSP/Concorde workflow remains unexercised because external prerequisites are absent. Migration history cleanup is complete. C4 performance costs are measured and accepted for long-running optimization; resolver optimization is not a migration prerequisite. Review the final acceptance record before beginning selector registration (4c.2). Resolution-time matching and stable predicates remain agreed; registration/advice semantics and public vocabulary require their separate design review. Stop after each package; leave the Git index untouched.
+Status: packages 1 and 2 are committed as `0236ab08`, and selector definitions/composition (4a/4b) as `79be85b0`. The selected option-C factory/resolver foundation is implemented in `aa72a5a7`, with its consumer migration consolidated as `85c1b24f` and reviewed M3 repairs through `4cc36826`. The [final foundation gate](execution-bindings-and-shared-state.md#final-foundation-gate-2026-10-06) verifies all 2,926 solution tests and closes 4c.1 implementation/validation; the optional activated-TSP/Concorde workflow remains unexercised because external prerequisites are absent. Migration history cleanup is complete. C4 performance costs are measured and accepted for long-running optimization; resolver optimization is not a migration prerequisite. The user reviewed the foundation and approved 4c.2 on 2026-10-09; selector registration is implemented in the working tree, uncommitted, and complete pending review and commit; see its [review record](#package-4c2-review-record). The derived-configuration question it raised was decided on 2026-10-10 and is planned as [package 4c.3](#package-4c3-plan-internal-compositions), not yet started. Advice semantics and public vocabulary still require their separate design review. Stop after each package; leave the Git index untouched.
 
 Reviewed against `37e8bdcc` (the layering overhaul merged into `dev`) on 2026-09-26. Work continues on `container-and-aspect-framing`. The completed layering implementation plan and its obsolete analysis report have been removed; Git history preserves them. Durable rules live in [layering](../docs/contributing/architecture/layering.md), the [developer guidelines](../docs/contributing/developer-guidelines.md), the [design goals](../docs/contributing/design-goals.md) and the [developer backlog](developer-backlog.md).
 
@@ -168,7 +168,7 @@ The `|` and `&` operands are both evaluated while composing selectors. Predicate
 **Still open:** specify these before implementing the dependent resolver integration:
 
 - Additional concrete-to-role ergonomics, open generic roles and any later complement/exclusion operators. A closed role such as `IMutator<TCandidate>` provides information an open role across all candidate types cannot statically provide to one callback.
-- Match-cache ownership, retention and predicate-failure behavior, including what a repeated resolution does after a predicate throws. Stable matching results do not imply that execution nodes can be shared or hoisted.
+- ~~Match-cache ownership, retention and predicate-failure behavior.~~ Settled in 4c.2: no match cache; a predicate fault is a sticky binding fault in the requesting context. Stable matching results do not imply that execution nodes can be shared or hoisted.
 - How typed selection proves advice can wrap the requested configuration/instance role, including a consumer-defined role. Keep stand-in compatibility checks; no universal invocation or built-in-role switch.
 - Ancestor cache hits and child-scope registrations, including cached composites and the scope retained by delayed construction. Review the examples below before choosing the integration mechanism.
 - Attribute inheritance, type-name/namespace/generic wildcard grammar, and runtime names with equality and persistence semantics. A naming wrapper adds a configuration identity and must not accidentally clone its child's state.
@@ -250,7 +250,7 @@ The [factory design plan](execution-bindings-and-shared-state.md) owns the next 
 
 **Requirements retained from the earlier review:** no silent observer omission; independent siblings without ancestor state; ancestor-state reuse; child-first ownership; no hoisting; source attribution and generated-wrapper exclusion; outer observations of deferred children; valid empty selections; clock/trace order and duration-budget isolation. Child-scope binding is not general caller-path selection.
 
-**Open design cases:** preserving G's dependency when C already owns a different logical M; stable derived configurations and declaration identities; deferred Cycle/Pipeline child ownership versus observer context; richer execution capabilities; initialization and binding failures; paused enumerations; resource ownership; and binding/cache costs. Preserving an active iterator's original binding is the current recommendation, not a promise to migrate suspended execution to new observers.
+**Open design cases:** preserving G's dependency when C already owns a different logical M; declaration identities (derived configurations are settled by [package 4c.3](#package-4c3-plan-internal-compositions)); deferred Cycle/Pipeline child ownership versus observer context; richer execution capabilities; initialization and binding failures; paused enumerations; resource ownership; and binding/cache costs. Preserving an active iterator's original binding is the current recommendation, not a promise to migrate suspended execution to new observers.
 
 **Superseded option-A work:** the earlier proposal to record dependencies primarily to detect missing observations and reject composite reuse is no longer the next package. Its finding that `underConstruction` is not a persistent dependency graph remains relevant. Option C may need dependency records to preserve identities, but those serve rebinding rather than retaining option A's limitation. Any rejection policy for temporarily unsupported factories must be explicitly designed during migration and must not quietly become the final solution for supported composites.
 
@@ -294,7 +294,8 @@ Each row is a review stop. Implement at most one package per review cycle. At th
 | 4a. Standalone typed node selector | Reference and assignable-type matching, including role interfaces, plus typed conditions (initially `Where`, renamed to `And` in 4b). Query supplied configurations without resolver integration. Include a consumer-authored naming-wrapper usage example. | Agreed reference/role/type selection and typed filters; new API shape reviewed in this package. | Focused matcher tests, core and API usage specs, Release build and scoped formatting/analyzers. Include distinct equal configurations, derived types, consumer interfaces, filter short-circuiting and unchanged source selectors. |
 | 4b. Selector composition | Union/intersection through `Or`/`And` and `|`/`&`, with `And(predicate)` delegating through a predicate selector. Retain one shared declared configuration type or role. | Accepted D2 composition rules. Additional role-adaptation conveniences remain for review with real registration usage. | Focused matcher tests, core and API usage specs, Release build and scoped formatting/analyzers. Cover overlap, precedence/grouping, short-circuiting, predicate failures and unchanged operands. |
 | 4c.1. Shared state and binding integration | Completed option-C factory implementation, consumer migration and M3 repairs through `4cc36826`; final foundation verification complete, awaiting review of its acceptance record. | [Final foundation gate](execution-bindings-and-shared-state.md#final-foundation-gate-2026-10-06), including case 4/5 ownership, ordering, capabilities and deferred construction. | Integrated acceptance assertions, full Release solution tests, build, docs and formatting/analyzer checks. Selector registration remains in 4c.2. |
-| 4c.2. Selector registration and resolution | One mutator integration and a consumer-defined-role usage spec. Select multiple configurations through the reviewed factory/binding mechanism. | Package 4c.1 reviewed; D2 integration choices and match-cache ownership. Option C is the foundation; general caller-path nesting stays separate. | Focused matcher/resolution tests, core and API usage specs. Include overlapping selections, ancestor state, reused composites, late children, generated-wrapper exclusion and valid empty selections. |
+| 4c.2. Selector registration and resolution | Implemented in the working tree; see the [review record](#package-4c2-review-record). One mutator integration and a consumer-defined-role usage spec. Select multiple configurations through the reviewed factory/binding mechanism. | Package 4c.1 reviewed; D2 integration choices and match-cache ownership. Option C is the foundation; general caller-path nesting stays separate. | Focused matcher/resolution tests, core and API usage specs. Include overlapping selections, ancestor state, reused composites, late children, generated-wrapper exclusion and valid empty selections. |
+| 4c.3. Internal compositions | `composedAs` resolution for compositions an algorithm derives from its own parameters; migrate `GeneticAlgorithm`, `NSGA2` and ALPS. See the [plan](#package-4c3-plan-internal-compositions). | Package 4c.2 reviewed and committed. Decided on 2026-10-10. | Focused resolution tests, seeded parity for the three algorithms, core, Experimental and API usage specs; selected algorithm scenarios at completion. |
 | 5. First typed advice | Agreed synchronous advice kinds for one role, with traces for success, failure, advice failure and around short-circuit/retry. | D4 and synchronous D5. | Focused advice tests, core, API usage specs and a local lightweight-operation overhead comparison. |
 | 6. Role expansion | One further role per package, retaining consumer role extensibility. Migrate its observation adapter where appropriate. | Packages 4-5 reviewed. | Focused role tests, core and API usage specs; experimental tests for affected consumers. |
 | 7. Algorithm advice | Agreed iteration/stream boundaries and algorithm observation migration. Replace the dynamic-problem exception in a separately reviewed follow-up. | Algorithm D5 and D4. | Lifecycle/observation tests, core, API usage and experimental tests; selected workflow scenarios. |
@@ -341,6 +342,81 @@ For C# packages use `dotnet restore`, `dotnet build --configuration Release --no
 - Scoped whitespace, style at warning severity and analyzer verification at error severity passed for the three changed C# files, with the existing workspace-loading warnings. `npm run docs:build` and `git diff --check` passed.
 - Review correction: removed all six runtime null guards from `NodeSelector`, following the existing developer-guidelines § 6.1 contract for nonnullable references. Release rebuild passed (28 existing warnings, zero errors), all 18 focused selector tests passed, and scoped whitespace/style/analyzer verification passed with workspace-loading warnings. No null-bypass tests were added; valid-input behavior and public nullable annotations are unchanged.
 - Review completed: packages 4a and 4b approved for commit on 2026-09-26. No resolver registration, invocation wrappers, sharing/precedence changes, mixed-role advice, node-contract renames or public naming wrappers. Review registration ergonomics and match evaluation with concrete mutator and consumer-defined-role examples before package 4c.
+
+## Package 4c.2 review record
+
+Approved on 2026-10-09 with these choices: a selector overload of `Wrap` with the reference overload delegating to it, no match cache, predicate faults as binding faults, the existing stand-in check as the role check, and configuration-based observation shortcuts unchanged until advice.
+
+- `ResolutionScopeBuilder.Wrap(NodeSelector<TConfiguration>, Func<TConfiguration, TConfiguration>)` registers a wrapper for every matching source. `Wrap(configuration, recipe)` now forwards to `NodeSelector.Reference(configuration)`, so there is one registration path. `WrapperRegistration` stores the selector's `Matches` instead of one reference. Binding, ordering, per-source wrapper preparation and generated-wrapper exclusion are unchanged: a generated wrapper binds with a target and never reaches `Wrap`, so no registration or predicate sees it.
+- Matching runs while binding each source in each context; sources created after the declaration and resolved through retained or deferred scopes are matched. A predicate exception is captured by the source's construction and rethrown for that context; another context binds again with the same preparation. A recipe whose result cannot stand in for the resolved role fails through the existing preparation check.
+- Tests: eight resolver cases (per-source advice state with a filter, union overlap versus separate registrations, empty selection, two modules sharing a broad selector with an explicit source wrapper, child-scope rebinding of an ancestor composite, late sources through retained and deferred scopes, predicate faults, stand-in failure) and two mutator integrations (a configured `ChooseOneMutator` and its children in a GA; mutators of algorithms activated later by `CycleAlgorithm`). Usage specs: a module counting all Gaussian mutators in a GA run, and a consumer-defined cooling-schedule role selected by type through a consumer composite.
+- Docs: XML on `Wrap`, `NodeSelector` and `IExecutionModule`; glossary node selector and wrapper registration entries; execution resolution declaration, wrapper and failure sections.
+- **Decision, 2026-10-09: a registration skips sources beneath its own generated wrappers.** Without it, a recipe adding a fresh child of the selected role (for example an advice bringing its own fallback mutator) had that child matched again, adding another child without bound; a throwaway probe with a depth guard confirmed this, and without the guard the stack overflows instead of throwing. Reference registrations could not reach this. Each registration now marks the private sharing scopes of its wrappers with an identity object that does not retain the registration; `Matches` rejects a source whose preparation lies beneath one of its own marks before evaluating the predicate. Other registrations still see advice children, as R8 and the existing `AdviceAdditionalChild` case require, so nesting is bounded by the number of registrations. Two cases cover a single self-extending registration and two registrations wrapping each other's children (`R1(leaf)`, `R2(R1 child of leaf)`, `R2(leaf)`, `R1(R2 child of leaf)`).
+- Validation: `dotnet restore`; Release solution build (zero errors, no diagnostics in changed files); core 2,497, Experimental 221 and API usage 196 cases pass with no failures or skips; scoped whitespace, style at warning severity and analyzers at error severity pass for the nine changed C# files; `npm run docs:build` and `git diff --check` pass. Scenarios and the full solution run were not repeated.
+
+**Found while implementing, decided separately:** `GeneticAlgorithm`, `NSGA2` and ALPS resolve `Mutator.AppliedAtRate(rate)` when the rate is below one, so a broad mutator selector also matches the derived `ChooseOneMutator` and the shared `NoChangeMutator.Instance`. A count of all mutator calls then includes the rate wrapper and no-change calls. 4c.2 leaves this behavior unchanged: the usage spec filters by `GaussianMutator`, and the mutator integration tests use a rate of one, so no test pins it. [Package 4c.3](#package-4c3-plan-internal-compositions) removes it.
+
+Concrete-to-role ergonomics remain open: wrapping requires the selector's declared type to be the role, so concrete filters are written as `OfType<IMutator<T>>().And(m => m is GaussianMutator)`.
+
+## Package 4c.3 plan: internal compositions
+
+Decided with the user on 2026-10-10. Implementation has not started; begin only after 4c.2 is reviewed and committed.
+
+### Decisions
+
+- **Node selection works on the configuration objects the user sees as properties.** Configurations an algorithm or operator builds internally from its parameters, and anything they bring along, are never offered to selectors. This follows the scikit-learn model: constructor parameters are kept as given, and what `fit` derives from them is internal and absent from `get_params()`.
+- **Parameters stay as given.** `MutationRate` remains an init property on `GeneticAlgorithm`, `NSGA2` and ALPS, stored unchanged and turned into behavior at resolution. The `For` builders keep their `mutationRate` parameter.
+- **Composition helpers exist once, at configuration level.** `AppliedAtRate`, `CountCalls` and any later configuration helper are reused as they are. There are no execution-level or candidate-list twins.
+- **Internal compositions are plumbing.** An internal composition routes work to the source it wraps and may add only plumbing, such as no-change branches, dispatch or caching around the source. It never adds an independent operator that does real work; such an operator must be a parameter. Otherwise counters, observers and budgets would silently miss that work.
+- **Two skip rules, for different reasons.** Every registration skips internal compositions and everything beneath them, because they are plumbing the user did not configure. Children added by a registration's generated wrappers stay visible to other registrations and are skipped only by their own registration (the 4c.2 decision), because a module attached them deliberately and they may do real work.
+
+### Authoring shape
+
+```csharp
+// preparation: derive once from the as-is parameter, using the existing configuration helper
+var rated = MutationRate >= 1.0 ? null : Mutator.AppliedAtRate(MutationRate);
+
+// binding: resolve the user's Mutator with `rated` as its internal composition; null is a plain Resolve
+typed.Resolve(Mutator, composedAs: rated)
+```
+
+The core API is a `ResolutionScope.Resolve(source, prepare, composedAs)` overload. Role conveniences are added per role only when an algorithm needs one; this package adds the mutator role. Growth is one overload per role, never one per composition helper. `composedAs` is the accepted name; a better one may replace it during implementation if it reads more naturally to algorithm authors. Add a glossary entry for the concept.
+
+### Resolver behavior
+
+1. Resolve the source normally. Its selection, sharing, registrations and completed wrapper chain are exactly those of a plain `Resolve`.
+2. Prepare the composition once per owner. The owner's preparation, or a standalone scope's sharing scope, keeps a table from composition reference to preparation. Because the owner creates the composition once during preparation, its prepared state (for example `ChooseOneMutator`'s dispatcher) is created once and survives rebinding, as today.
+3. Give the composition an isolated private sharing scope marked internal. Isolated: configurations resolved inside it, such as `NoChangeMutator.Instance`, never look up or share state with the user's graph; the scope still shares the construction-recursion set. Marked internal: no registration matches a preparation beneath it. This generalizes the 4c.2 registration marker, which only its own registration skips. The composition table entry strongly owns the private scope, following `PreparedWrapper`.
+4. Bind the composition like a generated wrapper, with a `WrappedNodes` target holding the source's raw and completed nodes. The composition is therefore never offered for selection, and its factory receives the source's completed chain. Observers of the source see only the work routed to it.
+5. Cache the binding per preparation and context like any node. A child scope adding an observer on the source rebinds the owner; the source chain gains the observer, and the composition rebinds around it with its prepared state.
+
+### Boundaries
+
+- The source must be a direct child of the composition root, the same limit generated wrappers have. Resolving the source deeper inside the composition would create a private, state-splitting copy in the isolated scope; detect this and throw `InvalidOperationException` with a clear message.
+- A composition references only its own source. Another user configuration placed inside would be prepared privately and hidden. The resolver cannot distinguish user configurations from plumbing, so this is a documented rule. A form taking several sources is the natural extension if an algorithm ever needs it; it is not part of this package.
+- Control projection through a composition (for example `IMutationStrengthControl` from the source's raw binding) is not needed by the three algorithms and is deferred.
+- Generated-wrapper recipes that resolve their source below the wrapper root have the same depth limit today; changing that is out of scope.
+
+### Migration
+
+- `GeneticAlgorithm`, `NSGA2` and ALPS derive `rated` during preparation and call `typed.Resolve(Mutator, composedAs: rated)` instead of resolving the derived configuration as a source. Nothing else in `src` resolves a derived configuration (checked on 2026-10-09; budgets and counters already use `Wrap` registrations).
+- The 4c.2 usage spec may drop its `GaussianMutator` filter if counting all configured mutators reads better afterwards, and the mutator integration tests can use a rate below one.
+
+### Tests
+
+- Broad selectors and their predicates are offered only the source; the composition and `NoChangeMutator.Instance` are never offered.
+- Observers and counters on the source see only routed offspring.
+- Other callers of the same source share its state and do not pass through the composition.
+- Child-scope rebinding reaches a new source observer and preserves the composition's prepared state; a paused stream keeps its composition.
+- Resolving the source below the composition root fails with the documented error.
+- Seeded results for `GeneticAlgorithm`, `NSGA2` and ALPS equal the pre-change implementation, for rates below one and at one.
+
+### Documentation
+
+- Developer guidelines: the selection rule, the plumbing rule, and that factories derive compositions only through `composedAs`, never by resolving a derived configuration as a source.
+- Execution resolution: internal compositions, their isolation and the two skip rules.
+- Glossary: node selector, wrapper registration and a new internal composition entry.
+- Backlog: the rejected alternatives are recorded under [internally derived configurations](developer-backlog.md#internally-derived-configurations-as-selectable-sources).
 
 ## Out of scope
 

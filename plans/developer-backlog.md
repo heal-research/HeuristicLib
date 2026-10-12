@@ -140,6 +140,18 @@ Discussed and rejected during the DI/AOP design review in September 2026. A rena
 
 Neither `Interceptor` nor `StateTransformer` communicates the precise invocation boundary: after a successful iteration step, before termination evaluation and publication, with the transformed state feeding the next iteration. Renaming would therefore leave the stated clarity problem unresolved while changing the whole role family and its callers. Retain `Interceptor`. Reconsider its name only if a concrete responsibility or unavoidable ambiguity changes; adopting AOP alone is insufficient. Whether typed algorithm advice should replace the role remains a separate open question in [container and aspect framing](container-and-aspect-framing.md#d1-state-transformation-responsibility-and-naming).
 
+### Internally derived configurations as selectable sources
+
+Discussed on 2026-10-09 and 2026-10-10 after selector registration (4c.2) exposed that `GeneticAlgorithm`, `NSGA2` and ALPS resolve `Mutator.AppliedAtRate(rate)` as an ordinary source, so broad mutator selectors also matched the derived `ChooseOneMutator` and `NoChangeMutator.Instance`. What was measured then depended on how an algorithm implements its rate rather than on what the user configured. The selected direction is [internal compositions](container-and-aspect-framing.md#package-4c3-plan-internal-compositions). Rejected alternatives:
+
+- **Keep derived configurations as visible sources.** Selection and measurement would follow algorithm internals that the user cannot see on the configuration and that may change without notice.
+- **Execution-level composition helpers**, such as `AppliedAtRate` on a resolved mutator execution. Every configuration-level helper would need an execution-level twin for every role.
+- **A list-level helper**, such as `offspring.ApplyAtRate(...)` in the algorithm step. This is the same duplication on a third representation.
+- **Removing `MutationRate` from the algorithms**, leaving explicit `Mutator = m.AppliedAtRate(r)`. Users expect a mutation-rate parameter on a genetic algorithm, and a builder parameter without a matching algorithm property is inconsistent. Parameters are kept as given and interpreted at resolution, as in scikit-learn.
+- **A transparent resolve that only hides a derived configuration**, without isolation or the plumbing rule. Hidden nodes could share state with the user's graph or do unmeasured work.
+
+Reopen only if an algorithm needs a derived composition that does real work of its own, which the plumbing rule forbids, or several user sources in one composition.
+
 ### Separate node-selector filtering through Where
 
 The first node-selector draft used `Where(predicate)`. During the September 2026 composition review it was replaced by `And(predicate)`: a selector builds a definition rather than returning an enumerable, and a predicate condition is already intersection with a predicate selector. The overload constructs that selector and delegates to the same `And(selector)` implementation. Keeping both spellings would add a second public name for the same operation. Reconsider only if predicate filtering acquires a responsibility different from Boolean intersection; LINQ familiarity alone does not require another spelling.

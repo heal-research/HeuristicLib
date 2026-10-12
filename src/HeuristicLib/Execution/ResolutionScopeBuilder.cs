@@ -18,17 +18,34 @@ public sealed class ResolutionScopeBuilder
         this.sharing = sharing;
     }
 
-    /// <summary>Declares a generated wrapper for an original source configuration.</summary>
-    /// <remarks>
-    /// The callback receives the original source, even when other wrappers already apply. It runs once per source
-    /// execution and registration. Each wrapper's factory resolves that source as its context-specific inner chain.
-    /// Configuration declarations bind inside module declarations, deeper declarations inside shallower ones, and
-    /// earlier declarations inside later ones at equal registration kind/depth. Entry work runs in reverse order.
-    /// </remarks>
+    /// <summary>Declares a generated wrapper for one original source configuration, selected by reference.</summary>
+    /// <remarks>Equivalent to wrapping the selection <see cref="NodeSelector.Reference{TConfiguration}"/>.</remarks>
     public ResolutionScopeBuilder Wrap<TConfiguration>(TConfiguration configuration, Func<TConfiguration, TConfiguration> wrap)
+        where TConfiguration : class, IConfigurationNode =>
+        Wrap(NodeSelector.Reference(configuration), wrap);
+
+    /// <summary>Declares a generated wrapper for every original source configuration the selector matches.</summary>
+    /// <remarks>
+    /// <para>
+    /// Matching happens while resolving, including sources resolved later by deferred children. Generated wrappers are
+    /// never offered to a selector; explicit wrappers in the configuration graph are ordinary sources. Children added by
+    /// this registration's own wrappers are not offered to it, though other registrations still see them. A source matching
+    /// several branches of one selector is wrapped once. A selection matching nothing is valid and adds nothing.
+    /// Predicates should depend only on configuration data; how often they run is unspecified. A predicate exception
+    /// fails that source's binding in the requesting context.
+    /// </para>
+    /// <para>
+    /// The callback receives the original source, even when other wrappers already apply. It runs once per source
+    /// execution and registration. Its result must stand in for the role through which the source is resolved. Each
+    /// wrapper's factory resolves that source as its context-specific inner chain. Configuration declarations bind
+    /// inside module declarations, deeper declarations inside shallower ones, and earlier declarations inside later
+    /// ones at equal registration kind/depth. Entry work runs in reverse order.
+    /// </para>
+    /// </remarks>
+    public ResolutionScopeBuilder Wrap<TConfiguration>(NodeSelector<TConfiguration> selector, Func<TConfiguration, TConfiguration> wrap)
         where TConfiguration : class, IConfigurationNode
     {
-        registrations.Add(WrapperRegistration.Create(configuration, wrap, sharing, installingModule, registrations.Count));
+        registrations.Add(WrapperRegistration.Create(selector, wrap, sharing, installingModule, registrations.Count));
         return this;
     }
 

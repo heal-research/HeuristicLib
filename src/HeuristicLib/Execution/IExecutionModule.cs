@@ -5,7 +5,8 @@ namespace HEAL.HeuristicLib.Execution;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A module wraps the configurations it is interested in by calling <see cref="ResolutionScopeBuilder.Wrap"/>.
+/// A module wraps the configurations it is interested in by calling <see cref="ResolutionScopeBuilder.Wrap{TConfiguration}(NodeSelector{TConfiguration}, Func{TConfiguration, TConfiguration})"/>
+/// or its single-reference overload.
 /// It can declare wrappers and cannot resolve anything, because a module must not participate in building the graph
 /// it wraps. Wrappers compose, so several modules may act on the same configuration without displacing one
 /// another.

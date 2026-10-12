@@ -21,7 +21,7 @@ These are internal storage owners with different lifetimes. A single preparation
 
 ## Declaration, preparation and binding
 
-`ResolutionScopeBuilder.Wrap(source, recipe)` registers a wrapper and `Install` installs a module. `ResolutionScope.Create(declare)` and `CreateChildScope(declare)` snapshot those registrations before returning a scope. Keeping the builder and changing it later cannot change that snapshot. The scope resolves configurations and exposes no registration method.
+`ResolutionScopeBuilder.Wrap(selector, recipe)` registers a wrapper for the source configurations a `NodeSelector` matches, `Wrap(source, recipe)` registers one for a single reference, and `Install` installs a module. `ResolutionScope.Create(declare)` and `CreateChildScope(declare)` snapshot those registrations before returning a scope. Keeping the builder and changing it later cannot change that snapshot. The scope resolves configurations and exposes no registration method.
 
 A selected configuration prepares an `ExecutionFactory<TExecution>` once, without receiving a scope. Preparation allocates persistent state and validates configuration values. The returned factory receives a construction frame, resolves children and returns the typed execution node. It can run again under another observation context while retaining the prepared state.
 
@@ -160,7 +160,9 @@ A deferred execution may retain its immutable construction frame and use it late
 
 ## Wrappers and controls
 
-A declaration targets an original source configuration reference. Its callback receives that source, once per selected source execution and declaration, even when other declarations also apply. Each pair has its own generated configuration and prepared state, owned by the declaration's private `PreparedWrapper` helper.
+A declaration's selector decides which original source configurations it wraps. Each binding of a source asks every applicable declaration whether it matches, so selection covers sources resolved later through retained or deferred scopes, including configurations that did not exist when the declaration was made. Selection has no cache of its own: predicates run again for another binding context, and how often they run is unspecified. A predicate exception fails that source's binding in the requesting context, like any other binding fault. A selection matching nothing adds no wrappers.
+
+The callback receives the selected source, once per selected source execution and declaration, even when other declarations also apply. Its result must stand in for the role through which the source is resolved; a broad selector does not relax that check. Each pair has its own generated configuration and prepared state, owned by the declaration's private `PreparedWrapper` helper.
 
 For each context, the raw source binds first. Each wrapper then receives a `WrappedNodes` through its factory's scope. Resolving the supplied source returns that target's already-built inner chain. The target remains available for deferred resolution. It belongs only to that wrapper's scope; an additional child resolves through its own scope.
 
@@ -208,6 +210,8 @@ For each context, the raw source binds first. Each wrapper then receives a `Wrap
 </figure>
 
 Generated wrappers are not additional wrapper targets. Explicit configured wrappers remain ordinary selectable source nodes. Independent declarations keep independent state even when they use the same callback.
+
+A declaration also skips sources selected beneath its own generated wrappers, such as an additional child its recipe adds. Otherwise a recipe adding a child of the role it selects would wrap that child again, adding another child, without bound. Other declarations still see those children, so nesting is limited by the number of declarations.
 
 Additional wrapper dependencies are selected in a private sharing scope. Its parent is the deeper of the source and declaring sharing scopes when they are comparable; otherwise it is the declaring sharing scope. Existing ancestors can supply dependencies, but missing children stay private and their selections remain pinned.
 
@@ -300,7 +304,7 @@ Two nested duration budgets on one operator, an outer 10s and an inner 2s. Which
 | --- | --- |
 | Factory preparation | Faulted preparation; no later context repeats preparation. |
 | Wrapper callback or preparation | Faulted occurrence for that source/declaration pair. |
-| Raw or wrapper binding | Faulted binding in that context; no partially completed node is returned. A different observation context can try binding again with the same prepared state. |
+| Raw or wrapper binding, including a selector predicate | Faulted binding in that context; no partially completed node is returned. A different observation context can try binding again with the same prepared state. |
 | Dependency construction | Its selection remains pinned; already completed sibling dependencies remain valid. |
 | Retained child declaration | Faulted slot; the callback is not rerun. |
 | Control projection | Completed binding remains valid; the projection exception propagates. |

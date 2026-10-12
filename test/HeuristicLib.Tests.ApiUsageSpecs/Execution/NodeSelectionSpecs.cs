@@ -1,8 +1,12 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
+using HEAL.HeuristicLib.Random;
+using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
 
@@ -45,7 +49,7 @@ public class NodeSelectionSpecs
         NodeSelector<IMutator<RealVector>> selected = allMutators
             .And(mutator => mutator is NamedMutator<RealVector> { Name: "exploration" });
 
-        // These are explicitly supplied nodes; resolver integration is a later package.
+        // Matches examines supplied nodes; ResolutionScopeBuilder.Wrap applies a selection while resolving.
         IConfigurationNode[] nodes = [child, exploration, refinement];
         nodes.Where(selected.Matches).ShouldBe([exploration]);
         nodes.Where(allMutators.Matches).ShouldBe(nodes);
@@ -100,6 +104,110 @@ public class NodeSelectionSpecs
 
         nodes.Where(selected.Matches).ShouldBe([exploration]);
         nodes.Where(sameSelection.Matches).ShouldBe([exploration]);
+    }
+
+    [Fact]
+    public async Task OneModuleCanCountEveryGaussianMutatorInAnAlgorithm()
+    {
+        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
+        var exploration = new GaussianMutator(mutationRate: 0.5, mutationStrength: 1.0);
+        var refinement = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1);
+        var algorithm = new GeneticAlgorithm<RealVector>
+        {
+            PopulationSize = 16,
+            MaximumGenerations = 5,
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Crossover = new AlphaBetaBlendCrossover { Alpha = 0.7 },
+            Mutator = ChooseOneMutator.Create<RealVector>(exploration, refinement),
+            Selector = TournamentSelector.For(problem, tournamentSize: 2),
+            MutationRate = 0.5,
+            Elites = 1
+        };
+        var gaussianMutations = new CountAccumulator();
+
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
+            .Attach(new GaussianMutationCounter(gaussianMutations));
+        await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        gaussianMutations.CurrentCount.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public void ConsumerDefinedRolesCanBeSelectedByType()
+    {
+        ICoolingSchedule warmup = new GeometricCooling(StartTemperature: 100, Factor: 0.5);
+        ICoolingSchedule main = new GeometricCooling(StartTemperature: 8, Factor: 0.5);
+        var plan = new AnnealingPlan(warmup, main, WarmupSteps: 3);
+        var queriedTemperatures = new List<double>();
+
+        var scope = ResolutionScope.Create(builder => builder.Wrap(
+            NodeSelector.OfType<ICoolingSchedule>(),
+            schedule => new RecordedCooling(schedule, queriedTemperatures.Add)));
+        var execution = scope.Resolve(plan);
+
+        execution.Temperature(step: 0).ShouldBe(100);
+        execution.Temperature(step: 5).ShouldBe(2);
+        queriedTemperatures.ShouldBe([100, 2]);
+    }
+
+    private sealed class GaussianMutationCounter(CountAccumulator mutations) : IExecutionModule
+    {
+        private static readonly NodeSelector<IMutator<RealVector>> GaussianMutators =
+            NodeSelector.OfType<IMutator<RealVector>>().And(mutator => mutator is GaussianMutator);
+
+        public void Install(ResolutionScopeBuilder builder) =>
+            builder.Wrap(GaussianMutators, mutator => mutator.CountCalls(mutations));
+    }
+
+    // A consumer-defined role: the library knows nothing about cooling schedules.
+    private interface ICoolingSchedule : IConfigurationNode<ICoolingScheduleExecution>;
+
+    private interface ICoolingScheduleExecution : IExecutionNode
+    {
+        double Temperature(int step);
+    }
+
+    private sealed record GeometricCooling(double StartTemperature, double Factor) : ICoolingSchedule
+    {
+        public ExecutionFactory<ICoolingScheduleExecution> CreateExecutionFactory()
+        {
+            var execution = new Execution(StartTemperature, Factor);
+            return _ => execution;
+        }
+
+        private sealed class Execution(double startTemperature, double factor) : ICoolingScheduleExecution
+        {
+            public double Temperature(int step) => startTemperature * Math.Pow(factor, step);
+        }
+    }
+
+    private sealed record RecordedCooling(ICoolingSchedule Schedule, Action<double> Record) : ICoolingSchedule
+    {
+        public ExecutionFactory<ICoolingScheduleExecution> CreateExecutionFactory() =>
+            scope => new Execution(scope.Resolve(Schedule), Record);
+
+        private sealed class Execution(ICoolingScheduleExecution schedule, Action<double> record) : ICoolingScheduleExecution
+        {
+            public double Temperature(int step)
+            {
+                var temperature = schedule.Temperature(step);
+                record(temperature);
+                return temperature;
+            }
+        }
+    }
+
+    private sealed record AnnealingPlan(ICoolingSchedule Warmup, ICoolingSchedule Main, int WarmupSteps)
+        : IConfigurationNode<AnnealingPlan.Execution>
+    {
+        public ExecutionFactory<Execution> CreateExecutionFactory() =>
+            scope => new Execution(scope.Resolve(Warmup), scope.Resolve(Main), WarmupSteps);
+
+        public sealed class Execution(ICoolingScheduleExecution warmup, ICoolingScheduleExecution main, int warmupSteps) : IExecutionNode
+        {
+            public double Temperature(int step) =>
+                step < warmupSteps ? warmup.Temperature(step) : main.Temperature(step - warmupSteps);
+        }
     }
 
     // This consumer-authored example is not a new library naming contract.

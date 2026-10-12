@@ -5,20 +5,22 @@ using System.Runtime.ExceptionServices;
 namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>
-/// One declared wrapper recipe. It owns a separate preparation for each selected source through weak keys;
-/// placement and ordering belong to the requesting execution bindings.
+/// One declared wrapper recipe for the source configurations its selector matches. It owns a separate preparation
+/// for each selected source through weak keys; placement and ordering belong to the requesting execution bindings.
 /// </summary>
 internal sealed class WrapperRegistration
 {
     private readonly ConditionalWeakTable<ExecutionPreparation, PreparedWrapper> preparations = new();
-    private readonly IConfigurationNode source;
+    // Marks this registration's private sharing scopes without giving them a path back to the registration.
+    private readonly object identity = new();
+    private readonly Func<IConfigurationNode, bool> matches;
     private readonly Func<IConfigurationNode, IConfigurationNode> wrap;
     private readonly ExecutionSharingScope sharing;
 
-    private WrapperRegistration(IConfigurationNode source, Func<IConfigurationNode, IConfigurationNode> wrap,
+    private WrapperRegistration(Func<IConfigurationNode, bool> matches, Func<IConfigurationNode, IConfigurationNode> wrap,
         ExecutionSharingScope sharing, bool registeredByModule, int sequence)
     {
-        this.source = source;
+        this.matches = matches;
         this.wrap = wrap;
         this.sharing = sharing;
         RegisteredByModule = registeredByModule;
@@ -28,12 +30,18 @@ internal sealed class WrapperRegistration
     public bool RegisteredByModule { get; }
     public int Sequence { get; }
 
-    public static WrapperRegistration Create<TConfiguration>(TConfiguration source, Func<TConfiguration, TConfiguration> wrap,
+    public static WrapperRegistration Create<TConfiguration>(NodeSelector<TConfiguration> selector, Func<TConfiguration, TConfiguration> wrap,
         ExecutionSharingScope sharing, bool registeredByModule, int sequence)
         where TConfiguration : class, IConfigurationNode =>
-        new(source, configuration => wrap((TConfiguration)configuration), sharing, registeredByModule, sequence);
+        new(selector.Matches, configuration => wrap((TConfiguration)configuration), sharing, registeredByModule, sequence);
 
-    public bool Matches(IConfigurationNode configuration) => ReferenceEquals(configuration, source);
+    /// <remarks>
+    /// Only original source configurations are offered; predicate exceptions propagate to the binding. Sources selected
+    /// beneath this registration's own generated wrappers are not offered, so a recipe adding a child of the selected
+    /// role cannot wrap that child again without bound. Other registrations still see such children.
+    /// </remarks>
+    public bool Matches(ExecutionPreparation source) =>
+        !source.Sharing.IsWithinWrapperOf(identity) && matches(source.Source);
 
     public ExecutionPreparation GetPreparation(ExecutionPreparation source) =>
         preparations.GetValue(source, static execution => new PreparedWrapper(execution)).PrepareOnce(this);
@@ -68,7 +76,7 @@ internal sealed class WrapperRegistration
 
                 var inheritFromSource = source.Sharing.IsWithin(registration.sharing);
                 var parent = inheritFromSource ? source.Sharing : registration.sharing;
-                privateSharing = new ExecutionSharingScope(parent, retainParent: inheritFromSource);
+                privateSharing = new ExecutionSharingScope(parent, retainParent: inheritFromSource, registration.identity);
                 wrapper = source.CreateWrapper(configuration, privateSharing);
                 wrapper.PrepareOnce();
                 status = PreparationStatus.Ready;
