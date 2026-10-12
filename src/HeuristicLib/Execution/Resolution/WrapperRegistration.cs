@@ -37,11 +37,12 @@ internal sealed class WrapperRegistration
 
     /// <remarks>
     /// Only original source configurations are offered; predicate exceptions propagate to the binding. Sources selected
+    /// beneath an internal composition are excluded from every registration. Sources selected
     /// beneath this registration's own generated wrappers are not offered, so a recipe adding a child of the selected
     /// role cannot wrap that child again without bound. Other registrations still see such children.
     /// </remarks>
     public bool Matches(ExecutionPreparation source) =>
-        !source.Sharing.IsWithinWrapperOf(identity) && matches(source.Source);
+        !source.Sharing.IsInternal && !source.Sharing.IsWithinWrapperOf(identity) && matches(source.Source);
 
     public ExecutionPreparation GetPreparation(ExecutionPreparation source) =>
         preparations.GetValue(source, static execution => new PreparedWrapper(execution)).PrepareOnce(this);

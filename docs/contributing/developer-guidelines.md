@@ -128,6 +128,10 @@ Search states are public progress values. Do not use them to carry private count
 
 Preparation receives no scope. The returned `ExecutionFactory<TExecution>` receives a `ResolutionScope` construction frame; resolve children inside that factory and pass them to the node. Retain the frame only for child scopes, wrappers or delayed child construction. Use a preparation-owned key for a retained child slot. Do not add another scope abstraction or call a child's factory directly.
 
+Node selection follows the configuration objects exposed as parameters. Keep those parameters as supplied. If a factory derives a composition such as `Mutator.AppliedAtRate(MutationRate)`, create it once during preparation and bind it through `Resolve(Mutator, composedAs: rated)`, never by resolving the derived configuration as an ordinary source. Reuse the configuration helper; do not add execution-level or candidate-list equivalents.
+
+An internal composition routes work to one configured source and adds only plumbing, such as dispatch, no-change branches or caching. Any independent operator doing real work must be a parameter so observations and budgets can see it. Resolve the source directly from the composition's root factory. The composition and its private dependencies are isolated from the user's state and excluded from every registration. Children introduced by a registration's generated wrappers have a different rule: only that registration skips them; other registrations can still select them.
+
 ### § 4.4 Expose one execution node factory
 
 Expose one public `CreateExecutionFactory(...)` method returning `ExecutionFactory<TExecution>` for the exact execution role. Do not add role named alternatives or hide it behind explicit interface implementation. Preparation runs once per selected logical execution; its returned factory may bind several nodes.

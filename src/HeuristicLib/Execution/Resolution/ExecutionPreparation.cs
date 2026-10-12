@@ -13,6 +13,7 @@ internal sealed class ExecutionPreparation
     private readonly Func<IConfigurationNode, Delegate> prepare;
     private readonly Dictionary<IConfigurationNode, ExecutionPreparation> dependencies = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<object, ExecutionSharingScope.RetainedChildScope> retainedChildren = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IConfigurationNode, InternalComposition> compositions = new(ReferenceEqualityComparer.Instance);
     private PreparationStatus status;
     private Delegate? factory;
     private ExceptionDispatchInfo? fault;
@@ -58,6 +59,9 @@ internal sealed class ExecutionPreparation
 
     public ExecutionPreparation CreateWrapper(IConfigurationNode configuration, ExecutionSharingScope sharing) =>
         new(configuration, sharing, executionContract, prepare);
+
+    public ExecutionPreparation GetComposition(IConfigurationNode configuration, ExecutionPreparation source) =>
+        InternalComposition.GetOrAdd(compositions, configuration, source, Sharing);
 
     public void RequireContract<TExecution>()
         where TExecution : class, IExecutionNode

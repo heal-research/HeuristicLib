@@ -70,7 +70,8 @@ public static class ChooseOneMutatorExtensions
     {
         public ChooseOneMutator<TCandidate> AppliedAtRate(double mutationRate) =>
             ChooseOneMutator.Create(
-                [mutator, NoChangeMutator<TCandidate>.Instance],
+                // Keep plumbing distinct even when the source is NoChangeMutator<TCandidate>.Instance.
+                [mutator, new NoChangeMutator<TCandidate>()],
                 [mutationRate, double.IsNaN(mutationRate) ? double.PositiveInfinity : 1 - mutationRate]);
     }
 }

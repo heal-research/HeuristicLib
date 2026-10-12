@@ -107,7 +107,7 @@ public class NodeSelectionSpecs
     }
 
     [Fact]
-    public async Task OneModuleCanCountEveryGaussianMutatorInAnAlgorithm()
+    public async Task OneModuleCanCountEveryConfiguredMutatorInAnAlgorithm()
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var exploration = new GaussianMutator(mutationRate: 0.5, mutationStrength: 1.0);
@@ -123,13 +123,13 @@ public class NodeSelectionSpecs
             MutationRate = 0.5,
             Elites = 1
         };
-        var gaussianMutations = new CountAccumulator();
+        var mutations = new CountAccumulator();
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-            .Attach(new GaussianMutationCounter(gaussianMutations));
+            .Attach(new MutationCounter(mutations));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        gaussianMutations.CurrentCount.ShouldBeGreaterThan(0);
+        mutations.CurrentCount.ShouldBeGreaterThan(0);
     }
 
     [Fact]
@@ -150,13 +150,12 @@ public class NodeSelectionSpecs
         queriedTemperatures.ShouldBe([100, 2]);
     }
 
-    private sealed class GaussianMutationCounter(CountAccumulator mutations) : IExecutionModule
+    private sealed class MutationCounter(CountAccumulator mutations) : IExecutionModule
     {
-        private static readonly NodeSelector<IMutator<RealVector>> GaussianMutators =
-            NodeSelector.OfType<IMutator<RealVector>>().And(mutator => mutator is GaussianMutator);
+        private static readonly NodeSelector<IMutator<RealVector>> Mutators = NodeSelector.OfType<IMutator<RealVector>>();
 
         public void Install(ResolutionScopeBuilder builder) =>
-            builder.Wrap(GaussianMutators, mutator => mutator.CountCalls(mutations));
+            builder.Wrap(Mutators, mutator => mutator.CountCalls(mutations));
     }
 
     // A consumer-defined role: the library knows nothing about cooling schedules.

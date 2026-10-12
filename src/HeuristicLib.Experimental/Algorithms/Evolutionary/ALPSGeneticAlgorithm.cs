@@ -44,12 +44,12 @@ public record AlpsGeneticAlgorithm<TCandidate>
 
     protected override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>()
     {
-        var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.AppliedAtRate(MutationRate);
+        var rated = MutationRate >= 1.0 ? null : Mutator.AppliedAtRate(MutationRate);
         return scope =>
         {
             var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>>();
             return new Execution<TRunSearchSpace, TRunProblem>(typed.ResolveOptional(Interceptor), typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover),
-                typed.Resolve(effectiveMutator), typed.Resolve(Selector), typed.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations);
+                typed.Resolve(Mutator, composedAs: rated), typed.Resolve(Selector), typed.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations);
         };
     }
 

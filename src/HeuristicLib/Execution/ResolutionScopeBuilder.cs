@@ -31,6 +31,7 @@ public sealed class ResolutionScopeBuilder
     /// never offered to a selector; explicit wrappers in the configuration graph are ordinary sources. Children added by
     /// this registration's own wrappers are not offered to it, though other registrations still see them. A source matching
     /// several branches of one selector is wrapped once. A selection matching nothing is valid and adds nothing.
+    /// Internal compositions and their private dependencies are never offered to any registration.
     /// Predicates should depend only on configuration data; how often they run is unspecified. A predicate exception
     /// fails that source's binding in the requesting context.
     /// </para>

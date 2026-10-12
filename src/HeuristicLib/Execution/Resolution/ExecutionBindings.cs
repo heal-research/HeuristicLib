@@ -46,6 +46,11 @@ internal sealed class ExecutionBindings
         where TExecution : class, IExecutionNode =>
         Bind<TExecution>(preparation).GetNodes<TExecution>(preparation.Source);
 
+    public TExecution BindComposition<TExecution>(ExecutionPreparation composition, ExecutionPreparation source,
+        TExecution raw, TExecution completed)
+        where TExecution : class, IExecutionNode =>
+        Bind<TExecution>(composition, new WrappedNodes(source, raw, completed)).GetNodes<TExecution>(composition.Source).Completed;
+
     private NodeConstruction Bind<TExecution>(ExecutionPreparation preparation, WrappedNodes? target = null)
         where TExecution : class, IExecutionNode
     {
@@ -94,7 +99,7 @@ internal sealed class ExecutionBindings
                 continue;
 
             var wrapper = declaration.GetPreparation(source);
-            var target = new WrappedNodes(source.Source, raw, completed);
+            var target = new WrappedNodes(source, raw, completed);
             completed = Bind<TExecution>(wrapper, target).GetNodes<TExecution>(source.Source).Completed;
         }
 
@@ -166,12 +171,14 @@ internal sealed class ExecutionBindings
     /// The original source and the already-built nodes a generated wrapper wraps. Retaining this immutable target
     /// lets deferred calls reach the same inner chain without changing another wrapper or observation context.
     /// </summary>
-    internal sealed class WrappedNodes(IConfigurationNode source, IExecutionNode raw, IExecutionNode inner)
+    internal sealed class WrappedNodes(ExecutionPreparation source, IExecutionNode raw, IExecutionNode inner)
     {
-        public bool Matches(IConfigurationNode configuration) => ReferenceEquals(configuration, source);
+        public ExecutionPreparation Source { get; } = source;
+
+        public bool Matches(IConfigurationNode configuration) => ReferenceEquals(configuration, Source.Source);
 
         public (TExecution Raw, TExecution Completed) GetNodes<TExecution>()
             where TExecution : class, IExecutionNode =>
-            (ExecutionBindings.RequireNode<TExecution>(source, raw), ExecutionBindings.RequireNode<TExecution>(source, inner));
+            (ExecutionBindings.RequireNode<TExecution>(Source.Source, raw), ExecutionBindings.RequireNode<TExecution>(Source.Source, inner));
     }
 }
