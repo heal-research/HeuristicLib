@@ -76,7 +76,7 @@ An analyzer already owns its result accumulator, and existing observation wrappe
 
 There is a concrete ordering constraint: operator duration budgets are configuration-origin wrappers, and analyzer callbacks are module-origin wrappers. The budget must measure the operator without including outer observer callback work. Simply appending a child budget outside an existing parent observer chain violates that property.
 
-Budget algorithms also allocate counters/timers during instance creation and declare wrappers in a child scope before resolving the algorithm they control. Disallowing child-local *modules* alone therefore does not solve all instances of case 5; configuration-origin behavior has the same binding problem.
+Budget algorithms also allocate counters/timers during instance creation and declare wrappers in a child scope before resolving the algorithm they control. Disallowing child-local _modules_ alone therefore does not solve all instances of case 5; configuration-origin behavior has the same binding problem.
 
 ## Questions to answer
 

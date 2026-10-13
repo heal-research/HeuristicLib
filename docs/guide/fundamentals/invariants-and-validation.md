@@ -3,7 +3,7 @@
 ::: info What this answers
 Whether an operator can actually be used in a run, and how that is decided before the run starts rather than
 discovered from a crash or from bad results afterwards. Two independent questions are asked: whether an operator was
-*written for* this run's types at all, and whether what it *guarantees about its output* keeps candidates inside the
+_written for_ this run's types at all, and whether what it _guarantees about its output_ keeps candidates inside the
 search space.
 :::
 
@@ -11,7 +11,7 @@ search space.
 
 An operator's type arguments say what it **reads**. `SingleCandidateMutator<BoolVector, FixedCardinalityBoolVectorSearchSpace>` reads a fixed cardinality space, so it can consult the cardinality.
 
-What they never say is what the operator **preserves**. Preserving a property is a statement about the operator's *output*, and an output property is not part of a signature. Two mutators over bool vectors have identical signatures whether or not they keep the number of set elements constant.
+What they never say is what the operator **preserves**. Preserving a property is a statement about the operator's _output_, and an output property is not part of a signature. Two mutators over bool vectors have identical signatures whether or not they keep the number of set elements constant.
 
 That gap is real and it is not a design oversight to be fixed with more type arguments:
 
@@ -40,7 +40,7 @@ public sealed record BoolVectorCardinality(int Cardinality) : ICandidateInvarian
 }
 ```
 
-`Implies` is the one member with a non-obvious job. It answers whether holding *this* invariant is enough to guarantee another one, and defaults to value equality. Override it where one invariant is strictly stronger:
+`Implies` is the one member with a non-obvious job. It answers whether holding _this_ invariant is enough to guarantee another one, and defaults to value equality. Override it where one invariant is strictly stronger:
 
 ```csharp
 public bool Implies(ICandidateInvariant<BoolVector> other) => other switch
@@ -85,15 +85,15 @@ public record BitSwapMutator
 
 `Ensures` is three-valued, and the third value is the important one:
 
-| Answer | Meaning | Effect |
-| --- | --- | --- |
-| `true` | Every candidate this operator produces has the invariant | Compatible for that invariant |
-| `false` | The output may not have it | Reported as an incompatibility |
-| `null` | The operator states nothing | Not checked |
+| Answer  | Meaning                                                  | Effect                         |
+| ------- | -------------------------------------------------------- | ------------------------------ |
+| `true`  | Every candidate this operator produces has the invariant | Compatible for that invariant  |
+| `false` | The output may not have it                               | Reported as an incompatibility |
+| `null`  | The operator states nothing                              | Not checked                    |
 
 So **declaring is opt-in, per invariant**. An operator that implements nothing, or answers `null`, is never reported. That keeps the system additive: adding an invariant to a search space does not invalidate operators that never claimed anything about it.
 
-`Ensures` is named for what it covers. A mutator *preserves* an invariant of its input; a creator has no input and *establishes* one. Both are "ensures this of my output", which is why one member serves both.
+`Ensures` is named for what it covers. A mutator _preserves_ an invariant of its input; a creator has no input and _establishes_ one. Both are "ensures this of my output", which is why one member serves both.
 
 The other half is `Requires`, the invariants an operator needs of the candidates handed to it:
 
@@ -114,7 +114,7 @@ Each failure becomes a diagnostic naming the invariant that decided it, so a mes
 
 ## The other question: was it written for this run at all?
 
-Invariants answer what an operator *does*. A separate question comes first: can it run here at all? An operator
+Invariants answer what an operator _does_. A separate question comes first: can it run here at all? An operator
 authored at a bound rung names the search space and problem it was written for, and the run supplies its own:
 
 ```csharp
@@ -146,7 +146,7 @@ public bool Fits(ExecutionSignature execution) =>
 ```
 
 A mutator is not written about a search state, so it does not look at that field. A terminator is, and adds a clause
-for it — contravariant, like the other two. An interceptor *returns* its search state, so it is invariant in it and
+for it — contravariant, like the other two. An interceptor _returns_ its search state, so it is invariant in it and
 compares exactly.
 
 The assignability runs toward the declared type because the instance contracts are contravariant in the search space
@@ -172,7 +172,7 @@ public override bool Fits(ExecutionSignature execution) =>
     base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Terminator, Evaluator, Refiner, Selector);
 ```
 
-A composition that resolves a child under *different* types — a different candidate, or a problem it adapts and then
+A composition that resolves a child under _different_ types — a different candidate, or a problem it adapts and then
 calls directly — must **not** forward, because those children belong to a different run. Not forwarding is the default,
 so such a composition needs no code: it answers for itself, and its children are never asked about a run they were
 never part of. If it wants them checked, it checks them against the inner run's own signature.

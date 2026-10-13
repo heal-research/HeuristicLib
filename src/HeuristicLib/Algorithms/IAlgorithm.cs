@@ -47,6 +47,7 @@ public static class AlgorithmResolutionExtensions
             where TSearchState : class, ISearchState =>
             scope.Resolve(algorithm, static target => target.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>());
 
+        [return: NotNullIfNotNull(nameof(algorithm))]
         public IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate>? algorithm)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -85,6 +86,7 @@ public static class AlgorithmResolutionExtensions
         public IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve(IAlgorithm<TCandidate> algorithm) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 
+        [return: NotNullIfNotNull(nameof(algorithm))]
         public IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional(IAlgorithm<TCandidate>? algorithm) =>
             algorithm is null ? null : scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 

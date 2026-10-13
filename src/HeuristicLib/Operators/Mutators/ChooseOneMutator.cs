@@ -36,22 +36,16 @@ public sealed record ChooseOneMutator<TCandidate> : MultiMutator<TCandidate>
         if (Weights.Count > 0 && Weights.Count != ChildMutators.Count)
             throw new InvalidOperationException("Weights must have the same length as mutators.");
 
-        var dispatcher = new WeightedBatchDispatcher(ChildMutators.Count, Weights);
-        return childMutators => new Execution<TRunSearchSpace, TRunProblem>(childMutators, dispatcher);
+        return childMutators => new Execution<TRunSearchSpace, TRunProblem>(childMutators, new(childMutators, Weights));
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedBatchDispatcher dispatcher)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedRouter<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> router)
         : MultiMutatorExecution<TCandidate, TSearchSpace, TProblem>(childMutators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            dispatcher.Dispatch(
-                parents,
-                ChildMutators,
-                random,
-                (random, searchSpace, problem),
-                static (mutator, batchParents, state) => mutator.Mutate(batchParents, state.random, state.searchSpace, state.problem));
+            router.Route(parents, random, (mutator, batch) => mutator.Mutate(batch, random, searchSpace, problem));
     }
 }
 
@@ -69,9 +63,6 @@ public static class ChooseOneMutatorExtensions
     extension<TCandidate>(IMutator<TCandidate> mutator)
     {
         public ChooseOneMutator<TCandidate> AppliedAtRate(double mutationRate) =>
-            ChooseOneMutator.Create(
-                // Keep plumbing distinct even when the source is NoChangeMutator<TCandidate>.Instance.
-                [mutator, new NoChangeMutator<TCandidate>()],
-                [mutationRate, double.IsNaN(mutationRate) ? double.PositiveInfinity : 1 - mutationRate]);
+            ChooseOneMutator.Create([mutator, new NoChangeMutator<TCandidate>()], WeightedRouter.RateWeights(mutationRate));
     }
 }

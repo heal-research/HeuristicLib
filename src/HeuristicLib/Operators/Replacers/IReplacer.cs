@@ -34,6 +34,7 @@ public static class ReplacerResolutionExtensions
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             scope.Resolve(replacer, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
 
+        [return: NotNullIfNotNull(nameof(replacer))]
         public IReplacerExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate>? replacer)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
@@ -68,6 +69,7 @@ public static class ReplacerResolutionExtensions
         public IReplacerExecution<TCandidate, TSearchSpace, TProblem> Resolve(IReplacer<TCandidate> replacer) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
 
+        [return: NotNullIfNotNull(nameof(replacer))]
         public IReplacerExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IReplacer<TCandidate>? replacer) =>
             replacer is null ? null : scope.Resolve(replacer);
 

@@ -10,10 +10,10 @@ Operator configurations prepare typed execution factories. Each factory binds an
 
 ## Choose an authoring path
 
-| Path                        | Typical base                     | Use when                                                                                     |
-| --------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------- |
-| Stateless                   | `StatelessEvaluator<...>`        | The operation needs configuration values but no mutable execution data                       |
-| Stateful                    | `StatefulEvaluator<..., TState>` | The operation needs framework managed execution data but no execution graph dependencies     |
+| Path                    | Typical base                     | Use when                                                                                     |
+| ----------------------- | -------------------------------- | -------------------------------------------------------------------------------------------- |
+| Stateless               | `StatelessEvaluator<...>`        | The operation needs configuration values but no mutable execution data                       |
+| Stateful                | `StatefulEvaluator<..., TState>` | The operation needs framework managed execution data but no execution graph dependencies     |
 | Explicit execution node | `Evaluator<...>`                 | The operator resolves child operators or needs complete control over its execution structure |
 
 The same pattern exists for creators, crossovers, mutators, selectors, replacers, interceptors and terminators.
@@ -50,7 +50,7 @@ public record SwapMutator : SingleCandidateMutator<Permutation>
 
 Reduction changes what the author declares, not where the operator fits. **The role contract names only the candidate.** `IMutator<Permutation>` is the whole contract, so the `SwapMutator` above fills any mutator slot over permutations, and so does an operator authored at the fullest rung against a specific problem.
 
-The arity lives in the authoring bases: the base performs the type check when a run supplies types the operator was not written for, and for a stateless operator the configuration *is* the executable part, so it needs the search space and problem in scope where it is written. A consumer, field or child property never names them.
+The arity lives in the authoring bases: the base performs the type check when a run supplies types the operator was not written for, and for a stateless operator the configuration _is_ the executable part, so it needs the search space and problem in scope where it is written. A consumer, field or child property never names them.
 
 Wrapping and multi bases are agnostic in the search space and the problem, and take **one** type argument:
 
@@ -65,7 +65,7 @@ public sealed record RetryingMutator<TCandidate>(IMutator<TCandidate> ChildMutat
 }
 ```
 
-Leaf authors may name fixed search-space and problem types; a composite forwards the run's types rather than naming what its children were written for. The run's search space and problem arrive as *method* type arguments on `CreateWrapperFactory`, are threaded into a nested generic execution class, and the child is resolved against them. A problem-specific child composes in exactly as a universal one does, because the child slot is `IMutator<TCandidate>` either way.
+Leaf authors may name fixed search-space and problem types; a composite forwards the run's types rather than naming what its children were written for. The run's search space and problem arrive as _method_ type arguments on `CreateWrapperFactory`, are threaded into a nested generic execution class, and the child is resolved against them. A problem-specific child composes in exactly as a universal one does, because the child slot is `IMutator<TCandidate>` either way.
 
 The cost of that agnosticism falls on the composite's author, and only there: a generic method with a constraint clause and a nested generic execution class, instead of a plain nested class. Leaf authoring is unchanged, and every consumer of the composite names one type argument.
 
@@ -214,6 +214,10 @@ public record EliteSelector<TCandidate> : ISelector<TCandidate>
 Like every composite, these name only the candidate. A child slot is `ISelector<TCandidate>`, and the run's search space and problem arrive as method type arguments on the creation method. See [Choose an arity](#choose-an-arity) for what that costs the author and why it costs the consumer nothing.
 
 Composition helpers such as choosing one child, applying a transformation and running a pipeline are covered in [Operator composition](/guide/extending/operator-composition).
+
+`WeightedRouter<TChoice>` supplies the per-input routing used by `ChooseOneCreator`, `ChooseOneCrossover`, `ChooseOneMutator` and `ChooseOneRefiner`. Create it with `WeightedRouter.Create(choices)` for uniform routing or `WeightedRouter.Create(choices, weights)`, using `WeightedIndexSampler` semantics; weights are compiled once per router. Its `Route` overloads accept either inputs or a requested output count, an RNG and a handler that receives one choice and its batch. It assigns every input before handling any batch, handles the batches in choice order, skips empty batches and restores results to their original positions. When every input goes to the same choice, that choice receives the original inputs. Each handler must return exactly the batch size; a mismatch throws `InvalidOperationException`. `ChooseOneSelector` and `ChooseOneReplacer` choose once for the whole call and sample their child from a `WeightedItemSampler<T>`.
+
+Algorithms use the router to apply parameter-derived behavior in their execution code. GA, NSGA2 and ALPS create `WeightedRouter.AtRate(mutator, mutationRate)` in their execution constructor. The router owns the resolved mutator and a null pass-through choice, so the execution retains only the router for mutation. It routes each offspring to the mutator with the rate's probability, and the algorithm mutates only that batch. Rates at most zero, negative infinity and NaN route every offspring to null; rates at least one and positive infinity route every offspring to the mutator, which receives the original offspring. Neither extreme draws from the RNG. The algorithms use the step's same RNG for routing and mutation, so observers count only offspring routed to the configured mutator. `WeightedRouter.AtRate(rate)` supplies boolean choices for callers that need a decision, and `AppliedAtRate` remains a configuration helper for explicitly configured compositions using the same rate weights.
 
 ## Scaffolding roles and cross-cutting concerns
 

@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Operators.Creators;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -14,10 +15,16 @@ public sealed class AlpsMutationCompositionTests
     [Theory]
     [InlineData(0.0)]
     [InlineData(0.35)]
+    [InlineData(0.5)]
+    [InlineData(-0.25)]
+    [InlineData(double.NaN)]
+    [InlineData(double.NegativeInfinity)]
     [InlineData(1.0)]
-    public async Task InternalMutationRate_MatchesExplicitComposition_WithTheSameSeed(double rate)
+    [InlineData(1.5)]
+    [InlineData(double.PositiveInfinity)]
+    public async Task MutationRate_MatchesExplicitAppliedAtRate_WithTheSameSeed(double rate)
     {
-        var algorithm = CreateAlgorithm(rate);
+        var algorithm = CreateAlgorithm(rate) with { Mutator = new RandomStepMutator(), Evaluator = new RandomEvaluator() };
         var baseline = algorithm with
         {
             Mutator = rate >= 1 ? algorithm.Mutator : algorithm.Mutator.AppliedAtRate(rate),
@@ -52,6 +59,28 @@ public sealed class AlpsMutationCompositionTests
         count.CurrentCount.ShouldBe(mutated);
     }
 
+    [Theory]
+    [InlineData(false, 0.0)]
+    [InlineData(true, 0.0)]
+    [InlineData(false, -0.25)]
+    [InlineData(true, -0.25)]
+    [InlineData(false, double.NaN)]
+    [InlineData(true, double.NaN)]
+    [InlineData(false, double.NegativeInfinity)]
+    [InlineData(true, double.NegativeInfinity)]
+    public async Task NonMutatingRates_DoNotObserveTheConfiguredSource_EvenWhenItIsTheSharedNoChangeMutator(bool noChange, double rate)
+    {
+        var algorithm = CreateAlgorithm(rate);
+        if (noChange)
+            algorithm = algorithm with { Mutator = NoChangeMutator<int>.Instance };
+        var count = new CountAccumulator();
+        var scope = ResolutionScope.Create(builder => builder.Wrap(algorithm.Mutator, source => source.CountCandidates(count)));
+
+        await States(scope, algorithm);
+
+        count.CurrentCount.ShouldBe(0);
+    }
+
     private static AlpsGeneticAlgorithm<int> CreateAlgorithm(double rate) => new()
     {
         Creator = new ConstantCreator(),
@@ -77,5 +106,17 @@ public sealed class AlpsMutationCompositionTests
     private sealed record StepMutator : SingleCandidateMutator<int>
     {
         public override int MutateCandidate(int parent, IRandomNumberGenerator random) => parent - 1;
+    }
+
+    private sealed record RandomEvaluator : StatelessEvaluator<int>
+    {
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
+            candidates.Select(candidate => new ObjectiveVector(candidate + random.NextDouble())).ToArray();
+    }
+
+    private sealed record RandomStepMutator : StatelessMutator<int>
+    {
+        public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
+            parents.Select(parent => parent - random.NextInt(1, 10)).ToArray();
     }
 }

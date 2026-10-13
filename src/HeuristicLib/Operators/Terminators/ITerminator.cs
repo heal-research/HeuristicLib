@@ -37,6 +37,7 @@ public static class TerminatorResolutionExtensions
             where TSearchState : class, ISearchState =>
             scope.Resolve(terminator, static target => target.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>());
 
+        [return: NotNullIfNotNull(nameof(terminator))]
         public ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate>? terminator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -74,6 +75,7 @@ public static class TerminatorResolutionExtensions
         public ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve(ITerminator<TCandidate> terminator) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
 
+        [return: NotNullIfNotNull(nameof(terminator))]
         public ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional(ITerminator<TCandidate>? terminator) =>
             terminator is null ? null : scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
 

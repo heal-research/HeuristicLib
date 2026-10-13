@@ -38,6 +38,7 @@ public static class InterceptorResolutionExtensions
             where TSearchState : class, ISearchState =>
             scope.Resolve(interceptor, static target => target.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>());
 
+        [return: NotNullIfNotNull(nameof(interceptor))]
         public IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate>? interceptor)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -75,6 +76,7 @@ public static class InterceptorResolutionExtensions
         public IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve(IInterceptor<TCandidate> interceptor) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor);
 
+        [return: NotNullIfNotNull(nameof(interceptor))]
         public IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional(IInterceptor<TCandidate>? interceptor) =>
             interceptor is null ? null : scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor);
 

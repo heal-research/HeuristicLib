@@ -31,6 +31,7 @@ public static class SelectorResolutionExtensions
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             scope.Resolve(selector, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
 
+        [return: NotNullIfNotNull(nameof(selector))]
         public ISelectorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate>? selector)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
@@ -65,6 +66,7 @@ public static class SelectorResolutionExtensions
         public ISelectorExecution<TCandidate, TSearchSpace, TProblem> Resolve(ISelector<TCandidate> selector) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(selector);
 
+        [return: NotNullIfNotNull(nameof(selector))]
         public ISelectorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(ISelector<TCandidate>? selector) =>
             selector is null ? null : scope.Resolve(selector);
 

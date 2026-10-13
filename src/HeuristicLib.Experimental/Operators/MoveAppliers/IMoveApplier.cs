@@ -35,6 +35,7 @@ public static class MoveApplierResolutionExtensions
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             scope.Resolve(moveApplier, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
 
+        [return: NotNullIfNotNull(nameof(moveApplier))]
         public IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TMove>(IMoveApplier<TCandidate, TMove>? moveApplier)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
@@ -69,6 +70,7 @@ public static class MoveApplierResolutionExtensions
         public IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TMove>(IMoveApplier<TCandidate, TMove> moveApplier) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveApplier);
 
+        [return: NotNullIfNotNull(nameof(moveApplier))]
         public IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TMove>(IMoveApplier<TCandidate, TMove>? moveApplier) =>
             moveApplier is null ? null : scope.Resolve(moveApplier);
 

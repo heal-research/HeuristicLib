@@ -30,6 +30,7 @@ public static class CreatorResolutionExtensions
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             scope.Resolve(creator, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
 
+        [return: NotNullIfNotNull(nameof(creator))]
         public ICreatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate>? creator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
@@ -65,6 +66,7 @@ public static class CreatorResolutionExtensions
         public ICreatorExecution<TCandidate, TSearchSpace, TProblem> Resolve(ICreator<TCandidate> creator) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(creator);
 
+        [return: NotNullIfNotNull(nameof(creator))]
         public ICreatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(ICreator<TCandidate>? creator) =>
             creator is null ? null : scope.Resolve(creator);
 

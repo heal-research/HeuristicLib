@@ -119,6 +119,7 @@ public static class CrossoverResolutionExtensions
         }
 
         /// <remarks>For an optional slot such as the crossover of an evolution strategy.</remarks>
+        [return: NotNullIfNotNull(nameof(crossover))]
         public ICrossoverExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate>? crossover)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
@@ -132,6 +133,7 @@ public static class CrossoverResolutionExtensions
         public ICrossoverExecution<TCandidate, TSearchSpace, TProblem> Resolve(ICrossover<TCandidate> crossover) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(crossover);
 
+        [return: NotNullIfNotNull(nameof(crossover))]
         public ICrossoverExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(ICrossover<TCandidate>? crossover) =>
             crossover is null ? null : scope.Resolve(crossover);
 

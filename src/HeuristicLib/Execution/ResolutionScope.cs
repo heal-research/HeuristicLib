@@ -95,30 +95,6 @@ public sealed class ResolutionScope
         where TExecution : class, IExecutionNode =>
         ResolveBinding(configuration, prepare).Completed;
 
-    /// <summary>Resolves a source through an internal composition derived from its owner's parameters.</summary>
-    /// <remarks>
-    /// A null composition resolves the source normally. Otherwise the composition must implement the same role and
-    /// resolve its source directly from its root factory. It may add only plumbing, never independent work. Neither
-    /// the composition nor its private dependencies are offered to selectors or share state with the user's graph.
-    /// The source retains its normal shared state and observations. Create the composition once during preparation;
-    /// its state is retained per owner across observation contexts.
-    /// </remarks>
-    public TExecution Resolve<TConfiguration, TExecution>(TConfiguration configuration,
-        Func<TConfiguration, ExecutionFactory<TExecution>> prepare, TConfiguration? composedAs)
-        where TConfiguration : class, IConfigurationNode
-        where TExecution : class, IExecutionNode
-    {
-        if (composedAs is null)
-            return Resolve(configuration, prepare);
-
-        var (source, raw, completed) = ResolveBinding(configuration, prepare);
-        var composition = owner is null
-            ? sharing.GetComposition(composedAs, source)
-            : owner.GetComposition(composedAs, source);
-        composition.RequireContract<TExecution>();
-        return bindings.BindComposition(composition, source, raw, completed);
-    }
-
     /// <summary>Resolves a configuration whose execution contract is known without a run's type arguments.</summary>
     public TExecution Resolve<TExecution>(IConfigurationNode<TExecution> configuration)
         where TExecution : class, IExecutionNode =>
@@ -176,22 +152,18 @@ public sealed class ResolutionScope
         }
     }
 
-    private (ExecutionPreparation Preparation, TExecution Raw, TExecution Completed) ResolveBinding<TConfiguration, TExecution>(
+    private (TExecution Raw, TExecution Completed) ResolveBinding<TConfiguration, TExecution>(
         TConfiguration configuration, Func<TConfiguration, ExecutionFactory<TExecution>> prepare)
         where TConfiguration : class, IConfigurationNode
         where TExecution : class, IExecutionNode
     {
         if (wrappedNodes is not null && wrappedNodes.Matches(configuration))
-        {
-            var target = wrappedNodes.GetNodes<TExecution>();
-            return (wrappedNodes.Source, target.Raw, target.Completed);
-        }
+            return wrappedNodes.GetNodes<TExecution>();
 
         var preparation = owner is null
             ? sharing.Select(configuration, prepare)
             : owner.SelectDependency(configuration, prepare);
         preparation.RequireContract<TExecution>();
-        var binding = bindings.GetOrBind<TExecution>(preparation);
-        return (preparation, binding.Raw, binding.Completed);
+        return bindings.GetOrBind<TExecution>(preparation);
     }
 }

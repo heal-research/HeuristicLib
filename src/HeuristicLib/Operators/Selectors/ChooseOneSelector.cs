@@ -35,19 +35,16 @@ public sealed record ChooseOneSelector<TCandidate>
         if (Weights.Count > 0 && Weights.Count != ChildSelectors.Count)
             throw new InvalidOperationException("Weights must have the same length as selectors.");
 
-        return childSelectors => new Execution<TRunSearchSpace, TRunProblem>(childSelectors, WeightedDispatcher.Create(childSelectors, Weights));
+        return childSelectors => new Execution<TRunSearchSpace, TRunProblem>(childSelectors, new(childSelectors, Weights));
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> childSelectors, WeightedDispatcher<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> dispatcher)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> childSelectors, WeightedItemSampler<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> sampler)
         : MultiSelectorExecution<TCandidate, TSearchSpace, TProblem>(childSelectors)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            dispatcher.Dispatch(
-                random,
-                (population, objective, count, random, searchSpace, problem),
-                static (selector, state) => selector.Select(state.population, state.objective, state.count, state.random, state.searchSpace, state.problem));
+            sampler.Sample(random).Select(population, objective, count, random, searchSpace, problem);
     }
 }
 

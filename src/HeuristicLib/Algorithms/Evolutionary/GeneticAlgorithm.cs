@@ -38,17 +38,14 @@ public record GeneticAlgorithm<TCandidate>
     public ISelector<TCandidate> Selector { get; init; } = GeneticAlgorithmDefaults.Selector<TCandidate>();
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Terminator, Evaluator, Refiner, Selector);
 
-    protected override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>()
-    {
-        var rated = MutationRate >= 1.0 ? null : Mutator.AppliedAtRate(MutationRate);
-        return scope =>
+    protected override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
+        scope =>
         {
             var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>();
             return new Execution<TRunSearchSpace, TRunProblem>(typed.ResolveOptional(Interceptor), typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover),
-                typed.Resolve(Mutator, composedAs: rated), typed.Resolve(Selector), typed.ResolveOptional(Terminator),
-                typed.ResolveOptional(Refiner), PopulationSize, MaximumGenerations, Elites);
+                typed.Resolve(Mutator), typed.Resolve(Selector), typed.ResolveOptional(Terminator),
+                typed.ResolveOptional(Refiner), PopulationSize, MaximumGenerations, Elites, MutationRate);
         };
-    }
 
     private sealed class Execution<TSearchSpace, TProblem>(
         IInterceptorExecution<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
@@ -61,11 +58,14 @@ public record GeneticAlgorithm<TCandidate>
         IRefinerExecution<TCandidate, TSearchSpace, TProblem>? refiner,
         int populationSize,
         int? maximumGenerations,
-        int elites)
+        int elites,
+        double mutationRate)
         : IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
+        private readonly WeightedRouter<IMutatorExecution<TCandidate, TSearchSpace, TProblem>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
+
         protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState, TProblem problem) =>
             maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;
 
@@ -90,7 +90,8 @@ public record GeneticAlgorithm<TCandidate>
             var parentCount = populationSize * 2;
             var parents = selector.Select(oldPopulation, problem.Objective, parentCount, random, problem.SearchSpace, problem).Select(x => x.Candidate).ToList();
             var offspring = crossover.Cross(parents.ToParentPairs(), random, problem.SearchSpace, problem);
-            offspring = mutator.Mutate(offspring, random, problem.SearchSpace, problem);
+            offspring = mutationRouter.Route(offspring, random, (selected, batch) =>
+                selected is null ? batch : selected.Mutate(batch, random, problem.SearchSpace, problem));
             if (refiner is not null)
             {
                 offspring = refiner.Refine(offspring, random, problem.SearchSpace, problem);

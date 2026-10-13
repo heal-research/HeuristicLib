@@ -128,9 +128,9 @@ Search states are public progress values. Do not use them to carry private count
 
 Preparation receives no scope. The returned `ExecutionFactory<TExecution>` receives a `ResolutionScope` construction frame; resolve children inside that factory and pass them to the node. Retain the frame only for child scopes, wrappers or delayed child construction. Use a preparation-owned key for a retained child slot. Do not add another scope abstraction or call a child's factory directly.
 
-Node selection follows the configuration objects exposed as parameters. Keep those parameters as supplied. If a factory derives a composition such as `Mutator.AppliedAtRate(MutationRate)`, create it once during preparation and bind it through `Resolve(Mutator, composedAs: rated)`, never by resolving the derived configuration as an ordinary source. Reuse the configuration helper; do not add execution-level or candidate-list equivalents.
+Algorithms resolve only their configured parameters and create no operators of their own. Keep those parameters as supplied. Behavior derived from a parameter, such as a mutation rate, belongs in the algorithm's execution code. Independent operators doing real work must be parameters so observations and budgets can see them.
 
-An internal composition routes work to one configured source and adds only plumbing, such as dispatch, no-change branches or caching. Any independent operator doing real work must be a parameter so observations and budgets can see it. Resolve the source directly from the composition's root factory. The composition and its private dependencies are isolated from the user's state and excluded from every registration. Children introduced by a registration's generated wrappers have a different rule: only that registration skips them; other registrations can still select them.
+Resolving a configuration an algorithm builds itself makes it visible to node selectors, so selection can differ from what the user configured. This is an authoring guideline, not a rule enforced by the resolver. Children introduced by a registration's generated wrappers are excluded only from that registration; other registrations can still select them.
 
 ### § 4.4 Expose one execution node factory
 
@@ -208,7 +208,7 @@ Operator scaffolding remains checked in source. Do not add source generators, ID
 
 ### § 4.17 Give algorithms explicit execution nodes
 
-Algorithms use a configuration paired with an explicitly authored execution node. Persistent counters and derived configurations are prepared once; child operators and interceptors bind per context. Active iterators retain their original children, RNG forks, progress and timers when another binding is created. See [Algorithms](/guide/fundamentals/algorithms).
+Algorithms use a configuration paired with an explicitly authored execution node. Persistent execution data is prepared once; child operators and interceptors bind per context. Active iterators retain their original children, RNG forks, progress and timers when another binding is created. See [Algorithms](/guide/fundamentals/algorithms).
 
 Iterative bases expose public `CreateExecutionFactory` and a protected, scope-free `CreateIterationFactory` returning `ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>>`. Prepare persistent data in that hook. The returned factory resolves the optional interceptor and other declared children through its construction scope and passes them to the execution constructor. Derived algorithm authors own this wiring; the execution base applies the interceptor in its iteration loop. Bound bases check run-type compatibility before preparation.
 
@@ -252,7 +252,7 @@ Choose collection types by meaning and ownership.
 | Parameter accepting a finite ordered collection        | `IReadOnlyList<T>`, snapshotted with `ToValueArray()` |
 | Mathematical coordinates with broadcasting             | `RealVector`, `IntegerVector`, `BoolVector`           |
 | Transient batch inside one operation, never retained   | `IReadOnlyList<T>`                                    |
-| Collection held by an execution node               | `ImmutableArray<T>`                                   |
+| Collection held by an execution node                   | `ImmutableArray<T>`                                   |
 | Lazy or sequence oriented API                          | `IEnumerable<T>`                                      |
 
 `ValueArray<T>` gives configuration records structural equality. `ImmutableArray<T>` compares backing array identity and belongs on execution nodes, where structural equality is unnecessary.
@@ -398,7 +398,7 @@ Reduce type arguments consumed by the operator's own code. Do not reduce type ar
 
 | Base                                                            | Reduced arities | Why                                    |
 | --------------------------------------------------------------- | :-------------: | -------------------------------------- |
-| `Mutator`, `MutatorExecution`                                    |       Yes       | No owned child                         |
+| `Mutator`, `MutatorExecution`                                   |       Yes       | No owned child                         |
 | `StatelessMutator`, `StatefulMutator`, `SingleCandidateMutator` |       Yes       | Type arguments describe operation data |
 | `WrappingMutator`, `MultiMutator`                               |       No        | Type arguments describe child slots    |
 
@@ -571,6 +571,10 @@ A documentation comment that states something false about the code is an error. 
 - Add a diagnostic to the error list only when it reports a comment that contradicts the code.
 
 An incremental build does not re-emit these diagnostics, so verification needs a clean build.
+
+### § 9.8 Use consistent Markdown emphasis
+
+Use `_italic text_` for emphasis and `**bold text**` for strong emphasis, following the repository's Prettier output. Code spans, fenced code and literal underscores retain their original meaning. Let Prettier choose an alternative delimiter only when necessary to preserve nested or intraword emphasis.
 
 ## § 10 Enforcement and implementation style
 

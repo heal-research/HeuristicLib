@@ -176,48 +176,101 @@ public class ChooseOneOperatorTests
     }
 
     [Fact]
-    public void WeightedDispatcher_SelectsAndInvokesOneOperator()
+    public void WeightedRouter_RoutesEachInputAndRestoresInputOrder()
     {
-        int[] operators = [100, 200];
-        var dispatcher = WeightedDispatcher.Create(operators, [1.0, 3.0]);
-
-        var result = dispatcher.Dispatch(
-            new SequenceRandomNumberGenerator(0.9),
-            1,
-            static (value, offset) => value + offset);
-
-        result.ShouldBe(201);
-    }
-
-    [Fact]
-    public void WeightedBatchDispatcher_UsesItsRetainedSamplerAndRestoresInputOrder()
-    {
-        var dispatcher = new WeightedBatchDispatcher(2);
+        var router = WeightedRouter.Create(100, 200);
         var random = new SequenceRandomNumberGenerator(0.1, 0.6, 0.9);
 
-        var result = dispatcher.Dispatch(
-            [1, 2, 3],
-            [100, 200],
-            random,
-            static (value, batch) => Enumerable.Repeat(value, batch.Count).ToArray());
+        var result = router.Route([1, 2, 3], random, static (value, batch) => Enumerable.Repeat(value, batch.Count).ToArray());
 
         result.ShouldBe([100, 200, 200]);
     }
 
     [Fact]
-    public void WeightedBatchDispatcher_DispatchesARequestedCountWithoutPlaceholderInputs()
+    public void WeightedRouter_RoutesARequestedCountWithoutPlaceholderInputs()
     {
-        var dispatcher = new WeightedBatchDispatcher(2);
+        var router = WeightedRouter.Create(100, 200);
         var random = new SequenceRandomNumberGenerator(0.1, 0.6, 0.9);
 
-        var result = dispatcher.Dispatch(
-            count: 3,
-            operators: [100, 200],
-            random,
-            state: 0,
-            static (value, batchCount, _) => Enumerable.Repeat(value, batchCount).ToArray());
+        var result = router.Route(3, random, static (value, batchCount) => Enumerable.Repeat(value, batchCount).ToArray());
 
         result.ShouldBe([100, 200, 200]);
+    }
+
+    [Fact]
+    public void WeightedRouter_HandsTheOriginalInputsToASingleCertainChoice()
+    {
+        var router = WeightedRouter.Create([100, 200], [0.0, 1.0]);
+        IReadOnlyList<int> inputs = [1, 2, 3];
+        IReadOnlyList<int>? received = null;
+
+        // The empty sequence throws on any draw, so this also shows that a certain choice draws nothing.
+        var result = router.Route(inputs, new SequenceRandomNumberGenerator(), (offset, batch) =>
+        {
+            received = batch;
+            return batch.Select(input => input + offset).ToArray();
+        });
+
+        received.ShouldBeSameAs(inputs);
+        result.ShouldBe([201, 202, 203]);
+    }
+
+    [Fact]
+    public void WeightedRouter_RejectsABatchResultOfTheWrongSize()
+    {
+        var router = WeightedRouter.Create(100, 200);
+
+        Should.Throw<InvalidOperationException>(() =>
+            router.Route([1, 2, 3], new SequenceRandomNumberGenerator(0.1, 0.6, 0.9), static (_, batch) => batch.Skip(1).ToArray()));
+    }
+
+    [Theory]
+    [InlineData(0.0, false)]
+    [InlineData(-0.1, false)]
+    [InlineData(double.NegativeInfinity, false)]
+    [InlineData(double.NaN, false)]
+    [InlineData(1.0, true)]
+    [InlineData(1.1, true)]
+    [InlineData(double.PositiveInfinity, true)]
+    public void WeightedRouter_AtRate_RoutesExtremeRatesWithoutDrawing(double rate, bool expected)
+    {
+        var result = WeightedRouter.AtRate(rate).Route([1, 2], new SequenceRandomNumberGenerator(), static (routed, batch) => batch.Select(_ => routed).ToArray());
+
+        result.ShouldBe([expected, expected]);
+    }
+
+    [Fact]
+    public void WeightedRouter_AtRate_RoutesAsAThreshold()
+    {
+        var result = WeightedRouter.AtRate(0.3).Route([1, 2, 3], new SequenceRandomNumberGenerator(0.1, 0.5, 0.29), static (routed, batch) => batch.Select(_ => routed).ToArray());
+
+        result.ShouldBe([true, false, true]);
+    }
+
+    [Theory]
+    [InlineData(0.0, false)]
+    [InlineData(-0.1, false)]
+    [InlineData(double.NegativeInfinity, false)]
+    [InlineData(double.NaN, false)]
+    [InlineData(1.0, true)]
+    [InlineData(1.1, true)]
+    [InlineData(double.PositiveInfinity, true)]
+    public void WeightedRouter_AtRate_RoutesTheSuppliedReferenceOrNullWithoutDrawing(double rate, bool applied)
+    {
+        var choice = new object();
+        var result = WeightedRouter.AtRate(choice, rate).Route([1, 2], new SequenceRandomNumberGenerator(),
+            static (selected, batch) => Enumerable.Repeat(selected, batch.Count).ToArray());
+
+        result.ShouldAllBe(selected => ReferenceEquals(selected, applied ? choice : null));
+    }
+
+    [Fact]
+    public void WeightedRouter_AtRate_RoutesTheSuppliedReferenceOrNullAsAThreshold()
+    {
+        var result = WeightedRouter.AtRate("mutate", 0.3).Route([1, 2, 3], new SequenceRandomNumberGenerator(0.1, 0.5, 0.29),
+            static (selected, batch) => Enumerable.Repeat(selected, batch.Count).ToArray());
+
+        result.ShouldBe(["mutate", null, "mutate"]);
     }
 
     [Fact]

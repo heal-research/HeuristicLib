@@ -38,22 +38,16 @@ public sealed record ChooseOneCreator<TCandidate>
         if (Weights.Count > 0 && Weights.Count != ChildCreators.Count)
             throw new InvalidOperationException("Weights must have the same length as creators.");
 
-        var dispatcher = new WeightedBatchDispatcher(ChildCreators.Count, Weights);
-        return childCreators => new Execution<TRunSearchSpace, TRunProblem>(childCreators, dispatcher);
+        return childCreators => new Execution<TRunSearchSpace, TRunProblem>(childCreators, new(childCreators, Weights));
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> childCreators, WeightedBatchDispatcher dispatcher)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> childCreators, WeightedRouter<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> router)
         : MultiCreatorExecution<TCandidate, TSearchSpace, TProblem>(childCreators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            dispatcher.Dispatch(
-                count,
-                ChildCreators,
-                random,
-                (random, searchSpace, problem),
-                static (creator, batchCount, state) => creator.Create(batchCount, state.random, state.searchSpace, state.problem));
+            router.Route(count, random, (creator, batchCount) => creator.Create(batchCount, random, searchSpace, problem));
     }
 }
 

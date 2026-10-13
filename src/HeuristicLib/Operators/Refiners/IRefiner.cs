@@ -46,6 +46,7 @@ public static class RefinerResolutionExtensions
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             scope.Resolve(refiner, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
 
+        [return: NotNullIfNotNull(nameof(refiner))]
         public IRefinerExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate>? refiner)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
@@ -80,6 +81,7 @@ public static class RefinerResolutionExtensions
         public IRefinerExecution<TCandidate, TSearchSpace, TProblem> Resolve(IRefiner<TCandidate> refiner) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(refiner);
 
+        [return: NotNullIfNotNull(nameof(refiner))]
         public IRefinerExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IRefiner<TCandidate>? refiner) =>
             refiner is null ? null : scope.Resolve(refiner);
 

@@ -31,6 +31,7 @@ public static class EvaluatorResolutionExtensions
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             scope.Resolve(evaluator, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
 
+        [return: NotNullIfNotNull(nameof(evaluator))]
         public IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate>? evaluator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
@@ -65,6 +66,7 @@ public static class EvaluatorResolutionExtensions
         public IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> Resolve(IEvaluator<TCandidate> evaluator) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(evaluator);
 
+        [return: NotNullIfNotNull(nameof(evaluator))]
         public IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IEvaluator<TCandidate>? evaluator) =>
             evaluator is null ? null : scope.Resolve(evaluator);
 

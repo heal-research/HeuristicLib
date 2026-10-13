@@ -497,19 +497,9 @@ A node selector is a rule for selecting algorithm or operator configurations in 
 
 Selectors match by configuration reference or assignable type, including role interfaces. Selectors with the same declared configuration type or role compose by union (`Or`, `|`) or intersection (`And`, `&`). `And(predicate)` intersects with a selector constructed from the typed configuration predicate. Composition creates a new definition without changing its operands or evaluating predicates; matching evaluates predicates from left to right only as needed. A node matching several union branches still matches once. The selector does not traverse a graph or resolve execution nodes; a wrapper registration applies it to source configurations while they are resolved.
 
-A selected configuration can be referenced by several callers and resolved into more than one execution node. Selecting that configuration does not select one caller path or one invocation. Resolver selection follows configurations exposed as parameters; internal compositions derived from those parameters and their private dependencies are excluded.
+A selected configuration can be referenced by several callers and resolved into more than one execution node. Selecting that configuration does not select one caller path or one invocation. Resolver selection follows configuration references as they are resolved.
 
-See also: Configuration, Configuration graph, Execution node, Execution module, Internal composition, Resolution scope.
-
-### Internal composition
-
-Status: `Canonical`
-
-An internal composition is a configuration derived from an algorithm's or operator's parameters to route work to one configured source. It adds only plumbing, such as dispatch, no-change branches or caching; an independent operator doing real work must be exposed as a parameter.
-
-The source keeps its normal shared execution state and observations. The composition and its private dependencies have isolated state and are excluded from wrapper registration selection. Composition state belongs to its owner and survives changes of observation context. Explicitly configured compositions remain ordinary selectable configurations.
-
-See also: Configuration, Execution state, Node selector, Resolution scope, Wrapper registration.
+See also: Configuration, Configuration graph, Execution node, Execution module, Resolution scope.
 
 ### Run
 
@@ -601,7 +591,7 @@ See also: Configuration, Wrapper chain, Execution graph, Execution node, Executi
 
 Status: `Canonical`
 
-A wrapper registration adds a recipe for wrapping a selected source configuration's execution. `ResolutionScopeBuilder.Wrap` selects sources with a node selector, or one source by reference. Matching happens during resolution, so sources resolved later by deferred children are included; generated wrappers, and children a registration's own wrappers add, are never offered to that registration. Internal compositions and their private dependencies are excluded from every registration. The recipe receives the original source configuration, even when other wrappers also apply.
+A wrapper registration adds a recipe for wrapping a selected source configuration's execution. `ResolutionScopeBuilder.Wrap` selects sources with a node selector, or one source by reference. Matching happens during resolution, so sources resolved later by deferred children are included; generated wrappers, and children a registration's own wrappers add, are never offered to that registration. The recipe receives the original source configuration, even when other wrappers also apply.
 
 One registration keeps its own prepared wrapper state for each selected execution, across observation contexts. Two registrations are separate contributions even when their recipes are equal. An execution module groups registrations through `Install`. Wrappers can observe operations or add other typed behavior; observation retains its narrower read-only meaning.
 

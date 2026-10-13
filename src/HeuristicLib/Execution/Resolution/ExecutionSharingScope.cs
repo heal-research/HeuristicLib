@@ -12,24 +12,17 @@ internal sealed class ExecutionSharingScope
     private readonly WeakReference<ExecutionSharingScope>? declaringScope;
     private readonly Dictionary<IConfigurationNode, ExecutionPreparation> selections = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<object, RetainedChildScope> retainedChildren = new(ReferenceEqualityComparer.Instance);
-    private readonly Dictionary<IConfigurationNode, InternalComposition> compositions = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<IConfigurationNode> constructing;
     // Identifies the registration whose generated wrapper owns this private scope; null for ordinary scopes.
     private readonly object? wrapperRegistration;
-    private readonly IConfigurationNode? internalSource;
 
-    public ExecutionSharingScope(ExecutionSharingScope? parent, bool retainParent = true, object? wrapperRegistration = null,
-        IConfigurationNode? internalSource = null)
+    public ExecutionSharingScope(ExecutionSharingScope? parent, bool retainParent = true, object? wrapperRegistration = null)
     {
         this.wrapperRegistration = wrapperRegistration;
-        this.internalSource = internalSource;
-        if (internalSource is null)
-        {
-            if (retainParent)
-                this.parent = parent;
-            else if (parent is not null)
-                declaringScope = new(parent);
-        }
+        if (retainParent)
+            this.parent = parent;
+        else if (parent is not null)
+            declaringScope = new(parent);
         constructing = parent?.constructing ?? new(ReferenceEqualityComparer.Instance);
     }
 
@@ -63,12 +56,8 @@ internal sealed class ExecutionSharingScope
         where TExecution : class, IExecutionNode
     {
         for (var ancestor = this; ancestor is not null; ancestor = ancestor.Parent)
-        {
-            if (ReferenceEquals(configuration, ancestor.internalSource))
-                throw new InvalidOperationException("An internal composition must resolve its source directly from its root factory, not through a descendant scope or configuration.");
             if (ancestor.selections.TryGetValue(configuration, out var found))
                 return found;
-        }
 
         var created = ExecutionPreparation.Create(configuration, this, prepare);
         selections.Add(configuration, created);
@@ -77,20 +66,6 @@ internal sealed class ExecutionSharingScope
 
     public RetainedChildScope GetRetainedChild(object key) =>
         RetainedChildScope.GetOrAdd(retainedChildren, key, this);
-
-    public ExecutionPreparation GetComposition(IConfigurationNode configuration, ExecutionPreparation source) =>
-        InternalComposition.GetOrAdd(compositions, configuration, source, this);
-
-    public bool IsInternal
-    {
-        get
-        {
-            for (var current = this; current is not null; current = current.Parent)
-                if (current.internalSource is not null)
-                    return true;
-            return false;
-        }
-    }
 
     public bool IsWithin(ExecutionSharingScope ancestor)
     {

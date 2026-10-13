@@ -37,22 +37,16 @@ public sealed record ChooseOneRefiner<TCandidate>
         if (Weights.Count > 0 && Weights.Count != ChildRefiners.Count)
             throw new InvalidOperationException("Weights must have the same length as refiners.");
 
-        var dispatcher = new WeightedBatchDispatcher(ChildRefiners.Count, Weights);
-        return childRefiners => new Execution<TRunSearchSpace, TRunProblem>(childRefiners, dispatcher);
+        return childRefiners => new Execution<TRunSearchSpace, TRunProblem>(childRefiners, new(childRefiners, Weights));
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> childRefiners, WeightedBatchDispatcher dispatcher)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> childRefiners, WeightedRouter<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> router)
         : MultiRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiners)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            dispatcher.Dispatch(
-                candidates,
-                ChildRefiners,
-                random,
-                (random, searchSpace, problem),
-                static (refiner, batchCandidates, state) => refiner.Refine(batchCandidates, state.random, state.searchSpace, state.problem));
+            router.Route(candidates, random, (refiner, batch) => refiner.Refine(batch, random, searchSpace, problem));
     }
 }
 
@@ -70,8 +64,6 @@ public static class ChooseOneRefinerExtensions
     extension<TCandidate>(IRefiner<TCandidate> refiner)
     {
         public ChooseOneRefiner<TCandidate> AppliedAtRate(double refinementRate) =>
-            ChooseOneRefiner.Create(
-                [refiner, NoChangeRefiner<TCandidate>.Instance],
-                [refinementRate, double.IsNaN(refinementRate) ? double.PositiveInfinity : 1 - refinementRate]);
+            ChooseOneRefiner.Create([refiner, NoChangeRefiner<TCandidate>.Instance], WeightedRouter.RateWeights(refinementRate));
     }
 }

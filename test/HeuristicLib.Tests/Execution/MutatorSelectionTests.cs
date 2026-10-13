@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Operators.Creators;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -53,25 +54,27 @@ public sealed class MutatorSelectionTests
     [Theory]
     [InlineData(false, 0.0)]
     [InlineData(false, 0.35)]
+    [InlineData(false, 0.5)]
+    [InlineData(false, -0.25)]
+    [InlineData(false, double.NaN)]
+    [InlineData(false, double.NegativeInfinity)]
     [InlineData(false, 1.0)]
+    [InlineData(false, 1.5)]
+    [InlineData(false, double.PositiveInfinity)]
     [InlineData(true, 0.0)]
     [InlineData(true, 0.35)]
+    [InlineData(true, 0.5)]
+    [InlineData(true, -0.25)]
+    [InlineData(true, double.NaN)]
+    [InlineData(true, double.NegativeInfinity)]
     [InlineData(true, 1.0)]
-    public async Task InternalMutationRate_MatchesExplicitComposition_WithTheSameSeed(bool nsga, double rate)
+    [InlineData(true, 1.5)]
+    [InlineData(true, double.PositiveInfinity)]
+    public async Task MutationRate_MatchesExplicitAppliedAtRate_WithTheSameSeed(bool nsga, double rate)
     {
-        IMutator<int> source = new StepMutator(3);
-        var ga = Algorithm(source) with { MutationRate = rate, PopulationSize = 16, MaximumGenerations = 5 };
-        var nsga2 = new NSGA2<int>
-        {
-            Creator = ga.Creator,
-            Crossover = ga.Crossover,
-            Mutator = source,
-            Selector = ga.Selector,
-            Replacer = new ElitismReplacer<int>(elites: 0),
-            PopulationSize = ga.PopulationSize,
-            MaximumGenerations = ga.MaximumGenerations,
-            MutationRate = rate
-        };
+        IMutator<int> source = new RandomStepMutator();
+        var ga = Algorithm(source) with { MutationRate = rate, PopulationSize = 16, MaximumGenerations = 5, Evaluator = new RandomEvaluator() };
+        var nsga2 = AsNsga2(ga);
         var explicitMutator = rate >= 1 ? source : source.AppliedAtRate(rate);
         IAlgorithm<int, PopulationState<int>> algorithm = nsga ? nsga2 : ga;
         IAlgorithm<int, PopulationState<int>> baseline = nsga
@@ -85,8 +88,10 @@ public sealed class MutatorSelectionTests
             actual[i].Population.EvaluatedCandidates.ShouldBe(expected[i].Population.EvaluatedCandidates);
     }
 
-    [Fact]
-    public async Task MutationRate_OnlyOffersConfiguredSources_AndCountersSeeOnlyRoutedCandidates()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MutationRate_OnlyOffersConfiguredSources_AndCountersSeeOnlyRoutedCandidates(bool nsga)
     {
         IMutator<int> source = new StepMutator(1);
         var offered = new List<IMutator<int>>();
@@ -98,19 +103,19 @@ public sealed class MutatorSelectionTests
         }), mutator => mutator.CountCandidates(count)));
         var algorithm = Algorithm(source) with { PopulationSize = 16, MaximumGenerations = 2, MutationRate = 0.5 };
 
-        var states = await States(scope, algorithm);
+        var states = await States(scope, nsga ? AsNsga2(algorithm) : algorithm);
         offered.ShouldBe([source]);
         var mutated = states[1].Population.EvaluatedCandidates.Count(candidate => candidate.Candidate == 99);
         mutated.ShouldBeInRange(1, 15);
         count.CurrentCount.ShouldBe(mutated);
-        // Another caller reaches the same source without passing through the algorithm's rate composition.
+        // Another caller reaches the same source without the algorithm's mutation rate.
         scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().Resolve(source)
             .Mutate([100], RandomNumberGenerator.Create(7), Problem.SearchSpace, Problem).ShouldBe([99]);
         count.CurrentCount.ShouldBe(mutated + 1);
     }
 
     [Fact]
-    public async Task PausedAlgorithm_KeepsItsComposition_WhenAnotherContextAddsASourceObserver()
+    public async Task PausedAlgorithm_KeepsItsMutator_WhenAnotherContextAddsASourceObserver()
     {
         IMutator<int> source = new StepMutator(1);
         var algorithm = Algorithm(source) with { PopulationSize = 16, MaximumGenerations = 3, MutationRate = 0.5 };
@@ -131,14 +136,29 @@ public sealed class MutatorSelectionTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task ZeroMutationRate_DoesNotObserveTheConfiguredSource_EvenWhenItIsTheSharedNoChangeMutator(bool noChange)
+    [InlineData(false, false, 0.0)]
+    [InlineData(false, true, 0.0)]
+    [InlineData(true, false, 0.0)]
+    [InlineData(true, true, 0.0)]
+    [InlineData(false, false, -0.25)]
+    [InlineData(false, true, -0.25)]
+    [InlineData(true, false, -0.25)]
+    [InlineData(true, true, -0.25)]
+    [InlineData(false, false, double.NaN)]
+    [InlineData(false, true, double.NaN)]
+    [InlineData(true, false, double.NaN)]
+    [InlineData(true, true, double.NaN)]
+    [InlineData(false, false, double.NegativeInfinity)]
+    [InlineData(false, true, double.NegativeInfinity)]
+    [InlineData(true, false, double.NegativeInfinity)]
+    [InlineData(true, true, double.NegativeInfinity)]
+    public async Task NonMutatingRates_DoNotObserveTheConfiguredSource_EvenWhenItIsTheSharedNoChangeMutator(bool nsga, bool noChange, double rate)
     {
         IMutator<int> source = noChange ? NoChangeMutator<int>.Instance : new StepMutator(1);
         var count = new CountAccumulator();
         var scope = ResolutionScope.Create(builder => builder.Wrap(source, mutator => mutator.CountCandidates(count)));
-        await RunToCompletion(scope, Algorithm(source) with { MutationRate = 0 });
+        var algorithm = Algorithm(source) with { MutationRate = rate };
+        await RunToCompletion(scope, nsga ? AsNsga2(algorithm) : algorithm);
         count.CurrentCount.ShouldBe(0);
     }
 
@@ -152,6 +172,20 @@ public sealed class MutatorSelectionTests
         Elites = 0,
         MaximumGenerations = 3,
         MutationRate = 0.5
+    };
+
+    private static NSGA2<int> AsNsga2(GeneticAlgorithm<int> algorithm) => new()
+    {
+        Creator = algorithm.Creator,
+        Crossover = algorithm.Crossover,
+        Mutator = algorithm.Mutator,
+        Selector = algorithm.Selector,
+        Evaluator = algorithm.Evaluator,
+        Refiner = algorithm.Refiner,
+        Replacer = new ElitismReplacer<int>(elites: 0),
+        PopulationSize = algorithm.PopulationSize,
+        MaximumGenerations = algorithm.MaximumGenerations,
+        MutationRate = algorithm.MutationRate
     };
 
     private static IAsyncEnumerable<PopulationState<int>> Run(ResolutionScope scope, IAlgorithm<int, PopulationState<int>> algorithm) =>
@@ -176,5 +210,17 @@ public sealed class MutatorSelectionTests
     private sealed record StepMutator(int Step) : SingleCandidateMutator<int>
     {
         public override int MutateCandidate(int parent, IRandomNumberGenerator random) => parent - Step;
+    }
+
+    private sealed record RandomEvaluator : StatelessEvaluator<int>
+    {
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
+            candidates.Select(candidate => new ObjectiveVector(candidate + random.NextDouble())).ToArray();
+    }
+
+    private sealed record RandomStepMutator : StatelessMutator<int>
+    {
+        public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
+            parents.Select(parent => parent - random.NextInt(1, 10)).ToArray();
     }
 }

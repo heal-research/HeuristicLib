@@ -8,21 +8,21 @@ This document specifies the design and its original review decisions. C2/C3 loca
 
 Decision, 2026-09-27: use graph vocabulary for the common contracts and execution vocabulary for role-specific runtime types. The user selected `IConfigurationNode` and `IExecutionNode`; ordinary users continue to compose `IMutator`, `IOperator`, concrete mutators and algorithms. They do not need a general graph API. Implement the rename with the resolution/factory rework, in a separate behavior-preserving commit before the behavior change.
 
-| Previous name or concept | Agreed name | Migration boundary |
-| --- | --- | --- |
-| `IExecutionConfiguration`, including its generic form | `IConfigurationNode`, including its generic form | Naming commit; preserve existing members and semantics. |
-| `IExecutionInstance` | `IExecutionNode` | Naming commit. |
-| `IOperatorInstance`, `IMutatorInstance<...>`, `IAlgorithmInstance<...>` and other role execution contracts | `IOperatorExecution`, `IMutatorExecution<...>`, `IAlgorithmExecution<...>` and corresponding `...Execution` contracts | Naming commit; keep generic arities and constraints. |
-| `MutatorInstance<...>`, `WrappingMutatorInstance<...>`, `IterativeAlgorithmInstance<...>` and corresponding runtime bases/types | `MutatorExecution<...>`, `WrappingMutatorExecution<...>`, `IterativeAlgorithmExecution<...>` and corresponding `...Execution` types | Naming commit; also migrate matching extension classes, filenames and authoring examples. |
-| Runtime type parameters and nested implementation names | `TExecution` and `Execution` in the authoring examples | Naming commit where they describe these runtime objects; do not rename unrelated uses of `Instance`, including singleton properties. |
-| `IOperator`, `IMutator<...>`, `IAlgorithm<...>` and concrete configuration types | Retain their domain names without `Node` | No naming change. |
-| Prepared typed factory | `ExecutionFactory<TExecution>` | Introduced by the factory/resolution commit. |
-| `CreateExecutionInstance(...)` | `CreateExecutionFactory()` with the reviewed run type parameters | Factory/resolution commit, because this changes what is returned and when state is initialized. |
-| Resolution and declaration APIs | Retain `ResolutionScope`, typed scope views, `ResolutionScopeBuilder`, `Resolve`, `ResolveOptional`, `TryResolve`, `CreateChildScope` and `Wrap` | Names retained; behavioral/API extensions remain subject to their design review. |
-| Source selection and setup contributions | Retain `NodeSelector<TConfiguration>`, `IExecutionModule` and `Install` | Names retained. |
-| Compatibility and run lifecycle | Retain `ExecutionSignature`, `Fits`, `AlgorithmRun`, `ExperimentRun`, `Attach`, `AttachPerTrial` and `GetAttached` | Names and responsibilities retained. |
+| Previous name or concept                                                                                                        | Agreed name                                                                                                                                      | Migration boundary                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `IExecutionConfiguration`, including its generic form                                                                           | `IConfigurationNode`, including its generic form                                                                                                 | Naming commit; preserve existing members and semantics.                                                                              |
+| `IExecutionInstance`                                                                                                            | `IExecutionNode`                                                                                                                                 | Naming commit.                                                                                                                       |
+| `IOperatorInstance`, `IMutatorInstance<...>`, `IAlgorithmInstance<...>` and other role execution contracts                      | `IOperatorExecution`, `IMutatorExecution<...>`, `IAlgorithmExecution<...>` and corresponding `...Execution` contracts                            | Naming commit; keep generic arities and constraints.                                                                                 |
+| `MutatorInstance<...>`, `WrappingMutatorInstance<...>`, `IterativeAlgorithmInstance<...>` and corresponding runtime bases/types | `MutatorExecution<...>`, `WrappingMutatorExecution<...>`, `IterativeAlgorithmExecution<...>` and corresponding `...Execution` types              | Naming commit; also migrate matching extension classes, filenames and authoring examples.                                            |
+| Runtime type parameters and nested implementation names                                                                         | `TExecution` and `Execution` in the authoring examples                                                                                           | Naming commit where they describe these runtime objects; do not rename unrelated uses of `Instance`, including singleton properties. |
+| `IOperator`, `IMutator<...>`, `IAlgorithm<...>` and concrete configuration types                                                | Retain their domain names without `Node`                                                                                                         | No naming change.                                                                                                                    |
+| Prepared typed factory                                                                                                          | `ExecutionFactory<TExecution>`                                                                                                                   | Introduced by the factory/resolution commit.                                                                                         |
+| `CreateExecutionInstance(...)`                                                                                                  | `CreateExecutionFactory()` with the reviewed run type parameters                                                                                 | Factory/resolution commit, because this changes what is returned and when state is initialized.                                      |
+| Resolution and declaration APIs                                                                                                 | Retain `ResolutionScope`, typed scope views, `ResolutionScopeBuilder`, `Resolve`, `ResolveOptional`, `TryResolve`, `CreateChildScope` and `Wrap` | Names retained; behavioral/API extensions remain subject to their design review.                                                     |
+| Source selection and setup contributions                                                                                        | Retain `NodeSelector<TConfiguration>`, `IExecutionModule` and `Install`                                                                          | Names retained.                                                                                                                      |
+| Compatibility and run lifecycle                                                                                                 | Retain `ExecutionSignature`, `Fits`, `AlgorithmRun`, `ExperimentRun`, `Attach`, `AttachPerTrial` and `GetAttached`                               | Names and responsibilities retained.                                                                                                 |
 
-In prose, a configuration node belongs to the configuration graph; an execution node is the resolved callable object in the execution graph. Use role-specific forms such as *mutator execution* and *algorithm execution*. An execution node is not one invocation, an entire run or the persistent resolver record. Its identity need not identify the persistent state it accesses. Keep *execution state* distinct from public *search state*.
+In prose, a configuration node belongs to the configuration graph; an execution node is the resolved callable object in the execution graph. Use role-specific forms such as _mutator execution_ and _algorithm execution_. An execution node is not one invocation, an entire run or the persistent resolver record. Its identity need not identify the persistent state it accesses. Keep _execution state_ distinct from public _search state_.
 
 `Node` appears on the common contracts, not every derived role: use `IMutatorExecution`, not `IMutatorExecutionNode`. No shared `INode`, public child-enumeration contract or universal `Execute` method follows from this naming. Configuration-node identity remains configuration-object reference identity, not one identity per caller path. Node selectors select source configurations; advice applies at operations on their execution nodes.
 
@@ -32,17 +32,17 @@ The naming migration uses the agreed names in source, links and examples. Object
 
 ## 1. What changes for each audience
 
-| Audience | Proposed change |
-| --- | --- |
-| Configuring and running algorithms | None: compose configurations, attach modules and resolve/start normally. No state-store, binding or factory management. |
-| Stateless and ordinary stateful leaf authors | Existing operation overrides and `CreateInitialState()` remain. Framework bases implement preparation and binding. |
-| Explicit leaf authors | Return a factory; construct the reusable raw leaf once outside its lambda when it has no scope-dependent children. |
-| Composite authors | Prepare persistent fields and derived configurations once; return a lambda that resolves typed children and creates the execution node. Operations keep their existing role signatures. |
-| Algorithm authors | Same split as composites. Iterative bases continue resolving interceptors. Search progress remains in the invocation. |
-| Meta-algorithm and budget authors | Use explicit fresh or retained child scopes; never retain wrapped child instances in shared data. |
-| Resolver and instrumentation authors | Own logical identity, dependency selection, binding caches, generated-wrapper identities and failure publication. |
+| Audience                                     | Proposed change                                                                                                                                                                         |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Configuring and running algorithms           | None: compose configurations, attach modules and resolve/start normally. No state-store, binding or factory management.                                                                 |
+| Stateless and ordinary stateful leaf authors | Existing operation overrides and `CreateInitialState()` remain. Framework bases implement preparation and binding.                                                                      |
+| Explicit leaf authors                        | Return a factory; construct the reusable raw leaf once outside its lambda when it has no scope-dependent children.                                                                      |
+| Composite authors                            | Prepare persistent fields and derived configurations once; return a lambda that resolves typed children and creates the execution node. Operations keep their existing role signatures. |
+| Algorithm authors                            | Same split as composites. Iterative bases continue resolving interceptors. Search progress remains in the invocation.                                                                   |
+| Meta-algorithm and budget authors            | Use explicit fresh or retained child scopes; never retain wrapped child instances in shared data.                                                                                       |
+| Resolver and instrumentation authors         | Own logical identity, dependency selection, binding caches, generated-wrapper identities and failure publication.                                                                       |
 
-An execution node is the concrete object on which `Mutate`, `Evaluate` or `RunStreamingAsync` is called. It may be a scope-specific binding over persistent execution data. The descriptive terms *execution preparation*, *sharing scope*, *binding context* and *construction frame* below name implementation responsibilities, not new public objects ordinary authors must construct. The execution preparation is the persistent owner; it must not also be called an execution node. Its eventual internal CLR name remains an implementation choice.
+An execution node is the concrete object on which `Mutate`, `Evaluate` or `RunStreamingAsync` is called. It may be a scope-specific binding over persistent execution data. The descriptive terms _execution preparation_, _sharing scope_, _binding context_ and _construction frame_ below name implementation responsibilities, not new public objects ordinary authors must construct. The execution preparation is the persistent owner; it must not also be called an execution node. Its eventual internal CLR name remains an implementation choice.
 
 ## 2. Core and role contracts
 
@@ -98,12 +98,12 @@ Configuration-only validation moves to preparation. Validation that genuinely de
 
 `ResolutionScope` is the public entry point and the scope passed to factories. It routes selection through the proper owner, verifies the requested contract, and obtains the current nodes from `ExecutionBindings`. It does not own their dictionaries or construction state machines.
 
-| Component | Responsibility and ownership |
-| --- | --- |
-| `ExecutionSharingScope` | Local configuration-reference selections, ancestor lookup, retained standalone child scopes, ancestry checks and the active construction guard shared by related scopes. It decides where state is shared, not how nodes are built. |
-| `ExecutionPreparation` | One selected configuration's preparation attempt, typed factory or sticky preparation fault, pinned dependencies and retained children. Persistent state lives in its prepared factory. It can be unprepared or faulted and is not an `IExecutionNode`. |
-| `ExecutionBindings` | Ordered declarations and their current depth, node construction, raw/completed node caches and binding faults, plus retained child bindings. Empty observation layers can read ancestor nodes, but never publish nodes upward. |
-| `WrapperRegistration` | One stable recipe, its source/declaring sharing scope/module flag/sequence, and weak-key per-source wrapper preparations. Its private `PreparedWrapper` owns the generated wrapper, state and private sharing scope. |
+| Component               | Responsibility and ownership                                                                                                                                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ExecutionSharingScope` | Local configuration-reference selections, ancestor lookup, retained standalone child scopes, ancestry checks and the active construction guard shared by related scopes. It decides where state is shared, not how nodes are built.                     |
+| `ExecutionPreparation`  | One selected configuration's preparation attempt, typed factory or sticky preparation fault, pinned dependencies and retained children. Persistent state lives in its prepared factory. It can be unprepared or faulted and is not an `IExecutionNode`. |
+| `ExecutionBindings`     | Ordered declarations and their current depth, node construction, raw/completed node caches and binding faults, plus retained child bindings. Empty observation layers can read ancestor nodes, but never publish nodes upward.                          |
+| `WrapperRegistration`   | One stable recipe, its source/declaring sharing scope/module flag/sequence, and weak-key per-source wrapper preparations. Its private `PreparedWrapper` owns the generated wrapper, state and private sharing scope.                                    |
 
 Selection precedes preparation so a failure cannot replace a dependency's identity. Construction guarding precedes cache reuse. The collaborators encapsulate these rules rather than exposing dictionaries for the public scope to manipulate.
 
@@ -121,12 +121,12 @@ The family is `NodeSelector` for selection, `Wrap` for the low-level builder ope
 
 The remaining internal classes are storage owners, not interchangeable services or a new public framework. Their exact class boundaries are implementation choices. Their independent identities and lifetimes follow from the required behavior:
 
-| Stored information | Why it cannot be combined into one cache |
-| --- | --- |
-| Sharing-scope selections | Several factory frames and observation contexts can refer to the same selected state. Keeping a sharing scope alive must not itself retain all observing contexts. |
+| Stored information                 | Why it cannot be combined into one cache                                                                                                                                         |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sharing-scope selections           | Several factory frames and observation contexts can refer to the same selected state. Keeping a sharing scope alive must not itself retain all observing contexts.               |
 | A selected execution's preparation | Its factory, pinned dependencies and preparation fault survive contextual node reconstruction. Different configurations in one sharing scope have separate preparation attempts. |
-| Contextual bindings | Parent and child can need different nodes over the same preparation. Their node caches, wrappers and binding failures belong to those contexts. |
-| A wrapper registration | One recipe can prepare separate wrapper state for different selected executions. Two registrations of the same recipe remain two contributions. |
+| Contextual bindings                | Parent and child can need different nodes over the same preparation. Their node caches, wrappers and binding failures belong to those contexts.                                  |
+| A wrapper registration             | One recipe can prepare separate wrapper state for different selected executions. Two registrations of the same recipe remain two contributions.                                  |
 
 For example, parent and child calls can advance the same mutator counter while only child calls reach a child observer. Merging state selection with the bound-node cache would need another way to represent that pair of identities. Combining these objects into the public scope would require modes or references between scopes and would still need separate storage for those lifetimes. The current implementation keeps the separation explicit; it does not claim that four top-level classes are inherently required.
 
@@ -166,11 +166,11 @@ This revision migrates source, callers, tests, glossary and resolution diagrams 
 
 This yields the following collision policy:
 
-| Sequence | Required identity |
-| --- | --- |
-| C resolves M before P does | C owns M_child. P later owns M_parent. |
-| P builds G using M_parent | G permanently selects M_parent for that dependency. |
-| C resolves the ancestor G | G's C binding calls M_parent through C's observation context. |
+| Sequence                    | Required identity                                                   |
+| --------------------------- | ------------------------------------------------------------------- |
+| C resolves M before P does  | C owns M_child. P later owns M_parent.                              |
+| P builds G using M_parent   | G permanently selects M_parent for that dependency.                 |
+| C resolves the ancestor G   | G's C binding calls M_parent through C's observation context.       |
 | C directly resolves M again | Still M_child. Rebinding G does not overwrite C's direct selection. |
 
 Two M states are consequently reachable from C through different logical graphs. This is deliberate dependency continuity, not two states in one direct cache slot. The alternative, substituting M_child into G, would preserve only G's own fields and silently change its existing execution graph.
@@ -372,7 +372,7 @@ The derived rate-wrapper configuration is an ordinary selectable source node wit
 
 Do not add the previously sketched three-callback helper in the first implementation. No inspected production constructor establishes a need for binding-time initialization from a live child. Creating an initial population is invocation work and stays in execution; values available on a child configuration can be prepared normally.
 
-For a future controller that snapshots a child's *current* strength, distinguish snapshot-at-first-operation from snapshot-at-first-binding. The former can use a persistent initialization flag and a typed control reference supplied to each binding; a rebound controller keeps the original snapshot. The latter is not promised by the initial scope-free preparation API. If required by an actual consumer, design and prove a once-only initializer with separate failure semantics before extending the contract. Do not hide initialization and partial failures in an ad hoc `state ??=` binder.
+For a future controller that snapshots a child's _current_ strength, distinguish snapshot-at-first-operation from snapshot-at-first-binding. The former can use a persistent initialization flag and a typed control reference supplied to each binding; a rebound controller keeps the original snapshot. The latter is not promised by the initial scope-free preparation API. If required by an actual consumer, design and prove a once-only initializer with separate failure semantics before extending the contract. Do not hide initialization and partial failures in an ad hoc `state ??=` binder.
 
 ## 5. Child scopes, Cycle and Pipeline
 
@@ -492,15 +492,15 @@ At the initial design checkpoint, this overload, control separation and configur
 
 Reserve the logical selection before preparation so a repeated request cannot allocate another logical state after failure. Use explicit states, not null as an initialization flag:
 
-| Failure | Proposed outcome |
-| --- | --- |
-| Preparation/validation throws | Execution preparation stores the original fault. Later requests for it rethrow without calling preparation again. |
-| A dependency fails during binding | The dependency's selected identity remains pinned. The parent context's binding is faulted; no completed parent is published. Already completed sibling dependencies remain valid. |
-| Raw binder or wrapper binder throws | Cache a fault for that execution preparation/context. Other completed contexts remain usable. Prepared persistent state is retained; a new context may attempt its own binding. |
-| Wrapper callback/preparation throws | Fault that source/declaration occurrence; do not repeatedly allocate advice data on another context. |
-| Retained child declaration throws | Reserve/fault that owner's key. Do not rerun the callback and partially redeclare modules. |
-| Recursive construction returns to active source/occurrence construction, including through another context/domain | Diagnose a dependency cycle. A changing context is not an escape. Only the explicit generated predecessor edge may resolve an already-built chain prefix. |
-| Operation or observer callback throws | Keep existing operation semantics; construction records do not replay or roll back the operation. |
+| Failure                                                                                                           | Proposed outcome                                                                                                                                                                   |
+| ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Preparation/validation throws                                                                                     | Execution preparation stores the original fault. Later requests for it rethrow without calling preparation again.                                                                  |
+| A dependency fails during binding                                                                                 | The dependency's selected identity remains pinned. The parent context's binding is faulted; no completed parent is published. Already completed sibling dependencies remain valid. |
+| Raw binder or wrapper binder throws                                                                               | Cache a fault for that execution preparation/context. Other completed contexts remain usable. Prepared persistent state is retained; a new context may attempt its own binding.    |
+| Wrapper callback/preparation throws                                                                               | Fault that source/declaration occurrence; do not repeatedly allocate advice data on another context.                                                                               |
+| Retained child declaration throws                                                                                 | Reserve/fault that owner's key. Do not rerun the callback and partially redeclare modules.                                                                                         |
+| Recursive construction returns to active source/occurrence construction, including through another context/domain | Diagnose a dependency cycle. A changing context is not an escape. Only the explicit generated predecessor edge may resolve an already-built chain prefix.                          |
+| Operation or observer callback throws                                                                             | Keep existing operation semantics; construction records do not replay or roll back the operation.                                                                                  |
 
 This sticky construction-failure policy is a behavior change from rebuilding after a miss. It prevents partial initialization from silently becoming a second logical execution. It provides no rollback of arbitrary user side effects. Recover by creating a genuinely independent execution scope/run; an ordinary child that inherits the same faulted execution preparation is not a retry mechanism. `TryResolve` retains its documented exception-to-reason behavior; it is not a hidden retry API. Include exact failure identity and preparation-count tests.
 
@@ -516,14 +516,14 @@ The constructor audit found no need for child-dependent binding initialization o
 
 ## 9. Required proof and review decisions
 
-| ID | Proposed choice to review | Evidence required before rollout |
-| --- | --- | --- |
-| D1 | Preserve G's pinned M even when direct C resolution selects another M; keep original logical ownership for delayed dependencies. | Collision, late dependency and no-hoisting tests; clear direct-versus-composite behavior. |
-| D2 | `CreateWrapperFactory` prepares once and receives a typed child later; `CreateIterationFactory` prepares the common execution factory, which resolves its interceptor and other children per binding. | Full compilation of agnostic/bound bases, custom roles, representative algorithms; author ceremony comparison. |
-| D3 | Retained child domains keyed explicitly, returning contextual views. | Both Cycle modes, repeated source references, two Cycle nodes, two invocations, Pipeline and budget composition. |
-| D4 | Wrapper callback receives original source; generated occurrence has a per-binding predecessor, private extra-child domain and weak-key lifetime. | Stateful A/B chain insertion, deferred predecessor, extra-child isolation, unrelated child, attribution, contextual depth, timing order and both collection directions. |
-| D5 | Operation-free controls projected during resolution. | EvolutionStrategy/Gaussian with observation, consumer control, explicit wrapper absence/forwarding, inference. |
-| D6 | Sticky preparation/occurrence faults and context-local binding faults. | Failure injection at each phase; no repeated preparation or partial publication. |
-| D7 | No first-binding child-dependent initialization helper; paused iterators keep original bindings. | Audit remaining constructors; pause/resume and exception/disposal lifecycle tests. |
+| ID  | Proposed choice to review                                                                                                                                                                             | Evidence required before rollout                                                                                                                                        |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Preserve G's pinned M even when direct C resolution selects another M; keep original logical ownership for delayed dependencies.                                                                      | Collision, late dependency and no-hoisting tests; clear direct-versus-composite behavior.                                                                               |
+| D2  | `CreateWrapperFactory` prepares once and receives a typed child later; `CreateIterationFactory` prepares the common execution factory, which resolves its interceptor and other children per binding. | Full compilation of agnostic/bound bases, custom roles, representative algorithms; author ceremony comparison.                                                          |
+| D3  | Retained child domains keyed explicitly, returning contextual views.                                                                                                                                  | Both Cycle modes, repeated source references, two Cycle nodes, two invocations, Pipeline and budget composition.                                                        |
+| D4  | Wrapper callback receives original source; generated occurrence has a per-binding predecessor, private extra-child domain and weak-key lifetime.                                                      | Stateful A/B chain insertion, deferred predecessor, extra-child isolation, unrelated child, attribution, contextual depth, timing order and both collection directions. |
+| D5  | Operation-free controls projected during resolution.                                                                                                                                                  | EvolutionStrategy/Gaussian with observation, consumer control, explicit wrapper absence/forwarding, inference.                                                          |
+| D6  | Sticky preparation/occurrence faults and context-local binding faults.                                                                                                                                | Failure injection at each phase; no repeated preparation or partial publication.                                                                                        |
+| D7  | No first-binding child-dependent initialization helper; paused iterators keep original bindings.                                                                                                      | Audit remaining constructors; pause/resume and exception/disposal lifecycle tests.                                                                                      |
 
 The factory direction is already selected. These proposals make it concrete enough to review, but none of the unexecuted proof or cost claims is a completed result. Keep ordinary public guides and canonical glossary descriptions on current behavior until the corresponding implementation lands.

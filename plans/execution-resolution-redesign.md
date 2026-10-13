@@ -1,6 +1,6 @@
 # Execution-resolution redesign
 
-Status: final design, 2026-10-13. This is the only active plan for replacing the execution resolver. It replaces the candidate recorded in `68ad810c` with a smaller design; the [differences](#changes-from-the-earlier-candidate) are listed below. Decided on 2026-10-13: the resolver has no node cache; advice receives the execution it wraps directly; algorithms create no operators of their own; `Aspect` replaces `IExecutionModule`; analyzers are aspects; behavior changes 1 to 7 are accepted; `NodeSelector`, `Aspect`, `AspectBuilder` with `Advise` and `Install`, `Advice<TExecution>`, the wrapping bases' `CreateAdvice` hook, `AspectFactory` and "advice chain" are the chosen terms. No questions remain open; implementation awaits approval. Typed advice, package 5 of [container and aspect framing](container-and-aspect-framing.md), stays on hold. [Execution bindings and shared state](execution-bindings-and-shared-state.md) and [execution factory design](execution-factory-design.md) record the production baseline, `c6957cbc`, and its history.
+Status: final design, 2026-10-13. Step 2 is implemented in the working tree, uncommitted, pending review. This is the only active plan for replacing the execution resolver. It replaces the candidate recorded in `68ad810c` with a smaller design; the [differences](#changes-from-the-earlier-candidate) are listed below. Decided on 2026-10-13: the resolver has no node cache; advice receives the execution it wraps directly; algorithms create no operators of their own; `Aspect` replaces `IExecutionModule`; analyzers are aspects; behavior changes 1 to 7 are accepted; `NodeSelector`, `Aspect`, `AspectBuilder` with `Advise` and `Install`, `Advice<TExecution>`, the wrapping bases' `CreateAdvice` hook, `AspectFactory` and "advice chain" are the chosen terms. No questions remain open; steps 3–5 await approval. Typed advice, package 5 of [container and aspect framing](container-and-aspect-framing.md), stays on hold. [Execution bindings and shared state](execution-bindings-and-shared-state.md) and [execution factory design](execution-factory-design.md) record the production baseline, `c6957cbc`, and its history.
 
 ## Objective
 
@@ -107,11 +107,13 @@ No other storage exists: no node cache, retained children, dependency tables, co
 
 Decided on 2026-10-13: an algorithm resolves only its configured parameters and creates no operators of its own. Behavior derived from a parameter belongs in the algorithm's execution code. The execution graph therefore matches the configuration the user supplied, apart from aspect advice.
 
-The genetic algorithm's mutation rate is the example. The algorithm resolves `Mutator` and applies the rate in its iteration step, with the same `WeightedBatchDispatcher` that `ChooseOneMutator` uses:
+The genetic algorithm's mutation rate is the example. The algorithm resolves `Mutator` and applies the rate in its iteration step, with the same `WeightedRouter` that `ChooseOneMutator` uses:
 
 ```csharp
-offspring = rateDispatcher.Dispatch(offspring, [mutator, null], random, state,
-    static (mutator, batch, state) => mutator is null ? batch : mutator.Mutate(batch, state.random, state.searchSpace, state.problem));
+private readonly WeightedRouter<IMutatorExecution<TCandidate, TSearchSpace, TProblem>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
+
+offspring = mutationRouter.Route(offspring, random, (selected, batch) =>
+    selected is null ? batch : selected.Mutate(batch, random, problem.SearchSpace, problem));
 ```
 
 The rate logic exists once, observers of the mutator count only the offspring it actually mutates, and the resolver needs no mechanism for it. `AppliedAtRate` stays what it is today: `ChooseOne[source, NoChange]`, a helper for users building configurations. NSGA2 and ALPS follow the same pattern.
@@ -259,7 +261,7 @@ Users who want separate state pass value-equal distinct configurations (`algorit
 
 ## Open questions
 
-None. The design awaits approval for implementation.
+None. The remaining implementation packages await approval.
 
 ## Changes from the earlier candidate
 
@@ -278,6 +280,45 @@ None. The design awaits approval for implementation.
 5. **Review size, cost and behavior.** Compare resolver size and caller code with `c6957cbc`. Measure construction, repeated resolution, changed aspects, fresh stages and cheap operation calls. Complete collection, seeded streaming and whole-solution validation.
 
 Follow `AGENTS.md` and `test/README.md`: focused core checks during development, then core, API usage and affected Experimental consumers; representative scenarios and whole-solution validation near completion. Build and test work is sequential.
+
+## Step 2 review record — 2026-10-13
+
+Scope: GA, NSGA2 and ALPS resolve their configured mutator normally and apply the rate at the existing mutation call through an execution-owned `WeightedRouter`, using the same step RNG. Each execution constructor creates a router holding the resolved mutator and a null pass-through choice; the execution retains only that router for mutation. Certain routes pass the original offspring to their handler without random draws. The internal-composition feature line and its nine test methods are removed from the current resolver. `AppliedAtRate` keeps its existing configuration behavior; `NodeSelectionSpecs` is unchanged.
+
+Initial public API decision: the user selected making the existing sealed `WeightedBatchDispatcher` public, including its constructor and three `Dispatch` overloads. This lets Experimental and external algorithm authors share the existing batch-routing implementation. No friend-assembly access or separate rate helper was added. Its XML contract, authoring documentation and an API usage spec describe the exposed behavior.
+
+Parity: 27 seeded cases, nine each for GA, NSGA2 and ALPS, compare every generation with explicit `AppliedAtRate` configuration (or the existing direct shortcut). Rates are `0`, `0.35`, `0.5`, `-0.25`, `NaN`, negative infinity, `1`, `1.5` and positive infinity. The mutator consumes the batch RNG, and the evaluator draws from it afterward, so the checks cover mutation routing and the downstream random stream even at rate zero. ALPS also compares ages. Broad selectors see only configured mutators; observers count only mutated offspring; zero, negative and NaN rates do not invoke the source, including `NoChangeMutator.Instance`. A paused GA retains its original mutator binding when another context adds an observer.
+
+Validation is sequential, using `AGENTS.md` commands:
+
+| Check                                            | Result                                                                                                      |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Restore and Release build                        | Passed; existing build warnings remain.                                                                     |
+| Focused suites                                   | Passed: mutation selection 39, weighted operators 39, GA 1, NSGA2 1, current resolver 46, ALPS mutation 18. |
+| Complete core, API usage and Experimental suites | Passed: 2,534, 197 and 239 cases respectively.                                                              |
+| Whole solution, one test module at a time        | Passed: 2,996 cases, zero failures or skips.                                                                |
+| Whitespace, style and analyzer verification      | All three passed; each reported workspace-loading warnings.                                                 |
+| Published documentation build                    | Passed.                                                                                                     |
+| Changed Markdown Prettier check                  | Passed after formatting the four changed files flagged by the initial check.                                |
+| Reference inventory and Git checks               | No live references to removed composition members; no agent staging or unstaging.                           |
+
+Initial build failures were corrected before the successful validation: `CS1525: Invalid expression term 'public'` and `CS1002: ; expected` from a missing `Matches` expression; `CS0246: The type or namespace name 'UnrestrictedSearchSpace<>' could not be found` and consequent conversion errors from a test-only type used in the API usage spec. The spec supplies its own search space through the public contract. The initial Prettier check reported `Code style issues found in 4 files. Run Prettier with --write to fix.`; those four changed Markdown files were formatted before the passing check.
+
+Review follow-up: dispatcher construction belongs to each GA, NSGA2 and ALPS execution constructor, rather than execution factory creation. Repeated validation passed: Release build, all 144 focused cases, the 2,996-case solution run, all three .NET format checks and the documentation build. Markdown emphasis follows `_italics_` and `**bold**`, documented in developer guidelines § 9.8 and consistent with Prettier and the [GitLab handbook](https://handbook.gitlab.com/docs/markdown-guide/); [CommonMark](https://spec.commonmark.org/0.31.2/#emphasis-and-strong-emphasis) accepts both delimiter forms. An audit of 62 first-party Markdown files normalized 19 italic phrases in three files, verifying unchanged semantic syntax trees before writing. The initial follow-up Prettier check reported `Code style issues found in 2 files. Run Prettier with --write to fix.`; both files were formatted. The dispatcher name is unchanged; naming alternatives remain review suggestions.
+
+Router follow-up, decided on 2026-10-13: `WeightedBatchDispatcher` becomes `WeightedRouter<TChoice>`. "Route" describes the purpose for one input or many, whereas "dispatcher" suggests threads and "chooser" suggests a call that returns a choice. The router takes its choices at construction, as `WeightedItemSampler<T>` does, which removes the operator count, the per-call count check and the algorithms' separate choice arrays. `WeightedRouter.AtRate(rate)` routes to `true` or `false` and holds the NaN weight rule that the three `AppliedAtRate` helpers also use. A choice that receives every input gets the original inputs, which replaces the algorithms' direct-call shortcut; a certain choice draws no random numbers, so seeded results are unchanged. Handlers are plain capturing lambdas, and the state-passing overloads are gone: one closure per routing call is accepted against the design goal of avoiding delegate creation, because routing already allocates its batch arrays per call. The internal `WeightedDispatcher<TOperator>` duplicated `WeightedItemSampler<T>`; `ChooseOneSelector` and `ChooseOneReplacer` now sample from it directly. Following developer guidelines § 8.6, the `WeightedRouter` companion offers `Create(choices)` and `Create(choices, weights)` beside `AtRate(rate)`, so callers never spell the choice type. Validation passed: Release build; core, API usage and Experimental suites with 2,543, 199 and 239 cases; the 3,007-case solution run; all three .NET format checks; the documentation build and Prettier on the changed Markdown.
+
+Mutator ownership follow-up, approved on 2026-10-13: `WeightedRouter.AtRate<TChoice>(choice, rate)` returns `WeightedRouter<TChoice?>` for a reference choice, using the existing rate weights and null as the second choice. GA, NSGA2 and ALPS initialize it with their resolved mutator. The mutator constructor parameter is used only in that initialization; handlers receive the selected execution, so no separate mutator capture or algorithm-owned choices array remains. The boolean `AtRate(rate)` overload retains its decision-oriented use. Eight new unit cases cover reference identity, null routing and extreme-rate RNG behavior; the API usage spec exercises inference with a resolved mutator. Validation passed: Release build; 161 focused cases; complete core, API usage and Experimental suites with 2,551, 199 and 239 cases; the 3,015-case solution run with no failures or skips; all three .NET format checks and the documentation build. The 27 seeded algorithm parity cases and observer assertions still pass. Changes remain uncommitted, and the user's staged content is preserved.
+
+Changed files (35, including deletions, the router and ownership follow-ups, and the new usage spec):
+
+- Algorithms: `src/HeuristicLib/Algorithms/Evolutionary/GeneticAlgorithm.cs`, `src/HeuristicLib/Algorithms/Evolutionary/NSGA2.cs`, `src/HeuristicLib.Experimental/Algorithms/Evolutionary/ALPSGeneticAlgorithm.cs`.
+- Resolver: `src/HeuristicLib/Execution/NodeSelector.cs`, `src/HeuristicLib/Execution/ResolutionScope.cs`, `src/HeuristicLib/Execution/ResolutionScopeBuilder.cs`, `src/HeuristicLib/Execution/Resolution/ExecutionBindings.cs`, `src/HeuristicLib/Execution/Resolution/ExecutionPreparation.cs`, `src/HeuristicLib/Execution/Resolution/ExecutionSharingScope.cs`, `src/HeuristicLib/Execution/Resolution/WrapperRegistration.cs`; deleted `src/HeuristicLib/Execution/Resolution/InternalComposition.cs`.
+- Operators: added `src/HeuristicLib/Operators/WeightedRouter.cs`; deleted `src/HeuristicLib/Operators/WeightedBatchDispatcher.cs` and `src/HeuristicLib/Operators/WeightedDispatcher.cs`; `src/HeuristicLib/Operators/Mutators/IMutator.cs`, `src/HeuristicLib/Operators/Mutators/ChooseOneMutator.cs`, `src/HeuristicLib/Operators/Creators/ChooseOneCreator.cs`, `src/HeuristicLib/Operators/Crossovers/ChooseOneCrossover.cs`, `src/HeuristicLib/Operators/Refiners/ChooseOneRefiner.cs`, `src/HeuristicLib/Operators/Selectors/ChooseOneSelector.cs`, `src/HeuristicLib/Operators/Replacers/ChooseOneReplacer.cs`.
+- Tests: `test/HeuristicLib.Tests/Execution/MutatorSelectionTests.cs`, `test/HeuristicLib.Tests.Experimental/Algorithms/AlpsMutationCompositionTests.cs`, `test/HeuristicLib.Tests/Operators/ChooseOneOperatorTests.cs`; added `test/HeuristicLib.Tests.ApiUsageSpecs/Operators/WeightedRouterSpecs.cs`; deleted `test/HeuristicLib.Tests/Execution/ExecutionFactoryResolutionTests.Compositions.cs`.
+- Documentation: `docs/contributing/architecture/execution-resolution.md`, `docs/contributing/architecture/operator-implementation.md`, `docs/contributing/developer-guidelines.md`, `docs/guide/glossary.md`, `docs/guide/fundamentals/invariants-and-validation.md`, `plans/execution-resolution-redesign.md`, `plans/execution-factory-design.md`, `plans/container-and-aspect-framing-scope-review-prompt.md`, `plans/developer-backlog.md`.
+
+Deferred: steps 3–5 remain unstarted. Execution modules, retained children, source interception for generated wrappers and node caches remain in the current resolver. Step 2 is pending review and uncommitted. The user's staged review changes are preserved; follow-up edits are left in the working tree without agent staging or unstaging.
 
 ## Validation scenarios
 

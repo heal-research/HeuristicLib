@@ -8,13 +8,12 @@ For the surrounding concepts, read [configuration vs execution nodes](/contribut
 
 The resolver answers two different questions: **which prepared state does this configuration use?** and **which nodes should this caller receive?** `ResolutionScope` routes those requests; it does not own the preparation state machines, node cache or wrapper-construction algorithm.
 
-| Component | Responsibility |
-| --- | --- |
-| `ExecutionSharingScope` | Finds existing state in this scope or its ancestors, reserves missing preparations locally, and remembers direct selections. |
-| `ExecutionPreparation` | Owns one configuration's preparation attempt and factory, including captured persistent state, pinned child selections and retained child scopes. It is not an execution node. |
-| `ExecutionBindings` | Constructs and caches raw/wrapped nodes for the current observation path. Owns binding failures, wrapper ordering and contextual retained children. |
-| `WrapperRegistration` | Owns a wrapper recipe and its separate preparation for each selected source, using weak source keys. |
-| `InternalComposition` | Owns one derived composition's preparation and isolated private sharing scope, retained by its factory owner or standalone sharing scope. |
+| Component               | Responsibility                                                                                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ExecutionSharingScope` | Finds existing state in this scope or its ancestors, reserves missing preparations locally, and remembers direct selections.                                                   |
+| `ExecutionPreparation`  | Owns one configuration's preparation attempt and factory, including captured persistent state, pinned child selections and retained child scopes. It is not an execution node. |
+| `ExecutionBindings`     | Constructs and caches raw/wrapped nodes for the current observation path. Owns binding failures, wrapper ordering and contextual retained children.                            |
+| `WrapperRegistration`   | Owns a wrapper recipe and its separate preparation for each selected source, using weak source keys.                                                                           |
 
 These are internal storage owners with different lifetimes. A single preparation can supply nodes to several observation contexts. Each context needs its own node cache, while the shared factory and chosen dependencies survive. The sharing scope remembers which preparations belong together; it does not own their bound-node caches. A registration owns per-source wrapper preparation so another context does not reset the wrapper's state.
 
@@ -89,12 +88,12 @@ Execution bindings keep the callable nodes and their wrapper chains for one obse
 
 Direct resolution first uses a local selection, then searches ancestors, and otherwise reserves a new preparation locally. Wrappers do not block this search. A descendant never publishes its local selection to an ancestor.
 
-| Resolution order | State ownership |
-| --- | --- |
-| Parent, then child | Child shares the selected parent state, including when it adds observations. |
-| Two siblings before any ancestor selection | Each sibling owns independent state. |
-| Child, then parent | Both own state; the child keeps its earlier selection. |
-| Parent, then two siblings | Both siblings share the selected parent state. |
+| Resolution order                           | State ownership                                                              |
+| ------------------------------------------ | ---------------------------------------------------------------------------- |
+| Parent, then child                         | Child shares the selected parent state, including when it adds observations. |
+| Two siblings before any ancestor selection | Each sibling owns independent state.                                         |
+| Child, then parent                         | Both own state; the child keeps its earlier selection.                       |
+| Parent, then two siblings                  | Both siblings share the selected parent state.                               |
 
 A factory's scope resolves each ordinary child through its preparation's original sharing scope and pins the selected preparation. Rebinding a composite preserves these selections. If C selected M locally before P constructed G with another M, resolving G through C still uses G's pinned M while C's direct M remains separate.
 
@@ -158,30 +157,6 @@ For example, P owns G -> M. C adds an observer of M. Resolving G through C creat
 The first call snapshots the declarations once. Later calls ignore the callback and return a scope combining that child's shared state with the requesting observations. Distinct keys and owners remain independent. A declaration failure is retained, and a recursive request for an unfinished declaration fails.
 
 A deferred execution may retain its immutable construction frame and use it later. The frame continues to use its original dependencies and observation context. Rebinding elsewhere does not modify an active iterator or its children.
-
-## Internal compositions
-
-Algorithms keep parameters such as `Mutator` and `MutationRate` as supplied. During preparation they may derive a composition from them, reusing a configuration helper:
-
-```csharp
-// Preparation: derive once from the unchanged parameter.
-var rated = MutationRate >= 1.0 ? null : Mutator.AppliedAtRate(MutationRate);
-
-// Binding: resolve the parameter through its internal composition.
-var mutator = typed.Resolve(Mutator, composedAs: rated);
-```
-
-The core overload is `Resolve(source, prepare, composedAs)`. A null composition is ordinary resolution. Otherwise the source resolves normally, including its pinned selection, shared state and completed wrapper chain. A table on the owner's preparation, or on a standalone scope's sharing scope, retains one `InternalComposition` per composition reference. The entry strongly owns an isolated sharing scope; its preparation retains that scope weakly, like any other preparation. The same composition reference cannot serve different selected sources within one owner.
-
-The composition is prepared once with the source's role adapter and bound with a `WrappedNodes` target containing the source's raw and completed nodes. Its factory therefore resolves the source's observed chain directly, and the composition itself is never offered to a selector. Its private sharing scope has no ancestor selection lookup, shares the owner's recursion guard and marks every descendant as internal. No registration, including one declared later in a retained scope, sees these private dependencies; their state cannot collide with the user's graph.
-
-Composition bindings use the ordinary per-context cache. Rebinding an owner under new observations changes the source chain and binds the composition around it with the same prepared state. An active iterator keeps its original binding. Other callers of the source use its normal chain without passing through the composition. Observers of a rate-limited mutator count only candidates routed to that mutator, rather than the no-change branch or dispatch itself.
-
-`AppliedAtRate` creates a distinct no-change configuration for its fallback branch, so that branch remains private plumbing even when the configured source is `NoChangeMutator.Instance`.
-
-An internal composition may add only plumbing and reference only its own configured source. Independent operators that do real work must be parameters. The source must be resolved directly from the composition root's factory, including deferred calls through that same retained frame. Resolving it through another configuration or a descendant scope throws `InvalidOperationException`, rather than preparing a hidden copy. Control projection through a composition is not provided.
-
-Explicitly configured compositions are ordinary source configurations and remain selectable. Internal compositions are excluded from every registration; dependencies added by generated registration wrappers are instead excluded only from their own registration, so other registrations still see that deliberately added work.
 
 ## Wrappers and controls
 
@@ -262,11 +237,11 @@ Each registration records internally whether it was made during `Install(module)
 
 Wrappers are sorted innermost to outermost by three keys, in this order:
 
-| Key               | Rule                      | Reason                                                        |
-| ----------------- | ------------------------- | ------------------------------------------------------------- |
-| 1. Registration kind | configuration before module | a wrapper that measures must never measure the observer       |
-| 2. Contextual depth | deeper before shallower   | the most local budget is the least disturbed                  |
-| 3. Declaration sequence | earlier before later | a trace installs the clocks it reads before installing itself |
+| Key                     | Rule                        | Reason                                                        |
+| ----------------------- | --------------------------- | ------------------------------------------------------------- |
+| 1. Registration kind    | configuration before module | a wrapper that measures must never measure the observer       |
+| 2. Contextual depth     | deeper before shallower     | the most local budget is the least disturbed                  |
+| 3. Declaration sequence | earlier before later        | a trace installs the clocks it reads before installing itself |
 
 Registration kind outranks depth: configuration declared in an ancestor still binds tighter than a module declared below it.
 
@@ -325,16 +300,15 @@ Two nested duration budgets on one operator, an outer 10s and an inner 2s. Which
 
 ## Failure and lifetime ownership
 
-| Failure | Retained result |
-| --- | --- |
-| Factory preparation | Faulted preparation; no later context repeats preparation. |
-| Wrapper callback or preparation | Faulted occurrence for that source/declaration pair. |
-| Internal composition preparation | Faulted preparation for that composition reference and owner; no context repeats preparation. |
-| Raw, wrapper or internal composition binding, including a selector predicate | Faulted binding in that context; no partially completed node is returned. A different observation context can try binding again with the same prepared state. |
-| Dependency construction | Its selection remains pinned; already completed sibling dependencies remain valid. |
-| Retained child declaration | Faulted slot; the callback is not rerun. |
-| Control projection | Completed binding remains valid; the projection exception propagates. |
-| Operation or observer callback | Normal invocation failure; resolution is not rolled back or restarted. |
+| Failure                                                | Retained result                                                                                                                                               |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Factory preparation                                    | Faulted preparation; no later context repeats preparation.                                                                                                    |
+| Wrapper callback or preparation                        | Faulted occurrence for that source/declaration pair.                                                                                                          |
+| Raw or wrapper binding, including a selector predicate | Faulted binding in that context; no partially completed node is returned. A different observation context can try binding again with the same prepared state. |
+| Dependency construction                                | Its selection remains pinned; already completed sibling dependencies remain valid.                                                                            |
+| Retained child declaration                             | Faulted slot; the callback is not rerun.                                                                                                                      |
+| Control projection                                     | Completed binding remains valid; the projection exception propagates.                                                                                         |
+| Operation or observer callback                         | Normal invocation failure; resolution is not rolled back or restarted.                                                                                        |
 
 `TryResolve` converts `InvalidOperationException` into a reason and propagates other exception types. It does not retry faulted construction. Active synchronous construction is checked across factory frames and fresh sharing scopes; creating another child scope cannot evade a recursive dependency.
 

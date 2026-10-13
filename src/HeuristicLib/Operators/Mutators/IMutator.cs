@@ -30,12 +30,7 @@ public static class MutatorResolutionExtensions
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             scope.Resolve(mutator, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
 
-        public IMutatorExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(
-            IMutator<TCandidate> mutator, IMutator<TCandidate>? composedAs)
-            where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(mutator, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>(), composedAs);
-
+        [return: NotNullIfNotNull(nameof(mutator))]
         public IMutatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate>? mutator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
@@ -71,9 +66,6 @@ public static class MutatorResolutionExtensions
         public IMutatorExecution<TCandidate, TSearchSpace, TProblem> Resolve(IMutator<TCandidate> mutator) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(mutator);
 
-        public IMutatorExecution<TCandidate, TSearchSpace, TProblem> Resolve(IMutator<TCandidate> mutator, IMutator<TCandidate>? composedAs) =>
-            scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(mutator, composedAs);
-
         /// <summary>Resolves the wrapped mutator and an optional control from the same selected raw binding.</summary>
         /// <remarks>
         /// Observation wrappers need not implement the source's control interfaces. Resolving the control separately
@@ -85,6 +77,7 @@ public static class MutatorResolutionExtensions
             where TControl : class =>
             scope.Scope.Resolve(mutator, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>(), static execution => execution as TControl, out control);
 
+        [return: NotNullIfNotNull(nameof(mutator))]
         public IMutatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IMutator<TCandidate>? mutator) =>
             mutator is null ? null : scope.Resolve(mutator);
 
