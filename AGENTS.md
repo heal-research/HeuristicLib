@@ -1,63 +1,67 @@
 # AGENTS.md
 
-Contributor contract for this repository.
+Contributor contract shared by coding agents. `CLAUDE.md` imports this file.
 
-Follow [docs/contributing/developer-guidelines.md](docs/contributing/developer-guidelines.md) for implementation rules, public API conventions and architectural decisions. Durable product and architectural principles live in [docs/contributing/design-goals.md](docs/contributing/design-goals.md).
+## Find the relevant guidance
 
-Use [docs/guide/glossary.md](docs/guide/glossary.md) for canonical HeuristicLib terminology when editing code, docs, tests, examples, and plans. Prefer glossary terms over legacy or ad hoc wording unless a local context explicitly defines a narrower meaning.
+Follow the developer guidelines for implementation, public APIs and documentation responsibilities, and the glossary for terminology. Read the sections and topic pages relevant to the task.
+
+| Task                                                               | Guidance                                                                                                                                                |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implementation and public API conventions                          | [Developer guidelines](docs/contributing/developer-guidelines.md)                                                                                       |
+| Capability boundaries and architectural tradeoffs                  | [Requirements](docs/contributing/requirements.md) and [design goals](docs/contributing/design-goals.md)                                                 |
+| Naming and domain language in code, docs, tests, examples or plans | [Glossary](docs/guide/glossary.md); prefer canonical terms unless a local context explicitly defines a narrower meaning                                 |
+| Adding or moving types and dependencies                            | [Layering](docs/contributing/architecture/layering.md)                                                                                                  |
+| Execution state, resolution, sharing or wrappers                   | [Execution nodes](docs/contributing/architecture/execution-nodes.md) and [execution resolution](docs/contributing/architecture/execution-resolution.md) |
+| Authoring or changing operators                                    | [Operator implementation](docs/contributing/architecture/operator-implementation.md)                                                                    |
+| Analyzers, observations and result ownership                       | [Analyzer architecture](docs/contributing/architecture/analyzers.md)                                                                                    |
+| Test placement, API usage specs and suite selection                | [Test suite guide](test/README.md)                                                                                                                      |
+| Planned work or a continuation                                     | The task's stated spec or relevant plan under `plans/`; identify current scope and decision status rather than inferring them from the branch name      |
+
+Unresolved work and rejected approaches are recorded in [the developer backlog](plans/developer-backlog.md). Check relevant rejected approaches before proposing a previously discussed direction.
 
 ## Repository map
 
-- `src/HeuristicLib`: public contracts, core algorithms, operators, search spaces, candidate representations, problems, random engines, runs, experiments, and analysis primitives.
-- `src/HeuristicLib.Experimental`: experimental problems, workflows, and integration-oriented features.
-- `src/HeuristicLib.PythonInterop`: Python-specific integration code, adapters, and workflows.
-- `test/HeuristicLib.Tests`: fast unit tests for core library behavior and invariants.
-- `test/HeuristicLib.Tests.Experimental`: fast unit tests for experimental library behavior and invariants.
-- `test/HeuristicLib.Tests.Scenarios`: broader workflow, execution, and data-backed scenarios that may span core, experimental, and integration packages.
-- `test/HeuristicLib.Tests.ApiUsageSpecs`: executable API usage specs; see `test/README.md` before editing specs.
+- `src/HeuristicLib`: core public contracts and library implementations.
+- `src/HeuristicLib.Experimental`: experimental problems, workflows and features.
+- `src/HeuristicLib.PythonInterop`: Python integration and adapters.
+- `test`: core, Experimental, scenario and API usage suites; see `test/README.md` for ownership and placement.
 - `analyzers`: Roslyn analyzers and code fixes for repository-specific API usage rules.
-- `docs`: user-facing and design documentation.
-- `samples`: runnable C# sample applications, one project per sample, referencing the projects in `src` so an API change breaks them here first.
-- `python-samples`: Python demonstrations and notebooks. Not part of the solution, so nothing builds, formats or tests them.
-- `.agents/skills`: agent skills for Codex; see "Agent skills" below.
-- `.claude`: Claude Code project settings, which enable the `dotnet` plugin, and identical copies of the shared skills in `.agents/skills`.
-
-Test-suite placement guidance lives in `test/README.md`.
+- `docs`: published VitePress documentation. `plans`: development plans, investigations and review records.
+- `samples`: runnable C# applications included in the solution and referencing `src` projects.
+- `python-samples`: Python demonstrations and notebooks outside the solution; solution validation does not validate them. See [their README](python-samples/README.md).
+- `.agents/skills` and `.claude`: shared skills and agent-specific configuration; see [the skill inventory](.agents/skills/README.md).
 
 ## Validation commands
 
+Use the .NET SDK selected by `global.json`. Tests use Microsoft.Testing.Platform with xUnit v3, so select suites with `--project` and use xUnit filters such as `--filter-class`, rather than VSTest's `--filter` syntax. Run build and test commands sequentially in this checkout.
+
 - Restore dependencies with `dotnet restore`.
 - Build with `dotnet build --configuration Release --no-restore`.
-- Run the selected test scope with `dotnet test --configuration Release --no-restore`.
+- Run a selected suite, for example `dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore`.
+- Narrow that suite with an appropriate filter, for example `--filter-class '*ResolutionScopeTests'`.
+- For final whole-solution validation, use `dotnet test --solution ./HEAL.HeuristicLib.slnx --configuration Release --no-restore --max-parallel-test-modules 1`.
 - Check whitespace with `dotnet format whitespace ./HEAL.HeuristicLib.slnx --verify-no-changes --no-restore`.
 - Check code style with `dotnet format style ./HEAL.HeuristicLib.slnx --verify-no-changes --no-restore --severity warn`.
 - Check analyzer fixes with `dotnet format analyzers ./HEAL.HeuristicLib.slnx --verify-no-changes --no-restore --severity error`.
-- CI currently runs restore, release build, release tests, formatting verification, and package creation. Formatting verification is currently non-blocking in CI, so do not treat a green CI format job as proof that formatting is clean.
+- Build published documentation with `npm run docs:build`; install npm dependencies with `npm ci` when needed.
+- Check changed Markdown, JSON and YAML files with `npx --no-install prettier --check <files>`.
+- Validate packaging changes with `dotnet pack --configuration Release --no-restore`.
 
-### Test execution strategy
+CI runs restore, Release build and tests, documentation build, formatting verification and package creation. Formatting verification is currently non-blocking in CI, so a green CI format job does not prove that formatting is clean.
 
-Use the narrowest test scope that provides confidence for the current change and prefer fast feedback during ordinary development.
-
-1. During implementation, run focused tests from `HeuristicLib.Tests` with an appropriate test filter.
-2. After meaningful core changes, run the complete `HeuristicLib.Tests` project. This is the primary test suite and the default broad validation during development.
-3. Run `HeuristicLib.Tests.ApiUsageSpecs` when changing public APIs, authoring patterns, documentation examples or intended usage.
-4. Run `HeuristicLib.Tests.Experimental` when changing experimental code or when core changes may affect experimental consumers.
-5. Run `HeuristicLib.Tests.Scenarios` when changing scenario behavior, validating a broad workflow or performing final validation near completion. Scenario tests are often time consuming, so consider their value and timing carefully before running them.
-6. Run the complete solution test suite only for final validation of substantial public API, shared invariant or cross-project changes.
-
-Do not run scenario tests repeatedly during ordinary implementation iterations. Prefer the core, API usage and experimental test projects for faster results and feedback.
+Use the [test suite guide](test/README.md#validation-order) for test selection and validation order. For prose-only changes, select the relevant documentation or formatting checks. Validate tooling and build configuration changes through the affected workflows. Changes to documented C# usage require API usage validation.
 
 ## Agent skills
 
-The repository ships general-purpose agent skills, copied verbatim from their sources; `.agents/skills/README.md` lists them. Where a skill's instructions conflict with this file, the developer guidelines or the glossary, the repository wins. Adjust skill behavior in this section instead of editing the copied skills.
-
-Claude Code gets `csharp-refactoring` and the C# language server from the `dotnet` plugin, which `.claude/settings.json` enables once the folder is trusted. Codex has no language server, so the skill falls back to compiler-checked edits there.
+The repository ships general-purpose agent skills, copied verbatim from their sources; the skill inventory records their provenance and update procedure. Where a skill's instructions conflict with this file, the developer guidelines or the glossary, the repository wins. Adjust skill behavior in this section instead of editing the copied skills.
 
 ### Repository overrides
 
+- Composition, for `grill-with-docs`: apply both `grilling` and `domain-modeling`. If the runtime has no `Skill` invocation tool, read both skills from its skill inventory and follow their workflows directly.
 - Glossary, for `domain-modeling` and `grill-with-docs`: `docs/guide/glossary.md` is the domain glossary. Challenge terms against it and record resolved terms there, using its status labels and entry format. Entries may name the type that represents a concept. Do not create `CONTEXT.md` or `CONTEXT-MAP.md`.
 - Decisions, for `domain-modeling` and `grill-with-docs`: do not create ADRs or `docs/adr/`. Record a settled decision in the plan of the change it belongs to under `plans/`. Approaches that were tried and rejected go to "Discussed, tried, and rejected" in `plans/developer-backlog.md`. Contributor and architecture docs describe the current state of the code, not decision history.
-- Review scope, for `two-axis-review`: changes are usually left uncommitted, so review the working tree against the fixed point, `git diff $(git merge-base <fixed-point> HEAD)`, and include untracked files from `git status --short`.
-- Review sources, for `two-axis-review`: there is no issue tracker, so skip `docs/agents/issue-tracker.md` and `/setup-matt-pocock-skills`. The spec is the branch's plan in `plans/`, usually `plans/<branch>.md`. The standards are this file, the developer guidelines, the design goals, the glossary and, for tests, `test/README.md`.
+- Review scope, for `two-axis-review`: for reviews of the current working tree, compare against the fixed point with `git diff $(git merge-base <fixed-point> HEAD)` and include untracked files from `git status --short`.
+- Review sources, for `two-axis-review`: skip the generic `docs/agents/issue-tracker.md` and `/setup-matt-pocock-skills` prerequisite. Use the task's stated spec or relevant plan under `plans/`, rather than assuming a branch-named plan. The standards are this file, the developer guidelines, the design goals, the glossary and, for tests, `test/README.md`.
 - Compatibility, for `csharp-refactoring`: backward compatibility is not a design goal (developer guidelines § 1.1). A requested public rename, move or removal is an authorized breaking change. Migrate every in-repository caller, including tests, samples and documentation snippets, and add no `[Obsolete]` shims, forwarding members or `[TypeForwardedTo]` attributes.
 - Validation, for all skills: use the validation commands and test execution strategy above instead of a skill's generic build and test commands.
