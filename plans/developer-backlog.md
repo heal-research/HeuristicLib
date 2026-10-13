@@ -124,6 +124,42 @@ Selected on 2026-09-26, then superseded on 2026-09-27 after comparing shared-sta
 
 The user selected option C's typed factory approach to support new scope-specific child bindings while preserving logical execution state. Do not implement the superseded guard as an intermediate prerequisite or silently fall back to A when a proof is incomplete. Preserve the no-silent-omission requirement and bring unresolved authoring, capability or lifecycle conflicts back for an explicit decision. The [factory design plan](execution-bindings-and-shared-state.md) owns the next work.
 
+### Implicit source resolution for generated wrappers
+
+Production behavior at `c6957cbc`, rejected for the [execution-resolution redesign](execution-resolution-redesign.md) on 2026-10-13. A generated wrapper obtains the execution it encloses by resolving its original source configuration, which the resolver temporarily redirects to the already-built inner chain. Internal compositions reuse the same redirection.
+
+It hides the wrapper's input behind an ordinary-looking `Resolve` call, so resolving the source means different things inside and outside a wrapper. The resolver needs interception state in every construction frame and rules for when the redirection must not leak into extra children. An explicit typed `inner` gives the same composition without either. Reopen only if explicit input cannot express a wrapper whose source it must locate itself.
+
+### Supplying the inner execution through every factory
+
+Proposed for the [execution-resolution redesign](execution-resolution-redesign.md) and rejected on 2026-10-13. Every factory would receive an optional supplied execution with the configuration it stands for. Wrapping and multi bases would take it for matching child references, and the resolver would check that it was taken.
+
+It treated the symptom of building advice through ordinary child resolution rather than the cause. Wrappers already prepare state once and wrap a supplied child execution, so advice applies that hook directly to the built execution. Ordinary factories stay unchanged, and the check, the extra parameter and the private advice states disappear. Reopen only if advice must resolve children of its own.
+
+### Separate ordinary and supplied construction callbacks
+
+Tried in the redesign's disposable authoring fixture and superseded on 2026-10-13. A factory received an `ordinary` constructor for configured use, a `supplied` constructor for an already-built `inner`, and an `acceptsSource` predicate deciding which source it could receive.
+
+The two constructors duplicated the same node construction, and the predicate restated what the factory's own child references already determine. One construction callback that receives the supplied execution as an explicit argument covers both routes. Reopen only for a factory whose ordinary and supplied construction genuinely differ beyond where the child comes from.
+
+### Resolver-owned keyed child retention
+
+Production behavior at `c6957cbc`, rejected for the [execution-resolution redesign](execution-resolution-redesign.md) on 2026-10-13. `GetOrCreateChildScope(key, declare)` kept a child's state and its once-only declarations under a reference key on the owner, and rebuilt a scope around them for each requesting context. Cycle's reuse mode and both operator budgets used it.
+
+It existed because every child scope also created new state, so adding wrappers or keeping per-algorithm state required keeping a child alive somewhere. Separating a scope's state from its aspect removes the need: `With(aspect)` adds advice without new state, Cycle's reuse mode resolves through its own scope, and fresh state remains `CreateChildScope()`. The accepted cost is that the same configuration reference shares state within one state, also across Cycle owners and inside budgets. Reopen only for a caller that needs persistent state isolated from its siblings, and then prefer a caller-owned child state over resolver-owned keys.
+
+### Generated wrappers with children of their own
+
+Production behavior at `c6957cbc`, rejected for the [execution-resolution redesign](execution-resolution-redesign.md) on 2026-10-13. A generated wrapper could resolve additional children, with a private selection scope and a rule that its own registration skipped them while other registrations still saw them (R8).
+
+No production recipe used it. Advice now wraps exactly its target, so it never resolves anything, and the private scopes and self-exclusion rule disappear. Real work belongs in the configuration, where node selectors and budgets can see it. Reopen only for advice that must resolve another configured operator.
+
+### Per-context node caches in the resolver
+
+Production behavior at `c6957cbc`, rejected for the [execution-resolution redesign](execution-resolution-redesign.md) on 2026-10-13. Each observation context cached its completed nodes and construction faults, children without new declarations reused ancestor nodes, and any added declaration forced the affected nodes to be rebuilt.
+
+Resolution runs once per run, or once per activation in a meta-algorithm, while operator execution dominates runtime. Persistent state lives with the configuration's factory, so the cache only preserved node identity and fault timing, at the cost of fault records, unchanged-parent lookup and the rebuild rule. Reopen only if measurements show repeated resolution as a material cost; even then, add a cache that does not change behavior.
+
 ### Shared configurable run host
 
 Tried and removed during the layers overhaul in September 2026. `RunHost` wrapped a lifecycle enum and lock, accepted a transition table and exception-message prefix, and exposed its lock back to the runs. The callers still made the actual lifecycle decisions. The extraction introduced a generic state-machine mechanism without taking ownership of execution or scheduling.
@@ -142,15 +178,17 @@ Neither `Interceptor` nor `StateTransformer` communicates the precise invocation
 
 ### Internally derived configurations as selectable sources
 
-Discussed on 2026-10-09 and 2026-10-10 after selector registration (4c.2) exposed that `GeneticAlgorithm`, `NSGA2` and ALPS resolve `Mutator.AppliedAtRate(rate)` as an ordinary source, so broad mutator selectors also matched the derived `ChooseOneMutator` and `NoChangeMutator.Instance`. What was measured then depended on how an algorithm implements its rate rather than on what the user configured. The selected direction is [internal compositions](container-and-aspect-framing.md#package-4c3-plan-internal-compositions). Rejected alternatives:
+Discussed on 2026-10-09 and 2026-10-10 after selector registration (4c.2) exposed that `GeneticAlgorithm`, `NSGA2` and ALPS resolve `Mutator.AppliedAtRate(rate)` as an ordinary source, so broad mutator selectors also matched the derived `ChooseOneMutator` and `NoChangeMutator.Instance`. What was measured then depended on how an algorithm implements its rate rather than on what the user configured.
 
+On 2026-10-13 the [execution-resolution redesign](execution-resolution-redesign.md#parameter-logic-belongs-to-the-algorithm) selected algorithm-owned logic: an algorithm resolves only its configured parameters and applies behavior derived from a parameter, such as a mutation rate, in its own execution code. GA, NSGA2 and ALPS dispatch with the same `WeightedBatchDispatcher` that `ChooseOneMutator` uses, so the rate logic exists once. Rejected alternatives:
+
+- **Internal compositions**, implemented in `c6957cbc`. The algorithm derived `Mutator.AppliedAtRate(MutationRate)` and the resolver built it around the configured mutator, hidden from selectors, in an isolated scope with an internal-source rule and a per-owner table. Each redesign attempt needed another resolver mechanism for it: source interception, a supplied inner execution or owner-applied advice. Algorithm-owned logic needs none.
 - **Keep derived configurations as visible sources.** Selection and measurement would follow algorithm internals that the user cannot see on the configuration and that may change without notice.
 - **Execution-level composition helpers**, such as `AppliedAtRate` on a resolved mutator execution. Every configuration-level helper would need an execution-level twin for every role.
-- **A list-level helper**, such as `offspring.ApplyAtRate(...)` in the algorithm step. This is the same duplication on a third representation.
-- **Removing `MutationRate` from the algorithms**, leaving explicit `Mutator = m.AppliedAtRate(r)`. Users expect a mutation-rate parameter on a genetic algorithm, and a builder parameter without a matching algorithm property is inconsistent. Parameters are kept as given and interpreted at resolution, as in scikit-learn.
+- **Removing `MutationRate` from the algorithms**, leaving explicit `Mutator = m.AppliedAtRate(r)`. Users expect a mutation-rate parameter on a genetic algorithm, and a builder parameter without a matching algorithm property is inconsistent. Parameters are kept as given and interpreted by the algorithm, as in scikit-learn.
 - **A transparent resolve that only hides a derived configuration**, without isolation or the plumbing rule. Hidden nodes could share state with the user's graph or do unmeasured work.
 
-Reopen only if an algorithm needs a derived composition that does real work of its own, which the plumbing rule forbids, or several user sources in one composition.
+The list-level approach was first rejected as duplicating the rate logic on a third representation. A shared dispatcher removes that duplication, and its cost is a few lines per algorithm instead of a resolver feature. An algorithm that resolves a configuration it builds itself only makes that configuration visible to node selectors; the developer guidelines forbid it, and no tooling enforces it. Reopen only if several algorithms need the same derived behavior and the shared dispatcher cannot express it.
 
 ### Separate node-selector filtering through Where
 
