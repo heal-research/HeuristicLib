@@ -20,14 +20,14 @@ An algorithm observation captures each search state it yields, after its interce
 
 An analyzer is one of several ways to see what a run does. Pick by what you need:
 
-| Need | Use |
-| --- | --- |
-| Look at every state the algorithm yields | `algorithm.Stream(problem, random)` |
-| Only the final state | `algorithm.CompleteAsync(problem, random)` |
-| Typed data from chosen boundaries, such as a quality curve or an operator's offspring | An analyzer attached with `Attach` |
-| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An execution module attached with `Attach` |
-| A count or duration that stops or limits the run | Instrumentation such as `CountCandidates` or `LimitedToEvaluatedCandidates`, read by terminators and budgets |
-| The same analysis for every experiment trial | A trial analyzer, see [Experiments](/guide/execution/experiments) |
+| Need                                                                                        | Use                                                                                                          |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Look at every state the algorithm yields                                                    | `algorithm.Stream(problem, random)`                                                                          |
+| Only the final state                                                                        | `algorithm.CompleteAsync(problem, random)`                                                                   |
+| Typed data from chosen boundaries, such as a quality curve or an operator's offspring       | An analyzer attached with `Attach`                                                                           |
+| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An execution module attached with `Attach`                                                                   |
+| A count or duration that stops or limits the run                                            | Instrumentation such as `CountCandidates` or `LimitedToEvaluatedCandidates`, read by terminators and budgets |
+| The same analysis for every experiment trial                                                | A trial analyzer, see [Experiments](/guide/execution/experiments)                                            |
 
 Analyzers only read. Nothing an analyzer records changes what the algorithm does next.
 
@@ -152,3 +152,50 @@ This makes dimension priority explicit and affects this trace's comparisons, inc
 ## Experiments
 
 An experiment uses a trial analyzer factory to create fresh analyzers for every trial. Retrieve the typed trial/analyzer pairs and read each analyzer directly. See [Experiments](/guide/execution/experiments).
+
+## Build a trace for a custom observation role
+
+`TraceAnalyzer<TResult>.Create` accepts sources, a factory connecting each source to a recording callback, and a measurement function. Consumer-defined roles use the same trace storage, retention and clocks as the built-in `Analyzer.Trace` overloads. Sources are deduplicated by reference.
+
+For example, with a consumer-defined cooling-schedule role and its `RecordedCooling` wrapper:
+
+```csharp
+var temperatures = TraceAnalyzer<double>.Create<ICoolingSchedule, double>(
+    [warmup, main],
+    static (schedule, record) => Aspect.Create(
+        schedule, current => new RecordedCooling(current, record)),
+    static temperature => temperature);
+var execution = ResolutionScope.Create(temperatures).Resolve(plan);
+execution.Temperature(step: 0);
+var values = temperatures.Snapshot().Values;
+```
+
+The factory initializes trace storage before creating its observation callbacks and installs clocks before observation aspects. Reading a snapshot does not change the trace.
+
+## Use an aspect directly
+
+`Aspect.Create` pairs a pointcut or configuration reference with a wrapper recipe. Pass that aspect directly to `ResolutionScope.Create`, `With` or `CreateChildScope`, or attach it to a run with `Attach`. A containing aspect is useful when grouping several contributions.
+
+Using the same cooling-schedule role and wrapper:
+
+```csharp
+var queriedTemperatures = new List<double>();
+var recording = Aspect.Create(
+    Pointcut.OfType<ICoolingSchedule>(),
+    schedule => new RecordedCooling(schedule, queriedTemperatures.Add));
+var execution = ResolutionScope.Create(recording).Resolve(plan);
+```
+
+The aspect records each selected temperature query. Use `Aspect.Create(warmup, recipe)` to select just the `warmup` configuration by reference.
+
+`AspectBuilder.Install` adds each contribution to one ordered list. It accepts an existing aspect, a configuration reference and recipe, or a pointcut and recipe:
+
+```csharp
+var combined = Aspect.Create(builder => builder
+    .Install(recording)
+    .Install(warmup, schedule => new RecordedCooling(schedule, recordWarmup))
+    .Install(Pointcut.OfType<ICoolingSchedule>(),
+        schedule => new RecordedCooling(schedule, recordAll)));
+```
+
+A composition expands at its installation position. If several compositions include the same aspect, its first occurrence determines its position and its rules apply once. Separate calls to `Aspect.Create(pointcut, recipe)` or the recipe-taking `Install` overloads create independent rules that each apply. Earlier rules wrap closer to the source execution; later rules wrap outside them. Child-scope and `With` layers precede inherited layers. Preparation caches belong to the scope's execution state; reusing an aspect across independent scopes does not share their prepared state.

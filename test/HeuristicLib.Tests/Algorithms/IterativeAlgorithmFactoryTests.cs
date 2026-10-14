@@ -50,7 +50,7 @@ public sealed class IterativeAlgorithmFactoryTests
         var outer = Resolve(parent, source);
         (await Next(outer)).Value.ShouldBe(101);
 
-        var child = parent.CreateChildScope(builder => builder.Wrap<IInterceptor<int>>(interceptor, original => original.CountCalls(observedCalls)));
+        var child = parent.CreateChildScope(builder => builder.Install<IInterceptor<int>>(interceptor, original => original.CountCalls(observedCalls)));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         (await Next(inner)).Value.ShouldBe(202);
@@ -82,7 +82,7 @@ public sealed class IterativeAlgorithmFactoryTests
         paused.Current.Value.ShouldBe(101);
         paused.Current.PreviousValue.ShouldBeNull();
 
-        var child = parent.CreateChildScope(builder => builder.Wrap<IInterceptor<int>>(interceptor, original => original.CountCalls(observedCalls)));
+        var child = parent.CreateChildScope(builder => builder.Install<IInterceptor<int>>(interceptor, original => original.CountCalls(observedCalls)));
         var inner = Resolve(child, source);
         var innerRandom = new RecordingRandom();
         await using var observed = inner.RunStreamingAsync(Problem, innerRandom, ct: TestContext.Current.CancellationToken).GetAsyncEnumerator();

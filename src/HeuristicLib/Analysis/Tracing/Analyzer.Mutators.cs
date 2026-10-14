@@ -23,9 +23,9 @@ public static partial class Analyzer
         TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        Create<IMutator<TCandidate>, MutatorObservation<TCandidate, TSearchSpace, TProblem>, TProblem, TValue, TResult>(mutators,
-            static (source, record) => new MutatorObservationModule<TCandidate, TSearchSpace, TProblem>(source, record),
-            clocks, retention, measurement, aggregation, objectiveComparer);
+        TraceAnalyzer<TResult>.Create<IMutator<TCandidate>, MutatorObservation<TCandidate, TSearchSpace, TProblem>, TProblem, TValue>(mutators,
+            static (source, record) => new MutatorObservationAspect<TCandidate, TSearchSpace, TProblem>(source, record),
+            measurement, aggregation, clocks, retention, objectiveComparer);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TValue, TResult>(
         IMutator<TCandidate> mutator,
@@ -61,9 +61,9 @@ public static partial class Analyzer
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        Create(mutators,
-            static (source, record) => new MutatorObservationModule<TCandidate, TSearchSpace, TProblem>(source, record),
-            clocks, retention, value);
+        TraceAnalyzer<TResult>.Create(mutators,
+            static (source, record) => new MutatorObservationAspect<TCandidate, TSearchSpace, TProblem>(source, record),
+            value, clocks, retention);
 
     // Observes at the interface search space and problem, so an implicitly typed lambda needs no type arguments.
 
@@ -93,7 +93,7 @@ public static partial class Analyzer
         IReadOnlyList<IMutator<TCandidate>> mutators,
         Func<MutatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>, TResult> value,
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null) =>
-        Create(mutators,
-            static (source, record) => new MutatorObservationModule<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(source, record),
-            clocks, retention, value);
+        TraceAnalyzer<TResult>.Create(mutators,
+            static (source, record) => new MutatorObservationAspect<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(source, record),
+            value, clocks, retention);
 }

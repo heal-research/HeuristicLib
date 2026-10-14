@@ -25,9 +25,9 @@ public static partial class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState =>
-        Create<IAlgorithm<TCandidate, TSearchState>, AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>, TProblem, TValue, TResult>(algorithms,
-            static (source, record) => new AlgorithmObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(source, record),
-            clocks, retention, measurement, aggregation, objectiveComparer);
+        TraceAnalyzer<TResult>.Create<IAlgorithm<TCandidate, TSearchState>, AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>, TProblem, TValue>(algorithms,
+            static (source, record) => new AlgorithmObservationAspect<TCandidate, TSearchSpace, TProblem, TSearchState>(source, record),
+            measurement, aggregation, clocks, retention, objectiveComparer);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TSearchState, TValue, TResult>(
         IAlgorithm<TCandidate, TSearchState> algorithm,
@@ -56,9 +56,9 @@ public static partial class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState =>
-        Create(algorithms,
-            static (source, record) => new AlgorithmObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(source, record),
-            clocks, retention, value);
+        TraceAnalyzer<TResult>.Create(algorithms,
+            static (source, record) => new AlgorithmObservationAspect<TCandidate, TSearchSpace, TProblem, TSearchState>(source, record),
+            value, clocks, retention);
 
     // Observes at the interface search space and problem, so an implicitly typed lambda needs no type arguments.
 
@@ -83,7 +83,7 @@ public static partial class Analyzer
         Func<AlgorithmObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>, TResult> value,
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null)
         where TSearchState : class, ISearchState =>
-        Create(algorithms,
-            static (source, record) => new AlgorithmObservationModule<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>(source, record),
-            clocks, retention, value);
+        TraceAnalyzer<TResult>.Create(algorithms,
+            static (source, record) => new AlgorithmObservationAspect<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>(source, record),
+            value, clocks, retention);
 }

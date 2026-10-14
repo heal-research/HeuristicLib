@@ -9,9 +9,9 @@ namespace HEAL.HeuristicLib.Tests.Scenarios.Core.Algorithms.MetaAlgorithms;
 public class CycleAlgorithmAnalysisScenarios
 {
     [Fact]
-    public void CycleAlgorithm_WithFreshRegistries_PreservesAnalyzerStateAcrossCycles()
+    public void CycleAlgorithm_WithFreshScopes_PreservesAnalyzerStateAcrossCycles()
     {
-        var result = RunCycleAlgorithm(newExecutionInstancesPerCycle: true);
+        var result = RunCycleAlgorithm(ChildScopePolicy.Fresh);
 
         result.EvaluationTrace1.ObjectiveValues.ShouldBe([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
         result.EvaluationTrace2.ObjectiveValues.ShouldBe([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
@@ -20,9 +20,20 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     [Fact]
-    public void CycleAlgorithm_WithReusedChildRegistries_PreservesAnalyzerStateAcrossCycles()
+    public void CycleAlgorithm_WithSharedState_SharesSiblingDependenciesAndPreservesAnalyzerState()
     {
-        var result = RunCycleAlgorithm(newExecutionInstancesPerCycle: false);
+        var result = RunCycleAlgorithm(ChildScopePolicy.Shared);
+
+        result.EvaluationTrace1.ObjectiveValues.ShouldBe([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        result.EvaluationTrace2.ObjectiveValues.ShouldBe([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        result.InterceptionTrace.ObjectiveValues.ShouldBe([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        result.FinalState.Population.EvaluatedCandidates.Single().Candidate.ShouldBe(2);
+    }
+
+    [Fact]
+    public void CycleAlgorithm_WithRetainedState_IsolatesSiblingDependenciesAndPreservesAnalyzerState()
+    {
+        var result = RunCycleAlgorithm(ChildScopePolicy.Retained);
 
         result.EvaluationTrace1.ObjectiveValues.ShouldBe([1.0, 1.0, 2.0, 2.0, 3.0, 3.0]);
         result.EvaluationTrace2.ObjectiveValues.ShouldBe([1.0, 1.0, 2.0, 2.0, 3.0, 3.0]);
@@ -30,7 +41,7 @@ public class CycleAlgorithmAnalysisScenarios
         result.FinalState.Population.EvaluatedCandidates.Single().Candidate.ShouldBe(2);
     }
 
-    private static CycleRunResult RunCycleAlgorithm(bool newExecutionInstancesPerCycle)
+    private static CycleRunResult RunCycleAlgorithm(ChildScopePolicy mode)
     {
         var evaluator = new IncrementingEvaluator();
         var interceptor = new IdentityInterceptor<int, PopulationState<int>>();
@@ -38,7 +49,7 @@ public class CycleAlgorithmAnalysisScenarios
         var algorithm2 = new SingleStepAlgorithm(2, evaluator, interceptor);
         var cycleAlgorithm = algorithm1.CycleWith(algorithm2, maximumCycles: 3) with
         {
-            NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
+            ScopePolicy = mode
         };
 
         var evaluationTrace1 = new EvaluationTraceAnalysis(evaluator);
@@ -134,11 +145,11 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     private sealed class EvaluationTraceAnalysis(IEvaluator<int> evaluator)
-        : IAnalyzer
+        : Aspect
     {
         public ExecutionState Result { get; } = new();
 
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
+        protected override void Declare(AspectBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);
@@ -157,11 +168,11 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     private sealed class InterceptionTraceAnalysis(IInterceptor<int> interceptor)
-        : IAnalyzer
+        : Aspect
     {
         public ExecutionState Result { get; } = new();
 
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(interceptor, Record);
+        protected override void Declare(AspectBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(interceptor, Record);
 
         public void Record(InterceptorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> observation) =>
             Result.RecordObjectiveValue(observation.UntransformedState);

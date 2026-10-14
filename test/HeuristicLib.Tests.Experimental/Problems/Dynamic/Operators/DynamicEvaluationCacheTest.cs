@@ -466,7 +466,7 @@ public class DynamicEvaluationCacheTests
         var root = ResolutionScope.Create();
         var outer = root.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
         var calls = new CountAccumulator();
-        var child = root.CreateChildScope(builder => builder.Wrap<IEvaluator<DummyGenotype>>(evaluator, original => original.CountCalls(calls)));
+        var child = root.CreateChildScope(builder => builder.Install<IEvaluator<DummyGenotype>>(evaluator, original => original.CountCalls(calls)));
         var inner = child.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
         inner.ShouldNotBeSameAs(outer);
 
@@ -500,7 +500,7 @@ public class DynamicEvaluationCacheTests
         var root = ResolutionScope.Create();
         var outer = root.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
         var calls = new CountAccumulator();
-        var child = root.CreateChildScope(builder => builder.Wrap<IEvaluator<DummyGenotype>>(evaluator, original => original.CountCalls(calls)));
+        var child = root.CreateChildScope(builder => builder.Install<IEvaluator<DummyGenotype>>(evaluator, original => original.CountCalls(calls)));
         var inner = child.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
 
         outer.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
@@ -526,7 +526,7 @@ public class DynamicEvaluationCacheTests
         var outer = root.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
         var independent = ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
         var calls = new CountAccumulator();
-        var child = root.CreateChildScope(builder => builder.Wrap<IEvaluator<DummyGenotype>>(evaluator, original => original.CountCalls(calls)));
+        var child = root.CreateChildScope(builder => builder.Install<IEvaluator<DummyGenotype>>(evaluator, original => original.CountCalls(calls)));
         var inner = child.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
         var state = Population.From([EvaluatedCandidate.From(new DummyGenotype(1), new ObjectiveVector(99))]).ToPopulationState();
         inner.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).ShouldBeSameAs(state);

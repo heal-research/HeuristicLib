@@ -17,7 +17,7 @@ public sealed class MutatorSelectionTests
         var large = new StepMutator(5);
         var mutator = ChooseOneMutator.Create<int>(small, large);
         var counts = new Dictionary<IMutator<int>, CountAccumulator>(ReferenceEqualityComparer.Instance);
-        var scope = ResolutionScope.Create(builder => builder.Wrap(NodeSelector.OfType<IMutator<int>>(), source =>
+        var scope = ResolutionScope.Create(builder => builder.Install(Pointcut.OfType<IMutator<int>>(), source =>
         {
             var count = new CountAccumulator();
             counts.Add(source, count);
@@ -38,7 +38,7 @@ public sealed class MutatorSelectionTests
         var second = new StepMutator(2);
         var cycle = Algorithm(first).CycleWith(Algorithm(second), maximumCycles: 2);
         var activations = new List<(IMutator<int> Source, CountAccumulator Mutations)>();
-        var scope = ResolutionScope.Create(builder => builder.Wrap(NodeSelector.OfType<IMutator<int>>(), source =>
+        var scope = ResolutionScope.Create(builder => builder.Install(Pointcut.OfType<IMutator<int>>(), source =>
         {
             var mutations = new CountAccumulator();
             activations.Add((source, mutations));
@@ -96,7 +96,7 @@ public sealed class MutatorSelectionTests
         IMutator<int> source = new StepMutator(1);
         var offered = new List<IMutator<int>>();
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(builder => builder.Wrap(NodeSelector.OfType<IMutator<int>>().And(mutator =>
+        var scope = ResolutionScope.Create(builder => builder.Install(Pointcut.OfType<IMutator<int>>().And(mutator =>
         {
             offered.Add(mutator);
             return true;
@@ -123,7 +123,7 @@ public sealed class MutatorSelectionTests
         await using var paused = Run(parent, algorithm).GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observed = new CountAccumulator();
-        var child = parent.CreateChildScope(builder => builder.Wrap(source, mutator => mutator.CountCandidates(observed)));
+        var child = parent.CreateChildScope(builder => builder.Install(source, mutator => mutator.CountCandidates(observed)));
         await using var rebound = Run(child, algorithm).GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await rebound.MoveNextAsync()).ShouldBeTrue();
         (await paused.MoveNextAsync()).ShouldBeTrue();
@@ -156,7 +156,7 @@ public sealed class MutatorSelectionTests
     {
         IMutator<int> source = noChange ? NoChangeMutator<int>.Instance : new StepMutator(1);
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(builder => builder.Wrap(source, mutator => mutator.CountCandidates(count)));
+        var scope = ResolutionScope.Create(builder => builder.Install(source, mutator => mutator.CountCandidates(count)));
         var algorithm = Algorithm(source) with { MutationRate = rate };
         await RunToCompletion(scope, nsga ? AsNsga2(algorithm) : algorithm);
         count.CurrentCount.ShouldBe(0);

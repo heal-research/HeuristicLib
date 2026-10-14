@@ -100,8 +100,8 @@ public sealed class DynamicRacingFactoryTests
         var mutations = new CountAccumulator();
         var parent = ResolutionScope.Create(builder =>
         {
-            builder.Wrap<ICreator<MetaCandidate>>(metaCreator, original => original.CountCalls(creations));
-            builder.Wrap<IMutator<MetaCandidate>>(metaMutator, original => original.CountCalls(mutations));
+            builder.Install<ICreator<MetaCandidate>>(metaCreator, original => original.CountCalls(creations));
+            builder.Install<IMutator<MetaCandidate>>(metaMutator, original => original.CountCalls(mutations));
         });
         // Prebind the contender so its internal evaluator must be rebound for each performance observer.
         _ = parent.Resolve<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(contender);
@@ -115,8 +115,8 @@ public sealed class DynamicRacingFactoryTests
         var interceptions = new CountAccumulator();
         var child = parent.CreateChildScope(builder =>
         {
-            builder.Wrap(contender.Evaluator, original => original.CountCalls(evaluations));
-            builder.Wrap<IInterceptor<int>>(interceptor, original => original.CountCalls(interceptions));
+            builder.Install(contender.Evaluator, original => original.CountCalls(evaluations));
+            builder.Install<IInterceptor<int>>(interceptor, original => original.CountCalls(interceptions));
         });
         await using var observed = Run(child, racing, problem).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
@@ -135,7 +135,7 @@ public sealed class DynamicRacingFactoryTests
 
         var independentSourceIndex = sources.Count;
         var independent = ResolutionScope.Create(builder =>
-            builder.Wrap<ICreator<MetaCandidate>>(metaCreator, original => original.CountCalls(creations)));
+            builder.Install<ICreator<MetaCandidate>>(metaCreator, original => original.CountCalls(creations)));
         await using var fresh = Run(independent, racing, problem).GetAsyncEnumerator();
         (await fresh.MoveNextAsync()).ShouldBeTrue();
         creations.CurrentCount.ShouldBe(2);

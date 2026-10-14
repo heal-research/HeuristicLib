@@ -92,11 +92,11 @@ public class CycleAlgorithmAnalysisTests
     }
 
     private sealed class EvaluationTraceAnalysis(IEvaluator<int> evaluator)
-        : IAnalyzer
+        : Aspect
     {
         public ExecutionState Result { get; } = new();
 
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
+        protected override void Declare(AspectBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);

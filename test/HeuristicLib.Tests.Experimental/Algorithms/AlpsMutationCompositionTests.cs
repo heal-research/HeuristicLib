@@ -46,7 +46,7 @@ public sealed class AlpsMutationCompositionTests
         var algorithm = CreateAlgorithm(0.5) with { MaximumGenerations = 2 };
         var offered = new List<IMutator<int>>();
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(builder => builder.Wrap(NodeSelector.OfType<IMutator<int>>().And(source =>
+        var scope = ResolutionScope.Create(builder => builder.Install(Pointcut.OfType<IMutator<int>>().And(source =>
         {
             offered.Add(source);
             return true;
@@ -74,7 +74,7 @@ public sealed class AlpsMutationCompositionTests
         if (noChange)
             algorithm = algorithm with { Mutator = NoChangeMutator<int>.Instance };
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(builder => builder.Wrap(algorithm.Mutator, source => source.CountCandidates(count)));
+        var scope = ResolutionScope.Create(builder => builder.Install(algorithm.Mutator, source => source.CountCandidates(count)));
 
         await States(scope, algorithm);
 

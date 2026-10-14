@@ -125,7 +125,7 @@ public class CycleAlgorithmTests
         var cycle = CycleAlgorithm.Create(algorithm) with
         {
             MaximumCycles = 2,
-            NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
+            ScopePolicy = newExecutionInstancesPerCycle ? ChildScopePolicy.Fresh : ChildScopePolicy.Shared
         };
         var scope = ResolutionScope.Create();
         _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);

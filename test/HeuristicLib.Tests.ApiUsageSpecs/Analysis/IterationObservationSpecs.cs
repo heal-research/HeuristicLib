@@ -88,7 +88,7 @@ public class IterationObservationSpecs
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var innerAlgorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 3);
-        var cycle = CycleAlgorithm.Create(innerAlgorithm) with { MaximumCycles = 2, NewExecutionInstancesPerCycle = false };
+        var cycle = CycleAlgorithm.Create(innerAlgorithm) with { MaximumCycles = 2, ScopePolicy = ChildScopePolicy.Shared };
 
         var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
                        .TracePopulationCandidates(out var innerQuality, innerAlgorithm);
@@ -119,15 +119,15 @@ public class IterationObservationSpecs
     }
 
     private sealed class RecordingModule(IAlgorithm<RealVector, PopulationState<RealVector>> source, Action observed)
-        : IExecutionModule
+        : Aspect
     {
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe(source, _ => observed());
+        protected override void Declare(AspectBuilder builder) => builder.Observe(source, _ => observed());
     }
 
     private sealed class RecordingAnalyzer(IAlgorithm<RealVector, PopulationState<RealVector>> source, Action observed)
-        : IAnalyzer
+        : Aspect
     {
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe(source, _ => observed());
+        protected override void Declare(AspectBuilder builder) => builder.Observe(source, _ => observed());
     }
 
     private static GeneticAlgorithm<RealVector> CreateGeneticAlgorithm(

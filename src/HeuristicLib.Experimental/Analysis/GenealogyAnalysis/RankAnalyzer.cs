@@ -10,10 +10,10 @@ namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 /// <summary>
 /// Reads what this analyzer collected, without naming its observation-source types.
 /// </summary>
-public interface IRankAnalyzer<TCandidate> : IAnalyzer
+public abstract class RankAnalyzer<TCandidate> : Aspect
     where TCandidate : notnull
 {
-    RankState<TCandidate> State { get; }
+    public abstract RankState<TCandidate> State { get; }
 }
 
 /// <summary>
@@ -23,7 +23,7 @@ public interface IRankAnalyzer<TCandidate> : IAnalyzer
 /// This analyzer composes a genealogy analysis: it installs that analysis into a graph it owns and adds one observation
 /// of its own. Both observations share the same explicit objective ordering.
 /// </remarks>
-public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState> : IRankAnalyzer<TCandidate>
+public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState> : RankAnalyzer<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : PopulationState<TCandidate>
@@ -55,17 +55,17 @@ public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchStat
         this.algorithms = [.. algorithms ?? []];
     }
 
-    public RankState<TCandidate> State { get; }
+    public override RankState<TCandidate> State { get; }
 
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; init; }
 
-    public void Install(ResolutionScopeBuilder builder)
+    protected override void Declare(AspectBuilder builder)
     {
         // Installed first, so the graph already contains this generation when the ranks over it are read.
         var graphBuilder = new GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState>(
             State.Graph, crossovers, mutators, algorithms, saveSpace: false)
         { ObjectiveComparer = ObjectiveComparer };
-        graphBuilder.Install(builder);
+        builder.Install(graphBuilder);
 
         foreach (var algorithm in algorithms)
             builder.Observe(algorithm, _ => State.RecordRanks());

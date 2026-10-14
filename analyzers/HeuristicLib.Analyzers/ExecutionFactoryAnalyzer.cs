@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace HEAL.HeuristicLib.Analyzers;
 
@@ -42,7 +43,7 @@ public sealed class ExecutionFactoryAnalyzer : DiagnosticAnalyzer
             return;
 
         // A bridge delegates to its own preparation hook. A child of the same type is still a different receiver.
-        if (IsSelfReceiver(invocation.Expression) || !IsConstructionContext(context, invocation) || IsPreparationAdapter(context, invocation))
+        if (IsSelfReceiver(invocation.Expression) || !IsConstructionContext(context, invocation) || IsResolutionPreparation(context, invocation))
             return;
 
         context.ReportDiagnostic(Diagnostic.Create(Rule, invocation.GetLocation()));
@@ -53,7 +54,7 @@ public sealed class ExecutionFactoryAnalyzer : DiagnosticAnalyzer
         for (var symbol = context.SemanticModel.GetEnclosingSymbol(invocation.SpanStart, context.CancellationToken);
              symbol is not null; symbol = symbol.ContainingSymbol)
         {
-            if (symbol is IMethodSymbol method && (IsExecutionType(method.ReturnType, "ExecutionFactory", "WrapperExecutionFactory", "CompositeExecutionFactory")
+            if (symbol is IMethodSymbol method && (IsExecutionType(method.ReturnType, "ExecutionFactory", "Advice", "WrapperExecutionFactory", "CompositeExecutionFactory") || IsWrapperConstructor(method.ReturnType)
                 || method.Parameters.Any(static parameter => IsExecutionType(parameter.Type, "ResolutionScope"))))
                 return true;
             if (symbol is INamedTypeSymbol type && HasContract(type, "IExecutionNode"))
@@ -62,28 +63,26 @@ public sealed class ExecutionFactoryAnalyzer : DiagnosticAnalyzer
         return false;
     }
 
-    private static bool IsPreparationAdapter(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation)
+    private static bool IsResolutionPreparation(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation)
     {
-        if (invocation.Expression is not MemberAccessExpressionSyntax member)
+        if (invocation.Expression is not MemberAccessExpressionSyntax member
+            || invocation.Ancestors().OfType<LambdaExpressionSyntax>().FirstOrDefault() is not { Parent: ArgumentSyntax argument } lambda
+            || context.SemanticModel.GetOperation(argument, context.CancellationToken) is not IArgumentOperation preparation
+            || preparation.Parameter?.Name != "prepareFactory"
+            || preparation.Parent is not IInvocationOperation resolution
+            || !IsExecutionType(resolution.TargetMethod.ContainingType, "ResolutionScope")
+            || context.SemanticModel.GetOperation(lambda, context.CancellationToken) is not IAnonymousFunctionOperation callback)
             return false;
-
-        // Resolve owns preparation when its adapter calls the hook on the adapter's own source parameter.
-        // Calling some other child in that callback is still a bypass.
-        foreach (var lambda in invocation.Ancestors().OfType<LambdaExpressionSyntax>())
-        {
-            if (lambda.Parent is not ArgumentSyntax { Parent: ArgumentListSyntax { Parent: InvocationExpressionSyntax resolve } }
-                || context.SemanticModel.GetSymbolInfo(resolve, context.CancellationToken).Symbol is not IMethodSymbol method
-                || method.Name is not ("Resolve" or "TryResolve")
-                || !IsExecutionType(method.ContainingType, "ResolutionScope"))
-                continue;
-
-            var receiver = context.SemanticModel.GetSymbolInfo(member.Expression, context.CancellationToken).Symbol;
-            if (context.SemanticModel.GetSymbolInfo(lambda, context.CancellationToken).Symbol is IMethodSymbol adapter
-                && adapter.Parameters.Any(parameter => SymbolEqualityComparer.Default.Equals(parameter, receiver)))
-                return true;
-        }
-        return false;
+        var receiver = context.SemanticModel.GetSymbolInfo(member.Expression, context.CancellationToken).Symbol;
+        return callback.Symbol.Parameters.Length == 1
+            && SymbolEqualityComparer.Default.Equals(callback.Symbol.Parameters[0], receiver);
     }
+
+    private static bool IsWrapperConstructor(ITypeSymbol type) =>
+        type is INamedTypeSymbol { Name: "Func", TypeArguments.Length: 2 } function
+        && function.ContainingNamespace.ToDisplayString() == "System"
+        && SymbolEqualityComparer.Default.Equals(function.TypeArguments[0], function.TypeArguments[1])
+        && function.TypeArguments[0] is INamedTypeSymbol execution && HasContract(execution, "IExecutionNode");
 
     private static bool IsSelfReceiver(ExpressionSyntax expression)
     {

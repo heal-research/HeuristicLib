@@ -109,7 +109,7 @@ public class DynamicAnalysisTests
             [4]
         ]);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(problem.CreateIterationUpdateModule(algorithm));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(problem.CreateIterationUpdateAspect(algorithm));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 

@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -32,7 +33,7 @@ public static class ReplacerResolutionExtensions
         public IReplacerExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate> replacer)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(replacer, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
+            scope.Resolve(replacer, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(replacer))]
         public IReplacerExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate>? replacer)
@@ -78,5 +79,14 @@ public static class ReplacerResolutionExtensions
             [NotNullWhen(true)] out IReplacerExecution<TCandidate, TSearchSpace, TProblem>? execution,
             [NotNullWhen(false)] out string? reason) =>
             scope.Scope.TryResolve(replacer, out execution, out reason);
+    }
+
+    private static Advice<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> PrepareAdvice<TCandidate, TSearchSpace, TProblem>(IConfigurationNode wrapper)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        if (wrapper is not WrappingReplacer<TCandidate> typed)
+            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IReplacer<TCandidate>).Name} producing {typeof(IReplacerExecution<TCandidate, TSearchSpace, TProblem>).Name}.");
+        return WrappingReplacer<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem>(typed).Invoke;
     }
 }

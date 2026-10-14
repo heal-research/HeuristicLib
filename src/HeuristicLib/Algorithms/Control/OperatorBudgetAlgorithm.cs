@@ -22,8 +22,7 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchState, TOperator>
     /// Gets the factory that wraps the observed operator in a counting operator.
     /// </summary>
     /// <remarks>
-    /// The factory receives the original observed operator configuration. The returned wrapper resolves that source
-    /// through its scope to obtain the already-built inner chain, so enclosing budgets and observations compose.
+    /// The factory receives the original observed operator configuration. The returned single-child wrapper supplies advice for that source, so enclosing budgets and observations compose.
     /// The returned operator must retain the observed operator's role.
     /// </remarks>
     public required Func<TOperator, CountAccumulator, TOperator> CountedOperatorFactory { get; init; }
@@ -37,11 +36,10 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchState, TOperator>
     public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         var counter = new CountAccumulator();
-        var childKey = new object();
+        var counting = Aspect.Create(ObservedOperator, current => CountedOperatorFactory(current, counter));
         return scope =>
         {
-            var childScope = scope.GetOrCreateChildScope(childKey, child =>
-                child.Wrap(ObservedOperator, current => CountedOperatorFactory(current, counter)));
+            var childScope = scope.With(counting);
             return new OperatorBudgetAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
         };
     }

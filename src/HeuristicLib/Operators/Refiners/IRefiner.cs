@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -44,7 +45,7 @@ public static class RefinerResolutionExtensions
         public IRefinerExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate> refiner)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(refiner, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
+            scope.Resolve(refiner, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(refiner))]
         public IRefinerExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate>? refiner)
@@ -90,5 +91,14 @@ public static class RefinerResolutionExtensions
             [NotNullWhen(true)] out IRefinerExecution<TCandidate, TSearchSpace, TProblem>? execution,
             [NotNullWhen(false)] out string? reason) =>
             scope.Scope.TryResolve(refiner, out execution, out reason);
+    }
+
+    private static Advice<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> PrepareAdvice<TCandidate, TSearchSpace, TProblem>(IConfigurationNode wrapper)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        if (wrapper is not WrappingRefiner<TCandidate> typed)
+            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IRefiner<TCandidate>).Name} producing {typeof(IRefinerExecution<TCandidate, TSearchSpace, TProblem>).Name}.");
+        return WrappingRefiner<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem>(typed).Invoke;
     }
 }

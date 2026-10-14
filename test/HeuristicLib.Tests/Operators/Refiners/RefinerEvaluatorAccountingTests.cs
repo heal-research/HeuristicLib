@@ -7,8 +7,7 @@ namespace HEAL.HeuristicLib.Tests.Operators.Refiners;
 
 public class RefinerEvaluatorAccountingTests
 {
-    // One configuration object resolves to one execution node, which is what makes one counter, budget and cache
-    // shared.
+    // One configuration reference shares prepared accounting state across fresh execution nodes.
     [Fact]
     public void EvaluationAccounting_FollowsConfigurationInstanceIdentityRatherThanEquality()
     {
@@ -16,7 +15,14 @@ public class RefinerEvaluatorAccountingTests
         var shared = CreateEvaluator().LimitEvaluations(1);
         var separateButEqual = CreateEvaluator().LimitEvaluations(1);
 
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared).ShouldBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared).ShouldNotBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
+        var problem = CreateProblem();
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared)
+            .Evaluate([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared)
+            .Evaluate([10], RandomNumberGenerator.Create(2), problem.SearchSpace, problem).ShouldBe([problem.Objective.Worst]);
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(separateButEqual)
+            .Evaluate([10], RandomNumberGenerator.Create(3), problem.SearchSpace, problem).ShouldNotBe([problem.Objective.Worst]);
         separateButEqual.ShouldBe(shared);
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(separateButEqual).ShouldNotBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
     }

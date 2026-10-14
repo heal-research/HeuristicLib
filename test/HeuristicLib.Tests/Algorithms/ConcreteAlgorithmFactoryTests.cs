@@ -31,8 +31,8 @@ public sealed class ConcreteAlgorithmFactoryTests
         var observedInterceptions = new CountAccumulator();
         var child = parent.CreateChildScope(builder =>
         {
-            builder.Wrap(creator, original => original.CountCalls(observedCreations));
-            builder.Wrap(interceptor, original => original.CountCalls(observedInterceptions));
+            builder.Install(creator, original => original.CountCalls(observedCreations));
+            builder.Install(interceptor, original => original.CountCalls(observedInterceptions));
         });
 
         (await Next(child, algorithm)).ShouldBe(2);
@@ -70,7 +70,7 @@ public sealed class ConcreteAlgorithmFactoryTests
         Candidate(paused.Current).ShouldBe(1);
 
         var observedInterceptions = new CountAccumulator();
-        var child = parent.CreateChildScope(builder => builder.Wrap(interceptor, original => original.CountCalls(observedInterceptions)));
+        var child = parent.CreateChildScope(builder => builder.Install(interceptor, original => original.CountCalls(observedInterceptions)));
         await using var observed = Run(child, algorithm).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
         Candidate(observed.Current).ShouldBe(2);

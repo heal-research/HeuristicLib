@@ -142,6 +142,36 @@ Tried in the redesign's disposable authoring fixture and superseded on 2026-10-1
 
 The two constructors duplicated the same node construction, and the predicate restated what the factory's own child references already determine. One construction callback that receives the supplied execution as an explicit argument covers both routes. Reopen only for a factory whose ordinary and supplied construction genuinely differ beyond where the child comes from.
 
+### Separate public advice declarations and aspects
+
+Extracted during the [execution-resolution redesign](execution-resolution-redesign.md) follow-up and superseded on 2026-10-14. `AdviceDeclaration` represented one pointcut/wrapper-recipe rule, while `Aspect` grouped declarations and installed other aspects. The separate public authoring concept made users distinguish an aspect from the rule it declares.
+
+Each rule needs independent identity for preparation caching, but the advice instance provides that identity. In the [aspect redesign](aspect-redesign.md) an aspect stores its pointcut/advice pairs as tuples, so no public declaration type is needed. The standalone declaration type was removed rather than hidden or renamed. Reopen only if a concrete rule responsibility cannot be expressed by a pointcut/advice pair.
+
+### Separate direct-advice and installed-aspect collections
+
+Used during the [execution-resolution redesign](execution-resolution-redesign.md) and superseded on 2026-10-14. `Advise` added rules to one list, while `Install` added existing aspects to another. Collection applied direct rules before installed aspects regardless of call order, including across scope roots. This preserved an origin-priority policy at the cost of two authoring paths, two snapshots and separate collection passes.
+
+The user selected one ordered list. The [aspect redesign](aspect-redesign.md) keeps attach order as application order, and first occurrence determines a shared advice's position. There is no direct-versus-installed priority. Reopen only if a concrete behavior requires origin priority that cannot be expressed by explicit attach order.
+
+### Composite aspects
+
+Implemented as rule-or-composition `Aspect` with nested installation, and proposed as `PipelineAspect` with `Aspect.Combine`; rejected for the [aspect redesign](aspect-redesign.md) on 2026-10-14. Aspect hierarchies needed lazy declaration, recursive flattening, cycle handling and a lock in every aspect.
+
+A resolution scope holds one flat list of pointcut/advice pairs instead. Combining aspects concatenates their lists, and shared clocks apply once because their advice instances are removed as duplicates by reference. Reopen only if an ordering or sharing requirement cannot be expressed by a flat list.
+
+### Advice expressed as wrapper configurations
+
+Implemented during the [execution-resolution redesign](execution-resolution-redesign.md) and rejected for the [aspect redesign](aspect-redesign.md) on 2026-10-14. A recipe mapped each selected configuration to a wrapper configuration whose child was never used; the resolver borrowed the wrapper's construction hook through a role-specific type test and public static bridges.
+
+It mixed the configuration graph with woven behavior and hid the advice behind a configuration. Advice now wraps executions directly through one advice base per role. Reopen only if advice must itself appear in the configuration graph.
+
+### Advice-based configured wrappers
+
+Proposed during the [aspect redesign](aspect-redesign.md) and rejected on 2026-10-14. A generic configured wrapper per role, such as `AdvisedMutator(child, advice)`, would let one behavior serve both as a configured operator and as advice.
+
+Instead, instrumentation such as counting, timing and observing is advice only, and behavior-changing wrappers such as caching and limits are operators only, so no behavior needs both forms. Reopen only if a behavior is needed both in configurations and as woven advice.
+
 ### Resolver-owned keyed child retention
 
 Production behavior at `c6957cbc`, rejected for the [execution-resolution redesign](execution-resolution-redesign.md) on 2026-10-13. `GetOrCreateChildScope(key, declare)` kept a child's state and its once-only declarations under a reference key on the owner, and rebuilt a scope around them for each requesting context. Cycle's reuse mode and both operator budgets used it.

@@ -72,7 +72,7 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
 
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; init; }
 
-    public override void Install(ResolutionScopeBuilder builder)
+    protected override void Declare(AspectBuilder builder)
     {
         foreach (var crossover in crossovers)
             builder.Observe<TCandidate, TSearchSpace, TProblem>(

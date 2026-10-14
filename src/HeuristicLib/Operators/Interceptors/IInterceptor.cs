@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -36,7 +37,7 @@ public static class InterceptorResolutionExtensions
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            scope.Resolve(interceptor, static target => target.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>());
+            scope.Resolve(interceptor, static source => source.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem, TSearchState>);
 
         [return: NotNullIfNotNull(nameof(interceptor))]
         public IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate>? interceptor)
@@ -85,5 +86,15 @@ public static class InterceptorResolutionExtensions
             [NotNullWhen(true)] out IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? execution,
             [NotNullWhen(false)] out string? reason) =>
             scope.Scope.TryResolve(interceptor, out execution, out reason);
+    }
+
+    private static Advice<IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> PrepareAdvice<TCandidate, TSearchSpace, TProblem, TSearchState>(IConfigurationNode wrapper)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
+    {
+        if (wrapper is not WrappingInterceptor<TCandidate> typed)
+            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IInterceptor<TCandidate>).Name} producing {typeof(IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>).Name}.");
+        return WrappingInterceptor<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem, TSearchState>(typed).Invoke;
     }
 }

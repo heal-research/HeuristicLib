@@ -188,20 +188,49 @@ public class ExecutionFactoryAnalyzerTests
     }
 
     [Theory]
-    [InlineData("scope.Resolve(Child, child => child.CreateExecutionFactory<SS, P>())", 0)]
-    [InlineData("scope.Resolve(Child, child => Other.CreateExecutionFactory<SS, P>())", 1)]
-    public async Task PreparationAdapter_OnlyAllowsItsOwnSource(string resolution, int count)
+    [InlineData("source.CreateExecutionFactory<SS, P>()", 0)]
+    [InlineData("Other.CreateExecutionFactory<SS, P>()", 1)]
+    public async Task ResolutionPreparation_OnlyAllowsItsOwnSource(string preparation, int count)
     {
         var diagnostics = await AnalyzeAsync(Preamble + $$"""
-            file sealed record ResolvingMutator : Mutator<int>
+            file static class CustomResolution
             {
-                public required IMutator<int> Child { get; init; }
-                public required IMutator<int> Other { get; init; }
-                public override ExecutionFactory<IMutatorExecution<int, SS, P>> CreateExecutionFactory() => scope => {{resolution}};
+                public static IMutatorExecution<int, SS, P> Resolve(ResolutionScope scope, IMutator<int> configuration, IMutator<int> Other) =>
+                    scope.Resolve(configuration, source => {{preparation}},
+                        static _ => throw new System.InvalidOperationException());
             }
             """);
-
         diagnostics.Length.ShouldBe(count);
+    }
+
+    [Fact]
+    public async Task Reports_WhenPreparationOfTheSourceIsDeferredInsideAFactoryCallback()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file static class CustomResolution
+            {
+                public static IMutatorExecution<int, SS, P> Resolve(ResolutionScope scope, IMutator<int> configuration) =>
+                    scope.Resolve<IMutator<int>, IMutatorExecution<int, SS, P>>(configuration, source => innerScope => source.CreateExecutionFactory<SS, P>()(innerScope),
+                        static _ => throw new System.InvalidOperationException());
+            }
+            """);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutionFactoryAnalyzer.DiagnosticId);
+    }
+
+    [Fact]
+    public async Task Reports_WhenWrapperPreparationConstructsAChildFactoryDirectly()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed record CustomWrapper(IMutator<int> Child) : WrappingMutator<int>(Child)
+            {
+                protected override WrapperExecutionFactory<IMutatorExecution<int, TSS, TP>> CreateWrapperFactory<TSS, TP>()
+                {
+                    var childFactory = Child.CreateExecutionFactory<TSS, TP>();
+                    return inner => inner;
+                }
+            }
+            """);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutionFactoryAnalyzer.DiagnosticId);
     }
 
     [Fact]

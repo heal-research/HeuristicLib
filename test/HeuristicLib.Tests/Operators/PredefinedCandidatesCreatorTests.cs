@@ -33,7 +33,7 @@ public class PredefinedCandidatesCreatorTests
         var outer = parent.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(creator);
         outer.Create(1, random, problem.SearchSpace, problem).ShouldBe([10]);
         var observedFallbackCalls = new CountAccumulator();
-        var child = parent.CreateChildScope(builder => builder.Wrap(fallback, original => original.CountCalls(observedFallbackCalls)));
+        var child = parent.CreateChildScope(builder => builder.Install(fallback, original => original.CountCalls(observedFallbackCalls)));
         var inner = child.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(creator);
 
         inner.ShouldNotBeSameAs(outer);

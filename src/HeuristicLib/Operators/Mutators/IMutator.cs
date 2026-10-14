@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -28,7 +29,7 @@ public static class MutatorResolutionExtensions
         public IMutatorExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate> mutator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(mutator, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
+            scope.Resolve(mutator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(mutator))]
         public IMutatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate>? mutator)
@@ -75,7 +76,7 @@ public static class MutatorResolutionExtensions
         /// </remarks>
         public IMutatorExecution<TCandidate, TSearchSpace, TProblem> Resolve<TControl>(IMutator<TCandidate> mutator, out TControl? control)
             where TControl : class =>
-            scope.Scope.Resolve(mutator, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>(), static execution => execution as TControl, out control);
+            scope.Scope.Resolve(mutator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem>, static execution => execution as TControl, out control);
 
         [return: NotNullIfNotNull(nameof(mutator))]
         public IMutatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IMutator<TCandidate>? mutator) =>
@@ -86,5 +87,14 @@ public static class MutatorResolutionExtensions
             [NotNullWhen(true)] out IMutatorExecution<TCandidate, TSearchSpace, TProblem>? execution,
             [NotNullWhen(false)] out string? reason) =>
             scope.Scope.TryResolve(mutator, out execution, out reason);
+    }
+
+    private static Advice<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> PrepareAdvice<TCandidate, TSearchSpace, TProblem>(IConfigurationNode wrapper)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        if (wrapper is not WrappingMutator<TCandidate> typed)
+            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IMutator<TCandidate>).Name} producing {typeof(IMutatorExecution<TCandidate, TSearchSpace, TProblem>).Name}.");
+        return WrappingMutator<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem>(typed).Invoke;
     }
 }

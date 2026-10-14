@@ -37,6 +37,14 @@ public abstract record WrappingTerminator<TCandidate>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState;
+
+    /// <summary>Prepares a wrapper constructor for a caller supplying its resolved child directly.</summary>
+    /// <remarks>Resolution uses this bridge for aspect advice; configured wrappers use CreateExecutionFactory.</remarks>
+    public static WrapperExecutionFactory<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(WrappingTerminator<TCandidate> wrapper)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+        where TRunSearchState : class, ISearchState =>
+        wrapper.CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>();
 }
 
 public abstract class WrappingTerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator)

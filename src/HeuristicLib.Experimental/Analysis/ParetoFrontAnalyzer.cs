@@ -38,7 +38,7 @@ public sealed class ParetoFrontAnalyzer<T, TS, TP> : AccumulatingAnalyzer
     /// <summary>The front this analyzer accumulates.</summary>
     public ParetoFront<T> Front => front;
 
-    public override void Install(ResolutionScopeBuilder builder)
+    protected override void Declare(AspectBuilder builder)
     {
         foreach (var evaluator in evaluators)
             builder.Observe<T, TS, TP>(evaluator, Record);

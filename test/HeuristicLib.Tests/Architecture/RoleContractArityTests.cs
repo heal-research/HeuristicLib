@@ -56,15 +56,16 @@ public sealed class RoleContractArityTests
     {
         var factory = topology.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .Single(method => method.Name == "CreateExecutionFactory");
-        var hook = topology.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Single(method => method.IsAbstract);
+        var wrapper = topology.Name.StartsWith("Wrapping", StringComparison.Ordinal);
+        var hook = topology.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Single(method => method.IsAbstract && method.Name == (wrapper ? "CreateWrapperFactory" : "CreateCompositeFactory"));
 
         factory.GetParameters().ShouldBeEmpty();
         factory.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutionFactory<>));
+        hook.IsFamily.ShouldBeTrue();
         hook.GetParameters().ShouldBeEmpty();
-        var wrapper = topology.Name.StartsWith("Wrapping", StringComparison.Ordinal);
         hook.ReturnType.GetGenericTypeDefinition().ShouldBe(wrapper ? typeof(WrapperExecutionFactory<>) : typeof(CompositeExecutionFactory<>));
-        var execution = hook.ReturnType.GetGenericArguments().Single();
+        var execution = hook.ReturnType.GetGenericArguments()[^1];
         execution.GetGenericTypeDefinition().ShouldBe(factory.ReturnType.GetGenericArguments().Single().GetGenericTypeDefinition());
         var constructor = hook.ReturnType.GetMethod("Invoke")!;
         constructor.ReturnType.ShouldBe(execution);
@@ -88,6 +89,7 @@ public sealed class RoleContractArityTests
         var hook = algorithm.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .Single(method => method.IsAbstract);
         hook.Name.ShouldBe("CreateIterationFactory");
+        hook.IsFamily.ShouldBeTrue();
         hook.GetParameters().ShouldBeEmpty();
         hook.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutionFactory<>));
         var constructor = hook.ReturnType.GetMethod("Invoke")!;

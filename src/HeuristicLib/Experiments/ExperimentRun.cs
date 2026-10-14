@@ -15,7 +15,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
 {
     private readonly Lock sync = new();
-    private readonly Dictionary<TrialModule<TAlgorithm>, ImmutableArray<IExecutionModule>> trialModules = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<AspectFactory<TAlgorithm>, ImmutableArray<Aspect>> trialAspects = new(ReferenceEqualityComparer.Instance);
     private RunLifecycleState lifecycleState = RunLifecycleState.Preparing;
 
     public IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> Experiment { get; }
@@ -62,32 +62,32 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
     }
 
-    /// <summary>Creates and attaches one module from this factory to every experiment trial.</summary>
-    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> AttachPerTrial<TModule>(
-        TrialModule<TAlgorithm, TModule> trialModule)
-        where TModule : IExecutionModule
+    /// <summary>Creates and attaches one aspect from this factory to every experiment trial.</summary>
+    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> AttachPerTrial<TAspect>(
+        AspectFactory<TAlgorithm, TAspect> aspectFactory)
+        where TAspect : Aspect
     {
         EnsureNotStarted();
-        if (trialModules.ContainsKey(trialModule))
-            throw new InvalidOperationException("The same trial module cannot be attached more than once.");
+        if (trialAspects.ContainsKey(aspectFactory))
+            throw new InvalidOperationException("The same trial aspect cannot be attached more than once.");
 
-        ImmutableArray<IExecutionModule> modules = [.. Trials.Select(trial => trialModule.CreateFor(trial.Algorithm))];
+        ImmutableArray<Aspect> aspects = [.. Trials.Select(trial => aspectFactory.Create(trial.Algorithm))];
         for (var index = 0; index < Trials.Length; index++)
-            Trials[index].Run.Attach(modules[index]);
+            Trials[index].Run.Attach(aspects[index]);
 
-        trialModules.Add(trialModule, modules);
+        trialAspects.Add(aspectFactory, aspects);
         return this;
     }
 
     /// <summary>
-    /// Gets each trial together with its module, in trial order.
+    /// Gets each trial together with its aspect, in trial order.
     /// </summary>
-    public ImmutableArray<TrialAttachment<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TModule>> GetAttached<TModule>(TrialModule<TAlgorithm, TModule> trialModule)
-        where TModule : IExecutionModule
+    public ImmutableArray<TrialAspect<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAspect>> GetAttached<TAspect>(AspectFactory<TAlgorithm, TAspect> aspectFactory)
+        where TAspect : Aspect
     {
-        var modules = trialModules[trialModule];
+        var aspects = trialAspects[aspectFactory];
 
-        return [.. Trials.Select((trial, index) => TrialAttachment.From(trial, (TModule)modules[index]))];
+        return [.. Trials.Select((trial, index) => TrialAspect.From(trial, (TAspect)aspects[index]))];
     }
 
     public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)

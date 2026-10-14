@@ -68,13 +68,13 @@ public sealed class ConcreteOperatorFactoryTests
         invoke(parent);
         var child = parent.CreateChildScope(builder =>
         {
-            builder.Wrap(creator, original => original.CountCalls(counters[0]));
-            builder.Wrap(crossover, original => original.CountCalls(counters[1]));
-            builder.Wrap(mutator, original => original.CountCalls(counters[2]));
-            builder.Wrap(refiner, original => original.CountCalls(counters[3]));
-            builder.Wrap(evaluator, original => original.CountCalls(counters[4]));
-            builder.Wrap(female, original => original.CountCalls(counters[5]));
-            builder.Wrap(male, original => original.CountCalls(counters[6]));
+            builder.Install(creator, original => original.CountCalls(counters[0]));
+            builder.Install(crossover, original => original.CountCalls(counters[1]));
+            builder.Install(mutator, original => original.CountCalls(counters[2]));
+            builder.Install(refiner, original => original.CountCalls(counters[3]));
+            builder.Install(evaluator, original => original.CountCalls(counters[4]));
+            builder.Install(female, original => original.CountCalls(counters[5]));
+            builder.Install(male, original => original.CountCalls(counters[6]));
         });
 
         invoke(child);

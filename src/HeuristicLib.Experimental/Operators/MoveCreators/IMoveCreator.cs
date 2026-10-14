@@ -32,7 +32,7 @@ public static class MoveCreatorResolutionExtensions
         public IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TCandidate, TSearchSpace, TProblem, TMove>(IMoveCreator<TCandidate, TMove> moveCreator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(moveCreator, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
+            scope.Resolve(moveCreator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem, TMove>);
 
         [return: NotNullIfNotNull(nameof(moveCreator))]
         public IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TMove>(IMoveCreator<TCandidate, TMove>? moveCreator)
@@ -79,4 +79,9 @@ public static class MoveCreatorResolutionExtensions
             [NotNullWhen(false)] out string? reason) =>
             scope.Scope.TryResolve(moveCreator, out execution, out reason);
     }
+
+    private static Advice<IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>> PrepareAdvice<TCandidate, TSearchSpace, TProblem, TMove>(IConfigurationNode wrapper)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        => throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IMoveCreator<TCandidate, TMove>).Name} producing {typeof(IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>).Name}.");
 }

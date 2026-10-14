@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -29,7 +30,7 @@ public static class SelectorResolutionExtensions
         public ISelectorExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate> selector)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(selector, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
+            scope.Resolve(selector, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(selector))]
         public ISelectorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate>? selector)
@@ -75,5 +76,14 @@ public static class SelectorResolutionExtensions
             [NotNullWhen(true)] out ISelectorExecution<TCandidate, TSearchSpace, TProblem>? execution,
             [NotNullWhen(false)] out string? reason) =>
             scope.Scope.TryResolve(selector, out execution, out reason);
+    }
+
+    private static Advice<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> PrepareAdvice<TCandidate, TSearchSpace, TProblem>(IConfigurationNode wrapper)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        if (wrapper is not WrappingSelector<TCandidate> typed)
+            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(ISelector<TCandidate>).Name} producing {typeof(ISelectorExecution<TCandidate, TSearchSpace, TProblem>).Name}.");
+        return WrappingSelector<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem>(typed).Invoke;
     }
 }

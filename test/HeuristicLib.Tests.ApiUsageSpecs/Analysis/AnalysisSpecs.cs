@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
@@ -72,7 +73,7 @@ public class AnalysisSpecs
     {
         var problem = new TestFunctionProblem(new RastriginFunction(4));
         var algorithm = CreateAlgorithm(problem);
-        var quality = TrialAnalyzer.Create(
+        var quality = AspectFactory.Create(
             (GeneticAlgorithm<RealVector> trial) =>
                 trial.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
         var run = algorithm.Repeat(2).CreateRun(problem, RandomNumberGenerator.Create(42)).AttachPerTrial(quality);
@@ -80,8 +81,8 @@ public class AnalysisSpecs
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var results = run.GetAttached(quality);
-        results[0].Module.ShouldNotBeSameAs(results[1].Module);
-        results.ShouldAllBe(result => result.Module.SampleCount == 4);
+        results[0].Aspect.ShouldNotBeSameAs(results[1].Aspect);
+        results.ShouldAllBe(result => result.Aspect.SampleCount == 4);
     }
 
     private static GeneticAlgorithm<RealVector> CreateAlgorithm(TestFunctionProblem problem) =>

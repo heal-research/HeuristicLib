@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -18,7 +19,7 @@ public sealed record EvaluatorObservation<TCandidate, TSearchSpace, TProblem>(
 
 public static class EvaluatorObservations
 {
-    extension(ResolutionScopeBuilder builder)
+    extension(AspectBuilder builder)
     {
         /// <summary>Observes every call to one chosen evaluator.</summary>
         /// <remarks>
@@ -30,7 +31,7 @@ public static class EvaluatorObservations
             Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            builder.Install(new EvaluatorObservationModule<TCandidate, TSearchSpace, TProblem>(evaluator, observe));
+            builder.Install(new EvaluatorObservationAspect<TCandidate, TSearchSpace, TProblem>(evaluator, observe));
 
         /// <summary>Observes every call to one chosen evaluator, for an observer that reads no particular search space or problem.</summary>
         /// <remarks>
@@ -44,47 +45,51 @@ public static class EvaluatorObservations
     }
 }
 
-internal sealed class EvaluatorObservationModule<TCandidate, TSearchSpace, TProblem>(
+internal sealed class EvaluatorObservationAspect<TCandidate, TSearchSpace, TProblem>(
     IEvaluator<TCandidate> evaluator,
-    Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe) : IExecutionModule
+    Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe) : Aspect
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public void Install(ResolutionScopeBuilder builder) =>
-        builder.Wrap(evaluator, current => new ObservingEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, current, observe));
+    protected override void Declare(AspectBuilder builder) =>
+        builder.Install(evaluator, current => new ObservingEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, current, observe));
 }
 
-internal sealed class ObservingEvaluator<TCandidate, TSearchSpace, TProblem>(
-    IEvaluator<TCandidate> observedEvaluator,
-    IEvaluator<TCandidate> childEvaluator,
-    Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
-    : IEvaluator<TCandidate>
+internal sealed record ObservingEvaluator<TCandidate, TSearchSpace, TProblem> : WrappingEvaluator<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public bool Fits(ExecutionSignature execution) =>
-        ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(childEvaluator);
+    private readonly IEvaluator<TCandidate> observedEvaluator;
+    private readonly Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe;
 
-    public ExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    public ObservingEvaluator(IEvaluator<TCandidate> observedEvaluator, IEvaluator<TCandidate> childEvaluator, Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
+        : base(childEvaluator)
+    {
+        this.observedEvaluator = observedEvaluator;
+        this.observe = observe;
+    }
+
+    public override bool Fits(ExecutionSignature execution) =>
+        base.Fits(execution) && ObservationSignature.Fits<TSearchSpace, TProblem>(execution);
+
+    protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return scope => new Execution<TRunSearchSpace, TRunProblem>(observedEvaluator, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childEvaluator), observe);
+        return inner => new Execution<TRunSearchSpace, TRunProblem>(observedEvaluator, inner, observe);
     }
 
     private sealed class Execution<TRunSearchSpace, TRunProblem>(
         IEvaluator<TCandidate> observedEvaluator,
         IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator,
         Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
-        : IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>
+        : WrappingEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>(childEvaluator)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random,
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random,
             TRunSearchSpace searchSpace, TRunProblem problem)
         {
-            var objectiveVectors = childEvaluator.Evaluate(candidates, random, searchSpace, problem);
+            var objectiveVectors = ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
             observe(new EvaluatorObservation<TCandidate, TSearchSpace, TProblem>(
                 observedEvaluator, objectiveVectors, candidates, (TSearchSpace)(object)searchSpace, (TProblem)(object)problem));
             return objectiveVectors;

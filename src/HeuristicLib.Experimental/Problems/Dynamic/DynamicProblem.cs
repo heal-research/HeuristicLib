@@ -122,9 +122,9 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     /// Only <see cref="UpdatePolicy.AfterEachIteration"/> needs this, because an iteration belongs to an algorithm
     /// rather than to the problem. Every other policy needs nothing installed.
     /// </remarks>
-    public IExecutionModule CreateIterationUpdateModule<TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
+    public Aspect CreateIterationUpdateAspect<TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState =>
-        new IterationUpdateModule<TSelf, TCandidate, TSearchSpace, TSearchState>(this, algorithm);
+        new IterationUpdateAspect<TSelf, TCandidate, TSearchSpace, TSearchState>(this, algorithm);
 
     internal void CompleteIteration()
     {
@@ -240,14 +240,14 @@ internal interface IUpdateRequestable
 /// <summary>
 /// Applies a dynamic problem's deferred updates at an algorithm's iteration boundary.
 /// </summary>
-internal sealed class IterationUpdateModule<TSelf, TCandidate, TSearchSpace, TSearchState>(
+internal sealed class IterationUpdateAspect<TSelf, TCandidate, TSearchSpace, TSearchState>(
     DynamicProblem<TSelf, TCandidate, TSearchSpace> problem,
     IAlgorithm<TCandidate, TSearchState> algorithm)
-    : IExecutionModule
+    : Aspect
     where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TSearchState : class, ISearchState
 {
-    public void Install(ResolutionScopeBuilder builder) =>
+    protected override void Declare(AspectBuilder builder) =>
         builder.Observe<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>(algorithm, _ => problem.CompleteIteration());
 }

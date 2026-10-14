@@ -2,14 +2,14 @@ using HEAL.HeuristicLib.Execution;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
-public class NodeSelectorTests
+public class PointcutTests
 {
     [Fact]
     public void Reference_DistinguishesStructurallyEqualConfigurations()
     {
         var original = new SizedConfiguration(3);
         var copy = original with { };
-        var selector = NodeSelector.Reference(original);
+        var selector = Pointcut.Reference(original);
 
         copy.ShouldBe(original);
         selector.Matches(original).ShouldBeTrue();
@@ -19,7 +19,7 @@ public class NodeSelectorTests
     [Fact]
     public void OfType_IncludesDerivedConfigurations()
     {
-        var selector = NodeSelector.OfType<SizedConfiguration>();
+        var selector = Pointcut.OfType<SizedConfiguration>();
 
         selector.Matches(new SizedConfiguration(3)).ShouldBeTrue();
         selector.Matches(new DerivedConfiguration(3)).ShouldBeTrue();
@@ -29,7 +29,7 @@ public class NodeSelectorTests
     [Fact]
     public void OfType_UsesConsumerDefinedInterfaceMembership()
     {
-        var selector = NodeSelector.OfType<ISizedConfiguration>();
+        var selector = Pointcut.OfType<ISizedConfiguration>();
 
         selector.Matches(new SizedConfiguration(3)).ShouldBeTrue();
         selector.Matches(new AlternateSizedConfiguration(3)).ShouldBeTrue();
@@ -40,7 +40,7 @@ public class NodeSelectorTests
     public void AndPredicate_PreservesReferenceIdentity()
     {
         var original = new SizedConfiguration(3);
-        NodeSelector<SizedConfiguration> selector = NodeSelector.Reference(original).And(node => node.Size > 0);
+        Pointcut<SizedConfiguration> selector = Pointcut.Reference(original).And(node => node.Size > 0);
 
         selector.Matches(original).ShouldBeTrue();
         selector.Matches(original with { }).ShouldBeFalse();
@@ -50,7 +50,7 @@ public class NodeSelectorTests
     public void AndPredicate_DoesNotEvaluateAFilterForAnUnmatchedConfiguration()
     {
         var filterCalls = 0;
-        var selector = NodeSelector.OfType<ISizedConfiguration>()
+        var selector = Pointcut.OfType<ISizedConfiguration>()
             .And(node => node.Size > 0)
             .And(_ =>
             {
@@ -69,8 +69,8 @@ public class NodeSelectorTests
     [Fact]
     public void AndPredicate_ComposesFiltersWithoutChangingTheOriginalSelection()
     {
-        var original = NodeSelector.OfType<ISizedConfiguration>();
-        NodeSelector<ISizedConfiguration> narrowed = original.And(node => node.Size > 0).And(node => node.Size < 5);
+        var original = Pointcut.OfType<ISizedConfiguration>();
+        Pointcut<ISizedConfiguration> narrowed = original.And(node => node.Size > 0).And(node => node.Size < 5);
 
         narrowed.Matches(new SizedConfiguration(0)).ShouldBeFalse();
         narrowed.Matches(new SizedConfiguration(3)).ShouldBeTrue();
@@ -86,8 +86,8 @@ public class NodeSelectorTests
     [InlineData(7, false, false)]
     public void Composition_MatchesTheUnionAndIntersection(int size, bool inUnion, bool inIntersection)
     {
-        var left = new NodeSelector<ISizedConfiguration>(node => node.Size is 1 or 3);
-        var right = new NodeSelector<ISizedConfiguration>(node => node.Size is 3 or 5);
+        var left = new Pointcut<ISizedConfiguration>(node => node.Size is 1 or 3);
+        var right = new Pointcut<ISizedConfiguration>(node => node.Size is 3 or 5);
         var node = new SizedConfiguration(size);
 
         left.Or(right).Matches(node).ShouldBe(inUnion);
@@ -103,8 +103,8 @@ public class NodeSelectorTests
         var preferred = new SizedConfiguration(3);
         var equalCopy = preferred with { };
         var anotherImplementation = new AlternateSizedConfiguration(3);
-        var original = NodeSelector.Reference<ISizedConfiguration>(preferred);
-        var matchingSizes = new NodeSelector<ISizedConfiguration>(node => node.Size == 3);
+        var original = Pointcut.Reference<ISizedConfiguration>(preferred);
+        var matchingSizes = new Pointcut<ISizedConfiguration>(node => node.Size == 3);
         var selected = original.Or(matchingSizes);
         IConfigurationNode[] nodes = [preferred, equalCopy, anotherImplementation, new SizedConfiguration(5)];
 
@@ -124,12 +124,12 @@ public class NodeSelectorTests
     public void Or_EvaluatesPredicatesOnlyWhenMatchingAndStopsAfterASuccess(bool leftMatches)
     {
         var evaluated = new List<string>();
-        var left = new NodeSelector<ISizedConfiguration>(_ =>
+        var left = new Pointcut<ISizedConfiguration>(_ =>
         {
             evaluated.Add("left");
             return leftMatches;
         });
-        var right = new NodeSelector<ISizedConfiguration>(_ =>
+        var right = new Pointcut<ISizedConfiguration>(_ =>
         {
             evaluated.Add("right");
             return true;
@@ -148,12 +148,12 @@ public class NodeSelectorTests
     public void And_EvaluatesPredicatesOnlyWhenMatchingAndStopsAfterAFailure(bool leftMatches)
     {
         var evaluated = new List<string>();
-        var left = new NodeSelector<ISizedConfiguration>(_ =>
+        var left = new Pointcut<ISizedConfiguration>(_ =>
         {
             evaluated.Add("left");
             return leftMatches;
         });
-        var right = new NodeSelector<ISizedConfiguration>(_ =>
+        var right = new Pointcut<ISizedConfiguration>(_ =>
         {
             evaluated.Add("right");
             return true;
@@ -169,8 +169,8 @@ public class NodeSelectorTests
     [Fact]
     public void Composition_RejectsAnotherRoleWithoutEvaluatingEitherPredicate()
     {
-        var left = new NodeSelector<ISizedConfiguration>(_ => throw new InvalidOperationException("Unexpected left predicate."));
-        var right = new NodeSelector<ISizedConfiguration>(_ => throw new InvalidOperationException("Unexpected right predicate."));
+        var left = new Pointcut<ISizedConfiguration>(_ => throw new InvalidOperationException("Unexpected left predicate."));
+        var right = new Pointcut<ISizedConfiguration>(_ => throw new InvalidOperationException("Unexpected right predicate."));
         var other = new OtherConfiguration(3);
 
         left.Or(right).Matches(other).ShouldBeFalse();
@@ -181,9 +181,9 @@ public class NodeSelectorTests
     public void Composition_PropagatesAnEvaluatedPredicateFailure()
     {
         var failure = new InvalidOperationException("Predicate failed.");
-        var failing = new NodeSelector<ISizedConfiguration>(_ => throw failure);
-        var accepts = NodeSelector.OfType<ISizedConfiguration>();
-        var rejects = new NodeSelector<ISizedConfiguration>(_ => false);
+        var failing = new Pointcut<ISizedConfiguration>(_ => throw failure);
+        var accepts = Pointcut.OfType<ISizedConfiguration>();
+        var rejects = new Pointcut<ISizedConfiguration>(_ => false);
         var node = new SizedConfiguration(3);
 
         Should.Throw<InvalidOperationException>(() => accepts.And(failing).Matches(node)).ShouldBeSameAs(failure);
@@ -196,9 +196,9 @@ public class NodeSelectorTests
     public void AFilterAfterUnionAppliesToBothBranches()
     {
         var preferred = new SizedConfiguration(0);
-        var exact = NodeSelector.Reference<ISizedConfiguration>(preferred);
-        var small = new NodeSelector<ISizedConfiguration>(node => node.Size < 5);
-        var positive = new NodeSelector<ISizedConfiguration>(node => node.Size > 0);
+        var exact = Pointcut.Reference<ISizedConfiguration>(preferred);
+        var small = new Pointcut<ISizedConfiguration>(node => node.Size < 5);
+        var positive = new Pointcut<ISizedConfiguration>(node => node.Size > 0);
 
         (exact | small & positive).Matches(preferred).ShouldBeTrue();
         ((exact | small) & positive).Matches(preferred).ShouldBeFalse();

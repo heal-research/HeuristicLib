@@ -80,7 +80,7 @@ public class ObservationModuleTests
         var observed = new List<IEvaluator<int>>();
         var root = ResolutionScope.Create(builder =>
             builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, observation => observed.Add(observation.Evaluator)));
-        var budget = root.CreateChildScope(builder => builder.Wrap<IEvaluator<int>>(evaluator, current => current.CountCalls(counter)));
+        var budget = root.CreateChildScope(builder => builder.Install<IEvaluator<int>>(evaluator, current => current.CountCalls(counter)));
 
         budget.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
             .Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

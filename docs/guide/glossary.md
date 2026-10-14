@@ -477,7 +477,7 @@ Iterative algorithm bases centralize preparation through `CreateIterationFactory
 
 The term does not imply a common child-enumeration API or a universal operation on all nodes.
 
-See also: Configuration, Configuration graph, Execution node, Node selector.
+See also: Configuration, Configuration graph, Execution node, Pointcut.
 
 ### Configuration graph
 
@@ -489,17 +489,29 @@ Use graph rather than tree because the same configuration object may be shared f
 
 See also: Configuration, Execution graph.
 
-### Node selector
+### Pointcut
 
-Status: `Provisional`
+Status: `Canonical`
 
-A node selector is a rule for selecting algorithm or operator configurations in a configuration graph. `NodeSelector<TConfiguration>` matches individual supplied configurations.
+A pointcut is a rule selecting algorithm or operator configurations whose execution operations receive advice. `Pointcut<TConfiguration>` matches individual supplied configurations.
 
-Selectors match by configuration reference or assignable type, including role interfaces. Selectors with the same declared configuration type or role compose by union (`Or`, `|`) or intersection (`And`, `&`). `And(predicate)` intersects with a selector constructed from the typed configuration predicate. Composition creates a new definition without changing its operands or evaluating predicates; matching evaluates predicates from left to right only as needed. A node matching several union branches still matches once. The selector does not traverse a graph or resolve execution nodes; a wrapper registration applies it to source configurations while they are resolved.
+Selectors match by configuration reference or assignable type, including role interfaces. Selectors with the same declared configuration type or role compose by union (`Or`, `|`) or intersection (`And`, `&`). `And(predicate)` intersects with a selector constructed from the typed configuration predicate. Composition creates a new definition without changing its operands or evaluating predicates; matching evaluates predicates from left to right only as needed. A node matching several union branches still matches once. The selector does not traverse a graph or resolve execution nodes; `AspectBuilder.Install(pointcut, recipe)` applies it to source configurations while they are resolved.
 
 A selected configuration can be referenced by several callers and resolved into more than one execution node. Selecting that configuration does not select one caller path or one invocation. Resolver selection follows configuration references as they are resolved.
 
-See also: Configuration, Configuration graph, Execution node, Execution module, Resolution scope.
+See also: Aspect, Configuration, Configuration graph, Execution node, Execution module, Resolution scope.
+
+### Aspect
+
+Status: `Canonical`
+
+An aspect pairs a pointcut with a recipe for wrapping each selected configuration's execution, or composes other aspects. `Aspect.Create(pointcut, recipe)` and `Aspect.Create(source, recipe)` create individual rule aspects that can be passed directly to a resolution scope or attached to a run.
+
+An aspect subclass or `Aspect.Create(declare)` groups contributions through `AspectBuilder.Install`. Its overloads include an existing aspect or create a rule aspect from a pointcut or configuration reference and recipe. A composition declares once after successful completion and keeps one immutable ordered snapshot. Nested compositions expand at their installation position; the first occurrence of a shared aspect determines its position. Earlier rules wrap closer to the source execution, and later rules wrap outside them. New scope layers precede inherited layers.
+
+Reusing the same aspect object contributes its rules once to a scope's aspect collection. Separately created rule aspects are independent even when their pointcuts and recipes are equal. Prepared advice is cached per rule aspect and target configuration in the state owning the target's factory; an aspect itself does not own execution state.
+
+See also: Configuration node, Execution node, Pointcut, Resolution scope, Wrapper chain.
 
 ### Run
 
@@ -565,6 +577,16 @@ Execution state is distinct from search state. Search states describe visible pr
 
 See also: Configuration, Execution node, Run, Search state.
 
+### Child scope policy
+
+Status: `Canonical`
+
+A child scope policy chooses a resolution scope and its state ownership and reuse when a meta-algorithm activates an inner algorithm. `ChildScopePolicy.Fresh` creates new child-local state per activation, `Retained` keeps child-local state per inner algorithm configuration reference within its owning meta-algorithm, and `Shared` uses the meta-algorithm's state.
+
+Child-local state reuses factories already owned by an ancestor. Retaining state does not retain an earlier observation context. Cycle exposes the choice as `ScopePolicy`, defaulting to `Fresh`; other meta-algorithms keep their own policies.
+
+See also: Configuration node, Execution state, Resolution scope.
+
 ### Execution graph
 
 Status: `Canonical`
@@ -581,7 +603,7 @@ Status: `Canonical`
 
 A resolution scope resolves configurations to execution nodes during a run.
 
-The scope selects persistent execution state by configuration reference and obtains nodes bound to an observation context. Internally, sharing scopes determine state reuse, preparations retain factories and chosen dependencies, and execution bindings construct the callable nodes. A typed factory receives a construction frame that preserves its selected child identities while applying the requesting context's observations. Fresh child scopes create new local domains; retained child scopes preserve a domain under a stable reference key. Wrappers are snapshotted from a `ResolutionScopeBuilder` before resolution.
+The scope combines state ownership with an immutable ordered collection of zero, one or more aspects. It selects prepared factories by configuration reference and constructs fresh execution nodes with the requesting aspects. Dependencies resolve in the state owning their factory. Child scopes create local state while reusing ancestor-owned factories; `With` changes aspects while sharing state. Both operations accept multiple aspects in supplied order as one layer.
 
 See [execution resolution](/contributing/architecture/execution-resolution) for preparation, binding and observation rules.
 
@@ -591,7 +613,7 @@ See also: Configuration, Wrapper chain, Execution graph, Execution node, Executi
 
 Status: `Canonical`
 
-A wrapper registration adds a recipe for wrapping a selected source configuration's execution. `ResolutionScopeBuilder.Wrap` selects sources with a node selector, or one source by reference. Matching happens during resolution, so sources resolved later by deferred children are included; generated wrappers, and children a registration's own wrappers add, are never offered to that registration. The recipe receives the original source configuration, even when other wrappers also apply.
+A wrapper registration adds a recipe for wrapping a selected source configuration's execution. `ResolutionScopeBuilder.Wrap` selects sources with a pointcut, or one source by reference. Matching happens during resolution, so sources resolved later by deferred children are included; generated wrappers, and children a registration's own wrappers add, are never offered to that registration. The recipe receives the original source configuration, even when other wrappers also apply.
 
 One registration keeps its own prepared wrapper state for each selected execution, across observation contexts. Two registrations are separate contributions even when their recipes are equal. An execution module groups registrations through `Install`. Wrappers can observe operations or add other typed behavior; observation retains its narrower read-only meaning.
 

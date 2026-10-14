@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -29,7 +30,7 @@ public static class EvaluatorResolutionExtensions
         public IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate> evaluator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(evaluator, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
+            scope.Resolve(evaluator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(evaluator))]
         public IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate>? evaluator)
@@ -75,5 +76,14 @@ public static class EvaluatorResolutionExtensions
             [NotNullWhen(true)] out IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>? execution,
             [NotNullWhen(false)] out string? reason) =>
             scope.Scope.TryResolve(evaluator, out execution, out reason);
+    }
+
+    private static Advice<IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>> PrepareAdvice<TCandidate, TSearchSpace, TProblem>(IConfigurationNode wrapper)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        if (wrapper is not WrappingEvaluator<TCandidate> typed)
+            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IEvaluator<TCandidate>).Name} producing {typeof(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>).Name}.");
+        return WrappingEvaluator<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem>(typed).Invoke;
     }
 }

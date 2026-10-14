@@ -13,7 +13,7 @@ namespace HEAL.HeuristicLib.Analysis;
 /// Derive from <see cref="Clock{TTime}"/> to add a clock of your own, such as one over a domain quantity the library
 /// knows nothing about. The factory methods here cover the times every run has.
 /// </remarks>
-public abstract class Clock
+public abstract class Clock : Aspect
 {
     private protected Clock() { }
 
@@ -23,11 +23,11 @@ public abstract class Clock
     /// Declares whatever keeps this clock's time current, if anything does.
     /// </summary>
     /// <remarks>
-    /// Installation can occur in several scope scopes and must not reset accumulated state. A clock whose source
+    /// Installation can occur in several scopes and must not reset accumulated state. A clock whose source
     /// keeps time current itself overrides nothing. Traces install clocks before retention observations, and Observe
     /// deduplicates a shared clock's recorder at the same boundary within each scope.
     /// </remarks>
-    public virtual void Install(ResolutionScopeBuilder builder)
+    protected override void Declare(AspectBuilder builder)
     {
     }
 }
@@ -88,16 +88,16 @@ public sealed class IterationClock<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
     private long latest;
-    private readonly IExecutionModule observationModule;
+    private readonly Aspect observationAspect;
 
     public IterationClock(IAlgorithm<TCandidate, TSearchState> algorithm)
     {
-        observationModule = new AlgorithmObservationModule<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>(algorithm, Record);
+        observationAspect = new AlgorithmObservationAspect<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>(algorithm, Record);
     }
 
     protected override long ReadTime() => Interlocked.Read(ref latest);
 
-    public override void Install(ResolutionScopeBuilder builder) => builder.Install(observationModule);
+    protected override void Declare(AspectBuilder builder) => builder.Install(observationAspect);
 
     private void Record(AlgorithmObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> observation) =>
         Interlocked.Exchange(ref latest, observation.Iteration);
@@ -114,16 +114,16 @@ public sealed class EvaluationClock<TCandidate>
     : Clock<long>
 {
     private long evaluations;
-    private readonly IExecutionModule observationModule;
+    private readonly Aspect observationAspect;
 
     public EvaluationClock(IEvaluator<TCandidate> evaluator)
     {
-        observationModule = new EvaluatorObservationModule<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(evaluator, Record);
+        observationAspect = new EvaluatorObservationAspect<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(evaluator, Record);
     }
 
     protected override long ReadTime() => Interlocked.Read(ref evaluations);
 
-    public override void Install(ResolutionScopeBuilder builder) => builder.Install(observationModule);
+    protected override void Declare(AspectBuilder builder) => builder.Install(observationAspect);
 
     private void Record(EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> observation) =>
         Interlocked.Add(ref evaluations, observation.ObjectiveVectors.Count);
@@ -143,7 +143,7 @@ public sealed class ElapsedTimeClock(TimeProvider timeProvider) : Clock<TimeSpan
     /// <summary>
     /// Captures the first installation time. Later installations preserve that starting point.
     /// </summary>
-    public override void Install(ResolutionScopeBuilder builder)
+    protected override void Declare(AspectBuilder builder)
     {
         lock (sync)
         {

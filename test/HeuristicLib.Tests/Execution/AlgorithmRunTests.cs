@@ -184,44 +184,44 @@ public class AlgorithmRunTests
         var attachment = new DualRoleAttachment();
 
         if (analyzerFirst)
-            run.Attach((IAnalyzer)attachment).Attach((IExecutionModule)attachment);
+            run.Attach((Aspect)attachment).Attach((Aspect)attachment);
         else
-            run.Attach((IExecutionModule)attachment).Attach((IAnalyzer)attachment);
+            run.Attach((Aspect)attachment).Attach((Aspect)attachment);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         attachment.InstallationCount.ShouldBe(1);
     }
 
-    private sealed class FailingModule(Exception failure) : IExecutionModule
+    private sealed class FailingModule(Exception failure) : Aspect
     {
-        public void Install(ResolutionScopeBuilder builder) => throw failure;
+        protected override void Declare(AspectBuilder builder) => throw failure;
     }
 
-    private sealed class DualRoleAttachment : IAnalyzer
+    private sealed class DualRoleAttachment : Aspect
     {
         public int InstallationCount { get; private set; }
 
-        public void Install(ResolutionScopeBuilder builder) => InstallationCount++;
+        protected override void Declare(AspectBuilder builder) => InstallationCount++;
     }
 
-    private sealed class BlindAnalyzer : IAnalyzer
+    private sealed class BlindAnalyzer : Aspect
     {
-        public void Install(ResolutionScopeBuilder builder)
+        protected override void Declare(AspectBuilder builder)
         {
         }
     }
 
-    private sealed class ObservingAnalyzer(IEvaluator<int> evaluator, Action observed) : IAnalyzer
+    private sealed class ObservingAnalyzer(IEvaluator<int> evaluator, Action observed) : Aspect
     {
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe(evaluator, _ => observed());
+        protected override void Declare(AspectBuilder builder) => builder.Observe(evaluator, _ => observed());
     }
 
     // Declares its wrapper itself rather than through a module, as a hand-written analyzer may.
-    private sealed class WrappingAnalyzer(IEvaluator<int> evaluator, Action observed) : IAnalyzer
+    private sealed class WrappingAnalyzer(IEvaluator<int> evaluator, Action observed) : Aspect
     {
-        public void Install(ResolutionScopeBuilder builder) =>
-            builder.Wrap(evaluator, current =>
+        protected override void Declare(AspectBuilder builder) =>
+            builder.Install(evaluator, current =>
                 new ObservingEvaluator<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(evaluator, current, _ => observed()));
     }
 

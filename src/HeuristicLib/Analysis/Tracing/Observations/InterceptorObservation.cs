@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -20,7 +21,7 @@ public sealed record InterceptorObservation<TCandidate, TSearchSpace, TProblem, 
 
 public static class InterceptorObservations
 {
-    extension(ResolutionScopeBuilder builder)
+    extension(AspectBuilder builder)
     {
         /// <summary>Observes every call to one chosen interceptor.</summary>
         /// <remarks>
@@ -34,7 +35,7 @@ public static class InterceptorObservations
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            builder.Install(new InterceptorObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, observe));
+            builder.Install(new InterceptorObservationAspect<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, observe));
 
         /// <summary>
         /// Observes every call to one chosen interceptor, for an observer that reads no particular search space, problem
@@ -52,52 +53,54 @@ public static class InterceptorObservations
     }
 }
 
-internal sealed class InterceptorObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(
+internal sealed class InterceptorObservationAspect<TCandidate, TSearchSpace, TProblem, TSearchState>(
     IInterceptor<TCandidate> interceptor,
-    Action<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe) : IExecutionModule
+    Action<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe) : Aspect
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public void Install(ResolutionScopeBuilder builder) =>
-        builder.Wrap(interceptor, current => new ObservingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, current, observe));
+    protected override void Declare(AspectBuilder builder) =>
+        builder.Install(interceptor, current => new ObservingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, current, observe));
 }
 
-internal sealed class ObservingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(
-    IInterceptor<TCandidate> observedInterceptor,
-    IInterceptor<TCandidate> childInterceptor,
-    Action<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe)
-    : IInterceptor<TCandidate>
+internal sealed record ObservingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> : WrappingInterceptor<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public bool Fits(ExecutionSignature execution) =>
-        ObservationSignature.Fits<TSearchSpace, TProblem, TSearchState>(execution) && execution.Fits(childInterceptor);
+    private readonly IInterceptor<TCandidate> observedInterceptor;
+    private readonly Action<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe;
 
-    public ExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
-        where TRunSearchState : class, ISearchState
+    public ObservingInterceptor(IInterceptor<TCandidate> observedInterceptor, IInterceptor<TCandidate> childInterceptor, Action<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe)
+        : base(childInterceptor)
+    {
+        this.observedInterceptor = observedInterceptor;
+        this.observe = observe;
+    }
+
+    public override bool Fits(ExecutionSignature execution) =>
+        base.Fits(execution) && ObservationSignature.Fits<TSearchSpace, TProblem, TSearchState>(execution);
+
+    protected override WrapperExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TSearchState, TRunSearchSpace, TRunProblem, TRunSearchState>(this);
-        return scope => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            observedInterceptor, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor), observe);
+        return inner => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(observedInterceptor, inner, observe);
     }
 
     private sealed class Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(
         IInterceptor<TCandidate> observedInterceptor,
         IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childInterceptor,
         Action<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe)
-        : IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>
+        : WrappingInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState
     {
-        public TRunSearchState Transform(TRunSearchState currentState, TRunSearchState? previousState, IRandomNumberGenerator random,
+        public override TRunSearchState Transform(TRunSearchState currentState, TRunSearchState? previousState, IRandomNumberGenerator random,
             TRunSearchSpace searchSpace, TRunProblem problem)
         {
-            var result = childInterceptor.Transform(currentState, previousState, random, searchSpace, problem);
+            var result = ChildInterceptor.Transform(currentState, previousState, random, searchSpace, problem);
             observe(new InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>(
                 observedInterceptor, (TSearchState)(object)result, (TSearchState)(object)currentState, (TSearchState?)(object?)previousState,
                 (TSearchSpace)(object)searchSpace, (TProblem)(object)problem));

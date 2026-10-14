@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -35,7 +36,7 @@ public static class TerminatorResolutionExtensions
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            scope.Resolve(terminator, static target => target.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>());
+            scope.Resolve(terminator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem, TSearchState>);
 
         [return: NotNullIfNotNull(nameof(terminator))]
         public ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate>? terminator)
@@ -84,5 +85,15 @@ public static class TerminatorResolutionExtensions
             [NotNullWhen(true)] out ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? execution,
             [NotNullWhen(false)] out string? reason) =>
             scope.Scope.TryResolve(terminator, out execution, out reason);
+    }
+
+    private static Advice<ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> PrepareAdvice<TCandidate, TSearchSpace, TProblem, TSearchState>(IConfigurationNode wrapper)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
+    {
+        if (wrapper is not WrappingTerminator<TCandidate> typed)
+            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(ITerminator<TCandidate>).Name} producing {typeof(ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>).Name}.");
+        return WrappingTerminator<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem, TSearchState>(typed).Invoke;
     }
 }

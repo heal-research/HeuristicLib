@@ -66,7 +66,7 @@ public sealed class EvaluatorExecutionFactoryTests
         var outer = Resolve(parent, source);
         Evaluate(outer, 1).ShouldBe([new ObjectiveVector(101)]);
 
-        var child = parent.CreateChildScope(builder => builder.Wrap<IEvaluator<int>>(leaf, original => new ObservingEvaluator(original, reports.AddRange)));
+        var child = parent.CreateChildScope(builder => builder.Install<IEvaluator<int>>(leaf, original => new ObservingEvaluator(original, reports.AddRange)));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         Evaluate(inner, 1).ShouldBe([new ObjectiveVector(101)]);
@@ -96,7 +96,7 @@ public sealed class EvaluatorExecutionFactoryTests
         var outer = Resolve(parent, source);
         Evaluate(outer, 1).ShouldBe([new ObjectiveVector(101)]);
 
-        var child = parent.CreateChildScope(builder => builder.Wrap<IEvaluator<int>>(leaf, original => new ObservingEvaluator(original, reports.AddRange)));
+        var child = parent.CreateChildScope(builder => builder.Install<IEvaluator<int>>(leaf, original => new ObservingEvaluator(original, reports.AddRange)));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         Evaluate(inner, 2, 3).ShouldBe([new ObjectiveVector(202), new ObjectiveVector(-1)]);

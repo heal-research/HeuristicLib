@@ -34,6 +34,13 @@ public abstract record WrappingCreator<TCandidate>
     protected abstract WrapperExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+
+    /// <summary>Prepares a wrapper constructor for a caller supplying its resolved child directly.</summary>
+    /// <remarks>Resolution uses this bridge for aspect advice; configured wrappers use CreateExecutionFactory.</remarks>
+    public static WrapperExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(WrappingCreator<TCandidate> wrapper)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
+        wrapper.CreateWrapperFactory<TRunSearchSpace, TRunProblem>();
 }
 
 public abstract class WrappingCreatorExecution<TCandidate, TSearchSpace, TProblem>(ICreatorExecution<TCandidate, TSearchSpace, TProblem> childCreator)

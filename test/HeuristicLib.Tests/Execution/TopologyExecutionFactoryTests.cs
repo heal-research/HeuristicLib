@@ -24,7 +24,7 @@ public sealed class TopologyExecutionFactoryTests
         var outer = Resolve(parent, source);
         Next(outer).ShouldBe(1);
 
-        var child = parent.CreateChildScope(builder => builder.Wrap<IMutator<RealVector>>(leaf, original => new ObservingWrapper(original, reports.Add)));
+        var child = parent.CreateChildScope(builder => builder.Install<IMutator<RealVector>>(leaf, original => new ObservingWrapper(original, reports.Add)));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         Next(inner).ShouldBe(2);
@@ -32,6 +32,35 @@ public sealed class TopologyExecutionFactoryTests
         Next(inner).ShouldBe(4);
 
         reports.ShouldBe([2, 4]);
+        preparations.ShouldBe(1);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CompositeTargetAdviceIsPreparedOnceAndWrapsFreshNodes(bool chooseOne)
+    {
+        var preparations = 0;
+        var recipes = 0;
+        var leaf = new CountingLeaf(() => preparations++);
+        IMutator<RealVector> source = chooseOne ? new ChooseOneMutator<RealVector>([leaf]) : new PipelineMutator<RealVector>([leaf]);
+        var calls = new CountAccumulator();
+        var root = ResolutionScope.Create(builder => builder.Install(source, original =>
+        {
+            recipes++;
+            return original.CountCalls(calls);
+        }));
+        var first = Resolve(root, source);
+        var second = Resolve(root, source);
+        first.ShouldNotBeSameAs(second);
+        Next(first).ShouldBe(1);
+        Next(second).ShouldBe(2);
+        var reports = new List<double>();
+        var child = root.CreateChildScope(builder => builder.Install(source, original => new ObservingWrapper(original, reports.Add)));
+        Next(Resolve(child, source)).ShouldBe(3);
+        calls.CurrentCount.ShouldBe(3);
+        reports.ShouldBe([3]);
+        recipes.ShouldBe(1);
         preparations.ShouldBe(1);
     }
 
@@ -83,7 +112,7 @@ public sealed class TopologyExecutionFactoryTests
         var outer = Resolve(parent, source);
         Next(outer).ShouldBe(101);
 
-        var child = parent.CreateChildScope(builder => builder.Wrap<IMutator<RealVector>>(leaf, original => new ObservingWrapper(original, reports.Add)));
+        var child = parent.CreateChildScope(builder => builder.Install<IMutator<RealVector>>(leaf, original => new ObservingWrapper(original, reports.Add)));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         Next(inner).ShouldBe(202);
@@ -108,7 +137,7 @@ public sealed class TopologyExecutionFactoryTests
         var source = CreateComposite(multi, leaf, static () => { }, static () => { });
         var parent = ResolutionScope.Create();
         var reports = new List<double>();
-        var child = parent.CreateChildScope(builder => builder.Wrap<IMutator<RealVector>>(leaf, original => new ObservingWrapper(original, reports.Add)));
+        var child = parent.CreateChildScope(builder => builder.Install<IMutator<RealVector>>(leaf, original => new ObservingWrapper(original, reports.Add)));
         var localLeaf = Resolve(child, leaf);
         Next(localLeaf).ShouldBe(1);
 
@@ -144,7 +173,7 @@ public sealed class TopologyExecutionFactoryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void PreparationFailure_IsStickyAndDoesNotResolveChildren(bool multi)
+    public void PreparationFailure_IsRetriedAndDoesNotResolveChildren(bool multi)
     {
         var preparations = 0;
         var childPreparations = 0;
@@ -155,14 +184,14 @@ public sealed class TopologyExecutionFactoryTests
 
         Should.Throw<InvalidOperationException>(() => Resolve(parent, source)).ShouldBeSameAs(failure);
         Should.Throw<InvalidOperationException>(() => Resolve(parent.CreateChildScope(), source)).ShouldBeSameAs(failure);
-        preparations.ShouldBe(1);
+        preparations.ShouldBe(2);
         childPreparations.ShouldBe(0);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void BindingFailure_IsLocalAndAnotherContextReusesThePreparation(bool multi)
+    public void ConstructionFailureIsRetriedOverTheSamePreparedState(bool multi)
     {
         var preparations = 0;
         var childPreparations = 0;
@@ -173,12 +202,12 @@ public sealed class TopologyExecutionFactoryTests
         var parent = ResolutionScope.Create();
 
         Should.Throw<InvalidOperationException>(() => Resolve(parent, source)).ShouldBeSameAs(failure);
-        Should.Throw<InvalidOperationException>(() => Resolve(parent, source)).ShouldBeSameAs(failure);
-        var child = parent.CreateChildScope(builder => builder.Wrap<IMutator<RealVector>>(leaf, original => new ObservingWrapper(original, static _ => { })));
-        Next(Resolve(child, source)).ShouldBe(101);
+        Next(Resolve(parent, source)).ShouldBe(101);
+        var child = parent.CreateChildScope(builder => builder.Install<IMutator<RealVector>>(leaf, original => new ObservingWrapper(original, static _ => { })));
+        Next(Resolve(child, source)).ShouldBe(202);
         preparations.ShouldBe(1);
         childPreparations.ShouldBe(1);
-        bindings.ShouldBe(2);
+        bindings.ShouldBe(3);
     }
 
     [Fact]

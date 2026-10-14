@@ -21,7 +21,7 @@ These are internal storage owners with different lifetimes. A single preparation
 
 ## Declaration, preparation and binding
 
-`ResolutionScopeBuilder.Wrap(selector, recipe)` registers a wrapper for the source configurations a `NodeSelector` matches, `Wrap(source, recipe)` registers one for a single reference, and `Install` installs a module. `ResolutionScope.Create(declare)` and `CreateChildScope(declare)` snapshot those registrations before returning a scope. Keeping the builder and changing it later cannot change that snapshot. The scope resolves configurations and exposes no registration method.
+`ResolutionScopeBuilder.Wrap(selector, recipe)` registers a wrapper for the source configurations a `Pointcut` matches, `Wrap(source, recipe)` registers one for a single reference, and `Install` installs a module. `ResolutionScope.Create(declare)` and `CreateChildScope(declare)` snapshot those registrations before returning a scope. Keeping the builder and changing it later cannot change that snapshot. The scope resolves configurations and exposes no registration method.
 
 A selected configuration prepares an `ExecutionFactory<TExecution>` once, without receiving a scope. Preparation allocates persistent state and validates configuration values. The returned factory receives a construction frame, resolves children and returns the typed execution node. It can run again under another observation context while retaining the prepared state.
 

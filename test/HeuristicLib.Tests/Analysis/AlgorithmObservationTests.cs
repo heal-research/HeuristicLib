@@ -245,7 +245,7 @@ public class AlgorithmObservationTests
         var cycle = CycleAlgorithm.Create(inner) with
         {
             MaximumCycles = 2,
-            NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
+            ScopePolicy = newExecutionInstancesPerCycle ? ChildScopePolicy.Fresh : ChildScopePolicy.Shared
         };
 
         var iterations = Clock.FromIterations(inner);

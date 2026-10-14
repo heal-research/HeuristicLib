@@ -61,7 +61,9 @@ Use a stateful base for ordinary mutable execution data. It prepares one state o
 
 The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), execution nodes and repository analyzer rules.
 
-For a wrapping operator, override `CreateWrapperFactory` and return `WrapperExecutionFactory<TExecution>`; for a multi operator, override `CreateCompositeFactory` and return `CompositeExecutionFactory<TExecution>`. The execution type is the role interface shared by the children and result. Prepare counters or caches in that hook, then return a factory that receives the resolved child or ordered child array. The base resolves those children for each context. Keep persistent data outside the returned delegate so a child observation does not reset it.
+For a wrapping operator, override the protected `CreateWrapperFactory` hook and return `WrapperExecutionFactory<TExecution>`; for a multi operator, override `CreateCompositeFactory` and return `CompositeExecutionFactory<TExecution>`. The execution type is the role interface shared by the children and result. Prepare counters or caches in that hook, then return a factory that receives the resolved child or ordered child array. The base resolves those children for each context. Keep persistent data outside the returned delegate so a child observation does not reset it.
+
+The wrapping base also exposes a static `CreateWrapperFactory(wrapper)` bridge for callers that supply an already resolved child, including aspect advice. The bridge invokes the protected preparation hook, so derived authors implement one construction path.
 
 ## Test the contract
 

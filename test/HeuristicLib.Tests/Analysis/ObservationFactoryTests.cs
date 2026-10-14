@@ -154,7 +154,7 @@ public class ObservationFactoryTests
     }
 
     private static void AssertContextualObservations<TExecution>(List<string> events,
-        Action<ResolutionScopeBuilder, Action> declare, Func<ResolutionScope, TExecution> resolve, Action<TExecution> invoke)
+        Action<AspectBuilder, Action> declare, Func<ResolutionScope, TExecution> resolve, Action<TExecution> invoke)
         where TExecution : class, IExecutionNode
     {
         var root = ResolutionScope.Create(builder => declare(builder, () => events.Add("parent")));

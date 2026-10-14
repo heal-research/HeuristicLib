@@ -93,7 +93,7 @@ public class ImprovementCheckingRefinerTests
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator);
 
         var budgetScope = ResolutionScope.Create().CreateChildScope(budget =>
-            budget.Wrap(sharedEvaluator, current => current.CountCandidates(counter)));
+            budget.Install(sharedEvaluator, current => current.CountCandidates(counter)));
 
         Refine(budgetScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
 
@@ -109,7 +109,7 @@ public class ImprovementCheckingRefinerTests
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement();
 
         var budgetScope = ResolutionScope.Create().CreateChildScope(budget =>
-            budget.Wrap(algorithmEvaluator, current => current.CountCandidates(counter)));
+            budget.Install(algorithmEvaluator, current => current.CountCandidates(counter)));
 
         Refine(budgetScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
 

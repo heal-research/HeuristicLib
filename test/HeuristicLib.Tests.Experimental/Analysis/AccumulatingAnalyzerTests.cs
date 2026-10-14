@@ -33,11 +33,11 @@ public class AccumulatingAnalyzerTests
         analyzer.Front.Count.ShouldBe(5);
     }
 
-    private static ResolutionScope Install(params IAnalyzer[] analyzers) =>
+    private static ResolutionScope Install(params Aspect[] analyzers) =>
         ResolutionScope.Create(builder =>
         {
             foreach (var analyzer in analyzers)
-                analyzer.Install(builder);
+                builder.Install(analyzer);
         });
 
     private static void Evaluate(ResolutionScope scope, SketchEvaluator evaluator, params int[] candidates) =>

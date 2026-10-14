@@ -131,16 +131,25 @@ var execution = childScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchSt
 
 The scope itself has no type arguments, so it cannot infer the four the resolution needs and the call names them. Where several children are resolved against the same child scope, bind it once with `childScope.For<TCandidate, TSearchSpace, TProblem, TSearchState>()` and the individual `Resolve` calls need no type arguments at all. Both spellings reach the same resolution; the typed scope only saves the repetition.
 
-A fresh child scope inherits its parent's observations and any execution state already selected by an ancestor. It does not reset ancestor-owned state. Pipeline creates one fresh child scope for each stage activation. Cycle does the same for each child activation when `NewExecutionInstancesPerCycle` is true.
+A fresh child scope inherits its parent's aspects and any execution state already selected by an ancestor. It does not reset ancestor-owned state. Pipeline creates one fresh child scope for each stage activation.
 
-For reuse across activations and observation contexts, use a retained child scope with a stable reference key:
+Cycle's `ScopePolicy` selects one of three policies:
+
+| Policy                      | Inner state                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------- |
+| `ChildScopePolicy.Fresh`    | New child-local state for each activation; the default.                             |
+| `ChildScopePolicy.Retained` | Child-local state retained per inner algorithm reference within the prepared Cycle. |
+| `ChildScopePolicy.Shared`   | The Cycle's own state, shared with sibling and direct uses of the same references.  |
 
 ```csharp
-var childScope = scope.GetOrCreateChildScope(childAlgorithm);
-var execution = childScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm);
+var cycle = first.CycleWith(second, maximumCycles: 3, scopePolicy: ChildScopePolicy.Retained);
 ```
 
-Cycle uses the child algorithm reference as its key when `NewExecutionInstancesPerCycle` is false. Repeated references share one child domain; equal but distinct configurations have separate domains. Retained child domains belong to the meta-algorithm's execution preparation, so rebinding applies the requesting observations without replacing the original caller's children. A custom slot key must be prepared before returning the factory rather than allocated on each binding.
+Equal but distinct algorithm configurations retain separate child state. Repeated references retain the same child state. Common dependencies first selected in separate child states stay separate; dependencies already owned by an ancestor are reused in every mode.
+
+For caller-owned retained state in a custom meta-algorithm, create `scope.CreateChildScopeWithoutAspects()` once and retain that view in the prepared factory. For each activation, use `retained.WithAspectsFrom(scope)` with the current construction scope. This replaces the retained view's aspect collection without replacing its state, so a new observer does not reset state or retain an earlier observer. Keep invocation progress and the requesting construction scope on the constructed execution, rather than capturing the first requesting scope in persistent state.
+
+For a meta-algorithm with the same activation policies, prepare one `ChildScopeSelector` from its `ChildScopePolicy` before returning the execution factory. Pass that selector to each constructed node and call `GetScopeFor(child, scope)` when activating a child. The selector retains child state across bindings without retaining an earlier aspect context.
 
 ## Preserve run behavior
 

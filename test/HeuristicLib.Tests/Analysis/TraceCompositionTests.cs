@@ -86,9 +86,9 @@ public class TraceCompositionTests
         trace.SampleCount.ShouldBe(3);
     }
 
-    private sealed class FailingModule : IExecutionModule
+    private sealed class FailingModule : Aspect
     {
-        public void Install(ResolutionScopeBuilder builder) => throw new InvalidOperationException("Installation failed.");
+        protected override void Declare(AspectBuilder builder) => throw new InvalidOperationException("Installation failed.");
     }
 
     private sealed record FailingCreator : Creator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
@@ -520,25 +520,25 @@ public class TraceCompositionTests
 
         protected override long ReadTime() => Interlocked.Read(ref calls);
 
-        public override void Install(ResolutionScopeBuilder builder) =>
+        protected override void Declare(AspectBuilder builder) =>
             builder.Observe(crossover, _ => Interlocked.Increment(ref calls));
     }
 
     private sealed class CreatorCountAnalyzer(ICreator<RealVector> creator)
-        : IAnalyzer
+        : Aspect
     {
         public int CreatedCandidates { get; private set; }
 
-        public void Install(ResolutionScopeBuilder builder) =>
+        protected override void Declare(AspectBuilder builder) =>
             builder.Install(new CreatorObservationModule(creator, count => CreatedCandidates += count));
     }
 
     private sealed class CreatorObservationModule(
         ICreator<RealVector> creator,
-        Action<int> observe) : IExecutionModule
+        Action<int> observe) : Aspect
     {
-        public void Install(ResolutionScopeBuilder builder) =>
-            builder.Wrap(creator, current => new ObservingCreator(current, observe));
+        protected override void Declare(AspectBuilder builder) =>
+            builder.Install(creator, current => new ObservingCreator(current, observe));
     }
 
     private sealed record ObservingCreator(

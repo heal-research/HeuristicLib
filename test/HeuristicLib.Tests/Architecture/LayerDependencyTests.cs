@@ -45,15 +45,19 @@ public sealed class LayerDependencyTests
             ("Execution.ExecutionConcurrency", "Execution/Concurrency/"),
             ("Execution.ExecutionConcurrencyKind", "Execution/Concurrency/"),
             ("Execution.BatchExecution", "Execution/Concurrency/"),
-            ("Execution.IExecutionModule", "Execution/"),
-            ("Analysis.IAnalyzer", "Analysis/"),
-            ("Analysis.TrialAnalyzer", "Analysis/"),
+            ("Execution.Aspect", "Execution/Aspects/"),
+            ("Execution.AspectBuilder", "Execution/Aspects/"),
+            ("Execution.Advice`1", "Execution/Aspects/"),
+            ("Execution.ChildScopePolicy", "Execution/"),
+            ("Analysis.Observation", "Analysis/Observations/"),
+            ("Analysis.Observation`1", "Analysis/Observations/"),
+            ("Analysis.AlgorithmObservation`4", "Analysis/Observations/"),
             ("Experiments.ExperimentRun`6", "Experiments/"),
-            ("Experiments.TrialModule", "Experiments/"),
-            ("Experiments.TrialModule`1", "Experiments/"),
-            ("Experiments.TrialModule`2", "Experiments/"),
-            ("Experiments.TrialAttachment", "Experiments/"),
-            ("Experiments.TrialAttachment`2", "Experiments/"),
+            ("Execution.AspectFactory", "Execution/Aspects/"),
+            ("Execution.AspectFactory`1", "Execution/Aspects/"),
+            ("Execution.AspectFactory`2", "Execution/Aspects/"),
+            ("Experiments.TrialAspect", "Experiments/"),
+            ("Experiments.TrialAspect`2", "Experiments/"),
         ]);
     }
 
@@ -101,7 +105,7 @@ public sealed class LayerDependencyTests
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
-            "namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { private HEAL.HeuristicLib.Analysis.IAnalyzer? analyzer; }",
+            "namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { private HEAL.HeuristicLib.Analysis.TraceAnalyzer<int>? analyzer; }",
             ParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Operators", "LayerProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -116,7 +120,7 @@ public sealed class LayerDependencyTests
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
-            "global using HEAL.HeuristicLib.Analysis; namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { int Depth => HEAL.HeuristicLib.Execution.ResolutionScope.Create().Depth; }",
+            "global using HEAL.HeuristicLib.Analysis; namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { object Empty => HEAL.HeuristicLib.Execution.Aspect.Collect([]); }",
             ParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Operators", "LayerProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -133,7 +137,7 @@ public sealed class LayerDependencyTests
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var hostProbe = CSharpSyntaxTree.ParseText(
-            "namespace HEAL.HeuristicLib.Execution; internal class HostProbe { private HEAL.HeuristicLib.Algorithms.GeneticAlgorithm<int>? algorithm; int Depth => ResolutionScope.Create().Depth; }",
+            "namespace HEAL.HeuristicLib.Execution; internal class HostProbe { private HEAL.HeuristicLib.Algorithms.GeneticAlgorithm<int>? algorithm; object Empty => Aspect.Collect([]); }",
             ParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Execution", "Runs", "HostProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -153,18 +157,14 @@ public sealed class LayerDependencyTests
     }
 
     [Theory]
-    [InlineData("ExecutionSharingScope")]
-    [InlineData("ExecutionPreparation")]
-    [InlineData("ExecutionBindings")]
-    [InlineData("ExecutionBindings.WrappedNodes")]
-    [InlineData("WrapperRegistration")]
-    [InlineData("ExecutionSharingScope.RetainedChildScope")]
-    public void SemanticCheck_KeepsExtractedResolutionComponentsInternalToResolution(string component)
+    [InlineData("new AspectBuilder().Snapshot()")]
+    [InlineData("aspect.Prepare<IExecutionNode>(null!, null!)")]
+    public void SemanticCheck_KeepsAspectPreparationInternalToResolution(string operation)
     {
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
-            $"namespace HEAL.HeuristicLib.Execution; internal class HostProbe {{ private {component}? component; }}",
+            $"namespace HEAL.HeuristicLib.Execution; internal class HostProbe {{ private Aspect aspect = null!; object Value => {operation}; }}",
             ParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Execution", "Runs", "HostProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -172,6 +172,21 @@ public sealed class LayerDependencyTests
 
         ScanTree(compilation, probe, repositoryRoot)
             .ShouldContain("src/HeuristicLib/Execution/Runs/HostProbe.cs | OutsideExecution -> ResolutionInternal");
+    }
+
+    [Fact]
+    public void SemanticCheck_AllowsPublicAspectsInHosting()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var (compilation, _) = CreateMainCompilation(repositoryRoot);
+        var probe = CSharpSyntaxTree.ParseText(
+            "namespace HEAL.HeuristicLib.Execution; internal class HostProbe { private Aspect? aspect; }",
+            ParseOptions,
+            Path.Combine(repositoryRoot, MainRoot, "Execution", "Runs", "HostProbe.cs"),
+            cancellationToken: TestContext.Current.CancellationToken);
+        compilation = compilation.AddSyntaxTrees(probe);
+
+        ScanTree(compilation, probe, repositoryRoot).ShouldBeEmpty();
     }
 
     [Fact]
@@ -402,8 +417,7 @@ public sealed class LayerDependencyTests
             return false;
         type = Outermost(type);
         return type.ContainingNamespace.ToDisplayString() == "HEAL.HeuristicLib.Execution" &&
-               type.Name is "ResolutionScope" or "ResolutionScopeBuilder" or "ExecutionSharingScope" or
-                   "ExecutionPreparation" or "ExecutionBindings" or "WrapperRegistration" &&
+               type.Name is "ResolutionScope" or "Aspect" or "AspectBuilder" or "ExecutionRole" &&
                (symbol.DeclaredAccessibility == Accessibility.Internal || type.DeclaredAccessibility == Accessibility.Internal);
     }
 

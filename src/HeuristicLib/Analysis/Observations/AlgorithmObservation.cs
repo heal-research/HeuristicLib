@@ -1,8 +1,8 @@
-using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Algorithms;
+namespace HEAL.HeuristicLib.Analysis;
 
 /// <summary>
 /// The search state an algorithm yielded at the end of one iteration, with the state it followed.

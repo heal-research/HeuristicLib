@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Analysis;
 
 public static class AlgorithmObservations
 {
-    extension(ResolutionScopeBuilder builder)
+    extension(AspectBuilder builder)
     {
         /// <summary>Observes every search state yielded by one chosen algorithm.</summary>
         /// <remarks>
@@ -23,7 +23,7 @@ public static class AlgorithmObservations
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            builder.Install(new AlgorithmObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, observe));
+            builder.Install(new AlgorithmObservationAspect<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, observe));
 
         /// <summary>
         /// Observes every search state yielded by one chosen algorithm, for an observer that reads no particular search
@@ -41,35 +41,42 @@ public static class AlgorithmObservations
     }
 }
 
-internal sealed class AlgorithmObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(
+internal sealed class AlgorithmObservationAspect<TCandidate, TSearchSpace, TProblem, TSearchState>(
     IAlgorithm<TCandidate, TSearchState> algorithm,
-    Action<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe) : IExecutionModule
+    Action<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe) : Aspect
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public void Install(ResolutionScopeBuilder builder) =>
-        builder.Wrap(algorithm, current => new ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, current, observe));
+    protected override void Declare(AspectBuilder builder) =>
+        builder.Install(algorithm, current => new ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, current, observe));
 }
 
-internal sealed record ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>(
-    IAlgorithm<TCandidate, TSearchState> ObservedAlgorithm,
-    IAlgorithm<TCandidate, TSearchState> ChildAlgorithm,
-    Action<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> Observe)
-    : Algorithm<ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchState>
+internal sealed record ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : WrappingAlgorithm<TCandidate, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
+    private readonly IAlgorithm<TCandidate, TSearchState> observedAlgorithm;
+    private readonly Action<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe;
+
+    public ObservingAlgorithm(IAlgorithm<TCandidate, TSearchState> observedAlgorithm, IAlgorithm<TCandidate, TSearchState> childAlgorithm,
+        Action<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe) : base(childAlgorithm)
+    {
+        this.observedAlgorithm = observedAlgorithm;
+        this.observe = observe;
+    }
+
     public override bool Fits(ExecutionSignature execution) =>
         base.Fits(execution) && ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(ChildAlgorithm);
 
-    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    protected override WrapperExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
         var state = new ExecutionState();
-        return scope => new Execution<TRunSearchSpace, TRunProblem>(
-            ObservedAlgorithm, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(ChildAlgorithm), Observe, state);
+        return inner => new Execution<TRunSearchSpace, TRunProblem>(
+            observedAlgorithm, inner, observe, state);
     }
 
     private sealed class ExecutionState
@@ -82,15 +89,15 @@ internal sealed record ObservingAlgorithm<TCandidate, TSearchSpace, TProblem, TS
         IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> childAlgorithm,
         Action<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe,
         ExecutionState state)
-        : IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>
+        : WrappingAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childAlgorithm)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        public async IAsyncEnumerable<TSearchState> RunStreamingAsync(TRunProblem problem, IRandomNumberGenerator random,
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TRunProblem problem, IRandomNumberGenerator random,
             TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             var previousState = initialState;
-            await foreach (var searchState in childAlgorithm.RunStreamingAsync(problem, random, initialState, ct))
+            await foreach (var searchState in ChildAlgorithm.RunStreamingAsync(problem, random, initialState, ct))
             {
                 observe(new AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>(
                     observedAlgorithm, ++state.Iteration, searchState, previousState, (TSearchSpace)(object)problem.SearchSpace, (TProblem)(object)problem));

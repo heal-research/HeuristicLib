@@ -101,11 +101,11 @@ public class PipelineAlgorithmTests
     }
 
     private sealed class EvaluationCountAnalysis(IEvaluator<int> evaluator)
-        : IAnalyzer
+        : Aspect
     {
         public Result AnalysisResult { get; } = new();
 
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
+        protected override void Declare(AspectBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             AnalysisResult.Count += observation.Candidates.Count;

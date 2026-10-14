@@ -773,11 +773,11 @@ public class OperatorBudgetAlgorithmTests
     /// when a budget algorithm wraps the same evaluator.
     /// </summary>
     private sealed class EvaluationObservingAnalyzer(IEvaluator<RealVector> evaluator)
-        : IAnalyzer
+        : Aspect
     {
         public int ObservedCandidates { get; private set; }
 
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator, Record);
+        protected override void Declare(AspectBuilder builder) => builder.Observe<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator, Record);
 
         public void Record(EvaluatorObservation<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> observation) =>
             ObservedCandidates += observation.ObjectiveVectors.Count;

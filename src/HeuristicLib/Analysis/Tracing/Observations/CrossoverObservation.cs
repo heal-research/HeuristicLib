@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,7 +9,7 @@ namespace HEAL.HeuristicLib.Analysis;
 
 public static class CrossoverObservations
 {
-    extension(ResolutionScopeBuilder builder)
+    extension(AspectBuilder builder)
     {
         /// <summary>Observes every call to one chosen crossover.</summary>
         /// <remarks>
@@ -20,7 +21,7 @@ public static class CrossoverObservations
             Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> observe)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            builder.Install(new CrossoverObservationModule<TCandidate, TSearchSpace, TProblem>(crossover, observe));
+            builder.Install(new CrossoverObservationAspect<TCandidate, TSearchSpace, TProblem>(crossover, observe));
 
         /// <summary>Observes every call to one chosen crossover, for an observer that reads no particular search space or problem.</summary>
         /// <remarks>
@@ -34,47 +35,51 @@ public static class CrossoverObservations
     }
 }
 
-internal sealed class CrossoverObservationModule<TCandidate, TSearchSpace, TProblem>(
+internal sealed class CrossoverObservationAspect<TCandidate, TSearchSpace, TProblem>(
     ICrossover<TCandidate> crossover,
-    Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> observe) : IExecutionModule
+    Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> observe) : Aspect
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public void Install(ResolutionScopeBuilder builder) =>
-        builder.Wrap(crossover, current => new ObservingCrossover<TCandidate, TSearchSpace, TProblem>(crossover, current, observe));
+    protected override void Declare(AspectBuilder builder) =>
+        builder.Install(crossover, current => new ObservingCrossover<TCandidate, TSearchSpace, TProblem>(crossover, current, observe));
 }
 
-internal sealed class ObservingCrossover<TCandidate, TSearchSpace, TProblem>(
-    ICrossover<TCandidate> observedCrossover,
-    ICrossover<TCandidate> childCrossover,
-    Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> observe)
-    : ICrossover<TCandidate>
+internal sealed record ObservingCrossover<TCandidate, TSearchSpace, TProblem> : WrappingCrossover<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public bool Fits(ExecutionSignature execution) =>
-        ObservationSignature.Fits<TSearchSpace, TProblem>(execution) && execution.Fits(childCrossover);
+    private readonly ICrossover<TCandidate> observedCrossover;
+    private readonly Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> observe;
 
-    public ExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    public ObservingCrossover(ICrossover<TCandidate> observedCrossover, ICrossover<TCandidate> childCrossover, Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> observe)
+        : base(childCrossover)
+    {
+        this.observedCrossover = observedCrossover;
+        this.observe = observe;
+    }
+
+    public override bool Fits(ExecutionSignature execution) =>
+        base.Fits(execution) && ObservationSignature.Fits<TSearchSpace, TProblem>(execution);
+
+    protected override WrapperExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return scope => new Execution<TRunSearchSpace, TRunProblem>(observedCrossover, scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(childCrossover), observe);
+        return inner => new Execution<TRunSearchSpace, TRunProblem>(observedCrossover, inner, observe);
     }
 
     private sealed class Execution<TRunSearchSpace, TRunProblem>(
         ICrossover<TCandidate> observedCrossover,
         ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> childCrossover,
         Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> observe)
-        : ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>
+        : WrappingCrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>(childCrossover)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        public IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random,
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random,
             TRunSearchSpace searchSpace, TRunProblem problem)
         {
-            var offspring = childCrossover.Cross(parents, random, searchSpace, problem);
+            var offspring = ChildCrossover.Cross(parents, random, searchSpace, problem);
             observe(new CrossoverObservation<TCandidate, TSearchSpace, TProblem>(
                 observedCrossover, offspring, parents, (TSearchSpace)(object)searchSpace, (TProblem)(object)problem));
             return offspring;

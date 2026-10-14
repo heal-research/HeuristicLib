@@ -45,7 +45,7 @@ public static class AlgorithmResolutionExtensions
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            scope.Resolve(algorithm, static target => target.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>());
+            scope.Resolve(algorithm, static source => source.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem, TSearchState>);
 
         [return: NotNullIfNotNull(nameof(algorithm))]
         public IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate>? algorithm)
@@ -95,5 +95,15 @@ public static class AlgorithmResolutionExtensions
             [NotNullWhen(true)] out IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? execution,
             [NotNullWhen(false)] out string? reason) =>
             scope.Scope.TryResolve(algorithm, out execution, out reason);
+    }
+
+    private static Advice<IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> PrepareAdvice<TCandidate, TSearchSpace, TProblem, TSearchState>(IConfigurationNode wrapper)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
+    {
+        if (wrapper is not WrappingAlgorithm<TCandidate, TSearchState> typed)
+            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IAlgorithm<TCandidate>).Name} producing {typeof(IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>).Name}.");
+        return WrappingAlgorithm<TCandidate, TSearchState>.CreateWrapperFactory<TSearchSpace, TProblem>(typed).Invoke;
     }
 }

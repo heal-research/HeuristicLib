@@ -28,7 +28,7 @@ public class OperatorInstrumentationTests
         var outer = parent.ResolveMutator(source);
         outer.Mutate([0, 0], random, problem.SearchSpace, problem).ShouldBe([1, 1]);
 
-        var child = parent.CreateChildScope(builder => builder.Wrap<IMutator<int>>(leaf, original => original.CountCalls(observedCalls)));
+        var child = parent.CreateChildScope(builder => builder.Install<IMutator<int>>(leaf, original => original.CountCalls(observedCalls)));
         var inner = child.ResolveMutator(source);
         inner.ShouldNotBeSameAs(outer);
         inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
@@ -63,7 +63,7 @@ public class OperatorInstrumentationTests
         outer.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
 
-        var child = parent.CreateChildScope(builder => builder.Wrap<IMutator<int>>(leaf, original => original.CountCalls(observedCalls)));
+        var child = parent.CreateChildScope(builder => builder.Install<IMutator<int>>(leaf, original => original.CountCalls(observedCalls)));
         var inner = child.ResolveMutator(source);
         inner.ShouldNotBeSameAs(outer);
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));

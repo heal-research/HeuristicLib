@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Problems;
 
-namespace HEAL.HeuristicLib.Execution;
+namespace HEAL.HeuristicLib.Analysis;
 
 /// <summary>
 /// A read-only capture at a defined algorithm or operator boundary.

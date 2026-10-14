@@ -21,7 +21,8 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
     /// <remarks>A nonpositive limit runs no cycles.</remarks>
     public int? MaximumCycles { get; init; }
 
-    public bool NewExecutionInstancesPerCycle { get; init; } = true;
+    /// <summary>Chooses fresh, retained child-local or shared state for inner algorithm activations.</summary>
+    public ChildScopePolicy ScopePolicy { get; init; } = ChildScopePolicy.Fresh;
 
     public CycleAlgorithm(IReadOnlyList<TAlgorithm> algorithms)
     {
@@ -31,8 +32,12 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
-        scope => new CycleAlgorithmExecution<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(scope, Algorithms, MaximumCycles, NewExecutionInstancesPerCycle);
+    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    {
+        var scopeSelector = new ChildScopeSelector(ScopePolicy);
+        return scope => new CycleAlgorithmExecution<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(
+            scope, Algorithms, MaximumCycles, scopeSelector);
+    }
 }
 
 public static class CycleAlgorithm
@@ -53,23 +58,23 @@ public static class CycleAlgorithmExtensions
         where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchState>
         where TSearchState : class, ISearchState
     {
-        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(TAlgorithm followingAlgorithm, int? maximumCycles = null) =>
-            new([algorithm.Self, followingAlgorithm]) { MaximumCycles = maximumCycles };
+        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(TAlgorithm followingAlgorithm, int? maximumCycles = null, ChildScopePolicy scopePolicy = ChildScopePolicy.Fresh) =>
+            new([algorithm.Self, followingAlgorithm]) { MaximumCycles = maximumCycles, ScopePolicy = scopePolicy };
 
-        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(IReadOnlyList<TAlgorithm> followingAlgorithms, int? maximumCycles = null) =>
-            new([algorithm.Self, .. followingAlgorithms]) { MaximumCycles = maximumCycles };
+        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(IReadOnlyList<TAlgorithm> followingAlgorithms, int? maximumCycles = null, ChildScopePolicy scopePolicy = ChildScopePolicy.Fresh) =>
+            new([algorithm.Self, .. followingAlgorithms]) { MaximumCycles = maximumCycles, ScopePolicy = scopePolicy };
     }
 
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
         public CycleAlgorithm<IAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState> CycleWith(
-            IAlgorithm<TCandidate, TSearchState> followingAlgorithm, int? maximumCycles = null) =>
-            new([algorithm, followingAlgorithm]) { MaximumCycles = maximumCycles };
+            IAlgorithm<TCandidate, TSearchState> followingAlgorithm, int? maximumCycles = null, ChildScopePolicy scopePolicy = ChildScopePolicy.Fresh) =>
+            new([algorithm, followingAlgorithm]) { MaximumCycles = maximumCycles, ScopePolicy = scopePolicy };
 
         public CycleAlgorithm<IAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState> CycleWith(
-            IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> followingAlgorithms, int? maximumCycles = null) =>
-            new([algorithm, .. followingAlgorithms]) { MaximumCycles = maximumCycles };
+            IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> followingAlgorithms, int? maximumCycles = null, ChildScopePolicy scopePolicy = ChildScopePolicy.Fresh) =>
+            new([algorithm, .. followingAlgorithms]) { MaximumCycles = maximumCycles, ScopePolicy = scopePolicy };
     }
 }
 
@@ -83,14 +88,15 @@ public class CycleAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TProb
     private readonly ResolutionScope scope;
     protected readonly ImmutableArray<TAlgorithm> Algorithms;
     protected readonly int? MaximumCycles;
-    protected readonly bool NewExecutionInstancesPerCycle;
+    private readonly ChildScopeSelector scopeSelector;
 
-    public CycleAlgorithmExecution(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle)
+    public CycleAlgorithmExecution(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles,
+        ChildScopeSelector scopeSelector)
     {
         this.scope = scope;
         Algorithms = algorithms.ToImmutableArray();
         MaximumCycles = maximumCycles;
-        NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle;
+        this.scopeSelector = scopeSelector;
     }
 
     public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
@@ -127,9 +133,6 @@ public class CycleAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TProb
         }
     }
 
-    private IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> ResolveAlgorithmExecution(TAlgorithm algorithm)
-    {
-        var childScope = NewExecutionInstancesPerCycle ? scope.CreateChildScope() : scope.GetOrCreateChildScope(algorithm);
-        return childScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
-    }
+    private IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> ResolveAlgorithmExecution(TAlgorithm algorithm) =>
+        scopeSelector.GetScopeFor(algorithm, scope).Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 }

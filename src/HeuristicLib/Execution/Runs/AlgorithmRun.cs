@@ -8,8 +8,9 @@ namespace HEAL.HeuristicLib.Execution;
 public abstract class AlgorithmRun
 {
     private readonly Lock sync = new();
-    private readonly List<IExecutionModule> modules = [];
-    private readonly HashSet<IExecutionModule> moduleSet = new(ReferenceEqualityComparer.Instance);
+    // Together these collections form an insertion-ordered set using reference identity.
+    private readonly List<Aspect> aspects = [];
+    private readonly HashSet<Aspect> aspectSet = new(ReferenceEqualityComparer.Instance);
     private ResolutionScope? scope;
 
     public RunLifecycleState LifecycleState { get; private set; } = RunLifecycleState.Preparing;
@@ -18,13 +19,13 @@ public abstract class AlgorithmRun
     {
     }
 
-    protected void Add(IExecutionModule module)
+    protected void Add(Aspect aspect)
     {
         lock (sync)
         {
             EnsurePreparing();
-            if (moduleSet.Add(module))
-                modules.Add(module);
+            if (aspectSet.Add(aspect))
+                aspects.Add(aspect);
         }
     }
 
@@ -51,8 +52,8 @@ public abstract class AlgorithmRun
             {
                 scope = ResolutionScope.Create(builder =>
                 {
-                    foreach (var module in modules)
-                        builder.Install(module);
+                    foreach (var aspect in aspects)
+                        builder.Install(aspect);
                 });
                 return scope;
             }
@@ -121,10 +122,10 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         Random = random;
     }
 
-    /// <summary>Attaches a module while preparing, preserving attachment order and deduplicating by reference.</summary>
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> Attach(IExecutionModule module)
+    /// <summary>Attaches an aspect while preparing, preserving attachment order and deduplicating by reference.</summary>
+    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> Attach(Aspect aspect)
     {
-        Add(module);
+        Add(aspect);
         return this;
     }
 

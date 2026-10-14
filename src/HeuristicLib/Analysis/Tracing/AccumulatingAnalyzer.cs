@@ -18,11 +18,9 @@ namespace HEAL.HeuristicLib.Analysis;
 /// finished.
 /// </para>
 /// </remarks>
-public abstract class AccumulatingAnalyzer : IAnalyzer
+public abstract class AccumulatingAnalyzer : Aspect
 {
     /// <summary>Guards the accumulator. Hold it while updating.</summary>
     protected Lock Sync { get; } = new();
 
-    /// <summary>Installs the observations that feed the accumulator.</summary>
-    public abstract void Install(ResolutionScopeBuilder builder);
 }

@@ -22,8 +22,7 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
     /// Gets the factory that wraps the observed operator in a duration-measuring operator.
     /// </summary>
     /// <remarks>
-    /// The factory receives the original observed operator configuration. The returned wrapper resolves that source
-    /// through its scope to obtain the already-built inner chain, so enclosing budgets and observations compose.
+    /// The factory receives the original observed operator configuration. The returned single-child wrapper supplies advice for that source, so enclosing budgets and observations compose.
     /// The returned operator must retain the observed operator's role.
     /// </remarks>
     public required Func<TOperator, DurationAccumulator, TimeProvider, TOperator> MeasuredOperatorFactory { get; init; }
@@ -38,11 +37,10 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
     public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         var duration = new DurationAccumulator();
-        var childKey = new object();
+        var counting = Aspect.Create(ObservedOperator, current => MeasuredOperatorFactory(current, duration, TimeProvider));
         return scope =>
         {
-            var childScope = scope.GetOrCreateChildScope(childKey, child =>
-                child.Wrap(ObservedOperator, current => MeasuredOperatorFactory(current, duration, TimeProvider)));
+            var childScope = scope.With(counting);
             return new OperatorDurationBudgetAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
         };
     }

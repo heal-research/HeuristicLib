@@ -26,13 +26,13 @@ public sealed class RoleExecutionFactoryTests
         var source = CreateMutator(arity, () => preparations++);
         var outerReports = new List<double>();
         var innerReports = new List<double>();
-        var parent = ResolutionScope.Create(builder => builder.Wrap(source, original => new ObservingMutator(original, outerReports.Add)));
+        var parent = ResolutionScope.Create(builder => builder.Install(source, original => new ObservingMutator(original, outerReports.Add)));
         var outer = parent.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(source);
         Next(outer).ShouldBe(1);
         Next(outer).ShouldBe(2);
         Next(outer).ShouldBe(3);
 
-        var child = parent.CreateChildScope(builder => builder.Wrap(source, original => new ObservingMutator(original, innerReports.Add)));
+        var child = parent.CreateChildScope(builder => builder.Install(source, original => new ObservingMutator(original, innerReports.Add)));
         var inner = child.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(source);
         Next(inner).ShouldBe(4);
         Next(inner).ShouldBe(5);
@@ -120,7 +120,7 @@ public sealed class RoleExecutionFactoryTests
     }
 
     [Fact]
-    public void StatefulLeaf_PreparationFaultIsSharedWithoutRepeatingInitialization()
+    public void StatefulLeaf_PreparationFaultIsRetriedWithoutPublishingState()
     {
         var preparations = 0;
         var failure = new InvalidOperationException("initialization failed");
@@ -133,7 +133,7 @@ public sealed class RoleExecutionFactoryTests
 
         Should.Throw<InvalidOperationException>(() => parent.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBeSameAs(failure);
         Should.Throw<InvalidOperationException>(() => parent.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBeSameAs(failure);
-        preparations.ShouldBe(1);
+        preparations.ShouldBe(2);
     }
 
     [Fact]
@@ -271,12 +271,10 @@ public sealed class RoleExecutionFactoryTests
             [RealVector.Repeat(++state.Calls, 1)];
     }
 
-    private sealed record ObservingMutator(IMutator<RealVector> Child, Action<double> Report) : IMutator<RealVector>
+    private sealed record ObservingMutator(IMutator<RealVector> Inner, Action<double> Report) : WrappingMutator<RealVector>(Inner)
     {
-        public ExecutionFactory<IMutatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
-            where TRunSearchSpace : class, ISearchSpace<RealVector>
-            where TRunProblem : class, IProblem<RealVector, TRunSearchSpace> =>
-            scope => new Execution<TRunSearchSpace, TRunProblem>(scope.Resolve<RealVector, TRunSearchSpace, TRunProblem>(Child), Report);
+        protected override WrapperExecutionFactory<IMutatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+            inner => new Execution<TRunSearchSpace, TRunProblem>(inner, Report);
 
         private sealed class Execution<TSearchSpace, TProblem>(IMutatorExecution<RealVector, TSearchSpace, TProblem> child, Action<double> report)
             : IMutatorExecution<RealVector, TSearchSpace, TProblem>

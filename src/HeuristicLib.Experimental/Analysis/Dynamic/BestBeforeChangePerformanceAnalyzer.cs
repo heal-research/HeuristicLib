@@ -67,7 +67,7 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
     }
     private double prediction = double.NaN;
 
-    public override void Install(ResolutionScopeBuilder builder)
+    protected override void Declare(AspectBuilder builder)
     {
         foreach (var evaluator in evaluators)
             builder.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, ReadBatch);

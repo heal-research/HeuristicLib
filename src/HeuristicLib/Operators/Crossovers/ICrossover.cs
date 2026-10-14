@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -94,7 +95,7 @@ public static class CrossoverResolutionExtensions
         public ICrossoverExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate> crossover)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(crossover, static target => target.CreateExecutionFactory<TSearchSpace, TProblem>());
+            scope.Resolve(crossover, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem>);
 
         /// <remarks>A true result carries the instance the run will use, so validating and creating are one step.</remarks>
         public bool TryResolve<TCandidate, TSearchSpace, TProblem>(
@@ -142,5 +143,14 @@ public static class CrossoverResolutionExtensions
             [NotNullWhen(true)] out ICrossoverExecution<TCandidate, TSearchSpace, TProblem>? execution,
             [NotNullWhen(false)] out string? reason) =>
             scope.Scope.TryResolve(crossover, out execution, out reason);
+    }
+
+    private static Advice<ICrossoverExecution<TCandidate, TSearchSpace, TProblem>> PrepareAdvice<TCandidate, TSearchSpace, TProblem>(IConfigurationNode wrapper)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        if (wrapper is not WrappingCrossover<TCandidate> typed)
+            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(ICrossover<TCandidate>).Name} producing {typeof(ICrossoverExecution<TCandidate, TSearchSpace, TProblem>).Name}.");
+        return WrappingCrossover<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem>(typed).Invoke;
     }
 }

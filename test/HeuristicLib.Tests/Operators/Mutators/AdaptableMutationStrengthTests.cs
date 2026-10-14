@@ -56,12 +56,12 @@ public class AdaptableMutationStrengthTests
         strength.ShouldNotBeNull();
         strength.CurrentMutationStrength = 4.0;
         var observedCalls = new CountAccumulator();
-        var child = parent.CreateChildScope(builder => builder.Wrap<IMutator<RealVector>>(mutator, original => original.CountCalls(observedCalls)));
+        var child = parent.CreateChildScope(builder => builder.Install<IMutator<RealVector>>(mutator, original => original.CountCalls(observedCalls)));
         var typed = child.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
         var inner = typed.Resolve(mutator, out IMutationStrengthControl? innerStrength);
         innerStrength.ShouldBeSameAs(strength);
         inner.ShouldNotBeAssignableTo<IMutationStrengthControl>();
-        typed.Resolve(mutator, out IMutationStrengthControl? repeatedStrength).ShouldBeSameAs(inner);
+        typed.Resolve(mutator, out IMutationStrengthControl? repeatedStrength).ShouldNotBeSameAs(inner);
         repeatedStrength.ShouldBeSameAs(strength);
 
         inner.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, problem).ShouldBe([new RealVector(2.0)]);
@@ -85,7 +85,7 @@ public class AdaptableMutationStrengthTests
         var gaussian = new GaussianMutator(1.0, 3.0);
         var algorithm = CreateAlgorithm(gaussian, problem);
         var calls = new CountAccumulator();
-        var scope = observed ? ResolutionScope.Create(builder => builder.Wrap<IMutator<RealVector>>(gaussian, source => source.CountCalls(calls))) : ResolutionScope.Create();
+        var scope = observed ? ResolutionScope.Create(builder => builder.Install<IMutator<RealVector>>(gaussian, source => source.CountCalls(calls))) : ResolutionScope.Create();
         var execution = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>(algorithm);
         var states = execution.Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -103,7 +103,7 @@ public class AdaptableMutationStrengthTests
         var algorithm = CreateAlgorithm(gaussian, problem);
         var calls = new CountAccumulator();
         var root = ResolutionScope.Create();
-        var child = root.CreateChildScope(builder => builder.Wrap<IMutator<RealVector>>(gaussian, source => source.CountCalls(calls)));
+        var child = root.CreateChildScope(builder => builder.Install<IMutator<RealVector>>(gaussian, source => source.CountCalls(calls)));
         child.For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(gaussian, out IMutationStrengthControl? localStrength);
         localStrength.ShouldNotBeNull();
         localStrength.CurrentMutationStrength = 9.0;

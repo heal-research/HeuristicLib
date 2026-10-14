@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
@@ -88,8 +89,8 @@ public class InferenceConstructionSpecs
         var pipelineAlgorithm = PipelineAlgorithm.Create(firstStage, secondStage);
         var fluentPipelineAlgorithm = firstStage.Then(secondStage);
         var cycleAlgorithm = CycleAlgorithm.Create(firstStage, secondStage);
-        var fluentCycleAlgorithm = firstStage.CycleWith(secondStage, maximumCycles: 2);
-        var fluentMultiCycleAlgorithm = firstStage.CycleWith([secondStage], maximumCycles: 2);
+        var fluentCycleAlgorithm = firstStage.CycleWith(secondStage, maximumCycles: 2, scopePolicy: ChildScopePolicy.Retained);
+        var fluentMultiCycleAlgorithm = firstStage.CycleWith([secondStage], maximumCycles: 2, scopePolicy: ChildScopePolicy.Shared);
         var interfacePipelineAlgorithm = PipelineAlgorithm.Create(firstStage.Algorithm, firstStage);
 
         problemDirectEvaluator.ShouldBeOfType<ProblemEvaluator<RealVector>>();

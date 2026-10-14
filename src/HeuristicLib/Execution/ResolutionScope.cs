@@ -1,146 +1,99 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace HEAL.HeuristicLib.Execution;
 
-/// <summary>
-/// Resolves configuration references into typed execution nodes, preserving their state across observation contexts.
-/// </summary>
 /// <remarks>
-/// Routes sharing and dependency selection to their owners, then obtains nodes from the current execution bindings.
-/// A factory receives a scope tied to its original preparation and the requesting observations. It can retain that
-/// scope for deferred construction without changing another caller's children or observers.
+/// Prepared factories belong to configuration references in a state and are reused from ancestors. Each resolution
+/// constructs fresh nodes using the factory owner's state and the requesting aspects. A leaf may return its prepared node.
+/// The resolver provides no disposal or concurrency guarantees.
 /// </remarks>
 public sealed class ResolutionScope
 {
-    private readonly ExecutionSharingScope sharing;
-    private readonly ExecutionBindings bindings;
-    private readonly ExecutionPreparation? owner;
-    private readonly ExecutionBindings.WrappedNodes? wrappedNodes;
+    private readonly State state;
+    private readonly ImmutableArray<Aspect> aspects;
+    // Flattened, ordered cache of individual rule aspects from these aspects and their installed aspects.
+    // Aspect identities are shared; prepared advice delegates belong to the owning State.
+    private readonly ImmutableArray<Aspect> advisingAspects;
 
-    internal ResolutionScope(ExecutionSharingScope sharing, ExecutionBindings bindings,
-        ExecutionPreparation? owner = null, ExecutionBindings.WrappedNodes? wrappedNodes = null)
+    private ResolutionScope(State state, ImmutableArray<Aspect> aspects)
+        : this(state, aspects, Aspect.Collect(aspects)) { }
+
+    private ResolutionScope(State state, ImmutableArray<Aspect> aspects, ImmutableArray<Aspect> advisingAspects)
     {
-        this.sharing = sharing;
-        this.bindings = bindings;
-        this.owner = owner;
-        this.wrappedNodes = wrappedNodes;
+        this.state = state;
+        this.aspects = aspects;
+        this.advisingAspects = advisingAspects;
     }
 
-    /// <summary>Gets this scope's depth along the current observation path, including retained children.</summary>
-    internal int Depth => bindings.Depth;
+    /// <remarks>Aspects form one layer in the supplied order. An empty collection creates an unadvised scope.</remarks>
+    public static ResolutionScope Create(params IReadOnlyList<Aspect> aspects) =>
+        new(new State(null), [.. aspects.Distinct<Aspect>(ReferenceEqualityComparer.Instance)]);
+    public static ResolutionScope Create(Action<AspectBuilder> declare) => Create(Aspect.Create(declare));
 
-    /// <summary>Creates an independent root scope without wrappers.</summary>
-    public static ResolutionScope Create() => CreateScope(new ExecutionSharingScope(null), null, null);
+    /// <remarks>Creates child-local state and places the supplied aspect layer before the existing layers.</remarks>
+    public ResolutionScope CreateChildScope(params IReadOnlyList<Aspect> added) =>
+        new(new State(state), [.. added.Concat(aspects).Distinct<Aspect>(ReferenceEqualityComparer.Instance)]);
+    public ResolutionScope CreateChildScope(Action<AspectBuilder> declare) => CreateChildScope(Aspect.Create(declare));
 
-    /// <summary>Creates an independent root scope with a snapshot of the declared wrappers.</summary>
-    public static ResolutionScope Create(Action<ResolutionScopeBuilder> declare) =>
-        CreateScope(new ExecutionSharingScope(null), null, declare);
+    /// <remarks>Shares state and places the supplied aspects, in their order, before the existing layers.</remarks>
+    public ResolutionScope With(params IReadOnlyList<Aspect> added) =>
+        new(state, [.. added.Concat(aspects).Distinct<Aspect>(ReferenceEqualityComparer.Instance)]);
+    public ResolutionScope With(Action<AspectBuilder> declare) => With(Aspect.Create(declare));
 
-    /// <summary>Creates a fresh child sharing scope, inheriting observations and existing ancestor state.</summary>
-    /// <remarks>A fresh child does not reset state that its ancestors already own.</remarks>
-    public ResolutionScope CreateChildScope() => CreateScope(new ExecutionSharingScope(sharing), bindings, null);
+    // Meta-algorithms retain these state-only views, then apply the requesting context to each activation.
+    /// <summary>Creates child-local state without retaining the current aspect context.</summary>
+    /// <remarks>Retain this view in prepared meta-algorithm state, then use WithAspectsFrom for each activation.</remarks>
+    public ResolutionScope CreateChildScopeWithoutAspects() => new(new State(state), [], []);
+    /// <summary>Uses this state with the requesting scope's exact aspect collection.</summary>
+    /// <remarks>Replaces this view's aspects without adding a layer or changing either scope.</remarks>
+    public ResolutionScope WithAspectsFrom(ResolutionScope requestingScope) =>
+        new(state, requestingScope.aspects, requestingScope.advisingAspects);
 
-    /// <summary>Creates a fresh child sharing scope and snapshots its additional declarations.</summary>
-    public ResolutionScope CreateChildScope(Action<ResolutionScopeBuilder> declare) =>
-        CreateScope(new ExecutionSharingScope(sharing), bindings, declare);
-
-    /// <summary>Gets a retained child scope through the current observation context.</summary>
-    /// <remarks>
-    /// Keys compare by reference. A factory's scope retains children on its preparation; a standalone scope retains
-    /// them on its sharing scope. Use a stable key for each child, allocated outside the binding factory.
-    /// </remarks>
-    public ResolutionScope GetOrCreateChildScope(object key) => GetChildScope(key, null);
-
-    /// <summary>Gets a retained child scope, declaring its observations only on the first use of the key.</summary>
-    /// <remarks>
-    /// Later calls reuse the child's state and declarations through the requesting context. They do not rerun the
-    /// callback, including when the first declaration failed. Changing a callback's captures is not reconfiguration.
-    /// </remarks>
-    public ResolutionScope GetOrCreateChildScope(object key, Action<ResolutionScopeBuilder> declare) =>
-        GetChildScope(key, declare);
-
-    private ResolutionScope GetChildScope(object key, Action<ResolutionScopeBuilder>? declare)
-    {
-        var child = owner is null ? sharing.GetRetainedChild(key) : owner.GetRetainedChild(key);
-        return bindings.GetRetainedScope(child, declare);
-    }
-
-    private static ResolutionScope CreateScope(ExecutionSharingScope sharing, ExecutionBindings? parent,
-        Action<ResolutionScopeBuilder>? declare)
-    {
-        var builder = new ResolutionScopeBuilder(sharing);
-        declare?.Invoke(builder);
-        return new ResolutionScope(sharing, new ExecutionBindings(parent, builder.Snapshot()));
-    }
-
-    /// <summary>Prepares a configuration once and resolves its binding for this observation context.</summary>
-    /// <remarks>
-    /// <para>
-    /// Direct resolution uses this scope's selected preparation, finds one in an ancestor, or reserves one locally.
-    /// A factory's scope instead uses its preparation's pinned dependencies. A reused composite keeps those children even
-    /// when direct resolution in the requesting child scope has selected different children.
-    /// </para>
-    /// <para>
-    /// Preparation has no scope and runs once per selected execution. The returned factory may run again to bind
-    /// children and observations for another context. Pass a static preparation adapter where possible. Generated
-    /// wrappers must implement the same configuration contract accepted by that adapter.
-    /// </para>
-    /// <para>
-    /// Preparation faults stay with the selected preparation; binding faults belong to its observation context.
-    /// Neither is retried by resolving again. Changing observations can retry binding but never preparation.
-    /// </para>
-    /// </remarks>
-    public TExecution Resolve<TConfiguration, TExecution>(TConfiguration configuration, Func<TConfiguration, ExecutionFactory<TExecution>> prepare)
+    public TExecution Resolve<TConfiguration, TExecution>(TConfiguration configuration,
+        Func<TConfiguration, ExecutionFactory<TExecution>> prepareFactory, Func<IConfigurationNode, Advice<TExecution>> prepareAdvice)
         where TConfiguration : class, IConfigurationNode
-        where TExecution : class, IExecutionNode =>
-        ResolveBinding(configuration, prepare).Completed;
+        where TExecution : class, IExecutionNode => Construct(configuration, prepareFactory, prepareAdvice).Advised;
 
-    /// <summary>Resolves a configuration whose execution contract is known without a run's type arguments.</summary>
     public TExecution Resolve<TExecution>(IConfigurationNode<TExecution> configuration)
         where TExecution : class, IExecutionNode =>
-        Resolve(configuration, static source => source.CreateExecutionFactory());
+        Resolve(configuration, static source => source.CreateExecutionFactory(), UnavailableAdvice<TExecution>);
 
-    /// <summary>Resolves the wrapped operation and projects an optional control from the same source's raw binding.</summary>
     /// <remarks>
-    /// Role wrappers need not implement the source's additional control interfaces. Projecting from the raw binding
-    /// keeps observations from hiding those controls while operations still use the completed wrapper chain.
-    /// The selector runs only after complete resolution succeeds. It must be a side-effect-free projection of an
-    /// operation-free control. Invoke operations through the returned wrapped execution. Configured wrappers expose
-    /// their own control deliberately; this overload does not search or unwrap their children.
+    /// Controls project from the raw execution only after the advised chain succeeds. Invoke operations through the
+    /// returned chain. Configured wrappers expose their own controls; projection does not search their children.
     /// </remarks>
     public TExecution Resolve<TConfiguration, TExecution, TControl>(TConfiguration configuration,
-        Func<TConfiguration, ExecutionFactory<TExecution>> prepare, Func<TExecution, TControl?> selectControl, out TControl? control)
+        Func<TConfiguration, ExecutionFactory<TExecution>> prepareFactory, Func<IConfigurationNode, Advice<TExecution>> prepareAdvice,
+        Func<TExecution, TControl?> selectControl, out TControl? control)
         where TConfiguration : class, IConfigurationNode
         where TExecution : class, IExecutionNode
         where TControl : class
     {
-        var binding = ResolveBinding(configuration, prepare);
-        control = selectControl(binding.Raw);
-        return binding.Completed;
+        var constructed = Construct(configuration, prepareFactory, prepareAdvice);
+        control = selectControl(constructed.Raw);
+        return constructed.Advised;
     }
 
-    /// <summary>Resolves an optional configuration, returning null for an absent child.</summary>
     [return: NotNullIfNotNull(nameof(configuration))]
     public TExecution? ResolveOptional<TExecution>(IConfigurationNode<TExecution>? configuration)
-        where TExecution : class, IExecutionNode =>
-        configuration is null ? null : Resolve(configuration);
+        where TExecution : class, IExecutionNode => configuration is null ? null : Resolve(configuration);
 
-    /// <summary>Resolves a configuration, reporting an invalid-operation failure as a reason.</summary>
     public bool TryResolve<TExecution>(IConfigurationNode<TExecution> configuration,
         [NotNullWhen(true)] out TExecution? execution, [NotNullWhen(false)] out string? reason)
         where TExecution : class, IExecutionNode =>
-        TryResolve(configuration, static source => source.CreateExecutionFactory(), out execution, out reason);
+        TryResolve(configuration, static source => source.CreateExecutionFactory(), UnavailableAdvice<TExecution>, out execution, out reason);
 
-    /// <summary>Resolves through a typed preparation adapter, reporting an invalid-operation failure as a reason.</summary>
-    /// <remarks>Other exception types propagate. This operation does not retry faulted construction.</remarks>
-    public bool TryResolve<TConfiguration, TExecution>(TConfiguration configuration, Func<TConfiguration, ExecutionFactory<TExecution>> prepare,
+    /// <remarks>Invalid-operation failures become reasons; other exceptions propagate. Failed attempts may be retried.</remarks>
+    public bool TryResolve<TConfiguration, TExecution>(TConfiguration configuration,
+        Func<TConfiguration, ExecutionFactory<TExecution>> prepareFactory, Func<IConfigurationNode, Advice<TExecution>> prepareAdvice,
         [NotNullWhen(true)] out TExecution? execution, [NotNullWhen(false)] out string? reason)
         where TConfiguration : class, IConfigurationNode
         where TExecution : class, IExecutionNode
     {
         try
         {
-            execution = Resolve(configuration, prepare);
+            execution = Resolve(configuration, prepareFactory, prepareAdvice);
             reason = null;
             return true;
         }
@@ -152,18 +105,62 @@ public sealed class ResolutionScope
         }
     }
 
-    private (TExecution Raw, TExecution Completed) ResolveBinding<TConfiguration, TExecution>(
-        TConfiguration configuration, Func<TConfiguration, ExecutionFactory<TExecution>> prepare)
+    private static Advice<TExecution> UnavailableAdvice<TExecution>(IConfigurationNode wrapper)
+        where TExecution : class, IExecutionNode =>
+        throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper producing {typeof(TExecution).Name}. Supply its typed wrapper preparation callback.");
+
+    private (TExecution Raw, TExecution Advised) Construct<TConfiguration, TExecution>(TConfiguration configuration,
+        Func<TConfiguration, ExecutionFactory<TExecution>> prepareFactory, Func<IConfigurationNode, Advice<TExecution>> prepareAdvice)
         where TConfiguration : class, IConfigurationNode
         where TExecution : class, IExecutionNode
     {
-        if (wrappedNodes is not null && wrappedNodes.Matches(configuration))
-            return wrappedNodes.GetNodes<TExecution>();
+        if (!state.Constructing.Add(configuration))
+            throw new InvalidOperationException($"Recursive construction of {configuration.GetType().Name}.");
+        try
+        {
+            var (factory, owner) = state.GetOrAdd(configuration, prepareFactory);
+            var raw = factory(new ResolutionScope(owner, aspects, advisingAspects));
+            var advised = raw;
+            foreach (var matching in advisingAspects.Where(matching => matching.Matches(configuration)))
+                advised = owner.GetOrAddAdvice(matching, configuration, prepareAdvice)(advised);
+            return (raw, advised);
+        }
+        finally { state.Constructing.Remove(configuration); }
+    }
 
-        var preparation = owner is null
-            ? sharing.Select(configuration, prepare)
-            : owner.SelectDependency(configuration, prepare);
-        preparation.RequireContract<TExecution>();
-        return bindings.GetOrBind<TExecution>(preparation);
+    private sealed class State(State? parent)
+    {
+        private readonly State? parent = parent;
+        private readonly Dictionary<IConfigurationNode, Delegate> factories = new(ReferenceEqualityComparer.Instance);
+        private readonly ConditionalWeakTable<Aspect, Dictionary<IConfigurationNode, Delegate>> preparedAdvice = new();
+        internal HashSet<IConfigurationNode> Constructing { get; } = parent?.Constructing ?? new(ReferenceEqualityComparer.Instance);
+
+        internal (ExecutionFactory<TExecution> Factory, State Owner) GetOrAdd<TConfiguration, TExecution>(
+            TConfiguration configuration, Func<TConfiguration, ExecutionFactory<TExecution>> prepareFactory)
+            where TConfiguration : class, IConfigurationNode
+            where TExecution : class, IExecutionNode
+        {
+            for (var current = this; current is not null; current = current.parent)
+                if (current.factories.TryGetValue(configuration, out var found))
+                    return (found as ExecutionFactory<TExecution> ?? throw new InvalidOperationException(
+                        $"{configuration.GetType().Name} was prepared for {found.GetType().GenericTypeArguments[0].Name}, not {typeof(TExecution).Name}. Resolve over a second search space or problem in its own scope."), current);
+            var created = prepareFactory(configuration);
+            factories.Add(configuration, created);
+            return (created, this);
+        }
+
+        internal Advice<TExecution> GetOrAddAdvice<TConfiguration, TExecution>(Aspect matching,
+            TConfiguration target, Func<IConfigurationNode, Advice<TExecution>> prepareAdvice)
+            where TConfiguration : class, IConfigurationNode
+            where TExecution : class, IExecutionNode
+        {
+            var prepared = preparedAdvice.GetValue(matching, static _ => new(ReferenceEqualityComparer.Instance));
+            if (!prepared.TryGetValue(target, out var found))
+            {
+                found = matching.Prepare(target, prepareAdvice);
+                prepared.Add(target, found);
+            }
+            return found as Advice<TExecution> ?? throw new InvalidOperationException($"Advice for {target.GetType().Name} is incompatible with {typeof(TExecution).Name}.");
+        }
     }
 }

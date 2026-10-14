@@ -124,22 +124,22 @@ public class AnalysisUsabilityTests
         exception.Message.ShouldContain("unknown decision");
     }
 
-    private static ResolutionScope Install(params IAnalyzer[] analyzers) =>
+    private static ResolutionScope Install(params Aspect[] analyzers) =>
         ResolutionScope.Create(builder =>
         {
             foreach (var analyzer in analyzers)
-                analyzer.Install(builder);
+                builder.Install(analyzer);
         });
 
     private static void Evaluate(ResolutionScope scope, ManualEvaluator evaluator, params int[] candidates) =>
         scope.Resolve<int, DummySearchSpace<int>, TestProblem>(evaluator).Evaluate(candidates, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, TestProblem.Instance);
 
-    private sealed class SeparateEvaluatorAnalyzer(ManualEvaluator first, ManualEvaluator second) : IAnalyzer
+    private sealed class SeparateEvaluatorAnalyzer(ManualEvaluator first, ManualEvaluator second) : Aspect
     {
         public int FirstCandidates { get; private set; }
         public int SecondCandidates { get; private set; }
 
-        public void Install(ResolutionScopeBuilder builder)
+        protected override void Declare(AspectBuilder builder)
         {
             builder.Observe(first, observation => FirstCandidates += observation.Candidates.Count);
             builder.Observe(second, observation => SecondCandidates += observation.Candidates.Count);
