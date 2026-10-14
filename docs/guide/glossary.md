@@ -493,25 +493,45 @@ See also: Configuration, Execution graph.
 
 Status: `Canonical`
 
-A pointcut is a rule selecting algorithm or operator configurations whose execution operations receive advice. `Pointcut<TConfiguration>` matches individual supplied configurations.
+A pointcut selects configurations whose executions receive advice. `Pointcut<TConfiguration>` examines one supplied configuration through `Matches`.
 
-Selectors match by configuration reference or assignable type, including role interfaces. Selectors with the same declared configuration type or role compose by union (`Or`, `|`) or intersection (`And`, `&`). `And(predicate)` intersects with a selector constructed from the typed configuration predicate. Composition creates a new definition without changing its operands or evaluating predicates; matching evaluates predicates from left to right only as needed. A node matching several union branches still matches once. The selector does not traverse a graph or resolve execution nodes; `AspectBuilder.Install(pointcut, recipe)` applies it to source configurations while they are resolved.
+`Pointcut.Reference(source)` selects by object reference. `Pointcut.OfType<TConfiguration>()` selects implementations and derived types. Pointcuts of the same declared configuration type combine through `And` and `Or`, also spelled `&` and `|`, with left-to-right short-circuit matching. Custom selection derives a small pointcut class. Matching neither traverses a graph nor resolves executions.
 
-A selected configuration can be referenced by several callers and resolved into more than one execution node. Selecting that configuration does not select one caller path or one invocation. Resolver selection follows configuration references as they are resolved.
+A selected configuration can have several callers and contextual execution bindings. Selecting it does not select one invocation or caller path.
 
-See also: Aspect, Configuration, Configuration graph, Execution node, Execution module, Resolution scope.
+See also: Advice, Aspect, Configuration node, Join point, Resolution scope.
+
+### Advice
+
+Status: `Canonical`
+
+Advice wraps the executions built for the configurations a pointcut selects. It contains no pointcut and is separate from the configuration graph.
+
+`Advice<TConfiguration>` identifies the configuration role it can advise. A role advice base prepares a wrapper factory for the selected configuration and the run's types. Resolution compares advice by reference and keeps its prepared state once per advice instance, selected configuration and owner state. Observation, counting and duration measurement are predefined advice.
+
+See also: Aspect, Configuration node, Join point, Pointcut.
+
+### Join point
+
+Status: `Canonical`
+
+A join point is the execution built for one configuration selected by a pointcut. Its advice can be rebound around another contextual execution while retaining the prepared join-point state.
+
+A join point does not identify one invocation or one occurrence of a configuration along a caller path.
+
+See also: Advice, Configuration node, Execution node, Pointcut.
 
 ### Aspect
 
 Status: `Canonical`
 
-An aspect pairs a pointcut with a recipe for wrapping each selected configuration's execution, or composes other aspects. `Aspect.Create(pointcut, recipe)` and `Aspect.Create(source, recipe)` create individual rule aspects that can be passed directly to a resolution scope or attached to a run.
+An aspect holds ordered pointcut/advice pairs in `Advices`. `Aspect.Create(pointcut, advice)` creates one pair; a derived constructor can assign several pairs directly.
 
-An aspect subclass or `Aspect.Create(declare)` groups contributions through `AspectBuilder.Install`. Its overloads include an existing aspect or create a rule aspect from a pointcut or configuration reference and recipe. A composition declares once after successful completion and keeps one immutable ordered snapshot. Nested compositions expand at their installation position; the first occurrence of a shared aspect determines its position. Earlier rules wrap closer to the source execution, and later rules wrap outside them. New scope layers precede inherited layers.
+Runs accept aspects through `AddAspect`. Resolution applies earlier advice closer to the source execution, with a new scope's pairs preceding inherited pairs. Each advice instance applies once at its first position. If the same advice appears with two pointcuts, the first pairing wins. Two traces sharing a clock therefore share its advice without counting twice.
 
-Reusing the same aspect object contributes its rules once to a scope's aspect collection. Separately created rule aspects are independent even when their pointcuts and recipes are equal. Prepared advice is cached per rule aspect and target configuration in the state owning the target's factory; an aspect itself does not own execution state.
+An aspect holds its pairs; resolution state owns prepared advice factories. Reusing an aspect across independent scopes does not share their prepared execution state. An analyzer or clock may own collected data that it intentionally shares across runs.
 
-See also: Configuration node, Execution node, Pointcut, Resolution scope, Wrapper chain.
+See also: Advice, Join point, Pointcut, Resolution scope.
 
 ### Run
 
@@ -523,7 +543,7 @@ An `AlgorithmRun` executes one algorithm configuration on a problem. An `Experim
 
 When a meta-algorithm coordinates child algorithms, the run is created by the algorithm started by the user. Child algorithms and operators participate in that same run unless they are explicitly started as separate runs.
 
-Run analyzers are attached while a run is preparing and installed when execution starts, so their observations can span nested algorithms and multiple short-lived execution nodes. A run does not accept more analyzers after it leaves `Preparing`.
+Run analyzers are added while a run is preparing and their advice is applied during resolution, so their observations can span nested algorithms and multiple short-lived execution nodes. A run does not accept more analyzers after it leaves `Preparing`.
 
 See also: Analyzer, Configuration, Execution node, Search state.
 
@@ -607,41 +627,19 @@ The scope combines state ownership with an immutable ordered collection of zero,
 
 See [execution resolution](/contributing/architecture/execution-resolution) for preparation, binding and observation rules.
 
-See also: Configuration, Wrapper chain, Execution graph, Execution node, Execution module, Run.
-
-### Wrapper registration
-
-Status: `Canonical`
-
-A wrapper registration adds a recipe for wrapping a selected source configuration's execution. `ResolutionScopeBuilder.Wrap` selects sources with a pointcut, or one source by reference. Matching happens during resolution, so sources resolved later by deferred children are included; generated wrappers, and children a registration's own wrappers add, are never offered to that registration. The recipe receives the original source configuration, even when other wrappers also apply.
-
-One registration keeps its own prepared wrapper state for each selected execution, across observation contexts. Two registrations are separate contributions even when their recipes are equal. An execution module groups registrations through `Install`. Wrappers can observe operations or add other typed behavior; observation retains its narrower read-only meaning.
-
-See also: Configuration node, Execution module, Observation, Resolution scope, Wrapper chain.
+See also: Configuration, Wrapper chain, Execution graph, Execution node, Aspect, Run.
 
 ### Wrapper chain
 
 Status: `Canonical`
 
-A wrapper chain is the ordered set of wrappers that apply to one configuration at one resolution scope: every wrapper declared by that scope or any of its ancestors, and no others.
+A wrapper chain is the ordered set of execution wrappers applied to one selected configuration in a resolution context.
 
-The chain controls the bound wrappers, independently of persistent state selection. Adding declarations can rebuild nodes and child bindings without preparing state again. A child selection stays local, and siblings share state only when an ancestor already owns it. Each generated wrapper occurrence preserves its own state across contexts and resolves the original source as the already-built inner chain for that wrapper.
+Configured wrappers belong to the configuration graph. Advice wraps the raw execution built for a configuration. Earlier advice wraps closer to that source execution; later advice wraps outside it. A new scope's advice precedes inherited advice. Each advice instance applies once at its first position.
 
-Within a chain, wrappers declared by an execution module sit outside those declared by the configuration. Greater depth in the current observation path binds more tightly; declaration sequence breaks ties. Retained domains use their current contextual depth.
+Changing the chain can rebuild nodes and child bindings without preparing their persistent state again.
 
-See also: Configuration, Execution node, Execution module, Resolution scope.
-
-### Execution module
-
-Status: `Canonical`
-
-An execution module adds behavior at chosen configurations in a run's execution graph, before the graph is resolved, represented by `IExecutionModule`.
-
-A module declares its wrappers on a `ResolutionScopeBuilder` and resolves nothing itself, so it cannot participate in building the graph it wraps. Run-level additions wrap configuration-level ones, so a module always sees the fully configured operator.
-
-Analyzers install most of the modules a run sees, but the contract is not analysis specific. Writing to a log, reporting progress, advancing a dynamic problem at an iteration boundary and bridging to another runtime are equally valid modules.
-
-See also: Analyzer, Configuration, Wrapper chain, Observation, Resolution scope, Run.
+See also: Advice, Aspect, Configuration, Execution node, Resolution scope.
 
 ### Random number generator (RNG)
 
@@ -681,15 +679,15 @@ See also: Execution node, Run.
 
 Status: `Canonical`
 
-An analyzer is a stateful execution module that records or derives information from selected execution boundaries. `IAnalyzer` inherits `IExecutionModule`, and runs attach it through `Attach` alongside other modules.
+An analyzer is a stateful aspect that records or derives information from selected execution boundaries. A run accepts it through `AddAspect` alongside other aspects.
 
-The caller creates an analyzer for selected algorithm or operator sources, clocks and analysis behavior. A trace owns its aggregation and retention objects, which are never resolved through a run. The run installs observations when execution starts, before materializing the execution graph. Reusing an analyzer across runs intentionally combines its history. A trace exposes typed reads during and after execution. An accumulating analyzer is read once its run has finished.
+The caller selects its sources, clocks and analysis behavior. A trace owns its aggregation and retention objects, which are never resolved through a scope. Its constructor assigns observation and clock advice. Reusing an analyzer across runs intentionally combines its results.
 
-Properties on a trace return already published values without allocation. Its methods may allocate immutable snapshots or projections, and it does not expose its mutable entries through a read-only collection interface. An accumulating analyzer publishes the accumulator itself instead, as described under Accumulator.
+Properties on a trace read published values without allocation. Methods can allocate immutable snapshots or projections. An accumulating analyzer publishes its accumulator itself and is read once its run has finished.
 
 Do not use analyzer for Roslyn analyzers without the Roslyn qualifier when the context could be ambiguous.
 
-See also: Accumulator, Analysis snapshot, Observation, Run.
+See also: Accumulator, Analysis snapshot, Aspect, Observation, Run.
 
 ### Analysis snapshot
 
@@ -827,8 +825,8 @@ See also: Algorithm, Experiment, Run.
 
 Status: `Canonical`
 
-A trial analyzer is a factory that creates an analyzer from each trial algorithm configuration. `TrialAnalyzer.Create` returns a `TrialModule` that the experiment accepts through `AttachPerTrial`. It can select several observation boundaries and create clocks within that factory.
+A trial analyzer factory creates an analyzer for each trial's algorithm configuration. `AspectFactory.Create` supplies the factory passed to `ExperimentRun.AddAspectPerTrial`. It can select several observation boundaries and create clocks for that trial.
 
-The trial analyzer factory is also the typed lookup object passed to `GetAttached` to retrieve ordered trial/analyzer pairs. Each returned `TrialAttachment` exposes the trial as `Trial` and the concrete analyzer as `Module`.
+Pass that same factory to `GetAspectPerTrial` to retrieve entries in trial order. Each `TrialAspect` exposes `Trial` and the concrete analyzer as `Aspect`.
 
-See also: Analyzer, Experiment trial, Run.
+See also: Analyzer, Aspect, Experiment trial, Run.

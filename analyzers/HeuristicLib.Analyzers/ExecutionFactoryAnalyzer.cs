@@ -54,7 +54,7 @@ public sealed class ExecutionFactoryAnalyzer : DiagnosticAnalyzer
         for (var symbol = context.SemanticModel.GetEnclosingSymbol(invocation.SpanStart, context.CancellationToken);
              symbol is not null; symbol = symbol.ContainingSymbol)
         {
-            if (symbol is IMethodSymbol method && (IsExecutionType(method.ReturnType, "ExecutionFactory", "Advice", "WrapperExecutionFactory", "CompositeExecutionFactory") || IsWrapperConstructor(method.ReturnType)
+            if (symbol is IMethodSymbol method && (IsExecutionType(method.ReturnType, "ExecutionFactory", "WrapperExecutionFactory", "CompositeExecutionFactory") || IsWrapperConstructor(method.ReturnType)
                 || method.Parameters.Any(static parameter => IsExecutionType(parameter.Type, "ResolutionScope"))))
                 return true;
             if (symbol is INamedTypeSymbol type && HasContract(type, "IExecutionNode"))
@@ -68,7 +68,7 @@ public sealed class ExecutionFactoryAnalyzer : DiagnosticAnalyzer
         if (invocation.Expression is not MemberAccessExpressionSyntax member
             || invocation.Ancestors().OfType<LambdaExpressionSyntax>().FirstOrDefault() is not { Parent: ArgumentSyntax argument } lambda
             || context.SemanticModel.GetOperation(argument, context.CancellationToken) is not IArgumentOperation preparation
-            || preparation.Parameter?.Name != "prepareFactory"
+            || preparation.Parameter?.Name != "createExecutionFactory"
             || preparation.Parent is not IInvocationOperation resolution
             || !IsExecutionType(resolution.TargetMethod.ContainingType, "ResolutionScope")
             || context.SemanticModel.GetOperation(lambda, context.CancellationToken) is not IAnonymousFunctionOperation callback)

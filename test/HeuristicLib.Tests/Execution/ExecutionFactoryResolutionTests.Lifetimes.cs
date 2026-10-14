@@ -5,26 +5,17 @@ namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 public partial class ExecutionFactoryResolutionTests
 {
     [Fact]
-    public void WithSharesStateAndSnapshotsOneAspectDeclaration()
+    public void WithSharesStateAndReusesAdvicePreparation()
     {
         var root = ResolutionScope.Create();
         IConfigurationNode<ICounterExecution> source = new CounterConfiguration("source");
-        var declarations = 0;
         var observed = 0;
-        AspectBuilder? captured = null;
-        var aspect = Aspect.Create(builder =>
-        {
-            declarations++;
-            captured = builder;
-            builder.Install(source, inner => new CounterWrapper(inner, _ => observed++));
-        });
+        var aspect = Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(_ => observed++));
         var first = root.With(aspect);
         first.Resolve(source, static source => source.CreateExecutionFactory(), PrepareCounterAdvice).Next().ShouldBe(1);
         root.With(aspect).Resolve(source, static source => source.CreateExecutionFactory(), PrepareCounterAdvice).Next().ShouldBe(2);
         root.Resolve(source, static source => source.CreateExecutionFactory(), PrepareCounterAdvice).Next().ShouldBe(3);
-        captured!.Install(source, _ => throw new InvalidOperationException("late declaration"));
         first.Resolve(source, static source => source.CreateExecutionFactory(), PrepareCounterAdvice).Next().ShouldBe(4);
-        declarations.ShouldBe(1);
         observed.ShouldBe(3);
     }
 
@@ -32,24 +23,18 @@ public partial class ExecutionFactoryResolutionTests
     public void InstallingAnAspectAcrossOverlappingPathsAppliesItsAdviceOnce()
     {
         IConfigurationNode<ICounterExecution> source = new CounterConfiguration("source");
-        var declarations = 0;
         var recipes = 0;
         var observed = 0;
-        var shared = Aspect.Create(builder =>
+        var shared = Aspect.Create(Pointcut.Reference(source), new CounterAdvice(original =>
         {
-            declarations++;
-            builder.Install(source, original =>
-            {
-                recipes++;
-                return new CounterWrapper(original, _ => observed++);
-            });
-        });
-        var first = Aspect.Create(builder => builder.Install(shared));
-        var second = Aspect.Create(builder => builder.Install(shared));
-        var scope = ResolutionScope.Create(builder => builder.Install(first).Install(second).Install(shared));
+            recipes++;
+            return new CounterObservationAdvice(_ => observed++).CreateWrapperFactory(original);
+        }));
+        var first = new AdviceGroup(shared);
+        var second = new AdviceGroup(shared);
+        var scope = ResolutionScope.Create(first, second, shared);
         scope.With(shared).Resolve(source, static source => source.CreateExecutionFactory(), PrepareCounterAdvice).Next();
         scope.CreateChildScope(shared).Resolve(source, static source => source.CreateExecutionFactory(), PrepareCounterAdvice).Next();
-        declarations.ShouldBe(1);
         recipes.ShouldBe(1);
         observed.ShouldBe(2);
     }
@@ -62,7 +47,7 @@ public partial class ExecutionFactoryResolutionTests
         var owner = new FrameConfiguration();
         root.Resolve(owner);
         var observed = 0;
-        var child = root.CreateChildScope(builder => builder.Install(source, s => new CounterWrapper(s, _ => observed++)));
+        var child = root.CreateChildScope(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(_ => observed++)));
         var direct = child.Resolve(source, static source => source.CreateExecutionFactory(), PrepareCounterAdvice);
         direct.Next().ShouldBe(1);
         var frame = child.Resolve(owner).Scope;
@@ -85,14 +70,14 @@ public partial class ExecutionFactoryResolutionTests
         var outer = 0;
         var inner = 0;
         var recipes = 0;
-        var root = ResolutionScope.Create(builder => builder.Install(source, s =>
+        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CounterAdvice(s =>
         {
             recipes++;
-            return new DeferredWrapper(s, () => outer++);
-        }));
+            return new DeferredAdvice(() => outer++).CreateWrapperFactory(s);
+        })));
         var original = root.Resolve(source, static source => source.CreateExecutionFactory(), PrepareCounterAdvice);
         original.Next().ShouldBe(1);
-        var child = root.CreateChildScope(builder => builder.Install(source, s => new DeferredWrapper(s, () => inner++)));
+        var child = root.CreateChildScope(Aspect.Create(Pointcut.Reference(source), new DeferredAdvice(() => inner++)));
         var rebound = child.Resolve(source, static source => source.CreateExecutionFactory(), PrepareCounterAdvice);
         rebound.Next().ShouldBe(2);
         original.Next().ShouldBe(3);
@@ -102,25 +87,6 @@ public partial class ExecutionFactoryResolutionTests
         recipes.ShouldBe(1);
     }
 
-    [Fact]
-    public void FailedAspectDeclarationDoesNotPublishPartialAdviceAndCanBeRetried()
-    {
-        IConfigurationNode<ICounterExecution> source = new CounterConfiguration("source");
-        var attempts = 0;
-        var observed = 0;
-        var fault = new InvalidOperationException("declaration failure");
-        var aspect = Aspect.Create(builder =>
-        {
-            builder.Install(source, s => new CounterWrapper(s, _ => observed++));
-            if (++attempts == 1)
-                throw fault;
-        });
-        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create(aspect)).ShouldBeSameAs(fault);
-        var scope = ResolutionScope.Create(aspect);
-        scope.Resolve(source, static source => source.CreateExecutionFactory(), PrepareCounterAdvice).Next();
-        attempts.ShouldBe(2);
-        observed.ShouldBe(1);
-    }
 
     [Theory]
     [InlineData(false)]
@@ -130,8 +96,8 @@ public partial class ExecutionFactoryResolutionTests
         var weak = new List<WeakReference>();
         IConfigurationNode<ICounterExecution> source = new CollectingCounter(weak);
         var aspect = directAspect
-            ? Aspect.Create(source, s => new CollectingWrapper(s, weak))
-            : Aspect.Create(builder => builder.Install(source, s => new CollectingWrapper(s, weak)));
+            ? Aspect.Create(Pointcut.Reference(source), new CollectingAdvice(weak))
+            : new AdviceGroup(Aspect.Create(Pointcut.Reference(source), new CollectingAdvice(weak)));
         var root = ResolutionScope.Create(aspect);
         CreateFreshBindings(root, source, weak);
         weak.Count.ShouldBe(96);
@@ -188,8 +154,8 @@ public partial class ExecutionFactoryResolutionTests
         {
             var observed = new List<int>();
             var aspect = directAspect
-                ? Aspect.Create(source, s => new CounterWrapper(s, observed.Add))
-                : Aspect.Create(builder => builder.Install(source, s => new CounterWrapper(s, observed.Add)));
+                ? Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(observed.Add))
+                : new AdviceGroup(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(observed.Add)));
             var child = root.CreateChildScope(aspect);
             var binding = child.Resolve(source, static source => source.CreateExecutionFactory(), PrepareCounterAdvice);
             binding.Next();
@@ -202,7 +168,7 @@ public partial class ExecutionFactoryResolutionTests
     private static (FrameExecution Binding, List<WeakReference> References) CreateDeferredBinding(ResolutionScope root, List<int> observed)
     {
         IConfigurationNode<ICounterExecution> source = new CounterConfiguration("local");
-        var aspect = Aspect.Create(builder => builder.Install(source, s => new CounterWrapper(s, observed.Add)));
+        var aspect = Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(observed.Add));
         var child = root.CreateChildScope(aspect);
         var binding = child.Resolve(new FrameConfiguration(source));
         child.Resolve(source, static source => source.CreateExecutionFactory(), PrepareCounterAdvice, inner => inner as ICounterControl, out var raw);
@@ -230,9 +196,9 @@ public partial class ExecutionFactoryResolutionTests
         public IConfigurationNode<ICounterExecution>? Source { get; } = source;
     }
 
-    private sealed record DeferredWrapper(IConfigurationNode<ICounterExecution> Source, Action Observe) : WrappingCounter(Source)
+    private sealed class DeferredAdvice(Action observe) : CounterAdviceBase
     {
-        public override Advice<ICounterExecution> CreateAdvice() => inner => new Execution(inner, Observe);
+        public override WrapperExecutionFactory<ICounterExecution> CreateWrapperFactory(IConfigurationNode<ICounterExecution> configuration) => inner => new Execution(inner, observe);
         private sealed class Execution(ICounterExecution inner, Action observe) : ICounterExecution
         {
             public int Value => inner.Value;
@@ -255,12 +221,12 @@ public partial class ExecutionFactoryResolutionTests
         }
     }
 
-    private sealed record CollectingWrapper(IConfigurationNode<ICounterExecution> Source, List<WeakReference> Weak) : WrappingCounter(Source)
+    private sealed class CollectingAdvice(List<WeakReference> weak) : CounterAdviceBase
     {
-        public override Advice<ICounterExecution> CreateAdvice()
+        public override WrapperExecutionFactory<ICounterExecution> CreateWrapperFactory(IConfigurationNode<ICounterExecution> configuration)
         {
             var state = new Counter();
-            Weak.Add(new WeakReference(state));
+            weak.Add(new WeakReference(state));
             return inner => new WrapperExecution(inner, state, _ => { });
         }
     }

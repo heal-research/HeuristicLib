@@ -30,9 +30,9 @@ public class PointcutSpecs
         var largeMutation = smallMutation with { MutationStrength = 2.0 };
 
         Pointcut<IMutator<RealVector>> selectedMutators = Pointcut.OfType<IMutator<RealVector>>()
-            .And(mutator => mutator is GaussianMutator { MutationStrength: < 1.0 });
+            .And(new SmallMutations());
         Pointcut<GaussianMutator> selectedGaussianMutators = Pointcut.OfType<GaussianMutator>()
-            .And(mutator => mutator.MutationStrength < 1.0);
+            .And(new SmallGaussianMutations());
 
         selectedMutators.Matches(smallMutation).ShouldBeTrue();
         selectedGaussianMutators.Matches(smallMutation).ShouldBeTrue();
@@ -48,9 +48,9 @@ public class PointcutSpecs
         var refinement = new NamedMutator<RealVector>(child, "refinement");
         var allMutators = Pointcut.OfType<IMutator<RealVector>>();
         Pointcut<IMutator<RealVector>> selected = allMutators
-            .And(mutator => mutator is NamedMutator<RealVector> { Name: "exploration" });
+            .And(new ExplorationMutations());
 
-        // Matches examines supplied nodes; AspectBuilder.Install applies a selection while resolving.
+        // Matches examines supplied nodes; an aspect applies a selection while resolving.
         IConfigurationNode[] nodes = [child, exploration, refinement];
         nodes.Where(selected.Matches).ShouldBe([exploration]);
         nodes.Where(allMutators.Matches).ShouldBe(nodes);
@@ -78,7 +78,7 @@ public class PointcutSpecs
         IMutator<RealVector> alternative = new GaussianMutator(mutationRate: 0.2, mutationStrength: 2.0);
         var exactReference = Pointcut.Reference(preferred);
         var smallMutations = Pointcut.OfType<IMutator<RealVector>>()
-            .And(mutator => mutator is GaussianMutator { MutationStrength: < 1.0 });
+            .And(new SmallMutations());
 
         Pointcut<IMutator<RealVector>> selected = exactReference.Or(smallMutations);
         Pointcut<IMutator<RealVector>> sameSelection = exactReference | smallMutations;
@@ -94,13 +94,11 @@ public class PointcutSpecs
         var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
         IMutator<RealVector> exploration = new NamedMutator<RealVector>(child, "exploration");
         IMutator<RealVector> refinement = new NamedMutator<RealVector>(child, "refinement");
-        var namedExploration = new Pointcut<IMutator<RealVector>>(
-            mutator => mutator is NamedMutator<RealVector> { Name: "exploration" });
+        var namedExploration = new ExplorationMutations();
 
         var namedReferences = Pointcut.Reference(exploration) | Pointcut.Reference(refinement);
         Pointcut<IMutator<RealVector>> selected = namedReferences & namedExploration;
-        var sameSelection = namedReferences.And(
-            mutator => mutator is NamedMutator<RealVector> { Name: "exploration" });
+        var sameSelection = namedReferences.And(new ExplorationMutations());
         IConfigurationNode[] nodes = [child, exploration, refinement];
 
         nodes.Where(selected.Matches).ShouldBe([exploration]);
@@ -129,10 +127,10 @@ public class PointcutSpecs
         var mutations = new CountAccumulator();
         var counting = useSubclass
             ? new MutationCounter(mutations)
-            : Aspect.Create(Pointcut.OfType<IMutator<RealVector>>(), mutator => mutator.CountCalls(mutations));
+            : Aspect.Create(Pointcut.OfType<IMutator<RealVector>>(), new CountingMutatorAdvice<RealVector>(mutations, OperatorCountMetric.Calls));
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-            .Attach(counting);
+            .AddAspect(counting);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         mutations.CurrentCount.ShouldBeGreaterThan(0);
@@ -149,8 +147,8 @@ public class PointcutSpecs
         var queriedTemperatures = new List<double>();
 
         var recording = selectByReference
-            ? Aspect.Create(warmup, schedule => new RecordedCooling(schedule, queriedTemperatures.Add))
-            : Aspect.Create(Pointcut.OfType<ICoolingSchedule>(), schedule => new RecordedCooling(schedule, queriedTemperatures.Add));
+            ? Aspect.Create(Pointcut.Reference(warmup), new RecordedCoolingAdvice(queriedTemperatures.Add))
+            : Aspect.Create(Pointcut.OfType<ICoolingSchedule>(), new RecordedCoolingAdvice(queriedTemperatures.Add));
         var scope = ResolutionScope.Create(recording);
         var execution = scope.Resolve(plan);
 
@@ -170,9 +168,9 @@ public class PointcutSpecs
         var queriedTemperatures = new List<double>();
         var recording = Aspect.Create(
             Pointcut.OfType<ICoolingSchedule>(),
-            schedule => new RecordedCooling(schedule, queriedTemperatures.Add));
-        var first = Aspect.Create(builder => builder.Install(recording));
-        var second = Aspect.Create(builder => builder.Install(recording));
+            new RecordedCoolingAdvice(queriedTemperatures.Add));
+        var first = new AspectGroup(recording);
+        var second = new AspectGroup(recording);
 
         var scope = useCompositions ? ResolutionScope.Create(recording, first, second) : ResolutionScope.Create(recording);
         var execution = scope.Resolve(plan);
@@ -190,14 +188,12 @@ public class PointcutSpecs
         var plan = new AnnealingPlan(warmup, main, WarmupSteps: 3);
         var events = new List<string>();
         var recording = Aspect.Create(Pointcut.OfType<ICoolingSchedule>(),
-            schedule => new RecordedCooling(schedule, temperature => events.Add($"existing:{temperature}")));
+            new RecordedCoolingAdvice(temperature => events.Add($"existing:{temperature}")));
         Action<double> recordWarmup = temperature => events.Add($"warmup:{temperature}");
         Action<double> recordAll = temperature => events.Add($"all:{temperature}");
-        var combined = Aspect.Create(builder => builder
-            .Install(recording)
-            .Install(warmup, schedule => new RecordedCooling(schedule, recordWarmup))
-            .Install(Pointcut.OfType<ICoolingSchedule>(),
-                schedule => new RecordedCooling(schedule, recordAll)));
+        var combined = new AspectGroup(recording,
+            Aspect.Create(Pointcut.Reference(warmup), new RecordedCoolingAdvice(recordWarmup)),
+            Aspect.Create(Pointcut.OfType<ICoolingSchedule>(), new RecordedCoolingAdvice(recordAll)));
 
         var execution = ResolutionScope.Create(combined).Resolve(plan);
         execution.Temperature(step: 0).ShouldBe(100);
@@ -215,7 +211,7 @@ public class PointcutSpecs
         var temperatures = TraceAnalyzer<double>.Create<ICoolingSchedule, double>(
             [warmup, warmup, main],
             static (schedule, record) => Aspect.Create(
-                schedule, current => new RecordedCooling(current, record)),
+                Pointcut.Reference(schedule), new RecordedCoolingAdvice(record)),
             static temperature => temperature);
         var execution = ResolutionScope.Create(temperatures).Resolve(plan);
 
@@ -227,12 +223,37 @@ public class PointcutSpecs
         temperatures.Snapshot().Values.ShouldBe([100, 2]);
     }
 
-    private sealed class MutationCounter(CountAccumulator mutations) : Aspect
+    private sealed class MutationCounter : Aspect
     {
         private static readonly Pointcut<IMutator<RealVector>> Mutators = Pointcut.OfType<IMutator<RealVector>>();
 
-        protected override void Declare(AspectBuilder builder) =>
-            builder.Install(Mutators, mutator => mutator.CountCalls(mutations));
+        public MutationCounter(CountAccumulator mutations)
+        {
+            Advices = [(Mutators, new CountingMutatorAdvice<RealVector>(mutations, OperatorCountMetric.Calls))];
+        }
+    }
+
+    private sealed class SmallMutations : Pointcut<IMutator<RealVector>>
+    {
+        public override bool Matches(IMutator<RealVector> mutator) => mutator is GaussianMutator { MutationStrength: < 1.0 };
+    }
+
+    private sealed class SmallGaussianMutations : Pointcut<GaussianMutator>
+    {
+        public override bool Matches(GaussianMutator mutator) => mutator.MutationStrength < 1.0;
+    }
+
+    private sealed class ExplorationMutations : Pointcut<IMutator<RealVector>>
+    {
+        public override bool Matches(IMutator<RealVector> mutator) => mutator is NamedMutator<RealVector> { Name: "exploration" };
+    }
+
+    private sealed class AspectGroup : Aspect
+    {
+        public AspectGroup(params IReadOnlyList<Aspect> aspects)
+        {
+            Advices = [.. aspects.SelectMany(aspect => aspect.Advices)];
+        }
     }
 
     // A consumer-defined role: the library knows nothing about cooling schedules.
@@ -257,18 +278,13 @@ public class PointcutSpecs
         }
     }
 
-    private static Advice<ICoolingScheduleExecution> PrepareCoolingAdvice(IConfigurationNode wrapper) =>
-        wrapper is RecordedCooling typed ? typed.CreateAdvice()
-            : throw new InvalidOperationException("Not a single-child wrapper for ICoolingScheduleExecution.");
+    private static WrapperExecutionFactory<ICoolingScheduleExecution> PrepareCoolingAdvice(Advice advice, ICoolingSchedule schedule) =>
+        ((RecordedCoolingAdvice)advice).CreateWrapperFactory(schedule);
 
-    private sealed record RecordedCooling(ICoolingSchedule Schedule, Action<double> Record) : ICoolingSchedule
+    private sealed class RecordedCoolingAdvice(Action<double> record) : Advice<ICoolingSchedule>
     {
-        public Advice<ICoolingScheduleExecution> CreateAdvice() => inner => new Execution(inner, Record);
-        public ExecutionFactory<ICoolingScheduleExecution> CreateExecutionFactory()
-        {
-            var advice = CreateAdvice();
-            return scope => advice(scope.Resolve(Schedule, static source => source.CreateExecutionFactory(), PrepareCoolingAdvice));
-        }
+        public WrapperExecutionFactory<ICoolingScheduleExecution> CreateWrapperFactory(ICoolingSchedule schedule) =>
+            inner => new Execution(inner, record);
 
         private sealed class Execution(ICoolingScheduleExecution schedule, Action<double> record) : ICoolingScheduleExecution
         {

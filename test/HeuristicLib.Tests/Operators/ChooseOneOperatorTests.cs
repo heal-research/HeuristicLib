@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
@@ -472,11 +473,11 @@ public class ChooseOneOperatorTests
     public void DurationWrappers_SharingAChildMutator_ReuseItsExecution()
     {
         var innerOperator = new CountingExecutionMutator();
-        var firstWrapper = innerOperator.MeasureDuration(new DurationAccumulator());
-        var secondWrapper = innerOperator.MeasureDuration(new DurationAccumulator());
+        var firstWrapper = Aspect.MeasureDuration(innerOperator, new DurationAccumulator());
+        var secondWrapper = Aspect.MeasureDuration(innerOperator, new DurationAccumulator());
         var scope = ResolutionScope.Create();
-        var firstExecution = scope.ResolveMutator(firstWrapper);
-        var secondExecution = scope.ResolveMutator(secondWrapper);
+        var firstExecution = scope.With(firstWrapper).ResolveMutator(innerOperator);
+        var secondExecution = scope.With(secondWrapper).ResolveMutator(innerOperator);
         var problem = FuncProblem.Create(
             evaluateFunc: (int x) => x,
             encoding: DummySearchSpace<int>.Instance,

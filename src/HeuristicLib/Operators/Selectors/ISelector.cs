@@ -23,6 +23,19 @@ public interface ISelectorExecution<TCandidate, in TSearchSpace, in TProblem>
     IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
+public abstract class SelectorAdvice<TCandidate> : Advice<ISelector<TCandidate>>
+{
+    /// <summary>Prepares this advice for one join point and returns a constructor accepting the execution it wraps.</summary>
+    /// <remarks>
+    /// Resolution calls this once per join point and owner state. Validate the run's types and allocate state that must
+    /// survive rebuilding the execution graph here.
+    /// </remarks>
+    /// <param name="selector">The configuration the pointcut selected.</param>
+    public abstract WrapperExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ISelector<TCandidate> selector)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+}
+
 public static class SelectorResolutionExtensions
 {
     extension(ResolutionScope scope)
@@ -30,7 +43,7 @@ public static class SelectorResolutionExtensions
         public ISelectorExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate> selector)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(selector, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem>);
+            scope.Resolve(selector, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(selector))]
         public ISelectorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate>? selector)
@@ -78,12 +91,8 @@ public static class SelectorResolutionExtensions
             scope.Scope.TryResolve(selector, out execution, out reason);
     }
 
-    private static Advice<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> PrepareAdvice<TCandidate, TSearchSpace, TProblem>(IConfigurationNode wrapper)
+    private static WrapperExecutionFactory<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>(Advice advice, ISelector<TCandidate> selector)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        if (wrapper is not WrappingSelector<TCandidate> typed)
-            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(ISelector<TCandidate>).Name} producing {typeof(ISelectorExecution<TCandidate, TSearchSpace, TProblem>).Name}.");
-        return WrappingSelector<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem>(typed).Invoke;
-    }
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        ((SelectorAdvice<TCandidate>)advice).CreateWrapperFactory<TSearchSpace, TProblem>(selector);
 }

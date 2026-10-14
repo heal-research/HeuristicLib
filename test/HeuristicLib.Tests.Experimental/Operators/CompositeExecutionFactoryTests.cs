@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.MetaOptimization;
@@ -21,7 +22,7 @@ public class CompositeExecutionFactoryTests
         var root = ResolutionScope.Create();
         var outer = root.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source);
         var calls = new CountAccumulator();
-        var child = root.CreateChildScope(builder => builder.Install<ICreator<string>>(left, original => original.CountCalls(calls)));
+        var child = root.CreateChildScope(Aspect.CountCalls(left, calls));
         var inner = child.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source);
 
         outer.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("a", "x"));

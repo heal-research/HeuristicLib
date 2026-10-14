@@ -66,7 +66,7 @@ public sealed class EvaluatorExecutionFactoryTests
         var outer = Resolve(parent, source);
         Evaluate(outer, 1).ShouldBe([new ObjectiveVector(101)]);
 
-        var child = parent.CreateChildScope(builder => builder.Install<IEvaluator<int>>(leaf, original => new ObservingEvaluator(original, reports.AddRange)));
+        var child = parent.CreateChildScope(Aspect.Create(Pointcut.Reference(leaf), new ObservingEvaluatorAdvice(reports.AddRange)));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         Evaluate(inner, 1).ShouldBe([new ObjectiveVector(101)]);
@@ -96,7 +96,7 @@ public sealed class EvaluatorExecutionFactoryTests
         var outer = Resolve(parent, source);
         Evaluate(outer, 1).ShouldBe([new ObjectiveVector(101)]);
 
-        var child = parent.CreateChildScope(builder => builder.Install<IEvaluator<int>>(leaf, original => new ObservingEvaluator(original, reports.AddRange)));
+        var child = parent.CreateChildScope(Aspect.Create(Pointcut.Reference(leaf), new ObservingEvaluatorAdvice(reports.AddRange)));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         Evaluate(inner, 2, 3).ShouldBe([new ObjectiveVector(202), new ObjectiveVector(-1)]);
@@ -140,16 +140,16 @@ public sealed class EvaluatorExecutionFactoryTests
         }
     }
 
-    private sealed record ObservingEvaluator : WrappingEvaluator<int>
+    private sealed class ObservingEvaluatorAdvice : EvaluatorAdvice<int>
     {
         private readonly Action<IReadOnlyList<int>> report;
 
-        public ObservingEvaluator(IEvaluator<int> childEvaluator, Action<IReadOnlyList<int>> report) : base(childEvaluator)
+        public ObservingEvaluatorAdvice(Action<IReadOnlyList<int>> report)
         {
             this.report = report;
         }
 
-        protected override WrapperExecutionFactory<IEvaluatorExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        public override WrapperExecutionFactory<IEvaluatorExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<int> configuration) =>
             child => new Execution<TRunSearchSpace, TRunProblem>(child, report);
 
         private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<int, TSearchSpace, TProblem> child, Action<IReadOnlyList<int>> report)

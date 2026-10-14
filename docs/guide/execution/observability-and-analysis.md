@@ -5,6 +5,7 @@ An analyzer collects data from the execution boundaries you select. Create it, a
 ```csharp
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 
 var run = algorithm.CreateRun(problem, random)
@@ -24,8 +25,8 @@ An analyzer is one of several ways to see what a run does. Pick by what you need
 | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | Look at every state the algorithm yields                                                    | `algorithm.Stream(problem, random)`                                                                          |
 | Only the final state                                                                        | `algorithm.CompleteAsync(problem, random)`                                                                   |
-| Typed data from chosen boundaries, such as a quality curve or an operator's offspring       | An analyzer attached with `Attach`                                                                           |
-| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An execution module attached with `Attach`                                                                   |
+| Typed data from chosen boundaries, such as a quality curve or an operator's offspring       | An analyzer attached with `AddAspect`                                                                        |
+| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An aspect added with `AddAspect`                                                                             |
 | A count or duration that stops or limits the run                                            | Instrumentation such as `CountCandidates` or `LimitedToEvaluatedCandidates`, read by terminators and budgets |
 | The same analysis for every experiment trial                                                | A trial analyzer, see [Experiments](/guide/execution/experiments)                                            |
 
@@ -40,12 +41,14 @@ var evaluations = Clock.FromEvaluations(algorithm.Evaluator);
 var best = algorithm.Evaluator.TraceBestSoFar(clocks: [evaluations]);
 var population = algorithm.TracePopulationQuality(clocks: [evaluations]);
 var run = algorithm.CreateRun(problem, random)
-    .Attach(best)
-    .Attach(population);
+    .AddAspect(best)
+    .AddAspect(population);
 await run.CompleteAsync();
 ```
 
-Several traces may share the same clock in one run. Its observations are installed once. Use that same clock object to project the trace; constructing another clock does not identify the original axis.
+`Clock.FromElapsedTime(timeProvider)` measures time since the clock was constructed. Create it when that interval should begin.
+
+Several traces may share the same clock in one run. Its advice applies once. Use that same clock object to project the trace; constructing another clock does not identify the original axis.
 
 Evaluation counts describe the selected evaluator boundary. A caching evaluator's outer boundary can count requests while its inner evaluator counts cache misses. Choose the boundary whose work you intend to compare.
 
@@ -53,7 +56,7 @@ Observation sources match configurations by reference. A copied configuration is
 
 ## Ownership and reads
 
-A run accepts analyzers and other execution modules through `Attach` while its lifecycle is `Preparing`. It installs them in attachment order when execution starts, before resolving the execution graph. Attaching the same object again does not install it twice. Create fresh analyzers and clocks for independent results. You may reuse them across runs when combined history or cumulative counts are intentional. Installation does not reset their state.
+A run accepts analyzers and other aspects through `AddAspect` while its lifecycle is `Preparing`. It installs them in attachment order when execution starts, before resolving the execution graph. Attaching the same object again does not install it twice. Create fresh analyzers and clocks for independent results. You may reuse them across runs when combined history or cumulative counts are intentional. Installation does not reset their state.
 
 `LifecycleState` reports whether a run is `Preparing`, `Running`, `Paused`, `Completed`, `Canceled`, `Failed` or `Stopped`. Calling an execution entry point freezes its attachments. Each returned execution stream has one consumer. The run itself can continue through a later `Stream()` call after the consumer stops at a yielded root-algorithm state.
 
@@ -76,22 +79,13 @@ Retention runs after measurement and aggregation. It controls stored entries and
 
 ## Accumulating analyzers
 
-Some analysis is not a series. A Pareto front, a genealogy graph and a fitted model are each one object that every observation changes, and what you want back is that object as it stands. Those analyzers derive from `AccumulatingAnalyzer`:
+Some analysis produces one mutable summary rather than a history. Derive from `AccumulatingAnalyzer`, assign observation advice in the constructor, and update the summary under `Sync`:
 
 ```csharp
-var front = new ParetoFrontAnalyzer<RealVector, TSearchSpace, TProblem>(
-    problem.Objective, referencePoint, algorithm.Evaluator);
-
-var points = front.Front.Points;   // the front itself, still growing while the run runs
-```
-
-An accumulator is one mutable object, so what it publishes is a live view of it rather than a copy. Read it once the run has finished. Clocks and retention do not apply either: it holds the current state, not a history, so there is no entry for a moment to belong to.
-
-To write one, derive from `AccumulatingAnalyzer`, install your observations, and update under `Sync`:
-
-```csharp
-public override void Install(ResolutionScopeBuilder builder) =>
-    builder.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, Record);
+public CandidateSummaryAnalyzer(IEvaluator<TCandidate> evaluator)
+{
+    Advices = Aspect.Observe(evaluator, Record).Advices;
+}
 
 private void Record(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation)
 {
@@ -99,6 +93,8 @@ private void Record(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> obs
         accumulator.Add(observation.Candidates);
 }
 ```
+
+Read an accumulating analyzer after the run finishes. Clocks and retention apply to trace entries, so they do not apply to a single mutable summary.
 
 ## Custom traces
 
@@ -126,7 +122,7 @@ var evaluators = new[] { firstAlgorithm.Evaluator, secondAlgorithm.Evaluator };
 var combined = evaluators.TraceBestSoFar();
 ```
 
-Attach `combined` to both runs to intentionally accumulate shared history. Separate traces have separate strategy state, even when they use the same aggregation or retention configuration object.
+Attach `combined` to both runs to intentionally accumulate shared history. Separate traces have independent strategy state when each receives its own aggregation and retention objects.
 
 Take one snapshot when you want consistent projections onto several axes:
 
@@ -141,13 +137,13 @@ The snapshot preserves its selected axes even when empty. Selected clocks are re
 
 Single-objective traces use the observed problem's objective comparer automatically. A multi-objective problem without a total order cannot supply a unique best, median, or worst. Ranking throws when first required, even for a singleton batch. There is no implicit lexicographic fallback.
 
-Use Pareto analysis, such as the experimental `TraceHyperVolume`, or explicitly select an objective comparer for the analysis:
+Select an objective comparer explicitly when the trace needs a total order:
 
 ```csharp
 var best = algorithm.Evaluator.TraceBestSoFar(objectiveComparer: new LexicographicComparer(problem.Objective.Directions));
 ```
 
-This makes dimension priority explicit and affects this trace's comparisons, including best-so-far accumulation. It does not change the problem or algorithm's objective. Analysis accepts the objective system's existing `IComparer<ObjectiveVector>` implementations. The `RequireTotalOrder` helper also serves callers outside analysis. Genealogy and rank factories accept the same objective comparer. The correlation NSGA-II helper uses a lexicographic comparer for reports while leaving optimization Pareto-based. Ranking is checked at observation time because installation has no problem context.
+This makes dimension priority explicit and affects this trace's comparisons, including best-so-far accumulation. It does not change the problem or algorithm's objective. Analysis accepts the objective system's existing `IComparer<ObjectiveVector>` implementations. The `RequireTotalOrder` helper also serves callers outside analysis. Ranking is checked at observation time because installation has no problem context.
 
 ## Experiments
 
@@ -157,13 +153,13 @@ An experiment uses a trial analyzer factory to create fresh analyzers for every 
 
 `TraceAnalyzer<TResult>.Create` accepts sources, a factory connecting each source to a recording callback, and a measurement function. Consumer-defined roles use the same trace storage, retention and clocks as the built-in `Analyzer.Trace` overloads. Sources are deduplicated by reference.
 
-For example, with a consumer-defined cooling-schedule role and its `RecordedCooling` wrapper:
+For example, with a consumer-defined cooling-schedule role and its `RecordedCoolingAdvice`:
 
 ```csharp
 var temperatures = TraceAnalyzer<double>.Create<ICoolingSchedule, double>(
     [warmup, main],
     static (schedule, record) => Aspect.Create(
-        schedule, current => new RecordedCooling(current, record)),
+        Pointcut.Reference(schedule), new RecordedCoolingAdvice(record)),
     static temperature => temperature);
 var execution = ResolutionScope.Create(temperatures).Resolve(plan);
 execution.Temperature(step: 0);
@@ -174,28 +170,43 @@ The factory initializes trace storage before creating its observation callbacks 
 
 ## Use an aspect directly
 
-`Aspect.Create` pairs a pointcut or configuration reference with a wrapper recipe. Pass that aspect directly to `ResolutionScope.Create`, `With` or `CreateChildScope`, or attach it to a run with `Attach`. A containing aspect is useful when grouping several contributions.
-
-Using the same cooling-schedule role and wrapper:
+`Aspect.Create` pairs a pointcut with advice. Pass it to `ResolutionScope.Create`, `With` or `CreateChildScope`, or add it to a preparing run with `AddAspect`.
 
 ```csharp
-var queriedTemperatures = new List<double>();
-var recording = Aspect.Create(
-    Pointcut.OfType<ICoolingSchedule>(),
-    schedule => new RecordedCooling(schedule, queriedTemperatures.Add));
-var execution = ResolutionScope.Create(recording).Resolve(plan);
+var counter = new CountAccumulator();
+var counting = Aspect.CountCalls(algorithm.Mutator, counter);
+var duration = new DurationAccumulator();
+var timing = Aspect.MeasureDuration(algorithm.Mutator, duration, TimeProvider.System);
+var observation = Aspect.Observe(algorithm.Mutator,
+    value => Console.WriteLine(value.Offspring.Count));
+var run = algorithm.CreateRun(problem, random)
+    .AddAspect(counting)
+    .AddAspect(timing)
+    .AddAspect(observation);
+await run.CompleteAsync();
 ```
 
-The aspect records each selected temperature query. Use `Aspect.Create(warmup, recipe)` to select just the `warmup` configuration by reference.
+Earlier advice wraps closer to the source execution. Here timing finishes before the observation callback, so logging is outside the measurement. Counting updates only after success; timing uses `finally` and records failed calls too.
 
-`AspectBuilder.Install` adds each contribution to one ordered list. It accepts an existing aspect, a configuration reference and recipe, or a pointcut and recipe:
+To select several configurations, pair a pointcut with role advice:
 
 ```csharp
-var combined = Aspect.Create(builder => builder
-    .Install(recording)
-    .Install(warmup, schedule => new RecordedCooling(schedule, recordWarmup))
-    .Install(Pointcut.OfType<ICoolingSchedule>(),
-        schedule => new RecordedCooling(schedule, recordAll)));
+var counting = Aspect.Create(Pointcut.OfType<IMutator<RealVector>>(),
+    new CountingMutatorAdvice<RealVector>(counter, OperatorCountMetric.Candidates));
 ```
 
-A composition expands at its installation position. If several compositions include the same aspect, its first occurrence determines its position and its rules apply once. Separate calls to `Aspect.Create(pointcut, recipe)` or the recipe-taking `Install` overloads create independent rules that each apply. Earlier rules wrap closer to the source execution; later rules wrap outside them. Child-scope and `With` layers precede inherited layers. Preparation caches belong to the scope's execution state; reusing an aspect across independent scopes does not share their prepared state.
+Custom selection derives a small class:
+
+```csharp
+sealed class SmallMutations : Pointcut<IMutator<RealVector>>
+{
+    public override bool Matches(IMutator<RealVector> mutator) =>
+        mutator is GaussianMutator { MutationStrength: < 1.0 };
+}
+```
+
+Reference, type and custom pointcuts of the same configuration type combine with `And`/`&` and `Or`/`|`. Matching short-circuits from left to right. The pointcut sees configurations that resolution reaches, including those created later by a meta-algorithm.
+
+An aspect subclass assigns several pairs directly to `Advices` in its constructor. It can include a clock's pairs before its own observations. Resolution applies each advice instance once, at its first position; sharing a clock across several traces therefore counts each call once. If the same advice is paired with two pointcuts, the first pairing wins. Use separate advice instances for separate selections.
+
+A new scope layer precedes inherited layers. Prepared advice state belongs to the state owning each selected configuration. Reusing an aspect across independent scopes does not share that prepared state; reusing its caller-owned accumulator intentionally combines measurements.

@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -124,7 +124,7 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     /// </remarks>
     public Aspect CreateIterationUpdateAspect<TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState =>
-        new IterationUpdateAspect<TSelf, TCandidate, TSearchSpace, TSearchState>(this, algorithm);
+        Aspect.Observe<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>(algorithm, _ => CompleteIteration());
 
     internal void CompleteIteration()
     {
@@ -235,19 +235,4 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
 internal interface IUpdateRequestable
 {
     void RequestUpdate();
-}
-
-/// <summary>
-/// Applies a dynamic problem's deferred updates at an algorithm's iteration boundary.
-/// </summary>
-internal sealed class IterationUpdateAspect<TSelf, TCandidate, TSearchSpace, TSearchState>(
-    DynamicProblem<TSelf, TCandidate, TSearchSpace> problem,
-    IAlgorithm<TCandidate, TSearchState> algorithm)
-    : Aspect
-    where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TSearchState : class, ISearchState
-{
-    protected override void Declare(AspectBuilder builder) =>
-        builder.Observe<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>(algorithm, _ => problem.CompleteIteration());
 }

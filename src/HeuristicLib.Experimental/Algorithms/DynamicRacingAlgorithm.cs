@@ -3,6 +3,7 @@ using HEAL.HeuristicLib.Algorithms.AutoEC;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -382,8 +383,8 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
         private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct)
         {
-            var contenderScope = ParentRegistry.CreateChildScope(contender =>
-                contender.Install(evaluator, current => new PerformanceTrackingEvaluator(current, performanceObserver)));
+            var contenderScope = ParentRegistry.CreateChildScope(
+                Aspect.Create(Pointcut.Reference(evaluator), new PerformanceTrackingEvaluatorAdvice(performanceObserver)));
             return contenderScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm).Stream(problem, random, initialState, ct).GetEnumerator();
         }
     }
@@ -391,19 +392,14 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     /// <summary>
     /// Reports one contender's evaluations to its own performance observer, without affecting sibling contenders.
     /// </summary>
-    private sealed record PerformanceTrackingEvaluator(
-        IEvaluator<TCandidate> InnerEvaluator,
-        PerformanceTrackingEvaluatorObserver Observer)
-        : WrappingEvaluator<TCandidate>(InnerEvaluator)
+    private sealed class PerformanceTrackingEvaluatorAdvice(PerformanceTrackingEvaluatorObserver observer)
+        : EvaluatorAdvice<TCandidate>
     {
-        public override bool Fits(ExecutionSignature execution) => base.Fits(execution)
-            && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
-
-        protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+        public override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> evaluator)
         {
             if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
                 throw ExecutionSignature.Mismatch(this, ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)), ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-            return inner => new PerformanceTrackingEvaluatorExecution<TRunSearchSpace, TRunProblem>(inner, Observer);
+            return inner => new PerformanceTrackingEvaluatorExecution<TRunSearchSpace, TRunProblem>(inner, observer);
         }
     }
 

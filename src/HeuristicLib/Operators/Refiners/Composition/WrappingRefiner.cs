@@ -35,12 +35,6 @@ public abstract record WrappingRefiner<TCandidate>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
-    /// <summary>Prepares a wrapper constructor for a caller supplying its resolved child directly.</summary>
-    /// <remarks>Resolution uses this bridge for aspect advice; configured wrappers use CreateExecutionFactory.</remarks>
-    public static WrapperExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(WrappingRefiner<TCandidate> wrapper)
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
-        wrapper.CreateWrapperFactory<TRunSearchSpace, TRunProblem>();
 }
 
 public abstract class WrappingRefinerExecution<TCandidate, TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> childRefiner)

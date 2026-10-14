@@ -197,7 +197,7 @@ public class ExecutionFactoryAnalyzerTests
             {
                 public static IMutatorExecution<int, SS, P> Resolve(ResolutionScope scope, IMutator<int> configuration, IMutator<int> Other) =>
                     scope.Resolve(configuration, source => {{preparation}},
-                        static _ => throw new System.InvalidOperationException());
+                        static (_, _) => throw new System.InvalidOperationException());
             }
             """);
         diagnostics.Length.ShouldBe(count);
@@ -211,7 +211,7 @@ public class ExecutionFactoryAnalyzerTests
             {
                 public static IMutatorExecution<int, SS, P> Resolve(ResolutionScope scope, IMutator<int> configuration) =>
                     scope.Resolve<IMutator<int>, IMutatorExecution<int, SS, P>>(configuration, source => innerScope => source.CreateExecutionFactory<SS, P>()(innerScope),
-                        static _ => throw new System.InvalidOperationException());
+                        static (_, _) => throw new System.InvalidOperationException());
             }
             """);
         diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutionFactoryAnalyzer.DiagnosticId);

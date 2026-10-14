@@ -55,8 +55,8 @@ public class InferenceConstructionSpecs
         var fluentTransformedCrossover = algorithm.Crossover.TransformWith(algorithm.Mutator);
         var pipelineInterceptor = PipelineInterceptor.Create(identityInterceptor, identityInterceptor);
         var fluentPipelineInterceptor = identityInterceptor.Then(identityInterceptor);
-        var countingInterceptor = CountingInterceptor.Create(identityInterceptor, new CountAccumulator());
-        var measuredInterceptor = DurationMeasuringInterceptor.Create(identityInterceptor, new DurationAccumulator());
+        var countingInterceptor = Aspect.CountCalls(identityInterceptor, new CountAccumulator());
+        var measuredInterceptor = Aspect.MeasureDuration(identityInterceptor, new DurationAccumulator());
         var eliteSelector = EliteSelector.Create(algorithm.Selector, elites: 1);
         var fluentEliteSelector = algorithm.Selector.CombinedWithElites(elites: 1);
         var genderSpecificSelector = GenderSpecificSelector.Create(algorithm.Selector, algorithm.Selector);
@@ -79,8 +79,8 @@ public class InferenceConstructionSpecs
         var fluentAnyTerminator = firstTerminator.Or(secondTerminator);
         var allTerminator = AllTerminator.Create(firstTerminator, secondTerminator);
         var fluentAllTerminator = firstTerminator.And(secondTerminator);
-        var countingTerminator = CountingTerminator.Create(firstTerminator, new CountAccumulator());
-        var measuredTerminator = DurationMeasuringTerminator.Create(firstTerminator, new DurationAccumulator());
+        var countingTerminator = Aspect.CountCalls(firstTerminator, new CountAccumulator());
+        var measuredTerminator = Aspect.MeasureDuration(firstTerminator, new DurationAccumulator());
         var terminatedAlgorithm = StateTerminatedAlgorithm.Create(algorithm, firstTerminator);
         var fluentTerminatedAlgorithm = algorithm.TerminatedBy(firstTerminator);
 
@@ -123,8 +123,8 @@ public class InferenceConstructionSpecs
         fluentTransformedCrossover.SourceCrossover.ShouldBeSameAs(algorithm.Crossover);
         pipelineInterceptor.ChildInterceptors.Count.ShouldBe(2);
         fluentPipelineInterceptor.ChildInterceptors.Count.ShouldBe(2);
-        countingInterceptor.ChildInterceptor.ShouldBeSameAs(identityInterceptor);
-        measuredInterceptor.ChildInterceptor.ShouldBeSameAs(identityInterceptor);
+        countingInterceptor.Advices.Single().Pointcut.Matches(identityInterceptor).ShouldBeTrue();
+        measuredInterceptor.Advices.Single().Pointcut.Matches(identityInterceptor).ShouldBeTrue();
         eliteSelector.SelectorForRemaining.ShouldBeSameAs(algorithm.Selector);
         fluentEliteSelector.SelectorForRemaining.ShouldBeSameAs(algorithm.Selector);
         genderSpecificSelector.FemaleSelector.ShouldBeSameAs(algorithm.Selector);
@@ -144,8 +144,8 @@ public class InferenceConstructionSpecs
         fluentAnyTerminator.ShouldNotBeNull();
         allTerminator.ShouldNotBeNull();
         fluentAllTerminator.ShouldNotBeNull();
-        countingTerminator.ChildTerminator.ShouldBeSameAs(firstTerminator);
-        measuredTerminator.ChildTerminator.ShouldBeSameAs(firstTerminator);
+        countingTerminator.Advices.Single().Pointcut.Matches(firstTerminator).ShouldBeTrue();
+        measuredTerminator.Advices.Single().Pointcut.Matches(firstTerminator).ShouldBeTrue();
         terminatedAlgorithm.Algorithm.ShouldBeSameAs(algorithm);
         fluentTerminatedAlgorithm.Algorithm.ShouldBeSameAs(algorithm);
         pipelineAlgorithm.Algorithms.Count.ShouldBe(2);

@@ -37,6 +37,20 @@ public interface IAlgorithmExecution<TCandidate, in TSearchSpace, in TProblem, T
     IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
 }
 
+public abstract class AlgorithmAdvice<TCandidate, TSearchState> : Advice<IAlgorithm<TCandidate, TSearchState>>
+    where TSearchState : class, ISearchState
+{
+    /// <summary>Prepares this advice for one join point and returns a constructor accepting the execution it wraps.</summary>
+    /// <remarks>
+    /// Resolution calls this once per join point and owner state. Validate the run's types and allocate state that must
+    /// survive rebuilding the execution graph here.
+    /// </remarks>
+    /// <param name="algorithm">The configuration the pointcut selected.</param>
+    public abstract WrapperExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IAlgorithm<TCandidate, TSearchState> algorithm)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+}
+
 public static class AlgorithmResolutionExtensions
 {
     extension(ResolutionScope scope)
@@ -45,7 +59,7 @@ public static class AlgorithmResolutionExtensions
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            scope.Resolve(algorithm, static source => source.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem, TSearchState>);
+            scope.Resolve(algorithm, static source => source.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>);
 
         [return: NotNullIfNotNull(nameof(algorithm))]
         public IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate>? algorithm)
@@ -97,13 +111,9 @@ public static class AlgorithmResolutionExtensions
             scope.Scope.TryResolve(algorithm, out execution, out reason);
     }
 
-    private static Advice<IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> PrepareAdvice<TCandidate, TSearchSpace, TProblem, TSearchState>(IConfigurationNode wrapper)
+    private static WrapperExecutionFactory<IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>(Advice advice, IAlgorithm<TCandidate> algorithm)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState
-    {
-        if (wrapper is not WrappingAlgorithm<TCandidate, TSearchState> typed)
-            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IAlgorithm<TCandidate>).Name} producing {typeof(IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>).Name}.");
-        return WrappingAlgorithm<TCandidate, TSearchState>.CreateWrapperFactory<TSearchSpace, TProblem>(typed).Invoke;
-    }
+        where TSearchState : class, ISearchState =>
+        ((AlgorithmAdvice<TCandidate, TSearchState>)advice).CreateWrapperFactory<TSearchSpace, TProblem>((IAlgorithm<TCandidate, TSearchState>)algorithm);
 }

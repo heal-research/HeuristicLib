@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -21,9 +22,6 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
     where TCandidate : notnull
 {
     private readonly bool saveSpace;
-    private readonly ImmutableArray<ICrossover<TCandidate>> crossovers;
-    private readonly ImmutableArray<IMutator<TCandidate>> mutators;
-    private readonly ImmutableArray<IAlgorithm<TCandidate, TSearchState>> algorithms;
     private readonly GenealogyGraph<TCandidate> graph;
 
     /// <param name="crossovers">Crossovers whose offspring become graph edges from two parents.</param>
@@ -61,31 +59,22 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
             throw new ArgumentException("A genealogy analysis needs at least one crossover, mutator or algorithm to observe.");
 
         this.graph = graph;
-        this.crossovers = [.. crossovers ?? []];
-        this.mutators = [.. mutators ?? []];
-        this.algorithms = [.. algorithms ?? []];
         this.saveSpace = saveSpace;
+        Advices =
+        [
+            .. (crossovers ?? []).SelectMany(crossover => Aspect.Observe<TCandidate, TSearchSpace, TProblem>(
+                crossover, observation => AfterCross(observation.Offspring, observation.Parents)).Advices),
+            .. (mutators ?? []).SelectMany(mutator => Aspect.Observe<TCandidate, TSearchSpace, TProblem>(
+                mutator, observation => AfterMutate(observation.Offspring, observation.Parents)).Advices),
+            .. (algorithms ?? []).SelectMany(algorithm => Aspect.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(
+                algorithm, observation => CloseGeneration(observation.State, observation.Problem)).Advices)
+        ];
     }
 
     /// <summary>The graph this analyzer accumulates.</summary>
     public GenealogyGraph<TCandidate> Graph => graph;
 
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; init; }
-
-    protected override void Declare(AspectBuilder builder)
-    {
-        foreach (var crossover in crossovers)
-            builder.Observe<TCandidate, TSearchSpace, TProblem>(
-                crossover, observation => AfterCross(observation.Offspring, observation.Parents));
-
-        foreach (var mutator in mutators)
-            builder.Observe<TCandidate, TSearchSpace, TProblem>(
-                mutator, observation => AfterMutate(observation.Offspring, observation.Parents));
-
-        foreach (var algorithm in algorithms)
-            builder.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(
-                algorithm, observation => CloseGeneration(observation.State, observation.Problem));
-    }
 
     private void AfterCross(IReadOnlyList<TCandidate> offspring, IReadOnlyList<Parents<TCandidate>> parents)
     {

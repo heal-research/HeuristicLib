@@ -19,13 +19,13 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchState, TOperator>
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
 
     /// <summary>
-    /// Gets the factory that wraps the observed operator in a counting operator.
+    /// Gets the strategy creating advice that counts the observed operator's work into the supplied counter.
     /// </summary>
     /// <remarks>
-    /// The factory receives the original observed operator configuration. The returned single-child wrapper supplies advice for that source, so enclosing budgets and observations compose.
-    /// The returned operator must retain the observed operator's role.
+    /// The advice applies only inside this budget's algorithm, so enclosing budgets and observations compose. If the
+    /// algorithm does not reference the observed operator, nothing is counted and the budget never stops.
     /// </remarks>
-    public required Func<TOperator, CountAccumulator, TOperator> CountedOperatorFactory { get; init; }
+    public required IOperatorCounting<TOperator> Counting { get; init; }
 
     /// <summary>
     /// Gets the counted-operator budget. The expected value is positive.
@@ -36,7 +36,7 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchState, TOperator>
     public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         var counter = new CountAccumulator();
-        var counting = Aspect.Create(ObservedOperator, current => CountedOperatorFactory(current, counter));
+        var counting = Aspect.Create(Pointcut.Reference(ObservedOperator), Counting.CreateAdvice(counter));
         return scope =>
         {
             var childScope = scope.With(counting);

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators;
@@ -46,11 +47,7 @@ public sealed class AlpsMutationCompositionTests
         var algorithm = CreateAlgorithm(0.5) with { MaximumGenerations = 2 };
         var offered = new List<IMutator<int>>();
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(builder => builder.Install(Pointcut.OfType<IMutator<int>>().And(source =>
-        {
-            offered.Add(source);
-            return true;
-        }), source => source.CountCandidates(count)));
+        var scope = ResolutionScope.Create(Aspect.Create(new OfferedMutators(offered), new CountingMutatorAdvice<int>(count, OperatorCountMetric.Candidates)));
 
         var states = await States(scope, algorithm);
         offered.ShouldBe([algorithm.Mutator]);
@@ -74,11 +71,20 @@ public sealed class AlpsMutationCompositionTests
         if (noChange)
             algorithm = algorithm with { Mutator = NoChangeMutator<int>.Instance };
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(builder => builder.Install(algorithm.Mutator, source => source.CountCandidates(count)));
+        var scope = ResolutionScope.Create(Aspect.CountCandidates(algorithm.Mutator, count));
 
         await States(scope, algorithm);
 
         count.CurrentCount.ShouldBe(0);
+    }
+
+    private sealed class OfferedMutators(List<IMutator<int>> offered) : Pointcut<IMutator<int>>
+    {
+        public override bool Matches(IMutator<int> configuration)
+        {
+            offered.Add(configuration);
+            return true;
+        }
     }
 
     private static AlpsGeneticAlgorithm<int> CreateAlgorithm(double rate) => new()

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
@@ -86,10 +87,11 @@ public class RefinerEvaluatorAccountingTests
     public void InAPipeline_OnlyTheStageWithAnEvaluatorEvaluates()
     {
         var counter = new CountAccumulator();
+        var observed = CreateEvaluator();
         var refiner = PipelineRefiner.Create(
             new AddOffsetRefiner(-1),
-            new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().CountCandidates(counter)));
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
+            new AddOffsetRefiner(-5).CheckedForImprovement(observed));
+        var execution = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
         var problem = CreateProblem();
 
         execution.Refine([10, 20], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

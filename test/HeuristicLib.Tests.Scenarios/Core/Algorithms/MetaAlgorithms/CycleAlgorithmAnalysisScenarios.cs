@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
@@ -60,7 +61,7 @@ public class CycleAlgorithmAnalysisScenarios
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = cycleAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(evaluationTrace1).Attach(evaluationTrace2).Attach(interceptionTrace);
+        var run = cycleAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(evaluationTrace1).AddAspect(evaluationTrace2).AddAspect(interceptionTrace);
         var finalState = run.Complete();
 
         return new CycleRunResult(
@@ -144,12 +145,15 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
-    private sealed class EvaluationTraceAnalysis(IEvaluator<int> evaluator)
+    private sealed class EvaluationTraceAnalysis
         : Aspect
     {
         public ExecutionState Result { get; } = new();
 
-        protected override void Declare(AspectBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
+        public EvaluationTraceAnalysis(IEvaluator<int> evaluator)
+        {
+            Advices = Aspect.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record).Advices;
+        }
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);
@@ -167,12 +171,15 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
-    private sealed class InterceptionTraceAnalysis(IInterceptor<int> interceptor)
+    private sealed class InterceptionTraceAnalysis
         : Aspect
     {
         public ExecutionState Result { get; } = new();
 
-        protected override void Declare(AspectBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(interceptor, Record);
+        public InterceptionTraceAnalysis(IInterceptor<int> interceptor)
+        {
+            Advices = Aspect.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(interceptor, Record).Advices;
+        }
 
         public void Record(InterceptorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> observation) =>
             Result.RecordObjectiveValue(observation.UntransformedState);

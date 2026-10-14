@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -64,7 +65,7 @@ public class PipelineAlgorithmTests
         var evaluator = new ForwardingEvaluator();
         var pipeline = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Then(new AdditiveStepAlgorithm(10) { Evaluator = evaluator }, new AdditiveStepAlgorithm(100) { Evaluator = evaluator });
         var analysis = new EvaluationCountAnalysis(evaluator);
-        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(analysis);
+        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(analysis);
 
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 
@@ -100,12 +101,15 @@ public class PipelineAlgorithmTests
         }
     }
 
-    private sealed class EvaluationCountAnalysis(IEvaluator<int> evaluator)
+    private sealed class EvaluationCountAnalysis
         : Aspect
     {
         public Result AnalysisResult { get; } = new();
 
-        protected override void Declare(AspectBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
+        public EvaluationCountAnalysis(IEvaluator<int> evaluator)
+        {
+            Advices = Aspect.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record).Advices;
+        }
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             AnalysisResult.Count += observation.Candidates.Count;

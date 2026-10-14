@@ -152,75 +152,12 @@ public class SelectorConfigurationEqualityTests
         left.ShouldNotBe(right);
     }
 
-    [Fact]
-    public void CountingSelector_WithSameCounterAndMetric_IsEqual()
-    {
-        var counter = new CountAccumulator();
-        var left = new RangeSelector(1).CountCalls(counter);
-        var right = new RangeSelector(1).CountCalls(counter);
 
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
 
-    [Fact]
-    public void CountingSelector_WithDifferentMetric_IsNotEqual()
-    {
-        var counter = new CountAccumulator();
-        var left = new RangeSelector(1).CountCalls(counter);
-        var right = new RangeSelector(1).CountCandidates(counter);
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void CountingSelector_WithDifferentCounter_IsNotEqual()
-    {
-        var left = new RangeSelector(1).CountCalls(new CountAccumulator());
-        var right = new RangeSelector(1).CountCalls(new CountAccumulator());
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void CountingSelector_WithDifferentChildSelector_IsNotEqual()
-    {
-        var counter = new CountAccumulator();
-        var left = new RangeSelector(1).CountCalls(counter);
-        var right = new RangeSelector(2).CountCalls(counter);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void DurationMeasuringSelector_WithSameDurationAndTimeProvider_IsEqual()
-    {
-        var duration = new DurationAccumulator();
-        var left = new RangeSelector(1).MeasureDuration(duration, TimeProvider.System);
-        var right = new RangeSelector(1).MeasureDuration(duration, TimeProvider.System);
-
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
-
-    [Fact]
-    public void DurationMeasuringSelector_WithDifferentDuration_IsNotEqual()
-    {
-        var left = new RangeSelector(1).MeasureDuration(new DurationAccumulator(), TimeProvider.System);
-        var right = new RangeSelector(1).MeasureDuration(new DurationAccumulator(), TimeProvider.System);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void DurationMeasuringSelector_WithDifferentChildSelector_IsNotEqual()
-    {
-        var duration = new DurationAccumulator();
-        var left = new RangeSelector(1).MeasureDuration(duration, TimeProvider.System);
-        var right = new RangeSelector(2).MeasureDuration(duration, TimeProvider.System);
-
-        left.ShouldNotBe(right);
-    }
 
 
 

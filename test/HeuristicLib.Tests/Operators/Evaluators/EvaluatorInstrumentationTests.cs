@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -10,10 +11,11 @@ public class EvaluatorInstrumentationTests
     public void CountEvaluatorCalls_IncrementsOncePerEvaluateCall()
     {
         var counter = new CountAccumulator();
-        var evaluator = CreateEvaluator().CountCalls(counter);
-        evaluator.Counter.ShouldBeSameAs(counter);
-        evaluator.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var evaluator = CreateEvaluator();
+        var aspect = Aspect.CountCalls(evaluator, counter);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingEvaluatorAdvice<int>>().Counter.ShouldBeSameAs(counter);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingEvaluatorAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
+        var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         execution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -26,8 +28,9 @@ public class EvaluatorInstrumentationTests
     public void CountEvaluatedCandidates_IncrementsByBatchSize()
     {
         var counter = new CountAccumulator();
-        var evaluator = CreateEvaluator().CountCandidates(counter);
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var evaluator = CreateEvaluator();
+        var aspect = Aspect.CountCandidates(evaluator, counter);
+        var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         execution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -41,10 +44,11 @@ public class EvaluatorInstrumentationTests
     {
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var evaluator = CreateEvaluator().MeasureDuration(duration, timeProvider);
-        evaluator.Duration.ShouldBeSameAs(duration);
-        evaluator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var evaluator = CreateEvaluator();
+        var aspect = Aspect.MeasureDuration(evaluator, duration, timeProvider);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringEvaluatorAdvice<int>>().Duration.ShouldBeSameAs(duration);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringEvaluatorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
+        var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         execution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -57,11 +61,12 @@ public class EvaluatorInstrumentationTests
     public void CountEvaluatorCalls_DoesNotCountFailedCall()
     {
         var counter = new CountAccumulator();
-        var evaluator = new ThrowingEvaluator().CountCalls(counter);
+        var evaluator = new ThrowingEvaluator();
+        var aspect = Aspect.CountCalls(evaluator, counter);
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -70,11 +75,12 @@ public class EvaluatorInstrumentationTests
     public void MeasureEvaluatorDuration_RecordsFailedCall()
     {
         var duration = new DurationAccumulator();
-        var evaluator = new ThrowingEvaluator().MeasureDuration(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
+        var evaluator = new ThrowingEvaluator();
+        var aspect = Aspect.MeasureDuration(evaluator, duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }

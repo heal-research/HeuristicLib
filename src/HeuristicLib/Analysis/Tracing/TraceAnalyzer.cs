@@ -1,5 +1,6 @@
 using System.Collections;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 
@@ -18,14 +19,14 @@ public sealed class TraceAnalyzer<TResult> : Aspect
     private readonly List<TraceEntry<TResult>> entries = [];
     private readonly TraceRetention retention;
     private readonly ImmutableArray<Clock> clocks;
-    private readonly ImmutableArray<Aspect> observationAspects;
 
     private TraceAnalyzer(TraceRetention retention, IReadOnlyList<Clock> clocks, Func<TraceAnalyzer<TResult>, ImmutableArray<Aspect>> createObservationAspects)
     {
         this.retention = retention;
         this.clocks = [.. clocks.Distinct<Clock>(ReferenceEqualityComparer.Instance)];
-        // Storage is initialized before observer callbacks capture this trace; the aspect list is complete on return.
-        observationAspects = createObservationAspects(this);
+        // Storage is initialized before observer callbacks capture this trace. Clock advice precedes the observations,
+        // so an entry reads clocks that already include its call.
+        Advices = [.. this.clocks.SelectMany(clock => clock.Advices), .. createObservationAspects(this).SelectMany(aspect => aspect.Advices)];
     }
 
     /// <summary>Builds a trace over distinct sources, storing the measured value of each observation.</summary>
@@ -84,15 +85,6 @@ public sealed class TraceAnalyzer<TResult> : Aspect
     }
 
     public IReadOnlyList<TracePoint<TTime, TResult>> By<TTime>(Clock<TTime> clock) => Snapshot().By(clock);
-
-    /// <summary>Installs clocks before observations. Installation never resets collected state.</summary>
-    protected override void Declare(AspectBuilder builder)
-    {
-        foreach (var clock in clocks)
-            builder.Install(clock);
-        foreach (var observationAspect in observationAspects)
-            builder.Install(observationAspect);
-    }
 
     /// <summary>
     /// Measures and stores under one lock. An observation of one source arrives on the thread that called the

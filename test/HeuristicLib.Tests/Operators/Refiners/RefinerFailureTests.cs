@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -58,9 +59,9 @@ public class RefinerFailureTests
     {
         var problem = CreateProblem();
         var counter = new CountAccumulator();
-        var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingAfterBatchesRefiner(2).CountCalls(counter) };
+        var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingAfterBatchesRefiner(2) };
 
-        Should.Throw<InvalidOperationException>(() => algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
+        Should.Throw<InvalidOperationException>(() => algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(Aspect.CountCalls(algorithm.Refiner!, counter)).Complete(cancellationToken: TestContext.Current.CancellationToken));
 
         // The two completed batches are counted; the failing one is not, because the counter increments on success.
         counter.CurrentCount.ShouldBe(2);

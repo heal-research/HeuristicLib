@@ -62,27 +62,27 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
     }
 
-    /// <summary>Creates and attaches one aspect from this factory to every experiment trial.</summary>
-    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> AttachPerTrial<TAspect>(
+    /// <summary>Creates one aspect from this factory for every experiment trial and adds it to the trial's run.</summary>
+    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> AddAspectPerTrial<TAspect>(
         AspectFactory<TAlgorithm, TAspect> aspectFactory)
         where TAspect : Aspect
     {
         EnsureNotStarted();
         if (trialAspects.ContainsKey(aspectFactory))
-            throw new InvalidOperationException("The same trial aspect cannot be attached more than once.");
+            throw new InvalidOperationException("The same trial aspect cannot be added more than once.");
 
         ImmutableArray<Aspect> aspects = [.. Trials.Select(trial => aspectFactory.Create(trial.Algorithm))];
         for (var index = 0; index < Trials.Length; index++)
-            Trials[index].Run.Attach(aspects[index]);
+            Trials[index].Run.AddAspect(aspects[index]);
 
         trialAspects.Add(aspectFactory, aspects);
         return this;
     }
 
     /// <summary>
-    /// Gets each trial together with its aspect, in trial order.
+    /// Gets each trial together with the aspect this factory created for it, in trial order.
     /// </summary>
-    public ImmutableArray<TrialAspect<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAspect>> GetAttached<TAspect>(AspectFactory<TAlgorithm, TAspect> aspectFactory)
+    public ImmutableArray<TrialAspect<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAspect>> GetAspectPerTrial<TAspect>(AspectFactory<TAlgorithm, TAspect> aspectFactory)
         where TAspect : Aspect
     {
         var aspects = trialAspects[aspectFactory];
@@ -306,7 +306,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     {
         if (lifecycleState != RunLifecycleState.Preparing)
         {
-            throw new InvalidOperationException($"An experiment run only accepts attachments and can only start while it is {RunLifecycleState.Preparing}; its current lifecycle state is {lifecycleState}.");
+            throw new InvalidOperationException($"An experiment run only accepts aspects and can only start while it is {RunLifecycleState.Preparing}; its current lifecycle state is {lifecycleState}.");
         }
     }
 

@@ -22,6 +22,19 @@ public interface ICreatorExecution<TCandidate, in TSearchSpace, in TProblem>
     IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
+public abstract class CreatorAdvice<TCandidate> : Advice<ICreator<TCandidate>>
+{
+    /// <summary>Prepares this advice for one join point and returns a constructor accepting the execution it wraps.</summary>
+    /// <remarks>
+    /// Resolution calls this once per join point and owner state. Validate the run's types and allocate state that must
+    /// survive rebuilding the execution graph here.
+    /// </remarks>
+    /// <param name="creator">The configuration the pointcut selected.</param>
+    public abstract WrapperExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICreator<TCandidate> creator)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+}
+
 public static class CreatorResolutionExtensions
 {
     extension(ResolutionScope scope)
@@ -29,7 +42,7 @@ public static class CreatorResolutionExtensions
         public ICreatorExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate> creator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(creator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem>);
+            scope.Resolve(creator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(creator))]
         public ICreatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate>? creator)
@@ -78,12 +91,8 @@ public static class CreatorResolutionExtensions
             scope.Scope.TryResolve(creator, out execution, out reason);
     }
 
-    private static Advice<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> PrepareAdvice<TCandidate, TSearchSpace, TProblem>(IConfigurationNode wrapper)
+    private static WrapperExecutionFactory<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>(Advice advice, ICreator<TCandidate> creator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        if (wrapper is not WrappingCreator<TCandidate> typed)
-            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(ICreator<TCandidate>).Name} producing {typeof(ICreatorExecution<TCandidate, TSearchSpace, TProblem>).Name}.");
-        return WrappingCreator<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem>(typed).Invoke;
-    }
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        ((CreatorAdvice<TCandidate>)advice).CreateWrapperFactory<TSearchSpace, TProblem>(creator);
 }

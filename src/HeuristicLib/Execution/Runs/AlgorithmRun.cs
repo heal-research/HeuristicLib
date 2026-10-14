@@ -47,26 +47,8 @@ public abstract class AlgorithmRun
             }
 
             LifecycleState = RunLifecycleState.Running;
-
-            try
-            {
-                scope = ResolutionScope.Create(builder =>
-                {
-                    foreach (var aspect in aspects)
-                        builder.Install(aspect);
-                });
-                return scope;
-            }
-            catch (OperationCanceledException)
-            {
-                LifecycleState = RunLifecycleState.Canceled;
-                throw;
-            }
-            catch
-            {
-                LifecycleState = RunLifecycleState.Failed;
-                throw;
-            }
+            scope = ResolutionScope.Create(aspects);
+            return scope;
         }
     }
 
@@ -122,8 +104,9 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         Random = random;
     }
 
-    /// <summary>Attaches an aspect while preparing, preserving attachment order and deduplicating by reference.</summary>
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> Attach(Aspect aspect)
+    /// <summary>Adds an aspect while preparing, preserving order and deduplicating by reference.</summary>
+    /// <remarks>The run only collects aspects; resolution weaves them in when the run starts.</remarks>
+    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AddAspect(Aspect aspect)
     {
         Add(aspect);
         return this;

@@ -26,6 +26,19 @@ public interface IReplacerExecution<TCandidate, in TSearchSpace, in TProblem>
       IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
+public abstract class ReplacerAdvice<TCandidate> : Advice<IReplacer<TCandidate>>
+{
+    /// <summary>Prepares this advice for one join point and returns a constructor accepting the execution it wraps.</summary>
+    /// <remarks>
+    /// Resolution calls this once per join point and owner state. Validate the run's types and allocate state that must
+    /// survive rebuilding the execution graph here.
+    /// </remarks>
+    /// <param name="replacer">The configuration the pointcut selected.</param>
+    public abstract WrapperExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IReplacer<TCandidate> replacer)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+}
+
 public static class ReplacerResolutionExtensions
 {
     extension(ResolutionScope scope)
@@ -33,7 +46,7 @@ public static class ReplacerResolutionExtensions
         public IReplacerExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate> replacer)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(replacer, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem>);
+            scope.Resolve(replacer, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(replacer))]
         public IReplacerExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate>? replacer)
@@ -81,12 +94,8 @@ public static class ReplacerResolutionExtensions
             scope.Scope.TryResolve(replacer, out execution, out reason);
     }
 
-    private static Advice<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> PrepareAdvice<TCandidate, TSearchSpace, TProblem>(IConfigurationNode wrapper)
+    private static WrapperExecutionFactory<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>(Advice advice, IReplacer<TCandidate> replacer)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        if (wrapper is not WrappingReplacer<TCandidate> typed)
-            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IReplacer<TCandidate>).Name} producing {typeof(IReplacerExecution<TCandidate, TSearchSpace, TProblem>).Name}.");
-        return WrappingReplacer<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem>(typed).Invoke;
-    }
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        ((ReplacerAdvice<TCandidate>)advice).CreateWrapperFactory<TSearchSpace, TProblem>(replacer);
 }

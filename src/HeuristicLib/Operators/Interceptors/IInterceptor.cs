@@ -29,6 +29,20 @@ public interface IInterceptorExecution<TCandidate, in TSearchSpace, in TProblem,
     TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
+public abstract class InterceptorAdvice<TCandidate> : Advice<IInterceptor<TCandidate>>
+{
+    /// <summary>Prepares this advice for one join point and returns a constructor accepting the execution it wraps.</summary>
+    /// <remarks>
+    /// Resolution calls this once per join point and owner state. Validate the run's types and allocate state that must
+    /// survive rebuilding the execution graph here.
+    /// </remarks>
+    /// <param name="interceptor">The configuration the pointcut selected.</param>
+    public abstract WrapperExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(IInterceptor<TCandidate> interceptor)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+        where TRunSearchState : class, ISearchState;
+}
+
 public static class InterceptorResolutionExtensions
 {
     extension(ResolutionScope scope)
@@ -37,7 +51,7 @@ public static class InterceptorResolutionExtensions
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            scope.Resolve(interceptor, static source => source.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem, TSearchState>);
+            scope.Resolve(interceptor, static source => source.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>);
 
         [return: NotNullIfNotNull(nameof(interceptor))]
         public IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate>? interceptor)
@@ -88,13 +102,9 @@ public static class InterceptorResolutionExtensions
             scope.Scope.TryResolve(interceptor, out execution, out reason);
     }
 
-    private static Advice<IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> PrepareAdvice<TCandidate, TSearchSpace, TProblem, TSearchState>(IConfigurationNode wrapper)
+    private static WrapperExecutionFactory<IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>(Advice advice, IInterceptor<TCandidate> interceptor)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState
-    {
-        if (wrapper is not WrappingInterceptor<TCandidate> typed)
-            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IInterceptor<TCandidate>).Name} producing {typeof(IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>).Name}.");
-        return WrappingInterceptor<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem, TSearchState>(typed).Invoke;
-    }
+        where TSearchState : class, ISearchState =>
+        ((InterceptorAdvice<TCandidate>)advice).CreateWrapperFactory<TSearchSpace, TProblem, TSearchState>(interceptor);
 }

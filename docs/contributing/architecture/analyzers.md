@@ -1,47 +1,43 @@
 # Analyzer architecture
 
-An analyzer is a stateful execution module. It owns its collected data and exposes typed reads directly. `IAnalyzer` inherits `IExecutionModule`; the analyzer implements `Install(ResolutionScopeBuilder)` to declare its observations and may install additional modules. Wrappers it registers directly also sit outside configuration wrappers.
+An analyzer is a stateful `Aspect` that owns collected data and exposes typed reads. Its constructor assigns ordered pointcut/advice pairs to `Advices`. An accumulating analyzer derives from `AccumulatingAnalyzer` to share the synchronization convention; a trace uses `TraceAnalyzer<T>`.
 
-`AlgorithmRun.Attach` accepts analyzers and other modules while its lifecycle is `Preparing`. Starting it freezes one attachment list, installs every attachment in attachment order, and resolves the execution graph. Attaching the same object more than once installs it once, using reference identity. The run does not own analyzer disposal and does not provide a result lookup service. Reusing one analyzer on several runs intentionally combines its results.
+`AlgorithmRun.AddAspect` accepts analyzers and other aspects while its lifecycle is `Preparing`. Starting the run freezes its aspect list and resolves the execution graph. The same advice instance applies once by reference, including when several analyzers share a clock. A run owns neither analyzer disposal nor a result lookup service. Reusing an analyzer across runs intentionally combines its results.
 
 ## Observation boundaries
 
-Algorithms and operators remain unaware of analysis. The analysis layer turns a selected configuration into an observable runtime wrapper through typed `ResolutionScopeBuilder.Observe` overloads:
+Algorithms and operators remain unaware of analysis. Predefined observation records, advice and `Aspect.Observe` factories live in `HEAL.HeuristicLib.Instrumentation`:
 
 ```csharp
-public void Install(ResolutionScopeBuilder builder)
+public SeparateEvaluatorAnalyzer(IEvaluator<TCandidate> first, IEvaluator<TCandidate> second)
 {
-    var typed = builder.For<TCandidate, TSearchSpace, TProblem>();
-    typed.Observe(firstEvaluator, RecordFirst);
-    typed.Observe(secondEvaluator, RecordSecond);
+    Advices =
+    [
+        .. Aspect.Observe(first, RecordFirst).Advices,
+        .. Aspect.Observe(second, RecordSecond).Advices
+    ];
 }
 ```
 
-The selected algorithm or operator is the boundary identity; no separate anchor object is needed. Built-in overloads cover algorithms, evaluators, crossovers, mutators and interceptors. Each receives a typed observation value after the underlying operation completes. Different sources may use different callbacks, and several sources may feed one analyzer.
+The selected algorithm or operator is the observation's source identity. Factories cover algorithms, evaluators, crossovers, mutators and interceptors. Operator observations follow successful calls. Algorithm observations follow each yielded state, after interceptors have transformed it. Each observation reports the selected configuration, including when advice is applied through a pointcut covering several sources.
 
-A configuration such as `IEvaluator<TCandidate>` names only its candidate, while the observation hands the callback the search space and problem the operation ran with. Those types are named in one of three spellings of the same mechanism:
+A configuration names only its candidate and, for algorithms, its search state. A typed callback or method group supplies the search space and problem types it reads. An implicitly typed lambda uses an overload with `ISearchSpace<TCandidate>` and `IProblem<TCandidate, ISearchSpace<TCandidate>>`; interceptor callbacks also read `ISearchState`. These overloads fit every run over the candidate. Observations written for narrower types are checked when the wrapper factory is prepared and report `ExecutionSignature.Mismatch` when incompatible.
 
-- `builder.For<TCandidate, TSearchSpace, TProblem>()` names them once for an analyzer, as above, and its `Observe` accepts method groups typed at them. `For<TCandidate, TSearchSpace, TProblem, TSearchState>()` also names the search state, which interceptor observations need.
-- `builder.Observe<TCandidate, TSearchSpace, TProblem>(source, callback)` names them at one call.
-- `builder.Observe(source, observation => …)` names nothing. An implicitly typed lambda binds to the overload typed at `ISearchSpace<TCandidate>` and `IProblem<TCandidate, ISearchSpace<TCandidate>>`, and at `ISearchState` for an interceptor, which suits callbacks that read only candidates, objective vectors or states.
+Observation advice is a runtime class and may retain its callback. Its wrapper factory prepares persistent join-point state once per advice, configuration and owner state. Algorithm observation allocates its iteration counter there, so rebuilding contextual nodes does not reset the count. Invocation-local previous states stay in the iterator.
 
-Named types are checked against the run when the observation is resolved, applying the same rule as the operator authoring bases, so a run over other types fails with `ExecutionSignature.Mismatch` instead of casting. The interface-typed overload fits every run over the candidate.
+Earlier advice wraps closer to the source execution and reports completed operations first. A trace therefore includes its clocks' advice before its own observation advice. Shared clocks keep their first position. A scope with no matching advice adds no observation wrapper.
 
-Each `Observe` call creates a private runtime module. These module and wrapper classes may retain delegates because they are runtime identity objects rather than records or serializable configuration. Installing the same exact module object twice in one scope has no additional effect. Distinct modules compose in declaration order.
-
-Configuration wrappers remain inside module wrappers. Among modules, earlier declarations observe completed operations first. A trace therefore installs its clocks before its own observation modules.
-
-An operator that nothing observes is resolved without a wrapper, so a run without analyzers takes the ordinary operator path unchanged. Observation only reads, and analysis never steers the search. An operator that adapts to its own measured success is control flow: it reads instrumentation, as budgets and terminators read an operator counter, rather than an analyzer.
+Observation reads inputs, outputs and progress. An algorithm that adapts to measured work uses instrumentation as control flow rather than reading an analyzer's result.
 
 ## Trace analyzers
 
 `TraceAnalyzer<T>` is the standard tracing subsystem. It combines one or several compatible observation sources, measurement, aggregation, retention, clocks, immutable trace entries and synchronization. A trace requires at least one source and ignores repeated references to the same source.
 
-Almost every analysis users ask for is the same act: at a boundary, read something, summarize it, and file the summary under the clocks of that moment. A trace therefore composes independent choices instead of shipping one analyzer type per metric. HeuristicLab ended up with `BestAverageWorstQualityAnalyzer`, `QualityPerEvaluationsAnalyzer` and `QualityPerClockAnalyzer` for one metric because the time axis was part of each type. Here every clock a trace selects is recorded on every entry, so one trace is read against iterations, evaluations or elapsed time without a second run. No clock is added automatically, because observing a source costs something and a run with nested algorithms or several evaluators has no single obvious iteration or evaluation count.
+A trace composes observation sources, measurement, aggregation, retention and explicit clocks. Every selected clock is recorded on each entry, so the same trace can be projected by iterations, evaluations or elapsed time. No clock is added automatically: a nested run can contain several algorithm and evaluator boundaries.
 
 Named measurements are immutable value strategies. Delegate measurements and scalar projections are runtime-only adapters with identity semantics. Public trace construction never exposes an execution scope.
 
-Aggregation and retention are plain objects, not execution configurations. They are never resolved through a `ResolutionScope`, because nothing about them depends on a run: an aggregation's state is its own, it is built when the trace is built, and it is never rebuilt. A trace does reach the resolution system for the one thing that needs it, installing its observation modules and clocks into the run's scope.
+Aggregation and retention are plain objects, not execution configurations. They are never resolved through a `ResolutionScope`, because nothing about them depends on a run: an aggregation's state is its own, it is built when the trace is built, and it is never rebuilt. A trace contributes its observation and clock advice to the run's scope.
 
 One consequence is deliberate: an aggregation or retention that holds state owns it, so handing one object to two traces couples them. The factories on `Aggregate` and `TraceRetention` return a fresh object per call, which is what makes ordinary inline use independent. Combining several sources in one trace remains the supported way to share an accumulator and result sink.
 
@@ -51,7 +47,7 @@ One consequence is deliberate: an aggregation or retention that holds state owns
 
 ## Accumulating analyzers
 
-`TraceAnalyzer<T>` keeps a history of immutable values. An analyzer whose data is one object updated in place, such as a Pareto front or a descent graph, derives from `AccumulatingAnalyzer` instead. It owns that object, mutates it under the inherited `Sync` and publishes it as it is. Copying it per read would cost the whole accumulator, and every reader of one today reads after the run finished, so a live view is what they get and reading during a run is not supported.
+`TraceAnalyzer<T>` keeps a history of immutable values. An analyzer whose data is one object updated in place, such as a custom summary object, derives from `AccumulatingAnalyzer` instead. It owns that object, mutates it under the inherited `Sync` and publishes it as it is. Copying it per read would cost the whole accumulator, and every reader of one today reads after the run finished, so a live view is what they get and reading during a run is not supported.
 
 Neither retention nor clocks apply to it. There is nothing to store apart from what was computed, and one current state has no moment of its own.
 
@@ -63,7 +59,7 @@ An observation carries the problem because every observed operation is called wi
 
 A trace serializes measurement, aggregation, retention and publication. Built-in traces can safely observe several sources concurrently. Custom analyzers that may be installed on concurrently executing runs are responsible for synchronizing their own state.
 
-The lock is not there for batch parallelism: an observation of one source arrives on the thread that called the operator, so it is never delivered twice. It is what lets a caller read a trace while the run writes, and what keeps one analyzer consistent when runs sharing it execute at the same time. The store is an ordinary list under that lock, copied when a snapshot or projection is taken. The alternatives measured against it are recorded in the developer backlog.
+The lock is not there for batch parallelism: an observation of one source arrives on the thread that called the operator, so it is never delivered twice. It is what lets a caller read a trace while the run writes, and what keeps one analyzer consistent when runs sharing it execute at the same time. The store is an ordinary list under that lock, copied when a snapshot or projection is taken.
 
 Entries contain immutable results. `Latest` and `SampleCount` do not allocate; `Snapshot()` and `By(clock)` return stable copies. Stopping, cancelling or failing a run leaves collected results available, so there is no separate result type for an unfinished run. An analyzer has no global completion state because another run may still use it.
 
@@ -71,11 +67,11 @@ Analyzers have no disposal contract. What an analyzer installs lives in the run'
 
 ## Naming and placement
 
-A stateful object that collects data is named `...Analyzer`, such as `GenealogyAnalyzer` or `ParetoFrontAnalyzer`. The immutable values it publishes are entries, snapshots or result records, never `...Analyzer`.
+A stateful object that collects data is named `...Analyzer`, such as a consumer-authored `CandidateSummaryAnalyzer`. The immutable values it publishes are entries, snapshots or result records, never `...Analyzer`.
 
 Ready-made traces are extension methods on the configuration they observe, named `Trace...`, as in `algorithm.TracePopulationQuality()` or `algorithm.Evaluator.TraceBestSoFar()`, and grouped in a static class ending in `Traces`. User-facing shortcuts take the observed configuration itself. A run-level shortcut such as `run.TracePopulationCandidates(out var analyzer)` observes the run's root algorithm unless a nested one is named.
 
-The main package ships only the traces every algorithm can use. A trace specific to an encoding or a problem family lives beside what it measures, and one whose semantics are still unsettled, such as Pareto front and hypervolume analysis awaiting the objective-system rework, stays in the Experimental package under the rules of § 9.6 of the [developer guidelines](/contributing/developer-guidelines).
+The main package ships general-purpose traces. Specialized analysis belongs beside the concept it measures, following the package placement rules in § 9.6 of the [developer guidelines](/contributing/developer-guidelines).
 
 ## Run lifecycle
 

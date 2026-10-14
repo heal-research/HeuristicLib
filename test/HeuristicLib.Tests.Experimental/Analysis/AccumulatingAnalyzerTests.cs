@@ -34,11 +34,7 @@ public class AccumulatingAnalyzerTests
     }
 
     private static ResolutionScope Install(params Aspect[] analyzers) =>
-        ResolutionScope.Create(builder =>
-        {
-            foreach (var analyzer in analyzers)
-                builder.Install(analyzer);
-        });
+        ResolutionScope.Create(analyzers);
 
     private static void Evaluate(ResolutionScope scope, SketchEvaluator evaluator, params int[] candidates) =>
         scope.Resolve<int, SketchSearchSpace, SketchProblem>(evaluator)

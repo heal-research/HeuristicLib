@@ -136,7 +136,7 @@ public class ExecutionFactoryCodeFixTests
             {
                 public static CustomExecution<T> Resolve<T>(this ResolutionScope scope, ICustomRole<T> source) =>
                     scope.Resolve(source, static configuration => configuration.CreateExecutionFactory(),
-                        static _ => throw new System.InvalidOperationException());
+                        static (_, _) => throw new System.InvalidOperationException());
             }
             """);
 

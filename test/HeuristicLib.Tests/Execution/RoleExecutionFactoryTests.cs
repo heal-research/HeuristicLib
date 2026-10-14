@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Interceptors;
@@ -26,13 +27,13 @@ public sealed class RoleExecutionFactoryTests
         var source = CreateMutator(arity, () => preparations++);
         var outerReports = new List<double>();
         var innerReports = new List<double>();
-        var parent = ResolutionScope.Create(builder => builder.Install(source, original => new ObservingMutator(original, outerReports.Add)));
+        var parent = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ObservingMutatorAdvice(outerReports.Add)));
         var outer = parent.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(source);
         Next(outer).ShouldBe(1);
         Next(outer).ShouldBe(2);
         Next(outer).ShouldBe(3);
 
-        var child = parent.CreateChildScope(builder => builder.Install(source, original => new ObservingMutator(original, innerReports.Add)));
+        var child = parent.CreateChildScope(Aspect.Create(Pointcut.Reference(source), new ObservingMutatorAdvice(innerReports.Add)));
         var inner = child.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(source);
         Next(inner).ShouldBe(4);
         Next(inner).ShouldBe(5);
@@ -271,10 +272,10 @@ public sealed class RoleExecutionFactoryTests
             [RealVector.Repeat(++state.Calls, 1)];
     }
 
-    private sealed record ObservingMutator(IMutator<RealVector> Inner, Action<double> Report) : WrappingMutator<RealVector>(Inner)
+    private sealed class ObservingMutatorAdvice(Action<double> report) : MutatorAdvice<RealVector>
     {
-        protected override WrapperExecutionFactory<IMutatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-            inner => new Execution<TRunSearchSpace, TRunProblem>(inner, Report);
+        public override WrapperExecutionFactory<IMutatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<RealVector> configuration) =>
+            inner => new Execution<TRunSearchSpace, TRunProblem>(inner, report);
 
         private sealed class Execution<TSearchSpace, TProblem>(IMutatorExecution<RealVector, TSearchSpace, TProblem> child, Action<double> report)
             : IMutatorExecution<RealVector, TSearchSpace, TProblem>

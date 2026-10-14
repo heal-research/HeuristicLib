@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -29,9 +30,6 @@ public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchStat
     where TSearchState : PopulationState<TCandidate>
     where TCandidate : notnull
 {
-    private readonly ImmutableArray<ICrossover<TCandidate>> crossovers;
-    private readonly ImmutableArray<IMutator<TCandidate>> mutators;
-    private readonly ImmutableArray<IAlgorithm<TCandidate, TSearchState>> algorithms;
 
     /// <param name="crossovers">Crossovers whose offspring become graph edges from two parents.</param>
     /// <param name="mutators">Mutators whose offspring become graph edges from one parent.</param>
@@ -45,31 +43,28 @@ public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchStat
     public RankAnalyzer(IReadOnlyList<ICrossover<TCandidate>>? crossovers = null,
                         IReadOnlyList<IMutator<TCandidate>>? mutators = null,
                         IReadOnlyList<IAlgorithm<TCandidate, TSearchState>>? algorithms = null,
-                        IEqualityComparer<TCandidate>? equality = null)
+                        IEqualityComparer<TCandidate>? equality = null,
+                        IComparer<ObjectiveVector>? objectiveComparer = null)
     {
         if ((crossovers?.Count ?? 0) + (mutators?.Count ?? 0) + (algorithms?.Count ?? 0) == 0)
             throw new ArgumentException("A rank analysis needs at least one crossover, mutator or algorithm to observe.");
         State = new RankState<TCandidate>(new GenealogyGraph<TCandidate>(equality ?? EqualityComparer<TCandidate>.Default));
-        this.crossovers = (crossovers ?? []).ToImmutableArray();
-        this.mutators = (mutators ?? []).ToImmutableArray();
-        this.algorithms = [.. algorithms ?? []];
+        ObjectiveComparer = objectiveComparer;
+        var graphBuilder = new GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState>(
+            State.Graph, crossovers, mutators, algorithms, saveSpace: false)
+        { ObjectiveComparer = objectiveComparer };
+        // The graph contains this generation before its ranks are read.
+        Advices =
+        [
+            .. graphBuilder.Advices,
+            .. (algorithms ?? []).SelectMany(algorithm => Aspect.Observe(algorithm, _ => State.RecordRanks()).Advices)
+        ];
     }
 
     public override RankState<TCandidate> State { get; }
 
-    public IComparer<ObjectiveVector>? ObjectiveComparer { get; init; }
+    public IComparer<ObjectiveVector>? ObjectiveComparer { get; }
 
-    protected override void Declare(AspectBuilder builder)
-    {
-        // Installed first, so the graph already contains this generation when the ranks over it are read.
-        var graphBuilder = new GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState>(
-            State.Graph, crossovers, mutators, algorithms, saveSpace: false)
-        { ObjectiveComparer = ObjectiveComparer };
-        builder.Install(graphBuilder);
-
-        foreach (var algorithm in algorithms)
-            builder.Observe(algorithm, _ => State.RecordRanks());
-    }
 }
 
 /// <summary>
@@ -120,7 +115,6 @@ public static class RankAnalysisTraces
                 crossover is null ? null : (IReadOnlyList<ICrossover<T>>)[crossover],
                 mutator is null ? null : (IReadOnlyList<IMutator<T>>)[mutator],
                 algorithm is null ? null : (IReadOnlyList<IAlgorithm<T, TR>>)[algorithm],
-                equality)
-            { ObjectiveComparer = objectiveComparer };
+                equality, objectiveComparer);
     }
 }

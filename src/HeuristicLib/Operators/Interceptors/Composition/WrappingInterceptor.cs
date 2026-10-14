@@ -38,13 +38,6 @@ public abstract record WrappingInterceptor<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState;
 
-    /// <summary>Prepares a wrapper constructor for a caller supplying its resolved child directly.</summary>
-    /// <remarks>Resolution uses this bridge for aspect advice; configured wrappers use CreateExecutionFactory.</remarks>
-    public static WrapperExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(WrappingInterceptor<TCandidate> wrapper)
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
-        where TRunSearchState : class, ISearchState =>
-        wrapper.CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>();
 }
 
 public abstract class WrappingInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor)

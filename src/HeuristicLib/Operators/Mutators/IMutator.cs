@@ -22,6 +22,19 @@ public interface IMutatorExecution<TCandidate, in TSearchSpace, in TProblem>
     IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
+public abstract class MutatorAdvice<TCandidate> : Advice<IMutator<TCandidate>>
+{
+    /// <summary>Prepares this advice for one join point and returns a constructor accepting the execution it wraps.</summary>
+    /// <remarks>
+    /// Resolution calls this once per join point and owner state. Validate the run's types and allocate state that must
+    /// survive rebuilding the execution graph here.
+    /// </remarks>
+    /// <param name="mutator">The configuration the pointcut selected.</param>
+    public abstract WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> mutator)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+}
+
 public static class MutatorResolutionExtensions
 {
     extension(ResolutionScope scope)
@@ -29,7 +42,7 @@ public static class MutatorResolutionExtensions
         public IMutatorExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate> mutator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(mutator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem>);
+            scope.Resolve(mutator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(mutator))]
         public IMutatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate>? mutator)
@@ -76,7 +89,7 @@ public static class MutatorResolutionExtensions
         /// </remarks>
         public IMutatorExecution<TCandidate, TSearchSpace, TProblem> Resolve<TControl>(IMutator<TCandidate> mutator, out TControl? control)
             where TControl : class =>
-            scope.Scope.Resolve(mutator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem>, static execution => execution as TControl, out control);
+            scope.Scope.Resolve(mutator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>, static execution => execution as TControl, out control);
 
         [return: NotNullIfNotNull(nameof(mutator))]
         public IMutatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IMutator<TCandidate>? mutator) =>
@@ -89,12 +102,8 @@ public static class MutatorResolutionExtensions
             scope.Scope.TryResolve(mutator, out execution, out reason);
     }
 
-    private static Advice<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> PrepareAdvice<TCandidate, TSearchSpace, TProblem>(IConfigurationNode wrapper)
+    private static WrapperExecutionFactory<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>(Advice advice, IMutator<TCandidate> mutator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        if (wrapper is not WrappingMutator<TCandidate> typed)
-            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IMutator<TCandidate>).Name} producing {typeof(IMutatorExecution<TCandidate, TSearchSpace, TProblem>).Name}.");
-        return WrappingMutator<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem>(typed).Invoke;
-    }
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        ((MutatorAdvice<TCandidate>)advice).CreateWrapperFactory<TSearchSpace, TProblem>(mutator);
 }

@@ -14,7 +14,7 @@ The built in composition overview is:
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | Weighted alternatives per element | Chooses a child independently for each element of a batch, invokes grouped child batches and restores input order | `ChooseOneCreator`, `ChooseOneCrossover`, `ChooseOneMutator`, `ChooseOneRefiner`                            | Creators, crossovers, mutators and refiners           |
 | Weighted alternatives per call    | Chooses one child for the complete operation call                                                                 | `ChooseOneSelector`, `ChooseOneReplacer`                                                                    | Selectors and replacers                               |
-| Conditional application           | Chooses between an operation and role specific unchanged behavior                                                 | `mutator.AppliedAtRate(...)`, `crossover.AppliedAtRate(...)`, `refiner.AppliedAtRate(...)`                                 | Mutators, crossovers and refiners                     |
+| Conditional application           | Chooses between an operation and role specific unchanged behavior                                                 | `mutator.AppliedAtRate(...)`, `crossover.AppliedAtRate(...)`, `refiner.AppliedAtRate(...)`                  | Mutators, crossovers and refiners                     |
 | Sequential composition            | Passes each stage result to the next stage in order                                                               | `PipelineMutator`, `PipelineRefiner`, `PipelineInterceptor`                                                 | Mutators, refiners and interceptors                   |
 | Repeated composition              | Feeds a result back into the same child for a configured number of iterations                                     | `IteratedRefiner`                                                                                           | Refiners                                              |
 | Objective-aware retention         | Measures a child's result and keeps it only when a criterion counts it as an improvement                          | `ImprovementCheckingRefiner`                                                                                | Refiners                                              |
@@ -168,61 +168,63 @@ A refinement that has to pass through a worse candidate to reach a better one is
 
 Improvement checking evaluates twice, and the algorithm then evaluates the returned candidate itself, so the naive configuration costs three problem evaluations per refined candidate where an unchecked refiner costs one. That cost is deliberately visible rather than hidden, and it is controlled by one thing: whether the refiner and the algorithm hold the **same evaluator object**.
 
-Execution nodes are resolved by reference identity, so one evaluator object resolves to one execution node, and therefore to one counter and one cache. Two separately constructed but structurally identical configurations resolve to two independent instances.
+Resolution uses configuration reference identity to select prepared execution state. Reusing the same evaluator object through the same resolution scope preserves that state, including its counters and caches. Execution objects are ephemeral bindings and may be rebuilt around that state for each context. Two separately constructed but structurally identical configurations have independent prepared state.
 
-The snippets in this section need four namespaces:
+The snippets in this section use these namespaces:
 
 ```csharp
-using HEAL.HeuristicLib.Algorithms;   // TerminatedBy, LimitedToEvaluatedCandidates
-using HEAL.HeuristicLib.Instrumentation; // CountAccumulator
-using HEAL.HeuristicLib.Operators;    // ProblemEvaluator, CachingEvaluator, CheckedForImprovement, LimitEvaluations
-using HEAL.HeuristicLib.Operators.Evaluators; // CountCandidates
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Operators;
 ```
 
-`CountCandidates` sits one namespace deeper than the helpers it chains onto, because instrumentation is declared beside the role it instruments. It is the one import in this list that is not guessable from the snippet.
-
-Algorithm configurations are records with `init` properties, so a slot is filled at construction or through `with`, never by assignment to an existing instance. Every snippet below therefore produces a new configuration rather than mutating one.
-
-By default a refiner uses its own plain `ProblemEvaluator`, which is unwrapped and therefore invisible to counting and analysis:
+Counting and timing are aspects. They select the configured evaluator by reference and leave the reusable algorithm configuration unchanged:
 
 ```csharp
+var evaluator = algorithm.Evaluator;
+var counting = Aspect.CountCandidates(evaluator, out var counter);
 var unshared = algorithm with
 {
-    Evaluator = new ProblemEvaluator<...>().CountCandidates(out var counter),
     Refiner = parameterFitting.CheckedForImprovement()
 };
+var run = unshared.CreateRun(problem, random).AddAspect(counting);
 ```
 
-The counter sees only the algorithm's own evaluations here; refinement effort is not measured. Sharing the counting evaluator brings it in:
+The improvement check uses its own evaluator configuration here, so the counter measures only the algorithm's evaluations. Share the selected evaluator to include comparison work:
 
 ```csharp
-var evaluator = new ProblemEvaluator<...>().CountCandidates(out var counter);
-
+var evaluator = algorithm.Evaluator;
+var counting = Aspect.CountCandidates(evaluator, out var counter);
 var shared = algorithm with
 {
-    Evaluator = evaluator,
     Refiner = parameterFitting.CheckedForImprovement(evaluator)
 };
+var run = shared.CreateRun(problem, random).AddAspect(counting);
 ```
 
-All three evaluations now increment one counter, so it measures total evaluation effort including refinement.
+Each refined candidate causes two comparison evaluations and the algorithm's subsequent evaluation. All three reach the selected evaluator and increment the same counter.
 
-That counter is what an algorithm terminator reads to stop the run. `AfterOperatorCountTerminator` observes it directly:
+An external terminator can read that accumulator:
 
 ```csharp
-var evaluator = new ProblemEvaluator<...>().CountCandidates(out var counter);
-
-var budgeted = (algorithm with
-    {
-        Evaluator = evaluator,
-        Refiner = parameterFitting.CheckedForImprovement(evaluator)
-    })
-    .TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 100_000));
+var budgeted = shared.TerminatedBy(
+    AfterOperatorCountTerminator.For(problem, counter, maximumCount: 100_000));
+var run = budgeted.CreateRun(problem, random).AddAspect(counting);
 ```
 
-The refiner's comparison evaluations increment the same counter that ends the run, so termination reflects the true cost of the search including refinement. Leave the refiner on its inherited default and the opposite holds: it holds a different evaluator execution, its evaluations never reach the counter, and refinement never shortens the run. Both behaviours are intentional, and the only thing that decides between them is whether the same evaluator object appears in both places.
+`shared.LimitedToEvaluatedCandidates(evaluator, 100_000)` owns its accumulator and adds counting advice only to the child scope resolving the budgeted algorithm. Comparison work counts when the refiner holds the selected evaluator. A different evaluator is outside that selection. The budget is checked after a yielded state, so a batch or iteration can take the count past the limit. A nonpositive limit stops after the first state.
 
-`algorithm.LimitedToEvaluatedCandidates(evaluator, 100_000)` is the shorthand for the same arrangement. It installs a counting replacement for the evaluator execution it observes and attaches the matching terminator. Replacements are also resolved by reference, so a refiner holding that instance resolves the counted version too and the accounting works out identically.
+The generic budget API accepts value strategies rather than callbacks:
+
+```csharp
+var budgeted = shared.LimitedToCount(evaluator, 100_000,
+    new EvaluatorCounting<TCandidate>(OperatorCountMetric.Candidates));
+var timed = shared.LimitedToOperatorDuration(evaluator, TimeSpan.FromSeconds(10),
+    new EvaluatorDurationMeasuring<TCandidate>());
+```
+
+Each role provides counting and duration-measuring values in `Instrumentation`. Counting records successful calls or returned candidates; timing also records failed calls. Timing accepts an explicit `TimeProvider`. Both are scoped to the budget's inner algorithm. If that algorithm never resolves the selected operator, nothing is recorded and the budget never stops it.
 
 Several observed operators can feed the same termination criterion by sharing one `CountAccumulator`. For example, the same counter can track refiner calls and evaluations.
 
@@ -374,13 +376,13 @@ var mutator = typed.Resolve(Mutator, out IMutationStrengthControl? strength);
 
 Use `mutator` for mutation and `strength`, when non-null, to read or update the selected execution's strength.
 
-An explicitly configured wrapper is a separate selected configuration. For example, assigning `gaussian.CountCalls(counter)` to `EvolutionStrategy.Mutator` exposes the counting wrapper's ordinary mutation role, so that configuration has no strength adaptation. A custom configured wrapper must deliberately expose `IMutationStrengthControl` if its own mutation behavior supports that control; the resolver does not search its children for additional capabilities.
+An explicitly configured wrapper is a separate selected configuration. For example, assigning `PipelineMutator.Create(gaussian)` to `EvolutionStrategy.Mutator` exposes the pipeline's ordinary mutation role, so that configuration has no strength adaptation. A custom configured wrapper must deliberately expose `IMutationStrengthControl` if its own mutation behavior supports that control; the resolver does not search its children for additional capabilities.
 
 ## Randomness and execution nodes
 
 Compositions whose role receives an explicit random number generator invoke children in the order defined by their policy. Random draw order is therefore part of reproducible behavior. Adding, removing or reordering child operators may change later random draws even when the same root seed is used. Interceptors and terminators do not receive a random number generator, so their built in compositions are deterministic with respect to child ordering unless a child depends on some other explicit input or external resource.
 
-Child configurations are resolved once for each composition execution node. Reusing the same child configuration elsewhere through the same resolution scope reuses the same child execution node and its execution data.
+Child configurations are resolved when each composition execution node is built. Reusing the same child configuration elsewhere through the same resolution scope preserves its prepared execution state. The resulting child execution objects may differ because each binding applies the requesting context's aspects.
 
 See [Reproducible randomness](/guide/execution/randomness) and [Running algorithms](/guide/execution/running-algorithms) for the underlying models.
 
@@ -390,4 +392,4 @@ Use the role specific `Wrapping*` base when a composition coordinates one child 
 
 Derive directly from the unprefixed role base when a composition coordinates different roles or needs a custom execution structure. `TransformedCreator` and `TransformedCrossover` follow this path because each coordinates both a source operator and a mutator.
 
-The authored execution node owns resolved child instances and mutable execution data. The reusable configuration owns parameters and child configurations.
+The authored execution node holds resolved child bindings and the prepared execution state needed for its context. Persistent mutable state is prepared once and survives rebuilding those bindings. The reusable configuration owns parameters and child configurations.

@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
@@ -24,7 +25,7 @@ public sealed class TopologyExecutionFactoryTests
         var outer = Resolve(parent, source);
         Next(outer).ShouldBe(1);
 
-        var child = parent.CreateChildScope(builder => builder.Install<IMutator<RealVector>>(leaf, original => new ObservingWrapper(original, reports.Add)));
+        var child = parent.CreateChildScope(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(reports.Add)));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         Next(inner).ShouldBe(2);
@@ -45,18 +46,14 @@ public sealed class TopologyExecutionFactoryTests
         var leaf = new CountingLeaf(() => preparations++);
         IMutator<RealVector> source = chooseOne ? new ChooseOneMutator<RealVector>([leaf]) : new PipelineMutator<RealVector>([leaf]);
         var calls = new CountAccumulator();
-        var root = ResolutionScope.Create(builder => builder.Install(source, original =>
-        {
-            recipes++;
-            return original.CountCalls(calls);
-        }));
+        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new PreparingCounterAdvice(calls, () => recipes++)));
         var first = Resolve(root, source);
         var second = Resolve(root, source);
         first.ShouldNotBeSameAs(second);
         Next(first).ShouldBe(1);
         Next(second).ShouldBe(2);
         var reports = new List<double>();
-        var child = root.CreateChildScope(builder => builder.Install(source, original => new ObservingWrapper(original, reports.Add)));
+        var child = root.CreateChildScope(Aspect.Create(Pointcut.Reference(source), new ObservingWrapperAdvice(reports.Add)));
         Next(Resolve(child, source)).ShouldBe(3);
         calls.CurrentCount.ShouldBe(3);
         reports.ShouldBe([3]);
@@ -112,7 +109,7 @@ public sealed class TopologyExecutionFactoryTests
         var outer = Resolve(parent, source);
         Next(outer).ShouldBe(101);
 
-        var child = parent.CreateChildScope(builder => builder.Install<IMutator<RealVector>>(leaf, original => new ObservingWrapper(original, reports.Add)));
+        var child = parent.CreateChildScope(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(reports.Add)));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         Next(inner).ShouldBe(202);
@@ -137,7 +134,7 @@ public sealed class TopologyExecutionFactoryTests
         var source = CreateComposite(multi, leaf, static () => { }, static () => { });
         var parent = ResolutionScope.Create();
         var reports = new List<double>();
-        var child = parent.CreateChildScope(builder => builder.Install<IMutator<RealVector>>(leaf, original => new ObservingWrapper(original, reports.Add)));
+        var child = parent.CreateChildScope(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(reports.Add)));
         var localLeaf = Resolve(child, leaf);
         Next(localLeaf).ShouldBe(1);
 
@@ -203,7 +200,7 @@ public sealed class TopologyExecutionFactoryTests
 
         Should.Throw<InvalidOperationException>(() => Resolve(parent, source)).ShouldBeSameAs(failure);
         Next(Resolve(parent, source)).ShouldBe(101);
-        var child = parent.CreateChildScope(builder => builder.Install<IMutator<RealVector>>(leaf, original => new ObservingWrapper(original, static _ => { })));
+        var child = parent.CreateChildScope(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(static _ => { })));
         Next(Resolve(child, source)).ShouldBe(202);
         preparations.ShouldBe(1);
         childPreparations.ShouldBe(1);
@@ -342,16 +339,25 @@ public sealed class TopologyExecutionFactoryTests
         }
     }
 
-    private sealed record ObservingWrapper : WrappingMutator<RealVector>
+    private sealed class PreparingCounterAdvice(CountAccumulator counter, Action prepare) : MutatorAdvice<RealVector>
+    {
+        public override WrapperExecutionFactory<IMutatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<RealVector> configuration)
+        {
+            prepare();
+            return new CountingMutatorAdvice<RealVector>(counter, OperatorCountMetric.Calls).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(configuration);
+        }
+    }
+
+    private sealed class ObservingWrapperAdvice : MutatorAdvice<RealVector>
     {
         private readonly Action<double> report;
 
-        public ObservingWrapper(IMutator<RealVector> childMutator, Action<double> report) : base(childMutator)
+        public ObservingWrapperAdvice(Action<double> report)
         {
             this.report = report;
         }
 
-        protected override WrapperExecutionFactory<IMutatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        public override WrapperExecutionFactory<IMutatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<RealVector> configuration) =>
             child => new Execution<TRunSearchSpace, TRunProblem>(child, report);
 
         private sealed class Execution<TSearchSpace, TProblem>(IMutatorExecution<RealVector, TSearchSpace, TProblem> child, Action<double> report)

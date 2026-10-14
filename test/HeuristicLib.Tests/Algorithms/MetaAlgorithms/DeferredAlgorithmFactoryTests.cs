@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
@@ -123,13 +124,13 @@ public sealed class DeferredAlgorithmFactoryTests
         };
         var root = ResolutionScope.Create();
         var observations = new List<string>();
-        var original = Resolve(root.With(builder => builder.Observe(mutator, _ => observations.Add("original"))), cycle);
+        var original = Resolve(root.With(Aspect.Observe(mutator, _ => observations.Add("original"))), cycle);
         var before = await Run(original);
         before.Select(state => state.Call).ShouldBe([1, 2, 1, 3, 4, 2]);
         before[0].Data.ShouldBeSameAs(before[1].Data);
         before[0].Data.ShouldNotBeSameAs(before[2].Data);
 
-        var rebuilt = Resolve(root.With(builder => builder.Observe(mutator, _ => observations.Add("rebuilt"))), cycle);
+        var rebuilt = Resolve(root.With(Aspect.Observe(mutator, _ => observations.Add("rebuilt"))), cycle);
         var after = await Run(rebuilt);
         after.Select(state => state.Call).ShouldBe([5, 6, 3, 7, 8, 4]);
         after[0].Data.ShouldBeSameAs(before[0].Data);
@@ -167,7 +168,7 @@ public sealed class DeferredAlgorithmFactoryTests
     private static WeakReference RunUnderTemporaryObserver(ResolutionScope root,
         CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState> cycle, IMutator<int> mutator)
     {
-        var observer = Aspect.Create(builder => builder.Observe(mutator, _ => { }));
+        var observer = Aspect.Observe(mutator, _ => { });
         Run(Resolve(root.With(observer), cycle)).GetAwaiter().GetResult();
         return new WeakReference(observer);
     }
@@ -212,7 +213,7 @@ public sealed class DeferredAlgorithmFactoryTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var values = new List<int> { paused.Current.Value };
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(builder => builder.Install(algorithm.Mutator, originalMutator => originalMutator.CountCalls(observedCalls)));
+        var child = root.CreateChildScope(Aspect.CountCalls(algorithm.Mutator, observedCalls));
 
         var observed = await Run(Resolve(child, source));
         observedCalls.CurrentCount.ShouldBe(cycle ? 4 : 2);
@@ -239,24 +240,24 @@ public sealed class DeferredAlgorithmFactoryTests
                 ObservedOperator = algorithm.Mutator,
                 MaximumDuration = TimeSpan.FromSeconds(3),
                 TimeProvider = clock,
-                MeasuredOperatorFactory = (source, duration, timeProvider) =>
+                DurationMeasuring = new RecordingMutatorDurationMeasuring<int>((source, duration, timeProvider) =>
                 {
                     source.ShouldBeSameAs(algorithm.Mutator);
                     accumulators.Add(duration);
-                    return source.MeasureDuration(duration, timeProvider);
-                }
+                    return new DurationMeasuringMutatorAdvice<int>(duration, timeProvider);
+                })
             }
             : new OperatorBudgetAlgorithm<int, ProbeState, IMutator<int>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Mutator,
                 MaximumCount = 3,
-                CountedOperatorFactory = (source, count) =>
+                Counting = new RecordingMutatorCounting<int>((source, count) =>
                 {
                     source.ShouldBeSameAs(algorithm.Mutator);
                     accumulators.Add(count);
-                    return source.CountCalls(count);
-                }
+                    return new CountingMutatorAdvice<int>(count, OperatorCountMetric.Calls);
+                })
             };
         var root = ResolutionScope.Create();
         var original = Resolve(root, budget);
@@ -264,7 +265,7 @@ public sealed class DeferredAlgorithmFactoryTests
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(builder => builder.Install(algorithm.Mutator, source => source.CountCalls(observedCalls)));
+        var child = root.CreateChildScope(Aspect.CountCalls(algorithm.Mutator, observedCalls));
 
         var observed = await Run(Resolve(child, budget));
         observed.Select(state => state.Call).ShouldBe([2, 3]);
@@ -302,22 +303,22 @@ public sealed class DeferredAlgorithmFactoryTests
                 ObservedOperator = algorithm.Mutator,
                 MaximumDuration = TimeSpan.FromSeconds(2),
                 TimeProvider = clock,
-                MeasuredOperatorFactory = (source, accumulator, provider) =>
+                DurationMeasuring = new RecordingMutatorDurationMeasuring<int>((source, accumulator, provider) =>
                 {
                     duration = accumulator;
-                    return source.MeasureDuration(accumulator, provider);
-                }
+                    return new DurationMeasuringMutatorAdvice<int>(accumulator, provider);
+                })
             }
             : new OperatorBudgetAlgorithm<int, ProbeState, IMutator<int>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Mutator,
                 MaximumCount = 2,
-                CountedOperatorFactory = (source, accumulator) =>
+                Counting = new RecordingMutatorCounting<int>((source, accumulator) =>
                 {
                     count = accumulator;
-                    return source.CountCalls(accumulator);
-                }
+                    return new CountingMutatorAdvice<int>(accumulator, OperatorCountMetric.Calls);
+                })
             };
         var root = ResolutionScope.Create();
         var limited = Resolve(root, budget);
@@ -344,7 +345,7 @@ public sealed class DeferredAlgorithmFactoryTests
         var first = await Run(Resolve(root, budget));
         first.Select(state => state.Call).ShouldBe([1, 2]);
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(builder => builder.Install(algorithm.Mutator, source => source.CountCalls(observedCalls)));
+        var child = root.CreateChildScope(Aspect.CountCalls(algorithm.Mutator, observedCalls));
 
         var observed = await Run(Resolve(child, budget));
         observed.Select(state => state.Call).ShouldBe([3]);
@@ -377,31 +378,31 @@ public sealed class DeferredAlgorithmFactoryTests
                 ObservedOperator = algorithm.Mutator,
                 MaximumDuration = TimeSpan.FromSeconds(3),
                 TimeProvider = clock,
-                MeasuredOperatorFactory = (source, accumulator, timeProvider) =>
+                DurationMeasuring = new RecordingMutatorDurationMeasuring<int>((source, accumulator, timeProvider) =>
                 {
                     declarations++;
                     duration = accumulator;
-                    return source.MeasureDuration(accumulator, timeProvider);
-                }
+                    return new DurationMeasuringMutatorAdvice<int>(accumulator, timeProvider);
+                })
             }
             : new OperatorBudgetAlgorithm<int, ProbeState, IMutator<int>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Mutator,
                 MaximumCount = 3,
-                CountedOperatorFactory = (source, accumulator) =>
+                Counting = new RecordingMutatorCounting<int>((source, accumulator) =>
                 {
                     declarations++;
                     count = accumulator;
-                    return source.CountCalls(accumulator);
-                }
+                    return new CountingMutatorAdvice<int>(accumulator, OperatorCountMetric.Calls);
+                })
             };
-        var root = ResolutionScope.Create(builder => builder.Install(trace));
+        var root = ResolutionScope.Create(trace);
         await using var paused = Resolve(root, budget).RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observed = 0;
-        var child = root.CreateChildScope(builder => builder.Observe(algorithm.Mutator, _ =>
+        var child = root.CreateChildScope(Aspect.Observe(algorithm.Mutator, _ =>
         {
             observed++;
             clock.Advance(20);
@@ -429,7 +430,7 @@ public sealed class DeferredAlgorithmFactoryTests
         var root = ResolutionScope.Create();
         (await Run(Resolve(root, source))).Count.ShouldBe(2);
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(builder => builder.Install(terminator, original => original.CountCalls(observedCalls)));
+        var child = root.CreateChildScope(Aspect.CountCalls(terminator, observedCalls));
 
         (await Run(Resolve(child, source))).Count.ShouldBe(1);
         observedCalls.CurrentCount.ShouldBe(1);
@@ -451,7 +452,7 @@ public sealed class DeferredAlgorithmFactoryTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         paused.Current.Value.ShouldBe(1);
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(builder => builder.Install(algorithm.Mutator, source => source.CountCalls(observedCalls)));
+        var child = root.CreateChildScope(Aspect.CountCalls(algorithm.Mutator, observedCalls));
 
         (await Run(Resolve(child, budget))).Count.ShouldBe(2);
         observedCalls.CurrentCount.ShouldBe(2);
@@ -537,11 +538,14 @@ public sealed class DeferredAlgorithmFactoryTests
         }
     }
 
-    private sealed class MutationCallClock(IMutator<int> mutator) : Clock<long>
+    private sealed class MutationCallClock : Clock<long>
     {
         private long calls;
         protected override long ReadTime() => calls;
-        protected override void Declare(AspectBuilder builder) => builder.Observe(mutator, _ => calls++);
+        public MutationCallClock(IMutator<int> mutator)
+        {
+            Advices = Aspect.Observe(mutator, _ => calls++).Advices;
+        }
     }
 
     private sealed class MutationData { public int Calls; }
@@ -577,4 +581,26 @@ public sealed class DeferredAlgorithmFactoryTests
             return new RecordingRandom(childPath, Forks);
         }
     }
+    private sealed record RecordingMutatorCounting<TCandidate>(Func<IMutator<TCandidate>, CountAccumulator, MutatorAdvice<TCandidate>> Create) : IOperatorCounting<IMutator<TCandidate>>
+    {
+        public Advice<IMutator<TCandidate>> CreateAdvice(CountAccumulator counter) => new SelectedAdvice(source => Create(source, counter));
+
+        private sealed class SelectedAdvice(Func<IMutator<TCandidate>, MutatorAdvice<TCandidate>> create) : MutatorAdvice<TCandidate>
+        {
+            public override WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> configuration) =>
+                create(configuration).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(configuration);
+        }
+    }
+
+    private sealed record RecordingMutatorDurationMeasuring<TCandidate>(Func<IMutator<TCandidate>, DurationAccumulator, TimeProvider, MutatorAdvice<TCandidate>> Create) : IOperatorDurationMeasuring<IMutator<TCandidate>>
+    {
+        public Advice<IMutator<TCandidate>> CreateAdvice(DurationAccumulator duration, TimeProvider timeProvider) => new SelectedAdvice(source => Create(source, duration, timeProvider));
+
+        private sealed class SelectedAdvice(Func<IMutator<TCandidate>, MutatorAdvice<TCandidate>> create) : MutatorAdvice<TCandidate>
+        {
+            public override WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> configuration) =>
+                create(configuration).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(configuration);
+        }
+    }
+
 }

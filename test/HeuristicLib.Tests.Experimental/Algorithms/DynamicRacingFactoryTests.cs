@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
@@ -98,11 +99,8 @@ public sealed class DynamicRacingFactoryTests
         };
         var creations = new CountAccumulator();
         var mutations = new CountAccumulator();
-        var parent = ResolutionScope.Create(builder =>
-        {
-            builder.Install<ICreator<MetaCandidate>>(metaCreator, original => original.CountCalls(creations));
-            builder.Install<IMutator<MetaCandidate>>(metaMutator, original => original.CountCalls(mutations));
-        });
+        var parent = ResolutionScope.Create(Aspect.CountCalls(metaCreator, creations),
+            Aspect.CountCalls(metaMutator, mutations));
         // Prebind the contender so its internal evaluator must be rebound for each performance observer.
         _ = parent.Resolve<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(contender);
         await using var paused = Run(parent, racing, problem).GetAsyncEnumerator();
@@ -113,11 +111,8 @@ public sealed class DynamicRacingFactoryTests
 
         var evaluations = new CountAccumulator();
         var interceptions = new CountAccumulator();
-        var child = parent.CreateChildScope(builder =>
-        {
-            builder.Install(contender.Evaluator, original => original.CountCalls(evaluations));
-            builder.Install<IInterceptor<int>>(interceptor, original => original.CountCalls(interceptions));
-        });
+        var child = parent.CreateChildScope(Aspect.CountCalls(contender.Evaluator, evaluations),
+            Aspect.CountCalls(interceptor, interceptions));
         await using var observed = Run(child, racing, problem).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
         sources[1].ShouldBeSameAs(contender);
@@ -134,8 +129,7 @@ public sealed class DynamicRacingFactoryTests
         interceptions.CurrentCount.ShouldBe(1);
 
         var independentSourceIndex = sources.Count;
-        var independent = ResolutionScope.Create(builder =>
-            builder.Install<ICreator<MetaCandidate>>(metaCreator, original => original.CountCalls(creations)));
+        var independent = ResolutionScope.Create(Aspect.CountCalls(metaCreator, creations));
         await using var fresh = Run(independent, racing, problem).GetAsyncEnumerator();
         (await fresh.MoveNextAsync()).ShouldBeTrue();
         creations.CurrentCount.ShouldBe(2);

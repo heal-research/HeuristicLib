@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators;
@@ -66,16 +67,13 @@ public sealed class ConcreteOperatorFactoryTests
         var counters = Enumerable.Range(0, expectedCalls.Length).Select(_ => new CountAccumulator()).ToArray();
         var parent = ResolutionScope.Create();
         invoke(parent);
-        var child = parent.CreateChildScope(builder =>
-        {
-            builder.Install(creator, original => original.CountCalls(counters[0]));
-            builder.Install(crossover, original => original.CountCalls(counters[1]));
-            builder.Install(mutator, original => original.CountCalls(counters[2]));
-            builder.Install(refiner, original => original.CountCalls(counters[3]));
-            builder.Install(evaluator, original => original.CountCalls(counters[4]));
-            builder.Install(female, original => original.CountCalls(counters[5]));
-            builder.Install(male, original => original.CountCalls(counters[6]));
-        });
+        var child = parent.CreateChildScope(Aspect.CountCalls(creator, counters[0]),
+            Aspect.CountCalls(crossover, counters[1]),
+            Aspect.CountCalls(mutator, counters[2]),
+            Aspect.CountCalls(refiner, counters[3]),
+            Aspect.CountCalls(evaluator, counters[4]),
+            Aspect.CountCalls(female, counters[5]),
+            Aspect.CountCalls(male, counters[6]));
 
         invoke(child);
         counters.Select(counter => counter.CurrentCount).ShouldBe(expectedCalls);

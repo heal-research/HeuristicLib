@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -11,8 +12,9 @@ public class SelectorCompositionTests
     {
         var counter = new CountAccumulator();
         var problem = CreateProblem();
-        var selector = BestSelector.For(problem).CountCalls(counter).AvoidSameMates(maximumAttempts: 3);
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
+        var observed = BestSelector.For(problem);
+        var selector = observed.AvoidSameMates(maximumAttempts: 3);
+        var execution = ResolutionScope.Create(Aspect.CountCalls(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
         var population = new[]
         {
             EvaluatedCandidate.From(1, new ObjectiveVector(1.0)),

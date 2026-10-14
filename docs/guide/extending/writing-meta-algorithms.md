@@ -102,7 +102,7 @@ var staged = new TwoStageAlgorithm<RealVector, PopulationState<RealVector>>
 
 var wholeRun = staged.TracePopulationQuality();
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .Attach(wholeRun);
+    .AddAspect(wholeRun);
 ```
 
 Two type arguments, not four. The search space and the problem are supplied by `CreateRun`, so the same `staged` value composes stages written for any real vector problem.
@@ -114,8 +114,8 @@ var exploreQuality = explore.TracePopulationQuality();
 
 var wholeRun = staged.TracePopulationQuality();
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .Attach(exploreQuality)
-    .Attach(wholeRun);
+    .AddAspect(exploreQuality)
+    .AddAspect(wholeRun);
 ```
 
 `exploreQuality` then holds only the first stage's generations, and `wholeRun` holds every state the meta-algorithm yielded. Note that `explore` and `exploit` must be distinct objects for this to work, since observation sources are matched by reference.
@@ -147,9 +147,7 @@ var cycle = first.CycleWith(second, maximumCycles: 3, scopePolicy: ChildScopePol
 
 Equal but distinct algorithm configurations retain separate child state. Repeated references retain the same child state. Common dependencies first selected in separate child states stay separate; dependencies already owned by an ancestor are reused in every mode.
 
-For caller-owned retained state in a custom meta-algorithm, create `scope.CreateChildScopeWithoutAspects()` once and retain that view in the prepared factory. For each activation, use `retained.WithAspectsFrom(scope)` with the current construction scope. This replaces the retained view's aspect collection without replacing its state, so a new observer does not reset state or retain an earlier observer. Keep invocation progress and the requesting construction scope on the constructed execution, rather than capturing the first requesting scope in persistent state.
-
-For a meta-algorithm with the same activation policies, prepare one `ChildScopeSelector` from its `ChildScopePolicy` before returning the execution factory. Pass that selector to each constructed node and call `GetScopeFor(child, scope)` when activating a child. The selector retains child state across bindings without retaining an earlier aspect context.
+For a meta-algorithm with the same activation policies, prepare one `ChildScopeSelector` from its `ChildScopePolicy` before returning the execution factory. Pass that selector to each constructed node and call `GetScopeFor(child, scope)` when activating a child. The selector retains child state across bindings without retaining an earlier aspect context. Keep invocation progress and the current construction scope on the constructed execution; persistent state must not capture the first requesting scope.
 
 ## Preserve run behavior
 

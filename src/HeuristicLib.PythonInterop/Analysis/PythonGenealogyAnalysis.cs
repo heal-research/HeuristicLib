@@ -5,6 +5,7 @@ using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -147,7 +148,7 @@ public class PythonGenealogyAnalysis
                                                gaAlgorithm.TerminatedAfterIterations(parameters.Iterations),
                                                problem, RandomNumberGenerator.Create(parameters.Seed));
                     foreach (var analyzer in analyzers.GetAll())
-                        gaRun.Attach(analyzer);
+                        gaRun.AddAspect(analyzer);
                     gaRun.Complete();
                     return analyzers.ToExperimentResult();
                 }
@@ -168,7 +169,7 @@ public class PythonGenealogyAnalysis
                                                esAlgorithm.TerminatedAfterIterations(parameters.Iterations),
                                                problem, RandomNumberGenerator.Create(parameters.Seed));
                     foreach (var analyzer in analyzers.GetAll())
-                        esRun.Attach(analyzer);
+                        esRun.AddAspect(analyzer);
                     esRun.Complete();
                     return analyzers.ToExperimentResult();
                 }
@@ -201,7 +202,7 @@ public class PythonGenealogyAnalysis
                                                      nsga2Algorithm.TerminatedAfterIterations(parameters.Iterations),
                                                      problem, RandomNumberGenerator.Create(parameters.Seed));
                     foreach (var analyzer in analyzers.GetAll())
-                        nsga2Run.Attach(analyzer);
+                        nsga2Run.AddAspect(analyzer);
                     _ = nsga2Run.Complete();
                     return analyzers.ToExperimentResult();
                 }
@@ -288,24 +289,6 @@ public class PythonGenealogyAnalysis
     private static ArgumentException MissingOperator(string algorithmName, string operatorName) =>
         new($"Algorithm '{algorithmName}' requires '{operatorName}' to be set on the experiment parameters.");
 
-    /// <summary>
-    /// Forwards every intercepted population to a Python callback. It collects nothing of its own.
-    /// </summary>
-    private sealed class CallbackAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(
-        IAlgorithm<TCandidate, TSearchState> algorithm,
-        Action<PopulationState<TCandidate>> callback)
-        : Aspect
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : PopulationState<TCandidate>, ISearchState
-    {
-        protected override void Declare(AspectBuilder builder) =>
-            builder.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, Record);
-
-        public void Record(AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState> observation) =>
-            callback(observation.State);
-    }
-
     private static MyAnalyzers<TCandidate> CreateAnalyzers<TCandidate, TSearchSpace, TSearchState>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters,
         IAlgorithm<TCandidate, TSearchState> algorithm,
@@ -324,7 +307,7 @@ public class PythonGenealogyAnalysis
         var qc = evaluator.TraceBestCandidateSoFar(objectiveComparer: parameters.ObjectiveComparer);
         var apt = parameters.TrackPopulations ? Analyzer.TraceAllPopulations(algorithm) : null;
         var c = callback != null
-            ? new CallbackAnalysis<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>(algorithm, callback)
+            ? Aspect.Observe(algorithm, observation => callback(observation.State))
             : null;
         return new MyAnalyzers<TCandidate>(qualities, rankAnalysis, qc, apt, c);
     }

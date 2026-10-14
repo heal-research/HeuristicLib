@@ -16,7 +16,7 @@ public class CrossoverConfigurationEqualityTests
     {
         var childCrossover = new OffsetCrossover(1);
 
-        var crossover = childCrossover.CountCalls(new CountAccumulator());
+        var crossover = new IdentityCrossover(childCrossover);
 
         crossover.ChildCrossover.ShouldBeSameAs(childCrossover);
     }
@@ -142,75 +142,12 @@ public class CrossoverConfigurationEqualityTests
         crossover.TransformationMutator.ShouldBeSameAs(transformation);
     }
 
-    [Fact]
-    public void CountingCrossover_WithSameCounterAndMetric_IsEqual()
-    {
-        var counter = new CountAccumulator();
-        var left = new OffsetCrossover(1).CountCalls(counter);
-        var right = new OffsetCrossover(1).CountCalls(counter);
 
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
 
-    [Fact]
-    public void CountingCrossover_WithDifferentMetric_IsNotEqual()
-    {
-        var counter = new CountAccumulator();
-        var left = new OffsetCrossover(1).CountCalls(counter);
-        var right = new OffsetCrossover(1).CountCandidates(counter);
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void CountingCrossover_WithDifferentCounter_IsNotEqual()
-    {
-        var left = new OffsetCrossover(1).CountCalls(new CountAccumulator());
-        var right = new OffsetCrossover(1).CountCalls(new CountAccumulator());
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void CountingCrossover_WithDifferentChildCrossover_IsNotEqual()
-    {
-        var counter = new CountAccumulator();
-        var left = new OffsetCrossover(1).CountCalls(counter);
-        var right = new OffsetCrossover(2).CountCalls(counter);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void DurationMeasuringCrossover_WithSameDurationAndTimeProvider_IsEqual()
-    {
-        var duration = new DurationAccumulator();
-        var left = new OffsetCrossover(1).MeasureDuration(duration, TimeProvider.System);
-        var right = new OffsetCrossover(1).MeasureDuration(duration, TimeProvider.System);
-
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
-
-    [Fact]
-    public void DurationMeasuringCrossover_WithDifferentDuration_IsNotEqual()
-    {
-        var left = new OffsetCrossover(1).MeasureDuration(new DurationAccumulator(), TimeProvider.System);
-        var right = new OffsetCrossover(1).MeasureDuration(new DurationAccumulator(), TimeProvider.System);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void DurationMeasuringCrossover_WithDifferentChildCrossover_IsNotEqual()
-    {
-        var duration = new DurationAccumulator();
-        var left = new OffsetCrossover(1).MeasureDuration(duration, TimeProvider.System);
-        var right = new OffsetCrossover(2).MeasureDuration(duration, TimeProvider.System);
-
-        left.ShouldNotBe(right);
-    }
 
 
 
@@ -222,13 +159,12 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void RequiredChild_CanBeReplacedWithAWithExpression()
     {
-        var original = new OffsetCrossover(1).CountCalls(new CountAccumulator());
+        var original = new IdentityCrossover(new OffsetCrossover(1));
         var replacement = new OffsetCrossover(2);
 
         var reconfigured = original with { ChildCrossover = replacement };
 
         reconfigured.ChildCrossover.ShouldBeSameAs(replacement);
-        reconfigured.Counter.ShouldBeSameAs(original.Counter);
         original.ChildCrossover.ShouldNotBeSameAs(replacement);
     }
 
@@ -306,4 +242,14 @@ public class CrossoverConfigurationEqualityTests
                 ChildCrossovers[0].Cross(parents, random, searchSpace, problem);
         }
     }
+    private sealed record IdentityCrossover : WrappingCrossover<int>
+    {
+        public IdentityCrossover(ICrossover<int> child) : base(child)
+        {
+        }
+
+        protected override WrapperExecutionFactory<ICrossoverExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+            child => child;
+    }
+
 }

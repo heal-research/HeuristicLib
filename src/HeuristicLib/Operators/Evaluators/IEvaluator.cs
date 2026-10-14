@@ -23,6 +23,19 @@ public interface IEvaluatorExecution<TCandidate, in TSearchSpace, in TProblem>
     IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
+public abstract class EvaluatorAdvice<TCandidate> : Advice<IEvaluator<TCandidate>>
+{
+    /// <summary>Prepares this advice for one join point and returns a constructor accepting the execution it wraps.</summary>
+    /// <remarks>
+    /// Resolution calls this once per join point and owner state. Validate the run's types and allocate state that must
+    /// survive rebuilding the execution graph here.
+    /// </remarks>
+    /// <param name="evaluator">The configuration the pointcut selected.</param>
+    public abstract WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> evaluator)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+}
+
 public static class EvaluatorResolutionExtensions
 {
     extension(ResolutionScope scope)
@@ -30,7 +43,7 @@ public static class EvaluatorResolutionExtensions
         public IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate> evaluator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(evaluator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem>);
+            scope.Resolve(evaluator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(evaluator))]
         public IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate>? evaluator)
@@ -78,12 +91,8 @@ public static class EvaluatorResolutionExtensions
             scope.Scope.TryResolve(evaluator, out execution, out reason);
     }
 
-    private static Advice<IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>> PrepareAdvice<TCandidate, TSearchSpace, TProblem>(IConfigurationNode wrapper)
+    private static WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>(Advice advice, IEvaluator<TCandidate> evaluator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        if (wrapper is not WrappingEvaluator<TCandidate> typed)
-            throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IEvaluator<TCandidate>).Name} producing {typeof(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>).Name}.");
-        return WrappingEvaluator<TCandidate>.CreateWrapperFactory<TSearchSpace, TProblem>(typed).Invoke;
-    }
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        ((EvaluatorAdvice<TCandidate>)advice).CreateWrapperFactory<TSearchSpace, TProblem>(evaluator);
 }

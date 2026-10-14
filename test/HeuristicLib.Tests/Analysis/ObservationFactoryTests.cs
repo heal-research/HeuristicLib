@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
@@ -18,8 +19,7 @@ public class ObservationFactoryTests
         var parentObservations = new List<AlgorithmObservation<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>>();
         var childObservations = new List<AlgorithmObservation<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>>();
         var childEvaluations = new List<int>();
-        var root = ResolutionScope.Create(builder =>
-            builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, parentObservations.Add));
+        var root = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, parentObservations.Add));
         var original = root.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
         var parentInitial = CreateState(1);
         await using var paused = original.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), parentInitial,
@@ -27,11 +27,8 @@ public class ObservationFactoryTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var parentFirst = paused.Current;
 
-        var child = root.CreateChildScope(builder =>
-        {
-            builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, childObservations.Add);
-            builder.Observe(algorithm.Evaluator, observation => childEvaluations.AddRange(observation.Candidates));
-        });
+        var child = root.CreateChildScope(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, childObservations.Add),
+            Aspect.Observe(algorithm.Evaluator, observation => childEvaluations.AddRange(observation.Candidates)));
         var rebound = child.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
         rebound.ShouldNotBeSameAs(original);
         var childInitial = CreateState(10);
@@ -54,8 +51,7 @@ public class ObservationFactoryTests
         childEvaluations.ShouldBe([11, 12]);
 
         // A separate root selects a separate execution and observation counter for the same configuration.
-        var independent = ResolutionScope.Create(builder =>
-            builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, parentObservations.Add));
+        var independent = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, parentObservations.Add));
         var independentStates = new List<PopulationState<int>>();
         await foreach (var state in independent.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm)
             .RunStreamingAsync(problem, RandomNumberGenerator.Create(3), ct: TestContext.Current.CancellationToken))
@@ -72,7 +68,7 @@ public class ObservationFactoryTests
         IReadOnlyList<int> parents = [1, 2];
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            (builder, observe) => builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source, observation =>
+            observe => Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source, observation =>
             {
                 observation.Mutator.ShouldBeSameAs(source);
                 observation.Parents.ShouldBeSameAs(parents);
@@ -94,7 +90,7 @@ public class ObservationFactoryTests
         IReadOnlyList<Parents<int>> parents = [new(1, 2)];
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            (builder, observe) => builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source, observation =>
+            observe => Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source, observation =>
             {
                 observation.Crossover.ShouldBeSameAs(source);
                 observation.Parents.ShouldBeSameAs(parents);
@@ -116,7 +112,7 @@ public class ObservationFactoryTests
         IReadOnlyList<int> candidates = [3];
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            (builder, observe) => builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source, observation =>
+            observe => Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source, observation =>
             {
                 observation.Evaluator.ShouldBeSameAs(source);
                 observation.Candidates.ShouldBeSameAs(candidates);
@@ -139,7 +135,7 @@ public class ObservationFactoryTests
         var previous = CreateState(1);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            (builder, observe) => builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(source, observation =>
+            observe => Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(source, observation =>
             {
                 observation.Interceptor.ShouldBeSameAs(source);
                 observation.State.ShouldBeSameAs(transformed);
@@ -154,17 +150,17 @@ public class ObservationFactoryTests
     }
 
     private static void AssertContextualObservations<TExecution>(List<string> events,
-        Action<AspectBuilder, Action> declare, Func<ResolutionScope, TExecution> resolve, Action<TExecution> invoke)
+        Func<Action, Aspect> createAspect, Func<ResolutionScope, TExecution> resolve, Action<TExecution> invoke)
         where TExecution : class, IExecutionNode
     {
-        var root = ResolutionScope.Create(builder => declare(builder, () => events.Add("parent")));
+        var root = ResolutionScope.Create(createAspect(() => events.Add("parent")));
         var original = resolve(root);
         events.ShouldBeEmpty();
         invoke(original);
         events.ShouldBe(["operation", "parent"]);
         events.Clear();
 
-        var child = root.CreateChildScope(builder => declare(builder, () => events.Add("child")));
+        var child = root.CreateChildScope(createAspect(() => events.Add("child")));
         var rebound = resolve(child);
         rebound.ShouldNotBeSameAs(original);
         events.ShouldBeEmpty();

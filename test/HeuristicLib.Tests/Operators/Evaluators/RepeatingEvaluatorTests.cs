@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -19,9 +20,10 @@ public class RepeatingEvaluatorTests
     {
         var counter = new CountAccumulator();
         var problem = CreateProblem();
-        var evaluator = new CandidateEvaluator().CountCalls(counter).AsRepeated(3);
+        var observed = new CandidateEvaluator();
+        var evaluator = observed.AsRepeated(3);
 
-        ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
+        ResolutionScope.Create(Aspect.CountCalls(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
             .Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(3);

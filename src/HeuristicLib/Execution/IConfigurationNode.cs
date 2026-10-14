@@ -30,7 +30,7 @@ public interface IConfigurationNode
 /// <remarks>
 /// Role configurations such as mutators are not of this kind: their execution type depends on the run's search space
 /// and problem, so they are resolved through
-/// <see cref="ResolutionScope.Resolve{TConfiguration, TExecution}(TConfiguration, Func{TConfiguration, ExecutionFactory{TExecution}}, Func{IConfigurationNode, Advice{TExecution}})"/>
+/// <see cref="ResolutionScope.Resolve{TConfiguration, TExecution}(TConfiguration, Func{TConfiguration, ExecutionFactory{TExecution}}, Func{Advice, TConfiguration, WrapperExecutionFactory{TExecution}})"/>
 /// instead.
 /// </remarks>
 public interface IConfigurationNode<out TExecution> : IConfigurationNode

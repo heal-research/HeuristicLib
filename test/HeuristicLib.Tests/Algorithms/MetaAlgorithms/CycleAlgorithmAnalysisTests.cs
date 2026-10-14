@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -21,7 +22,7 @@ public class CycleAlgorithmAnalysisTests
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(analysis1).Attach(analysis2);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(analysis1).AddAspect(analysis2);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -91,12 +92,15 @@ public class CycleAlgorithmAnalysisTests
         }
     }
 
-    private sealed class EvaluationTraceAnalysis(IEvaluator<int> evaluator)
+    private sealed class EvaluationTraceAnalysis
         : Aspect
     {
         public ExecutionState Result { get; } = new();
 
-        protected override void Declare(AspectBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
+        public EvaluationTraceAnalysis(IEvaluator<int> evaluator)
+        {
+            Advices = Aspect.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record).Advices;
+        }
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);

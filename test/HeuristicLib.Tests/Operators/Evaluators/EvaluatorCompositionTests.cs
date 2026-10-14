@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -10,9 +11,10 @@ public class EvaluatorCompositionTests
     public void CachingEvaluator_UsesIndependentCachePerExecution()
     {
         var counter = new CountAccumulator();
-        var evaluator = CreateEvaluator().CountCalls(counter).Cached();
-        var firstExecution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
-        var secondExecution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var observed = CreateEvaluator();
+        var evaluator = observed.Cached();
+        var firstExecution = ResolutionScope.Create(Aspect.CountCalls(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var secondExecution = ResolutionScope.Create(Aspect.CountCalls(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         firstExecution.Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -26,9 +28,10 @@ public class EvaluatorCompositionTests
     public void LimitEvaluator_UsesIndependentCounterPerExecution()
     {
         var counter = new CountAccumulator();
-        var evaluator = CreateEvaluator().CountCandidates(counter).LimitEvaluations(2, enforceLimitWithinBatch: true);
-        var firstExecution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
-        var secondExecution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var observed = CreateEvaluator();
+        var evaluator = observed.LimitEvaluations(2, enforceLimitWithinBatch: true);
+        var firstExecution = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var secondExecution = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         var limited = firstExecution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -42,8 +45,9 @@ public class EvaluatorCompositionTests
     public void RepeatingEvaluator_InvokesResolvedChildForEveryEvaluation()
     {
         var counter = new CountAccumulator();
-        var evaluator = CreateEvaluator().CountCalls(counter).AsRepeated(2, ObjectiveVectorAggregation.Mean);
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var observed = CreateEvaluator();
+        var evaluator = observed.AsRepeated(2, ObjectiveVectorAggregation.Mean);
+        var execution = ResolutionScope.Create(Aspect.CountCalls(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         execution.Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

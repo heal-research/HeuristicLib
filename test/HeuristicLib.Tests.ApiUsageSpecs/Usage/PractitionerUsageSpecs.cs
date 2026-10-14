@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
@@ -395,21 +396,21 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
-    public void InstrumentationOperators_CanBeConstructedDirectlyOrThroughFluentMethods()
+    public void InstrumentationAdvice_CanBeConstructedDirectlyOrThroughAspectFactories()
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var mutator = CreateSimpleGeneticAlgorithm(problem).Mutator;
         var counter = new CountAccumulator();
         var duration = new DurationAccumulator();
 
-        var counted = new CountingMutator<RealVector>(mutator, counter, OperatorCountMetric.Candidates);
-        var measured = mutator.MeasureDuration(duration);
+        var counted = new CountingMutatorAdvice<RealVector>(counter, OperatorCountMetric.Candidates);
+        var measured = Aspect.MeasureDuration(mutator, duration);
 
-        counted.ChildMutator.ShouldBeSameAs(mutator);
+        Aspect.Create(Pointcut.Reference(mutator), counted).Advices.Single().Pointcut.Matches(mutator).ShouldBeTrue();
         counted.Counter.ShouldBeSameAs(counter);
         counted.Metric.ShouldBe(OperatorCountMetric.Candidates);
-        measured.ChildMutator.ShouldBeSameAs(mutator);
-        measured.Duration.ShouldBeSameAs(duration);
+        measured.Advices.Single().Pointcut.Matches(mutator).ShouldBeTrue();
+        measured.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringMutatorAdvice<RealVector>>().Duration.ShouldBeSameAs(duration);
     }
 
     [Fact]
@@ -438,7 +439,7 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
-    public void GeneticAlgorithm_GenericOperatorBudget_CanUseCustomCountedOperatorFactory()
+    public void GeneticAlgorithm_GenericOperatorBudget_CanUseACountingValueStrategy()
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var algorithm = CreateSimpleGeneticAlgorithm(problem) with
@@ -451,8 +452,7 @@ public class PractitionerUsageSpecs
             .LimitedToCount(
                 algorithm.Mutator,
                 maximumCount: 20,
-                countedOperatorFactory: static (mutator, counter) =>
-                    mutator.CountCandidates(counter))
+                counting: new MutatorCounting<RealVector>(OperatorCountMetric.Candidates))
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
@@ -473,17 +473,13 @@ public class PractitionerUsageSpecs
             MaximumGenerations = 5,
             MutationRate = 1.0
         };
-        var observedAlgorithm = baseAlgorithm with
-        {
-            Crossover = baseAlgorithm.Crossover.CountCalls(counter),
-            Mutator = baseAlgorithm.Mutator.CountCalls(counter)
-        };
+        var observedAlgorithm = baseAlgorithm;
         var algorithm = observedAlgorithm.TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 2));
 
-        var states = algorithm.Stream(
-            problem,
-            RandomNumberGenerator.Create(987),
-            ct: TestContext.Current.CancellationToken)
+        var states = algorithm.CreateRun(problem, RandomNumberGenerator.Create(987))
+            .AddAspect(Aspect.CountCalls(baseAlgorithm.Crossover, counter))
+            .AddAspect(Aspect.CountCalls(baseAlgorithm.Mutator, counter))
+            .Stream(cancellationToken: TestContext.Current.CancellationToken)
               .ToList();
 
         states.Count.ShouldBe(2);

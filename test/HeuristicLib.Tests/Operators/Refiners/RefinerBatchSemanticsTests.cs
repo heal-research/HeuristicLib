@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -14,9 +15,9 @@ public class RefinerBatchSemanticsTests
     {
         var population = Enumerable.Range(0, populationSize).Select(value => new Individual(value)).ToArray();
 
-        foreach (var (name, topology) in PassThroughTopologies())
+        foreach (var (name, topology, advice) in PassThroughTopologies())
         {
-            var refined = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(topology).Refine(population, RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
+            var refined = ResolutionScope.Create(advice is null ? [] : [advice]).Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(topology).Refine(population, RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
 
             refined.Count.ShouldBe(population.Length, name);
             for (var index = 0; index < population.Length; index++)
@@ -47,7 +48,8 @@ public class RefinerBatchSemanticsTests
     public void InstrumentationRefiners_ReportThePopulationTheRefinerActuallyReturned()
     {
         var counter = new CountAccumulator();
-        var execution = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(new DropLastRefiner().CountCandidates(counter));
+        var observed = new DropLastRefiner();
+        var execution = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(observed);
 
         Refine(execution, 1, 2, 3);
 
@@ -64,20 +66,20 @@ public class RefinerBatchSemanticsTests
         Should.Throw<InvalidOperationException>(() => Refine(execution, 1, 2, 3));
     }
 
-    private static IEnumerable<(string Name, IRefiner<Individual> Topology)> PassThroughTopologies()
+    private static IEnumerable<(string Name, IRefiner<Individual> Topology, Aspect? Advice)> PassThroughTopologies()
     {
         var noChange = NoChangeRefiner<Individual>.Instance;
 
-        yield return ("no change", noChange);
-        yield return ("pipeline", PipelineRefiner.Create(noChange, noChange));
-        yield return ("empty pipeline", PipelineRefiner.Create<Individual>());
-        yield return ("iterated", noChange.AsIterated(3));
-        yield return ("choose one", ChooseOneRefiner.Create(noChange));
-        yield return ("rate limited", new AddOffsetRefiner(1).AppliedAtRate(0.0));
-        yield return ("counting", noChange.CountCandidates(new CountAccumulator()));
-        yield return ("duration measuring", noChange.MeasureDuration(new DurationAccumulator()));
-        yield return ("improvement checking", noChange.CheckedForImprovement());
-        yield return ("single candidate", new IdentityRefiner());
+        yield return ("no change", noChange, null);
+        yield return ("pipeline", PipelineRefiner.Create(noChange, noChange), null);
+        yield return ("empty pipeline", PipelineRefiner.Create<Individual>(), null);
+        yield return ("iterated", noChange.AsIterated(3), null);
+        yield return ("choose one", ChooseOneRefiner.Create(noChange), null);
+        yield return ("rate limited", new AddOffsetRefiner(1).AppliedAtRate(0.0), null);
+        yield return ("counting", noChange, Aspect.CountCandidates(noChange, new CountAccumulator()));
+        yield return ("duration measuring", noChange, Aspect.MeasureDuration(noChange, new DurationAccumulator()));
+        yield return ("improvement checking", noChange.CheckedForImprovement(), null);
+        yield return ("single candidate", new IdentityRefiner(), null);
     }
 
     private static IReadOnlyList<Individual> Refine(IRefinerExecution<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>> execution, params int[] values) =>

@@ -22,13 +22,6 @@ public abstract record WrappingAlgorithm<TCandidate, TSearchState>(IAlgorithm<TC
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
-    /// <summary>Prepares a wrapper constructor for a caller supplying its resolved child directly.</summary>
-    /// <remarks>Resolution uses this bridge for aspect advice; configured wrappers use CreateExecutionFactory.</remarks>
-    public static WrapperExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(WrappingAlgorithm<TCandidate, TSearchState> wrapper)
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
-        wrapper.CreateWrapperFactory<TRunSearchSpace, TRunProblem>();
-
     ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> IAlgorithm<TCandidate>.CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
     {
         if (typeof(TRunSearchState) != typeof(TSearchState))

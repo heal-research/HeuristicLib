@@ -41,7 +41,7 @@ public static class MoveEvaluatorResolutionExtensions
         public IMoveEvaluatorExecution<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TCandidate, TSearchSpace, TProblem, TMove>(IMoveEvaluator<TCandidate, TMove> moveEvaluator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(moveEvaluator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem, TMove>);
+            scope.Resolve(moveEvaluator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TMove>);
 
         [return: NotNullIfNotNull(nameof(moveEvaluator))]
         public IMoveEvaluatorExecution<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TMove>(IMoveEvaluator<TCandidate, TMove>? moveEvaluator)
@@ -89,8 +89,8 @@ public static class MoveEvaluatorResolutionExtensions
             scope.Scope.TryResolve(moveEvaluator, out execution, out reason);
     }
 
-    private static Advice<IMoveEvaluatorExecution<TCandidate, TSearchSpace, TProblem, TMove>> PrepareAdvice<TCandidate, TSearchSpace, TProblem, TMove>(IConfigurationNode wrapper)
+    private static WrapperExecutionFactory<IMoveEvaluatorExecution<TCandidate, TSearchSpace, TProblem, TMove>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TMove>(Advice advice, IMoveEvaluator<TCandidate, TMove> configuration)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        => throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IMoveEvaluator<TCandidate, TMove>).Name} producing {typeof(IMoveEvaluatorExecution<TCandidate, TSearchSpace, TProblem, TMove>).Name}.");
+        => throw new InvalidOperationException($"{advice.GetType().Name} is not a single-child wrapper for {typeof(IMoveEvaluator<TCandidate, TMove>).Name} producing {typeof(IMoveEvaluatorExecution<TCandidate, TSearchSpace, TProblem, TMove>).Name}.");
 }

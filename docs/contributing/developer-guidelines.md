@@ -130,13 +130,13 @@ Preparation receives no scope. The returned `ExecutionFactory<TExecution>` recei
 
 Algorithms resolve only their configured parameters and create no operators of their own. Keep those parameters as supplied. Behavior derived from a parameter, such as a mutation rate, belongs in the algorithm's execution code. Independent operators doing real work must be parameters so observations and budgets can see them.
 
-Resolving a configuration an algorithm builds itself makes it visible to pointcuts, so selection can differ from what the user configured. This is an authoring guideline, not a rule enforced by the resolver. Children introduced by a registration's generated wrappers are excluded only from that registration; other registrations can still select them.
+Resolving a configuration an algorithm builds itself makes it visible to pointcuts, so selection can differ from what the user configured. This is an authoring guideline, not a rule enforced by the resolver. Advice wraps already resolved executions and introduces no configuration children.
 
 ### § 4.4 Expose one execution node factory
 
 Expose one public `CreateExecutionFactory(...)` method returning `ExecutionFactory<TExecution>` for the exact execution role. Do not add role named alternatives or hide it behind explicit interface implementation. Preparation runs once per selected logical execution; its returned factory may bind several nodes.
 
-A topology base owns the public method and exposes one protected preparation hook: `CreateWrapperFactory` returns `WrapperExecutionFactory<TExecution>` for a wrapping base; `CreateCompositeFactory` returns `CompositeExecutionFactory<TExecution>` for a multi base. The hook prepares persistent state and returns a factory accepting the newly resolved children. Use the same execution role interface for the children and result. Derived authors construct their matching execution classes inside the returned delegate. Ordinary leaf operation overrides remain unchanged. Wrapping bases expose a public static `CreateWrapperFactory(wrapper)` bridge for typed resolution callbacks that supply the inner execution directly; it invokes the same protected hook.
+A topology base owns the public method and exposes one protected preparation hook: `CreateWrapperFactory` returns `WrapperExecutionFactory<TExecution>` for a wrapping base; `CreateCompositeFactory` returns `CompositeExecutionFactory<TExecution>` for a multi base. The hook prepares persistent state and returns a factory accepting the newly resolved children. Use the same execution role interface for the children and result. Derived authors construct their matching execution classes inside the returned delegate. Ordinary leaf operation overrides remain unchanged.
 
 ### § 4.5 Keep construction entry points semantically equivalent
 
@@ -486,7 +486,7 @@ because an adjective cannot be misread as a command to modify the receiver: `alg
 more, and the name should not suggest otherwise.
 
 A method that **mutates the receiver** is named with an imperative verb and never with `With*`, even when it returns
-the receiver for chaining: `run.Attach(analyzer)`. A fluent chain is not evidence that a value is being built,
+the receiver for chaining: `run.AddAspect(analyzer)`. A fluent chain is not evidence that a value is being built,
 so the name has to carry that distinction on its own.
 
 This was applied across the library after `With*` was found covering three different semantics at once, one of which

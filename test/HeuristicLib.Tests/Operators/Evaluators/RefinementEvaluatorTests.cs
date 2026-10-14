@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
@@ -49,7 +50,8 @@ public class RefinementEvaluatorTests
     public void Evaluate_IssuesItsEvaluationsThroughTheChildEvaluator()
     {
         var counter = new CountAccumulator();
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().CountCandidates(counter).AppliedAfterRefinement(new AddOffsetRefiner(10)));
+        var observed = CreateEvaluator();
+        var execution = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed.AppliedAfterRefinement(new AddOffsetRefiner(10)));
         var problem = CreateProblem();
 
         execution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -62,8 +64,8 @@ public class RefinementEvaluatorTests
     public void Evaluate_SharesOneCounterWithAnAlgorithmUsingTheSameEvaluatorExecution()
     {
         var counter = new CountAccumulator();
-        var sharedEvaluator = CreateEvaluator().CountCandidates(counter);
-        var scope = ResolutionScope.Create();
+        var sharedEvaluator = CreateEvaluator();
+        var scope = ResolutionScope.Create(Aspect.CountCandidates(sharedEvaluator, counter));
         var refining = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator.AppliedAfterRefinement(new AddOffsetRefiner(10)));
         var direct = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
         var problem = CreateProblem();

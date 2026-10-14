@@ -1,4 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -27,7 +29,7 @@ public static partial class Analyzer
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState =>
         TraceAnalyzer<TResult>.Create<IInterceptor<TCandidate>, InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>, TProblem, TValue>(interceptors,
-            static (source, record) => new InterceptorObservationAspect<TCandidate, TSearchSpace, TProblem, TSearchState>(source, record),
+            static (source, record) => Aspect.Observe(source, record),
             measurement, aggregation, clocks, retention, objectiveComparer);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TSearchState, TValue, TResult>(
@@ -69,7 +71,7 @@ public static partial class Analyzer
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState =>
         TraceAnalyzer<TResult>.Create(interceptors,
-            static (source, record) => new InterceptorObservationAspect<TCandidate, TSearchSpace, TProblem, TSearchState>(source, record),
+            static (source, record) => Aspect.Observe(source, record),
             value, clocks, retention);
 
     // Observes at the interface search space and problem, so an implicitly typed lambda needs no type arguments.
@@ -105,6 +107,6 @@ public static partial class Analyzer
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null)
         where TSearchState : class, ISearchState =>
         TraceAnalyzer<TResult>.Create(interceptors,
-            static (source, record) => new InterceptorObservationAspect<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>(source, record),
+            static (source, record) => Aspect.Observe(source, record),
             value, clocks, retention);
 }

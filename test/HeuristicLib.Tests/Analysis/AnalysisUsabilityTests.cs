@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -125,24 +126,23 @@ public class AnalysisUsabilityTests
     }
 
     private static ResolutionScope Install(params Aspect[] analyzers) =>
-        ResolutionScope.Create(builder =>
-        {
-            foreach (var analyzer in analyzers)
-                builder.Install(analyzer);
-        });
+        ResolutionScope.Create(analyzers);
 
     private static void Evaluate(ResolutionScope scope, ManualEvaluator evaluator, params int[] candidates) =>
         scope.Resolve<int, DummySearchSpace<int>, TestProblem>(evaluator).Evaluate(candidates, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, TestProblem.Instance);
 
-    private sealed class SeparateEvaluatorAnalyzer(ManualEvaluator first, ManualEvaluator second) : Aspect
+    private sealed class SeparateEvaluatorAnalyzer : Aspect
     {
         public int FirstCandidates { get; private set; }
         public int SecondCandidates { get; private set; }
 
-        protected override void Declare(AspectBuilder builder)
+        public SeparateEvaluatorAnalyzer(ManualEvaluator first, ManualEvaluator second)
         {
-            builder.Observe(first, observation => FirstCandidates += observation.Candidates.Count);
-            builder.Observe(second, observation => SecondCandidates += observation.Candidates.Count);
+            Advices =
+            [
+                .. Aspect.Observe(first, observation => FirstCandidates += observation.Candidates.Count).Advices,
+                .. Aspect.Observe(second, observation => SecondCandidates += observation.Candidates.Count).Advices
+            ];
         }
     }
 

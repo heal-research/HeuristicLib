@@ -54,10 +54,10 @@ public class ExperimentSpecs
             .VaryBy([4, 8], (algorithm, maximumNeighbors) => algorithm with { MaxNeighbors = maximumNeighbors });
         var bestQuality = AspectFactory.Create(
             (HillClimber<RealVector> algorithm) => algorithm.Evaluator.TraceBestSoFar());
-        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456)).AttachPerTrial(bestQuality);
+        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456)).AddAspectPerTrial(bestQuality);
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-        var analyses = run.GetAttached(bestQuality);
+        var analyses = run.GetAspectPerTrial(bestQuality);
 
         analyses.Length.ShouldBe(2);
         analyses.Select(analysis => analysis.Trial.Key.MaxNeighbors).ShouldBe([4, 8]);

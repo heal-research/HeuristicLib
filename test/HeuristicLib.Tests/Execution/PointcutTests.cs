@@ -40,7 +40,7 @@ public class PointcutTests
     public void AndPredicate_PreservesReferenceIdentity()
     {
         var original = new SizedConfiguration(3);
-        Pointcut<SizedConfiguration> selector = Pointcut.Reference(original).And(node => node.Size > 0);
+        Pointcut<SizedConfiguration> selector = Pointcut.Reference(original).And(new SizeRange<SizedConfiguration>(1, int.MaxValue));
 
         selector.Matches(original).ShouldBeTrue();
         selector.Matches(original with { }).ShouldBeFalse();
@@ -51,12 +51,8 @@ public class PointcutTests
     {
         var filterCalls = 0;
         var selector = Pointcut.OfType<ISizedConfiguration>()
-            .And(node => node.Size > 0)
-            .And(_ =>
-            {
-                filterCalls++;
-                return true;
-            });
+            .And(new SizeRange<ISizedConfiguration>(1, int.MaxValue))
+            .And(new MatchProbe(true, () => filterCalls++));
 
         selector.Matches(new OtherConfiguration(3)).ShouldBeFalse();
         selector.Matches(new SizedConfiguration(0)).ShouldBeFalse();
@@ -70,7 +66,7 @@ public class PointcutTests
     public void AndPredicate_ComposesFiltersWithoutChangingTheOriginalSelection()
     {
         var original = Pointcut.OfType<ISizedConfiguration>();
-        Pointcut<ISizedConfiguration> narrowed = original.And(node => node.Size > 0).And(node => node.Size < 5);
+        Pointcut<ISizedConfiguration> narrowed = original.And(new SizeRange<ISizedConfiguration>(1, int.MaxValue)).And(new SizeRange<ISizedConfiguration>(int.MinValue, 4));
 
         narrowed.Matches(new SizedConfiguration(0)).ShouldBeFalse();
         narrowed.Matches(new SizedConfiguration(3)).ShouldBeTrue();
@@ -86,15 +82,15 @@ public class PointcutTests
     [InlineData(7, false, false)]
     public void Composition_MatchesTheUnionAndIntersection(int size, bool inUnion, bool inIntersection)
     {
-        var left = new Pointcut<ISizedConfiguration>(node => node.Size is 1 or 3);
-        var right = new Pointcut<ISizedConfiguration>(node => node.Size is 3 or 5);
+        var left = new Sizes(1, 3);
+        var right = new Sizes(3, 5);
         var node = new SizedConfiguration(size);
 
         left.Or(right).Matches(node).ShouldBe(inUnion);
         (left | right).Matches(node).ShouldBe(inUnion);
         left.And(right).Matches(node).ShouldBe(inIntersection);
         (left & right).Matches(node).ShouldBe(inIntersection);
-        left.And(candidate => candidate.Size is 3 or 5).Matches(node).ShouldBe(inIntersection);
+        left.And(new Sizes(3, 5)).Matches(node).ShouldBe(inIntersection);
     }
 
     [Fact]
@@ -104,7 +100,7 @@ public class PointcutTests
         var equalCopy = preferred with { };
         var anotherImplementation = new AlternateSizedConfiguration(3);
         var original = Pointcut.Reference<ISizedConfiguration>(preferred);
-        var matchingSizes = new Pointcut<ISizedConfiguration>(node => node.Size == 3);
+        var matchingSizes = new Sizes(3);
         var selected = original.Or(matchingSizes);
         IConfigurationNode[] nodes = [preferred, equalCopy, anotherImplementation, new SizedConfiguration(5)];
 
@@ -124,16 +120,8 @@ public class PointcutTests
     public void Or_EvaluatesPredicatesOnlyWhenMatchingAndStopsAfterASuccess(bool leftMatches)
     {
         var evaluated = new List<string>();
-        var left = new Pointcut<ISizedConfiguration>(_ =>
-        {
-            evaluated.Add("left");
-            return leftMatches;
-        });
-        var right = new Pointcut<ISizedConfiguration>(_ =>
-        {
-            evaluated.Add("right");
-            return true;
-        });
+        var left = new MatchProbe(leftMatches, () => evaluated.Add("left"));
+        var right = new MatchProbe(true, () => evaluated.Add("right"));
 
         var selected = left | right;
         evaluated.ShouldBeEmpty();
@@ -148,16 +136,8 @@ public class PointcutTests
     public void And_EvaluatesPredicatesOnlyWhenMatchingAndStopsAfterAFailure(bool leftMatches)
     {
         var evaluated = new List<string>();
-        var left = new Pointcut<ISizedConfiguration>(_ =>
-        {
-            evaluated.Add("left");
-            return leftMatches;
-        });
-        var right = new Pointcut<ISizedConfiguration>(_ =>
-        {
-            evaluated.Add("right");
-            return true;
-        });
+        var left = new MatchProbe(leftMatches, () => evaluated.Add("left"));
+        var right = new MatchProbe(true, () => evaluated.Add("right"));
 
         var selected = left & right;
         evaluated.ShouldBeEmpty();
@@ -169,8 +149,8 @@ public class PointcutTests
     [Fact]
     public void Composition_RejectsAnotherRoleWithoutEvaluatingEitherPredicate()
     {
-        var left = new Pointcut<ISizedConfiguration>(_ => throw new InvalidOperationException("Unexpected left predicate."));
-        var right = new Pointcut<ISizedConfiguration>(_ => throw new InvalidOperationException("Unexpected right predicate."));
+        var left = new FailingPointcut(new InvalidOperationException("Unexpected left predicate."));
+        var right = new FailingPointcut(new InvalidOperationException("Unexpected right predicate."));
         var other = new OtherConfiguration(3);
 
         left.Or(right).Matches(other).ShouldBeFalse();
@@ -181,9 +161,9 @@ public class PointcutTests
     public void Composition_PropagatesAnEvaluatedPredicateFailure()
     {
         var failure = new InvalidOperationException("Predicate failed.");
-        var failing = new Pointcut<ISizedConfiguration>(_ => throw failure);
+        var failing = new FailingPointcut(failure);
         var accepts = Pointcut.OfType<ISizedConfiguration>();
-        var rejects = new Pointcut<ISizedConfiguration>(_ => false);
+        var rejects = new MatchProbe(false);
         var node = new SizedConfiguration(3);
 
         Should.Throw<InvalidOperationException>(() => accepts.And(failing).Matches(node)).ShouldBeSameAs(failure);
@@ -197,14 +177,39 @@ public class PointcutTests
     {
         var preferred = new SizedConfiguration(0);
         var exact = Pointcut.Reference<ISizedConfiguration>(preferred);
-        var small = new Pointcut<ISizedConfiguration>(node => node.Size < 5);
-        var positive = new Pointcut<ISizedConfiguration>(node => node.Size > 0);
+        var small = new SizeRange<ISizedConfiguration>(int.MinValue, 4);
+        var positive = new SizeRange<ISizedConfiguration>(1, int.MaxValue);
 
         (exact | small & positive).Matches(preferred).ShouldBeTrue();
         ((exact | small) & positive).Matches(preferred).ShouldBeFalse();
         exact.Or(small).And(positive).Matches(preferred).ShouldBeFalse();
         exact.Matches(preferred).ShouldBeTrue();
         small.Matches(preferred).ShouldBeTrue();
+    }
+
+    private sealed class SizeRange<TConfiguration>(int minimum, int maximum) : Pointcut<TConfiguration>
+        where TConfiguration : class, ISizedConfiguration
+    {
+        public override bool Matches(TConfiguration configuration) => configuration.Size >= minimum && configuration.Size <= maximum;
+    }
+
+    private sealed class Sizes(params int[] sizes) : Pointcut<ISizedConfiguration>
+    {
+        public override bool Matches(ISizedConfiguration configuration) => sizes.Contains(configuration.Size);
+    }
+
+    private sealed class MatchProbe(bool result, Action? observed = null) : Pointcut<ISizedConfiguration>
+    {
+        public override bool Matches(ISizedConfiguration configuration)
+        {
+            observed?.Invoke();
+            return result;
+        }
+    }
+
+    private sealed class FailingPointcut(Exception failure) : Pointcut<ISizedConfiguration>
+    {
+        public override bool Matches(ISizedConfiguration configuration) => throw failure;
     }
 
     private interface ISizedConfiguration : IConfigurationNode

@@ -32,7 +32,7 @@ public static class MoveCreatorResolutionExtensions
         public IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TCandidate, TSearchSpace, TProblem, TMove>(IMoveCreator<TCandidate, TMove> moveCreator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(moveCreator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), PrepareAdvice<TCandidate, TSearchSpace, TProblem, TMove>);
+            scope.Resolve(moveCreator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TMove>);
 
         [return: NotNullIfNotNull(nameof(moveCreator))]
         public IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TMove>(IMoveCreator<TCandidate, TMove>? moveCreator)
@@ -80,8 +80,8 @@ public static class MoveCreatorResolutionExtensions
             scope.Scope.TryResolve(moveCreator, out execution, out reason);
     }
 
-    private static Advice<IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>> PrepareAdvice<TCandidate, TSearchSpace, TProblem, TMove>(IConfigurationNode wrapper)
+    private static WrapperExecutionFactory<IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TMove>(Advice advice, IMoveCreator<TCandidate, TMove> configuration)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        => throw new InvalidOperationException($"{wrapper.GetType().Name} is not a single-child wrapper for {typeof(IMoveCreator<TCandidate, TMove>).Name} producing {typeof(IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>).Name}.");
+        => throw new InvalidOperationException($"{advice.GetType().Name} is not a single-child wrapper for {typeof(IMoveCreator<TCandidate, TMove>).Name} producing {typeof(IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>).Name}.");
 }

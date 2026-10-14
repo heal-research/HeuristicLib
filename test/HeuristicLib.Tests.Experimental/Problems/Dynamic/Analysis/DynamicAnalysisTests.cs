@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -50,7 +51,7 @@ public class DynamicAnalysisTests
             Aggregate.Best<int>(),
             [epoch]);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(bestPerEpoch);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(bestPerEpoch);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -71,7 +72,7 @@ public class DynamicAnalysisTests
         var epoch = Clock.FromEpoch(problem);
         var work = Analyzer.TraceEpochWork(algorithm.Evaluator, evaluations, epoch);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(work);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(work);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -109,7 +110,7 @@ public class DynamicAnalysisTests
             [4]
         ]);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(problem.CreateIterationUpdateAspect(algorithm));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(problem.CreateIterationUpdateAspect(algorithm));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -178,7 +179,7 @@ public class DynamicAnalysisTests
                 [algorithm.Evaluator],
                 predictionEpochMultiplier: 2);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(analysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(analysis);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 

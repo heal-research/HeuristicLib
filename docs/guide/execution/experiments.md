@@ -135,15 +135,15 @@ Analyzers can collect progress during each trial rather than only final states. 
 A trial analyzer factory receives the concrete trial algorithm. Create any clocks inside the factory so they belong to that trial:
 
 ```csharp
-var quality = TrialAnalyzer.Create(
+var quality = AspectFactory.Create(
     (GeneticAlgorithm<RealVector> trial) =>
         trial.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
 var run = algorithm.Repeat(2).CreateRun(problem, random)
-    .AttachPerTrial(quality);
+    .AddAspectPerTrial(quality);
 await run.CompleteAsync();
-var analyses = run.GetAttached(quality);
+var analyses = run.GetAspectPerTrial(quality);
 ```
 
-`GetAttached` returns `TrialAspect` entries in trial order. Each has a typed `Trial` and a `Module` property; here `Module` has the concrete analyzer type created by the factory. The factory is reusable across experiments; the analyzers and clocks it creates are not.
+`GetAspectPerTrial` returns `TrialAspect` entries in trial order. Each has a typed `Trial` and a `Aspect` property; here `Aspect` has the concrete analyzer type created by the factory. The factory is reusable across experiments; the analyzers and clocks it creates are not.
 
-Use `AspectFactory.Create` for other execution modules. `TrialAnalyzer.Create` is its analyzer-specific convenience. Both use `AttachPerTrial` and `GetAttached`, and factories install their attachments in the order they were attached to the experiment. Attaching the same factory twice is rejected.
+Use `AspectFactory.Create` for any per-trial aspect, including analyzers. Add factories with `AddAspectPerTrial`; their aspects follow that order in each trial. Adding the same factory twice is rejected.

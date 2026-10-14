@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
@@ -29,11 +30,8 @@ public sealed class ConcreteAlgorithmFactoryTests
 
         var observedCreations = new CountAccumulator();
         var observedInterceptions = new CountAccumulator();
-        var child = parent.CreateChildScope(builder =>
-        {
-            builder.Install(creator, original => original.CountCalls(observedCreations));
-            builder.Install(interceptor, original => original.CountCalls(observedInterceptions));
-        });
+        var child = parent.CreateChildScope(Aspect.CountCalls(creator, observedCreations),
+            Aspect.CountCalls(interceptor, observedInterceptions));
 
         (await Next(child, algorithm)).ShouldBe(2);
         observedCreations.CurrentCount.ShouldBe(1);
@@ -70,7 +68,7 @@ public sealed class ConcreteAlgorithmFactoryTests
         Candidate(paused.Current).ShouldBe(1);
 
         var observedInterceptions = new CountAccumulator();
-        var child = parent.CreateChildScope(builder => builder.Install(interceptor, original => original.CountCalls(observedInterceptions)));
+        var child = parent.CreateChildScope(Aspect.CountCalls(interceptor, observedInterceptions));
         await using var observed = Run(child, algorithm).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
         Candidate(observed.Current).ShouldBe(2);

@@ -30,7 +30,7 @@ public class OperatorAuthoringSpecs
         var gaussian = new GaussianMutator(1.0, 3.0);
         IMutator<RealVector> mutator = gaussian;
         var observedCalls = 0;
-        var scope = ResolutionScope.Create(builder => builder.Observe(mutator, _ => observedCalls++));
+        var scope = ResolutionScope.Create(Aspect.Observe(mutator, _ => observedCalls++));
         var execution = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator, out IMutationStrengthControl? strength);
         strength.ShouldNotBeNull();
         strength.CurrentMutationStrength = 0.0;
@@ -167,8 +167,8 @@ public class OperatorAuthoringSpecs
     public void MutatorCompositionFactories_InferRoleTypes()
     {
         IMutator<RealVector> childMutator = new PullTowardZeroMutator();
-        var counting = CountingMutator.Create(childMutator, new CountAccumulator(), OperatorCountMetric.Calls);
-        counting.ChildMutator.ShouldBeSameAs(childMutator);
+        var counting = Aspect.CountCalls(childMutator, new CountAccumulator());
+        counting.Advices.Single().Pointcut.Matches(childMutator).ShouldBeTrue();
     }
 
     [Fact]
@@ -274,9 +274,9 @@ public class OperatorAuthoringSpecs
     public void RefinerCompositionFactories_InferRoleTypes()
     {
         IRefiner<RealVector> childRefiner = new HalveRefiner();
-        var counting = CountingRefiner.Create(childRefiner, new CountAccumulator(), OperatorCountMetric.Calls);
+        var counting = Aspect.CountCalls(childRefiner, new CountAccumulator());
         var iterated = IteratedRefiner.Create(childRefiner, 2);
-        counting.ChildRefiner.ShouldBeSameAs(childRefiner);
+        counting.Advices.Single().Pointcut.Matches(childRefiner).ShouldBeTrue();
         iterated.ChildRefiner.ShouldBeSameAs(childRefiner);
     }
 
@@ -469,12 +469,12 @@ public class OperatorAuthoringSpecs
     public void EvaluatorCompositionFactories_InferRoleTypes()
     {
         IEvaluator<RealVector> child = new FirstValueEvaluator();
-        var counting = CountingEvaluator.Create(child, new CountAccumulator(), OperatorCountMetric.Calls);
-        var duration = DurationMeasuringEvaluator.Create(child, new DurationAccumulator());
+        var counting = Aspect.CountCalls(child, new CountAccumulator());
+        var duration = Aspect.MeasureDuration(child, new DurationAccumulator());
         var repeating = child.AsRepeated(3, ObjectiveVectorAggregation.Median);
         var caching = child.Cached(new FirstCoordinateCacheKeySelector());
-        counting.ChildEvaluator.ShouldBeSameAs(child);
-        duration.ChildEvaluator.ShouldBeSameAs(child);
+        counting.Advices.Single().Pointcut.Matches(child).ShouldBeTrue();
+        duration.Advices.Single().Pointcut.Matches(child).ShouldBeTrue();
         repeating.ChildEvaluator.ShouldBeSameAs(child);
         repeating.Aggregator.ShouldBe(ObjectiveVectorAggregation.Median);
         caching.ChildEvaluator.ShouldBeSameAs(child);
@@ -560,9 +560,9 @@ public class OperatorAuthoringSpecs
     public void SelectorCompositionFactories_InferRoleTypes()
     {
         ISelector<RealVector> childSelector = new FirstSelector();
-        var counting = childSelector.CountCalls(new CountAccumulator());
+        var counting = Aspect.CountCalls(childSelector, new CountAccumulator());
         var chooseOne = ChooseOneSelector.Create(childSelector, new LastSelector());
-        counting.ChildSelector.ShouldBeSameAs(childSelector);
+        counting.Advices.Single().Pointcut.Matches(childSelector).ShouldBeTrue();
         chooseOne.ChildSelectors[0].ShouldBeSameAs(childSelector);
     }
 
@@ -638,10 +638,10 @@ public class OperatorAuthoringSpecs
     public void ReplacerCompositionFactories_InferRoleTypes()
     {
         IReplacer<RealVector> child = new OffspringReplacer();
-        var counting = CountingReplacer.Create(child, new CountAccumulator(), OperatorCountMetric.Calls);
-        var duration = DurationMeasuringReplacer.Create(child, new DurationAccumulator());
-        counting.ChildReplacer.ShouldBeSameAs(child);
-        duration.ChildReplacer.ShouldBeSameAs(child);
+        var counting = Aspect.CountCalls(child, new CountAccumulator());
+        var duration = Aspect.MeasureDuration(child, new DurationAccumulator());
+        counting.Advices.Single().Pointcut.Matches(child).ShouldBeTrue();
+        duration.Advices.Single().Pointcut.Matches(child).ShouldBeTrue();
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators;
@@ -17,12 +18,12 @@ public sealed class MutatorSelectionTests
         var large = new StepMutator(5);
         var mutator = ChooseOneMutator.Create<int>(small, large);
         var counts = new Dictionary<IMutator<int>, CountAccumulator>(ReferenceEqualityComparer.Instance);
-        var scope = ResolutionScope.Create(builder => builder.Install(Pointcut.OfType<IMutator<int>>(), source =>
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IMutator<int>>(), new CountingSelectedMutator(source =>
         {
             var count = new CountAccumulator();
             counts.Add(source, count);
-            return source.CountCandidates(count);
-        }));
+            return count;
+        })));
 
         await RunToCompletion(scope, Algorithm(mutator));
 
@@ -38,12 +39,12 @@ public sealed class MutatorSelectionTests
         var second = new StepMutator(2);
         var cycle = Algorithm(first).CycleWith(Algorithm(second), maximumCycles: 2);
         var activations = new List<(IMutator<int> Source, CountAccumulator Mutations)>();
-        var scope = ResolutionScope.Create(builder => builder.Install(Pointcut.OfType<IMutator<int>>(), source =>
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IMutator<int>>(), new CountingSelectedMutator(source =>
         {
             var mutations = new CountAccumulator();
             activations.Add((source, mutations));
-            return source.CountCandidates(mutations);
-        }));
+            return mutations;
+        })));
 
         await RunToCompletion(scope, cycle);
 
@@ -96,11 +97,7 @@ public sealed class MutatorSelectionTests
         IMutator<int> source = new StepMutator(1);
         var offered = new List<IMutator<int>>();
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(builder => builder.Install(Pointcut.OfType<IMutator<int>>().And(mutator =>
-        {
-            offered.Add(mutator);
-            return true;
-        }), mutator => mutator.CountCandidates(count)));
+        var scope = ResolutionScope.Create(Aspect.Create(new OfferedMutators(offered), new CountingMutatorAdvice<int>(count, OperatorCountMetric.Candidates)));
         var algorithm = Algorithm(source) with { PopulationSize = 16, MaximumGenerations = 2, MutationRate = 0.5 };
 
         var states = await States(scope, nsga ? AsNsga2(algorithm) : algorithm);
@@ -123,7 +120,7 @@ public sealed class MutatorSelectionTests
         await using var paused = Run(parent, algorithm).GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observed = new CountAccumulator();
-        var child = parent.CreateChildScope(builder => builder.Install(source, mutator => mutator.CountCandidates(observed)));
+        var child = parent.CreateChildScope(Aspect.CountCandidates(source, observed));
         await using var rebound = Run(child, algorithm).GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await rebound.MoveNextAsync()).ShouldBeTrue();
         (await paused.MoveNextAsync()).ShouldBeTrue();
@@ -156,10 +153,25 @@ public sealed class MutatorSelectionTests
     {
         IMutator<int> source = noChange ? NoChangeMutator<int>.Instance : new StepMutator(1);
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(builder => builder.Install(source, mutator => mutator.CountCandidates(count)));
+        var scope = ResolutionScope.Create(Aspect.CountCandidates(source, count));
         var algorithm = Algorithm(source) with { MutationRate = rate };
         await RunToCompletion(scope, nsga ? AsNsga2(algorithm) : algorithm);
         count.CurrentCount.ShouldBe(0);
+    }
+
+    private sealed class OfferedMutators(List<IMutator<int>> offered) : Pointcut<IMutator<int>>
+    {
+        public override bool Matches(IMutator<int> mutator)
+        {
+            offered.Add(mutator);
+            return true;
+        }
+    }
+
+    private sealed class CountingSelectedMutator(Func<IMutator<int>, CountAccumulator> counter) : MutatorAdvice<int>
+    {
+        public override WrapperExecutionFactory<IMutatorExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<int> mutator) =>
+            new CountingMutatorAdvice<int>(counter(mutator), OperatorCountMetric.Candidates).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(mutator);
     }
 
     private static GeneticAlgorithm<int> Algorithm(IMutator<int> mutator) => new()

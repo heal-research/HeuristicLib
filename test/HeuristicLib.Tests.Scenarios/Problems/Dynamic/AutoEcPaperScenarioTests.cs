@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.Encodings.Composite;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
@@ -110,7 +111,7 @@ public class AutoEcPaperScenarioTests
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).Attach(qualityCurve).Attach(bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAspect(qualityCurve).AddAspect(bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -162,7 +163,7 @@ public class AutoEcPaperScenarioTests
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).Attach(qualityCurve).Attach(bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAspect(qualityCurve).AddAspect(bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),

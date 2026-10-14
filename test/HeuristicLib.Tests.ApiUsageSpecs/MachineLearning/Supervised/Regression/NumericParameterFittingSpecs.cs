@@ -1,6 +1,8 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Data;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Instrumentation;
 using HEAL.HeuristicLib.MachineLearning;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -134,10 +136,10 @@ public class NumericParameterFittingSpecs
     public void DecidingWhetherRefinementEffortCountsAgainstTheEvaluationBudget()
     {
         var problem = CreateProblem();
-        var sharedEvaluator = new ProblemEvaluator<ExpressionTree>()
-            .CountCandidates(out var sharedCounter);
-        var algorithmEvaluator = new ProblemEvaluator<ExpressionTree>()
-            .CountCandidates(out var ownCounter);
+        var sharedEvaluator = new ProblemEvaluator<ExpressionTree>();
+        var sharedCounting = Aspect.CountCandidates(sharedEvaluator, out var sharedCounter);
+        var algorithmEvaluator = new ProblemEvaluator<ExpressionTree>();
+        var ownCounting = Aspect.CountCandidates(algorithmEvaluator, out var ownCounter);
 
         var sharing = CreateAlgorithm(problem) with
         {
@@ -150,8 +152,8 @@ public class NumericParameterFittingSpecs
             Refiner = new NumericParameterFittingRefiner().CheckedForImprovement()
         };
 
-        sharing.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
-        notSharing.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        sharing.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(sharedCounting).Complete(cancellationToken: TestContext.Current.CancellationToken);
+        notSharing.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(ownCounting).Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // The shared counter saw the algorithm's evaluations plus the two comparison evaluations per refined candidate.
         // The private one saw only the algorithm's, over the very same search.

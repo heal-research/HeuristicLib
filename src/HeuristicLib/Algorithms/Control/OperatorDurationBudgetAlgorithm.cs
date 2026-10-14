@@ -19,13 +19,13 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
 
     /// <summary>
-    /// Gets the factory that wraps the observed operator in a duration-measuring operator.
+    /// Gets the strategy creating advice that measures the observed operator's duration into the supplied accumulator.
     /// </summary>
     /// <remarks>
-    /// The factory receives the original observed operator configuration. The returned single-child wrapper supplies advice for that source, so enclosing budgets and observations compose.
-    /// The returned operator must retain the observed operator's role.
+    /// The advice applies only inside this budget's algorithm, so enclosing budgets and observations compose. If the
+    /// algorithm does not reference the observed operator, nothing is measured and the budget never stops.
     /// </remarks>
-    public required Func<TOperator, DurationAccumulator, TimeProvider, TOperator> MeasuredOperatorFactory { get; init; }
+    public required IOperatorDurationMeasuring<TOperator> DurationMeasuring { get; init; }
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
     /// <summary>
@@ -37,10 +37,10 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
     public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         var duration = new DurationAccumulator();
-        var counting = Aspect.Create(ObservedOperator, current => MeasuredOperatorFactory(current, duration, TimeProvider));
+        var measuring = Aspect.Create(Pointcut.Reference(ObservedOperator), DurationMeasuring.CreateAdvice(duration, TimeProvider));
         return scope =>
         {
-            var childScope = scope.With(counting);
+            var childScope = scope.With(measuring);
             return new OperatorDurationBudgetAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
         };
     }
