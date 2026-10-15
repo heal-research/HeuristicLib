@@ -134,16 +134,99 @@ public class AlgorithmRunTests
         run.LifecycleState.ShouldBe(RunLifecycleState.Completed);
     }
 
-    [Fact]
-    public void AlgorithmRun_AllowsOnlyOneActiveStream()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CompetingStream_IsRejectedWithoutFailingTheActiveExecution(bool startEnumeration)
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var run = new SequenceAlgorithm().CreateRun(problem, RandomNumberGenerator.Create(42));
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var stream = run.Stream(cancellationToken: cancellationToken);
+        await using var enumerator = stream.GetAsyncEnumerator(cancellationToken);
+        var values = new List<int>();
+        if (startEnumeration)
+        {
+            (await enumerator.MoveNextAsync()).ShouldBeTrue();
+            values.Add(StateValue(enumerator.Current));
+        }
 
-        _ = run.Stream();
-
-        Should.Throw<InvalidOperationException>(() => run.Stream())
+        Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: cancellationToken))
               .Message.ShouldContain("active execution stream");
+        run.LifecycleState.ShouldBe(RunLifecycleState.Running);
+
+        while (await enumerator.MoveNextAsync())
+            values.Add(StateValue(enumerator.Current));
+
+        values.ShouldBe([1, 2, 3]);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Completed);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CompletionDisposalFailure_IsTerminalAndPreservesTheException(bool canceled)
+    {
+        Exception failure = canceled ? new OperationCanceledException() : new InvalidOperationException("Disposal failed.");
+        var disposalCount = 0;
+        var algorithm = new DisposalTrackingAlgorithm(() =>
+        {
+            disposalCount++;
+            return ValueTask.FromException(failure);
+        });
+        var run = algorithm.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var enumerator = run.Stream(cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        (await enumerator.MoveNextAsync()).ShouldBeTrue();
+        StateValue(enumerator.Current).ShouldBe(1);
+
+        var thrown = await Record.ExceptionAsync(async () => _ = await enumerator.MoveNextAsync());
+
+        thrown.ShouldBeSameAs(failure);
+        disposalCount.ShouldBe(1);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
+        Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: cancellationToken));
+        Should.Throw<InvalidOperationException>(() => run.AddAspect(new BlindAnalyzer()));
+        await run.CancelAsync();
+        disposalCount.ShouldBe(1);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public async Task TerminalCancellation_DisposesOnceAndRemainsCanceled(bool paused, bool failDuringDisposal)
+    {
+        var failure = new InvalidOperationException("Disposal failed.");
+        var disposalCount = 0;
+        var algorithm = new DisposalTrackingAlgorithm(() =>
+        {
+            disposalCount++;
+            return failDuringDisposal ? ValueTask.FromException(failure) : ValueTask.CompletedTask;
+        });
+        var run = algorithm.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var stream = paused ? run.Stream(cancellationToken: cancellationToken) : run.StreamForTerminalCancellation(null, cancellationToken);
+        await using (var enumerator = stream.GetAsyncEnumerator(cancellationToken))
+            (await enumerator.MoveNextAsync()).ShouldBeTrue();
+        run.LifecycleState.ShouldBe(paused ? RunLifecycleState.Paused : RunLifecycleState.Running);
+        disposalCount.ShouldBe(0);
+
+        var thrown = await Record.ExceptionAsync(async () => await run.CancelAsync());
+
+        if (failDuringDisposal)
+            thrown.ShouldBeSameAs(failure);
+        else
+            thrown.ShouldBeNull();
+        disposalCount.ShouldBe(1);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Canceled);
+        Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: cancellationToken));
+        Should.Throw<InvalidOperationException>(() => run.AddAspect(new BlindAnalyzer()));
+        await run.CancelAsync();
+        disposalCount.ShouldBe(1);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Canceled);
     }
 
     [Fact]
@@ -244,6 +327,39 @@ public class AlgorithmRunTests
 
     private static int StateValue(PopulationState<int> state) =>
         state.Population.EvaluatedCandidates.Single().Candidate;
+
+    private sealed record DisposalTrackingAlgorithm(Func<ValueTask> Dispose)
+        : Algorithm<DisposalTrackingAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    {
+        public override ExecutionFactory<AlgorithmExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>> CreateExecutionFactory() =>
+            _ => new Execution(Dispose);
+
+        private sealed class Execution(Func<ValueTask> dispose)
+            : AlgorithmExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>,
+              IAsyncEnumerable<PopulationState<int>>, IAsyncEnumerator<PopulationState<int>>
+        {
+            private bool yielded;
+
+            public PopulationState<int> Current => Population.From([1.ToEvaluated(1)]).ToPopulationState();
+
+            public override IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
+                IProblem<int, DummySearchSpace<int>> problem,
+                IRandomNumberGenerator random,
+                PopulationState<int>? initialState = null,
+                CancellationToken ct = default) => this;
+
+            public IAsyncEnumerator<PopulationState<int>> GetAsyncEnumerator(CancellationToken cancellationToken = default) => this;
+
+            public ValueTask<bool> MoveNextAsync()
+            {
+                var hasNext = !yielded;
+                yielded = true;
+                return ValueTask.FromResult(hasNext);
+            }
+
+            public ValueTask DisposeAsync() => dispose();
+        }
+    }
 
     private sealed record SequenceAlgorithm
         : Algorithm<SequenceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>

@@ -89,8 +89,10 @@ See [Observability and analysis](/guide/execution/observability-and-analysis) fo
 
 ## Pause and resume an explicit run
 
-An explicit `AlgorithmRun` starts in `Preparing` and accepts attachments until `Stream` starts execution. Consume each returned stream only once and finish or dispose it before requesting another stream from the run.
+An explicit `AlgorithmRun` starts in `Preparing` and accepts attachments until `Stream` starts execution. Consume each returned stream only once and finish or dispose it before requesting another stream from the run. Requesting another stream while one is active throws without changing the active execution.
 
 Ending enumeration early pauses the run. Cancellation through the ordinary stream or enumeration token also pauses it. Call `Stream` again on the same run to resume its retained execution state. The root scope is created and the root algorithm is resolved with its aspects only on the first start; resuming continues the retained iterator. Supply an initial state only on that first start.
 
-Natural completion sets `Completed`. Execution-graph setup or execution failures are terminal; cancellation thrown during graph setup sets `Canceled`. A failed or canceled run cannot resume. This run lifecycle is separate from a resolution scope's ability to retry a failed construction. [Experiment runs](/guide/execution/experiments#run-lifecycle) use terminal cancellation and do not support pause and resume.
+Natural completion sets `Completed` after iterator cleanup succeeds. A cleanup failure sets `Failed` and propagates the original exception, including an `OperationCanceledException` thrown during cleanup. Execution-graph setup or execution failures are terminal; cancellation thrown during graph setup sets `Canceled`. A failed or canceled run cannot resume. This run lifecycle is separate from a resolution scope's ability to retry a failed construction.
+
+[Experiment runs](/guide/execution/experiments#run-lifecycle) use terminal cancellation and do not support pause and resume. Terminal cancellation of a trial records `Canceled` before iterator cleanup, so that trial remains canceled even if cleanup throws.

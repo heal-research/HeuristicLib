@@ -122,12 +122,12 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     private ExecutionStream<TSearchState> CreateStream(TSearchState? initialState, CancellationToken cancellationToken,
         bool cancellationTerminatesRun)
     {
+        var scope = BeginExecutionSegment();
+        if (scope is null)
+            return new(AsyncEnumerable.Empty<TSearchState>());
+
         try
         {
-            var scope = BeginExecutionSegment();
-            if (scope is null)
-                return new(AsyncEnumerable.Empty<TSearchState>());
-
             if (execution is null)
             {
                 var algorithmExecution = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
@@ -165,9 +165,9 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     {
         var currentExecution = execution;
         execution = null;
+        ExecutionCanceled();
         if (currentExecution is not null)
             await currentExecution.DisposeAsync();
-        ExecutionCanceled();
     }
 
     private async IAsyncEnumerable<TSearchState> Track(
@@ -206,8 +206,17 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
                 if (!hasNext)
                 {
                     ended = true;
-                    await execution!.DisposeAsync();
+                    var completedExecution = execution;
                     execution = null;
+                    try
+                    {
+                        await completedExecution.DisposeAsync();
+                    }
+                    catch
+                    {
+                        ExecutionFailed();
+                        throw;
+                    }
                     ExecutionCompleted();
                     yield break;
                 }
