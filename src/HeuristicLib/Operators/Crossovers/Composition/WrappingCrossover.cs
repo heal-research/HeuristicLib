@@ -20,26 +20,27 @@ public abstract record WrappingCrossover<TCandidate>
 
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildCrossover);
 
-
-    /// <summary>
-    /// Resolves the child over the run's search space and problem and hands it to
-    /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
-    /// </summary>
-    public ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    /// <summary>Prepares this operator once, then binds its child in each construction scope.</summary>
+    public ExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
-        WrapExecutionInstance(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildCrossover));
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    {
+        var create = CreateWrapperFactory<TRunSearchSpace, TRunProblem>();
+        return scope => create(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildCrossover));
+    }
 
-    /// <summary>Wraps the child's execution instance in this operator's own.</summary>
-    protected abstract ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ICrossoverInstance<TCandidate, TRunSearchSpace, TRunProblem> childCrossover)
+    /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved child.</summary>
+    /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
+    protected abstract WrapperExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+
 }
 
-public abstract class WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> childCrossover)
-    : CrossoverInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class WrappingCrossoverExecution<TCandidate, TSearchSpace, TProblem>(ICrossoverExecution<TCandidate, TSearchSpace, TProblem> childCrossover)
+    : CrossoverExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ICrossoverInstance<TCandidate, TSearchSpace, TProblem> ChildCrossover { get; } = childCrossover;
+    protected ICrossoverExecution<TCandidate, TSearchSpace, TProblem> ChildCrossover { get; } = childCrossover;
 }

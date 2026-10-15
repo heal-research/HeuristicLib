@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -19,14 +19,13 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
 
     /// <summary>
-    /// Gets the factory that wraps the observed operator in a duration-measuring operator.
+    /// Gets the strategy creating advice that measures the observed operator's duration into the supplied accumulator.
     /// </summary>
     /// <remarks>
-    /// The factory receives whatever the surrounding execution already resolves for the observed operator, which may
-    /// itself be a wrapper installed by an analyzer or by an enclosing budget, so that the decorations compose. The
-    /// returned operator is expected to keep the observed operator's role, as every operator wrapper does.
+    /// The advice applies only inside this budget's algorithm, so enclosing budgets and observations compose. If the
+    /// algorithm does not reference the observed operator, nothing is measured and the budget never stops.
     /// </remarks>
-    public required Func<TOperator, DurationAccumulator, TimeProvider, TOperator> MeasuredOperatorFactory { get; init; }
+    public required IOperatorDurationMeasuring<TOperator> DurationMeasuring { get; init; }
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
     /// <summary>
@@ -35,27 +34,29 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override OperatorDurationBudgetAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         var duration = new DurationAccumulator();
-        var childScope = scope.CreateChildScope(child =>
-            child.Decorate(ObservedOperator, current => MeasuredOperatorFactory(current, duration, TimeProvider)));
-
-        return new(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
+        var measuring = Aspect.Create(Pointcut.Reference(ObservedOperator), DurationMeasuring.CreateAdvice(duration, TimeProvider));
+        return scope =>
+        {
+            var childScope = scope.With(measuring);
+            return new OperatorDurationBudgetAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
+        };
     }
 }
 
-public sealed class OperatorDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+public sealed class OperatorDurationBudgetAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    private readonly IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
+    private readonly IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
     private readonly DurationAccumulator duration;
     private readonly TimeSpan maximumDuration;
 
-    public OperatorDurationBudgetAlgorithmInstance(IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, DurationAccumulator duration, TimeSpan maximumDuration)
+    public OperatorDurationBudgetAlgorithmExecution(IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, DurationAccumulator duration, TimeSpan maximumDuration)
     {
         this.algorithm = algorithm;
         this.duration = duration;

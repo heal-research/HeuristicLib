@@ -16,10 +16,8 @@ public interface IDynamicProblem<TCandidate, out TSearchSpace> : IProblem<TCandi
     /// <summary>
     /// The environment version currently in effect, which is the number of updates that have been applied.
     /// </summary>
+    /// <remarks>
+    /// Compare this value with a previously recorded epoch to detect applied updates. Pending updates do not change it.
+    /// </remarks>
     int CurrentEpoch { get; }
-
-    /// <summary>
-    /// Raised once an update has been applied, with the environment version now in effect.
-    /// </summary>
-    event EventHandler<int>? OnEpochChange;
 }

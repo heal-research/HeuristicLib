@@ -20,21 +20,22 @@ public abstract record MultiMutator<TCandidate>
 
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildMutators]);
 
-
-    /// <summary>
-    /// Resolves each child over the run's search space and problem and hands them to
-    /// <see cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
-    /// </summary>
-    public IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
+    public ExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return CombineExecutionInstances([.. ChildMutators.Select(child => typed.Resolve(child))]);
+        var create = CreateCompositeFactory<TRunSearchSpace, TRunProblem>();
+        return scope =>
+        {
+            var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
+            return create([.. ChildMutators.Select(child => typed.Resolve(child))]);
+        };
     }
 
-    /// <summary>Combines the children's execution instances into this operator's own.</summary>
-    protected abstract IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem>> childMutators)
+    /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
+    /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
+    protected abstract CompositeExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
@@ -50,10 +51,10 @@ public abstract record MultiMutator<TCandidate>
         OperatorContractComposition.Requires<TCandidate>(ChildMutators);
 }
 
-public abstract class MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators)
-    : MutatorInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiMutatorExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> childMutators)
+    : MutatorExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> ChildMutators { get; } = childMutators;
+    protected ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> ChildMutators { get; } = childMutators;
 }

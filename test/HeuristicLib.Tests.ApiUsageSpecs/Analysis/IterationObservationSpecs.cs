@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
@@ -22,9 +23,9 @@ public class IterationObservationSpecs
         var callbacks = new List<string>();
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-            .Attach(new RecordingModule(algorithm, () => callbacks.Add("first module")))
-            .Attach(new RecordingAnalyzer(algorithm, () => callbacks.Add("analyzer")))
-            .Attach(new RecordingModule(algorithm, () => callbacks.Add("last module")));
+            .AddAspect(new RecordingModule(algorithm, () => callbacks.Add("first module")))
+            .AddAspect(new RecordingAnalyzer(algorithm, () => callbacks.Add("analyzer")))
+            .AddAspect(new RecordingModule(algorithm, () => callbacks.Add("last module")));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -38,7 +39,7 @@ public class IterationObservationSpecs
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 3);
         var iterations = Clock.FromIterations(algorithm);
         var quality = algorithm.TracePopulationCandidates([iterations]);
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).Attach(quality);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(quality);
 
         await foreach (var state in run.Stream(cancellationToken: TestContext.Current.CancellationToken))
         {
@@ -76,7 +77,7 @@ public class IterationObservationSpecs
         var qualityAnalyzer = algorithm.TracePopulationCandidates();
         var run = algorithm
             .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-            .Attach(qualityAnalyzer);
+            .AddAspect(qualityAnalyzer);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -88,7 +89,7 @@ public class IterationObservationSpecs
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var innerAlgorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 3);
-        var cycle = CycleAlgorithm.Create(innerAlgorithm) with { MaximumCycles = 2, NewExecutionInstancesPerCycle = false };
+        var cycle = CycleAlgorithm.Create(innerAlgorithm) with { MaximumCycles = 2, ScopePolicy = ChildScopePolicy.Shared };
 
         var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
                        .TracePopulationCandidates(out var innerQuality, innerAlgorithm);
@@ -105,7 +106,7 @@ public class IterationObservationSpecs
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 4);
 
         var qualityAnalyzer = algorithm.TracePopulationCandidates();
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).Attach(qualityAnalyzer);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(qualityAnalyzer);
 
         var streamedStates = new List<PopulationState<RealVector>>();
         await foreach (var state in run.Stream(cancellationToken: TestContext.Current.CancellationToken))
@@ -118,16 +119,22 @@ public class IterationObservationSpecs
         qualityCurve.Count.ShouldBe(streamedStates.Count);
     }
 
-    private sealed class RecordingModule(IAlgorithm<RealVector, PopulationState<RealVector>> source, Action observed)
-        : IExecutionModule
+    private sealed class RecordingModule
+        : Aspect
     {
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe(source, _ => observed());
+        public RecordingModule(IAlgorithm<RealVector, PopulationState<RealVector>> source, Action observed)
+        {
+            Advices = Aspect.Observe(source, _ => observed()).Advices;
+        }
     }
 
-    private sealed class RecordingAnalyzer(IAlgorithm<RealVector, PopulationState<RealVector>> source, Action observed)
-        : IAnalyzer
+    private sealed class RecordingAnalyzer
+        : Aspect
     {
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe(source, _ => observed());
+        public RecordingAnalyzer(IAlgorithm<RealVector, PopulationState<RealVector>> source, Action observed)
+        {
+            Advices = Aspect.Observe(source, _ => observed()).Advices;
+        }
     }
 
     private static GeneticAlgorithm<RealVector> CreateGeneticAlgorithm(

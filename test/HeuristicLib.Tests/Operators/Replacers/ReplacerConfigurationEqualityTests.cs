@@ -12,7 +12,7 @@ public class ReplacerConfigurationEqualityTests
     {
         var child = new OffsetReplacer(1);
 
-        child.CountCalls(new CountAccumulator()).ChildReplacer.ShouldBeSameAs(child);
+        new IdentityReplacer(child).ChildReplacer.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -50,21 +50,6 @@ public class ReplacerConfigurationEqualityTests
         left.ShouldNotBe(right);
     }
 
-    [Fact]
-    public void WrappingConcerns_IncludeChildAndSettingsInEquality()
-    {
-        var counter = new CountAccumulator();
-        var duration = new DurationAccumulator();
-        var left = new OffsetReplacer(1).CountCalls(counter);
-        var equal = new OffsetReplacer(1).CountCalls(counter);
-        var differentMetric = new OffsetReplacer(1).CountCandidates(counter);
-        var measured = new OffsetReplacer(1).MeasureDuration(duration, TimeProvider.System);
-        var measuredEqual = new OffsetReplacer(1).MeasureDuration(duration, TimeProvider.System);
-
-        left.ShouldBe(equal);
-        left.ShouldNotBe(differentMetric);
-        measured.ShouldBe(measuredEqual);
-    }
 
 
     [Fact]
@@ -91,11 +76,11 @@ public class ReplacerConfigurationEqualityTests
         {
         }
 
-        protected override IReplacerInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IReplacerInstance<int, TRunSearchSpace, TRunProblem>> childReplacers) =>
-            new Instance<TRunSearchSpace, TRunProblem>(childReplacers);
+        protected override CompositeExecutionFactory<IReplacerExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childReplacers => new Execution<TRunSearchSpace, TRunProblem>(childReplacers);
 
-        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IReplacerInstance<int, TSearchSpace, TProblem>> childReplacers)
-            : MultiReplacerInstance<int, TSearchSpace, TProblem>(childReplacers)
+        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IReplacerExecution<int, TSearchSpace, TProblem>> childReplacers)
+            : MultiReplacerExecution<int, TSearchSpace, TProblem>(childReplacers)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
@@ -103,4 +88,14 @@ public class ReplacerConfigurationEqualityTests
                 ChildReplacers[0].Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
         }
     }
+    private sealed record IdentityReplacer : WrappingReplacer<int>
+    {
+        public IdentityReplacer(IReplacer<int> child) : base(child)
+        {
+        }
+
+        protected override WrapperExecutionFactory<IReplacerExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+            child => child;
+    }
+
 }

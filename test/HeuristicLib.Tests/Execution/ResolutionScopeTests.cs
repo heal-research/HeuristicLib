@@ -1,423 +1,417 @@
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
 /// <summary>
-/// Covers the resolution rules: which decorations apply, in which order they wrap, and when two resolves share one
-/// instance. The cell names refer to the combinations of where decorations are declared and where resolves happen.
+/// Covers the resolution rules: which wrappers apply, in which order they wrap, and when two resolves share one
+/// instance. The cell names refer to the combinations of where wrappers are declared and where resolves happen.
 /// </summary>
 public class ResolutionScopeTests
 {
-    // ---------- Sharing without decorations ----------
+    // ---------- Sharing across scopes ----------
 
-    /// <summary>Cell A3. Nothing is decorated, so the child reuses what the parent already built.</summary>
     [Fact]
-    public void UndecoratedChild_ReusesTheInstanceItsParentAlreadyBuilt()
+    public void UnwrappedChild_ReusesTheExecutionItsParentAlreadyBuilt()
     {
         var parent = ResolutionScope.Create();
         var configuration = new CountingConfiguration("instance");
-        var parentInstance = parent.Resolve(configuration);
+        var parentExecution = parent.Resolve(configuration, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
 
-        var childInstance = parent.CreateChildScope().Resolve(configuration);
+        var childExecution = parent.CreateChildScope().Resolve(configuration, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
 
-        childInstance.ShouldBeSameAs(parentInstance);
+        childExecution.ShouldBeSameAs(parentExecution);
         configuration.CreateCount.ShouldBe(1);
     }
 
-    /// <summary>
-    /// Cell A4. Siblings never share, which is how a meta-algorithm that recreates its execution instances gets fresh
-    /// ones per cycle.
-    /// </summary>
-    [Fact]
-    public void SiblingScopes_NeverShareAnInstance()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SiblingScopes_BuildSeparateExecutionsWhenNoAncestorHasResolvedTheConfiguration(bool wrapInParent)
     {
-        var parent = ResolutionScope.Create();
         var configuration = new CountingConfiguration("instance");
+        var parent = wrapInParent
+            ? ResolutionScope.Create(Wrap(configuration, "parent"))
+            : ResolutionScope.Create();
 
-        var first = parent.CreateChildScope().Resolve(configuration);
-        var second = parent.CreateChildScope().Resolve(configuration);
+        var first = parent.CreateChildScope().Resolve(configuration, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
+        var second = parent.CreateChildScope().Resolve(configuration, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
 
         second.ShouldNotBeSameAs(first);
         configuration.CreateCount.ShouldBe(2);
     }
 
-    /// <summary>
-    /// Sharing only ever flows down the tree. An instance a child built stays with the child, so the parent resolving
-    /// the same configuration afterwards builds its own.
-    /// </summary>
-    [Fact]
-    public void AParent_NeverSeesAnInstanceItsChildBuilt()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SiblingScopes_ReuseAnExecutionAlreadyBuiltInAnAncestor(bool wrapInAncestor)
+    {
+        var configuration = new CountingConfiguration("instance");
+        var ancestor = wrapInAncestor
+            ? ResolutionScope.Create(Wrap(configuration, "ancestor"))
+            : ResolutionScope.Create();
+        var ancestorExecution = ancestor.Resolve(configuration, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
+        var parent = ancestor.CreateChildScope();
+
+        var first = parent.CreateChildScope().Resolve(configuration, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
+        var second = parent.CreateChildScope().Resolve(configuration, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
+
+        first.Name.ShouldBe(ancestorExecution.Name);
+        second.Name.ShouldBe(ancestorExecution.Name);
+        if (wrapInAncestor)
+        {
+            first.ShouldNotBeSameAs(ancestorExecution);
+            second.ShouldNotBeSameAs(ancestorExecution);
+        }
+        else
+        {
+            first.ShouldBeSameAs(ancestorExecution);
+            second.ShouldBeSameAs(ancestorExecution);
+        }
+        configuration.CreateCount.ShouldBe(1);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AParent_NeverSeesAnExecutionItsChildBuilt(bool wrapInParent)
     {
         var original = new CountingConfiguration("original");
-        var parent = ResolutionScope.Create(builder => Wrap(builder, original, "parent"));
+        var parent = wrapInParent
+            ? ResolutionScope.Create(Wrap(original, "parent"))
+            : ResolutionScope.Create();
         var child = parent.CreateChildScope();
-        var childInstance = child.Resolve(original);
+        var childExecution = child.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
 
-        var parentInstance = parent.Resolve(original);
+        var parentExecution = parent.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
 
-        parentInstance.ShouldNotBeSameAs(childInstance);
-        child.Resolve(original).ShouldBeSameAs(childInstance);
+        parentExecution.ShouldNotBeSameAs(childExecution);
+        child.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe(childExecution.Name);
+        parent.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe(parentExecution.Name);
         original.CreateCount.ShouldBe(2);
     }
 
-    // ---------- Sharing with decorations ----------
+    // ---------- Sharing with wrappers ----------
 
-    /// <summary>
-    /// Cell B2. The parent's decoration applies to the child unchanged, so the decorated instance the parent already
-    /// built is exactly what the child would build and is reused rather than duplicated.
-    /// </summary>
     [Fact]
-    public void ChildAddingNoDecoration_ReusesTheParentsDecoratedInstance()
+    public void ChildAddingNoAdvice_ReconstructsTheParentsAdvisedExecution()
     {
         var original = new CountingConfiguration("original");
-        var parent = ResolutionScope.Create(builder => Wrap(builder, original, "parent"));
-        var parentInstance = parent.Resolve(original);
+        var parent = ResolutionScope.Create(Wrap(original, "parent"));
+        var parentExecution = parent.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
 
-        var childInstance = parent.CreateChildScope().Resolve(original);
+        var childExecution = parent.CreateChildScope().Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
 
-        childInstance.ShouldBeSameAs(parentInstance);
-        childInstance.Name.ShouldBe("parent(original)");
+        childExecution.ShouldNotBeSameAs(parentExecution);
+        childExecution.Name.ShouldBe("parent(original)");
         original.CreateCount.ShouldBe(1);
     }
 
-    /// <summary>
-    /// Cell D1. The child contributes a decoration the parent does not have, so it must not reuse the parent's
-    /// instance — that one is missing a wrapper the child requires.
-    /// </summary>
     [Fact]
-    public void ChildAddingItsOwnDecoration_BuildsItsOwnInstance()
+    public void ChildWrappingAnotherConfiguration_RebindsTheOriginalWithoutPreparingItsStateAgain()
     {
         var original = new CountingConfiguration("original");
-        var parent = ResolutionScope.Create(builder => Wrap(builder, original, "parent"));
-        var parentInstance = parent.Resolve(original);
+        var other = new CountingConfiguration("other");
+        var parent = ResolutionScope.Create(Wrap(original, "parent"));
+        var parentExecution = parent.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
+        var child = parent.CreateChildScope(Wrap(other, "child"));
 
-        var child = parent.CreateChildScope(builder => Wrap(builder, original, "child"));
-
-        var childInstance = child.Resolve(original);
-        childInstance.ShouldNotBeSameAs(parentInstance);
-        childInstance.Name.ShouldBe("parent(child(original))");
+        child.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).ShouldNotBeSameAs(parentExecution);
+        child.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("parent(original)");
+        child.Resolve(other, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("child(other)");
+        original.CreateCount.ShouldBe(1);
+        other.CreateCount.ShouldBe(1);
     }
 
-    /// <summary>Resolving twice in one scope returns the same instance rather than rebuilding the chain.</summary>
     [Fact]
-    public void ResolvingTwiceInOneScope_ReturnsTheSameDecoratedInstance()
+    public void ChildAddingItsOwnWrapper_BuildsItsOwnExecution()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(builder => Wrap(builder, original, "only"));
+        var parent = ResolutionScope.Create(Wrap(original, "parent"));
+        var parentExecution = parent.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
 
-        scope.Resolve(original).ShouldBeSameAs(scope.Resolve(original));
+        var child = parent.CreateChildScope(Wrap(original, "child"));
+
+        var childExecution = child.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
+        childExecution.ShouldNotBeSameAs(parentExecution);
+        childExecution.Name.ShouldBe("parent(child(original))");
+    }
+
+    [Fact]
+    public void ResolvingTwiceInOneScope_CreatesFreshAdviceOverSharedState()
+    {
+        var original = new CountingConfiguration("original");
+        var scope = ResolutionScope.Create(Wrap(original, "only"));
+
+        scope.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).ShouldNotBeSameAs(scope.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice));
         original.CreateCount.ShouldBe(1);
     }
 
     // ---------- Composition across scopes ----------
 
-    /// <summary>
-    /// Cell D1. Decorations compose across scopes rather than the nearer one replacing the farther. Both are
-    /// present; which one ends up innermost is the depth rule, covered separately.
-    /// </summary>
     [Fact]
-    public void ChildDecoration_ComposesWithTheParentsRatherThanReplacingIt()
+    public void ChildWrapper_ComposesWithTheParentsRatherThanReplacingIt()
     {
         var original = new CountingConfiguration("original");
-        var parent = ResolutionScope.Create(builder => Wrap(builder, original, "parent"));
+        var parent = ResolutionScope.Create(Wrap(original, "parent"));
 
-        var child = parent.CreateChildScope(builder => Wrap(builder, original, "child"));
+        var child = parent.CreateChildScope(Wrap(original, "child"));
 
-        child.Resolve(original).Name.ShouldBe("parent(child(original))");
+        child.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("parent(child(original))");
     }
 
-    /// <summary>Cells C1 and C2. A decoration declared in a child never reaches the parent's own resolution.</summary>
     [Fact]
-    public void ChildDecoration_DoesNotAffectTheParentsResolution()
+    public void ChildWrapper_DoesNotAffectTheParentsResolution()
     {
         var original = new CountingConfiguration("original");
-        var parent = ResolutionScope.Create(builder => Wrap(builder, original, "parent"));
+        var parent = ResolutionScope.Create(Wrap(original, "parent"));
 
-        parent.CreateChildScope(builder => Wrap(builder, original, "child")).Resolve(original);
+        parent.CreateChildScope(Wrap(original, "child")).Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
 
-        parent.Resolve(original).Name.ShouldBe("parent(original)");
+        parent.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("parent(original)");
     }
 
-    /// <summary>An undecorated configuration is untouched no matter what else the scope decorates.</summary>
     [Fact]
-    public void UndecoratedConfiguration_IsBuiltPlain()
+    public void UnwrappedConfiguration_IsBuiltPlain()
     {
-        var decorated = new CountingConfiguration("decorated");
+        var wrapped = new CountingConfiguration("wrapped");
         var untouched = new CountingConfiguration("untouched");
-        var scope = ResolutionScope.Create(builder => Wrap(builder, decorated, "wrapper"));
+        var scope = ResolutionScope.Create(Wrap(wrapped, "wrapper"));
 
-        scope.Resolve(untouched).Name.ShouldBe("untouched");
+        scope.Resolve(untouched, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("untouched");
     }
 
     // ---------- Ordering ----------
 
-    /// <summary>
-    /// Within one scope the first decoration declared binds tightest, which is what lets a trace install the clocks
-    /// it reads before installing itself.
-    /// </summary>
     [Fact]
-    public void WithinOneScope_TheFirstDecorationDeclaredIsInnermost()
+    public void WithinOneScope_TheFirstWrapperDeclaredIsInnermost()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(builder =>
-        {
-            Wrap(builder, original, "first");
-            Wrap(builder, original, "second");
-        });
+        var scope = ResolutionScope.Create(Wrap(original, "first"),
+            Wrap(original, "second"));
 
-        scope.Resolve(original).Name.ShouldBe("second(first(original))");
+        scope.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("second(first(original))");
     }
 
-    /// <summary>The same decoration declared twice stacks twice rather than being treated as one.</summary>
     [Fact]
-    public void TheSameDecorationDeclaredTwice_StacksTwice()
+    public void TheSameWrapperDeclaredTwice_StacksTwice()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(builder =>
-        {
-            Wrap(builder, original, "counted");
-            Wrap(builder, original, "counted");
-        });
+        var scope = ResolutionScope.Create(Wrap(original, "counted"),
+            Wrap(original, "counted"));
 
-        scope.Resolve(original).Name.ShouldBe("counted(counted(original))");
+        scope.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("counted(counted(original))");
     }
 
-    /// <summary>
-    /// A deeper scope binds more tightly, so the most local budget wraps the operator closest and is the least
-    /// disturbed by the ones around it.
-    /// </summary>
     [Fact]
-    public void ADeeperScopesDecoration_IsInnerThanAShallowerOne()
+    public void ADeeperScopesWrapper_IsInnerThanAShallowerOne()
     {
         var original = new CountingConfiguration("original");
-        var root = ResolutionScope.Create(builder => Wrap(builder, original, "shallow"));
+        var root = ResolutionScope.Create(Wrap(original, "shallow"));
 
-        var deep = root.CreateChildScope(builder => Wrap(builder, original, "deep"));
+        var deep = root.CreateChildScope(Wrap(original, "deep"));
 
-        deep.Resolve(original).Name.ShouldBe("shallow(deep(original))");
+        deep.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("shallow(deep(original))");
     }
 
-    /// <summary>
-    /// A module's decoration always sits outside the configuration's, so a wrapper that measures an operator never
-    /// measures the module observing it. Install order does not override this.
-    /// </summary>
     [Fact]
-    public void AModulesDecoration_IsOuterThanConfigurationEvenWhenInstalledFirst()
+    public void AnExistingAspect_IsInnerThanARecipeInstalledAfterIt()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(builder =>
-        {
-            builder.Install(new DecoratingModule<INamedInstance>(original, current => new LabelledConfiguration("module", current)));
-            Wrap(builder, original, "configuration");
-        });
+        var scope = ResolutionScope.Create(Wrap(original, "module"),
+            Wrap(original, "configuration"));
 
-        scope.Resolve(original).Name.ShouldBe("module(configuration(original))");
+        scope.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("configuration(module(original))");
     }
 
-    /// <summary>Origin outranks depth, so configuration in an ancestor still binds tighter than a module below it.</summary>
     [Fact]
-    public void ConfigurationInAnAncestor_IsStillInnerThanAModuleInADescendant()
+    public void AnExistingAspectInADescendant_IsInnerThanAnAncestorRecipe()
     {
         var original = new CountingConfiguration("original");
-        var root = ResolutionScope.Create(builder => Wrap(builder, original, "configuration"));
+        var root = ResolutionScope.Create(Wrap(original, "configuration"));
 
-        var child = root.CreateChildScope(builder =>
-            builder.Install(new DecoratingModule<INamedInstance>(original, current => new LabelledConfiguration("module", current))));
+        var child = root.CreateChildScope(Wrap(original, "module"));
 
-        child.Resolve(original).Name.ShouldBe("module(configuration(original))");
+        child.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("configuration(module(original))");
     }
 
-    /// <summary>Among modules the ordinary install order applies, so a module installed first observes first.</summary>
     [Fact]
     public void AmongModules_TheFirstInstalledIsInnermost()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(builder => builder
-            .Install(new DecoratingModule<INamedInstance>(original, current => new LabelledConfiguration("first", current)))
-            .Install(new DecoratingModule<INamedInstance>(original, current => new LabelledConfiguration("second", current))));
+        var scope = ResolutionScope.Create(Wrap(original, "first"), Wrap(original, "second"));
 
-        scope.Resolve(original).Name.ShouldBe("second(first(original))");
+        scope.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("second(first(original))");
     }
 
     // ---------- Building the chain ----------
 
-    /// <summary>
-    /// A decoration resolves what it wraps through the scope. That must hand back the instance already built for
-    /// the link below it rather than starting the chain again, so the raw configuration is created exactly once.
-    /// </summary>
     [Fact]
-    public void BuildingAChain_CreatesTheUndecoratedInstanceExactlyOnce()
+    public void BuildingAChain_CreatesTheUnwrappedExecutionExactlyOnce()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(builder =>
-        {
-            Wrap(builder, original, "inner");
-            Wrap(builder, original, "middle");
-            Wrap(builder, original, "outer");
-        });
+        var scope = ResolutionScope.Create(Wrap(original, "inner"),
+            Wrap(original, "middle"),
+            Wrap(original, "outer"));
 
-        scope.Resolve(original).Name.ShouldBe("outer(middle(inner(original)))");
+        scope.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("outer(middle(inner(original)))");
         original.CreateCount.ShouldBe(1);
     }
 
-    /// <summary>Once a chain is built, nothing it pinned while building stays behind to answer later resolves.</summary>
     [Fact]
-    public void AfterAChainIsBuilt_TheUndecoratedConfigurationStillResolvesThroughItsDecorations()
+    public void AfterAChainIsBuilt_TheUnwrappedConfigurationStillResolvesThroughItsWrappers()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(builder => Wrap(builder, original, "wrapper"));
+        var scope = ResolutionScope.Create(Wrap(original, "wrapper"));
 
-        scope.Resolve(original).Name.ShouldBe("wrapper(original)");
-        scope.Resolve(original).Name.ShouldBe("wrapper(original)");
+        scope.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("wrapper(original)");
+        scope.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice).Name.ShouldBe("wrapper(original)");
         original.CreateCount.ShouldBe(1);
     }
 
     // ---------- Phase separation ----------
 
-    /// <summary>
-    /// The builder belongs to its declaration callback. A caller that keeps it cannot reach the scope that callback
-    /// produced, so declaring after resolving has begun is not a mistake the scope has to defend against.
-    /// </summary>
+
+    // ---------- Resolving through a preparation adapter ----------
+
     [Fact]
-    public void ABuilderKeptPastItsDeclaration_CannotChangeTheScopeItProduced()
-    {
-        var original = new CountingConfiguration("original");
-        ResolutionScopeBuilder? escaped = null;
-        var scope = ResolutionScope.Create(builder =>
-        {
-            escaped = builder;
-            Wrap(builder, original, "declared");
-        });
-
-        Wrap(escaped!, original, "late");
-
-        scope.Resolve(original).Name.ShouldBe("declared(original)");
-    }
-
-    // ---------- Resolving through a create function ----------
-
-    /// <summary>
-    /// A configuration whose instance type depends on the run cannot create itself, so the caller passes the creation
-    /// step. The decorations still apply, each link created through that step.
-    /// </summary>
-    [Fact]
-    public void ResolvingThroughACreateFunction_AppliesTheDecorationsBeforeCreating()
+    public void ResolvingThroughAPreparationAdapter_AppliesTheWrappers()
     {
         var original = new RunTypedConfiguration("original");
-        var scope = ResolutionScope.Create(builder =>
-        {
-            builder.Decorate<IRunTypedConfiguration>(original, current => new RunTypedWrapper("inner", current));
-            builder.Decorate<IRunTypedConfiguration>(original, current => new RunTypedWrapper("outer", current));
-        });
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference<IRunTypedConfiguration>(original), new LabelAdvice<IRunTypedConfiguration>("inner")),
+            Aspect.Create(Pointcut.Reference<IRunTypedConfiguration>(original), new LabelAdvice<IRunTypedConfiguration>("outer")));
 
         var resolved = ResolveRunTyped(scope, original);
 
         resolved.Name.ShouldBe("outer(inner(original))");
-        scope.CreateChildScope().Resolve(original, static (target, childScope) => target.Create(childScope)).ShouldBeSameAs(resolved);
+        scope.CreateChildScope().Resolve(original, static source => source.CreateExecutionFactory(), PrepareRunAdvice).ShouldNotBeSameAs(resolved);
         original.CreateCount.ShouldBe(1);
     }
 
-    /// <summary>
-    /// A scope serves one run, so asking for a held instance as another type means the caller resolves over a
-    /// different search space or problem. That is reported rather than cast.
-    /// </summary>
     [Fact]
-    public void AnInstanceHeldAsAnotherType_IsReportedRatherThanCast()
+    public void AnExecutionHeldAsAnotherType_IsReportedRatherThanCast()
     {
         var configuration = new RunTypedConfiguration("instance");
         var scope = ResolutionScope.Create();
         ResolveRunTyped(scope, configuration);
 
         var exception = Should.Throw<InvalidOperationException>(() =>
-            scope.CreateChildScope().Resolve(configuration, static (_, _) => new OtherInstance()));
+            scope.CreateChildScope().Resolve<IRunTypedConfiguration, OtherExecution>(configuration, static _ => _ => new OtherExecution(), static (_, _) => throw new InvalidOperationException("No compatible wrapper.")));
 
         exception.Message.ShouldBe(
-            "This scope already holds a NamedInstance for RunTypedConfiguration, which is not a OtherInstance. " +
-            "A scope serves one run, so resolve over a second search space or problem in its own scope.");
+            "RunTypedConfiguration was prepared for INamedExecution, not OtherExecution. " +
+            "Resolve over a second search space or problem in its own scope.");
     }
 
-    /// <summary>
-    /// Every link of a chain is created through the caller's creation step, so a decoration must produce what that
-    /// step accepts.
-    /// </summary>
     [Fact]
-    public void ADecorationTheCreateFunctionCannotAccept_IsReported()
+    public void MultipleAspectsSnapshotInputsAndDeduplicateTheirSharedInstallation()
     {
-        var original = new RunTypedConfiguration("original");
-        var scope = ResolutionScope.Create(builder =>
-            builder.Decorate<IExecutionConfiguration>(original, _ => new CountingConfiguration("foreign")));
+        var original = new CountingConfiguration("original");
+        var installed = Wrap(original, "installed");
+        var first = new NamedAspect(Wrap(original, "first"), installed);
+        var second = new NamedAspect(Wrap(original, "second"), installed);
+        Aspect[] inputs = [first, second, installed, first];
+        var scope = ResolutionScope.Create(inputs);
+        inputs[0] = Wrap(original, "replacement");
+        scope.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice)
+            .Name.ShouldBe("second(installed(first(original)))");
+    }
 
-        var exception = Should.Throw<InvalidOperationException>(() => ResolveRunTyped(scope, original));
 
-        exception.Message.ShouldBe(
-            "CountingConfiguration was declared to decorate RunTypedConfiguration, but it is not a IRunTypedConfiguration and cannot stand in for it.");
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void MultipleAspectLayersPreserveInstallationOrdering(bool childState)
+    {
+        var original = new CountingConfiguration("original");
+        IConfigurationNode<INamedExecution> selected = original;
+        var installed = Wrap(selected, "installed");
+        var first = new NamedAspect(Wrap(original, "first"), installed);
+        var second = Wrap(selected, "second");
+        var root = ResolutionScope.Create(first, second);
+        root.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice);
+        var third = Wrap(selected, "third");
+        var fourth = Wrap(selected, "fourth");
+        var scope = childState ? root.CreateChildScope(third, fourth) : root.With(third, fourth);
+
+        scope.Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice)
+            .Name.ShouldBe("second(installed(first(fourth(third(original)))))");
+        original.CreateCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void ExistingAspectsFollowOneApplicationSequence()
+    {
+        var original = new CountingConfiguration("original");
+        var existing = Wrap(original, "existing");
+        var nested = Wrap(original, "nested");
+        var combined = new NamedAspect(existing, Wrap(original, "inline"), nested, Wrap(original, "last"));
+        ResolutionScope.Create(combined).Resolve(original, static source => source.CreateExecutionFactory(), PrepareNamedAdvice)
+            .Name.ShouldBe("last(nested(inline(existing(original))))");
     }
 
     // ---------- Test doubles ----------
 
-    private static void Wrap(ResolutionScopeBuilder builder, IExecutionConfiguration<INamedInstance> anchor, string label) =>
-        builder.Decorate(anchor, current => new LabelledConfiguration(label, current));
+    private static Aspect Wrap(IConfigurationNode<INamedExecution> anchor, string label) =>
+        Aspect.Create(Pointcut.Reference(anchor), new LabelAdvice<IConfigurationNode<INamedExecution>>(label));
 
-    private interface INamedInstance : IExecutionInstance
+    private static WrapperExecutionFactory<INamedExecution> PrepareNamedAdvice(Advice advice, IConfigurationNode<INamedExecution> configuration) =>
+        ((LabelAdvice<IConfigurationNode<INamedExecution>>)advice).CreateWrapperFactory();
+
+    private static WrapperExecutionFactory<INamedExecution> PrepareRunAdvice(Advice advice, IRunTypedConfiguration configuration) =>
+        ((LabelAdvice<IRunTypedConfiguration>)advice).CreateWrapperFactory();
+
+    private sealed class LabelAdvice<TConfiguration>(string label) : Advice<TConfiguration>
+        where TConfiguration : class, IConfigurationNode
+    {
+        public WrapperExecutionFactory<INamedExecution> CreateWrapperFactory() =>
+            inner => new NamedExecution($"{label}({inner.Name})");
+    }
+
+    private sealed class NamedAspect : Aspect
+    {
+        public NamedAspect(params IReadOnlyList<Aspect> aspects)
+        {
+            Advices = [.. aspects.SelectMany(aspect => aspect.Advices)];
+        }
+    }
+
+    private interface INamedExecution : IExecutionNode
     {
         string Name { get; }
     }
 
-    private sealed class NamedInstance(string name) : INamedInstance
+    private sealed class NamedExecution(string name) : INamedExecution
     {
         public string Name { get; } = name;
     }
 
-    private sealed class CountingConfiguration(string name) : IExecutionConfiguration<INamedInstance>
+    private sealed class CountingConfiguration(string name) : IConfigurationNode<INamedExecution>
     {
         public int CreateCount { get; private set; }
-
-        public INamedInstance CreateExecutionInstance(ResolutionScope scope)
+        public ExecutionFactory<INamedExecution> CreateExecutionFactory()
         {
             CreateCount++;
-            return new NamedInstance(name);
+            var execution = new NamedExecution(name);
+            return _ => execution;
         }
     }
 
-    private sealed class LabelledConfiguration(string label, IExecutionConfiguration<INamedInstance> inner)
-        : IExecutionConfiguration<INamedInstance>
+    private sealed class OtherExecution : IExecutionNode;
+
+    private interface IRunTypedConfiguration : IConfigurationNode
     {
-        public INamedInstance CreateExecutionInstance(ResolutionScope scope) =>
-            new NamedInstance($"{label}({scope.Resolve(inner).Name})");
+        ExecutionFactory<INamedExecution> CreateExecutionFactory();
     }
 
-    private sealed class OtherInstance : IExecutionInstance;
-
-    /// <summary>Stands in for a role configuration: configuration, but not able to create itself without its caller.</summary>
-    private interface IRunTypedConfiguration : IExecutionConfiguration
-    {
-        INamedInstance Create(ResolutionScope scope);
-    }
-
-    private static INamedInstance ResolveRunTyped(ResolutionScope scope, IRunTypedConfiguration configuration) =>
-        scope.Resolve(configuration, static (target, targetScope) => target.Create(targetScope));
+    private static INamedExecution ResolveRunTyped(ResolutionScope scope, IRunTypedConfiguration configuration) =>
+        scope.Resolve(configuration, static source => source.CreateExecutionFactory(), PrepareRunAdvice);
 
     private sealed class RunTypedConfiguration(string name) : IRunTypedConfiguration
     {
         public int CreateCount { get; private set; }
-
-        public INamedInstance Create(ResolutionScope scope)
+        public ExecutionFactory<INamedExecution> CreateExecutionFactory()
         {
             CreateCount++;
-            return new NamedInstance(name);
+            var execution = new NamedExecution(name);
+            return _ => execution;
         }
-    }
-
-    private sealed class RunTypedWrapper(string label, IRunTypedConfiguration inner) : IRunTypedConfiguration
-    {
-        public INamedInstance Create(ResolutionScope scope) =>
-            new NamedInstance($"{label}({ResolveRunTyped(scope, inner).Name})");
-    }
-
-    private sealed class DecoratingModule<TInstance>(
-        IExecutionConfiguration<TInstance> anchor,
-        Func<IExecutionConfiguration<TInstance>, IExecutionConfiguration<TInstance>> decorate)
-        : IExecutionModule
-        where TInstance : class, IExecutionInstance
-    {
-        public void Install(ResolutionScopeBuilder builder) => builder.Decorate(anchor, decorate);
     }
 }

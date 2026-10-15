@@ -33,12 +33,8 @@ public class AccumulatingAnalyzerTests
         analyzer.Front.Count.ShouldBe(5);
     }
 
-    private static ResolutionScope Install(params IAnalyzer[] analyzers) =>
-        ResolutionScope.Create(builder =>
-        {
-            foreach (var analyzer in analyzers)
-                analyzer.Install(builder);
-        });
+    private static ResolutionScope Install(params Aspect[] analyzers) =>
+        ResolutionScope.Create(analyzers);
 
     private static void Evaluate(ResolutionScope scope, SketchEvaluator evaluator, params int[] candidates) =>
         scope.Resolve<int, SketchSearchSpace, SketchProblem>(evaluator)
@@ -47,9 +43,9 @@ public class AccumulatingAnalyzerTests
     /// <summary>Scores a candidate against two conflicting objectives, so every candidate stays on the front.</summary>
     private sealed record SketchEvaluator : Evaluator<int, SketchSearchSpace, SketchProblem>
     {
-        public override IEvaluatorInstance<int, SketchSearchSpace, SketchProblem> CreateExecutionInstance(ResolutionScope scope) => new Instance();
+        public override ExecutionFactory<IEvaluatorExecution<int, SketchSearchSpace, SketchProblem>> CreateExecutionFactory() => _ => new Execution();
 
-        private sealed class Instance : IEvaluatorInstance<int, SketchSearchSpace, SketchProblem>
+        private sealed class Execution : IEvaluatorExecution<int, SketchSearchSpace, SketchProblem>
         {
             public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random,
                 SketchSearchSpace searchSpace, SketchProblem problem) =>

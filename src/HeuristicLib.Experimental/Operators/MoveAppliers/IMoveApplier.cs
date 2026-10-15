@@ -8,13 +8,13 @@ namespace HEAL.HeuristicLib.Operators.MoveAppliers;
 
 public interface IMoveApplier<TCandidate, in TMove> : IOperator
 {
-    IMoveApplierInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    ExecutionFactory<IMoveApplierExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public interface IMoveApplierInstance<TCandidate, in TSearchSpace, in TProblem, in TMove>
-    : IOperatorInstance
+public interface IMoveApplierExecution<TCandidate, in TSearchSpace, in TProblem, in TMove>
+    : IOperatorExecution
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -30,32 +30,33 @@ public static class MoveApplierResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public IMoveApplierInstance<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TCandidate, TSearchSpace, TProblem, TMove>(IMoveApplier<TCandidate, TMove> moveApplier)
+        public IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TCandidate, TSearchSpace, TProblem, TMove>(IMoveApplier<TCandidate, TMove> moveApplier)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(moveApplier, static (creationTarget, childScope) => creationTarget.CreateExecutionInstance<TSearchSpace, TProblem>(childScope));
+            scope.Resolve(moveApplier, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TMove>);
 
-        public IMoveApplierInstance<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TMove>(IMoveApplier<TCandidate, TMove>? moveApplier)
+        [return: NotNullIfNotNull(nameof(moveApplier))]
+        public IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TMove>(IMoveApplier<TCandidate, TMove>? moveApplier)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             moveApplier is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveApplier);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem, TMove>(
             IMoveApplier<TCandidate, TMove> moveApplier,
-            [NotNullWhen(true)] out IMoveApplierInstance<TCandidate, TSearchSpace, TProblem, TMove>? instance,
+            [NotNullWhen(true)] out IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove>? execution,
             [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
         {
             try
             {
-                instance = scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveApplier);
+                execution = scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveApplier);
                 reason = null;
                 return true;
             }
             catch (InvalidOperationException exception)
             {
-                instance = null;
+                execution = null;
                 reason = exception.Message;
                 return false;
             }
@@ -66,16 +67,22 @@ public static class MoveApplierResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IMoveApplierInstance<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TMove>(IMoveApplier<TCandidate, TMove> moveApplier) =>
+        public IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TMove>(IMoveApplier<TCandidate, TMove> moveApplier) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveApplier);
 
-        public IMoveApplierInstance<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TMove>(IMoveApplier<TCandidate, TMove>? moveApplier) =>
+        [return: NotNullIfNotNull(nameof(moveApplier))]
+        public IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TMove>(IMoveApplier<TCandidate, TMove>? moveApplier) =>
             moveApplier is null ? null : scope.Resolve(moveApplier);
 
         public bool TryResolve<TMove>(
             IMoveApplier<TCandidate, TMove> moveApplier,
-            [NotNullWhen(true)] out IMoveApplierInstance<TCandidate, TSearchSpace, TProblem, TMove>? instance,
+            [NotNullWhen(true)] out IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove>? execution,
             [NotNullWhen(false)] out string? reason) =>
-            scope.Scope.TryResolve(moveApplier, out instance, out reason);
+            scope.Scope.TryResolve(moveApplier, out execution, out reason);
     }
+
+    private static WrapperExecutionFactory<IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TMove>(Advice advice, IMoveApplier<TCandidate, TMove> configuration)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        => throw new InvalidOperationException($"{advice.GetType().Name} is not a single-child wrapper for {typeof(IMoveApplier<TCandidate, TMove>).Name} producing {typeof(IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove>).Name}.");
 }

@@ -11,7 +11,7 @@ public class TerminatorConfigurationEqualityTests
     {
         var child = new ThresholdTerminator(1);
 
-        child.CountCalls(new CountAccumulator()).ChildTerminator.ShouldBeSameAs(child);
+        new IdentityTerminator(child).ChildTerminator.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -35,25 +35,14 @@ public class TerminatorConfigurationEqualityTests
     [Fact]
     public void NestedComposition_WithEqualParts_IsEqual()
     {
-        var counter = new CountAccumulator();
-        var left = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(2)).CountCalls(counter);
-        var equal = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(2)).CountCalls(counter);
-        var different = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(3)).CountCalls(counter);
+        var left = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(2));
+        var equal = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(2));
+        var different = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(3));
 
         left.ShouldBe(equal);
         left.ShouldNotBe(different);
     }
 
-    [Fact]
-    public void WrappingConcerns_IncludeChildAndSettingsInEquality()
-    {
-        var counter = new CountAccumulator();
-        var duration = new DurationAccumulator();
-
-        new ThresholdTerminator(1).CountCalls(counter).ShouldBe(new ThresholdTerminator(1).CountCalls(counter));
-        new ThresholdTerminator(1).MeasureDuration(duration, TimeProvider.System).ShouldBe(new ThresholdTerminator(1).MeasureDuration(duration, TimeProvider.System));
-        new ThresholdTerminator(1).CountCalls(counter).ShouldNotBe(new ThresholdTerminator(2).CountCalls(counter));
-    }
 
     [Fact]
     public void StagnationTerminator_SupportsWithReconfiguration()
@@ -74,4 +63,14 @@ public class TerminatorConfigurationEqualityTests
         public override bool IsTerminalState(TestState state, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
             state.Value >= Threshold;
     }
+    private sealed record IdentityTerminator : WrappingTerminator<int>
+    {
+        public IdentityTerminator(ITerminator<int> child) : base(child)
+        {
+        }
+
+        protected override WrapperExecutionFactory<ITerminatorExecution<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
+            child => child;
+    }
+
 }

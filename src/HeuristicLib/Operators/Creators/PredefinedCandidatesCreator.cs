@@ -22,30 +22,36 @@ public record PredefinedCandidatesCreator<TCandidate>
         CreatorForRemainingCandidates = creatorForRemainingCandidates;
     }
 
-    public ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    public ExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
-        new Instance<TRunSearchSpace, TRunProblem>(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(CreatorForRemainingCandidates), PredefinedCandidates);
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    {
+        var state = new ExecutionState();
+        return scope => new Execution<TRunSearchSpace, TRunProblem>(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(CreatorForRemainingCandidates), PredefinedCandidates, state);
+    }
 
-    private sealed class Instance<TSearchSpace, TProblem>(ICreatorInstance<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates)
-        : CreatorInstance<TCandidate, TSearchSpace, TProblem>
+    private sealed class ExecutionState
+    {
+        public int CurrentCandidateIndex { get; set; }
+    }
+
+    private sealed class Execution<TSearchSpace, TProblem>(ICreatorExecution<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates, ExecutionState state)
+        : CreatorExecution<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        private int currentCandidateIndex;
-
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var candidates = new TCandidate[count];
-            var countPredefined = Math.Min(predefinedCandidates.Count - currentCandidateIndex, count);
+            var countPredefined = Math.Min(predefinedCandidates.Count - state.CurrentCandidateIndex, count);
             if (countPredefined > 0)
             {
                 for (var i = 0; i < countPredefined; i++)
                 {
-                    candidates[i] = predefinedCandidates[currentCandidateIndex + i];
+                    candidates[i] = predefinedCandidates[state.CurrentCandidateIndex + i];
                 }
 
-                currentCandidateIndex += countPredefined;
+                state.CurrentCandidateIndex += countPredefined;
             }
 
             var countRemaining = count - countPredefined;

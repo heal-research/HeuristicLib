@@ -1,4 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -26,9 +28,9 @@ public static partial class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState =>
-        Create<IInterceptor<TCandidate>, InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>, TProblem, TValue, TResult>(interceptors,
-            static (source, record) => new InterceptorObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(source, record),
-            clocks, retention, measurement, aggregation, objectiveComparer);
+        TraceAnalyzer<TResult>.Create<IInterceptor<TCandidate>, InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>, TProblem, TValue>(interceptors,
+            static (source, record) => Aspect.Observe(source, record),
+            measurement, aggregation, clocks, retention, objectiveComparer);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TSearchState, TValue, TResult>(
         IInterceptor<TCandidate> interceptor,
@@ -68,9 +70,9 @@ public static partial class Analyzer
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState =>
-        Create(interceptors,
-            static (source, record) => new InterceptorObservationModule<TCandidate, TSearchSpace, TProblem, TSearchState>(source, record),
-            clocks, retention, value);
+        TraceAnalyzer<TResult>.Create(interceptors,
+            static (source, record) => Aspect.Observe(source, record),
+            value, clocks, retention);
 
     // Observes at the interface search space and problem, so an implicitly typed lambda needs no type arguments.
 
@@ -104,7 +106,7 @@ public static partial class Analyzer
         Func<InterceptorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>, TResult> value,
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null)
         where TSearchState : class, ISearchState =>
-        Create(interceptors,
-            static (source, record) => new InterceptorObservationModule<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>(source, record),
-            clocks, retention, value);
+        TraceAnalyzer<TResult>.Create(interceptors,
+            static (source, record) => Aspect.Observe(source, record),
+            value, clocks, retention);
 }

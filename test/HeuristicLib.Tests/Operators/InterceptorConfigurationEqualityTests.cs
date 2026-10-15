@@ -11,7 +11,7 @@ public class InterceptorConfigurationEqualityTests
     {
         var child = new OffsetInterceptor(1);
 
-        child.CountCalls(new CountAccumulator()).ChildInterceptor.ShouldBeSameAs(child);
+        new IdentityInterceptor(child).ChildInterceptor.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -35,25 +35,14 @@ public class InterceptorConfigurationEqualityTests
     [Fact]
     public void NestedComposition_WithEqualParts_IsEqual()
     {
-        var counter = new CountAccumulator();
-        var left = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2)).CountCalls(counter);
-        var equal = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2)).CountCalls(counter);
-        var different = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(3)).CountCalls(counter);
+        var left = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2));
+        var equal = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2));
+        var different = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(3));
 
         left.ShouldBe(equal);
         left.ShouldNotBe(different);
     }
 
-    [Fact]
-    public void WrappingConcerns_IncludeChildAndSettingsInEquality()
-    {
-        var counter = new CountAccumulator();
-        var duration = new DurationAccumulator();
-
-        new OffsetInterceptor(1).CountCalls(counter).ShouldBe(new OffsetInterceptor(1).CountCalls(counter));
-        new OffsetInterceptor(1).MeasureDuration(duration, TimeProvider.System).ShouldBe(new OffsetInterceptor(1).MeasureDuration(duration, TimeProvider.System));
-        new OffsetInterceptor(1).CountCalls(counter).ShouldNotBe(new OffsetInterceptor(2).CountCalls(counter));
-    }
 
     private sealed record TestState(int Value) : SearchState;
 
@@ -63,4 +52,14 @@ public class InterceptorConfigurationEqualityTests
         public override TestState Transform(TestState currentState, TestState? previousState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
             currentState with { Value = currentState.Value + Offset };
     }
+    private sealed record IdentityInterceptor : WrappingInterceptor<int>
+    {
+        public IdentityInterceptor(IInterceptor<int> child) : base(child)
+        {
+        }
+
+        protected override WrapperExecutionFactory<IInterceptorExecution<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
+            child => child;
+    }
+
 }

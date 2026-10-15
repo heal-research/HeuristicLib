@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.Encodings.Composite;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
@@ -13,6 +14,45 @@ namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
 
 public class AutoEcPaperScenarioTests
 {
+    [Theory]
+    [InlineData(1)]
+    [InlineData(3)]
+    public async Task RunUntilEpochChanges_CountsAppliedUpdatesFromItsStartingEpoch(int updatesPerMove)
+    {
+        using var problem = CreateMovingPeaksProblem();
+        for (var epoch = 0; epoch < 3; epoch++)
+            problem.UpdateOnce();
+        var moves = 0;
+        var disposed = false;
+
+        var finalState = await RunUntilEpochChanges(AdvanceEpochs(), problem, 2, TestContext.Current.CancellationToken);
+
+        var expectedMoves = updatesPerMove == 1 ? 2 : 1;
+        moves.ShouldBe(expectedMoves);
+        finalState.ShouldBe($"move {expectedMoves}");
+        problem.CurrentEpoch.ShouldBe(3 + expectedMoves * updatesPerMove);
+        disposed.ShouldBeTrue();
+
+        async IAsyncEnumerable<string> AdvanceEpochs()
+        {
+            try
+            {
+                for (var move = 0; move < 3; move++)
+                {
+                    moves++;
+                    for (var update = 0; update < updatesPerMove; update++)
+                        problem.UpdateOnce();
+                    yield return $"move {moves}";
+                    await Task.CompletedTask;
+                }
+            }
+            finally
+            {
+                disposed = true;
+            }
+        }
+    }
+
     [Fact]
     public async Task DynamicRacingGa_OnActivatedTsp_UsesPaperLikeScenario()
     {
@@ -71,7 +111,7 @@ public class AutoEcPaperScenarioTests
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).Attach(qualityCurve).Attach(bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAspect(qualityCurve).AddAspect(bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -123,7 +163,7 @@ public class AutoEcPaperScenarioTests
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).Attach(qualityCurve).Attach(bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAspect(qualityCurve).AddAspect(bbcp);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -148,28 +188,14 @@ public class AutoEcPaperScenarioTests
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(epochChanges);
 
-        var observedEpochChanges = 0;
+        var initialEpoch = problem.CurrentEpoch;
         TSearchState? finalState = null;
-
-        void OnEpochChange(object? sender, int epoch)
+        await using var enumerator = stream.GetAsyncEnumerator(cancellationToken);
+        while (problem.CurrentEpoch - initialEpoch < epochChanges)
         {
-            observedEpochChanges += 1;
-        }
-
-        problem.OnEpochChange += OnEpochChange;
-        try
-        {
-            await using var enumerator = stream.GetAsyncEnumerator(cancellationToken);
-            while (observedEpochChanges < epochChanges)
-            {
-                var hasNext = await enumerator.MoveNextAsync();
-                hasNext.ShouldBeTrue();
-                finalState = enumerator.Current;
-            }
-        }
-        finally
-        {
-            problem.OnEpochChange -= OnEpochChange;
+            var hasNext = await enumerator.MoveNextAsync();
+            hasNext.ShouldBeTrue();
+            finalState = enumerator.Current;
         }
 
         return finalState ?? throw new InvalidOperationException("The stream did not produce a state.");

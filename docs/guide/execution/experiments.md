@@ -132,19 +132,18 @@ Parameter search can overfit benchmark instances. Keep separate instances for fi
 
 Analyzers can collect progress during each trial rather than only final states. Continue with [Observability and analysis](/guide/execution/observability-and-analysis).
 
-
 A trial analyzer factory receives the concrete trial algorithm. Create any clocks inside the factory so they belong to that trial:
 
 ```csharp
-var quality = TrialAnalyzer.Create(
+var quality = AspectFactory.Create(
     (GeneticAlgorithm<RealVector> trial) =>
         trial.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
 var run = algorithm.Repeat(2).CreateRun(problem, random)
-    .AttachPerTrial(quality);
+    .AddAspectPerTrial(quality);
 await run.CompleteAsync();
-var analyses = run.GetAttached(quality);
+var analyses = run.GetAspectPerTrial(quality);
 ```
 
-`GetAttached` returns `TrialAttachment` entries in trial order. Each has a typed `Trial` and a `Module` property; here `Module` has the concrete analyzer type created by the factory. The factory is reusable across experiments; the analyzers and clocks it creates are not.
+`GetAspectPerTrial` returns `TrialAspect` entries in trial order. Each has a typed `Trial` and an `Aspect` property; here `Aspect` has the concrete analyzer type created by the factory. Reuse the factory across experiments and create fresh analyzers and clocks for each trial when results should be independent. Returning a shared analyzer or clock intentionally combines its history or counts.
 
-Use `TrialModule.Create` for other execution modules. `TrialAnalyzer.Create` is its analyzer-specific convenience. Both use `AttachPerTrial` and `GetAttached`, and factories install their attachments in the order they were attached to the experiment. Attaching the same factory twice is rejected.
+Use `AspectFactory.Create` for any per-trial aspect, including analyzers. Add factories with `AddAspectPerTrial`; their aspects follow that order in each trial. Adding the same factory twice is rejected.

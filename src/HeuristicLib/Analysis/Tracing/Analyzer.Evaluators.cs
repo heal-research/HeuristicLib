@@ -1,3 +1,5 @@
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -23,9 +25,9 @@ public static partial class Analyzer
         TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        Create<IEvaluator<TCandidate>, EvaluatorObservation<TCandidate, TSearchSpace, TProblem>, TProblem, TValue, TResult>(evaluators,
-            static (source, record) => new EvaluatorObservationModule<TCandidate, TSearchSpace, TProblem>(source, record),
-            clocks, retention, measurement, aggregation, objectiveComparer);
+        TraceAnalyzer<TResult>.Create<IEvaluator<TCandidate>, EvaluatorObservation<TCandidate, TSearchSpace, TProblem>, TProblem, TValue>(evaluators,
+            static (source, record) => Aspect.Observe(source, record),
+            measurement, aggregation, clocks, retention, objectiveComparer);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TValue, TResult>(
         IEvaluator<TCandidate> evaluator,
@@ -51,9 +53,9 @@ public static partial class Analyzer
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        Create(evaluators,
-            static (source, record) => new EvaluatorObservationModule<TCandidate, TSearchSpace, TProblem>(source, record),
-            clocks, retention, value);
+        TraceAnalyzer<TResult>.Create(evaluators,
+            static (source, record) => Aspect.Observe(source, record),
+            value, clocks, retention);
 
     // Observes at the interface search space and problem, so an implicitly typed lambda needs no type arguments.
 
@@ -75,7 +77,7 @@ public static partial class Analyzer
         IReadOnlyList<IEvaluator<TCandidate>> evaluators,
         Func<EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>, TResult> value,
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null) =>
-        Create(evaluators,
-            static (source, record) => new EvaluatorObservationModule<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(source, record),
-            clocks, retention, value);
+        TraceAnalyzer<TResult>.Create(evaluators,
+            static (source, record) => Aspect.Observe(source, record),
+            value, clocks, retention);
 }

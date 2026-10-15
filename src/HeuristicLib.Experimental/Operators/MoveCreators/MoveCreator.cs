@@ -18,8 +18,8 @@ public abstract record MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TS
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    private sealed record Instance(MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TState> MoveCreator, TState State)
-        : IMoveCreatorInstance<TCandidate, TSearchSpace, TProblem, TMove>
+    private sealed record Execution(MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TState> MoveCreator, TState State)
+        : IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>
     {
         public IEnumerable<TMove> Moves(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             MoveCreator.Moves(candidate, State, searchSpace, problem, random);
@@ -29,12 +29,15 @@ public abstract record MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TS
 
     protected abstract TState InitialState();
 
-    public virtual IMoveCreatorInstance<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ResolutionScope scope) =>
-        new Instance(this, InitialState());
+    public virtual ExecutionFactory<IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, InitialState());
+        return _ => execution;
+    }
 
     public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    IMoveCreatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove> IMoveCreator<TCandidate, TMove>.CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    ExecutionFactory<IMoveCreatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveCreator<TCandidate, TMove>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -44,6 +47,6 @@ public abstract record MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TS
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (IMoveCreatorInstance<TCandidate, TRunSearchSpace, TRunProblem, TMove>)CreateExecutionInstance(scope);
+        return (ExecutionFactory<IMoveCreatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutionFactory();
     }
 }

@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms.AutoEC;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.Dynamic;
@@ -27,7 +28,6 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
     where TProblem : class, IDynamicProblem<TCandidate, TSearchSpace>
 {
     private readonly List<BestBeforeChangePerformanceEntry<TCandidate>> bestBeforeChange = [];
-    private readonly ImmutableArray<IEvaluator<TCandidate>> evaluators;
     private readonly Func<ObjectiveVector, double> objectiveValueSelector;
     private readonly OnlineWeibullCurveModel predictionModel = new(double.NaN);
     private readonly TProblem problem;
@@ -44,9 +44,9 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
 
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(predictionEpochMultiplier);
         this.problem = problem;
-        this.evaluators = [.. evaluators];
         this.objectiveValueSelector = objectiveValueSelector ?? (static objectiveVector => objectiveVector[0]);
         PredictionEpochMultiplier = predictionEpochMultiplier;
+        Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, ReadBatch).Advices)];
     }
 
     public int PredictionEpochMultiplier { get; }
@@ -66,12 +66,6 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
         get { lock (Sync) return prediction; }
     }
     private double prediction = double.NaN;
-
-    public override void Install(ResolutionScopeBuilder builder)
-    {
-        foreach (var evaluator in evaluators)
-            builder.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, ReadBatch);
-    }
 
     private void ReadBatch(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation)
     {

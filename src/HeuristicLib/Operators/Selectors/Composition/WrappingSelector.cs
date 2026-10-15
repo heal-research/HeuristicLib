@@ -20,26 +20,27 @@ public abstract record WrappingSelector<TCandidate>
 
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildSelector);
 
-
-    /// <summary>
-    /// Resolves the child over the run's search space and problem and hands it to
-    /// <see cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
-    /// </summary>
-    public ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    /// <summary>Prepares this operator once, then binds its child in each construction scope.</summary>
+    public ExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
-        WrapExecutionInstance(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildSelector));
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    {
+        var create = CreateWrapperFactory<TRunSearchSpace, TRunProblem>();
+        return scope => create(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildSelector));
+    }
 
-    /// <summary>Wraps the child's execution instance in this operator's own.</summary>
-    protected abstract ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> childSelector)
+    /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved child.</summary>
+    /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
+    protected abstract WrapperExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+
 }
 
-public abstract class WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(ISelectorInstance<TCandidate, TSearchSpace, TProblem> childSelector)
-    : SelectorInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class WrappingSelectorExecution<TCandidate, TSearchSpace, TProblem>(ISelectorExecution<TCandidate, TSearchSpace, TProblem> childSelector)
+    : SelectorExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ISelectorInstance<TCandidate, TSearchSpace, TProblem> ChildSelector { get; } = childSelector;
+    protected ISelectorExecution<TCandidate, TSearchSpace, TProblem> ChildSelector { get; } = childSelector;
 }

@@ -21,29 +21,29 @@ public abstract record MultiInterceptor<TCandidate>
 
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildInterceptors]);
 
-
-    /// <summary>
-    /// Resolves each child over the run's search space and problem and hands them to <see
-    /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem, TRunSearchState}"/>.
-    /// </summary>
-    public IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+    /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
+    public ExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
-        where TRunSearchState : class, ISearchState =>
-        CombineExecutionInstances([.. ChildInterceptors.Select(child => scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(child))]);
+        where TRunSearchState : class, ISearchState
+    {
+        var create = CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>();
+        return scope => create([.. ChildInterceptors.Select(child => scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(child))]);
+    }
 
-    /// <summary>Combines the children's execution instances into this operator's own.</summary>
-    protected abstract IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> CombineExecutionInstances<TRunSearchSpace, TRunProblem, TRunSearchState>(ImmutableArray<IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> childInterceptors)
+    /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
+    /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
+    protected abstract CompositeExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState;
 }
 
-public abstract class MultiInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(ImmutableArray<IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
-    : InterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+public abstract class MultiInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(ImmutableArray<IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
+    : InterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> ChildInterceptors { get; } = childInterceptors;
+    protected ImmutableArray<IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> ChildInterceptors { get; } = childInterceptors;
 }

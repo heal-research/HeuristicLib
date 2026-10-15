@@ -1,14 +1,5 @@
-using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Creators;
-using HEAL.HeuristicLib.Operators.Crossovers;
-using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Operators.Interceptors;
-using HEAL.HeuristicLib.Operators.Mutators;
-using HEAL.HeuristicLib.Operators.Refiners;
-using HEAL.HeuristicLib.Operators.Replacers;
-using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Operators.Terminators;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
@@ -20,21 +11,21 @@ public static class OperatorDurationBudgetExtensions
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperator> LimitedToOperatorDuration<TOperator>(
             TOperator observedOperator,
             TimeSpan maximumDuration,
-            Func<TOperator, DurationAccumulator, TimeProvider, TOperator> measuredOperatorFactory)
+            IOperatorDurationMeasuring<TOperator> durationMeasuring)
             where TOperator : class, IOperator
         {
             return algorithm.LimitedToOperatorDuration(
                 observedOperator,
                 maximumDuration,
                 TimeProvider.System,
-                measuredOperatorFactory);
+                durationMeasuring);
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperator> LimitedToOperatorDuration<TOperator>(
             TOperator observedOperator,
             TimeSpan maximumDuration,
             TimeProvider timeProvider,
-            Func<TOperator, DurationAccumulator, TimeProvider, TOperator> measuredOperatorFactory)
+            IOperatorDurationMeasuring<TOperator> durationMeasuring)
             where TOperator : class, IOperator
         {
             return new()
@@ -43,7 +34,7 @@ public static class OperatorDurationBudgetExtensions
                 ObservedOperator = observedOperator,
                 MaximumDuration = maximumDuration,
                 TimeProvider = timeProvider,
-                MeasuredOperatorFactory = measuredOperatorFactory
+                DurationMeasuring = durationMeasuring
             };
         }
 
@@ -63,8 +54,7 @@ public static class OperatorDurationBudgetExtensions
                 evaluator,
                 maximumDuration,
                 timeProvider,
-                static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureDuration(duration, timeProvider));
+                new EvaluatorDurationMeasuring<TCandidate>());
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ICreator<TCandidate>> LimitedToCreatorDuration(
@@ -83,8 +73,7 @@ public static class OperatorDurationBudgetExtensions
                 creator,
                 maximumDuration,
                 timeProvider,
-                static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureDuration(duration, timeProvider));
+                new CreatorDurationMeasuring<TCandidate>());
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ICrossover<TCandidate>> LimitedToCrossoverDuration(
@@ -103,8 +92,7 @@ public static class OperatorDurationBudgetExtensions
                 crossover,
                 maximumDuration,
                 timeProvider,
-                static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureDuration(duration, timeProvider));
+                new CrossoverDurationMeasuring<TCandidate>());
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IMutator<TCandidate>> LimitedToMutatorDuration(
@@ -123,8 +111,7 @@ public static class OperatorDurationBudgetExtensions
                 mutator,
                 maximumDuration,
                 timeProvider,
-                static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureDuration(duration, timeProvider));
+                new MutatorDurationMeasuring<TCandidate>());
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IRefiner<TCandidate>> LimitedToRefinerDuration(
@@ -143,8 +130,7 @@ public static class OperatorDurationBudgetExtensions
                 refiner,
                 maximumDuration,
                 timeProvider,
-                static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureDuration(duration, timeProvider));
+                new RefinerDurationMeasuring<TCandidate>());
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ISelector<TCandidate>> LimitedToSelectorDuration(
@@ -163,8 +149,7 @@ public static class OperatorDurationBudgetExtensions
                 selector,
                 maximumDuration,
                 timeProvider,
-                static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureDuration(duration, timeProvider));
+                new SelectorDurationMeasuring<TCandidate>());
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IReplacer<TCandidate>> LimitedToReplacerDuration(
@@ -183,8 +168,7 @@ public static class OperatorDurationBudgetExtensions
                 replacer,
                 maximumDuration,
                 timeProvider,
-                static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureDuration(duration, timeProvider));
+                new ReplacerDurationMeasuring<TCandidate>());
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IInterceptor<TCandidate>> LimitedToInterceptorDuration(
@@ -203,8 +187,7 @@ public static class OperatorDurationBudgetExtensions
                 interceptor,
                 maximumDuration,
                 timeProvider,
-                static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureDuration(duration, timeProvider));
+                new InterceptorDurationMeasuring<TCandidate>());
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ITerminator<TCandidate>> LimitedToTerminatorDuration(
@@ -223,8 +206,7 @@ public static class OperatorDurationBudgetExtensions
                 terminator,
                 maximumDuration,
                 timeProvider,
-                static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureDuration(duration, timeProvider));
+                new TerminatorDurationMeasuring<TCandidate>());
         }
     }
 }

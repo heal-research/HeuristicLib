@@ -91,6 +91,6 @@ See [Observability and analysis](/guide/execution/observability-and-analysis) fo
 
 An explicit `AlgorithmRun` starts in `Preparing` and accepts attachments until `Stream` starts execution. Consume each returned stream only once and finish or dispose it before requesting another stream from the run.
 
-Ending enumeration early pauses the run. Cancellation through the ordinary stream or enumeration token also pauses it. Call `Stream` again on the same run to resume its retained execution state; modules are installed and the algorithm is resolved only on the first start. Supply an initial state only on that first start.
+Ending enumeration early pauses the run. Cancellation through the ordinary stream or enumeration token also pauses it. Call `Stream` again on the same run to resume its retained execution state. The root scope is created and the root algorithm is resolved with its aspects only on the first start; resuming continues the retained iterator. Supply an initial state only on that first start.
 
-Natural completion sets `Completed`. Module installation or execution failures are terminal; cancellation during installation sets `Canceled`. A failed or canceled run cannot resume. [Experiment runs](/guide/execution/experiments#run-lifecycle) use terminal cancellation and do not support pause and resume.
+Natural completion sets `Completed`. Execution-graph setup or execution failures are terminal; cancellation thrown during graph setup sets `Canceled`. A failed or canceled run cannot resume. This run lifecycle is separate from a resolution scope's ability to retry a failed construction. [Experiment runs](/guide/execution/experiments#run-lifecycle) use terminal cancellation and do not support pause and resume.

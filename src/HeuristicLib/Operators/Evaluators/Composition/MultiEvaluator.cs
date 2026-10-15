@@ -20,29 +20,30 @@ public abstract record MultiEvaluator<TCandidate>
 
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildEvaluators]);
 
-
-    /// <summary>
-    /// Resolves each child over the run's search space and problem and hands them to <see
-    /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
-    /// </summary>
-    public IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
+    public ExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return CombineExecutionInstances([.. ChildEvaluators.Select(child => typed.Resolve(child))]);
+        var create = CreateCompositeFactory<TRunSearchSpace, TRunProblem>();
+        return scope =>
+        {
+            var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
+            return create([.. ChildEvaluators.Select(child => typed.Resolve(child))]);
+        };
     }
 
-    /// <summary>Combines the children's execution instances into this operator's own.</summary>
-    protected abstract IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem>> childEvaluators)
+    /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
+    /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
+    protected abstract CompositeExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class MultiEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> childEvaluators)
-    : EvaluatorInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>> childEvaluators)
+    : EvaluatorExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> ChildEvaluators { get; } = childEvaluators;
+    protected ImmutableArray<IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>> ChildEvaluators { get; } = childEvaluators;
 }

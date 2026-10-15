@@ -20,29 +20,30 @@ public abstract record MultiSelector<TCandidate>
 
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildSelectors]);
 
-
-    /// <summary>
-    /// Resolves each child over the run's search space and problem and hands them to <see
-    /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
-    /// </summary>
-    public ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
+    public ExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return CombineExecutionInstances([.. ChildSelectors.Select(child => typed.Resolve(child))]);
+        var create = CreateCompositeFactory<TRunSearchSpace, TRunProblem>();
+        return scope =>
+        {
+            var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
+            return create([.. ChildSelectors.Select(child => typed.Resolve(child))]);
+        };
     }
 
-    /// <summary>Combines the children's execution instances into this operator's own.</summary>
-    protected abstract ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ISelectorInstance<TCandidate, TRunSearchSpace, TRunProblem>> childSelectors)
+    /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
+    /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
+    protected abstract CompositeExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class MultiSelectorInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> childSelectors)
-    : SelectorInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiSelectorExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> childSelectors)
+    : SelectorExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> ChildSelectors { get; } = childSelectors;
+    protected ImmutableArray<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> ChildSelectors { get; } = childSelectors;
 }

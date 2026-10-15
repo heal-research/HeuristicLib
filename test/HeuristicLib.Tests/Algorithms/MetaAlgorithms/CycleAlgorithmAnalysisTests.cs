@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -21,7 +22,7 @@ public class CycleAlgorithmAnalysisTests
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(analysis1).Attach(analysis2);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(analysis1).AddAspect(analysis2);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -61,20 +62,20 @@ public class CycleAlgorithmAnalysisTests
             Evaluator = evaluator;
         }
 
-        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+        public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() => scope =>
         {
             var typed = scope.For<int, TRunSearchSpace, TRunProblem, PopulationState<int>>();
-            return new Instance<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Interceptor), Candidate);
-        }
+            return new Execution<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Interceptor), Candidate);
+        };
 
-        private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator, IInterceptorInstance<int, TSearchSpace, TProblem, PopulationState<int>> interceptor, int candidate)
-            : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+        private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator, IInterceptorExecution<int, TSearchSpace, TProblem, PopulationState<int>> interceptor, int candidate)
+            : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
-            private readonly IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator = evaluator;
+            private readonly IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator = evaluator;
 
-            private readonly IInterceptorInstance<int, TSearchSpace, TProblem, PopulationState<int>> interceptor = interceptor;
+            private readonly IInterceptorExecution<int, TSearchSpace, TProblem, PopulationState<int>> interceptor = interceptor;
 
             private readonly int candidate = candidate;
 
@@ -91,12 +92,15 @@ public class CycleAlgorithmAnalysisTests
         }
     }
 
-    private sealed class EvaluationTraceAnalysis(IEvaluator<int> evaluator)
-        : IAnalyzer
+    private sealed class EvaluationTraceAnalysis
+        : Aspect
     {
         public ExecutionState Result { get; } = new();
 
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
+        public EvaluationTraceAnalysis(IEvaluator<int> evaluator)
+        {
+            Advices = Aspect.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record).Advices;
+        }
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -30,28 +31,23 @@ public sealed record ChooseOneCreator<TCandidate>
     {
     }
 
-    protected override ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICreatorInstance<TCandidate, TRunSearchSpace, TRunProblem>> childCreators)
+    protected override CompositeExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildCreators.Count == 0)
             throw new InvalidOperationException("At least one creator must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildCreators.Count)
             throw new InvalidOperationException("Weights must have the same length as creators.");
 
-        return new Instance<TRunSearchSpace, TRunProblem>(childCreators, new WeightedBatchDispatcher(childCreators.Length, Weights));
+        return childCreators => new Execution<TRunSearchSpace, TRunProblem>(childCreators, new(childCreators, Weights));
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ICreatorInstance<TCandidate, TSearchSpace, TProblem>> childCreators, WeightedBatchDispatcher dispatcher)
-        : MultiCreatorInstance<TCandidate, TSearchSpace, TProblem>(childCreators)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> childCreators, WeightedRouter<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> router)
+        : MultiCreatorExecution<TCandidate, TSearchSpace, TProblem>(childCreators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            dispatcher.Dispatch(
-                count,
-                ChildCreators,
-                random,
-                (random, searchSpace, problem),
-                static (creator, batchCount, state) => creator.Create(batchCount, state.random, state.searchSpace, state.problem));
+            router.Route(count, random, (creator, batchCount) => creator.Create(batchCount, random, searchSpace, problem));
     }
 }
 

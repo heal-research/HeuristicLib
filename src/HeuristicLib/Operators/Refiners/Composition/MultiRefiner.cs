@@ -20,29 +20,30 @@ public abstract record MultiRefiner<TCandidate>
 
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildRefiners]);
 
-
-    /// <summary>
-    /// Resolves each child over the run's search space and problem and hands them to <see
-    /// cref="CombineExecutionInstances{TRunSearchSpace, TRunProblem}"/>.
-    /// </summary>
-    public IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
+    public ExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return CombineExecutionInstances([.. ChildRefiners.Select(child => typed.Resolve(child))]);
+        var create = CreateCompositeFactory<TRunSearchSpace, TRunProblem>();
+        return scope =>
+        {
+            var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
+            return create([.. ChildRefiners.Select(child => typed.Resolve(child))]);
+        };
     }
 
-    /// <summary>Combines the children's execution instances into this operator's own.</summary>
-    protected abstract IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem>> childRefiners)
+    /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
+    /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
+    protected abstract CompositeExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class MultiRefinerInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners)
-    : RefinerInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiRefinerExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> childRefiners)
+    : RefinerExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> ChildRefiners { get; } = childRefiners;
+    protected ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> ChildRefiners { get; } = childRefiners;
 }

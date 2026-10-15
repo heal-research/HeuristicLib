@@ -73,6 +73,7 @@ export default defineConfig({
                     items: [
                         { text: "Compose operators", link: "/guide/extending/operator-composition" },
                         { text: "Write an operator", link: "/guide/extending/writing-operators" },
+                        { text: "Write custom advice", link: "/guide/extending/writing-advice" },
                         { text: "Write an algorithm", link: "/guide/extending/writing-algorithms" },
                         { text: "Write a meta-algorithm", link: "/guide/extending/writing-meta-algorithms" },
                     ],
@@ -128,12 +129,12 @@ export default defineConfig({
                         { text: "Layering", link: "/contributing/architecture/layering" },
                         { text: "Analyzers", link: "/contributing/architecture/analyzers" },
                         {
-                            text: "Execution instances",
-                            link: "/contributing/architecture/execution-instances",
+                            text: "Execution nodes",
+                            link: "/contributing/architecture/execution-nodes",
                         },
                         {
-                            text: "Instance resolution",
-                            link: "/contributing/architecture/instance-resolution",
+                            text: "Execution resolution",
+                            link: "/contributing/architecture/execution-resolution",
                         },
                         {
                             text: "Operator implementation",

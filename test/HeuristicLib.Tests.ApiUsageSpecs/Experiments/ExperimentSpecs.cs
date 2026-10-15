@@ -52,16 +52,16 @@ public class ExperimentSpecs
         var experiment = CreateSimpleHillClimber(problem)
             .AsGrid()
             .VaryBy([4, 8], (algorithm, maximumNeighbors) => algorithm with { MaxNeighbors = maximumNeighbors });
-        var bestQuality = TrialAnalyzer.Create(
+        var bestQuality = AspectFactory.Create(
             (HillClimber<RealVector> algorithm) => algorithm.Evaluator.TraceBestSoFar());
-        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456)).AttachPerTrial(bestQuality);
+        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456)).AddAspectPerTrial(bestQuality);
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-        var analyses = run.GetAttached(bestQuality);
+        var analyses = run.GetAspectPerTrial(bestQuality);
 
         analyses.Length.ShouldBe(2);
         analyses.Select(analysis => analysis.Trial.Key.MaxNeighbors).ShouldBe([4, 8]);
-        analyses.All(analysis => analysis.Module.Latest is not null).ShouldBeTrue();
+        analyses.All(analysis => analysis.Aspect.Latest is not null).ShouldBeTrue();
     }
 
     [Fact]

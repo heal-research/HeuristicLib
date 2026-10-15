@@ -23,28 +23,25 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
         SourceProblem = sourceProblem;
     }
 
-    public override InterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ResolutionScope scope)
+    public override ExecutionFactory<InterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutionFactory()
     {
-        var instance = new Instance(scope.Resolve<TCandidate, TSearchSpace, TProblem>(Evaluator));
-
-        // The subscription lifetime is shared with DynamicCachingEvaluator and requires a common lifecycle design.
-        SourceProblem.OnEpochChange += (_, _) => instance.RequestReevaluation();
-
-        return instance;
+        var state = new ExecutionState(SourceProblem.CurrentEpoch);
+        return scope => new Execution(scope.Resolve<TCandidate, TSearchSpace, TProblem>(Evaluator), SourceProblem, state);
     }
 
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator)
-        : InterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+    private sealed class ExecutionState(int initialEpoch)
     {
-        private int requireReevaluation;
+        private int consumedEpoch = initialEpoch;
 
-        public void RequestReevaluation() => Interlocked.Increment(ref requireReevaluation);
+        public bool ConsumeReevaluationRequest(int epoch) => Interlocked.Exchange(ref consumedEpoch, epoch) != epoch;
+    }
 
-        private bool ConsumeReevaluationRequest() => Interlocked.Exchange(ref requireReevaluation, 0) != 0;
-
+    private sealed class Execution(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator, TProblem sourceProblem, ExecutionState state)
+        : InterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+    {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            if (!ConsumeReevaluationRequest())
+            if (!state.ConsumeReevaluationRequest(sourceProblem.CurrentEpoch))
             {
                 return currentState;
             }

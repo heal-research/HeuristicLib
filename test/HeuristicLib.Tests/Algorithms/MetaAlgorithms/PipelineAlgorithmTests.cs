@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -29,18 +30,18 @@ public class PipelineAlgorithmTests
     }
 
     [Fact]
-    public void PipelineAlgorithm_ChecksCancellationBeforeCreatingAStageInstance()
+    public void PipelineAlgorithm_ChecksCancellationBeforeCreatingAStageExecution()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
-        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var pipeline = PipelineAlgorithm.Create(algorithm);
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         Should.Throw<OperationCanceledException>(() => pipeline.Stream(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
 
-        algorithm.InstanceCount.ShouldBe(0);
+        algorithm.ExecutionCount.ShouldBe(0);
     }
 
     [Fact]
@@ -64,7 +65,7 @@ public class PipelineAlgorithmTests
         var evaluator = new ForwardingEvaluator();
         var pipeline = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Then(new AdditiveStepAlgorithm(10) { Evaluator = evaluator }, new AdditiveStepAlgorithm(100) { Evaluator = evaluator });
         var analysis = new EvaluationCountAnalysis(evaluator);
-        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(analysis);
+        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(analysis);
 
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 
@@ -73,21 +74,21 @@ public class PipelineAlgorithmTests
     }
 
     [Fact]
-    public void PipelineAlgorithm_CreatesEachStageInstanceWhileReusingResolvedParentDependencies()
+    public void PipelineAlgorithm_CreatesEachStageExecutionWhileReusingResolvedParentDependencies()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
-        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var pipeline = algorithm.Then(algorithm);
         var scope = ResolutionScope.Create();
         _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
-        var pipelineInstance = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(pipeline);
+        var pipelineExecution = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(pipeline);
 
-        var states = pipelineInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = pipelineExecution.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
-        algorithm.InstanceCount.ShouldBe(2);
-        evaluator.InstanceCount.ShouldBe(1);
+        algorithm.ExecutionCount.ShouldBe(2);
+        evaluator.ExecutionCount.ShouldBe(1);
     }
 
     private sealed record ForwardingEvaluator
@@ -100,12 +101,15 @@ public class PipelineAlgorithmTests
         }
     }
 
-    private sealed class EvaluationCountAnalysis(IEvaluator<int> evaluator)
-        : IAnalyzer
+    private sealed class EvaluationCountAnalysis
+        : Aspect
     {
         public Result AnalysisResult { get; } = new();
 
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
+        public EvaluationCountAnalysis(IEvaluator<int> evaluator)
+        {
+            Advices = Aspect.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record).Advices;
+        }
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             AnalysisResult.Count += observation.Candidates.Count;

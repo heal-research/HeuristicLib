@@ -9,14 +9,14 @@ namespace HEAL.HeuristicLib.APIs.RoarNet;
 
 public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
     TP Problem,
-    IEvaluatorInstance<TG, TS, TP> Evaluator,
-    IEvaluatorInstance<TG, TS, TP> BoundsEvaluator,
+    IEvaluatorExecution<TG, TS, TP> Evaluator,
+    IEvaluatorExecution<TG, TS, TP> BoundsEvaluator,
     INeighborhood<TG, TM1> ConstructionNeighborhood,
     INeighborhood<TG, TM2> DestructionNeighborhood,
     INeighborhood<TG, TM3> LocalNeighborhood,
-    ICreatorInstance<TG, TS, TP> EmptyCreator,
-    ICreatorInstance<TG, TS, TP> RandomCreator,
-    ICreatorInstance<TG, TS, TP> HeuristicCreator,
+    ICreatorExecution<TG, TS, TP> EmptyCreator,
+    ICreatorExecution<TG, TS, TP> RandomCreator,
+    ICreatorExecution<TG, TS, TP> HeuristicCreator,
     IRandomNumberGenerator Rng,
     ResolutionScope Registry) : IRoarNetOperationsProblem<TG, TS, TP>
     where TS : class, ISearchSpace<TG>

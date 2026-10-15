@@ -1,3 +1,5 @@
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -23,9 +25,9 @@ public static partial class Analyzer
         TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        Create<ICrossover<TCandidate>, CrossoverObservation<TCandidate, TSearchSpace, TProblem>, TProblem, TValue, TResult>(crossovers,
-            static (source, record) => new CrossoverObservationModule<TCandidate, TSearchSpace, TProblem>(source, record),
-            clocks, retention, measurement, aggregation, objectiveComparer);
+        TraceAnalyzer<TResult>.Create<ICrossover<TCandidate>, CrossoverObservation<TCandidate, TSearchSpace, TProblem>, TProblem, TValue>(crossovers,
+            static (source, record) => Aspect.Observe(source, record),
+            measurement, aggregation, clocks, retention, objectiveComparer);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TValue, TResult>(
         ICrossover<TCandidate> crossover,
@@ -61,9 +63,9 @@ public static partial class Analyzer
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        Create(crossovers,
-            static (source, record) => new CrossoverObservationModule<TCandidate, TSearchSpace, TProblem>(source, record),
-            clocks, retention, value);
+        TraceAnalyzer<TResult>.Create(crossovers,
+            static (source, record) => Aspect.Observe(source, record),
+            value, clocks, retention);
 
     // Observes at the interface search space and problem, so an implicitly typed lambda needs no type arguments.
 
@@ -93,7 +95,7 @@ public static partial class Analyzer
         IReadOnlyList<ICrossover<TCandidate>> crossovers,
         Func<CrossoverObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>, TResult> value,
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null) =>
-        Create(crossovers,
-            static (source, record) => new CrossoverObservationModule<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(source, record),
-            clocks, retention, value);
+        TraceAnalyzer<TResult>.Create(crossovers,
+            static (source, record) => Aspect.Observe(source, record),
+            value, clocks, retention);
 }

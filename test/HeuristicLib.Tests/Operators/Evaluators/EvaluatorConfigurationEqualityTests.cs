@@ -12,7 +12,7 @@ public class EvaluatorConfigurationEqualityTests
     {
         var child = new OffsetEvaluator(1);
 
-        child.CountCalls(new CountAccumulator()).ChildEvaluator.ShouldBeSameAs(child);
+        new IdentityEvaluator(child).ChildEvaluator.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -40,21 +40,6 @@ public class EvaluatorConfigurationEqualityTests
         left.ShouldNotBe(reordered);
     }
 
-    [Fact]
-    public void WrappingConcerns_IncludeChildAndSettingsInEquality()
-    {
-        var counter = new CountAccumulator();
-        var duration = new DurationAccumulator();
-        var counted = new OffsetEvaluator(1).CountCalls(counter);
-        var countedEqual = new OffsetEvaluator(1).CountCalls(counter);
-        var differentMetric = new OffsetEvaluator(1).CountCandidates(counter);
-        var measured = new OffsetEvaluator(1).MeasureDuration(duration, TimeProvider.System);
-        var measuredEqual = new OffsetEvaluator(1).MeasureDuration(duration, TimeProvider.System);
-
-        counted.ShouldBe(countedEqual);
-        counted.ShouldNotBe(differentMetric);
-        measured.ShouldBe(measuredEqual);
-    }
 
 
     [Fact]
@@ -103,11 +88,11 @@ public class EvaluatorConfigurationEqualityTests
         {
         }
 
-        protected override IEvaluatorInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IEvaluatorInstance<int, TRunSearchSpace, TRunProblem>> childEvaluators) =>
-            new Instance<TRunSearchSpace, TRunProblem>(childEvaluators);
+        protected override CompositeExecutionFactory<IEvaluatorExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childEvaluators => new Execution<TRunSearchSpace, TRunProblem>(childEvaluators);
 
-        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IEvaluatorInstance<int, TSearchSpace, TProblem>> childEvaluators)
-            : MultiEvaluatorInstance<int, TSearchSpace, TProblem>(childEvaluators)
+        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IEvaluatorExecution<int, TSearchSpace, TProblem>> childEvaluators)
+            : MultiEvaluatorExecution<int, TSearchSpace, TProblem>(childEvaluators)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
@@ -115,4 +100,14 @@ public class EvaluatorConfigurationEqualityTests
                 ChildEvaluators[0].Evaluate(candidates, random, searchSpace, problem);
         }
     }
+    private sealed record IdentityEvaluator : WrappingEvaluator<int>
+    {
+        public IdentityEvaluator(IEvaluator<int> child) : base(child)
+        {
+        }
+
+        protected override WrapperExecutionFactory<IEvaluatorExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+            child => child;
+    }
+
 }

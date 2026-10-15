@@ -8,8 +8,9 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 /// <remarks>
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
-/// It must not contain operator or algorithm configurations, execution instances or execution instance resolution facilities.
-/// <see cref="CreateInitialState"/> must return a fresh state object for every execution instance. Calls are not inherently thread safe.
+/// It must not contain operator or algorithm configurations, execution nodes or execution node resolution facilities.
+/// <see cref="CreateInitialState"/> must return a fresh state object for each preparation. Bindings of that execution share the state.
+/// Calls are not inherently thread safe.
 /// </remarks>
 public abstract record StatefulEvaluator<TCandidate, TSearchSpace, TProblem, TState>
     : Evaluator<TCandidate, TSearchSpace, TProblem>
@@ -21,10 +22,14 @@ public abstract record StatefulEvaluator<TCandidate, TSearchSpace, TProblem, TSt
 
     protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ResolutionScope scope) => new Instance(this, CreateInitialState());
+    public sealed override ExecutionFactory<IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, CreateInitialState());
+        return _ => execution;
+    }
 
-    private sealed class Instance(StatefulEvaluator<TCandidate, TSearchSpace, TProblem, TState> evaluator, TState state)
-        : EvaluatorInstance<TCandidate, TSearchSpace, TProblem>
+    private sealed class Execution(StatefulEvaluator<TCandidate, TSearchSpace, TProblem, TState> evaluator, TState state)
+        : EvaluatorExecution<TCandidate, TSearchSpace, TProblem>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => evaluator.Evaluate(candidates, state, random, searchSpace, problem);
     }
@@ -39,10 +44,14 @@ public abstract record StatefulEvaluator<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override IEvaluatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ResolutionScope scope) => new Instance(this, CreateInitialState());
+    public sealed override ExecutionFactory<IEvaluatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, CreateInitialState());
+        return _ => execution;
+    }
 
-    private sealed class Instance(StatefulEvaluator<TCandidate, TSearchSpace, TState> evaluator, TState state)
-        : EvaluatorInstance<TCandidate, TSearchSpace>
+    private sealed class Execution(StatefulEvaluator<TCandidate, TSearchSpace, TState> evaluator, TState state)
+        : EvaluatorExecution<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace) => evaluator.Evaluate(candidates, state, random, searchSpace);
     }
@@ -56,10 +65,14 @@ public abstract record StatefulEvaluator<TCandidate, TState>
 
     protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random);
 
-    public sealed override IEvaluatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ResolutionScope scope) => new Instance(this, CreateInitialState());
+    public sealed override ExecutionFactory<IEvaluatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutionFactory()
+    {
+        var execution = new Execution(this, CreateInitialState());
+        return _ => execution;
+    }
 
-    private sealed class Instance(StatefulEvaluator<TCandidate, TState> evaluator, TState state)
-        : EvaluatorInstance<TCandidate>
+    private sealed class Execution(StatefulEvaluator<TCandidate, TState> evaluator, TState state)
+        : EvaluatorExecution<TCandidate>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => evaluator.Evaluate(candidates, state, random);
     }

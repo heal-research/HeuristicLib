@@ -10,18 +10,12 @@ public sealed class LayerDependencyTests
     private const string MainRoot = "src/HeuristicLib/";
     private const string ExperimentalRoot = "src/HeuristicLib.Experimental/";
 
-    // The sole exception in architecture/layering.md: epoch updates use the analysis-owned Observe hook.
-    // Remove it when the DI/AOP work supplies a problem-control hook; do not add migration allowances.
-    private static readonly string[] AllowedExceptions =
-    [
-        "src/HeuristicLib.Experimental/Problems/Dynamic/DynamicProblem.cs | Problems -> Analysis",
-    ];
 
     [Fact]
-    public void SourceDependencies_HaveOnlyTheDocumentedException()
+    public void SourceDependencies_RespectLayerBoundaries()
     {
         var actual = FindViolations();
-        actual.ShouldBe(AllowedExceptions, ignoreOrder: true);
+        actual.ShouldBeEmpty();
     }
 
     [Fact]
@@ -33,8 +27,8 @@ public sealed class LayerDependencyTests
         // Reviewed ownership boundaries only; grouping folders do not introduce namespaces.
         AssertPublicTypeLocations(compilation, repositoryRoot, MainRoot,
         [
-            ("Instrumentation.CountAccumulator", "Instrumentation/"),
-            ("Instrumentation.DurationAccumulator", "Instrumentation/"),
+            ("Inspection.CountAccumulator", "Inspection/"),
+            ("Inspection.DurationAccumulator", "Inspection/"),
             ("Execution.SearchConfigurationValidation", "Execution/"),
             ("Execution.ValidationReport", "Execution/"),
             ("Execution.ValidationDiagnostic", "Execution/"),
@@ -45,15 +39,21 @@ public sealed class LayerDependencyTests
             ("Execution.ExecutionConcurrency", "Execution/Concurrency/"),
             ("Execution.ExecutionConcurrencyKind", "Execution/Concurrency/"),
             ("Execution.BatchExecution", "Execution/Concurrency/"),
-            ("Execution.IExecutionModule", "Execution/"),
-            ("Analysis.IAnalyzer", "Analysis/"),
-            ("Analysis.TrialAnalyzer", "Analysis/"),
+            ("Execution.Aspect", "Execution/Aspects/"),
+            ("Execution.Advice", "Execution/Aspects/"),
+            ("Execution.Advice`1", "Execution/Aspects/"),
+            ("Execution.ChildScopePolicy", "Execution/"),
+            ("Inspection.Observation", "Inspection/"),
+            ("Inspection.Observation`1", "Inspection/"),
+            ("Inspection.AlgorithmObservation`4", "Inspection/Algorithms/"),
+            ("Inspection.Clock", "Inspection/"),
+            ("Inspection.Clock`1", "Inspection/"),
             ("Experiments.ExperimentRun`6", "Experiments/"),
-            ("Experiments.TrialModule", "Experiments/"),
-            ("Experiments.TrialModule`1", "Experiments/"),
-            ("Experiments.TrialModule`2", "Experiments/"),
-            ("Experiments.TrialAttachment", "Experiments/"),
-            ("Experiments.TrialAttachment`2", "Experiments/"),
+            ("Execution.AspectFactory", "Execution/Aspects/"),
+            ("Execution.AspectFactory`1", "Execution/Aspects/"),
+            ("Execution.AspectFactory`2", "Execution/Aspects/"),
+            ("Experiments.TrialAspect", "Experiments/"),
+            ("Experiments.TrialAspect`2", "Experiments/"),
         ]);
     }
 
@@ -101,7 +101,7 @@ public sealed class LayerDependencyTests
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
-            "namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { private HEAL.HeuristicLib.Analysis.IAnalyzer? analyzer; }",
+            "namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { private HEAL.HeuristicLib.Analysis.TraceAnalyzer<int>? analyzer; }",
             ParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Operators", "LayerProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -116,7 +116,7 @@ public sealed class LayerDependencyTests
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
-            "global using HEAL.HeuristicLib.Analysis; namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { int Depth => HEAL.HeuristicLib.Execution.ResolutionScope.Create().Depth; }",
+            "global using HEAL.HeuristicLib.Analysis; namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { object Empty => HEAL.HeuristicLib.Execution.ResolutionScope.Create().CreateChildState(); }",
             ParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Operators", "LayerProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -133,7 +133,7 @@ public sealed class LayerDependencyTests
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var hostProbe = CSharpSyntaxTree.ParseText(
-            "namespace HEAL.HeuristicLib.Execution; internal class HostProbe { private HEAL.HeuristicLib.Algorithms.GeneticAlgorithm<int>? algorithm; int Depth => ResolutionScope.Create().Depth; }",
+            "namespace HEAL.HeuristicLib.Execution; internal class HostProbe { private HEAL.HeuristicLib.Algorithms.GeneticAlgorithm<int>? algorithm; object Empty => ResolutionScope.Create().CreateChildState(); }",
             ParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Execution", "Runs", "HostProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -150,6 +150,39 @@ public sealed class LayerDependencyTests
             .ShouldContain("src/HeuristicLib/Execution/Runs/HostProbe.cs | OutsideExecution -> ResolutionInternal");
         ScanTree(compilation, objectiveProbe, repositoryRoot)
             .ShouldContain("src/HeuristicLib/Objectives/ObjectiveProbe.cs | Domain -> Encodings");
+    }
+
+    [Theory]
+    [InlineData("ResolutionScope.Create().CreateChildState()")]
+    [InlineData("ResolutionScope.Create().WithState(null!)")]
+    public void SemanticCheck_KeepsAspectPreparationInternalToResolution(string operation)
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var (compilation, _) = CreateMainCompilation(repositoryRoot);
+        var probe = CSharpSyntaxTree.ParseText(
+            $"namespace HEAL.HeuristicLib.Execution; internal class HostProbe {{ object Value => {operation}; }}",
+            ParseOptions,
+            Path.Combine(repositoryRoot, MainRoot, "Execution", "Runs", "HostProbe.cs"),
+            cancellationToken: TestContext.Current.CancellationToken);
+        compilation = compilation.AddSyntaxTrees(probe);
+
+        ScanTree(compilation, probe, repositoryRoot)
+            .ShouldContain("src/HeuristicLib/Execution/Runs/HostProbe.cs | OutsideExecution -> ResolutionInternal");
+    }
+
+    [Fact]
+    public void SemanticCheck_AllowsPublicAspectsInHosting()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var (compilation, _) = CreateMainCompilation(repositoryRoot);
+        var probe = CSharpSyntaxTree.ParseText(
+            "namespace HEAL.HeuristicLib.Execution; internal class HostProbe { private Aspect? aspect; }",
+            ParseOptions,
+            Path.Combine(repositoryRoot, MainRoot, "Execution", "Runs", "HostProbe.cs"),
+            cancellationToken: TestContext.Current.CancellationToken);
+        compilation = compilation.AddSyntaxTrees(probe);
+
+        ScanTree(compilation, probe, repositoryRoot).ShouldBeEmpty();
     }
 
     [Fact]
@@ -351,7 +384,8 @@ public sealed class LayerDependencyTests
             _ when InNamespace(ns, "SearchSpaces") => type.Name is not ("OperatorContractComposition" or
                 "OperatorContractVerification" or "SearchSpaceCompatibility"),
             _ when InNamespace(ns, "Objectives") || InNamespace(ns, "Random") || InNamespace(ns, "Collections") ||
-                   InNamespace(ns, "Instrumentation") || InNamespace(ns, "Numerics") => true,
+                   InNamespace(ns, "Numerics") => true,
+            "HEAL.HeuristicLib.Inspection" => type.Name is "CountAccumulator" or "DurationAccumulator",
             "HEAL.HeuristicLib.Execution" => type.Name is "ExecutionConcurrency" or "ExecutionConcurrencyKind" or "BatchExecution",
             "HEAL.HeuristicLib.Problems" => type.Name is "IProblem" or "IStochasticProblem" or "Problem" or "SingleSolutionProblem",
             _ => false,
@@ -374,9 +408,15 @@ public sealed class LayerDependencyTests
     private static string Concept(INamedTypeSymbol type) =>
         Outermost(type).ContainingNamespace.ToDisplayString().Split('.').ElementAtOrDefault(2) ?? string.Empty;
 
-    private static bool IsResolutionInternal(ISymbol symbol, INamedTypeSymbol? type) =>
-        type?.Name is "ResolutionScope" or "ResolutionScopeBuilder" or "Decoration" &&
-        (symbol.DeclaredAccessibility == Accessibility.Internal || type.DeclaredAccessibility == Accessibility.Internal);
+    private static bool IsResolutionInternal(ISymbol symbol, INamedTypeSymbol? type)
+    {
+        if (type is null)
+            return false;
+        type = Outermost(type);
+        return type.ContainingNamespace.ToDisplayString() == "HEAL.HeuristicLib.Execution" &&
+               type.Name is "ResolutionScope" &&
+               (symbol.DeclaredAccessibility == Accessibility.Internal || type.DeclaredAccessibility == Accessibility.Internal);
+    }
 
     private static bool IsRunInternal(ISymbol symbol, INamedTypeSymbol? type) =>
         type?.Name.StartsWith("AlgorithmRun", StringComparison.Ordinal) == true &&

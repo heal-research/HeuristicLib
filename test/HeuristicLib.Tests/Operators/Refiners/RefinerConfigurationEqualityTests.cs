@@ -76,75 +76,12 @@ public class RefinerConfigurationEqualityTests
         pipeline.ShouldNotBe<object>(chooseOne);
     }
 
-    [Fact]
-    public void CountingRefiner_WithSameCounterAndMetric_IsEqual()
-    {
-        var counter = new CountAccumulator();
-        var left = new AddOffsetRefiner(1).CountCalls(counter);
-        var right = new AddOffsetRefiner(1).CountCalls(counter);
 
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
 
-    [Fact]
-    public void CountingRefiner_WithDifferentMetric_IsNotEqual()
-    {
-        var counter = new CountAccumulator();
-        var left = new AddOffsetRefiner(1).CountCalls(counter);
-        var right = new AddOffsetRefiner(1).CountCandidates(counter);
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void CountingRefiner_WithDifferentCounter_IsNotEqual()
-    {
-        var left = new AddOffsetRefiner(1).CountCalls(new CountAccumulator());
-        var right = new AddOffsetRefiner(1).CountCalls(new CountAccumulator());
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void CountingRefiner_WithDifferentChildRefiner_IsNotEqual()
-    {
-        var counter = new CountAccumulator();
-        var left = new AddOffsetRefiner(1).CountCalls(counter);
-        var right = new AddOffsetRefiner(2).CountCalls(counter);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void DurationMeasuringRefiner_WithSameDurationAndTimeProvider_IsEqual()
-    {
-        var duration = new DurationAccumulator();
-        var left = new AddOffsetRefiner(1).MeasureDuration(duration, TimeProvider.System);
-        var right = new AddOffsetRefiner(1).MeasureDuration(duration, TimeProvider.System);
-
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
-
-    [Fact]
-    public void DurationMeasuringRefiner_WithDifferentDuration_IsNotEqual()
-    {
-        var left = new AddOffsetRefiner(1).MeasureDuration(new DurationAccumulator());
-        var right = new AddOffsetRefiner(1).MeasureDuration(new DurationAccumulator());
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void DurationMeasuringRefiner_WithDifferentChildRefiner_IsNotEqual()
-    {
-        var duration = new DurationAccumulator();
-        var left = new AddOffsetRefiner(1).MeasureDuration(duration);
-        var right = new AddOffsetRefiner(2).MeasureDuration(duration);
-
-        left.ShouldNotBe(right);
-    }
 
 
 
@@ -191,13 +128,12 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void NestedRefinerComposition_WithEqualParts_IsEqual()
     {
-        var counter = new CountAccumulator();
         var left = PipelineRefiner.Create(
-            new AddOffsetRefiner(1).CountCalls(counter),
-            new AddOffsetRefiner(2));
+            new AddOffsetRefiner(1).AsIterated(2),
+            new AddOffsetRefiner(2).AsIterated(2));
         var right = PipelineRefiner.Create(
-            new AddOffsetRefiner(1).CountCalls(counter),
-            new AddOffsetRefiner(2));
+            new AddOffsetRefiner(1).AsIterated(2),
+            new AddOffsetRefiner(2).AsIterated(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -206,13 +142,12 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void NestedRefinerComposition_WithDifferentNestedChildRefiner_IsNotEqual()
     {
-        var counter = new CountAccumulator();
         var left = PipelineRefiner.Create(
-            new AddOffsetRefiner(1).CountCalls(counter),
-            new AddOffsetRefiner(2));
+            new AddOffsetRefiner(1).AsIterated(2),
+            new AddOffsetRefiner(2).AsIterated(2));
         var right = PipelineRefiner.Create(
-            new AddOffsetRefiner(9).CountCalls(counter),
-            new AddOffsetRefiner(2));
+            new AddOffsetRefiner(9).AsIterated(2),
+            new AddOffsetRefiner(2).AsIterated(2));
 
         left.ShouldNotBe(right);
     }
@@ -257,11 +192,11 @@ public class RefinerConfigurationEqualityTests
         {
         }
 
-        protected override IRefinerInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerInstance<int, TRunSearchSpace, TRunProblem>> childRefiners) =>
-            new Instance<TRunSearchSpace, TRunProblem>(childRefiners);
+        protected override CompositeExecutionFactory<IRefinerExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childRefiners => new Execution<TRunSearchSpace, TRunProblem>(childRefiners);
 
-        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IRefinerInstance<int, TSearchSpace, TProblem>> childRefiners)
-            : MultiRefinerInstance<int, TSearchSpace, TProblem>(childRefiners)
+        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<int, TSearchSpace, TProblem>> childRefiners)
+            : MultiRefinerExecution<int, TSearchSpace, TProblem>(childRefiners)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

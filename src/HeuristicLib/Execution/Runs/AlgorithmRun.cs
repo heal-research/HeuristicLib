@@ -8,8 +8,9 @@ namespace HEAL.HeuristicLib.Execution;
 public abstract class AlgorithmRun
 {
     private readonly Lock sync = new();
-    private readonly List<IExecutionModule> modules = [];
-    private readonly HashSet<IExecutionModule> moduleSet = new(ReferenceEqualityComparer.Instance);
+    // Together these collections form an insertion-ordered set using reference identity.
+    private readonly List<Aspect> aspects = [];
+    private readonly HashSet<Aspect> aspectSet = new(ReferenceEqualityComparer.Instance);
     private ResolutionScope? scope;
 
     public RunLifecycleState LifecycleState { get; private set; } = RunLifecycleState.Preparing;
@@ -18,13 +19,13 @@ public abstract class AlgorithmRun
     {
     }
 
-    protected void Add(IExecutionModule module)
+    protected void Add(Aspect aspect)
     {
         lock (sync)
         {
             EnsurePreparing();
-            if (moduleSet.Add(module))
-                modules.Add(module);
+            if (aspectSet.Add(aspect))
+                aspects.Add(aspect);
         }
     }
 
@@ -46,26 +47,8 @@ public abstract class AlgorithmRun
             }
 
             LifecycleState = RunLifecycleState.Running;
-
-            try
-            {
-                scope = ResolutionScope.Create(builder =>
-                {
-                    foreach (var module in modules)
-                        builder.Install(module);
-                });
-                return scope;
-            }
-            catch (OperationCanceledException)
-            {
-                LifecycleState = RunLifecycleState.Canceled;
-                throw;
-            }
-            catch
-            {
-                LifecycleState = RunLifecycleState.Failed;
-                throw;
-            }
+            scope = ResolutionScope.Create(aspects);
+            return scope;
         }
     }
 
@@ -121,10 +104,11 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         Random = random;
     }
 
-    /// <summary>Attaches a module while preparing, preserving attachment order and deduplicating by reference.</summary>
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> Attach(IExecutionModule module)
+    /// <summary>Adds an aspect while preparing, preserving order and deduplicating by reference.</summary>
+    /// <remarks>The run only collects aspects; resolution weaves them in when the run starts.</remarks>
+    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AddAspect(Aspect aspect)
     {
-        Add(module);
+        Add(aspect);
         return this;
     }
 
@@ -146,9 +130,9 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
 
             if (execution is null)
             {
-                var algorithmInstance = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
+                var algorithmExecution = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
                 var executionCancellation = cancellationTerminatesRun ? cancellationToken : CancellationToken.None;
-                execution = algorithmInstance.RunStreamingAsync(Problem, Random, initialState, executionCancellation)
+                execution = algorithmExecution.RunStreamingAsync(Problem, Random, initialState, executionCancellation)
                                              .GetAsyncEnumerator(executionCancellation);
             }
             else if (initialState is not null)

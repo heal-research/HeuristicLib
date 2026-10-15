@@ -116,7 +116,7 @@ Invariants. Breaking one is a design change.
   propagate without an implicit safeguard.
 - **Thread safety.** No shared mutable interpreter memory.
 - **Buffers.** Scratch buffers and column caches are interpreter internals scoped to
-  one evaluation call or execution instance.
+  one evaluation call or execution node.
 
 ## Measurements
 

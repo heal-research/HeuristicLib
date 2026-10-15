@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -18,7 +19,6 @@ public sealed class ParetoFrontAnalyzer<T, TS, TP> : AccumulatingAnalyzer
     where TS : class, ISearchSpace<T>
     where TP : class, IProblem<T, TS>
 {
-    private readonly ImmutableArray<IEvaluator<T>> evaluators;
     private readonly ParetoFront<T> front;
 
     public ParetoFrontAnalyzer(ObjectiveDirections problemObjective,
@@ -28,8 +28,8 @@ public sealed class ParetoFrontAnalyzer<T, TS, TP> : AccumulatingAnalyzer
         if (evaluators.Count == 0)
             throw new ArgumentException("An analyzer needs at least one observation source.", nameof(evaluators));
 
-        this.evaluators = [.. evaluators];
         front = new ParetoFront<T>(referencePoint, problemObjective);
+        Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe<T, TS, TP>(evaluator, Record).Advices)];
     }
 
     public ObjectiveDirections Objective => front.Objective;
@@ -37,12 +37,6 @@ public sealed class ParetoFrontAnalyzer<T, TS, TP> : AccumulatingAnalyzer
 
     /// <summary>The front this analyzer accumulates.</summary>
     public ParetoFront<T> Front => front;
-
-    public override void Install(ResolutionScopeBuilder builder)
-    {
-        foreach (var evaluator in evaluators)
-            builder.Observe<T, TS, TP>(evaluator, Record);
-    }
 
     private void Record(EvaluatorObservation<T, TS, TP> observation)
     {

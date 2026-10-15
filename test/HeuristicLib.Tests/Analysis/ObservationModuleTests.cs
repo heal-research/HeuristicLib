@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
@@ -17,8 +18,7 @@ public class ObservationModuleTests
         var mutator = new AddOneMutator();
         var problem = CreateProblem();
         var observations = new List<MutatorObservation<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>>();
-        var scope = ResolutionScope.Create(builder =>
-            builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, observations.Add));
+        var scope = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, observations.Add));
 
         var offspring = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator)
             .Mutate([1, 2], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -39,8 +39,7 @@ public class ObservationModuleTests
     public void AnObservationWrittenForANarrowerProblem_IsReportedWhenTheGraphIsResolved()
     {
         IMutator<int> mutator = new AddOneMutator();
-        var scope = ResolutionScope.Create(builder =>
-            builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, _ => { }));
+        var scope = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, _ => { }));
 
         var exception = Should.Throw<InvalidOperationException>(() =>
             scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutator));
@@ -56,8 +55,7 @@ public class ObservationModuleTests
     public void AMismatch_NamesGenericTypesWithTheirTypeArguments()
     {
         IMutator<int> mutator = new AddOneMutator();
-        var scope = ResolutionScope.Create(builder =>
-            builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, _ => { }));
+        var scope = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, _ => { }));
 
         var exception = Should.Throw<InvalidOperationException>(() =>
             scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutator));
@@ -68,8 +66,8 @@ public class ObservationModuleTests
     }
 
     /// <summary>
-    /// An observation reports the configuration it was declared for, even when a configuration decoration such as a
-    /// budget wraps it more tightly, and the two decorations both act.
+    /// An observation reports the configuration it was declared for, even when a configuration wrapper such as a
+    /// budget wraps it more tightly, and the two wrappers both act.
     /// </summary>
     [Fact]
     public void AnEvaluatorObservation_ReportsTheObservedEvaluatorAndComposesWithABudget()
@@ -78,9 +76,8 @@ public class ObservationModuleTests
         var problem = CreateProblem();
         var counter = new CountAccumulator();
         var observed = new List<IEvaluator<int>>();
-        var root = ResolutionScope.Create(builder =>
-            builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, observation => observed.Add(observation.Evaluator)));
-        var budget = root.CreateChildScope(builder => builder.Decorate<IEvaluator<int>>(evaluator, current => current.CountCalls(counter)));
+        var root = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, observation => observed.Add(observation.Evaluator)));
+        var budget = root.CreateChildScope(Aspect.CountCalls(evaluator, counter));
 
         budget.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
             .Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -95,14 +92,13 @@ public class ObservationModuleTests
         var algorithm = new AdditiveStepAlgorithm(2);
         var problem = CreateProblem();
         var observations = new List<AlgorithmObservation<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>>();
-        var scope = ResolutionScope.Create(builder =>
-            builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, observations.Add));
-        var instance = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
+        var scope = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, observations.Add));
+        var execution = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
 
         var states = new List<PopulationState<int>>();
-        await foreach (var state in instance.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
+        await foreach (var state in execution.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
             states.Add(state);
-        await foreach (var state in instance.RunStreamingAsync(problem, RandomNumberGenerator.Create(2), states[^1], TestContext.Current.CancellationToken))
+        await foreach (var state in execution.RunStreamingAsync(problem, RandomNumberGenerator.Create(2), states[^1], TestContext.Current.CancellationToken))
             states.Add(state);
 
         observations.Select(observation => observation.Iteration).ShouldBe([1L, 2L]);
@@ -122,8 +118,7 @@ public class ObservationModuleTests
         IMutator<int> mutator = new AddOneMutator();
         var problem = CreateProblem();
         var offspring = new List<int>();
-        var scope = ResolutionScope.Create(builder =>
-            builder.Observe(mutator, observation => offspring.AddRange(observation.Offspring)));
+        var scope = ResolutionScope.Create(Aspect.Observe(mutator, observation => offspring.AddRange(observation.Offspring)));
 
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator)
             .Mutate([1, 2], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -142,8 +137,7 @@ public class ObservationModuleTests
         var problem = CreateProblem();
         var state = Population.From([EvaluatedCandidate.From(4, 4)]).ToPopulationState();
         var observed = new List<ISearchState>();
-        var scope = ResolutionScope.Create(builder =>
-            builder.Observe(interceptor, observation => observed.Add(observation.State)));
+        var scope = ResolutionScope.Create(Aspect.Observe(interceptor, observation => observed.Add(observation.State)));
 
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(interceptor)
             .Transform(state, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -163,12 +157,9 @@ public class ObservationModuleTests
         var algorithm = new AdditiveStepAlgorithm(2);
         var problem = CreateProblem();
         var recorder = new BoundRecorder();
-        var scope = ResolutionScope.Create(builder =>
-        {
-            builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, recorder.Record);
-            builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, recorder.Record);
-            builder.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, recorder.Record);
-        });
+        var scope = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, recorder.Record),
+            Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, recorder.Record),
+            Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, recorder.Record));
 
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
             .Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

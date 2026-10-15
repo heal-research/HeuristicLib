@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -7,20 +8,40 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
+/// <summary>
+/// Caches evaluation results for the source problem's current epoch.
+/// </summary>
+/// <remarks>
+/// An epoch change invalidates cached results before the next lookup. If the epoch changes during a child evaluation,
+/// its results are returned but not cached. The batch is not retried, and results already obtained from cache are not reevaluated.
+/// </remarks>
 public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     : WrappingEvaluator<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TCandidate : notnull
     where TKey : notnull
 {
-    private sealed class ExecutionData
+    private sealed class ExecutionState
     {
         public MemoryCache Cache { get; }
         public long HitCount { get; set; }
+        public int Epoch { get; private set; }
 
-        public ExecutionData(long? sizeLimit)
+        public ExecutionState(long? sizeLimit, int initialEpoch)
         {
-            Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
+            // Keep statistics disabled: MemoryCache's thread-local statistics can retain the cache and its entries
+            // on a live thread after the prepared execution state is released. Grace accounting uses HitCount instead.
+            Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
+            Epoch = initialEpoch;
+        }
+
+        public void SynchronizeEpoch(int epoch)
+        {
+            if (Epoch == epoch)
+                return;
+            Cache.Clear();
+            HitCount = 0;
+            Epoch = epoch;
         }
     }
 
@@ -55,42 +76,38 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// <remarks>
     /// This evaluator serves exactly one problem instance, matched by identity, which <c>Evaluate</c> checks.
     /// </remarks>
-    protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, SizeLimit, GraceCount);
+    protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    {
+        var state = new ExecutionState(SizeLimit, SourceProblem.CurrentEpoch);
+        return childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, GraceCount, state);
+    }
 
-    private sealed class Instance<TRunSearchSpace, TRunProblem> : WrappingEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem>
+    private sealed class Execution<TRunSearchSpace, TRunProblem> : WrappingEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        private readonly ExecutionData executionData;
+        private readonly ExecutionState state;
         private readonly IDynamicProblem<TCandidate, TSearchSpace> sourceProblem;
         private readonly ICacheKeySelector<TCandidate, TKey> keySelector;
         private readonly long graceCount;
 
-        public Instance(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> sourceProblem, ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit, long graceCount)
+        public Execution(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> sourceProblem, ICacheKeySelector<TCandidate, TKey> keySelector, long graceCount, ExecutionState state)
             : base(childEvaluator)
         {
-            executionData = new ExecutionData(sizeLimit);
+            this.state = state;
             this.sourceProblem = sourceProblem;
             this.keySelector = keySelector;
             this.graceCount = graceCount;
-            sourceProblem.OnEpochChange += (_, _) =>
-            {
-                executionData.Cache.Clear();
-                executionData.HitCount = 0;
-            };
         }
 
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TRunSearchSpace searchSpace, TRunProblem problem)
         {
             if (!ReferenceEquals(problem, sourceProblem))
-                throw new InvalidOperationException("Dynamic caching evaluator instances can only evaluate the dynamic problem they were created for.");
+                throw new InvalidOperationException("Dynamic caching evaluator executions can only evaluate the dynamic problem they were created for.");
 
-            var cache = executionData.Cache;
-            var beforeCacheStatistics = cache.GetCurrentStatistics();
-            var beforeHits = beforeCacheStatistics?.TotalHits ?? 0;
-            var beforeMisses = beforeCacheStatistics?.TotalMisses ?? 0;
-
+            var epoch = sourceProblem.CurrentEpoch;
+            state.SynchronizeEpoch(epoch);
+            var cache = state.Cache;
             var n = candidates.Count;
             var results = new ObjectiveVector[n];
 
@@ -124,10 +141,23 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
 
             if (uncachedCandidates.Count > 0)
             {
-                var newObjectiveVectors = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
-                for (var k = 0; k < uncachedKeys.Count; k++)
+                IReadOnlyList<ObjectiveVector> newObjectiveVectors;
+                try
                 {
-                    cache.Set(uncachedKeys[k], newObjectiveVectors[k], new MemoryCacheEntryOptions { Size = 1 });
+                    newObjectiveVectors = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
+                }
+                finally
+                {
+                    state.SynchronizeEpoch(sourceProblem.CurrentEpoch);
+                }
+
+                // Objective vectors carry no epoch; a batch crossing an update cannot be safely admitted.
+                if (state.Epoch == epoch)
+                {
+                    for (var k = 0; k < uncachedKeys.Count; k++)
+                    {
+                        cache.Set(uncachedKeys[k], newObjectiveVectors[k], new MemoryCacheEntryOptions { Size = 1 });
+                    }
                 }
 
                 foreach (var (_, entry) in uncachedMap)
@@ -140,29 +170,22 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
                 }
             }
 
-            var afterCacheStatistics = cache.GetCurrentStatistics();
-            var afterHits = afterCacheStatistics?.TotalHits ?? 0;
-            var afterMisses = afterCacheStatistics?.TotalMisses ?? 0;
-
-            var uniqueEvaluatedCount = afterMisses - beforeMisses;
-            var cachedSolutionsCount = afterHits - beforeHits;
-
-            if (candidates.Count == 0)
+            if (n == 0)
             {
                 return results;
             }
 
-            if (uniqueEvaluatedCount == 0)
+            if (uncachedCandidates.Count == 0)
             {
-                executionData.HitCount += cachedSolutionsCount;
-                if (executionData.HitCount >= graceCount)
+                state.HitCount += n;
+                if (state.HitCount >= graceCount)
                 {
                     ((IUpdateRequestable)sourceProblem).RequestUpdate();
                 }
             }
             else
             {
-                executionData.HitCount = 0;
+                state.HitCount = 0;
             }
 
             return results;

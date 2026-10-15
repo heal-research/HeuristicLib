@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -28,28 +29,23 @@ public sealed record ChooseOneMutator<TCandidate> : MultiMutator<TCandidate>
     {
     }
 
-    protected override IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IMutatorInstance<TCandidate, TRunSearchSpace, TRunProblem>> childMutators)
+    protected override CompositeExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildMutators.Count == 0)
             throw new InvalidOperationException("At least one mutator must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildMutators.Count)
             throw new InvalidOperationException("Weights must have the same length as mutators.");
 
-        return new Instance<TRunSearchSpace, TRunProblem>(childMutators, new WeightedBatchDispatcher(childMutators.Length, Weights));
+        return childMutators => new Execution<TRunSearchSpace, TRunProblem>(childMutators, new(childMutators, Weights));
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedBatchDispatcher dispatcher)
-        : MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(childMutators)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedRouter<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> router)
+        : MultiMutatorExecution<TCandidate, TSearchSpace, TProblem>(childMutators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            dispatcher.Dispatch(
-                parents,
-                ChildMutators,
-                random,
-                (random, searchSpace, problem),
-                static (mutator, batchParents, state) => mutator.Mutate(batchParents, state.random, state.searchSpace, state.problem));
+            router.Route(parents, random, (mutator, batch) => mutator.Mutate(batch, random, searchSpace, problem));
     }
 }
 
@@ -67,8 +63,6 @@ public static class ChooseOneMutatorExtensions
     extension<TCandidate>(IMutator<TCandidate> mutator)
     {
         public ChooseOneMutator<TCandidate> AppliedAtRate(double mutationRate) =>
-            ChooseOneMutator.Create(
-                [mutator, NoChangeMutator<TCandidate>.Instance],
-                [mutationRate, double.IsNaN(mutationRate) ? double.PositiveInfinity : 1 - mutationRate]);
+            ChooseOneMutator.Create([mutator, new NoChangeMutator<TCandidate>()], WeightedRouter.RateWeights(mutationRate));
     }
 }

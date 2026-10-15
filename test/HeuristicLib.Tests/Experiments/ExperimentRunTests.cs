@@ -31,17 +31,17 @@ public class ExperimentRunTests
     }
 
     [Fact]
-    public void CombinedExecution_CreatesExecutionInstancesBeforeEnumeration()
+    public void CombinedExecution_CreatesExecutionsBeforeEnumeration()
     {
         var evaluator = new CountingResolutionEvaluator();
-        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var experiment = algorithm.Repeat(2);
         var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
 
         _ = run.Stream(cancellationToken: TestContext.Current.CancellationToken);
 
-        algorithm.InstanceCount.ShouldBe(2);
-        evaluator.InstanceCount.ShouldBe(2);
+        algorithm.ExecutionCount.ShouldBe(2);
+        evaluator.ExecutionCount.ShouldBe(2);
     }
 
     [Fact]

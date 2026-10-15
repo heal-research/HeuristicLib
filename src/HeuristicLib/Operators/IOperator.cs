@@ -3,9 +3,9 @@ using HEAL.HeuristicLib.Execution;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IOperator : IExecutionConfiguration;
+public interface IOperator : IConfigurationNode;
 
-public interface IOperatorInstance : IExecutionInstance;
+public interface IOperatorExecution : IExecutionNode;
 
 /// <summary>
 /// Declares that a value recommends an operator for a specific operator role.

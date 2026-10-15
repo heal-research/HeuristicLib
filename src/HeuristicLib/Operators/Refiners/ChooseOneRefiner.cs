@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -29,28 +30,23 @@ public sealed record ChooseOneRefiner<TCandidate>
     {
     }
 
-    protected override IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<IRefinerInstance<TCandidate, TRunSearchSpace, TRunProblem>> childRefiners)
+    protected override CompositeExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildRefiners.Count == 0)
             throw new InvalidOperationException("At least one refiner must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildRefiners.Count)
             throw new InvalidOperationException("Weights must have the same length as refiners.");
 
-        return new Instance<TRunSearchSpace, TRunProblem>(childRefiners, new WeightedBatchDispatcher(childRefiners.Length, Weights));
+        return childRefiners => new Execution<TRunSearchSpace, TRunProblem>(childRefiners, new(childRefiners, Weights));
     }
 
-    private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners, WeightedBatchDispatcher dispatcher)
-        : MultiRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiners)
+    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> childRefiners, WeightedRouter<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> router)
+        : MultiRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiners)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            dispatcher.Dispatch(
-                candidates,
-                ChildRefiners,
-                random,
-                (random, searchSpace, problem),
-                static (refiner, batchCandidates, state) => refiner.Refine(batchCandidates, state.random, state.searchSpace, state.problem));
+            router.Route(candidates, random, (refiner, batch) => refiner.Refine(batch, random, searchSpace, problem));
     }
 }
 
@@ -68,8 +64,6 @@ public static class ChooseOneRefinerExtensions
     extension<TCandidate>(IRefiner<TCandidate> refiner)
     {
         public ChooseOneRefiner<TCandidate> AppliedAtRate(double refinementRate) =>
-            ChooseOneRefiner.Create(
-                [refiner, NoChangeRefiner<TCandidate>.Instance],
-                [refinementRate, double.IsNaN(refinementRate) ? double.PositiveInfinity : 1 - refinementRate]);
+            ChooseOneRefiner.Create([refiner, NoChangeRefiner<TCandidate>.Instance], WeightedRouter.RateWeights(refinementRate));
     }
 }

@@ -42,29 +42,32 @@ public record AlpsGeneticAlgorithm<TCandidate>
     /// </remarks>
     public double MutationRate { get; init; } = 0.1;
 
-    protected override IterativeAlgorithmInstance<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope, IInterceptorInstance<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>>? resolvedInterceptor)
-    {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.AppliedAtRate(MutationRate);
-        return new Instance<TRunSearchSpace, TRunProblem>(resolvedInterceptor, typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover),
-            typed.Resolve(effectiveMutator), typed.Resolve(Selector), typed.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations);
-    }
+    protected override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
+        scope =>
+        {
+            var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>>();
+            return new Execution<TRunSearchSpace, TRunProblem>(typed.ResolveOptional(Interceptor), typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover),
+                typed.Resolve(Mutator), typed.Resolve(Selector), typed.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations, MutationRate);
+        };
 
-    private sealed class Instance<TSearchSpace, TProblem>(
-        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>? interceptor,
-        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
-        ICrossoverInstance<TCandidate, TSearchSpace, TProblem> crossover,
-        IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator,
-        ISelectorInstance<TCandidate, TSearchSpace, TProblem> selector,
-        IRefinerInstance<TCandidate, TSearchSpace, TProblem>? refiner,
+    private sealed class Execution<TSearchSpace, TProblem>(
+        IInterceptorExecution<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>? interceptor,
+        IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator,
+        ICreatorExecution<TCandidate, TSearchSpace, TProblem> creator,
+        ICrossoverExecution<TCandidate, TSearchSpace, TProblem> crossover,
+        IMutatorExecution<TCandidate, TSearchSpace, TProblem> mutator,
+        ISelectorExecution<TCandidate, TSearchSpace, TProblem> selector,
+        IRefinerExecution<TCandidate, TSearchSpace, TProblem>? refiner,
         int populationSize,
         int elites,
-        int? maximumGenerations)
-        : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>(interceptor)
+        int? maximumGenerations,
+        double mutationRate)
+        : IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>(interceptor)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
+        private readonly WeightedRouter<IMutatorExecution<TCandidate, TSearchSpace, TProblem>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
+
         protected override bool HasCompleted(int yieldedStateCount, AlpsState<TCandidate>? previousState, TProblem problem) =>
             maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;
 
@@ -101,7 +104,8 @@ public record AlpsGeneticAlgorithm<TCandidate>
             }
 
             var offspring = crossover.Cross(parentPairs, random, searchSpace, problem);
-            offspring = mutator.Mutate(offspring, random, searchSpace, problem);
+            offspring = mutationRouter.Route(offspring, random, (selected, batch) =>
+                selected is null ? batch : selected.Mutate(batch, random, searchSpace, problem));
             if (refiner is not null)
             {
                 offspring = refiner.Refine(offspring, random, searchSpace, problem);

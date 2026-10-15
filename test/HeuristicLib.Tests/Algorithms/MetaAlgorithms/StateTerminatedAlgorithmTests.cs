@@ -108,36 +108,36 @@ public class StateTerminatedAlgorithmTests
     }
 
     [Fact]
-    public void AfterElapsedTimeTerminator_UsesElapsedTimeFromExecutionInstanceCreation()
+    public void AfterElapsedTimeTerminator_UsesElapsedTimeFromExecutionCreation()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var timeProvider = new ManualTimeProvider();
         var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5)) { TimeProvider = timeProvider };
-        var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator);
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator);
 
-        instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeFalse();
+        execution.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeFalse();
 
         timeProvider.Advance(TimeSpan.FromSeconds(5));
 
-        instance.IsTerminalState(CreateState(2), problem.SearchSpace, problem).ShouldBeTrue();
+        execution.IsTerminalState(CreateState(2), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Fact]
     public void AfterElapsedTimeTerminator_StopsOnFirstCheck_WhenMaximumElapsedTimeIsNotPositive()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var instance = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
 
-        instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeTrue();
+        execution.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Fact]
-    public void CreateExecutionInstance_ResolvesTerminatorBeforeWrappedAlgorithm()
+    public void Binding_ResolvesTerminatorBeforeWrappedAlgorithm()
     {
         var events = new List<string>();
         var algorithm = new RecordingAlgorithm(events).TerminatedBy(new RecordingResolveTerminator(events));
 
-        _ = algorithm.CreateExecutionInstance<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
+        _ = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
 
         events.ShouldBe(["terminator", "algorithm"]);
     }
@@ -185,14 +185,15 @@ public class StateTerminatedAlgorithmTests
     private sealed record RecordingAlgorithm(List<string> Events)
         : Algorithm<RecordingAlgorithm, int, PopulationState<int>>
     {
-        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+        public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         {
             Events.Add("algorithm");
-            return new Instance<TRunSearchSpace, TRunProblem>();
+            var execution = new Execution<TRunSearchSpace, TRunProblem>();
+            return _ => execution;
         }
 
-        private sealed class Instance<TSearchSpace, TProblem>
-            : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+        private sealed class Execution<TSearchSpace, TProblem>
+            : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
@@ -207,21 +208,22 @@ public class StateTerminatedAlgorithmTests
     private sealed record RecordingResolveTerminator(List<string> Events)
         : ITerminator<int>
     {
-        public ITerminatorInstance<int, TRunSearchSpace, TRunProblem, TRunSearchState> CreateExecutionInstance<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope scope)
+        public ExecutionFactory<ITerminatorExecution<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
             where TRunSearchSpace : class, ISearchSpace<int>
             where TRunProblem : class, IProblem<int, TRunSearchSpace>
             where TRunSearchState : class, ISearchState
         {
             Events.Add("terminator");
-            return (ITerminatorInstance<int, TRunSearchSpace, TRunProblem, TRunSearchState>)(object)new Instance();
+            var execution = new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>();
+            return _ => execution;
         }
 
-        private sealed class Instance : ITerminatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        private sealed class Execution<TSearchSpace, TProblem, TSearchState> : TerminatorExecution<int, TSearchSpace, TProblem, TSearchState>
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
+            where TSearchState : class, ISearchState
         {
-            public bool IsTerminalState(PopulationState<int> state, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
-            {
-                return false;
-            }
+            public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem) => false;
         }
     }
 }

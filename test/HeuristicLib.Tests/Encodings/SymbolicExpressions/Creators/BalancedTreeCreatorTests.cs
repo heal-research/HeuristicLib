@@ -132,7 +132,7 @@ public sealed class BalancedTreeCreatorTests
     }
 
     [Fact]
-    public void CreatorInstance_UsesItsConfiguredLengthDistributionAndIrregularity()
+    public void CreatorExecution_UsesItsConfiguredLengthDistributionAndIrregularity()
     {
         var searchSpace = CreateBinarySearchSpace(maximumLength: 7, maximumDepth: 4);
         var creator = new BalancedTreeCreator

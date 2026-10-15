@@ -20,26 +20,26 @@ public abstract record WrappingEvaluator<TCandidate>
 
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildEvaluator);
 
-
-    /// <summary>
-    /// Resolves the child over the run's search space and problem and hands it to <see
-    /// cref="WrapExecutionInstance{TRunSearchSpace, TRunProblem}"/>.
-    /// </summary>
-    public IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
+    /// <summary>Prepares this operator once, then binds its child in each construction scope.</summary>
+    public ExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
-        WrapExecutionInstance(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildEvaluator));
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    {
+        var create = CreateWrapperFactory<TRunSearchSpace, TRunProblem>();
+        return scope => create(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(ChildEvaluator));
+    }
 
-    /// <summary>Wraps the child's execution instance in this operator's own.</summary>
-    protected abstract IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator)
+    /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved child.</summary>
+    /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
+    protected abstract WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator)
-    : EvaluatorInstance<TCandidate, TSearchSpace, TProblem>
+public abstract class WrappingEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator)
+    : EvaluatorExecution<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> ChildEvaluator { get; } = childEvaluator;
+    protected IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> ChildEvaluator { get; } = childEvaluator;
 }

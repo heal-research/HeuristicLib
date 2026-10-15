@@ -1,6 +1,8 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Data;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.MachineLearning;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -40,7 +42,7 @@ public class NumericParameterFittingSpecs
     // Fitting minimizes squared error against the raw targets, which is not necessarily the problem's objective. Wrap
     // the refiner in an improvement check to keep a fitted candidate only when it actually improves that objective.
     // Passing the algorithm's own evaluator to the check makes its two comparison evaluations share that evaluator's
-    // execution instance, so they count against the same budget and hit the same cache. Leaving the evaluator unset
+    // execution node, so they count against the same budget and hit the same cache. Leaving the evaluator unset
     // gives the check a private one, whose evaluations stay invisible to budgets and analysis.
     [Fact]
     public void KeepingAFittedCandidateOnlyWhenItImprovesTheObjective()
@@ -127,17 +129,17 @@ public class NumericParameterFittingSpecs
     }
 
     // Whether refinement effort counts against the run's evaluation budget is decided by one thing: whether the
-    // algorithm and the improvement check hold the same evaluator object. Execution instances resolve by reference, so
+    // algorithm and the improvement check hold the same evaluator object. Execution nodes resolve by reference, so
     // one object means one counter. Sharing it makes the budget describe total effort including refinement; leaving the
     // check on its own evaluator keeps refinement outside the budget. Neither is a hidden default, and both are here.
     [Fact]
     public void DecidingWhetherRefinementEffortCountsAgainstTheEvaluationBudget()
     {
         var problem = CreateProblem();
-        var sharedEvaluator = new ProblemEvaluator<ExpressionTree>()
-            .CountCandidates(out var sharedCounter);
-        var algorithmEvaluator = new ProblemEvaluator<ExpressionTree>()
-            .CountCandidates(out var ownCounter);
+        var sharedEvaluator = new ProblemEvaluator<ExpressionTree>();
+        var sharedCounting = Aspect.CountCandidates(sharedEvaluator, out var sharedCounter);
+        var algorithmEvaluator = new ProblemEvaluator<ExpressionTree>();
+        var ownCounting = Aspect.CountCandidates(algorithmEvaluator, out var ownCounter);
 
         var sharing = CreateAlgorithm(problem) with
         {
@@ -150,8 +152,8 @@ public class NumericParameterFittingSpecs
             Refiner = new NumericParameterFittingRefiner().CheckedForImprovement()
         };
 
-        sharing.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
-        notSharing.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        sharing.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(sharedCounting).Complete(cancellationToken: TestContext.Current.CancellationToken);
+        notSharing.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(ownCounting).Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // The shared counter saw the algorithm's evaluations plus the two comparison evaluations per refined candidate.
         // The private one saw only the algorithm's, over the very same search.

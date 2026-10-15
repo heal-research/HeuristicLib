@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -14,8 +15,8 @@ public static class RunTraceExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : PopulationState<TCandidate>
     {
-        /// <summary>Attaches a population-candidate trace and returns the run for further configuration.</summary>
-        /// <param name="analyzer">The attached analyzer. Read it while the run executes or after it completes.</param>
+        /// <summary>Adds a population-candidate trace and returns the run for further configuration.</summary>
+        /// <param name="analyzer">The added analyzer. Read it while the run executes or after it completes.</param>
         /// <param name="algorithm">
         /// The algorithm to observe. When omitted, the trace observes the root algorithm owned by the run.
         /// </param>
@@ -34,7 +35,7 @@ public static class RunTraceExtensions
             IComparer<ObjectiveVector>? objectiveComparer = null)
         {
             analyzer = (algorithm ?? run.Algorithm).TracePopulationCandidates(clocks, retention, objectiveComparer);
-            return run.Attach(analyzer);
+            return run.AddAspect(analyzer);
         }
     }
 }

@@ -17,7 +17,7 @@ public class CreatorConfigurationEqualityTests
     {
         var childCreator = new ConstantCreator(1);
 
-        var creator = childCreator.CountCalls(new CountAccumulator());
+        var creator = new IdentityCreator(childCreator);
 
         creator.ChildCreator.ShouldBeSameAs(childCreator);
     }
@@ -174,75 +174,12 @@ public class CreatorConfigurationEqualityTests
         creator.TransformationMutator.ShouldBeSameAs(transformation);
     }
 
-    [Fact]
-    public void CountingCreator_WithSameCounterAndMetric_IsEqual()
-    {
-        var counter = new CountAccumulator();
-        var left = new ConstantCreator(1).CountCalls(counter);
-        var right = new ConstantCreator(1).CountCalls(counter);
 
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
 
-    [Fact]
-    public void CountingCreator_WithDifferentMetric_IsNotEqual()
-    {
-        var counter = new CountAccumulator();
-        var left = new ConstantCreator(1).CountCalls(counter);
-        var right = new ConstantCreator(1).CountCandidates(counter);
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void CountingCreator_WithDifferentCounter_IsNotEqual()
-    {
-        var left = new ConstantCreator(1).CountCalls(new CountAccumulator());
-        var right = new ConstantCreator(1).CountCalls(new CountAccumulator());
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void CountingCreator_WithDifferentChildCreator_IsNotEqual()
-    {
-        var counter = new CountAccumulator();
-        var left = new ConstantCreator(1).CountCalls(counter);
-        var right = new ConstantCreator(2).CountCalls(counter);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void DurationMeasuringCreator_WithSameDurationAndTimeProvider_IsEqual()
-    {
-        var duration = new DurationAccumulator();
-        var left = new ConstantCreator(1).MeasureDuration(duration, TimeProvider.System);
-        var right = new ConstantCreator(1).MeasureDuration(duration, TimeProvider.System);
-
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
-
-    [Fact]
-    public void DurationMeasuringCreator_WithDifferentDuration_IsNotEqual()
-    {
-        var left = new ConstantCreator(1).MeasureDuration(new DurationAccumulator(), TimeProvider.System);
-        var right = new ConstantCreator(1).MeasureDuration(new DurationAccumulator(), TimeProvider.System);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void DurationMeasuringCreator_WithDifferentChildCreator_IsNotEqual()
-    {
-        var duration = new DurationAccumulator();
-        var left = new ConstantCreator(1).MeasureDuration(duration, TimeProvider.System);
-        var right = new ConstantCreator(2).MeasureDuration(duration, TimeProvider.System);
-
-        left.ShouldNotBe(right);
-    }
 
 
 
@@ -293,11 +230,11 @@ public class CreatorConfigurationEqualityTests
         {
         }
 
-        protected override ICreatorInstance<int, TRunSearchSpace, TRunProblem> CombineExecutionInstances<TRunSearchSpace, TRunProblem>(ImmutableArray<ICreatorInstance<int, TRunSearchSpace, TRunProblem>> childCreators) =>
-            new Instance<TRunSearchSpace, TRunProblem>(childCreators);
+        protected override CompositeExecutionFactory<ICreatorExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childCreators => new Execution<TRunSearchSpace, TRunProblem>(childCreators);
 
-        private sealed class Instance<TSearchSpace, TProblem>(ImmutableArray<ICreatorInstance<int, TSearchSpace, TProblem>> childCreators)
-            : MultiCreatorInstance<int, TSearchSpace, TProblem>(childCreators)
+        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICreatorExecution<int, TSearchSpace, TProblem>> childCreators)
+            : MultiCreatorExecution<int, TSearchSpace, TProblem>(childCreators)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
@@ -305,4 +242,14 @@ public class CreatorConfigurationEqualityTests
                 ChildCreators[0].Create(count, random, searchSpace, problem);
         }
     }
+    private sealed record IdentityCreator : WrappingCreator<int>
+    {
+        public IdentityCreator(ICreator<int> child) : base(child)
+        {
+        }
+
+        protected override WrapperExecutionFactory<ICreatorExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+            child => child;
+    }
+
 }

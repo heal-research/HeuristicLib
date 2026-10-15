@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -35,7 +36,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
     where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
 {
     /// <summary>
-    /// Gets the dynamic problem this evaluator is bound to. Execution instances observe its epoch clock and can only evaluate this problem.
+    /// Gets the dynamic problem this evaluator is bound to. Execution nodes observe its epoch clock and can only evaluate this problem.
     /// </summary>
     public TProblem SourceProblem { get; init; }
 
@@ -53,41 +54,50 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
         BestKnownProvider = bestKnownProvider;
     }
 
-    protected override IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> WrapExecutionInstance<TRunSearchSpace, TRunProblem>(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator) =>
-        new Instance<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy);
+    protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    {
+        var state = new ExecutionState();
+        return childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy, state);
+    }
 
-    private sealed class Instance<TRunSearchSpace, TRunProblem> : WrappingEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem>
+    private sealed class ExecutionState
+    {
+        public ObjectiveVector? BestKnown { get; set; }
+        public int BestKnownEpoch { get; set; } = -1;
+    }
+
+    private sealed class Execution<TRunSearchSpace, TRunProblem> : WrappingEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         private readonly TProblem sourceProblem;
         private readonly IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider;
         private readonly RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy;
-        private ObjectiveVector? bestKnown;
-        private int bestKnownEpoch = -1;
+        private readonly ExecutionState state;
 
-        public Instance(IEvaluatorInstance<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
+        public Execution(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy, ExecutionState state)
             : base(childEvaluator)
         {
             this.sourceProblem = sourceProblem;
             this.bestKnownProvider = bestKnownProvider;
             this.zeroBestKnownPolicy = zeroBestKnownPolicy;
+            this.state = state;
         }
 
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TRunSearchSpace searchSpace, TRunProblem problem)
         {
             if (!ReferenceEquals(problem, sourceProblem))
-                throw new InvalidOperationException("Dynamic relative quality evaluator instances can only evaluate the dynamic problem they were created for.");
+                throw new InvalidOperationException("Dynamic relative quality evaluator executions can only evaluate the dynamic problem they were created for.");
 
             var objectiveVectors = ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
             // A deferred batch update is applied inside Evaluate. Read its reference afterwards, while that
             // environment is still current, instead of retaining an event subscription to the problem.
-            if (bestKnownEpoch != sourceProblem.CurrentEpoch)
+            if (state.BestKnownEpoch != sourceProblem.CurrentEpoch)
             {
-                bestKnown = bestKnownProvider.GetBestKnown(sourceProblem);
-                bestKnownEpoch = sourceProblem.CurrentEpoch;
+                state.BestKnown = bestKnownProvider.GetBestKnown(sourceProblem);
+                state.BestKnownEpoch = sourceProblem.CurrentEpoch;
             }
-            var currentBestKnown = bestKnown!;
+            var currentBestKnown = state.BestKnown!;
             return objectiveVectors
                 .Select(objectiveVector => RelativeQuality.Normalize(objectiveVector, currentBestKnown, zeroBestKnownPolicy))
                 .ToArray();

@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -54,13 +55,13 @@ public class RefinerFailureTests
     }
 
     [Fact]
-    public void WhenARunFailsPartWay_InstrumentationKeepsWhatItRecordedBefore()
+    public void WhenARunFailsPartWay_InspectionKeepsWhatItRecordedBefore()
     {
         var problem = CreateProblem();
         var counter = new CountAccumulator();
-        var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingAfterBatchesRefiner(2).CountCalls(counter) };
+        var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingAfterBatchesRefiner(2) };
 
-        Should.Throw<InvalidOperationException>(() => algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
+        Should.Throw<InvalidOperationException>(() => algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(Aspect.CountCalls(algorithm.Refiner!, counter)).Complete(cancellationToken: TestContext.Current.CancellationToken));
 
         // The two completed batches are counted; the failing one is not, because the counter increments on success.
         counter.CurrentCount.ShouldBe(2);
@@ -95,17 +96,18 @@ public class RefinerFailureTests
 
     private sealed record FailingAfterBatchesRefiner(int SuccessfulBatches) : Refiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        private readonly Counter counter = new();
-
-        public override IRefinerInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ResolutionScope scope) =>
-            new Instance(counter, SuccessfulBatches);
+        public override ExecutionFactory<IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutionFactory()
+        {
+            var counter = new Counter();
+            return _ => new Execution(counter, SuccessfulBatches);
+        }
 
         private sealed class Counter
         {
             public int Batches;
         }
 
-        private sealed class Instance(Counter counter, int successfulBatches) : IRefinerInstance<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Execution(Counter counter, int successfulBatches) : IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
                 counter.Batches++ < successfulBatches ? candidates : throw new InvalidOperationException("Refinement failed.");

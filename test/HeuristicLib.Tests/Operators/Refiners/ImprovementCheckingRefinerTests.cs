@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
@@ -11,44 +12,45 @@ public class ImprovementCheckingRefinerTests
     public void Refine_KeepsTheRefinedCandidateWhenItImproves()
     {
         // The problem minimizes the candidate value, so subtracting improves.
-        var instance = new AddOffsetRefiner(-5).CheckedForImprovement().CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement());
 
-        Refine(instance, 10, 20).ShouldBe([5, 15]);
+        Refine(execution, 10, 20).ShouldBe([5, 15]);
     }
 
     [Fact]
     public void Refine_KeepsTheOriginalCandidateWhenRefinementMakesItWorse()
     {
-        var instance = new AddOffsetRefiner(5).CheckedForImprovement().CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(5).CheckedForImprovement());
 
-        Refine(instance, 10, 20).ShouldBe([10, 20]);
+        Refine(execution, 10, 20).ShouldBe([10, 20]);
     }
 
     // A refiner that cannot improve a candidate returns it unchanged, so failure never produces a worse candidate.
     [Fact]
     public void Refine_KeepsTheOriginalCandidateWhenTheRefinerChangesNothing()
     {
-        var instance = NoChangeRefiner<int>.Instance.CheckedForImprovement().CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(NoChangeRefiner<int>.Instance.CheckedForImprovement());
 
-        Refine(instance, 10, 20).ShouldBe([10, 20]);
+        Refine(execution, 10, 20).ShouldBe([10, 20]);
     }
 
     [Fact]
     public void Refine_DecidesPerCandidateRatherThanPerBatch()
     {
         // Halving improves 10 but worsens -10, because the problem minimizes.
-        var instance = new HalveRefiner().CheckedForImprovement().CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new HalveRefiner().CheckedForImprovement());
 
-        Refine(instance, 10, -10).ShouldBe([5, -10]);
+        Refine(execution, 10, -10).ShouldBe([5, -10]);
     }
 
     [Fact]
     public void Refine_WithAnEmptyBatch_ReturnsAnEmptyResultWithoutEvaluating()
     {
         var counter = new CountAccumulator();
-        var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().CountCalls(counter));
+        var observed = CreateEvaluator();
+        var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(observed);
 
-        Refine(refiner.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create())).ShouldBeEmpty();
+        Refine(ResolutionScope.Create(Aspect.CountCalls(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner)).ShouldBeEmpty();
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -57,9 +59,10 @@ public class ImprovementCheckingRefinerTests
     public void Refine_EvaluatesTheOriginalAndTheRefinedCandidates()
     {
         var counter = new CountAccumulator();
-        var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().CountCandidates(counter));
+        var observed = CreateEvaluator();
+        var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(observed);
 
-        Refine(refiner.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create()), 10, 20);
+        Refine(ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
 
         counter.CurrentCount.ShouldBe(4);
     }
@@ -69,14 +72,15 @@ public class ImprovementCheckingRefinerTests
     public void Refine_WithASharedCachingEvaluator_LetsALaterEvaluationHitTheCache()
     {
         var counter = new CountAccumulator();
-        var sharedEvaluator = CreateEvaluator().CountCandidates(counter).Cached();
+        var observed = CreateEvaluator();
+        var sharedEvaluator = observed.Cached();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator);
-        var scope = ResolutionScope.Create();
-        var refinerInstance = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
+        var scope = ResolutionScope.Create(Aspect.CountCandidates(observed, counter));
+        var refinerExecution = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
         var algorithmEvaluator = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
         var problem = CreateProblem();
 
-        var accepted = refinerInstance.Refine([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var accepted = refinerExecution.Refine([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         algorithmEvaluator.Evaluate(accepted, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         accepted.ShouldBe([5]);
@@ -92,15 +96,15 @@ public class ImprovementCheckingRefinerTests
         var sharedEvaluator = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator);
 
-        var budgetScope = ResolutionScope.Create().CreateChildScope(budget =>
-            budget.Decorate(sharedEvaluator, current => current.CountCandidates(counter)));
+        var budgetScope = ResolutionScope.Create().CreateChildScope(
+            Aspect.CountCandidates(sharedEvaluator, counter));
 
         Refine(budgetScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
 
         counter.CurrentCount.ShouldBe(4);
     }
 
-    // The counterpart: a different evaluator instance is not reached by the budget's replacement.
+    // The counterpart: a different evaluator execution is not reached by the budget's replacement.
     [Fact]
     public void Refine_WithItsOwnEvaluator_KeepsComparisonEvaluationsOutOfTheBudget()
     {
@@ -108,8 +112,8 @@ public class ImprovementCheckingRefinerTests
         var algorithmEvaluator = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement();
 
-        var budgetScope = ResolutionScope.Create().CreateChildScope(budget =>
-            budget.Decorate(algorithmEvaluator, current => current.CountCandidates(counter)));
+        var budgetScope = ResolutionScope.Create().CreateChildScope(
+            Aspect.CountCandidates(algorithmEvaluator, counter));
 
         Refine(budgetScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
 
@@ -121,11 +125,11 @@ public class ImprovementCheckingRefinerTests
     {
         var refiner = new AddOffsetRefiner(-1).CheckedForImprovement(ImprovementChecking.MinimumImprovement(5.0));
 
-        Refine(refiner.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create()), 10).ShouldBe([10]);
+        Refine(ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10).ShouldBe([10]);
 
         var sufficient = new AddOffsetRefiner(-5).CheckedForImprovement(ImprovementChecking.MinimumImprovement(5.0));
 
-        Refine(sufficient.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create()), 10).ShouldBe([5]);
+        Refine(ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sufficient), 10).ShouldBe([5]);
     }
 
     // A lateral move needs a candidate that differs while its objective vector does not: the problem minimizes the
@@ -137,16 +141,16 @@ public class ImprovementCheckingRefinerTests
         var strict = new NegateRefiner().CheckedForImprovement(ImprovementChecking.StrictlyBetter);
         var notWorse = new NegateRefiner().CheckedForImprovement(ImprovementChecking.NotWorse);
 
-        Refine(strict.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create()), problem, 10).ShouldBe([10]);
-        Refine(notWorse.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create()), problem, 10).ShouldBe([-10]);
+        Refine(ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(strict), problem, 10).ShouldBe([10]);
+        Refine(ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(notWorse), problem, 10).ShouldBe([-10]);
     }
 
     [Fact]
     public void Refine_WhenTheRefinerChangesTheBatchSize_Throws()
     {
-        var instance = new DroppingRefiner().CheckedForImprovement().CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create());
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new DroppingRefiner().CheckedForImprovement());
 
-        Should.Throw<InvalidOperationException>(() => Refine(instance, 10, 20));
+        Should.Throw<InvalidOperationException>(() => Refine(execution, 10, 20));
     }
 
     [Fact]
@@ -221,18 +225,18 @@ public class ImprovementCheckingRefinerTests
         var acceptEachRound = new UphillRefiner().CheckedForImprovement().AsIterated(3);
         var acceptOnceAtTheEnd = new UphillRefiner().AsIterated(3).CheckedForImprovement();
 
-        Refine(acceptEachRound.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create()), 10).ShouldBe([10]);
-        Refine(acceptOnceAtTheEnd.CreateExecutionInstance<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(ResolutionScope.Create()), 10).ShouldBe([5]);
+        Refine(ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(acceptEachRound), 10).ShouldBe([10]);
+        Refine(ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(acceptOnceAtTheEnd), 10).ShouldBe([5]);
     }
 
-    private static IReadOnlyList<int> Refine(IRefinerInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> instance, params int[] candidates) =>
-        Refine(instance, CreateProblem(), candidates);
+    private static IReadOnlyList<int> Refine(IRefinerExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> execution, params int[] candidates) =>
+        Refine(execution, CreateProblem(), candidates);
 
     private static IReadOnlyList<int> Refine(
-        IRefinerInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> instance,
+        IRefinerExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> execution,
         FuncProblem<int, DummySearchSpace<int>> problem,
         params int[] candidates) =>
-        instance.Refine(candidates, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        execution.Refine(candidates, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
     private static IEvaluator<int> CreateEvaluator() =>
         new CandidateValueEvaluator();

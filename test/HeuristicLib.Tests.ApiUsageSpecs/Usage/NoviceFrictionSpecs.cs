@@ -172,7 +172,7 @@ public class NoviceFrictionSpecs
     /// <summary>
     /// The same measurement on the migrated role, which is what the arity reduction buys. A mutator that reads
     /// <see cref="BoundedRealVectorSearchSpace"/> fills the one argument algorithm's slot, because the slot no longer
-    /// names a search space at all: the run supplies it when the execution instance is created, and a mismatch is
+    /// names a search space at all: the run supplies it when the execution node is created, and a mismatch is
     /// reported by the pre-flight check rather than by a conversion the author has to talk the compiler out of.
     /// </summary>
     [Fact]
@@ -314,9 +314,9 @@ public class NoviceFrictionSpecs
 
         // A scope serves one run, so each triple is asked in its own.
         ResolutionScope.Create()
-            .TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problemBound, out var instance, out var reason)
+            .TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problemBound, out var execution, out var reason)
             .ShouldBeTrue();
-        instance.ShouldNotBeNull();
+        execution.ShouldNotBeNull();
         reason.ShouldBeNull();
 
         ResolutionScope.Create()

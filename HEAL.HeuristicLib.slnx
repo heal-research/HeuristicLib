@@ -18,6 +18,7 @@
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj" />
+    <Project Path="test/HeuristicLib.Tests.Docs/HeuristicLib.Tests.Docs.csproj" />
     <Project Path="test/HeuristicLib.Tests.Experimental/HeuristicLib.Tests.Experimental.csproj" />
     <Project Path="test/HeuristicLib.Tests.Scenarios/HeuristicLib.Tests.Scenarios.csproj" />
     <Project Path="test/HeuristicLib.Tests/HeuristicLib.Tests.csproj" />

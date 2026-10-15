@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
@@ -9,9 +10,9 @@ namespace HEAL.HeuristicLib.Tests.Scenarios.Core.Algorithms.MetaAlgorithms;
 public class CycleAlgorithmAnalysisScenarios
 {
     [Fact]
-    public void CycleAlgorithm_WithFreshRegistries_PreservesAnalyzerStateAcrossCycles()
+    public void CycleAlgorithm_WithFreshScopes_PreservesAnalyzerStateAcrossCycles()
     {
-        var result = RunCycleAlgorithm(newExecutionInstancesPerCycle: true);
+        var result = RunCycleAlgorithm(ChildScopePolicy.Fresh);
 
         result.EvaluationTrace1.ObjectiveValues.ShouldBe([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
         result.EvaluationTrace2.ObjectiveValues.ShouldBe([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
@@ -20,9 +21,20 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     [Fact]
-    public void CycleAlgorithm_WithReusedChildRegistries_PreservesAnalyzerStateAcrossCycles()
+    public void CycleAlgorithm_WithSharedState_SharesSiblingDependenciesAndPreservesAnalyzerState()
     {
-        var result = RunCycleAlgorithm(newExecutionInstancesPerCycle: false);
+        var result = RunCycleAlgorithm(ChildScopePolicy.Shared);
+
+        result.EvaluationTrace1.ObjectiveValues.ShouldBe([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        result.EvaluationTrace2.ObjectiveValues.ShouldBe([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        result.InterceptionTrace.ObjectiveValues.ShouldBe([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        result.FinalState.Population.EvaluatedCandidates.Single().Candidate.ShouldBe(2);
+    }
+
+    [Fact]
+    public void CycleAlgorithm_WithRetainedState_IsolatesSiblingDependenciesAndPreservesAnalyzerState()
+    {
+        var result = RunCycleAlgorithm(ChildScopePolicy.Retained);
 
         result.EvaluationTrace1.ObjectiveValues.ShouldBe([1.0, 1.0, 2.0, 2.0, 3.0, 3.0]);
         result.EvaluationTrace2.ObjectiveValues.ShouldBe([1.0, 1.0, 2.0, 2.0, 3.0, 3.0]);
@@ -30,7 +42,7 @@ public class CycleAlgorithmAnalysisScenarios
         result.FinalState.Population.EvaluatedCandidates.Single().Candidate.ShouldBe(2);
     }
 
-    private static CycleRunResult RunCycleAlgorithm(bool newExecutionInstancesPerCycle)
+    private static CycleRunResult RunCycleAlgorithm(ChildScopePolicy mode)
     {
         var evaluator = new IncrementingEvaluator();
         var interceptor = new IdentityInterceptor<int, PopulationState<int>>();
@@ -38,7 +50,7 @@ public class CycleAlgorithmAnalysisScenarios
         var algorithm2 = new SingleStepAlgorithm(2, evaluator, interceptor);
         var cycleAlgorithm = algorithm1.CycleWith(algorithm2, maximumCycles: 3) with
         {
-            NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
+            ScopePolicy = mode
         };
 
         var evaluationTrace1 = new EvaluationTraceAnalysis(evaluator);
@@ -49,7 +61,7 @@ public class CycleAlgorithmAnalysisScenarios
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = cycleAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).Attach(evaluationTrace1).Attach(evaluationTrace2).Attach(interceptionTrace);
+        var run = cycleAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(evaluationTrace1).AddAspect(evaluationTrace2).AddAspect(interceptionTrace);
         var finalState = run.Complete();
 
         return new CycleRunResult(
@@ -102,20 +114,21 @@ public class CycleAlgorithmAnalysisScenarios
             Evaluator = evaluator;
         }
 
-        public override IAlgorithmInstance<int, TRunSearchSpace, TRunProblem, PopulationState<int>> CreateExecutionInstance<TRunSearchSpace, TRunProblem>(ResolutionScope scope)
-        {
-            var typed = scope.For<int, TRunSearchSpace, TRunProblem, PopulationState<int>>();
-            return new Instance<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Interceptor), Candidate);
-        }
+        public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
+            scope =>
+            {
+                var typed = scope.For<int, TRunSearchSpace, TRunProblem, PopulationState<int>>();
+                return new Execution<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Interceptor), Candidate);
+            };
 
-        private sealed class Instance<TSearchSpace, TProblem>(IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator, IInterceptorInstance<int, TSearchSpace, TProblem, PopulationState<int>> interceptor, int candidate)
-            : AlgorithmInstance<int, TSearchSpace, TProblem, PopulationState<int>>
+        private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator, IInterceptorExecution<int, TSearchSpace, TProblem, PopulationState<int>> interceptor, int candidate)
+            : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
-            private readonly IEvaluatorInstance<int, TSearchSpace, TProblem> evaluator = evaluator;
+            private readonly IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator = evaluator;
 
-            private readonly IInterceptorInstance<int, TSearchSpace, TProblem, PopulationState<int>> interceptor = interceptor;
+            private readonly IInterceptorExecution<int, TSearchSpace, TProblem, PopulationState<int>> interceptor = interceptor;
 
             private readonly int candidate = candidate;
 
@@ -132,12 +145,15 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
-    private sealed class EvaluationTraceAnalysis(IEvaluator<int> evaluator)
-        : IAnalyzer
+    private sealed class EvaluationTraceAnalysis
+        : Aspect
     {
         public ExecutionState Result { get; } = new();
 
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record);
+        public EvaluationTraceAnalysis(IEvaluator<int> evaluator)
+        {
+            Advices = Aspect.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record).Advices;
+        }
 
         public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);
@@ -155,12 +171,15 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
-    private sealed class InterceptionTraceAnalysis(IInterceptor<int> interceptor)
-        : IAnalyzer
+    private sealed class InterceptionTraceAnalysis
+        : Aspect
     {
         public ExecutionState Result { get; } = new();
 
-        public void Install(ResolutionScopeBuilder builder) => builder.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(interceptor, Record);
+        public InterceptionTraceAnalysis(IInterceptor<int> interceptor)
+        {
+            Advices = Aspect.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(interceptor, Record).Advices;
+        }
 
         public void Record(InterceptorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> observation) =>
             Result.RecordObjectiveValue(observation.UntransformedState);
