@@ -495,17 +495,31 @@ Status: `Canonical`
 
 A pointcut selects configurations whose executions receive advice. `Pointcut<TConfiguration>` examines one supplied configuration through `Matches`.
 
-`Pointcut.Reference(source)` selects by object reference. `Pointcut.OfType<TConfiguration>()` selects implementations and derived types. Pointcuts of the same declared configuration type combine through `And` and `Or`, also spelled `&` and `|`, with left-to-right short-circuit matching. Custom selection derives a small pointcut class. Matching neither traverses a graph nor resolves executions.
+`Pointcut.Reference(source)` selects by object reference. `Pointcut.OfType<TConfiguration>()` selects implementations and derived types. `Pointcut.Predicate<TConfiguration>(predicate)` provides runtime-only matching by configuration data; custom selection may also derive a small pointcut class. `Pointcut.Named<TConfiguration>(name)` matches the exact, case-sensitive name carried by `INamedConfiguration`.
+
+Pointcuts of the same declared configuration type combine through `And` and `Or`, also spelled `&` and `|`, with left-to-right short-circuit matching. `Not()` and `!` complement a selection within that declared type. Matching neither traverses a graph nor resolves executions.
 
 A selected configuration can have several callers and contextual execution bindings. Selecting it does not select one invocation or caller path.
 
 See also: Advice, Aspect, Configuration node, Join point, Resolution scope.
+
+### Named configuration
+
+Status: `Canonical`
+
+A named configuration carries a descriptive `Name` through `INamedConfiguration`. Configurations may implement the contract directly; the predefined `Named*` wrappers add it while retaining an operator or algorithm role and forwarding the child's execution.
+
+Names are case-sensitive labels and need not be unique. A named wrapper and its child are separate configuration nodes. A name pointcut selects the wrapper; it does not assign that name to the child or introduce a caller path. Configuration identity and execution sharing still use configuration references.
+
+See also: Configuration node, Pointcut.
 
 ### Advice
 
 Status: `Canonical`
 
 Advice wraps the executions built for the configurations a pointcut selects. It contains no pointcut and is separate from the configuration graph.
+
+The single `Advice` concept provides around advice. Its wrapper can run code around an operation, change its arguments or results, or decide whether to invoke it. Advice is not restricted to observation.
 
 `Advice<TConfiguration>` identifies the configuration role it can advise. A role advice base prepares a wrapper factory for the selected configuration and the run's types. Resolution compares advice by reference and keeps its prepared state once per advice instance, selected configuration and owner state. Observation, counting and duration measurement are predefined advice.
 
@@ -781,6 +795,16 @@ A moment is the collective time of one trace entry. It contains simultaneous rea
 that trace analyzer, and is read back one clock at a time through `TraceEntry.At`.
 
 See also: Clock, Time, Trace.
+
+### Inspection
+
+Status: `Canonical`
+
+Inspection observes and measures execution while preserving the observed operation's inputs, outputs and computation. It may update its own counters, clocks and collected data. Explicit algorithm or operator policies may use those measurements to change behavior, such as stopping after a budget is consumed.
+
+`HEAL.HeuristicLib.Inspection` contains observations, predefined observation/counting/timing advice, clocks and accumulators. General aspects and advice belong to the execution model and may change behavior. Analysis derives and publishes results from observations.
+
+See also: Advice, Analyzer, Observation.
 
 ### Observation
 

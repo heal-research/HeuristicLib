@@ -5,7 +5,7 @@ An analyzer collects data from the execution boundaries you select. Create it, a
 ```csharp
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 
 var run = algorithm.CreateRun(problem, random)
@@ -21,16 +21,16 @@ An algorithm observation captures each search state it yields, after its interce
 
 An analyzer is one of several ways to see what a run does. Pick by what you need:
 
-| Need                                                                                        | Use                                                                                                          |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Look at every state the algorithm yields                                                    | `algorithm.Stream(problem, random)`                                                                          |
-| Only the final state                                                                        | `algorithm.CompleteAsync(problem, random)`                                                                   |
-| Typed data from chosen boundaries, such as a quality curve or an operator's offspring       | An analyzer attached with `AddAspect`                                                                        |
-| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An aspect added with `AddAspect`                                                                             |
-| A count or duration that stops or limits the run                                            | Instrumentation such as `CountCandidates` or `LimitedToEvaluatedCandidates`, read by terminators and budgets |
-| The same analysis for every experiment trial                                                | A trial analyzer, see [Experiments](/guide/execution/experiments)                                            |
+| Need                                                                                        | Use                                                                                                     |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Look at every state the algorithm yields                                                    | `algorithm.Stream(problem, random)`                                                                     |
+| Only the final state                                                                        | `algorithm.CompleteAsync(problem, random)`                                                              |
+| Typed data from chosen boundaries, such as a quality curve or an operator's offspring       | An analyzer attached with `AddAspect`                                                                   |
+| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An aspect added with `AddAspect`                                                                        |
+| A count or duration that stops or limits the run                                            | Inspection such as `CountCandidates` or `LimitedToEvaluatedCandidates`, read by terminators and budgets |
+| The same analysis for every experiment trial                                                | A trial analyzer, see [Experiments](/guide/execution/experiments)                                       |
 
-Analyzers only read. Nothing an analyzer records changes what the algorithm does next.
+Inspection preserves the observed computation while recording its own observations, counts, durations and clocks. Analyzers derive results from those observations. Observation callbacks must preserve the operation's inputs and outputs; they receive live references rather than isolated deep copies. General aspects may change behavior, and explicit algorithm policies such as budgets may read inspection data to decide when to stop.
 
 ## Choose a boundary and a clock
 
@@ -53,6 +53,23 @@ Several traces may share the same clock in one run. Its advice applies once. Use
 Evaluation counts describe the selected evaluator boundary. A caching evaluator's outer boundary can count requests while its inner evaluator counts cache misses. Choose the boundary whose work you intend to compare.
 
 Observation sources match configurations by reference. A copied configuration is a different source, even if its settings compare equal. A source that never participates produces no observations. Create analyzers for the actual configured objects that will execute.
+
+## Select configurations by properties or names
+
+`Pointcut.Predicate<TConfiguration>(predicate)` matches configuration data without a custom subclass. Combine pointcuts through `And`/`Or` or `&`/`|`, and negate them through `Not()` or `!`. Negation stays within the declared configuration type. Predicates are runtime-only delegates, rather than persistable configuration strategies.
+
+Name a configured operator through `.Named(name)` and select that boundary explicitly:
+
+```csharp
+var exploration = mutator.Named("exploration");
+var selected = Pointcut.Named<IMutator<RealVector>>("exploration");
+var excluded = !Pointcut.Reference<IMutator<RealVector>>(exploration);
+var otherExploration = selected & excluded;
+```
+
+The receiver here is an `IMutator<RealVector>`. Named wrappers exist for creators, crossovers, evaluators, mutators, refiners, replacers, selectors, interceptors, terminators and algorithms. Their constructors and `NamedMutator.Create`-style factories are also available. A consumer-defined configuration can implement `INamedConfiguration` directly.
+
+Names compare exactly and case-sensitively. Several nodes may share a name, and all match. The wrapper and its child are separate configuration nodes: name matching selects the wrapper, while a broad role pointcut can select both boundaries. Names do not change execution sharing or create caller paths. The child's concrete properties remain on the child configuration.
 
 ## Ownership and reads
 

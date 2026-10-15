@@ -10,20 +10,20 @@ Composition policies describe how child operations are coordinated. `Wrapping*` 
 
 The built in composition overview is:
 
-| Composition aspect                | Coordination semantics                                                                                            | Helpers and examples                                                                                        | Applicability                                         |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Weighted alternatives per element | Chooses a child independently for each element of a batch, invokes grouped child batches and restores input order | `ChooseOneCreator`, `ChooseOneCrossover`, `ChooseOneMutator`, `ChooseOneRefiner`                            | Creators, crossovers, mutators and refiners           |
-| Weighted alternatives per call    | Chooses one child for the complete operation call                                                                 | `ChooseOneSelector`, `ChooseOneReplacer`                                                                    | Selectors and replacers                               |
-| Conditional application           | Chooses between an operation and role specific unchanged behavior                                                 | `mutator.AppliedAtRate(...)`, `crossover.AppliedAtRate(...)`, `refiner.AppliedAtRate(...)`                  | Mutators, crossovers and refiners                     |
-| Sequential composition            | Passes each stage result to the next stage in order                                                               | `PipelineMutator`, `PipelineRefiner`, `PipelineInterceptor`                                                 | Mutators, refiners and interceptors                   |
-| Repeated composition              | Feeds a result back into the same child for a configured number of iterations                                     | `IteratedRefiner`                                                                                           | Refiners                                              |
-| Objective-aware retention         | Measures a child's result and keeps it only when a criterion counts it as an improvement                          | `ImprovementCheckingRefiner`                                                                                | Refiners                                              |
-| Transient refinement evaluation   | Refines candidates temporarily, measures the refined copies and discards them                                     | `RefinementEvaluator`                                                                                       | Evaluators composed with a refiner                    |
-| Unconditional postprocessing      | Invokes a source operation and always transforms its complete result                                              | `TransformedCreator`, `TransformedCrossover`                                                                | Creators and crossovers with a mutator transformation |
-| Logical composition               | Combines child conditions with short circuit Boolean logic                                                        | `AnyTerminator`, `AllTerminator`                                                                            | Terminators                                           |
-| Fallback composition              | Handles part of a request directly and delegates the remainder                                                    | `PredefinedCandidatesCreator`                                                                               | Creators                                              |
-| Specialized coordination          | Applies a policy whose meaning depends on one operator contract                                                   | Caching, repetition and evaluation limits, elite inclusion, mate restrictions and gender specific selection | Evaluators and selectors                              |
-| Observation and instrumentation   | Wraps an operation boundary to observe, count or measure calls                                                    | `Observable*`, `Counting*` and `DurationMeasuring*`                                                         | All operator roles                                    |
+| Composition aspect                | Coordination semantics                                                                                            | Helpers and examples                                                                                        | Applicability                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Weighted alternatives per element | Chooses a child independently for each element of a batch, invokes grouped child batches and restores input order | `ChooseOneCreator`, `ChooseOneCrossover`, `ChooseOneMutator`, `ChooseOneRefiner`                            | Creators, crossovers, mutators and refiners                  |
+| Weighted alternatives per call    | Chooses one child for the complete operation call                                                                 | `ChooseOneSelector`, `ChooseOneReplacer`                                                                    | Selectors and replacers                                      |
+| Conditional application           | Chooses between an operation and role specific unchanged behavior                                                 | `mutator.AppliedAtRate(...)`, `crossover.AppliedAtRate(...)`, `refiner.AppliedAtRate(...)`                  | Mutators, crossovers and refiners                            |
+| Sequential composition            | Passes each stage result to the next stage in order                                                               | `PipelineMutator`, `PipelineRefiner`, `PipelineInterceptor`                                                 | Mutators, refiners and interceptors                          |
+| Repeated composition              | Feeds a result back into the same child for a configured number of iterations                                     | `IteratedRefiner`                                                                                           | Refiners                                                     |
+| Objective-aware retention         | Measures a child's result and keeps it only when a criterion counts it as an improvement                          | `ImprovementCheckingRefiner`                                                                                | Refiners                                                     |
+| Transient refinement evaluation   | Refines candidates temporarily, measures the refined copies and discards them                                     | `RefinementEvaluator`                                                                                       | Evaluators composed with a refiner                           |
+| Unconditional postprocessing      | Invokes a source operation and always transforms its complete result                                              | `TransformedCreator`, `TransformedCrossover`                                                                | Creators and crossovers with a mutator transformation        |
+| Logical composition               | Combines child conditions with short circuit Boolean logic                                                        | `AnyTerminator`, `AllTerminator`                                                                            | Terminators                                                  |
+| Fallback composition              | Handles part of a request directly and delegates the remainder                                                    | `PredefinedCandidatesCreator`                                                                               | Creators                                                     |
+| Specialized coordination          | Applies a policy whose meaning depends on one operator contract                                                   | Caching, repetition and evaluation limits, elite inclusion, mate restrictions and gender specific selection | Evaluators and selectors                                     |
+| Inspection                        | Wraps a selected execution boundary to observe, count or measure calls                                            | `Aspect.Observe`, `Aspect.CountCalls` and `Aspect.MeasureDuration`                                          | Role-specific observations; counting and timing across roles |
 
 A missing helper usually means that the role does not provide the inputs needed by that policy or that the intermediate result has no single clear meaning. It does not prohibit authors from implementing a domain specific composition with explicit semantics.
 
@@ -175,7 +175,7 @@ The snippets in this section use these namespaces:
 ```csharp
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
 ```
 
@@ -224,7 +224,7 @@ var timed = shared.LimitedToOperatorDuration(evaluator, TimeSpan.FromSeconds(10)
     new EvaluatorDurationMeasuring<TCandidate>());
 ```
 
-Each role provides counting and duration-measuring values in `Instrumentation`. Counting records successful calls or returned candidates; timing also records failed calls. Timing accepts an explicit `TimeProvider`. Both are scoped to the budget's inner algorithm. If that algorithm never resolves the selected operator, nothing is recorded and the budget never stops it.
+Each role provides counting and duration-measuring values in `Inspection`. Counting records successful calls or returned candidates; timing also records failed calls. Timing accepts an explicit `TimeProvider`. Both are scoped to the budget's inner algorithm. If that algorithm never resolves the selected operator, nothing is recorded and the budget never stops it.
 
 Several observed operators can feed the same termination criterion by sharing one `CountAccumulator`. For example, the same counter can track refiner calls and evaluations.
 
@@ -348,17 +348,17 @@ var fluentDistinctMateSelector = selector.AvoidSameMates(maximumAttempts: 10);
 
 These types should document their own batching, state and cardinality behavior because their policies are role specific.
 
-## Observation and instrumentation boundaries
+## Observation and inspection boundaries
 
-Observable, counted and measured operators are also wrappers. Their placement determines which work they observe.
+Inspection uses execution advice installed through aspects. `Aspect.Observe`, `Aspect.CountCalls` and `Aspect.MeasureDuration` select existing configurations and wrap their executions; they do not add observation, counting or timing configurations to the operator graph.
 
-Every operator role provides public `Observable*`, `Counting*` and `DurationMeasuring*` configurations. Prefer the fluent observation, counting and duration methods because they express the wrapper at the point of composition with less type noise. They return the concrete wrapper types, while direct construction remains available for advanced cases that benefit from naming the instrumentation configuration explicitly.
+Selecting a complete composition observes its outer operation boundary and includes nested work. Selecting one child observes only calls reaching that child. For example, measuring a `TransformedCrossover` includes crossover and mutation work, while measuring its child crossover includes only crossover work.
 
-Wrapping a complete composition observes the outer operation boundary and includes all nested work. Wrapping one child observes only calls that reach that child. For example, measuring a `TransformedCrossover` includes both crossover and mutation work, while measuring its child crossover includes only crossover work.
+Counting and duration advice retain their supplied result accumulator. Independent root executions using the same accumulator also contribute to it. Counters increment after a successful child call. Duration measurement keeps timestamps local to each invocation and records elapsed time even when the child throws.
 
-Counting and duration wrappers bind contextual children while retaining the supplied result accumulator. Independent root executions using the same accumulator also contribute to it. Counters increment after a successful child call. Duration measurement keeps timestamps local to each invocation and records elapsed time even when the child throws.
+A named configuration such as `mutator.Named("exploration")` supplies a selectable wrapper boundary while forwarding the child's execution. `Pointcut.Named<IMutator<TCandidate>>("exploration")` selects that wrapper. Broad role pointcuts may select both the wrapper and its child.
 
-See [Observability and analysis](/guide/execution/observability-and-analysis) for observer, counter and duration APIs.
+See [Observability and analysis](/guide/execution/observability-and-analysis) for observation, counter, duration and pointcut APIs.
 
 ## Specialized execution node capabilities
 

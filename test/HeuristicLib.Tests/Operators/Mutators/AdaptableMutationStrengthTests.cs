@@ -1,5 +1,5 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
-using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;

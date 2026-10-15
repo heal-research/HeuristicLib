@@ -48,7 +48,7 @@ This section records the implementation inspected when the factory design was in
 | [WrappingMutator](../src/HeuristicLib/Operators/Mutators/Composition/WrappingMutator.cs) and authored composites                                                        | Execution nodes own typed child references. Changing bindings while preserving their own state requires an authoring contract beyond the existing leaf-stateful bases.                                                                                    |
 | [CycleAlgorithm](../src/HeuristicLib/Algorithms/Composition/CycleAlgorithm.cs) and [PipelineAlgorithm](../src/HeuristicLib/Algorithms/Composition/PipelineAlgorithm.cs) | Instances retain their creating scope; the cycle may also cache child algorithm executions. A proposed shared state object must not retain an old scope-specific child binding and defeat rebinding.                                                      |
 | [IterativeAlgorithm](../src/HeuristicLib/Algorithms/BaseClasses/IterativeAlgorithm.cs)                                                                                  | The async iterator retains progress values and uses instance-bound child operations. Sharing an ordinary state holder does not automatically share, resume or replace that active enumeration correctly.                                                  |
-| [Mutator observations](../src/HeuristicLib/Instrumentation/Mutators/MutatorObservation.cs)                                                                              | Thin wrappers retain a typed child and callback. Rebinding a wrapper can preserve a callback's accumulator, but arbitrary stateful advice still needs an ownership contract.                                                                              |
+| [Mutator observations](../src/HeuristicLib/Inspection/Mutators/MutatorObservation.cs)                                                                                   | Thin wrappers retain a typed child and callback. Rebinding a wrapper can preserve a callback's accumulator, but arbitrary stateful advice still needs an ownership contract.                                                                              |
 
 At investigation time, the developer guidelines put mutable data and resolved children on authored execution nodes. Their implemented rules (§ 4.1, § 4.12, § 4.17) distinguish once-prepared persistent state from bound children and invocation-local data. Framework-managed operator state must not contain configurations, execution nodes, registries or child-bound delegates (§ 4.14).
 
@@ -595,9 +595,9 @@ dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --config
 dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore --filter-class '*OperatorAuthoringSpecs'
 ```
 
-Instrumentation wrappers, iterative bases, other explicit composite/leaf implementations, algorithms, observations, capabilities, Experimental roles and remaining consumers are outside this package.
+Inspection wrappers, iterative bases, other explicit composite/leaf implementations, algorithms, observations, capabilities, Experimental roles and remaining consumers are outside this package.
 
-Stop for M2a review. Proposed M2b migrates the 18 core counting and duration-measuring wrappers in the nine role `Instrumentation` folders, preserving their external result sinks and invocation-local timing. M1d's iterative authoring bases remain outstanding and follow separately. No later package is started here.
+Stop for M2a review. Proposed M2b migrates the 18 core counting and duration-measuring wrappers in the nine role `Inspection` folders, preserving their external result sinks and invocation-local timing. M1d's iterative authoring bases remain outstanding and follow separately. No later package is started here.
 
 ### Named execution factories review record, 2026-09-30
 
@@ -615,17 +615,17 @@ Validation:
 - Documentation build, `git diff --check`, whitespace verification, style verification and analyzer verification passed. The formatter commands reported workspace-loading warnings; their success does not establish compilation or runtime behavior. Verification logs and the AST migration/audit helpers are under ignored `artifacts/execution-factory/named-factory-*` paths.
 - The Git index remains unchanged from this package's start; the user's four staged documentation/plan files and the unrelated `.claude/settings.local.json` are untouched by index operations. New code and documentation changes remain unstaged. No commit was made.
 
-This is an API-shape revision to M1c/M2a, not the start of M2b or M1d. Stop for review of the named factory contracts. Instrumentation wrappers and iterative bases remain separate packages.
+This is an API-shape revision to M1c/M2a, not the start of M2b or M1d. Stop for review of the named factory contracts. Inspection wrappers and iterative bases remain separate packages.
 
 ### M2b core instrumentation wrappers review record, 2026-10-01
 
 Reviewed and committed as `705cb4a3`. The validation and working-tree notes below describe the original review handoff.
 
-The user reviewed and committed M2a and the named factories, then authorized this package. Migrated the 18 `Counting*` and `DurationMeasuring*` configuration classes in the nine core operator roles' `Instrumentation` folders. Each replaces `WrapExecutionInstance` with scope-free `CreateWrapperFactory`, returning the role's `WrapperExecutionFactory` and constructing the existing execution with its contextual child. Interceptor and terminator factories retain the run's search-state type.
+The user reviewed and committed M2a and the named factories, then authorized this package. Migrated the 18 `Counting*` and `DurationMeasuring*` configuration classes in the nine core operator roles' `Inspection` folders. Each replaces `WrapExecutionInstance` with scope-free `CreateWrapperFactory`, returning the role's `WrapperExecutionFactory` and constructing the existing execution with its contextual child. Interceptor and terminator factories retain the run's search-state type.
 
 The supplied count/duration accumulators, count metric and time provider are retained. These accumulators are external result sinks, not fresh private state allocated during preparation. Every binding and independent root configured with the same sink contributes to it. Operation bodies, constructor arguments, fluent/configuration APIs, count placement and timing are unchanged: failed child calls do not increment counters, and elapsed time is recorded in `finally` using an invocation-local timestamp.
 
-Added three core regression cases in `OperatorInstrumentationTests`: call and candidate counts across contextual bindings, and duration accumulation across those bindings. All three check child state continuity, child-only counting in the observed scope, one child preparation across related scopes, fresh child state in an independent root and continued accumulation into the supplied result sink. Existing nested-duration and exception cases are retained. Migrated the ten obsolete direct creation calls in the two instrumentation test files to resolution, and the callback mutator fixture to once-only factory preparation. The operator composition guide describes accumulator ownership and invocation-local timing without migration history.
+Added three core regression cases in `OperatorInspectionTests`: call and candidate counts across contextual bindings, and duration accumulation across those bindings. All three check child state continuity, child-only counting in the observed scope, one child preparation across related scopes, fresh child state in an independent root and continued accumulation into the supplied result sink. Existing nested-duration and exception cases are retained. Migrated the ten obsolete direct creation calls in the two instrumentation test files to resolution, and the callback mutator fixture to once-only factory preparation. The operator composition guide describes accumulator ownership and invocation-local timing without migration history.
 
 Validation:
 
@@ -638,7 +638,7 @@ Validation:
 Focused checks:
 
 ```text
-dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*OperatorInstrumentationTests' --filter-class '*EvaluatorInstrumentationTests' --filter-class '*TopologyExecutionFactoryTests'
+dotnet test --project test/HeuristicLib.Tests/HeuristicLib.Tests.csproj --configuration Release --no-restore --filter-class '*OperatorInspectionTests' --filter-class '*EvaluatorInspectionTests' --filter-class '*TopologyExecutionFactoryTests'
 
 dotnet test --project test/HeuristicLib.Tests.ApiUsageSpecs/HeuristicLib.Tests.ApiUsageSpecs.csproj --configuration Release --no-restore --filter-class '*OperatorAuthoringSpecs' --filter-class '*PractitionerUsageSpecs'
 ```
@@ -809,7 +809,7 @@ The user approved M2f as `c4d91e2f` and authorized migrating the remaining core 
 Scope:
 
 - Fourteen fixture files: AnalysisUsabilityTests, TraceCompositionTests, AlgorithmRunTests, ExperimentTestSupport, CompositeBindingTests, OperatorCompatibilityTests, RefinerFailureTests and the seven creator/crossover/evaluator/mutator/refiner/replacer/selector configuration-equality test files. Creation hooks return `ExecutionFactory`, `WrapperExecutionFactory` or `CompositeExecutionFactory` as appropriate. CompositeBindingTests retain both the deliberately invalid leaf-ladder fixture and the correctly typed generic fixture. Children resolve inside the returned binding lambda. Probe setup recording and setup exceptions remain in preparation. RefinerFailureTests prepares its private counter once per logical execution rather than retaining mutable runtime state on the reusable configuration.
-- Six existing regression files: IterativeAlgorithmFactoryTests, TopologyExecutionFactoryTests, EvaluatorExecutionFactoryTests and OperatorInstrumentationTests specify the role interface in `Wrap<TSource>`, allowing the callback to return another implementation of that role. ConcreteAlgorithmFactoryTests and AdaptableMutationStrengthTests import the extension namespaces for their existing counting calls.
+- Six existing regression files: IterativeAlgorithmFactoryTests, TopologyExecutionFactoryTests, EvaluatorExecutionFactoryTests and OperatorInspectionTests specify the role interface in `Wrap<TSource>`, allowing the callback to return another implementation of that role. ConcreteAlgorithmFactoryTests and AdaptableMutationStrengthTests import the extension namespaces for their existing counting calls.
 - Five refiner caller files: ImprovementCheckingCompositionTests (one call), RefinerBatchSemanticsTests (five), RefinerCompositionTests (21), RefinerEvaluatorAccountingTests (one) and NumericParameterFittingRefinerTests (three). All 31 direct creation calls use the public `ResolutionScope.Create().Resolve<TCandidate, TSearchSpace, TProblem>(source)` route, preserving their concrete run types and fresh root scope per construction.
 - ExecutionFactoryResolutionTests.Lifetimes changes only the collection helper. The initial full run and a focused rerun both failed the two `LongLivedSource_DoesNotRetainDiscardedDeclarationDomains` cases. Three bounded collection/finalization cycles followed by a final collection make both pass. Weak-reference assertions are unchanged, and no resolver behavior or retained-object condition is relaxed. This establishes that additional cleanup cycles suffice in this runtime; it does not establish a particular internal finalization cause.
 
@@ -979,7 +979,7 @@ Scope:
 
 - AccumulatingAnalyzerTests.SketchEvaluator and AlgorithmRefinementTests.CountingRefiner expose the typed execution factory. Their scoring/refinement operations and existing counter probe are unchanged.
 - DynamicAnalysisTests.BatchEvaluationAlgorithm returns a factory that resolves its evaluator inside the requesting context; batching, iteration and progress assertions are unchanged.
-- The Experimental test project imports Instrumentation for CountAccumulator. GeneticAlgorithmFactoryTests imports interceptor instrumentation extensions, and DynamicRacingFactoryTests imports evaluator/interceptor instrumentation extensions. Normal compilation exposed these missing imports once the retired fixture declarations were migrated.
+- The Experimental test project imports Inspection for CountAccumulator. GeneticAlgorithmFactoryTests imports interceptor instrumentation extensions, and DynamicRacingFactoryTests imports evaluator/interceptor instrumentation extensions. Normal compilation exposed these missing imports once the retired fixture declarations were migrated.
 - No assertions are weakened, no tests are skipped and no new tests are added in this package. Production code, API usage specs and scenario fixtures are unchanged. A source scan finds no retired creation hooks in Experimental test sources.
 
 Validation:

@@ -26,7 +26,7 @@ Configured wrappers are ordinary configurations with declared children. A wrappi
 
 Advice is separate from the configuration graph. Its role-specific `CreateWrapperFactory` receives the configuration the pointcut selected and prepares a constructor accepting the already resolved execution. It introduces no configured children. Observation advice reports successful operator calls or states yielded by an algorithm; standalone counting and timing advice avoid observation allocations.
 
-Use `Aspect.Observe`, `Aspect.CountCalls`, `Aspect.CountCandidates` or `Aspect.MeasureDuration` from `Instrumentation` for predefined behavior. Add the result to a run with `AddAspect`, or pass aspects to `ResolutionScope.Create`, `With` or `CreateChildScope`.
+Use `Aspect.Observe`, `Aspect.CountCalls`, `Aspect.CountCandidates` or `Aspect.MeasureDuration` from `Inspection` for predefined behavior. Add the result to a run with `AddAspect`, or pass aspects to `ResolutionScope.Create`, `With` or `CreateChildScope`.
 
 ## State ownership and child activations
 

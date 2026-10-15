@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -45,7 +45,7 @@ public class RefinerBatchSemanticsTests
     }
 
     [Fact]
-    public void InstrumentationRefiners_ReportThePopulationTheRefinerActuallyReturned()
+    public void InspectionRefiners_ReportThePopulationTheRefinerActuallyReturned()
     {
         var counter = new CountAccumulator();
         var observed = new DropLastRefiner();

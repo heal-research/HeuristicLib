@@ -1,6 +1,6 @@
 # Aspect redesign
 
-Status: implemented and validated, 2026-10-14; committed as `7db6e6df` (`Redesign aspects around pointcuts and role advice`). This plan supersedes the aspect, advice and recipe parts of the [execution-resolution redesign](execution-resolution-redesign.md). Its state, scope, Cycle and budget-placement decisions remain valid. The [integration audit](execution-resolution-redesign.md#step-4-integration-audit-2026-10-15), documentation repairs and [architecture/authoring review](execution-resolution-redesign.md#step-5-architecture-and-authoring-review-2026-10-15) are complete in the working tree, pending user review. Final whole-solution validation passes all 2,993 tests. Performance measurement is explicitly deferred by the user.
+Status, 2026-10-15: the foundation is implemented in `7db6e6df`; the integration audit, documentation repairs and architecture/authoring review are committed in `bc6e15a9`. Their final whole-solution validation passed all 2,993 tests. The Inspection and matching follow-up is committed in `28309b6f`; its final whole-solution validation passed all 3,007 tests. Performance measurement remains deferred by user decision.
 
 ## Goal
 
@@ -16,7 +16,7 @@ A **join point** is the execution built for one configuration that a pointcut se
 
 ### Pointcut
 
-`Pointcut<TConfiguration>` is abstract with `public abstract bool Matches(TConfiguration)`. Custom selection derives a small subclass; there are no predicate delegates. Reference, OfType, And and Or implementations are private nested classes. A non-generic `Pointcut` base lets pointcuts for different roles share one list; the static `Reference` and `OfType` factories move onto it. More selection options can be added later.
+`Pointcut<TConfiguration>` is abstract with `public abstract bool Matches(TConfiguration)`. Custom selection can derive a small subclass or use the runtime-only `Pointcut.Predicate<TConfiguration>` factory. Reference, OfType, Predicate, Named, And, Or and Not implementations are private nested classes. A non-generic `Pointcut` base lets pointcuts for different roles share one list. The 2026-10-15 follow-up below records predicate, negation and name matching.
 
 ### Advice
 
@@ -40,6 +40,8 @@ public abstract class MutatorAdvice<TCandidate> : Advice<IMutator<TCandidate>>
 The method reuses the name and delegate of the wrapping operators' hook. The resolver calls it once per join point and owner state. The method validates the run's types and allocates state that must survive rebuilding the execution graph, such as an observed algorithm's iteration counter. The returned function wraps each construction of that join point's execution. The resolver keeps the function internally: it is the advice applied to one join point, not a separate concept, and it has no public type.
 
 Advice types are classes. The resolver compares advice by reference, never by value.
+
+Decision, 2026-10-15: retain the single `Advice` concept and its name. It provides around advice: an execution wrapper controls whether and how the underlying operation is invoked and can change behavior as well as observe it. Separate `Before`, `AfterReturning`, `AfterThrowing` and `After` convenience APIs are deferred for future discussion in the [developer backlog](developer-backlog.md). Algorithm advice can wrap `IAlgorithmExecution` and its returned stream; this decision adds no algorithm join points and does not replace the configured `Interceptor`.
 
 `Advice<TConfiguration>` names the configuration role an advice can attach to; it does not change what is wrapped. It lets the compiler reject a pointcut and advice for different roles. `Aspect.Create<TSelected, TConfiguration>(Pointcut<TSelected>, Advice<TConfiguration>) where TSelected : TConfiguration` infers both type arguments, including for `Pointcut.Reference(gaussianMutator)`. Call sites must never need explicit type arguments; the draft verifies this.
 
@@ -72,10 +74,12 @@ There is no composite aspect. A resolution scope stores its own aspects and its 
 - Combining aspects concatenates their lists. A trace includes its clocks' pairs. Two traces sharing a clock contain the same advice instances, so the clock applies once.
 - The advice instance is the key for its join-point state. No registration or declaration type is introduced.
 
-### Instrumentation is advice; behavior stays configuration
+### Predefined inspection and configured behavior
 
 - Counting, timing and observing do not change what an operator computes. They are advice only. The `Counting*` and `DurationMeasuring*` operators of all nine roles, with their `CountCalls` and `MeasureDuration` extensions, are removed. Tests that configure them migrate to aspects.
 - Caching, limits, repetition, iterated and improvement-checking refiners and the dynamic evaluators change results or cost. They stay operators only.
+
+These choices classify the predefined content. General advice may change behavior, and algorithms or operators may create aspects internally. Observation preserves the observed operation; inspection updates only its own collected data.
 
 ### Operator budgets
 
@@ -88,7 +92,7 @@ return scope => new OperatorBudgetAlgorithmExecution<…>(
     scope.With(counting).Resolve<…>(Algorithm), counter, MaximumCount);
 ```
 
-`IOperatorCounting<TOperator>` and `IOperatorDurationMeasuring<TOperator>` are value strategies in Instrumentation. Each role supplies a sealed counting and duration-measuring record in its advice files. Budgets require `Counting` or `DurationMeasuring` instead of delegate properties; the role extensions pass these values. The aspect exists only in the budget's child scope, so it counts only calls made inside the budgeted algorithm. If the algorithm does not reference the observed operator, nothing matches and the budget never stops. This is accepted.
+`IOperatorCounting<TOperator>` and `IOperatorDurationMeasuring<TOperator>` are value strategies in Inspection. Each role supplies a sealed counting and duration-measuring record in its advice files. Budgets require `Counting` or `DurationMeasuring` instead of delegate properties; the role extensions pass these values. The aspect exists only in the budget's child scope, so it counts only calls made inside the budgeted algorithm. If the algorithm does not reference the observed operator, nothing matches and the budget never stops. This is accepted.
 
 ### Removed
 
@@ -112,7 +116,7 @@ A run only collects aspects; weaving happens later, when resolution builds the e
 
 ### Placement and factories
 
-Predefined aspects, observation records and advice, `Observation`, `ObservationSignature`, clocks and their factories live in `HEAL.HeuristicLib.Instrumentation`, under role grouping folders. They are content-layer types; only `CountAccumulator` and `DurationAccumulator` remain domain vocabulary. `Analysis` keeps traces, measurements, analyzers and internal `Moment`. Mechanisms stay in Execution; role advice bases sit beside role interfaces. Convenience factories are static extension members on `Aspect` or `Clock`, except `Clock.FromElapsedTime`, which is a static member. Pointcut factories remain on Pointcut. Interceptor and terminator advice factories include `TRunSearchState`; `AlgorithmAdvice<TCandidate, TSearchState>` targets `IAlgorithm<TCandidate, TSearchState>`.
+Predefined aspects, observation records and advice, `Observation`, `ObservationSignature`, clocks and their factories live in `HEAL.HeuristicLib.Inspection`, under role grouping folders. They are content-layer types; only `CountAccumulator` and `DurationAccumulator` remain domain vocabulary. `Analysis` keeps traces, measurements, analyzers and internal `Moment`. Mechanisms stay in Execution; role advice bases sit beside role interfaces. Convenience factories are static extension members on `Aspect` or `Clock`, except `Clock.FromElapsedTime`, which is a static member. Pointcut factories remain on Pointcut. Interceptor and terminator advice factories include `TRunSearchState`; `AlgorithmAdvice<TCandidate, TSearchState>` targets `IAlgorithm<TCandidate, TSearchState>`.
 
 ## Accepted first draft
 
@@ -122,7 +126,7 @@ The accepted first draft replaced types in place and established the mutator and
 - mutator and evaluator: advice bases, observation, counting and timing advice, the `createWrapperFactory` callbacks in their resolution extensions, removal of their static bridges and instrumentation operators;
 - callers limited to these roles: both operator budgets with their mutator and evaluator extensions, `EvaluationClock`, `TraceAnalyzer`, the mutator and evaluator analyzer factories, `AlgorithmRun` and `ExperimentRun`.
 
-`ElapsedTimeClock` lives in `Instrumentation/Clock.cs` and captures its start time on construction. The completed remaining-role migration follows the accepted mutator and evaluator pattern.
+`ElapsedTimeClock` lives in `Inspection/Clock.cs` and captures its start time on construction. The completed remaining-role migration follows the accepted mutator and evaluator pattern.
 
 ## Implementation completion checklist
 
@@ -131,3 +135,25 @@ The accepted first draft replaced types in place and established the mutator and
 - [x] API usage specs, samples and tests that use `AspectBuilder`, recipes or the instrumentation operators.
 
 Commit `7db6e6df` contains the completed migration, including instrumentation, budgets, analyzers, API usage specs, tests and published documentation. The former migration-report link was removed because its target is absent from the committed tree. The [execution-resolution plan](execution-resolution-redesign.md#step-5-architecture-and-authoring-review-2026-10-15) records the completed integration/architecture reviews and final whole-solution validation.
+
+## Inspection and matching follow-up, 2026-10-15
+
+The user authorized implementation after the architecture and terminology discussion. This is an addition to the completed foundation, not a reopening of its resolver design.
+
+- Rename the user-facing concept and namespace from Instrumentation to `HEAL.HeuristicLib.Inspection`, including source folders, consumers and architecture expectations. Keep AOP mechanisms in Execution and result derivation in Analysis. The breaking rename has no compatibility aliases.
+- Add `Pointcut.Predicate<TConfiguration>(predicate)` as a runtime-only convenience for configuration-property or attribute matching. Preserve custom subclasses, query-time evaluation, declared-type filtering, short-circuit composition and exception propagation.
+- Add `Not()` and `!` as complements within the declared configuration type.
+- Add `INamedConfiguration` and `Pointcut.Named<TConfiguration>(name)`. Names compare ordinally and case-sensitively, need not be unique and do not identify resolution state or caller paths.
+- Supply a `Named*` configuration for all nine operator roles and for algorithms. Each keeps its role and declared child, forwards the child's execution, exposes an init-only Name, and supports direct construction, a type-inferred Create factory and a Named fluent method. Name pointcuts select the wrapper, not its child.
+- Retain the single around-capable Advice contract. Existing algorithm advice wraps RunStreamingAsync and its stream. Observation must preserve inputs, outputs and computation; algorithms may explicitly use inspection data to make decisions. No new persistable aspect wrapper, lifecycle advice kinds, caller paths or interceptor replacement is part of this package.
+
+Validation: the baseline Release build passed with 118 existing warnings and zero errors; all 46 inspection tests passed both before and after the namespace rename. After removing null guards on non-nullable references and the two tests requiring them, focused pointcut/named-wrapper tests pass 31 cases, and pointcut API usage specs pass 15 cases. Final Release solution build passed with zero errors and 79 warnings from the incremental build. The final pre-commit whole-solution run passed all **3,007 tests**, with zero failures or skips: 2,534 core, 207 API usage, 239 Experimental and 27 scenarios. This supersedes the earlier 3,009-case run, which included the two removed null-contract tests. The documentation build, changed-Markdown Prettier check, whitespace verification, style verification at warning severity and analyzer verification at error severity all passed. Format tools reported workspace-loading warnings. The namespace move was checked against the original source. The user separately authorized staging and then committing the final package as `28309b6f`.
+
+## Final package review, 2026-10-15
+
+Scope: review `bc6e15a955e3b6df8ed219ed3fdffef194c9b6dc...28309b6f9330f8c77b94de868dea96ad2194fb68`, the single committed Inspection and matching package. The earlier resolver architecture/authoring review remains the foundation review.
+
+- **Standards: no findings.** Runtime predicates follow the documented runtime-only exception to value-strategy rules; typed pointcuts remain local to the supplied configuration; named wrappers preserve configuration ownership, public API conventions and the non-nullable reference contract. Per-role repetition and forwarding serve the approved naming responsibility.
+- **Spec and behavior: no findings.** All 34 Inspection source moves preserve their implementations apart from namespace references. Predicate evaluation, exception propagation, declared-type negation, exact/nonunique names, consumer-defined named configurations, shared child state, independent named observations and algorithm stream advice match the accepted scope and its tests.
+
+No source changes are required by this review. The final pre-commit whole-solution result remains 3,007 passing tests; these closure corrections change only plans, so the suite was not rerun. Changed Markdown and whitespace checks pass. The user-local untracked `.claude/settings.local.json` was excluded from review. No staging, commit, history or integration action is part of this closure work. The agreed implementation scope is complete; deferred features remain in the developer backlog.

@@ -1,5 +1,5 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
-using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -55,7 +55,7 @@ public class RefinerFailureTests
     }
 
     [Fact]
-    public void WhenARunFailsPartWay_InstrumentationKeepsWhatItRecordedBefore()
+    public void WhenARunFailsPartWay_InspectionKeepsWhatItRecordedBefore()
     {
         var problem = CreateProblem();
         var counter = new CountAccumulator();

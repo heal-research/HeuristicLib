@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Algorithms;

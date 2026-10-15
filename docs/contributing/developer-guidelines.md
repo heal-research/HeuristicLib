@@ -167,6 +167,8 @@ Use a record only when structural equality is the contract. Use a class for a ca
 
 ### § 4.10 Validate operation inputs before side effects
 
+Do not add null checks for non-nullable reference parameters or properties. Trust their declared nullability contract.
+
 Validate problem, search space and operation inputs in the role method before random draws, state changes or substantial work. Configuration checks belong in execution creation.
 
 ### § 4.11 Expose configuration and hide execution machinery
@@ -459,7 +461,7 @@ Use concept first scalar names such as `NextDouble` and target first output name
 
 Duplicating a member once per operator role is acceptable. Adding a role is a deliberate act, its author writes the
 role's members once from an obvious template, and no existing role is disturbed. The resolve family
-(`Resolve`, `ResolveOptional`, `TryResolve`) and the instrumentation wrappers are both this shape, and both stay.
+(`Resolve`, `ResolveOptional`, `TryResolve`), inspection advice and named configuration wrappers all have this shape.
 
 What is not acceptable is a surface that multiplies over an axis the role's author does not know exists, so that
 adding one role silently obliges members for every value of some other dimension. Before adding a per-role member,

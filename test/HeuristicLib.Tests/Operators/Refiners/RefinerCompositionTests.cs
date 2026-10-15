@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -146,7 +146,7 @@ public class RefinerCompositionTests
         Refine(iterated, 3, 4).ShouldBe(Refine(ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(AddOffset(1)), 3, 4));
     }
 
-    // Instrumentation reports what its own position sees, so the same counter says something different inside an
+    // Inspection reports what its own position sees, so the same counter says something different inside an
     // iterated refiner than around it.
     [Fact]
     public void ObservableRefiner_ReportsOncePerCallAtItsOwnPositionInTheComposition()
@@ -166,7 +166,7 @@ public class RefinerCompositionTests
     }
 
     [Fact]
-    public void NestedComposition_AppliesEveryStageAndItsInstrumentation()
+    public void NestedComposition_AppliesEveryStageAndItsInspection()
     {
         var counter = new CountAccumulator();
         var observed = AddOffset(1);

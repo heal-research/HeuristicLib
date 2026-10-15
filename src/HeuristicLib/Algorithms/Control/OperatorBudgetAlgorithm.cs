@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;

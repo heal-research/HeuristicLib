@@ -22,6 +22,23 @@ public abstract class Pointcut
     public static Pointcut<TConfiguration> OfType<TConfiguration>()
         where TConfiguration : class, IConfigurationNode => new OfTypePointcut<TConfiguration>();
 
+    /// <summary>Selects configurations for which the supplied predicate returns true.</summary>
+    /// <remarks>
+    /// This runtime-only convenience may capture state and is not a persistable configuration strategy. The predicate
+    /// should examine configuration data only. It runs when matching is queried, only for the declared configuration
+    /// type, and its exceptions propagate to the caller.
+    /// </remarks>
+    public static Pointcut<TConfiguration> Predicate<TConfiguration>(Func<TConfiguration, bool> predicate)
+        where TConfiguration : class, IConfigurationNode => new PredicatePointcut<TConfiguration>(predicate);
+
+    /// <summary>Selects configurations carrying the supplied name through <see cref="INamedConfiguration"/>.</summary>
+    /// <remarks>
+    /// Names compare ordinally and case-sensitively. Every configuration with the name matches; names are labels,
+    /// not unique identities. Matching examines the supplied configuration, not its children.
+    /// </remarks>
+    public static Pointcut<TConfiguration> Named<TConfiguration>(string name)
+        where TConfiguration : class, IConfigurationNode => new NamedPointcut<TConfiguration>(name);
+
     private sealed class ReferencePointcut<TConfiguration>(TConfiguration target) : Pointcut<TConfiguration>
         where TConfiguration : class, IConfigurationNode
     {
@@ -32,6 +49,19 @@ public abstract class Pointcut
         where TConfiguration : class, IConfigurationNode
     {
         public override bool Matches(TConfiguration configuration) => true;
+    }
+
+    private sealed class PredicatePointcut<TConfiguration>(Func<TConfiguration, bool> predicate) : Pointcut<TConfiguration>
+        where TConfiguration : class, IConfigurationNode
+    {
+        public override bool Matches(TConfiguration configuration) => predicate(configuration);
+    }
+
+    private sealed class NamedPointcut<TConfiguration>(string name) : Pointcut<TConfiguration>
+        where TConfiguration : class, IConfigurationNode
+    {
+        public override bool Matches(TConfiguration configuration) =>
+            configuration is INamedConfiguration named && string.Equals(named.Name, name, StringComparison.Ordinal);
     }
 }
 
@@ -68,6 +98,10 @@ public abstract class Pointcut<TConfiguration> : Pointcut
     /// </remarks>
     public Pointcut<TConfiguration> Or(Pointcut<TConfiguration> other) => new OrPointcut(this, other);
 
+    /// <summary>Selects configurations of the declared type that this pointcut does not select.</summary>
+    /// <remarks>Configurations outside the declared type still do not match. The source pointcut is unchanged.</remarks>
+    public Pointcut<TConfiguration> Not() => new NotPointcut(this);
+
     /// <remarks>Constructs the same intersection as <see cref="And(Pointcut{TConfiguration})"/>.</remarks>
     public static Pointcut<TConfiguration> operator &(Pointcut<TConfiguration> left, Pointcut<TConfiguration> right) =>
         left.And(right);
@@ -75,6 +109,14 @@ public abstract class Pointcut<TConfiguration> : Pointcut
     /// <remarks>Constructs the same union as <see cref="Or(Pointcut{TConfiguration})"/>.</remarks>
     public static Pointcut<TConfiguration> operator |(Pointcut<TConfiguration> left, Pointcut<TConfiguration> right) =>
         left.Or(right);
+
+    /// <remarks>Constructs the same complement within the declared type as <see cref="Not"/>.</remarks>
+    public static Pointcut<TConfiguration> operator !(Pointcut<TConfiguration> source) => source.Not();
+
+    private sealed class NotPointcut(Pointcut<TConfiguration> source) : Pointcut<TConfiguration>
+    {
+        public override bool Matches(TConfiguration configuration) => !source.Matches(configuration);
+    }
 
     private sealed class AndPointcut(Pointcut<TConfiguration> left, Pointcut<TConfiguration> right) : Pointcut<TConfiguration>
     {

@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Algorithms.AutoEC;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.Dynamic;

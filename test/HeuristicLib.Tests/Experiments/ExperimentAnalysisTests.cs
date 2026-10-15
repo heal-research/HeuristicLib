@@ -1,5 +1,5 @@
 using HEAL.HeuristicLib.Experiments;
-using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.Experiments.TestSupport;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;

@@ -25,7 +25,7 @@ That cooperation can be hidden completely from ordinary configuration users and 
 - [CycleAlgorithm](../src/HeuristicLib/Algorithms/Composition/CycleAlgorithm.cs) retains its creating scope and, in reuse mode, a cache of child execution nodes. [PipelineAlgorithm](../src/HeuristicLib/Algorithms/Composition/PipelineAlgorithm.cs) also retains a scope for delayed construction.
 - [AlgorithmRun](../src/HeuristicLib/Execution/Runs/AlgorithmRun.cs) retains one live async enumerator across pauses. [IterativeAlgorithm](../src/HeuristicLib/Algorithms/BaseClasses/IterativeAlgorithm.cs) keeps progress, iteration position and dependencies in that enumeration.
 - [OperatorDurationBudgetAlgorithm](../src/HeuristicLib/Algorithms/Control/OperatorDurationBudgetAlgorithm.cs) allocates its accumulator during instance creation. [AlgorithmDurationBudgetAlgorithm](../src/HeuristicLib/Algorithms/Control/AlgorithmDurationBudgetAlgorithm.cs) instead keeps its duration inside an invocation's iterator. These require different lifetimes.
-- [EvolutionStrategy](../src/HeuristicLib/Algorithms/Evolutionary/EvolutionStrategy.cs) tests its resolved mutator for `IAdaptableMutationStrengthExecution`. The current [observation wrapper](../src/HeuristicLib/Instrumentation/Mutators/MutatorObservation.cs) implements only the ordinary mutator interface, already hiding that capability.
+- [EvolutionStrategy](../src/HeuristicLib/Algorithms/Evolutionary/EvolutionStrategy.cs) tests its resolved mutator for `IAdaptableMutationStrengthExecution`. The current [observation wrapper](../src/HeuristicLib/Inspection/Mutators/MutatorObservation.cs) implements only the ordinary mutator interface, already hiding that capability.
 
 ## Common ownership model
 

@@ -6,7 +6,7 @@ An analyzer is a stateful `Aspect` that owns collected data and exposes typed re
 
 ## Observation boundaries
 
-Algorithms and operators remain unaware of analysis. Predefined observation records, advice and `Aspect.Observe` factories live in `HEAL.HeuristicLib.Instrumentation`:
+Algorithms and operators remain unaware of analysis. Predefined observation records, advice and `Aspect.Observe` factories live in `HEAL.HeuristicLib.Inspection`:
 
 ```csharp
 public SeparateEvaluatorAnalyzer(IEvaluator<TCandidate> first, IEvaluator<TCandidate> second)
@@ -27,7 +27,7 @@ Observation advice is a runtime class and may retain its callback. Its wrapper f
 
 Earlier advice wraps closer to the source execution and reports completed operations first. A trace therefore includes its clocks' advice before its own observation advice. Shared clocks keep their first position. A scope with no matching advice adds no observation wrapper.
 
-Observation reads inputs, outputs and progress. An algorithm that adapts to measured work uses instrumentation as control flow rather than reading an analyzer's result.
+Observation reads inputs, outputs and progress while preserving the observed computation. An algorithm that adapts to measured work uses inspection data in its explicit control flow rather than reading an analyzer's result. General aspects may change behavior; the observation contract applies to inspection and analysis.
 
 ## Trace analyzers
 

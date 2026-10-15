@@ -187,6 +187,85 @@ public class PointcutTests
         small.Matches(preferred).ShouldBeTrue();
     }
 
+    [Fact]
+    public void Predicate_ExaminesOnlyTheDeclaredTypeAndRunsForEachQuery()
+    {
+        var calls = 0;
+        var selected = Pointcut.Predicate<ISizedConfiguration>(configuration =>
+        {
+            calls++;
+            return configuration.Size < 4;
+        });
+        var node = new SizedConfiguration(3);
+
+        calls.ShouldBe(0);
+        selected.Matches(new OtherConfiguration(3)).ShouldBeFalse();
+        calls.ShouldBe(0);
+        selected.Matches(node).ShouldBeTrue();
+        selected.Matches(node).ShouldBeTrue();
+        selected.Matches(new AlternateSizedConfiguration(5)).ShouldBeFalse();
+        calls.ShouldBe(3);
+    }
+
+    [Fact]
+    public void Predicate_ComposesWithReferenceMatchingAndPropagatesEvaluatedFailures()
+    {
+        var node = new SizedConfiguration(3);
+        var failure = new InvalidOperationException("Predicate failed.");
+        var failing = Pointcut.Predicate<SizedConfiguration>(_ => throw failure);
+        var selected = Pointcut.Reference(node).And(failing);
+
+        selected.Matches(node with { }).ShouldBeFalse();
+        Should.Throw<InvalidOperationException>(() => selected.Matches(node)).ShouldBeSameAs(failure);
+        Should.Throw<InvalidOperationException>(() => (!failing).Matches(node)).ShouldBeSameAs(failure);
+        (!failing).Matches(new OtherConfiguration(3)).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData(3, false)]
+    [InlineData(5, true)]
+    public void Not_ComplementsOnlyTheDeclaredTypeWithoutChangingItsSource(int size, bool expected)
+    {
+        var source = Pointcut.Predicate<ISizedConfiguration>(configuration => configuration.Size < 4);
+        var node = new SizedConfiguration(size);
+
+        source.Not().Matches(node).ShouldBe(expected);
+        (!source).Matches(node).ShouldBe(expected);
+        source.Not().Not().Matches(node).ShouldBe(!expected);
+        source.Matches(node).ShouldBe(!expected);
+        (!source).Matches(new OtherConfiguration(size)).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("exploration", true)]
+    [InlineData("Exploration", false)]
+    [InlineData("exploration ", false)]
+    [InlineData("", false)]
+    public void Named_UsesExactNamesOnConsumerDefinedConfigurations(string name, bool expected)
+    {
+        var selected = Pointcut.Named<ISizedConfiguration>("exploration");
+
+        selected.Matches(new NamedSizedConfiguration(name, 3)).ShouldBe(expected);
+        selected.Matches(new NamedSizedConfiguration(name, 5)).ShouldBe(expected);
+        selected.Matches(new NamedOtherConfiguration(name)).ShouldBeFalse();
+        selected.Matches(new SizedConfiguration(3)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Named_ComposesWithPredicateAndNegation()
+    {
+        var selected = Pointcut.Named<ISizedConfiguration>("exploration") &
+            !Pointcut.Predicate<ISizedConfiguration>(configuration => configuration.Size > 4);
+
+        selected.Matches(new NamedSizedConfiguration("exploration", 3)).ShouldBeTrue();
+        selected.Matches(new NamedSizedConfiguration("exploration", 5)).ShouldBeFalse();
+        selected.Matches(new NamedSizedConfiguration("refinement", 3)).ShouldBeFalse();
+    }
+
+    private sealed record NamedSizedConfiguration(string Name, int Size) : ISizedConfiguration, INamedConfiguration;
+
+    private sealed record NamedOtherConfiguration(string Name) : INamedConfiguration;
+
     private sealed class SizeRange<TConfiguration>(int minimum, int maximum) : Pointcut<TConfiguration>
         where TConfiguration : class, ISizedConfiguration
     {

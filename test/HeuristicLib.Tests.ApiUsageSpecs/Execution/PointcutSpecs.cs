@@ -2,9 +2,8 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Instrumentation;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
@@ -29,10 +28,10 @@ public class PointcutSpecs
         var smallMutation = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
         var largeMutation = smallMutation with { MutationStrength = 2.0 };
 
-        Pointcut<IMutator<RealVector>> selectedMutators = Pointcut.OfType<IMutator<RealVector>>()
-            .And(new SmallMutations());
-        Pointcut<GaussianMutator> selectedGaussianMutators = Pointcut.OfType<GaussianMutator>()
-            .And(new SmallGaussianMutations());
+        Pointcut<IMutator<RealVector>> selectedMutators = Pointcut.Predicate<IMutator<RealVector>>(
+            mutator => mutator is GaussianMutator { MutationStrength: < 1 });
+        Pointcut<GaussianMutator> selectedGaussianMutators = Pointcut.Predicate<GaussianMutator>(
+            mutator => mutator.MutationStrength < 1);
 
         selectedMutators.Matches(smallMutation).ShouldBeTrue();
         selectedGaussianMutators.Matches(smallMutation).ShouldBeTrue();
@@ -41,7 +40,7 @@ public class PointcutSpecs
     }
 
     [Fact]
-    public void NamesCanBePropertiesOnConsumerAuthoredWrappers()
+    public void NamesCanBePropertiesOnConfiguredWrappers()
     {
         var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
         var exploration = new NamedMutator<RealVector>(child, "exploration");
@@ -69,6 +68,22 @@ public class PointcutSpecs
 
         explorationExecution.ShouldBeSameAs(refinementExecution);
         scope.Resolve(child).ShouldBeSameAs(explorationExecution);
+    }
+
+    [Fact]
+    public void NamedPointcutsCanExcludeOneOfSeveralNodesWithTheSameName()
+    {
+        var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
+        var first = child.Named("exploration");
+        var second = NamedMutator.Create(child, "exploration");
+        var refinement = new NamedMutator<RealVector>(child, "refinement");
+        Pointcut<IMutator<RealVector>> selected = Pointcut.Named<IMutator<RealVector>>("exploration") &
+            !Pointcut.Reference<IMutator<RealVector>>(first);
+        IConfigurationNode[] nodes = [child, first, second, refinement];
+
+        var matches = nodes.Where(selected.Matches).ToArray();
+
+        matches.Single().ShouldBeSameAs(second);
     }
 
     [Fact]
@@ -238,11 +253,6 @@ public class PointcutSpecs
         public override bool Matches(IMutator<RealVector> mutator) => mutator is GaussianMutator { MutationStrength: < 1.0 };
     }
 
-    private sealed class SmallGaussianMutations : Pointcut<GaussianMutator>
-    {
-        public override bool Matches(GaussianMutator mutator) => mutator.MutationStrength < 1.0;
-    }
-
     private sealed class ExplorationMutations : Pointcut<IMutator<RealVector>>
     {
         public override bool Matches(IMutator<RealVector> mutator) => mutator is NamedMutator<RealVector> { Name: "exploration" };
@@ -310,17 +320,4 @@ public class PointcutSpecs
         }
     }
 
-    // This consumer-authored example is not a new library naming contract.
-    private sealed record NamedMutator<TCandidate> : WrappingMutator<TCandidate>
-    {
-        public NamedMutator(IMutator<TCandidate> childMutator, string name)
-            : base(childMutator)
-        {
-            Name = name;
-        }
-
-        public string Name { get; init; }
-
-        protected override WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() => childMutator => childMutator;
-    }
 }
