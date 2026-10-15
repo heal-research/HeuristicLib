@@ -25,7 +25,7 @@ Unresolved work and rejected approaches are recorded in [the developer backlog](
 - `src/HeuristicLib`: core public contracts and library implementations.
 - `src/HeuristicLib.Experimental`: experimental problems, workflows and features.
 - `src/HeuristicLib.PythonInterop`: Python integration and adapters.
-- `test`: core, Experimental, scenario and API usage suites; see `test/README.md` for ownership and placement.
+- `test`: core, Experimental, scenario, API usage and documentation suites; see `test/README.md` for ownership and placement.
 - `analyzers`: Roslyn analyzers and code fixes for repository-specific API usage rules.
 - `docs`: published VitePress documentation. `plans`: development plans, investigations and review records.
 - `samples`: runnable C# applications included in the solution and referencing `src` projects.
@@ -50,7 +50,7 @@ Use the .NET SDK selected by `global.json`. Tests use Microsoft.Testing.Platform
 
 CI runs restore, Release build and tests, documentation build, formatting verification and package creation. Formatting verification is currently non-blocking in CI, so a green CI format job does not prove that formatting is clean.
 
-Use the [test suite guide](test/README.md#validation-order) for test selection and validation order. For prose-only changes, select the relevant documentation or formatting checks. Validate tooling and build configuration changes through the affected workflows. Changes to documented C# usage require API usage validation.
+Use the [test suite guide](test/README.md#validation-order) for test selection and validation order. For prose-only changes, select the relevant documentation or formatting checks. Validate tooling and build configuration changes through the affected workflows. Changes to published C# examples require documentation-suite validation; public API usage changes also require API usage validation.
 
 ## Agent skills
 

@@ -240,14 +240,21 @@ var cached = algorithm with
 };
 ```
 
-Where counting sits relative to the cache decides what the counter measures:
+Select the outer cache configuration to count evaluation requests and its child evaluator to count actual problem evaluations:
 
 ```csharp
-new CachingEvaluator<...>(problemEvaluator, keySelector).CountCandidates(out var requests) // cache hits count
-new CachingEvaluator<...>(problemEvaluator.CountCandidates(out var solves), keySelector)   // cache hits do not count
+var problemEvaluator = new ProblemEvaluator<RealVector>();
+var cache = new CachingEvaluator<RealVector>(problemEvaluator);
+var requests = Aspect.CountCandidates(cache, out var requestCount);
+var solves = Aspect.CountCandidates(problemEvaluator, out var solveCount);
+
+var cached = algorithm with { Evaluator = cache };
+var run = cached.CreateRun(problem, random)
+    .AddAspect(requests)
+    .AddAspect(solves);
 ```
 
-The first counts evaluation requests, the second counts actual problem evaluations. Both are legitimate; documentation for a preset should state which one it chose.
+After the run, `requestCount` includes cache hits and `solveCount` excludes them. To include refinement comparisons, give `CheckedForImprovement` the same `cache` configuration. Counting selects an existing configuration; it does not return an evaluator that can be placed inside the cache.
 
 `LimitEvaluator` follows the same rule, and there the choice decides when a run stops rather than what a number reads:
 
@@ -258,15 +265,19 @@ new CachingEvaluator<...>(problemEvaluator.LimitEvaluations(100_000), keySelecto
 
 With the limit outside, the budget means evaluation requests, so a refiner re-evaluating a candidate the cache already knows still spends from it. With the cache outside, the request never reaches the limit and the budget means actual problem evaluations.
 
-To attribute refinement effort separately instead of folding it into one counter, give the refiner its own counted evaluator:
+To attribute refinement effort separately instead of folding it into one counter, give the refiner its own evaluator and select that evaluator with an aspect:
 
 ```csharp
+var refinementEvaluator = new ProblemEvaluator<RealVector>();
+var refinementCounting = Aspect.CountCandidates(refinementEvaluator, out var refinementCount);
 var attributed = algorithm with
 {
-    Refiner = parameterFitting.CheckedForImprovement(
-        new ProblemEvaluator<...>().CountCandidates(out var refinementCounter))
+    Refiner = parameterFitting.CheckedForImprovement(refinementEvaluator)
 };
+var run = attributed.CreateRun(problem, random).AddAspect(refinementCounting);
 ```
+
+`refinementCount` measures the improvement check's comparison evaluations. The algorithm's own evaluator is a different configuration, so its calls do not contribute to that count.
 
 ### Refinement evaluation
 
@@ -366,7 +377,7 @@ General wrappers and compositions preserve the operator role contract. Additiona
 
 An observation wrapper can implement `IMutatorExecution` without implementing `IMutationStrengthControl`. An `is` check on the wrapped mutator would then hide the source's adaptation capability. Resolving the control separately lets an algorithm keep adapting the selected source while every mutation call passes through the observation wrapper. The control interface contains no mutation operation, so it supplies no alternative path for mutation calls to bypass observations.
 
-`EvolutionStrategy` projects this optional control during resolution and invokes mutation through the wrapped execution. Observations, counters and duration measurements installed with a resolution scope therefore preserve adaptation. Rebinding preserves the selected strength state while applying the requesting scope's observations to mutation calls.
+`EvolutionStrategy` projects this optional control during resolution and invokes mutation through the advised execution. Advice applied directly to the selected Gaussian configuration preserves access to its raw strength control. Rebinding preserves that selected state while applying the requesting scope's observations to mutation calls. Additional configured wrappers can still hide the control, as described below.
 
 An algorithm author can request a control through its typed scope without supplying factory wiring:
 
@@ -377,6 +388,16 @@ var mutator = typed.Resolve(Mutator, out IMutationStrengthControl? strength);
 Use `mutator` for mutation and `strength`, when non-null, to read or update the selected execution's strength.
 
 An explicitly configured wrapper is a separate selected configuration. For example, assigning `PipelineMutator.Create(gaussian)` to `EvolutionStrategy.Mutator` exposes the pipeline's ordinary mutation role, so that configuration has no strength adaptation. A custom configured wrapper must deliberately expose `IMutationStrengthControl` if its own mutation behavior supports that control; the resolver does not search its children for additional capabilities.
+
+### Known capability loss
+
+::: warning Known bug: wrapping can change algorithm control
+Wrappers preserve the ordinary operator role but can drop an additional capability that an algorithm needs. If `EvolutionStrategy` can no longer resolve `IMutationStrengthControl`, it silently stops adapting mutation strength. This is a correctness bug, even when the wrapper only inspects or names an operator.
+
+For example, `gaussian.Named("exploration")` forwards its child's execution. With no child advice, that execution exposes the Gaussian strength control. Counting or observing the Gaussian child makes the named wrapper forward an advised execution that may lack the control. A broad mutator pointcut can trigger the same loss. Selecting only the named boundary avoids this particular child-advice case; it does not solve capability preservation for wrappers in general.
+
+Until this is addressed, check which configuration the algorithm uses for control resolution and which capabilities its raw execution exposes. A pipeline or another configured wrapper may hide the capability even without inspection. Adding inspection must not be assumed to preserve algorithm behavior across such wrapper chains.
+:::
 
 ## Randomness and execution nodes
 
@@ -393,3 +414,31 @@ Use the role specific `Wrapping*` base when a composition coordinates one child 
 Derive directly from the unprefixed role base when a composition coordinates different roles or needs a custom execution structure. `TransformedCreator` and `TransformedCrossover` follow this path because each coordinates both a source operator and a mutator.
 
 The authored execution node holds resolved child bindings and the prepared execution state needed for its context. Persistent mutable state is prepared once and survives rebuilding those bindings. The reusable configuration owns parameters and child configurations.
+
+### A complete stateful composition
+
+This `RoundRobinMutator` sends each complete batch to the next child in a fixed order. Unlike weighted selection, it remembers which child should run next. Its cursor advances only after a successful child call, including a successful empty batch.
+
+Use these imports in a C# project with implicit system usings enabled:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-imports{csharp}
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-type{csharp}
+
+The constructor retains child configurations through the multi base, which snapshots their collection. `CreateCompositeFactory` validates that collection and allocates `ExecutionState` once. The returned factory receives the current child executions from the base and builds a node around the same cursor. Allocating `ExecutionState` inside that returned factory would reset the cursor whenever another observation context binds the composition.
+
+The execution retains contextual child references through `MultiMutatorExecution`; it keeps only the cursor in shared state. `offspring` is local to one invocation. This example expects sequential calls: sharing the state does not serialize concurrent mutation operations.
+
+#### Add inspection without restarting the sequence
+
+Two distinct no-change mutators make the selection order visible through counters without changing candidate values:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-usage{csharp}
+
+`firstCalls.CurrentCount` is zero and `secondCalls.CurrentCount` is one. The observed binding resumes at the second child; the existing binding retains its unobserved children. Both bindings advance the same cursor because `With` shares prepared state.
+
+An independent root prepares a fresh cursor, even when it resolves the same configuration object:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-independent{csharp}
+
+`independentFirstCalls.CurrentCount` is one. A child scope instead follows ancestor reuse: it does not reset state already owned by its parent. See [Execution resolution](/contributing/architecture/execution-resolution#state-and-construction) for those selection rules.

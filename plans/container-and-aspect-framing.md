@@ -14,6 +14,23 @@ Deferred feature proposals require their own design review. The [execution-resol
 
 The dated review records and original scope examples below retain their checkpoint terminology and commit identifiers. Later decisions supersede their cache, failure, wrapper-recipe, module-ordering and internal-composition mechanisms; they are historical evidence rather than pending implementation instructions.
 
+## Developer-experience follow-up, 2026-10-15
+
+The whole-branch review against `origin/dev` identified documentation migration gaps and a capability-loss case. The user confirmed that wrappers hiding algorithm-facing controls are a known correctness bug and requested documentation and backlog tracking, not a resolver fix in this package.
+
+- The [capability-preservation backlog item](developer-backlog.md#still-not-taken-care-of) records the general wrapper problem and the named-Gaussian/child-inspection reproduction. Raw-control projection protects advice directly on the selected configuration but does not solve capability propagation through configured wrappers. A general solution remains unresolved.
+- Repaired the composition guide's removed counting-wrapper examples and the operator-writing guide's removed static wrapper bridge. The guides explain the current separation between configured compositions and runtime advice.
+- Added complete stateful-composition and custom-advice walkthroughs. Their source regions live in the dedicated documentation test project and are included directly in the guides, so these examples are compiled and exercised rather than copied into an independent Markdown version.
+- Repository-wide documentation-example compilation remains follow-up work. These two source imports do not establish that all existing code fences compile or run.
+
+This follow-up changes documentation and executable authoring examples; it does not select or implement a capability-preservation mechanism. Earlier review and validation records describe their own checkpoints.
+
+Initial validation before the project split: all 210 API usage specs passed, including the three new walkthrough cases. The documentation build and changed-text Prettier checks passed. Whitespace and style verification for the new C# files and analyzer verification at error severity passed; the format tools reported workspace-loading warnings. No library implementation or existing test assertions changed.
+
+The user subsequently chose `HeuristicLib.Tests.Docs` as the owner of published examples. The three walkthrough cases live there under `Extending`, retaining their implementations, source-region names and assertions. The new project references only the core library and supplies no global library imports. It is included in the solution, so the existing solution build/test CI discovers it; the documentation build still consumes source directly. Independent API usage specs remain in their existing project. Broader example adoption remains in the backlog, with placement no longer an unresolved decision.
+
+Validation after the project split: `dotnet restore` and `dotnet build --configuration Release --no-restore` pass; the Release build reports 78 existing warnings and zero errors. `dotnet test --project test/HeuristicLib.Tests.Docs/HeuristicLib.Tests.Docs.csproj --configuration Release --no-restore --no-build` passes all three documentation cases. `dotnet test --solution ./HEAL.HeuristicLib.slnx --configuration Release --no-restore --no-build --max-parallel-test-modules 1` discovers all five test projects and passes all 3,010 tests without failures or skips. The documentation build and changed-text/project Prettier checks pass, as do scoped whitespace, style and error-severity analyzer checks for the moved C# files. Format tools report workspace-loading warnings. Only the examples' namespaces changed; a source comparison confirmed their implementations and assertions are identical. The existing Git index is preserved.
+
 ## Implementation history
 
 The dated records below describe the original review checkpoints. The seventeen migration checkpoints after `aa72a5a7` were subsequently consolidated as `85c1b24f`; their old commit IDs and intermediate build/review states are historical context, not current branch status. M2n was reviewed and committed as `bea3e60d` before the squash. Tree equality and the unchanged Git index were verified during history cleanup. No further migration or squash is pending.

@@ -63,7 +63,9 @@ The contributor guide covers [operator implementation internals](/contributing/a
 
 For a wrapping operator, override the protected `CreateWrapperFactory` hook and return `WrapperExecutionFactory<TExecution>`; for a multi operator, override `CreateCompositeFactory` and return `CompositeExecutionFactory<TExecution>`. The execution type is the role interface shared by the children and result. Prepare counters or caches in that hook, then return a factory that receives the resolved child or ordered child array. The base resolves those children for each context. Keep persistent data outside the returned delegate so a child observation does not reset it.
 
-The wrapping base also exposes a static `CreateWrapperFactory(wrapper)` bridge for callers that supply an already resolved child, including aspect advice. The bridge invokes the protected preparation hook, so derived authors implement one construction path.
+Configured compositions use these protected hooks. Advice instead derives from a role-specific base such as `MutatorAdvice<TCandidate>` and wraps the execution supplied to its public `CreateWrapperFactory` method. See [Write custom advice](/guide/extending/writing-advice) for a complete example.
+
+The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) implements a complete round-robin mutator and follows its cursor through a new inspection context and an independent root execution.
 
 ## Test the contract
 

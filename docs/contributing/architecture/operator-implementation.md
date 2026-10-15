@@ -160,7 +160,7 @@ Some specialized operators expose a configured starting value and a mutable curr
 
 The same mutator configuration can therefore be reused for independent runs without one run changing another run's starting strength. This is a specialized contract, not a general convention that operator configuration properties become mutable on execution nodes.
 
-Checking the wrapped mutator with `is IMutationStrengthControl` is insufficient: an observation wrapper can implement the mutation role without implementing the source's additional control interface. Resolve the control separately so installing an observer does not disable adaptation, and keep mutation calls on the wrapped execution. See [Why controls are resolved separately](/contributing/architecture/execution-resolution#why-controls-are-resolved-separately) for binding identity and wrapper boundaries.
+Checking the wrapped mutator with `is IMutationStrengthControl` is insufficient: an observation wrapper can implement the mutation role without implementing the source's additional control interface. Resolve the control separately from the selected configuration's raw execution, and keep mutation calls on the advised execution. This protects advice directly on that source; configured wrappers can still hide child controls, a [known correctness bug](/guide/extending/operator-composition#known-capability-loss). See [Controls, failures and lifetime](/contributing/architecture/execution-resolution#controls-failures-and-lifetime) for the current projection boundary.
 
 ## Wrapping and multi operators
 

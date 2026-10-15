@@ -56,6 +56,8 @@ Retained selection uses the internal `CreateChildState` and `WithState` operatio
 
 Control projection reads the raw execution after the entire advised chain succeeds. Invoke operations through the returned advised execution. Advice need not implement the source's control interfaces. A configured wrapper exposes its own controls; projection does not search its children.
 
+This leaves a known correctness bug: a configured wrapper can hide a child capability that its algorithm needs. Even a named forwarding wrapper can lose the child's control when child advice changes the forwarded execution type. See [Known capability loss](/guide/extending/operator-composition#known-capability-loss) for the effect on mutation-strength adaptation.
+
 Failed preparation or construction is not stored as a successful result and can be retried. Completed factories remain prepared when a later contextual binding fails. Recursive construction is detected across a root state and all its children. `TryResolve` converts `InvalidOperationException` to a reason; other exceptions propagate.
 
 Advice factories are weakly keyed by advice in the owning state. A long-lived aspect does not retain discarded fresh states, and a long-lived state does not retain discarded advice. A live deferred execution can retain its construction scope and the state and aspects it still needs. Resolution itself promises neither disposal nor concurrent access.
