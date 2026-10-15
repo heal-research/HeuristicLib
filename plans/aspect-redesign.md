@@ -1,6 +1,6 @@
 # Aspect redesign
 
-Status: implemented and validated, 2026-10-14. This plan supersedes the aspect, advice and recipe parts of the [execution-resolution redesign](execution-resolution-redesign.md). Its state, scope, Cycle and budget-placement decisions remain valid.
+Status: implemented and validated, 2026-10-14; committed as `7db6e6df` (`Redesign aspects around pointcuts and role advice`). This plan supersedes the aspect, advice and recipe parts of the [execution-resolution redesign](execution-resolution-redesign.md). Its state, scope, Cycle and budget-placement decisions remain valid. The [integration audit](execution-resolution-redesign.md#step-4-integration-audit-2026-10-15), documentation repairs and [architecture/authoring review](execution-resolution-redesign.md#step-5-architecture-and-authoring-review-2026-10-15) are complete in the working tree, pending user review. Final whole-solution validation passes all 2,993 tests. Performance measurement is explicitly deferred by the user.
 
 ## Goal
 
@@ -130,4 +130,4 @@ The accepted first draft replaced types in place and established the mutator and
 - [x] [Execution resolution](../docs/contributing/architecture/execution-resolution.md), the analyzer architecture page and the user guides on observability and operator budgets.
 - [x] API usage specs, samples and tests that use `AspectBuilder`, recipes or the instrumentation operators.
 
-The [migration report](aspect-redesign-migration-report.md) lists the file changes, implementation choices, test removals and validation results.
+Commit `7db6e6df` contains the completed migration, including instrumentation, budgets, analyzers, API usage specs, tests and published documentation. The former migration-report link was removed because its target is absent from the committed tree. The [execution-resolution plan](execution-resolution-redesign.md#step-5-architecture-and-authoring-review-2026-10-15) records the completed integration/architecture reviews and final whole-solution validation.

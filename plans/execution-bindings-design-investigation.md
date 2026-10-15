@@ -1,6 +1,6 @@
 # Execution bindings: design investigation
 
-Status: design comparison recorded on 2026-09-27. Candidate 1, the typed factory, is now the selected option-C direction in the [design-work plan](execution-bindings-and-shared-state.md), superseding the old option-A decision. The detailed public API and migration are not approved or implemented. Read alongside the [scope cases](container-and-aspect-framing.md#package-4c-scope-examples-for-discussion). Full authoring sketches have not been compiled; a standalone compiler check verified return-lambda target typing for the typed delegate, including a generic instance. Performance and lifecycle claims require the later proofs.
+Status: historical design comparison recorded on 2026-09-27, reconciled 2026-10-15. Candidate 1 was selected, implemented and validated in the [foundation work](execution-bindings-and-shared-state.md); the subsequent resolver and aspect redesigns are committed through `7db6e6df`. The sketches and follow-up directions below retain their investigation-stage terminology and approval status, not current migration instructions. Read alongside the historical [scope cases](container-and-aspect-framing.md#package-4c-scope-examples-for-discussion). Only the standalone return-lambda target-typing check applied to these exploratory sketches; later implementation evidence belongs to the foundation and redesign records. The [execution-resolution redesign](execution-resolution-redesign.md#sequence) owns remaining acceptance work.
 
 Follow-up direction: design candidate 1 concretely, particularly preserving ordinary stateless/stateful leaf authoring. Review non-terminal operator and algorithm contracts and justify any child-dependent initialization facility. This comparison remains supporting evidence; the linked design-work plan owns the active sequence and the later migration review.
 
@@ -25,25 +25,25 @@ That cooperation can be hidden completely from ordinary configuration users and 
 - [CycleAlgorithm](../src/HeuristicLib/Algorithms/Composition/CycleAlgorithm.cs) retains its creating scope and, in reuse mode, a cache of child execution nodes. [PipelineAlgorithm](../src/HeuristicLib/Algorithms/Composition/PipelineAlgorithm.cs) also retains a scope for delayed construction.
 - [AlgorithmRun](../src/HeuristicLib/Execution/Runs/AlgorithmRun.cs) retains one live async enumerator across pauses. [IterativeAlgorithm](../src/HeuristicLib/Algorithms/BaseClasses/IterativeAlgorithm.cs) keeps progress, iteration position and dependencies in that enumeration.
 - [OperatorDurationBudgetAlgorithm](../src/HeuristicLib/Algorithms/Control/OperatorDurationBudgetAlgorithm.cs) allocates its accumulator during instance creation. [AlgorithmDurationBudgetAlgorithm](../src/HeuristicLib/Algorithms/Control/AlgorithmDurationBudgetAlgorithm.cs) instead keeps its duration inside an invocation's iterator. These require different lifetimes.
-- [EvolutionStrategy](../src/HeuristicLib/Algorithms/Evolutionary/EvolutionStrategy.cs) tests its resolved mutator for `IAdaptableMutationStrengthExecution`. The current [observation wrapper](../src/HeuristicLib/Analysis/Tracing/Observations/MutatorObservation.cs) implements only the ordinary mutator interface, already hiding that capability.
+- [EvolutionStrategy](../src/HeuristicLib/Algorithms/Evolutionary/EvolutionStrategy.cs) tests its resolved mutator for `IAdaptableMutationStrengthExecution`. The current [observation wrapper](../src/HeuristicLib/Instrumentation/Mutators/MutatorObservation.cs) implements only the ordinary mutator interface, already hiding that capability.
 
 ## Common ownership model
 
 All three candidates need more than a configuration-to-state dictionary. The following are internal descriptive terms, not proposed public interfaces.
 
-| Responsibility | Proposed owner and lifetime |
-| --- | --- |
-| Configuration settings | Existing reusable configuration; no mutable run data |
-| Logical source identity | A node selected by configuration reference within a logical resolution domain; compatible execution signature checked |
-| Persistent mutable data | That logical node; initialization is independent of the number of bindings |
-| Derived configuration references | Prepared logical construction data, stable across rebinding |
-| Selected child identities | The logical node's dependency records, including selected ancestor nodes |
-| Typed child references | One binding, constructed for its observation context |
-| Deferred child reuse cache | Logical child identities/domains, not decorated execution objects |
-| Advice state | A separately owned advice node associated with a declaration identity and logical source |
-| Analyzer accumulator | Caller-owned analyzer, which may aggregate several independent source states |
-| Progress, RNG forks, local timers, enumerator | The invocation, retaining the binding with which it started |
-| Resource ownership | Existing explicit persistent or invocation owner; binding replacement adds no disposal contract |
+| Responsibility                                | Proposed owner and lifetime                                                                                           |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Configuration settings                        | Existing reusable configuration; no mutable run data                                                                  |
+| Logical source identity                       | A node selected by configuration reference within a logical resolution domain; compatible execution signature checked |
+| Persistent mutable data                       | That logical node; initialization is independent of the number of bindings                                            |
+| Derived configuration references              | Prepared logical construction data, stable across rebinding                                                           |
+| Selected child identities                     | The logical node's dependency records, including selected ancestor nodes                                              |
+| Typed child references                        | One binding, constructed for its observation context                                                                  |
+| Deferred child reuse cache                    | Logical child identities/domains, not decorated execution objects                                                     |
+| Advice state                                  | A separately owned advice node associated with a declaration identity and logical source                              |
+| Analyzer accumulator                          | Caller-owned analyzer, which may aggregate several independent source states                                          |
+| Progress, RNG forks, local timers, enumerator | The invocation, retaining the binding with which it started                                                           |
+| Resource ownership                            | Existing explicit persistent or invocation owner; binding replacement adds no disposal contract                       |
 
 The resolver needs two internal relationships: where logical state is selected, and which declarations affect a binding. A scope passed explicitly to construction can carry both internally. This does not require ambient state or a second public scope API, but it is a substantial change to what `ResolutionScope` implements.
 
@@ -308,19 +308,19 @@ Binding disposal must not dispose shared state. Existing explicit resource/itera
 
 ## Acceptance and cost assessment
 
-| Case | Necessary condition; current confidence |
-| --- | --- |
-| Siblings without ancestor state | Separate logical domains; design-level pass |
-| Three outer and two inner calls to M | One M node, two chains, shared A accumulator; design-level pass |
-| Reused G holding M | Reconstruct G's typed child calls using its recorded M identity; design-level pass for cooperating factories |
-| Child first, parent later | Pin existing nodes and accept the dependency-collision policy; decision required |
-| Deferred Cycle/Pipeline | Separate logical domains from observation contexts and replace decorated-instance caches; needs lifecycle proof |
-| Stateful wrapper and consumer-defined role | Generic construction machinery plus handwritten typed role operations; authoring sketch provided, not compiled; child-dependent initialization needs the extended factory proof |
-| Paused enumeration | Preserve original live binding; no live transfer promised |
-| Failed preparation/binding/advice | Explicit fault/publication policy; needs focused proof |
-| No matching observation/repeated resolution | No callbacks or duplicate initialization; binding cache, conservative compatible reuse |
-| Rich custom capability | Typed controls or preserving facade required; not solved by the core alone |
-| Cheap calls and short cycles | No measured result yet |
+| Case                                        | Necessary condition; current confidence                                                                                                                                         |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Siblings without ancestor state             | Separate logical domains; design-level pass                                                                                                                                     |
+| Three outer and two inner calls to M        | One M node, two chains, shared A accumulator; design-level pass                                                                                                                 |
+| Reused G holding M                          | Reconstruct G's typed child calls using its recorded M identity; design-level pass for cooperating factories                                                                    |
+| Child first, parent later                   | Pin existing nodes and accept the dependency-collision policy; decision required                                                                                                |
+| Deferred Cycle/Pipeline                     | Separate logical domains from observation contexts and replace decorated-instance caches; needs lifecycle proof                                                                 |
+| Stateful wrapper and consumer-defined role  | Generic construction machinery plus handwritten typed role operations; authoring sketch provided, not compiled; child-dependent initialization needs the extended factory proof |
+| Paused enumeration                          | Preserve original live binding; no live transfer promised                                                                                                                       |
+| Failed preparation/binding/advice           | Explicit fault/publication policy; needs focused proof                                                                                                                          |
+| No matching observation/repeated resolution | No callbacks or duplicate initialization; binding cache, conservative compatible reuse                                                                                          |
+| Rich custom capability                      | Typed controls or preserving facade required; not solved by the core alone                                                                                                      |
+| Cheap calls and short cycles                | No measured result yet                                                                                                                                                          |
 
 Expected cost categories, not measured results: logical-node/dependency records; one prepared factory or persistent core per logical node; a binding per necessary observation context; wrapper instances per applied chain; and separate deferred-domain/binding caches. Data-holder operation code performs ordinary typed child calls with an additional state reference. Persistent-core and callback variants can add calls/delegates; inlining and actual cost are unproven.
 

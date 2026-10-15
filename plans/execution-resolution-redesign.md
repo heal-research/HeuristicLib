@@ -1,8 +1,8 @@
 # Execution-resolution redesign
 
-The aspect, advice and recipe parts of this plan are superseded by the [aspect redesign](aspect-redesign.md), decided on 2026-10-14 and not yet implemented. The working tree still implements them as recorded here. State, scope, Cycle and budget-placement decisions remain valid.
+The [aspect redesign](aspect-redesign.md), implemented in `7db6e6df` on 2026-10-14, replaces this plan's earlier aspect builders, wrapper recipes and advice declarations with pointcut/advice pairs and per-role advice bases. State, scope, Cycle and budget-placement decisions remain valid. The design summary below reflects the final implementation; dated review records retain their original terminology and validation results.
 
-Status: final design, 2026-10-13. Step 2 is accepted and committed at `103a2b0f`. Step 3 is implemented in the working tree, uncommitted, pending review; steps 4–5 remain deferred. This is the only active plan for replacing the execution resolver. It replaces the candidate recorded in `68ad810c` with a smaller design; the [differences](#changes-from-the-earlier-candidate) are listed below. Decided on 2026-10-13: the resolver has no node cache; advice receives the execution it wraps directly; algorithms create no operators of their own; `Aspect` replaces `IExecutionModule`; analyzers are aspects; behavior changes 1 to 7 are accepted; `Pointcut`, `Aspect`, `AspectBuilder` with `Install`, `Advice<TExecution>`, the wrapping bases' `CreateWrapperFactory` hook, `AspectFactory` and "advice chain" are the chosen terms. Review discussions are listed under Open questions; step 3 is implemented, uncommitted, pending review; steps 4–5 remain deferred. Typed advice, package 5 of [container and aspect framing](container-and-aspect-framing.md), stays on hold. [Execution bindings and shared state](execution-bindings-and-shared-state.md) and [execution factory design](execution-factory-design.md) record the production baseline, `c6957cbc`, and its history.
+Status, 2026-10-15: step 2 is committed at `103a2b0f`; step 3 and its resolver/state-policy follow-ups are committed through `4b5478f1`; the final aspect redesign and consumer/documentation migration are committed at `7db6e6df`. The [step 4 integration audit](#step-4-integration-audit-2026-10-15), documentation repairs and [step 5 architecture/authoring review](#step-5-architecture-and-authoring-review-2026-10-15) are complete in the working tree, pending user review. Final whole-solution validation passes all 2,993 tests. The user explicitly deferred performance measurement; it is no longer a completion prerequisite. [Execution bindings and shared state](execution-bindings-and-shared-state.md) and [execution factory design](execution-factory-design.md) preserve the pre-redesign foundation and its history, including baseline `c6957cbc`. General before/throwing/finally/around APIs and expanded algorithm-boundary semantics remain separate proposals; the per-role advice mechanism and existing instrumentation are implemented.
 
 ## Objective
 
@@ -12,9 +12,9 @@ HeuristicLib is alpha. Backward compatibility, preservation of existing implemen
 
 Keep ordinary typed operations, explicit dependencies, private state initialized once and immutable constructed child references. Do not introduce role registries, universal invocation, ambient operation contexts or compatibility shims.
 
-## Why production is complicated
+## Why the baseline was complicated
 
-The production resolver at `c6957cbc` spends about 810 lines in ten types (`ResolutionScope`, `ExecutionSharingScope`, `RetainedChildScope`, `ExecutionBindings`, `NodeConstruction`, `WrappedNodes`, `ExecutionPreparation`, `WrapperRegistration`, `PreparedWrapper`, `InternalComposition`). Most of it serves four mechanisms that this design makes unnecessary:
+The pre-redesign resolver at `c6957cbc` spends about 810 lines in ten types (`ResolutionScope`, `ExecutionSharingScope`, `RetainedChildScope`, `ExecutionBindings`, `NodeConstruction`, `WrappedNodes`, `ExecutionPreparation`, `WrapperRegistration`, `PreparedWrapper`, `InternalComposition`). Most of it serves four mechanisms removed by this design:
 
 - **Keyed child retention** keeps a child's state and declarations under a key, then rebuilds a scope for each requesting context. It exists because every child scope also creates new state: a budget adding wrappers, or Cycle keeping per-algorithm state across activations, had to keep that state alive somewhere.
 - **Per-context node caches** with fault records and unchanged-parent lookup exist to return the same node object again. Shared state does not need that.
@@ -26,10 +26,10 @@ The production resolver at `c6957cbc` spends about 810 lines in ten types (`Reso
 A resolution scope combines its **state**, which decides which state each configuration uses, with an ordered collection of **aspects**, which decides which advice its executions receive.
 
 - **State.** The scope's state keeps the factory each configuration created, and with it the execution state that factory captured. A configuration already held by a parent scope's state uses that factory; otherwise the factory is created once. A factory resolves its own dependencies **in the state that holds it**, with the aspect of the scope that asked. This replaces dependency pinning: an earlier or later selection elsewhere cannot change which state a composite uses, while new advice still reaches its children.
-- **Aspect.** An aspect pairs a `Pointcut` with advice for the configurations it selects. An aspect declares any number of such pairs and may install other aspects. A scope holds an immutable, ordered collection of zero, one or more actual aspects; it creates no synthetic empty or combined aspect.
-- **Advice.** Advice wraps an execution that has already been built. It is prepared once for each aspect and target and then applied to the target's execution in every construction. Advice never resolves its target, so nothing loops and nothing needs redirecting. The advice applied to one configuration in one scope forms its **advice chain**.
+- **Aspect.** An aspect stores ordered `(Pointcut, Advice)` pairs. It has no builder, lazy declaration or child aspects. A scope holds its own immutable aspect list and its parent scope; it creates no synthetic empty or combined aspect.
+- **Advice.** A role-specific advice class prepares a `WrapperExecutionFactory<TExecution>` once per advice instance, target configuration and owner state. That factory wraps the already-built execution on every construction. Advice never resolves its target, so nothing loops and nothing needs redirecting. The advice applied to one configuration in one scope forms its **advice chain**.
 
-Every resolution constructs new nodes; nothing caches them. Nodes are cheap views over shared state, in the manner of a flyweight.
+Every resolution invokes the prepared factory and applies advice again; the resolver caches no execution nodes. A leaf factory may return its prepared node, while composites construct contextual bindings over shared state.
 
 ### Deriving scopes
 
@@ -39,34 +39,19 @@ Every resolution constructs new nodes; nothing caches them. Nodes are cheap view
 | `scope.CreateChildScope(aspect)` | New state under the current one | Current plus the given | Fresh stages, activations, contenders         |
 | `scope.With(aspect)`             | Same state                      | Current plus the given | Adding advice without new state, e.g. budgets |
 
-Overloads taking `Action<AspectBuilder>` remain for the first two.
+All three operations accept zero or several aspects in supplied order. The `Action<AspectBuilder>` overloads were removed by the aspect redesign.
 
-### Core sketch
+### Core responsibilities
 
-```csharp
-(TExecution Raw, TExecution Advised) Construct<TConfiguration, TExecution>(
-    TConfiguration configuration,
-    Func<TConfiguration, ExecutionFactory<TExecution>> prepareFactory,
-    Func<IConfigurationNode, Advice<TExecution>> prepareAdvice)
-{
-    var (factory, owner) = state.GetOrAdd(configuration, prepareFactory);
-    var raw = factory(new ResolutionScope(owner, aspects, adviceDeclarations));
-    var advised = raw;
-    foreach (var declaration in adviceDeclarations.Where(item => item.Matches(configuration)))
-        advised = owner.GetOrAddAdvice(declaration, configuration, prepareAdvice)(advised);
-    return (raw, advised);
-}
-```
+The private `State` retains successful execution factories by configuration reference and wrapper factories by weak advice identity plus target reference. It reuses ancestor factories and constructs dependencies in the factory owner's state. A root and its children share recursion detection. No node cache, dependency-pinning table, resolver-owned retained child slots or failures are stored. See [ResolutionScope](../src/HeuristicLib/Execution/ResolutionScope.cs) for the implemented construction path.
 
-The private `State` retains successful factories by configuration reference and advice by weak declaration identity plus target reference. It reuses ancestor factories and constructs dependencies in the factory owner's state. A root and its children share recursion detection. No node cache, dependency-pinning table, retained child slots or failures are stored.
+Operator and algorithm resolution extensions supply the `createExecutionFactory` and `createWrapperFactory` callbacks. The latter casts to the role's advice base and calls its generic `CreateWrapperFactory` with the selected configuration. Consumer-defined roles supply the same pair; no `ExecutionRole` registry is required. Configured wrapping bases keep their protected `CreateWrapperFactory` hook; their former public static advice bridges and the runtime `Advice<TExecution>` delegate are removed. Ordinary `ExecutionFactory`, `WrapperExecutionFactory` and `CompositeExecutionFactory` contracts remain.
 
-Operator and algorithm resolution extensions supply typed factory preparation callbacks and typed advice preparation functions. Custom execution contracts supply the same pair; no `ExecutionRole` classes or registry are required. A wrapping base's one protected `CreateWrapperFactory` hook returns `WrapperExecutionFactory<TExecution>`; the resolution extension calls the base's public static `CreateWrapperFactory(wrapper)` bridge and obtains `Advice<TExecution>` from the returned constructor's `Invoke` method. Ordinary `ExecutionFactory` and `CompositeExecutionFactory` contracts stay unchanged.
-
-A scope snapshots its actual aspect inputs. Inputs in one call form one layer in supplied order; a later `With` layer precedes existing layers. Each aspect caches one ordered declaration snapshot. Scope collection expands compositions depth-first at their installation position; the first occurrence of an aspect determines its position, with reference-based sharing and cycle deduplication. These are declaration snapshots, not execution-node caches.
+Inputs in one scope call form one layer in supplied order; a later layer precedes inherited layers. The scope walks each layer's aspect pairs and applies each advice instance once, at its first occurrence by reference. Earlier advice wraps closer to the source, so entry runs in reverse application order and successful callbacks run in application order. There are no declaration snapshots, recursive aspect compositions or origin-priority collections. Traces include their clocks' advice before their own observations, and shared advice is applied once.
 
 ## Aspects and advice
 
-Superseded by the [aspect redesign](aspect-redesign.md): advice wraps executions through per-role advice bases instead of recipes producing wrapper configurations, an aspect stores pointcut/advice pairs without compositions, and the scope holds one flat list. Ordering and the weak lifetime of per-target advice state are kept there.
+The [aspect redesign](aspect-redesign.md) owns the final pointcut/advice pairing, per-role advice bases, ordering and weak lifetime of per-target advice state. It replaces recipes producing wrapper configurations and recursive aspect compositions. Each scope stores its own aspect list and inherits its parent's layers.
 
 ## Parameter logic belongs to the algorithm
 
@@ -87,73 +72,35 @@ The developer guidelines state the rule; nothing enforces it. An algorithm that 
 
 ## Aspects replace execution modules
 
-Decided on 2026-10-13: `IExecutionModule` is removed. A module does three things today, and `Aspect` covers each:
+Decided on 2026-10-13 and finalized by the aspect redesign: `IExecutionModule` and the `IAnalyzer` marker are removed. `Aspect` is an abstract class storing ordered pointcut/advice pairs; derived constructors assign `Advices`. There is no `Declare`, `Install`, builder callback or nested aspect installation.
 
-- **Grouping.** A module bundles several declarations, such as an analyzer observing several boundaries; an aspect is a composite.
-- **Installing once.** A module is installed at most once per builder, by reference; `Install(aspect)` does the same.
-- **Outer placement.** A module's wrappers sit outside configuration-level wrappers, so observers see the fully configured operator and duration budgets do not measure observer callbacks. `Install(aspect)` places an aspect outside the advice declared with `Install`.
+**Analyzers are aspects** that also own results. `AccumulatingAnalyzer` and `TraceAnalyzer` derive from `Aspect`. A trace initializes its recording storage before creating callbacks, then concatenates its clocks' pairs and observation pairs. Shared clocks retain the same advice instances, so resolution deduplicates them by reference. The analyzer remains the unit added to a run rather than exposing a separate installable object. See [TraceAnalyzer](../src/HeuristicLib/Analysis/Tracing/TraceAnalyzer.cs) and [analyzer architecture](../docs/contributing/architecture/analyzers.md).
 
-A module that depends on another, such as a trace reading its clocks, becomes an aspect that installs the clock aspect; installing once keeps one clock for several traces. Runs attach aspects with one `Attach(aspect)`.
+Configured wrappers are part of the raw execution graph. Budget-local aspect layers wrap closer to their targets than inherited observations, keeping observer work outside duration measurements. In one layer, supplied order determines placement; no direct-versus-installed origin priority remains.
 
-**Analyzers are aspects**, decided on 2026-10-13. An analyzer is an aspect that also owns results: it declares one or several pieces of advice, observing one or more operators, and records what they report. This follows AOP, where aspects may hold state, and keeps the earlier decision that an analyzer is the installable unit rather than an object exposing one. The `IAnalyzer` marker carries no behavior and is removed; `AccumulatingAnalyzer` and `TraceAnalyzer` derive from `Aspect`:
-
-```csharp
-public sealed class TraceAnalyzer<TResult> : Aspect
-{
-    protected override void Declare(AspectBuilder aspect)
-    {
-        foreach (var clock in clocks)
-            aspect.Install(clock);
-        aspect.Observe(boundary, observation => Record(observation));
-    }
-
-    public TResult Result => ...;
-}
-```
-
-`Aspect` is therefore an abstract class. A subclass declares its advice in `Declare`, which runs once per aspect; the result is kept, so advice identity stays stable wherever the aspect is installed. `Aspect.Create(declare)` returns an aspect backed by that callback, for budgets and ad-hoc use.
-
-**Per-trial aspects** use `AspectFactory<TInput, TAspect>`, decided on 2026-10-13. It replaces `TrialModule` and lives in the execution namespace: the generic-result factory derives from `AspectFactory<TInput>`, which bounds experiment dictionary keys; the factory depends only on its input, while `ExperimentRun.AttachPerTrial`, `GetAttached` and `TrialAspect` keep everything trial-specific. It stays a named object because `GetAttached` finds results by the factory's reference. `TrialAnalyzer.Create` becomes redundant and is removed.
-
-```csharp
-var quality = AspectFactory.Create((GeneticAlgorithm<RealVector> trial) =>
-    trial.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
-var run = algorithm.Repeat(2).CreateRun(problem, random).AttachPerTrial(quality);
-await run.CompleteAsync();
-foreach (var (trial, analyzer) in run.GetAttached(quality)) ...
-```
+**Per-trial aspects** use `AspectFactory<TInput, TAspect>`, derived from `AspectFactory<TInput>` for bounded experiment dictionary keys. The named factory replaces `TrialModule` and is compared by reference when retrieving results. `AlgorithmRun.AddAspect`, `ExperimentRun.AddAspectPerTrial` and `GetAspectPerTrial` are the final public names; `TrialAspect` retains the trial/result association. Usage is documented in [experiments](../docs/guide/execution/experiments.md) and covered by [aspect factory specs](../test/HeuristicLib.Tests.ApiUsageSpecs/Execution/AspectFactorySpecs.cs).
 
 ## Authoring
 
 - **Leaf operators and algorithms:** unchanged. `ExecutionFactory<TExecution>(ResolutionScope scope)` keeps its current shape, and algorithms keep writing `scope =>`.
-- **Wrappers:** each wrapping base has one protected `CreateWrapperFactory` hook returning `WrapperExecutionFactory<TExecution>`. Concrete wrappers such as `CountingMutator` keep their bodies: `inner => new Execution<TRunSearchSpace, TRunProblem>(inner, Counter, Metric)`.
+- **Configured wrappers:** each wrapping base has one protected `CreateWrapperFactory` hook returning `WrapperExecutionFactory<TExecution>`. Behavior-changing wrappers such as caching and limits remain configurations. Counting, timing and observation are advice only.
 - **Composites:** multi bases and `CompositeExecutionFactory` are unchanged; composites are configured operators, not advice.
-- **Migrations:** the observing wrappers and Dynamic Racing's performance-tracking evaluator move onto their role's wrapping base. Algorithms get a wrapping base for algorithm observation. Module implementations become aspects.
+- **Advice:** each role has an advice base beside its interface. Observation, counting and timing implementations and their factories live in `Instrumentation`; analysis implementations derive from `Aspect`. Dynamic Racing's behavior-changing evaluator remains a configured wrapper.
 - **Generic bases shared across roles** remain [rejected](developer-backlog.md#typed-operator-invocation).
 
 ## How existing operators look
 
 - **Leaf operators** such as `SwapMutator`: unchanged. Leaf nodes stay the same object because their factory returns the node it prepared.
-- **Wrappers and composites** such as `CountingMutator` and `PipelineMutator`: unchanged apart from the hook's return type.
+- **Behavior-changing wrappers and composites** remain configured operators. The `Counting*` and `DurationMeasuring*` operator families and their `CountCalls`/`MeasureDuration` extensions are removed in favor of advice.
 - **Algorithms** such as the genetic algorithm: unchanged factories; GA, NSGA2 and ALPS apply their mutation rate in the iteration step instead of resolving `composedAs:`.
-- **Operator budgets** build their aspect once:
+- **Operator budgets** allocate an accumulator and use their `Counting` or `DurationMeasuring` value strategy to create advice during preparation. A reference pointcut pairs it with the observed operator; the returned execution factory adds the aspect with `scope.With` before resolving the inner algorithm. Rebinding preserves the accumulator and inner algorithm state while applying the requesting observations. See [operator budgets](aspect-redesign.md#operator-budgets).
 
-  ```csharp
-  var counter = new CountAccumulator();
-  var counting = Aspect.Create(aspect =>
-      aspect.Install(ObservedOperator, source => CountedOperatorFactory(source, counter)));
-  return scope => new OperatorBudgetAlgorithmExecution<...>(
-      scope.With(counting).Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
-  ```
-
-  Rebuilding a budget under a child scope with a new observer keeps the inner algorithm's state and the single declaration, and the observer sees the new calls.
-
-- **Cycle** defaults to `ChildScopePolicy.Fresh`, creating a child scope per activation. `Retained` keeps caller-owned child state per inner algorithm reference in its prepared factory; `Shared` resolves through its own construction scope. Retained views contain no aspects and receive the requesting aspects through `WithAspectsFrom` on each activation. Reconstructed nodes use the new context, while an original node retains its own.
-- **Configuring, running and analyzing** algorithms: unchanged. Users who wrote their own modules write aspects instead.
+- **Cycle** defaults to `ChildScopePolicy.Fresh`, creating a child scope per activation. Its prepared `ChildScopeSelector` keeps state by inner configuration reference for `Retained`; `Shared` uses the construction scope's state. Retained states keep no aspects. Internal `CreateChildState` and `WithState` apply each activation's requesting aspects; the former public `CreateChildScopeWithoutAspects` and `WithAspectsFrom` are removed. Reconstructed nodes use the new context, while an original node retains its own.
+- **Configuring, running and analyzing** algorithms use aspects and the `AddAspect`/per-trial APIs above. The final role migration includes observation, instrumentation, clocks, budgets and analyzers.
 
 ## Removed feature lines
 
-These are deleted with the redesign rather than migrated. Removing internal compositions does not depend on the new resolver and can be the first implementation package.
+These baseline feature lines were deleted rather than migrated. Internal compositions were removed independently in step 2; execution modules were replaced in step 3. The detailed names below identify the removed baseline, not supported APIs or outstanding deletions.
 
 Internal compositions:
 
@@ -171,46 +118,46 @@ Execution modules:
 - Eight test files that implement or use modules.
 - Documentation: the glossary entry, [analyzers](../docs/contributing/architecture/analyzers.md), [execution nodes](../docs/contributing/architecture/execution-nodes.md), [layering](../docs/contributing/architecture/layering.md), and the user guides on [experiments](../docs/guide/execution/experiments.md) and [observability and analysis](../docs/guide/execution/observability-and-analysis.md).
 
-## Where today's parts go
+## Where the baseline parts went
 
 - `ExecutionSharingScope` → the scope's private `State`, without retained children, composition tables, markers and weak declaring parents.
 - `ExecutionPreparation`, `PreparedWrapper`, `NodeConstruction` → removed. Factories and advice are stored directly; failures are not stored.
-- `ExecutionBindings` → removed. Ordering moves into `Aspect`; construction moves into `ResolutionScope`.
-- `RetainedChildScope`, `GetOrCreateChildScope` → removed. Callers use their own scope, `With` or `CreateChildScope`; caller-owned retained state uses `CreateChildScopeWithoutAspects` and `WithAspectsFrom`. No keyed retention table is added to the resolver.
+- `ExecutionBindings` → removed. Construction and aspect-layer ordering belong to `ResolutionScope`.
+- `RetainedChildScope`, `GetOrCreateChildScope` → removed. Callers use their own scope, `With` or `CreateChildScope`; retained child state belongs to a prepared `ChildScopeSelector`, using internal `CreateChildState` and `WithState`. No keyed retention table is added to the resolver.
 - `WrappedNodes` → removed. Advice receives the execution it wraps as its argument.
-- `WrapperRegistration` → `Aspect`, an individual rule or a composition.
+- `WrapperRegistration` → an aspect's `(Pointcut, Advice)` pair; advice identity keys its prepared wrapper factory.
 - `InternalComposition`, `Resolve(..., composedAs)` → removed; algorithms apply parameter logic in their execution code.
 - `IExecutionModule`, `IAnalyzer` → `Aspect`; analyzers derive from it.
 - `TrialModule`, `TrialAnalyzer` → `AspectFactory<TInput, TAspect>`.
-- `ResolutionScopeBuilder` → `AspectBuilder`; `Wrap` → `Install`.
-- `WrapperExecutionFactory<TExecution>` remains the child-taking constructor returned by the protected `CreateWrapperFactory` hook; resolution adapts it to `Advice<TExecution>`.
+- `ResolutionScopeBuilder`, the intermediate `AspectBuilder`, `Wrap` and `Install` → removed. Aspects store pairs directly, and runs collect them through `AddAspect` and its per-trial APIs.
+- `WrapperExecutionFactory<TExecution>` remains the child-taking constructor returned by configured wrappers' protected hooks and per-role advice factories. The intermediate `Advice<TExecution>` delegate and public static wrapper bridges are removed.
 - Factory and advice preparation are gathered in role resolution extensions; standalone preparation-strategy classes are removed.
 - Construction frame → an ordinary `ResolutionScope`: the owner's state and the requester's aspect.
 
-The configuration-selection contract is unchanged; its public name is now `Pointcut` (formerly `NodeSelector`). `ExecutionFactory`, `CompositeExecutionFactory`, the configuration and execution marker interfaces, typed scopes (`For`) and `ExecutionSignature` are unchanged.
+Configuration selection remains reference/assignable-type matching with `And`/`Or`; its public name is `Pointcut` (formerly `NodeSelector`). Custom selection derives from `Pointcut<TConfiguration>` and overrides `Matches`; predicate constructors and convenience delegates are removed. `ExecutionFactory`, `CompositeExecutionFactory`, the configuration and execution marker interfaces, typed scopes (`For`) and `ExecutionSignature` retain their roles.
 
 ## Controls and type compatibility
 
 - Controls project from the raw node, while operations use the advised chain. Projection runs after construction succeeds; an absent capability stays absent.
-- A stored factory keeps the role of its first selection; delegate covariance turns compatibility into a type test. A later request for an incompatible role fails clearly, and so does a recipe result that is not a wrapper of the target's role.
-- Selector and recipe types remain independent; the checks sit at the erased role boundary, not at operation time.
+- A stored factory keeps the role of its first selection; delegate covariance turns compatibility into a type test. A later request for an incompatible role fails clearly.
+- `Aspect.Create` statically relates the pointcut's selected configuration type to the advice's configuration role. Role-specific resolution callbacks perform the remaining cast and run-type checks when preparing advice, not on each operation. Manually authored incompatible pairs fail during resolution; no recipe-result check remains.
 
 ## Failures
 
-| Failure                                           | Result                                                                     |
-| ------------------------------------------------- | -------------------------------------------------------------------------- |
-| Factory preparation, recipe or advice preparation | Propagates; nothing is stored, so a later resolution tries again.          |
-| Construction, including a selector predicate      | Propagates; nothing was published, so a later resolution constructs again. |
-| Recipe result not a wrapper of the target's role  | Fails when the advice is prepared.                                         |
-| Structural recursion                              | Detected by configuration across a root state and all its child states.    |
-| Control projection                                | Propagates; the constructed nodes are discarded.                           |
-| Operation or advice callback                      | Normal invocation failure; resolution is not involved.                     |
+| Failure                                          | Result                                                                       |
+| ------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Factory or advice preparation                    | Propagates; failed preparation is not stored, so a later resolution retries. |
+| Construction, including custom pointcut matching | Propagates; successful preparation remains available for a later binding.    |
+| Incompatible advice/configuration role           | Fails when the role callback prepares the wrapper factory.                   |
+| Structural recursion                             | Detected by configuration across a root state and all its child states.      |
+| Control projection                               | Propagates; the constructed nodes are discarded.                             |
+| Operation or advice callback                     | Normal invocation failure; resolution is not involved.                       |
 
 `TryResolve` converts `InvalidOperationException` into a reason and propagates other exception types. The resolver gives no disposal or concurrency guarantees.
 
 ## Behavior changes
 
-Each change follows from the design. The current tests that pin the old behavior are rewritten deliberately.
+These accepted changes were implemented with deliberate rewrites of tests pinning the old policies. The aspect redesign subsequently replaces the recipe-specific enforcement in change 5 with role advice bases.
 
 Decided on 2026-10-13: no node cache. Resolution runs once per run, or once per activation in a meta-algorithm, while operator execution dominates runtime. Shared state lives in the stored factories, so caching nodes would only preserve object identity and failure timing. Changes 1 to 7 are accepted.
 
@@ -218,7 +165,7 @@ Decided on 2026-10-13: no node cache. Resolution runs once per run, or once per 
 2. **Failures are not stored.** Before: preparation, wrapper and construction failures were stored and rethrown. After: a later resolution tries again. Affects R13 failure-timing assertions.
 3. **Cycle state modes.** The boolean reset option is replaced by `ChildScopePolicy`: `Fresh` (default) creates child-local state per activation; `Retained` keeps Cycle-owned child-local state per inner algorithm reference; `Shared` uses the Cycle's owning state, including sibling and direct uses of the same reference. All child states reuse ancestor-owned factories. Retained child state belongs to the prepared Cycle and receives the requesting aspects on each activation; it does not retain the first observer. This supersedes the initially accepted single reuse policy.
 4. **Budget inner state.** Before: a budget's inner algorithm lives in the budget's retained child. After: it lives in the budget's state and shares state with other uses of the same reference there. The budget's advice still applies only to calls through the budget.
-5. **Advice is a single-child wrapper of the target's role.** Before: a recipe could return any configuration of the role that resolves its source, such as a composite containing it. After: anything else fails. All eight production recipes already return single-child wrappers.
+5. **Advice wraps the target execution of its role.** Before: a recipe could return a configuration that resolves the source, including a composite. The intermediate redesign checked for a wrapping configuration. The final design removes recipes: a role advice base returns a wrapper factory that accepts the already-built target execution directly.
 6. **Advice has no children of its own.** Before: a generated wrapper could resolve additional children (R8), with private selection and self-exclusion rules. After: advice wraps only its target; real work belongs in the configuration, or the advice builds a helper privately during preparation. No production recipe resolves additional children.
 7. **Algorithms own their parameter logic.** Before: GA, NSGA2 and ALPS resolved their mutator through a hidden `ChooseOne[mutator, NoChange]` composition. After: they dispatch in their iteration step and create no operators of their own. Observations do not change; seeded results, including rate 0, must match.
 
@@ -226,7 +173,7 @@ Users who want separate state pass value-equal distinct configurations (`algorit
 
 ## Open questions
 
-The review follow-up choices are approved and implemented in the working tree; validation passed and user review is pending. No material design questions remain open. Steps 4-5 remain deferred.
+No material design choice remains open for the implemented resolver/aspect model. The integration audit, documentation repairs and scoped architecture/authoring review are complete, pending user review. Performance measurement is explicitly deferred. General advice-kind semantics, expanded algorithm boundaries, possible `Interceptor` replacement and richer matching remain separate proposals in the [branch plan](container-and-aspect-framing.md#review-packages); implementation of the role advice mechanism does not settle them.
 
 ## Changes from the earlier candidate
 
@@ -238,13 +185,88 @@ The review follow-up choices are approved and implemented in the working tree; v
 
 ## Sequence
 
-1. **Approve the design.** Stop for approval.
-2. **Remove internal compositions.** On the current resolver, move the mutation rate into GA, NSGA2 and ALPS and delete the [internal-composition feature line](#removed-feature-lines), including its tests and documentation. Verify seeded parity and selector behavior. This package is independent of the new resolver and stops for review.
-3. **Implement the core.** Replace the remaining production types with `ResolutionScope`, its private `State`, `Aspect` and the role classes; use the wrapping bases' protected `CreateWrapperFactory` hook and named wrapper factory; replace `IExecutionModule` with `Aspect`; migrate the observing wrappers, the racing evaluator, analyzers, Cycle and both budgets. Rewrite the retention, node-identity, failure-timing and additional-child tests deliberately; keep the shared-state, advice, ordering and algorithm-result assertions.
-4. **Integrate consumers and documentation.** Migrate every repository caller without shims; update analyzers and code fixes, API usage specs, samples, the user guides, the glossary entries that describe preparations, bindings, wrapper registrations, wrapper chains, execution modules and analyzers, and the [execution resolution](../docs/contributing/architecture/execution-resolution.md) page.
-5. **Review size, cost and behavior.** Compare resolver size and caller code with `c6957cbc`. Measure construction, repeated resolution, changed aspects, fresh stages and cheap operation calls. Complete collection, seeded streaming and whole-solution validation.
+1. **Approve the design — complete.** The resolver decisions and subsequent aspect redesign were approved before implementation; their dated records remain below and in the aspect plan.
+2. **Remove internal compositions — complete, `103a2b0f`.** GA, NSGA2 and ALPS apply mutation rate in their execution code. The internal-composition mechanism, tests and documentation are removed; the review record preserves seeded-parity and selection evidence.
+3. **Implement the core — complete through `7db6e6df`.** The resolver/state-policy work is committed through `4b5478f1`; `7db6e6df` supplies the final pointcut/role-advice model, instrumentation, budgets and analyzers. Earlier builder/recipe follow-ups below are historical intermediate checkpoints.
+4. **Audit consumer and documentation integration — complete, pending review.** The migration landed in `7db6e6df`. The [2026-10-15 audit](#step-4-integration-audit-2026-10-15) checks active callers, samples, analyzers, guides, the glossary and architecture pages; nine documentation files are corrected in the working tree. Runtime/API implementations and existing test assertions are unchanged. The audit evidence and validation limits are recorded below.
+5. **Review architecture, authoring and behavior — complete, pending user review.** The [review record](#step-5-architecture-and-authoring-review-2026-10-15) compares conceptual responsibilities and representative authoring flows with `c6957cbc`, finds no blocking issues and records the final 2,993-test whole-solution pass. This fulfills the original post-AOP resolver review. The user explicitly deferred timing/allocation measurements on 2026-10-15; benchmarks are not required to complete this scope. The recommendation is to retain the implemented architecture without another structural refactor.
 
 Follow `AGENTS.md` and `test/README.md`: focused core checks during development, then core, API usage and affected Experimental consumers; representative scenarios and whole-solution validation near completion. Build and test work is sequential.
+
+Plan reconciliation, 2026-10-15: status summaries, active terminology, package boundaries and related foundation/backlog pointers are reconciled with `7db6e6df`. The aspect plan's broken migration-report link is removed. Validation for this documentation package covers changed-Markdown Prettier checks, local file/heading links and Git whitespace checks. Runtime validation and comparative measurements remain acceptance work; the dated results below belong to their original checkpoints.
+
+## Step 4 integration audit, 2026-10-15
+
+Scope: audit the final model at `7db6e6df`, with the preceding plan reconciliation present. Active C# code, Roslyn analyzers/code fixes, tests, samples, Python examples and published documentation were checked for removed contracts, old namespace placement and superseded ownership/failure/ordering assumptions. Historical plans and descriptive test/helper names were distinguished from active API references.
+
+### Findings and repairs
+
+No active caller of the removed builders, modules, selectors, wrapper registrations, recipe APIs, attachment methods or public state-rebinding helpers was found. The Release solution build includes the samples and PythonInterop. Existing custom-role examples use explicit typed preparation callbacks and role advice; no compatibility shim or built-in-role registry is needed.
+
+The remaining integration gaps were documentation inconsistencies, repaired without changing code or test assertions:
+
+| Area                          | Gap and repair                                                                                                                                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contributor ownership rules   | Replace the removed retained-child-slot instruction with preparation-owned `ChildScopeSelector`; replace cached preparation failures with retry while preserving successful preparation after a contextual failure. |
+| Analyzer lifetime             | Remove the promise that analyzer resources cannot outlive a run; describe caller-owned shared data, retained deferred contexts and explicit cleanup ownership.                                                      |
+| Scope contract and glossary   | Clarify that all three scope-creation operations accept several aspects and that a leaf factory may reuse its raw node despite the absence of a resolver node cache.                                                |
+| Operator authoring            | Resolve declared children and prepare helper data; parameter-derived algorithm behavior stays in execution code rather than hidden operator configurations.                                                         |
+| Run and meta-algorithm guides | Replace module-installation descriptions with aspect weaving and child advice. Distinguish terminal run setup failures from retryable scope construction.                                                           |
+| Analysis and experiments      | Describe collecting aspects separately from weaving them, and distinguish independent per-trial results from intentionally shared analyzers/clocks.                                                                 |
+
+### Integration evidence
+
+| Flow                                       | Existing implementation and executable coverage                                                                                                                                                                                              |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pointcuts and consumer-defined roles       | `PointcutSpecs` covers reference/type/property matching, overlap, concrete-reference inference, a consumer cooling role and direct custom-role trace creation. `AspectFactorySpecs` checks predefined factory inference for all core roles.  |
+| Prepared state and failures                | `ExecutionFactoryResolutionTests`, `ResolutionScopeTests` and role/topology cases cover owner-state selection, no hoisting, contextual advice, retry, raw controls and both collection directions.                                           |
+| Shared clocks, instrumentation and budgets | Analysis/instrumentation tests and `DeferredAlgorithmFactoryTests` cover first-position advice deduplication, clock-before-trace reads, budget state across rebinding, direct-call isolation and observer work outside duration measurement. |
+| Runs and trials                            | Run lifecycle tests and `ExperimentAnalysisTests` cover collected aspect order, frozen configuration after starting, pause/resume, per-trial typed lookup, duplicate factories and failing factories without partial attachment.             |
+| Deferred children                          | Cycle/Pipeline tests cover Fresh/Retained/Shared policies, ancestor state reuse, retained owner isolation, a retired observer's collection and paused streams retaining their context.                                                       |
+| Guardrails and Experimental consumers      | The core suite includes execution-factory analyzer/code-fix and architecture checks. The Experimental suite exercises affected move roles, dynamic instrumentation and algorithms. PythonInterop compiles against the final aspect APIs.     |
+
+### Validation and review stop
+
+| Check                          | Result                                                                                                                                                                                         |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SDK-selected restore           | Passed. Sandbox access to installed Windows SDK metadata initially blocked restore; the normal command passed with approved access.                                                            |
+| Release solution build         | Passed: 118 warnings, zero errors, before the documentation-only repairs.                                                                                                                      |
+| Complete core suite            | Passed: 2,521 tests, zero failures or skips.                                                                                                                                                   |
+| Complete API usage suite       | Passed: 206 tests, zero failures or skips.                                                                                                                                                     |
+| Complete Experimental suite    | Passed: 239 tests, zero failures or skips.                                                                                                                                                     |
+| Published documentation build  | Passed after the documentation repairs.                                                                                                                                                        |
+| Markdown, links and whitespace | Passed: Prettier on all 16 changed Markdown files, 211 relative file links and 72 plan heading anchors, published links through the documentation build, and Git diff whitespace verification. |
+
+Standalone Python examples were scanned but not executed; the .NET solution build validates PythonInterop, not those examples' runtime prerequisites. The later step 5 record covers final whole-solution validation and the user's decision to defer performance measurement. No new pointcut kinds, general advice callback APIs or algorithm-boundary contracts are introduced here.
+
+This audit checkpoint stopped for review before the user authorized step 5 below. Existing staged plan changes are preserved; the audit performs no staging, commit, history or ref operations.
+
+## Step 5 architecture and authoring review, 2026-10-15
+
+Scope: compare the implemented model at `7db6e6df` with baseline `c6957cbc`, concentrating on conceptual responsibilities and representative authoring flows. The user explicitly deferred performance comparison because ordinary run setup is amortized over a much longer optimization. Timing and allocation measurements, including operation/advice overhead, are outside this review; they can be revisited for a concrete workload concern. This supersedes the earlier measurement prerequisite without making a performance claim.
+
+**Review conclusion:** no blocking architecture or authoring findings. The simplification removes mechanisms and caller responsibilities rather than moving the same machinery behind fewer types. Retain the current architecture; no further structural refactor is proposed. This is the review recommendation, pending user review of the documentation package.
+
+| Responsibility                              | Baseline and resulting authoring model                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| State ownership and contextual construction | Baseline sharing, preparation and binding objects coordinate pinned dependencies, node identity and sticky faults. `ResolutionScope.State` now owns successful factories and owner-state dependency selection; `ResolutionScope` constructs nodes and applies the requesting aspects. Authors retain the familiar prepare-once/bind-children contract without managing caches or pinned dependencies. |
+| Configured wrappers and advice              | Baseline advice creates wrapper configurations and relies on temporary source redirection. Configured wrappers keep their declared child and protected factory hook; role advice receives the built inner execution directly. Advice authors need no placeholder child, source re-resolution, internal scope or self-exclusion rule.                                                                  |
+| Child activations and budgets               | Baseline retained slots mix state retention with declaration/binding retention. Prepared `ChildScopeSelector` owns activation policy and configuration-reference retention; each activation supplies its current aspect context. Budgets own their accumulator and add advice with `With`, so instrumentation no longer requires a separate sharing domain or retention key.                          |
+| Aspects, analyzers and clocks               | Ordered pairs and first-occurrence advice identity replace builder callbacks, recursive installation and origin-priority collections. An analyzer owns results and its pairs; `TraceAnalyzer` initializes storage before creating observation callbacks and includes clock pairs before observations. Runs collect aspects without owning analyzer results or disposal.                               |
+| Algorithm parameter logic                   | GA, NSGA2 and ALPS resolve their configured mutator and use shared weighted routing for mutation rate. The resolver no longer needs private derived configurations, composition tables or selection exceptions. The small amount of explicit algorithm dispatch replaces a general resolver feature.                                                                                                  |
+| Consumer-defined roles                      | A role supplies its typed operation, execution preparation and advice-preparation callback. The cooling-role usage spec demonstrates advice and tracing without modifying the library. No built-in-role registry, universal invocation, dynamic proxy or generated role hierarchy is introduced.                                                                                                      |
+
+Representative sources: [resolver](../src/HeuristicLib/Execution/ResolutionScope.cs), [wrapping mutator](../src/HeuristicLib/Operators/Mutators/Composition/WrappingMutator.cs), [role advice](../src/HeuristicLib/Operators/Mutators/IMutator.cs), [counting advice](../src/HeuristicLib/Instrumentation/Mutators/CountingMutatorAdvice.cs), [child selector](../src/HeuristicLib/Execution/ChildScopeSelector.cs), [budget](../src/HeuristicLib/Algorithms/Control/OperatorBudgetAlgorithm.cs), [trace construction](../src/HeuristicLib/Analysis/Tracing/TraceAnalyzer.cs) and [consumer-role usage](../test/HeuristicLib.Tests.ApiUsageSpecs/Execution/PointcutSpecs.cs).
+
+The remaining authoring costs are deliberate and documented:
+
+- Each role has an advice base and typed preparation callback. This is explicit per-role boilerplate; consolidating it into a registry or universal operation would add a competing model.
+- Persistent state is allocated before returning a factory; contextual children and invocation-local values stay in their respective binding or operation. Adding advice must not capture the first requesting context into shared preparation.
+- `Aspect.Create` checks pointcut/advice role compatibility statically. Authors assigning heterogeneous `Advices` tuples directly must pair compatible roles themselves. Advice uses reference identity, and its first pairing wins; distinct selections require distinct advice instances, which may share a caller-owned sink.
+
+Final validation: `dotnet test --solution ./HEAL.HeuristicLib.slnx --configuration Release --no-restore --max-parallel-test-modules 1` passed all **2,993 tests**, with zero failures or reported skips: 2,521 core, 239 Experimental, 206 API usage and 27 scenario cases. Existing coverage includes state ownership, failure retry, both collection directions, deferred/paused contexts, clocks and budgets, custom roles and seeded algorithm parity. Optional external workflows retain their own prerequisites; standalone Python examples and performance measurements were not exercised by this review.
+
+No production code or test assertions changed. Step 4's documentation checks remain applicable; this review adds the plan record and scope/status updates. The scoped review work is complete and ready for user review, with performance deferred and the existing Git index preserved.
 
 ## Step 2 review record — 2026-10-13
 
@@ -364,18 +386,18 @@ Initial migration checks exposed the algorithm capture's old namespace dependenc
 
 ## Validation scenarios
 
-Use [R1-R16](execution-bindings-and-shared-state.md#acceptance-matrix-for-the-implementation) as a scenario inventory, adjusted by the accepted behavior changes. Reuse existing coverage first.
+Use [R1-R16](execution-bindings-and-shared-state.md#acceptance-matrix-for-the-implementation) as a historical scenario inventory, adjusted by the accepted behavior changes and final aspect model. Reuse existing coverage first; removed recipe and installation policies are not acceptance requirements.
 
-| Area                    | Cases                                                                                                                                                                                                                         |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Shared state            | Reference identity versus value-equal configurations; parent/child/sibling order without hoisting; outer/inner counts 5/2; old nodes keep their advice.                                                                       |
-| Owner's state           | An earlier child-local M does not replace G's M or its control; deferred resolution from a retained construction scope uses G's state and original aspect.                                                                    |
-| Advice                  | Declared/installed order, layer and sequence; unmatched and overlapping selectors; advice prepared once per aspect and target; composite targets; recipe results that are not wrappers of the role fail.                      |
-| Callers                 | Cycle fresh and reuse modes, repeated references and invocations; Pipeline stages; racing contenders; both budgets rebuilt under a new observer, including clock/trace order. RNG forks, cancellation and disposal unchanged. |
-| Mutation rates          | GA, NSGA2 and ALPS match their previous seeded results, including rate 0; observers of the mutator count only mutated offspring; broad selectors see only configured mutators.                                                |
-| Aspects for analysis    | Analyzers, traces with shared clocks, experiment trials and the dynamic-problem update apply through aspects; installing an aspect twice applies it once; installed aspects sit outside declared advice.                      |
-| Controls and roles      | Control from the raw node despite advice; absent capability stays absent; incompatible run types fail clearly; custom external roles and wrappers.                                                                            |
-| Failures and collection | Repeated preparation and construction after failures; recursion across child states; both collection directions; live deferred nodes retain their scope.                                                                      |
+| Area                    | Cases                                                                                                                                                                                                                             |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared state            | Reference identity versus value-equal configurations; parent/child/sibling order without hoisting; outer/inner counts 5/2; old nodes keep their advice.                                                                           |
+| Owner's state           | An earlier child-local M does not replace G's M or its control; deferred resolution from a retained construction scope uses G's state and original aspect.                                                                        |
+| Advice                  | Layer, aspect and pair order; first-occurrence deduplication by advice reference; unmatched and overlapping pointcuts; preparation once per advice, target and owner state; composite targets; typed and incompatible role cases. |
+| Callers                 | Cycle fresh and reuse modes, repeated references and invocations; Pipeline stages; racing contenders; both budgets rebuilt under a new observer, including clock/trace order. RNG forks, cancellation and disposal unchanged.     |
+| Mutation rates          | GA, NSGA2 and ALPS match their previous seeded results, including rate 0; observers of the mutator count only mutated offspring; broad selectors see only configured mutators.                                                    |
+| Aspects for analysis    | Analyzers, traces with shared clocks, experiment trials and dynamic updates apply through aspects; shared advice applies once; clocks precede trace reads; budget-local timing excludes inherited observer callbacks.             |
+| Controls and roles      | Control from the raw node despite advice; absent capability stays absent; incompatible run types fail clearly; custom external roles and wrappers.                                                                                |
+| Failures and collection | Repeated preparation and construction after failures; recursion across child states; both collection directions; live deferred nodes retain their scope.                                                                          |
 
 ## Sources
 

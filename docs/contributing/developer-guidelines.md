@@ -126,7 +126,7 @@ Search states are public progress values. Do not use them to carry private count
 
 ### § 4.3 Resolve declared children through the resolution scope
 
-Preparation receives no scope. The returned `ExecutionFactory<TExecution>` receives a `ResolutionScope` construction frame; resolve children inside that factory and pass them to the node. Retain the frame only for child scopes, wrappers or delayed child construction. Use a preparation-owned key for a retained child slot. Do not add another scope abstraction or call a child's factory directly.
+Preparation receives no scope. The returned `ExecutionFactory<TExecution>` receives a `ResolutionScope` construction frame; resolve children inside that factory and pass them to the node. Retain the frame only for child scopes, wrappers or delayed child construction. A meta-algorithm needing retained child state prepares one `ChildScopeSelector` and reuses it across bindings; each activation supplies its current construction scope. Do not add another scope abstraction or call a child's factory directly.
 
 Algorithms resolve only their configured parameters and create no operators of their own. Keep those parameters as supplied. Behavior derived from a parameter, such as a mutation rate, belongs in the algorithm's execution code. Independent operators doing real work must be parameters so observations and budgets can see them.
 
@@ -155,7 +155,7 @@ A setting has one input path.
 
 Retain configuration values unchanged during construction and `with`. Validate them in `CreateExecutionFactory` or the protected preparation hook and throw `InvalidOperationException` before execution begins. Bound bridges validate run-type compatibility before preparation. Do not add a separate validation API.
 
-Persistent initialization must not depend on whichever binding first resolves a live child. Binding failures are contextual; preparation failures remain attached to the selected execution.
+Persistent initialization must not depend on whichever binding first resolves a live child. Failed preparation is not cached, so a later resolution can retry. Successful preparation remains available when a later contextual construction or advice application fails; that binding can also be retried.
 
 ### § 4.8 Represent configured behavior with value strategies
 

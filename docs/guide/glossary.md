@@ -623,7 +623,7 @@ Status: `Canonical`
 
 A resolution scope resolves configurations to execution nodes during a run.
 
-The scope combines state ownership with an immutable ordered collection of zero, one or more aspects. It selects prepared factories by configuration reference and constructs fresh execution nodes with the requesting aspects. Dependencies resolve in the state owning their factory. Child scopes create local state while reusing ancestor-owned factories; `With` changes aspects while sharing state. Both operations accept multiple aspects in supplied order as one layer.
+The scope combines state ownership with an immutable ordered collection of zero, one or more aspects. It selects prepared factories by configuration reference and invokes them with the requesting aspects. The resolver caches no execution nodes, but a leaf factory may return its prepared raw node. Dependencies resolve in the state owning their factory. Child scopes create local state while reusing ancestor-owned factories; `With` changes aspects while sharing state. Both operations accept multiple aspects in supplied order as one layer.
 
 See [execution resolution](/contributing/architecture/execution-resolution) for preparation, binding and observation rules.
 

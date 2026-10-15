@@ -56,7 +56,7 @@ Observation sources match configurations by reference. A copied configuration is
 
 ## Ownership and reads
 
-A run accepts analyzers and other aspects through `AddAspect` while its lifecycle is `Preparing`. It installs them in attachment order when execution starts, before resolving the execution graph. Attaching the same object again does not install it twice. Create fresh analyzers and clocks for independent results. You may reuse them across runs when combined history or cumulative counts are intentional. Installation does not reset their state.
+A run accepts analyzers and other aspects through `AddAspect` while its lifecycle is `Preparing`. It collects them in the supplied order; resolution weaves their advice into the execution graph when the run starts. Adding the same aspect again does not apply its advice twice. Create fresh analyzers and clocks for independent results. You may reuse them across runs when combined history or cumulative counts are intentional. Adding an aspect does not reset its collected data.
 
 `LifecycleState` reports whether a run is `Preparing`, `Running`, `Paused`, `Completed`, `Canceled`, `Failed` or `Stopped`. Calling an execution entry point freezes its attachments. Each returned execution stream has one consumer. The run itself can continue through a later `Stream()` call after the consumer stops at a yielded root-algorithm state.
 

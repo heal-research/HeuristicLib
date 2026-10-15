@@ -13,9 +13,9 @@ A meta-algorithm splits into a configuration record and an execution node, exact
 ## Resolve child algorithms through the scope
 
 ::: warning Resolve child algorithms through the scope
-Obtain a child algorithm's execution node with `scope.Resolve(childAlgorithm)`. Creating and invoking its factory directly bypasses that child's wrappers and state reuse.
+Obtain a child algorithm's execution node with `scope.Resolve(childAlgorithm)`. Creating and invoking its factory directly bypasses that child's advice and state reuse.
 
-`ResolutionScope.Resolve` applies the wrappers an [analyzer](/guide/execution/observability-and-analysis) installed for the run. Bypassing a child's resolution means an analyzer observing that child misses its states.
+`ResolutionScope.Resolve` applies matching advice from the current aspects, including [analyzer observations](/guide/execution/observability-and-analysis). Bypassing a child's resolution means an analyzer observing that child misses its states.
 
 The `HLib0001` analyzer reports direct child `CreateExecutionFactory` calls in preparation hooks, binding lambdas and deferred execution methods. It does not prove correct state ownership or follow factories passed through arbitrary helper code. Keep child construction on the scope's resolution path.
 :::

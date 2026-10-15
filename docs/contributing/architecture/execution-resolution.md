@@ -6,7 +6,7 @@ See [configuration vs execution nodes](/contributing/architecture/execution-node
 
 ## State and construction
 
-`ResolutionScope.Create(aspects)` creates an independent root. `CreateChildScope(aspects)` creates child-local state and inherits the parent's aspects. `With(aspects)` shares state and adds another aspect layer. Both accept zero or several aspects in supplied order.
+`ResolutionScope.Create(aspects)` creates an independent root. `CreateChildScope(aspects)` creates child-local state and inherits the parent's aspects. `With(aspects)` shares state and adds another aspect layer. All three accept zero or several aspects in supplied order.
 
 A scope stores its own aspects and its parent scope. Its internal `State` stores prepared factories by configuration reference, a parent state and advice factories. Aspect inheritance and state ownership are independent: adding an observation changes the bound graph without resetting prepared state.
 

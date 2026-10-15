@@ -63,7 +63,7 @@ The lock is not there for batch parallelism: an observation of one source arrive
 
 Entries contain immutable results. `Latest` and `SampleCount` do not allocate; `Snapshot()` and `By(clock)` return stable copies. Stopping, cancelling or failing a run leaves collected results available, so there is no separate result type for an unfinished run. An analyzer has no global completion state because another run may still use it.
 
-Analyzers have no disposal contract. What an analyzer installs lives in the run's resolution scope, so nothing it acquires outlives the run.
+Analyzers and resolution scopes have no disposal contract. Reusing an analyzer or clock across runs intentionally retains its collected data, and a live deferred execution can retain its construction scope and advice. Resources requiring deterministic cleanup need an explicit lifecycle owner.
 
 ## Naming and placement
 

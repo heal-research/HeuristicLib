@@ -146,7 +146,7 @@ private sealed record ForwardingEvaluator(IEvaluator<RealVector> Inner)
 }
 ```
 
-Resolve ordinary child operators inside the returned factory. Allocate persistent counters, caches and derived configurations before returning it. Retain the scope only when deferred graph construction is an intentional part of the operator.
+Resolve declared child operators inside the returned factory. Allocate persistent counters, caches and helper data before returning it. Retain the scope only when deferred graph construction is an intentional part of the operator. Algorithms resolve their configured parameters and keep parameter-derived behavior in their execution code rather than constructing hidden operators.
 
 Return the most concrete accessible execution type that is useful to callers. A private nested execution is returned through its role specific execution base.
 
