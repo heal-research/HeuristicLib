@@ -29,6 +29,8 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
 
         public ExecutionState(long? sizeLimit, int initialEpoch)
         {
+            // Keep statistics disabled: MemoryCache's thread-local statistics can retain the cache and its entries
+            // on a live thread after the prepared execution state is released. Grace accounting uses HitCount instead.
             Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
             Epoch = initialEpoch;
         }

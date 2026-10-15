@@ -33,6 +33,8 @@ public record CachingEvaluator<TCandidate, TKey>
 
     protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
     {
+        // Keep statistics disabled: MemoryCache's thread-local statistics can retain the cache and its entries
+        // on a live thread after the prepared execution state is released.
         var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = SizeLimit });
         return childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, cache);
     }
