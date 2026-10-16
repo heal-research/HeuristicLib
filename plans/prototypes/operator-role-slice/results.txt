@@ -1,0 +1,47 @@
+SDK=10.0.402; reference pack=10.0.13; HEAD=a2643bc1005dc47611699cec603ba0106e4231df
+HLib SHA256=EFE2FA8F0875A37F8F882E3B62C562F55C991C8248BB0A1FC28B1BE2A6328D1C
+CASE: RoleSlice / CORE
+CASE: Scenarios / CORE
+PASS fluent API and bit-identical production Gaussian leaves
+PASS deterministic batching and concurrent one-item failure semantics
+PASS configuration-reference state ownership, control and contract preservation
+PASS retry, success/failure hooks and aspect deduplication
+PASS five roles, whole-call/per-candidate routing, composites and snapshots
+PASS typed observations, clocks, mismatches and construction cycles
+PASS production-equivalent GA and real shared-clock trace analysis
+PASS GA/hill meta-algorithm and fresh/retained/shared activation contexts
+PASS actual AlgorithmRun pause/resume and completion
+PASS stream enumeration, timing, failure, cancellation and disposal
+PASS multi-role ownership limit and temporary graph collectibility
+SCENARIOS: 11 groups; 174 assertions
+CASE: ExternalConsumer / CORE
+PASS external non-collection role: inferred retry/name, shared hooks and explicit self-typed role binding
+PASS external generic Twice wrapper uses the same implementation on built-in and external roles; no role registry edits
+CASE: CompilerCases / WRONG_CANDIDATE
+plans\prototypes\operator-role-slice\CompilerCases.cs(19,55): error CS0029: Cannot implicitly convert type 'RoleSlice.Named<HEAL.HeuristicLib.Encodings.Permutations.Permutation, RoleSlice.MutationRole>' to 'RoleSlice.IOperator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.MutationRole>'
+CASE: CompilerCases / WRONG_ROLE
+plans\prototypes\operator-role-slice\CompilerCases.cs(22,55): error CS0029: Cannot implicitly convert type 'RoleSlice.Named<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.EvaluationRole>' to 'RoleSlice.IOperator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.MutationRole>'
+CASE: CompilerCases / STREAMING_RETRY
+plans\prototypes\operator-role-slice\CompilerCases.cs(25,33): error CS0311: The type 'RoleSlice.AlgorithmRole<HEAL.HeuristicLib.Algorithms.PopulationState<HEAL.HeuristicLib.Encodings.RealVectors.RealVector>>' cannot be used as type parameter 'TRole' in the generic type or method 'Composition.Retry<TCandidate, TRole>(IOperator<TCandidate, TRole>, int)'. There is no implicit reference conversion from 'RoleSlice.AlgorithmRole<HEAL.HeuristicLib.Algorithms.PopulationState<HEAL.HeuristicLib.Encodings.RealVectors.RealVector>>' to 'RoleSlice.ISynchronousRole<RoleSlice.AlgorithmRole<HEAL.HeuristicLib.Algorithms.PopulationState<HEAL.HeuristicLib.Encodings.RealVectors.RealVector>>>'.
+CASE: CompilerCases / WRONG_STATE
+plans\prototypes\operator-role-slice\CompilerCases.cs(28,72): error CS0029: Cannot implicitly convert type 'RoleSlice.Named<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.AlgorithmRole<HEAL.HeuristicLib.Algorithms.PopulationState<HEAL.HeuristicLib.Encodings.RealVectors.RealVector>>>' to 'RoleSlice.IOperator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.AlgorithmRole<DifferentState>>'
+CASE: CompilerCases / WRONG_OBSERVER
+plans\prototypes\operator-role-slice\CompilerCases.cs(31,30): error CS0311: The type 'RoleSlice.IOperator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.MutationRole>' cannot be used as type parameter 'TSelected' in the generic type or method 'Aspect.Create<TSelected, TConfiguration>(Pointcut<TSelected>, Advice<TConfiguration>)'. There is no implicit reference conversion from 'RoleSlice.IOperator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.MutationRole>' to 'RoleSlice.IOperator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.EvaluationRole>'.
+CASE: CompilerCases / UNSUPPORTED_METRIC
+plans\prototypes\operator-role-slice\CompilerCases.cs(36,32): error CS0311: The type 'NoMetricRole' cannot be used as type parameter 'TRole' in the generic type or method 'Inspection.CountCandidates<TCandidate, TRole>(IOperator<TCandidate, TRole>, CountAccumulator)'. There is no implicit reference conversion from 'NoMetricRole' to 'RoleSlice.ICandidateCountingRole'.
+CASE: CompilerCases / CORE
+PASS compiler positive: candidate and role inferred through Retry, Named and algorithm construction
+CASE: StateFamilies / CORE
+PASS state-family variant: candidate-only termination/interception roles; generic naming; hidden run-state parameter; real contravariant terminator and invariant interceptor interfaces
+CASE: Performance / CORE
+cheap/raw: median=1,33 ns/batch; range=1,32..1,33; bytes/batch=0,00; checksum=500000
+cheap/named: median=1,27 ns/batch; range=1,27..1,28; bytes/batch=0,00; checksum=500000
+cheap/direct-success-counter: median=8,68 ns/batch; range=8,60..9,03; bytes/batch=0,00; checksum=500000
+cheap/shared-success-hooks: median=12,40 ns/batch; range=12,29..12,89; bytes/batch=0,00; checksum=500000
+cheap/shared-full-lifecycle-hooks: median=16,31 ns/batch; range=16,28..17,10; bytes/batch=0,00; checksum=500000
+cheap/shared-around-policy: median=29,56 ns/batch; range=29,24..29,68; bytes/batch=0,00; checksum=500000
+Gaussian32/raw: median=22050,50 ns/batch; range=19388,50..23163,00; bytes/batch=6680,00; checksum=6400
+Gaussian32/direct-success-counter: median=18710,50 ns/batch; range=18350,50..21696,00; bytes/batch=6680,00; checksum=6400
+Gaussian32/shared-success-hooks: median=18852,50 ns/batch; range=18617,00..19605,00; bytes/batch=6680,00; checksum=6400
+Gaussian32/shared-around-policy: median=18779,50 ns/batch; range=18578,00..19351,50; bytes/batch=6680,00; checksum=6400
+PASS factory erasure and controls envelope add no operation-time extraction; timings are local illustrative probes, not production guarantees

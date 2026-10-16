@@ -1,0 +1,41 @@
+SDK=10.0.402; reference pack=10.0.13; HEAD=a2643bc1005dc47611699cec603ba0106e4231df
+HLib SHA256=EFE2FA8F0875A37F8F882E3B62C562F55C991C8248BB0A1FC28B1BE2A6328D1C
+CASE: RoleSlice / CORE
+CASE: ConstructionCases / CORE
+Fluent construction: 56 assertions passed; exact types, all settings in seven families, defaults, identity, snapshots, preparation and seeded execution.
+CASE: Scenarios / CORE
+PASS fluent API and bit-identical production Gaussian leaves
+PASS deterministic batching and concurrent one-item failure semantics
+PASS configuration-reference state ownership, control and contract preservation
+PASS retry, success/failure hooks and aspect deduplication
+PASS five roles, whole-call/per-candidate routing, composites and snapshots
+PASS typed observations, clocks, mismatches and construction cycles
+PASS production-equivalent GA and real shared-clock trace analysis
+PASS GA/hill meta-algorithm and fresh/retained/shared activation contexts
+PASS actual AlgorithmRun pause/resume and completion
+PASS stream enumeration, timing, failure, cancellation and disposal
+PASS multi-role ownership limit and temporary graph collectibility
+SCENARIOS: 11 groups; 174 assertions
+CASE: ExternalConsumer / CORE
+PASS external non-collection role: inferred retry/name, shared hooks and explicit self-typed role binding
+PASS external generic Twice wrapper uses the same implementation on built-in and external roles; no role registry edits
+CASE: CompilerCases / WRONG_CANDIDATE
+plans\prototypes\operator-role-slice\CompilerCases.cs(19,55): error CS0029: Cannot implicitly convert type 'RoleSlice.Named<HEAL.HeuristicLib.Encodings.Permutations.Permutation, RoleSlice.MutationRole>' to 'RoleSlice.IOperator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.MutationRole>'
+CASE: CompilerCases / WRONG_ROLE
+plans\prototypes\operator-role-slice\CompilerCases.cs(22,55): error CS0029: Cannot implicitly convert type 'RoleSlice.Named<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.EvaluationRole>' to 'RoleSlice.IOperator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.MutationRole>'
+CASE: CompilerCases / STREAMING_RETRY
+plans\prototypes\operator-role-slice\CompilerCases.cs(25,33): error CS0311: The type 'RoleSlice.AlgorithmRole<HEAL.HeuristicLib.Algorithms.PopulationState<HEAL.HeuristicLib.Encodings.RealVectors.RealVector>>' cannot be used as type parameter 'TRole' in the generic type or method 'Composition.Retry<TCandidate, TRole>(IOperator<TCandidate, TRole>, int)'. There is no implicit reference conversion from 'RoleSlice.AlgorithmRole<HEAL.HeuristicLib.Algorithms.PopulationState<HEAL.HeuristicLib.Encodings.RealVectors.RealVector>>' to 'RoleSlice.ISynchronousRole<RoleSlice.AlgorithmRole<HEAL.HeuristicLib.Algorithms.PopulationState<HEAL.HeuristicLib.Encodings.RealVectors.RealVector>>>'.
+CASE: CompilerCases / WRONG_STATE
+plans\prototypes\operator-role-slice\CompilerCases.cs(28,72): error CS0029: Cannot implicitly convert type 'RoleSlice.Named<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.AlgorithmRole<HEAL.HeuristicLib.Algorithms.PopulationState<HEAL.HeuristicLib.Encodings.RealVectors.RealVector>>>' to 'RoleSlice.IOperator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.AlgorithmRole<DifferentState>>'
+CASE: CompilerCases / WRONG_OBSERVER
+plans\prototypes\operator-role-slice\CompilerCases.cs(38,30): error CS0311: The type 'RoleSlice.IOperator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.MutationRole>' cannot be used as type parameter 'TSelected' in the generic type or method 'Aspect.Create<TSelected, TConfiguration>(Pointcut<TSelected>, Advice<TConfiguration>)'. There is no implicit reference conversion from 'RoleSlice.IOperator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.MutationRole>' to 'RoleSlice.IOperator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.EvaluationRole>'.
+CASE: CompilerCases / UNSUPPORTED_METRIC
+plans\prototypes\operator-role-slice\CompilerCases.cs(43,32): error CS0311: The type 'NoMetricRole' cannot be used as type parameter 'TRole' in the generic type or method 'Inspection.CountCandidates<TCandidate, TRole>(IOperator<TCandidate, TRole>, CountAccumulator)'. There is no implicit reference conversion from 'NoMetricRole' to 'RoleSlice.ICandidateCountingRole'.
+CASE: CompilerCases / WRONG_FLUENT_ROLE
+plans\prototypes\operator-role-slice\CompilerCases.cs(32,26): error CS1503: Argument 2: cannot convert from 'RoleSlice.ProblemEvaluator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector>' to 'RoleSlice.IOperator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, RoleSlice.MutationRole>'
+CASE: CompilerCases / UNSUPPORTED_CONCURRENCY
+plans\prototypes\operator-role-slice\CompilerCases.cs(35,57): error CS0311: The type 'RoleSlice.IdentityMutator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector>' cannot be used as type parameter 'TConfiguration' in the generic type or method 'ConfigurationExtensions.WithConcurrency<TConfiguration>(TConfiguration, ExecutionConcurrency)'. There is no implicit reference conversion from 'RoleSlice.IdentityMutator<HEAL.HeuristicLib.Encodings.RealVectors.RealVector>' to 'RoleSlice.IExecutionConcurrencyConfiguration'.
+CASE: CompilerCases / CORE
+PASS compiler positive: candidate and role inferred through Retry, Named and algorithm construction
+CASE: StateFamilies / CORE
+PASS state-family variant: candidate-only termination/interception roles; generic naming; hidden run-state parameter; real contravariant terminator and invariant interceptor interfaces
