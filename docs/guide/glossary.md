@@ -268,13 +268,13 @@ See also: Expression metric, Refiner, Regression metric.
 
 Status: `Canonical`
 
-An algorithm defines a reusable search process through an algorithm configuration and its run scoped execution nodes.
+An algorithm defines a reusable search process through an algorithm configuration and its run scoped executors.
 
 In a run, an algorithm execution advances search state until the run stops. It owns resolved child operator executions, private execution data and execution behavior. One shot algorithms are still algorithms. They produce a search process with a single state.
 
 Use algorithm for the reusable configuration unless the text explicitly says algorithm execution.
 
-See also: Configuration, Execution node, Operator, Run, Search state.
+See also: Configuration, Executor, Operator, Run, Search state.
 
 ### Meta-algorithm
 
@@ -302,7 +302,37 @@ Examples include creators, evaluators, selectors, crossovers, mutators, replacer
 
 Use operator for the reusable configuration unless the text explicitly says operator execution.
 
-See also: Algorithm, Configuration, Evaluator, Execution node.
+See also: Algorithm, Configuration, Evaluator, Executor.
+
+### Operation
+
+Status: `Canonical`
+
+An operation is a named action an operator performs, such as mutation or evaluation. Its executor interface defines the inputs and result of that action.
+
+An operation is distinct from the executor that performs it. One executor can support several operations. Use operation for the action, execution for the callable runtime object, and invocation or call for one actual use of an operation.
+
+See also: Executor, Operation descriptor, Operation invocation, Operator roles.
+
+### Operation descriptor
+
+Status: `Canonical`
+
+An operation descriptor identifies which operation an operator contract selects. For example, `Mutation` in `IOperator<TCandidate, Mutation>` identifies mutation, whose executor interface is `IMutationExecutor<...>`.
+
+The descriptor represents the kind of action. The executor performs it, and each call is a separate invocation.
+
+See also: Executor, Operation, Operation invocation.
+
+### Operation invocation
+
+Status: `Canonical`
+
+An operation invocation is one call to an operation method, such as one call to `Mutate`. Operation call is an accepted synonym.
+
+An executor can receive many invocations. A duration measurement around an operation call measures that invocation rather than the lifetime of its executor.
+
+See also: Executor, Operation, Operation descriptor.
 
 ### Child operator
 
@@ -448,7 +478,7 @@ Status: `Canonical`
 
 A configuration is a reusable object that users set up before execution, such as an algorithm or operator.
 
-A configuration can contain parameters, child configurations, validation or helper logic and the mechanism that creates execution nodes. It is not required to be a passive data object. Mutable execution data belongs to an execution node, either directly or in framework managed operator state.
+A configuration can contain parameters, child configurations, validation or helper logic and the mechanism that creates executors. It is not required to be a passive data object. Mutable execution data belongs to an executor, either directly or in framework managed operator state.
 
 Use more specific terms when the context benefits from them:
 
@@ -459,7 +489,7 @@ Related terms:
 
 - `Definition`: `Legacy`. Use configuration for the reusable configured object graph.
 
-See also: Algorithm, Execution node, Operator, Run.
+See also: Algorithm, Executor, Operator, Run.
 
 ### Configuration node
 
@@ -469,15 +499,17 @@ A configuration node is a configuration considered as a node in the configuratio
 
 Configuration is accepted shorthand for configuration node when the context is clear. Use node when graph membership needs emphasis, or a role-specific term such as mutator when the role is known. The common interface is `IConfigurationNode`, including its generic form. Role-specific configuration names such as `IOperator` and `IMutator` do not acquire a `Node` suffix.
 
-The generic `IConfigurationNode<TExecution>` prepares an `ExecutionFactory<TExecution>` through `CreateExecutionFactory()`. Core run-typed roles expose the same preparation method with their run type parameters. This factory receives a construction scope and binds a typed execution node to its resolution context; it is runtime machinery, not a configuration value strategy.
+The generic `IConfigurationNode<TExecutor>` prepares an `ExecutorFactory<TExecutor>` through `CreateExecutorFactory()`. Core run-typed roles expose the same preparation method with their run type parameters. This factory receives a construction scope and binds a typed executor to its resolution context; it is runtime machinery, not a configuration value strategy.
 
-Wrapping and multi bases centralize preparation through `CreateWrapperFactory` and `CreateCompositeFactory`. Their returned `WrapperExecutionFactory<TExecution>` and `CompositeExecutionFactory<TExecution>` receive one resolved child or an ordered immutable array of children. The children and result share the same execution role interface.
+`IOperator<TCandidate, TOperation>` instead prepares one `OperatorExecutorFactory` through `CreateExecutorFactory()`. Its checked construction views share persistent state across operations and compatible run signatures. `OperationExecutorAdapter` is an advanced preparation adapter; the callable runtime object remains an executor.
 
-Iterative algorithm bases centralize preparation through `CreateIterationFactory`. Its returned `ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>>` receives a construction scope. The algorithm author resolves the optional interceptor and other declared children through that scope and passes them to the iterative execution constructor.
+Wrapping and multi bases centralize preparation through `CreateWrapperFactory` and `CreateCompositeFactory`. Their returned `WrapperExecutorFactory<TExecutor>` and `CompositeExecutorFactory<TExecutor>` receive one resolved child or an ordered immutable array of children. The children and result share the same executor interface.
+
+Iterative algorithm bases centralize preparation through `CreateIterationFactory`. Its returned `ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>>` receives a construction scope. The algorithm author resolves the optional interceptor and other declared children through that scope and passes them to the iterative executor constructor.
 
 The term does not imply a common child-enumeration API or a universal operation on all nodes.
 
-See also: Configuration, Configuration graph, Execution node, Pointcut.
+See also: Configuration, Configuration graph, Executor, Pointcut.
 
 ### Configuration graph
 
@@ -493,13 +525,13 @@ See also: Configuration, Execution graph.
 
 Status: `Canonical`
 
-A pointcut selects configurations whose executions receive advice. `Pointcut<TConfiguration>` examines one supplied configuration through `Matches`.
+A pointcut selects configurations whose executors receive advice. `Pointcut<TConfiguration>` examines one supplied configuration through `Matches`.
 
 `Pointcut.Reference(source)` selects by object reference. `Pointcut.OfType<TConfiguration>()` selects implementations and derived types. `Pointcut.Predicate<TConfiguration>(predicate)` provides runtime-only matching by configuration data; custom selection may also derive a small pointcut class. `Pointcut.Named<TConfiguration>(name)` matches the exact, case-sensitive name carried by `INamedConfiguration`.
 
 Pointcuts of the same declared configuration type combine through `And` and `Or`, also spelled `&` and `|`, with left-to-right short-circuit matching. `Not()` and `!` complement a selection within that declared type. Matching neither traverses a graph nor resolves executions.
 
-A selected configuration can have several callers and contextual execution bindings. Selecting it does not select one invocation or caller path.
+A selected configuration can have several callers and contextual executor bindings. Selecting it does not select one invocation or caller path.
 
 See also: Advice, Aspect, Configuration node, Join point, Resolution scope.
 
@@ -507,7 +539,7 @@ See also: Advice, Aspect, Configuration node, Join point, Resolution scope.
 
 Status: `Canonical`
 
-A named configuration carries a descriptive `Name` through `INamedConfiguration`. Configurations may implement the contract directly; the predefined `Named*` wrappers add it while retaining an operator or algorithm role and forwarding the child's execution.
+A named configuration carries a descriptive `Name` through `INamedConfiguration`. Configurations may implement the contract directly; the predefined `Named*` wrappers add it while retaining an operator or algorithm role and forwarding the child's executor.
 
 Names are case-sensitive labels and need not be unique. A named wrapper and its child are separate configuration nodes. A name pointcut selects the wrapper; it does not assign that name to the child or introduce a caller path. Configuration identity and execution sharing still use configuration references.
 
@@ -517,7 +549,7 @@ See also: Configuration node, Pointcut.
 
 Status: `Canonical`
 
-Advice wraps the executions built for the configurations a pointcut selects. It contains no pointcut and is separate from the configuration graph.
+Advice wraps the executors built for the configurations a pointcut selects. It contains no pointcut and is separate from the configuration graph.
 
 The single `Advice` concept provides around advice. Its wrapper can run code around an operation, change its arguments or results, or decide whether to invoke it. Advice is not restricted to observation.
 
@@ -529,11 +561,11 @@ See also: Aspect, Configuration node, Join point, Pointcut.
 
 Status: `Canonical`
 
-A join point is the execution built for one configuration selected by a pointcut. Its advice can be rebound around another contextual execution while retaining the prepared join-point state.
+A join point is the executor built for one configuration selected by a pointcut. Its advice can be rebound around another contextual executor while retaining the prepared join-point state.
 
 A join point does not identify one invocation or one occurrence of a configuration along a caller path.
 
-See also: Advice, Configuration node, Execution node, Pointcut.
+See also: Advice, Configuration node, Executor, Pointcut.
 
 ### Aspect
 
@@ -541,7 +573,7 @@ Status: `Canonical`
 
 An aspect holds ordered pointcut/advice pairs in `Advices`. `Aspect.Create(pointcut, advice)` creates one pair; a derived constructor can assign several pairs directly.
 
-Runs accept aspects through `AddAspect`. Resolution applies earlier advice closer to the source execution, with a new scope's pairs preceding inherited pairs. Each advice instance applies once at its first position. If the same advice appears with two pointcuts, the first pairing wins. Two traces sharing a clock therefore share its advice without counting twice.
+Runs accept aspects through `AddAspect`. Resolution applies earlier advice closer to the source executor, with a new scope's pairs preceding inherited pairs. Each advice instance applies once at its first position. If the same advice appears with two pointcuts, the first pairing wins. Two traces sharing a clock therefore share its advice without counting twice.
 
 An aspect holds its pairs; resolution state owns prepared advice factories. Reusing an aspect across independent scopes does not share their prepared execution state. An analyzer or clock may own collected data that it intentionally shares across runs.
 
@@ -557,9 +589,9 @@ An `AlgorithmRun` executes one algorithm configuration on a problem. An `Experim
 
 When a meta-algorithm coordinates child algorithms, the run is created by the algorithm started by the user. Child algorithms and operators participate in that same run unless they are explicitly started as separate runs.
 
-Run analyzers are added while a run is preparing and their advice is applied during resolution, so their observations can span nested algorithms and multiple short-lived execution nodes. A run does not accept more analyzers after it leaves `Preparing`.
+Run analyzers are added while a run is preparing and their advice is applied during resolution, so their observations can span nested algorithms and multiple short-lived executors. A run does not accept more analyzers after it leaves `Preparing`.
 
-See also: Analyzer, Configuration, Execution node, Search state.
+See also: Analyzer, Configuration, Executor, Search state.
 
 ### Search state
 
@@ -575,33 +607,49 @@ Use search terminology for the state and the search space, but do not use search
 
 See also: Candidate, Evaluated candidate, Execution state, Run, Search space.
 
-### Execution node
+### Executor
 
 Status: `Canonical`
 
-An execution node is the resolved runtime object that implements the operations of an algorithm or operator. Its resolved child references connect it to other execution nodes. It may hold private execution data or references to that data. A binding is that node with the children and observations supplied for a particular resolution context.
+An executor is a runtime object that performs one or more operations of an algorithm or operator. It exposes callable methods such as `Mutate`, `Evaluate` or `RunStreamingAsync`. It may keep counters, caches and other execution state, or references to shared state, and resolved child executors.
 
-An execution node is distinct from a run, a single operation invocation and the preparation that owns its persistent state and selected dependencies. The name alone does not promise a particular lifetime, a fresh allocation or a separate state object. A node can be shorter-lived than the run; a stateless configuration can also serve as its own execution node.
+Algorithms and other executors call its operation methods. One executor can receive many invocations and can support several operations. Resolution may construct another executor around the same shared state when children or advice differ. A stateless configuration can also serve as its own executor.
 
-The common interface is `IExecutionNode`. Role-specific contracts use names such as `IOperatorExecution`, `IMutatorExecution` and `IAlgorithmExecution`, without a `Node` suffix on those roles. These names do not themselves change execution-state ownership or resolution.
+The common interface is `IExecutor`. Operation-specific interfaces include `IMutationExecutor` and `IEvaluationExecutor`; algorithms use `IAlgorithmExecutor`. The term does not give the object scheduling, threading, disposal or run-lifecycle responsibilities.
 
-Execution is accepted shorthand for execution node when the context clearly refers to the callable object. Use node when graph membership needs emphasis, or role-specific terms such as algorithm execution, operator execution or mutator execution when the role is known. Use invocation or run when referring to execution over time.
+See also: Configuration, Execution, Execution graph, Execution state, Operation, Operation invocation, Run.
 
-See also: Configuration node, Execution graph, Execution state, Run.
+### Execution
+
+Status: `Canonical`
+
+Execution is the activity of performing work. Use the term in execution time, execution state, execution concurrency and execution graph. Use executor for the callable runtime object, operation for the action it supports, and invocation or call for one actual method call.
+
+`AlgorithmRun` owns a run's lifecycle. An executor performs the work that participates in that run.
+
+See also: Executor, Execution concurrency, Execution state, Operation, Operation invocation, Run.
+
+### Execution node
+
+Status: `Legacy`
+
+A former name for executor. Use executor for the callable runtime object; use node only when discussing its position in the execution graph.
+
+See also: Executor, Execution graph.
 
 ### Execution instance
 
 Status: `Legacy`
 
-A legacy alias for execution node. Use execution node or a role-specific form such as mutator execution.
+A former name for executor. Use executor or a role-specific form such as mutation executor.
 
-See also: Execution node.
+See also: Executor.
 
 ### Execution state
 
 Status: `Canonical`
 
-Execution state is private mutable data used by an execution node, such as counters, caches and buffers. It must not be shared through the reusable configuration.
+Execution state is private mutable data used by an executor, such as counters, caches and buffers. It must not be shared through the reusable configuration.
 
 Under the typed factory contract, persistent state belongs to the selected logical execution and survives reconstruction of its nodes. Resolved children and construction frames belong to each binding; iterator progress and local timers belong to an invocation. Framework-managed leaf state cannot contain graph dependencies.
 
@@ -609,7 +657,7 @@ Use `ExecutionState` for an authored private state holder and `state` for its lo
 
 Execution state is distinct from search state. Search states describe visible progress through the search and may be streamed, inspected, analyzed, or returned as the final state of a run.
 
-See also: Configuration, Execution node, Run, Search state.
+See also: Configuration, Executor, Run, Search state.
 
 ### Child scope policy
 
@@ -625,23 +673,23 @@ See also: Configuration node, Execution state, Resolution scope.
 
 Status: `Canonical`
 
-An execution graph is a graph of execution nodes created from a configuration graph during a run.
+An execution graph is a graph of executors created from a configuration graph during a run.
 
 A run may contain more than one execution graph over time or through different observation contexts. Distinct bound nodes can share persistent execution state while retaining their own children and observers.
 
-See also: Configuration graph, Execution node, Run.
+See also: Configuration graph, Executor, Run.
 
 ### Resolution scope
 
 Status: `Canonical`
 
-A resolution scope resolves configurations to execution nodes during a run.
+A resolution scope resolves configurations to executors during a run.
 
-The scope combines state ownership with an immutable ordered collection of zero, one or more aspects. It selects prepared factories by configuration reference and invokes them with the requesting aspects. The resolver caches no execution nodes, but a leaf factory may return its prepared raw node. Dependencies resolve in the state owning their factory. Child scopes create local state while reusing ancestor-owned factories; `With` changes aspects while sharing state. Both operations accept multiple aspects in supplied order as one layer.
+The scope combines state ownership with an immutable ordered collection of zero, one or more aspects. It selects prepared factories by configuration reference and invokes them with the requesting aspects. The resolver caches no executors, but a leaf factory may return its prepared raw node. Dependencies resolve in the state owning their factory. Child scopes create local state while reusing ancestor-owned factories; `With` changes aspects while sharing state. Both operations accept multiple aspects in supplied order as one layer.
 
 See [execution resolution](/contributing/architecture/execution-resolution) for preparation, binding and observation rules.
 
-See also: Configuration, Wrapper chain, Execution graph, Execution node, Aspect, Run.
+See also: Configuration, Wrapper chain, Execution graph, Executor, Aspect, Run.
 
 ### Wrapper chain
 
@@ -649,11 +697,11 @@ Status: `Canonical`
 
 A wrapper chain is the ordered set of execution wrappers applied to one selected configuration in a resolution context.
 
-Configured wrappers belong to the configuration graph. Advice wraps the raw execution built for a configuration. Earlier advice wraps closer to that source execution; later advice wraps outside it. A new scope's advice precedes inherited advice. Each advice instance applies once at its first position.
+Configured wrappers belong to the configuration graph. Advice wraps the raw executor built for a configuration. Earlier advice wraps closer to that source executor; later advice wraps outside it. A new scope's advice precedes inherited advice. Each advice instance applies once at its first position.
 
 Changing the chain can rebuild nodes and child bindings without preparing their persistent state again.
 
-See also: Advice, Aspect, Configuration, Execution node, Resolution scope.
+See also: Advice, Aspect, Configuration, Executor, Resolution scope.
 
 ### Random number generator (RNG)
 
@@ -671,9 +719,9 @@ Status: `Canonical`
 
 A value array is an immutable ordered collection that compares by its elements rather than by the identity of its backing storage, represented by `ValueArray<T>`.
 
-Configurations use a value array for every retained ordered collection, such as child operators, pipeline stages or weights, so that structurally identical configurations compare equal without an equality attribute or a hand-written comparison. An `ImmutableArray<T>` compares by underlying array reference and must not be used for collection state that participates in equality. Execution nodes keep `ImmutableArray<T>`, because they are resolved by reference identity and never compared structurally.
+Configurations use a value array for every retained ordered collection, such as child operators, pipeline stages or weights, so that structurally identical configurations compare equal without an equality attribute or a hand-written comparison. An `ImmutableArray<T>` compares by underlying array reference and must not be used for collection state that participates in equality. Executors keep `ImmutableArray<T>`, because they are resolved by reference identity and never compared structurally.
 
-See also: Child operator, Configuration, Execution node, Resolution scope.
+See also: Child operator, Configuration, Executor, Resolution scope.
 
 ### Execution concurrency
 
@@ -685,7 +733,7 @@ Execution concurrency describes whether independent operations must execute sequ
 
 Execution concurrency describes scheduling permission and bounds. It does not imply dedicated threads.
 
-See also: Execution node, Run.
+See also: Executor, Run.
 
 ## Analysis and Experiments
 

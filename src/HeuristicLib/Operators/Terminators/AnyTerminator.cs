@@ -14,11 +14,11 @@ public sealed record AnyTerminator<TCandidate>
     {
     }
 
-    protected override CompositeExecutionFactory<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
-        childTerminators => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminators);
+    protected override CompositeExecutorFactory<ITerminationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
+        childTerminators => new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminators);
 
-    private sealed class Execution<TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
-        : MultiTerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminators)
+    private sealed class Executor<TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
+        : MultiTerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState

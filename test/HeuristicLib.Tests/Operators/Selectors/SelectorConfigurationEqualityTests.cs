@@ -195,11 +195,11 @@ public class SelectorConfigurationEqualityTests
         {
         }
 
-        protected override CompositeExecutionFactory<ISelectorExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childSelectors => new Execution<TRunSearchSpace, TRunProblem>(childSelectors);
+        protected override CompositeExecutorFactory<ISelectionExecutor<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childSelectors => new Executor<TRunSearchSpace, TRunProblem>(childSelectors);
 
-        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ISelectorExecution<int, TSearchSpace, TProblem>> childSelectors)
-            : MultiSelectorExecution<int, TSearchSpace, TProblem>(childSelectors)
+        private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<ISelectionExecutor<int, TSearchSpace, TProblem>> childSelectors)
+            : MultiSelectionExecutor<int, TSearchSpace, TProblem>(childSelectors)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

@@ -58,7 +58,7 @@ public class InterceptorConfigurationEqualityTests
         {
         }
 
-        protected override WrapperExecutionFactory<IInterceptorExecution<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
+        protected override WrapperExecutorFactory<IInterceptionExecutor<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
             child => child;
     }
 

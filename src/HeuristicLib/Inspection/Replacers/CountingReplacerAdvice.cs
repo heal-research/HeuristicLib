@@ -19,11 +19,11 @@ public sealed class CountingReplacerAdvice<TCandidate> : ReplacerAdvice<TCandida
         Metric = metric;
     }
 
-    public override WrapperExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IReplacer<TCandidate> replacer) =>
-        childReplacer => new Execution<TRunSearchSpace, TRunProblem>(childReplacer, Counter, Metric);
+    public override WrapperExecutorFactory<IReplacementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IReplacer<TCandidate> replacer) =>
+        childReplacer => new Executor<TRunSearchSpace, TRunProblem>(childReplacer, Counter, Metric);
 
-    private sealed class Execution<TSearchSpace, TProblem>(IReplacerExecution<TCandidate, TSearchSpace, TProblem> childReplacer, CountAccumulator counter, OperatorCountMetric metric)
-        : WrappingReplacerExecution<TCandidate, TSearchSpace, TProblem>(childReplacer)
+    private sealed class Executor<TSearchSpace, TProblem>(IReplacementExecutor<TCandidate, TSearchSpace, TProblem> childReplacer, CountAccumulator counter, OperatorCountMetric metric)
+        : WrappingReplacementExecutor<TCandidate, TSearchSpace, TProblem>(childReplacer)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

@@ -63,11 +63,11 @@ public class PointcutSpecs
         var refinement = new NamedMutator<RealVector>(child, "refinement");
         var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
 
-        var explorationExecution = scope.Resolve(exploration);
-        var refinementExecution = scope.Resolve(refinement);
+        var explorationExecutor = scope.Resolve(exploration);
+        var refinementExecutor = scope.Resolve(refinement);
 
-        explorationExecution.ShouldBeSameAs(refinementExecution);
-        scope.Resolve(child).ShouldBeSameAs(explorationExecution);
+        explorationExecutor.ShouldBeSameAs(refinementExecutor);
+        scope.Resolve(child).ShouldBeSameAs(explorationExecutor);
     }
 
     [Fact]
@@ -165,10 +165,10 @@ public class PointcutSpecs
             ? Aspect.Create(Pointcut.Reference(warmup), new RecordedCoolingAdvice(queriedTemperatures.Add))
             : Aspect.Create(Pointcut.OfType<ICoolingSchedule>(), new RecordedCoolingAdvice(queriedTemperatures.Add));
         var scope = ResolutionScope.Create(recording);
-        var execution = scope.Resolve(plan);
+        var executor = scope.Resolve(plan);
 
-        execution.Temperature(step: 0).ShouldBe(100);
-        execution.Temperature(step: 5).ShouldBe(2);
+        executor.Temperature(step: 0).ShouldBe(100);
+        executor.Temperature(step: 5).ShouldBe(2);
         queriedTemperatures.ShouldBe(selectByReference ? [100] : [100, 2]);
     }
 
@@ -188,9 +188,9 @@ public class PointcutSpecs
         var second = new AspectGroup(recording);
 
         var scope = useCompositions ? ResolutionScope.Create(recording, first, second) : ResolutionScope.Create(recording);
-        var execution = scope.Resolve(plan);
-        execution.Temperature(step: 0).ShouldBe(100);
-        execution.Temperature(step: 5).ShouldBe(2);
+        var executor = scope.Resolve(plan);
+        executor.Temperature(step: 0).ShouldBe(100);
+        executor.Temperature(step: 5).ShouldBe(2);
 
         queriedTemperatures.ShouldBe([100, 2]);
     }
@@ -210,9 +210,9 @@ public class PointcutSpecs
             Aspect.Create(Pointcut.Reference(warmup), new RecordedCoolingAdvice(recordWarmup)),
             Aspect.Create(Pointcut.OfType<ICoolingSchedule>(), new RecordedCoolingAdvice(recordAll)));
 
-        var execution = ResolutionScope.Create(combined).Resolve(plan);
-        execution.Temperature(step: 0).ShouldBe(100);
-        execution.Temperature(step: 5).ShouldBe(2);
+        var executor = ResolutionScope.Create(combined).Resolve(plan);
+        executor.Temperature(step: 0).ShouldBe(100);
+        executor.Temperature(step: 5).ShouldBe(2);
 
         events.ShouldBe(["existing:100", "warmup:100", "all:100", "existing:2", "all:2"]);
     }
@@ -228,11 +228,11 @@ public class PointcutSpecs
             static (schedule, record) => Aspect.Create(
                 Pointcut.Reference(schedule), new RecordedCoolingAdvice(record)),
             static temperature => temperature);
-        var execution = ResolutionScope.Create(temperatures).Resolve(plan);
+        var executor = ResolutionScope.Create(temperatures).Resolve(plan);
 
-        execution.Temperature(step: 0).ShouldBe(100);
+        executor.Temperature(step: 0).ShouldBe(100);
         var first = temperatures.Snapshot();
-        execution.Temperature(step: 5).ShouldBe(2);
+        executor.Temperature(step: 5).ShouldBe(2);
 
         first.Values.ShouldBe([100]);
         temperatures.Snapshot().Values.ShouldBe([100, 2]);
@@ -267,36 +267,36 @@ public class PointcutSpecs
     }
 
     // A consumer-defined role: the library knows nothing about cooling schedules.
-    private interface ICoolingSchedule : IConfigurationNode<ICoolingScheduleExecution>;
+    private interface ICoolingSchedule : IConfigurationNode<ICoolingScheduleExecutor>;
 
-    private interface ICoolingScheduleExecution : IExecutionNode
+    private interface ICoolingScheduleExecutor : IExecutor
     {
         double Temperature(int step);
     }
 
     private sealed record GeometricCooling(double StartTemperature, double Factor) : ICoolingSchedule
     {
-        public ExecutionFactory<ICoolingScheduleExecution> CreateExecutionFactory()
+        public ExecutorFactory<ICoolingScheduleExecutor> CreateExecutorFactory()
         {
-            var execution = new Execution(StartTemperature, Factor);
-            return _ => execution;
+            var executor = new Executor(StartTemperature, Factor);
+            return _ => executor;
         }
 
-        private sealed class Execution(double startTemperature, double factor) : ICoolingScheduleExecution
+        private sealed class Executor(double startTemperature, double factor) : ICoolingScheduleExecutor
         {
             public double Temperature(int step) => startTemperature * Math.Pow(factor, step);
         }
     }
 
-    private static WrapperExecutionFactory<ICoolingScheduleExecution> PrepareCoolingAdvice(Advice advice, ICoolingSchedule schedule) =>
+    private static WrapperExecutorFactory<ICoolingScheduleExecutor> PrepareCoolingAdvice(Advice advice, ICoolingSchedule schedule) =>
         ((RecordedCoolingAdvice)advice).CreateWrapperFactory(schedule);
 
     private sealed class RecordedCoolingAdvice(Action<double> record) : Advice<ICoolingSchedule>
     {
-        public WrapperExecutionFactory<ICoolingScheduleExecution> CreateWrapperFactory(ICoolingSchedule schedule) =>
-            inner => new Execution(inner, record);
+        public WrapperExecutorFactory<ICoolingScheduleExecutor> CreateWrapperFactory(ICoolingSchedule schedule) =>
+            inner => new Executor(inner, record);
 
-        private sealed class Execution(ICoolingScheduleExecution schedule, Action<double> record) : ICoolingScheduleExecution
+        private sealed class Executor(ICoolingScheduleExecutor schedule, Action<double> record) : ICoolingScheduleExecutor
         {
             public double Temperature(int step)
             {
@@ -308,12 +308,12 @@ public class PointcutSpecs
     }
 
     private sealed record AnnealingPlan(ICoolingSchedule Warmup, ICoolingSchedule Main, int WarmupSteps)
-        : IConfigurationNode<AnnealingPlan.Execution>
+        : IConfigurationNode<AnnealingPlan.Executor>
     {
-        public ExecutionFactory<Execution> CreateExecutionFactory() =>
-            scope => new Execution(scope.Resolve(Warmup, static source => source.CreateExecutionFactory(), PrepareCoolingAdvice), scope.Resolve(Main, static source => source.CreateExecutionFactory(), PrepareCoolingAdvice), WarmupSteps);
+        public ExecutorFactory<Executor> CreateExecutorFactory() =>
+            scope => new Executor(scope.Resolve(Warmup, static source => source.CreateExecutorFactory(), PrepareCoolingAdvice), scope.Resolve(Main, static source => source.CreateExecutorFactory(), PrepareCoolingAdvice), WarmupSteps);
 
-        public sealed class Execution(ICoolingScheduleExecution warmup, ICoolingScheduleExecution main, int warmupSteps) : IExecutionNode
+        public sealed class Executor(ICoolingScheduleExecutor warmup, ICoolingScheduleExecutor main, int warmupSteps) : IExecutor
         {
             public double Temperature(int step) =>
                 step < warmupSteps ? warmup.Temperature(step) : main.Temperature(step - warmupSteps);

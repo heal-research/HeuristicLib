@@ -88,11 +88,11 @@ public class EvaluatorConfigurationEqualityTests
         {
         }
 
-        protected override CompositeExecutionFactory<IEvaluatorExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childEvaluators => new Execution<TRunSearchSpace, TRunProblem>(childEvaluators);
+        protected override CompositeExecutorFactory<IEvaluationExecutor<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childEvaluators => new Executor<TRunSearchSpace, TRunProblem>(childEvaluators);
 
-        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IEvaluatorExecution<int, TSearchSpace, TProblem>> childEvaluators)
-            : MultiEvaluatorExecution<int, TSearchSpace, TProblem>(childEvaluators)
+        private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IEvaluationExecutor<int, TSearchSpace, TProblem>> childEvaluators)
+            : MultiEvaluationExecutor<int, TSearchSpace, TProblem>(childEvaluators)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
@@ -106,7 +106,7 @@ public class EvaluatorConfigurationEqualityTests
         {
         }
 
-        protected override WrapperExecutionFactory<IEvaluatorExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        protected override WrapperExecutorFactory<IEvaluationExecutor<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
             child => child;
     }
 

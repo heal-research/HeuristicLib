@@ -15,7 +15,7 @@ public sealed record NamedSelector<TCandidate> : WrappingSelector<TCandidate>, I
 
     public string Name { get; init; }
 
-    protected override WrapperExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+    protected override WrapperExecutorFactory<ISelectionExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
         child => child;
 }
 

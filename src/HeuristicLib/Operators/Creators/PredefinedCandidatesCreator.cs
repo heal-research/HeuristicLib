@@ -22,12 +22,12 @@ public record PredefinedCandidatesCreator<TCandidate>
         CreatorForRemainingCandidates = creatorForRemainingCandidates;
     }
 
-    public ExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         var state = new ExecutionState();
-        return scope => new Execution<TRunSearchSpace, TRunProblem>(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(CreatorForRemainingCandidates), PredefinedCandidates, state);
+        return scope => new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(CreatorForRemainingCandidates), PredefinedCandidates, state);
     }
 
     private sealed class ExecutionState
@@ -35,8 +35,8 @@ public record PredefinedCandidatesCreator<TCandidate>
         public int CurrentCandidateIndex { get; set; }
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(ICreatorExecution<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates, ExecutionState state)
-        : CreatorExecution<TCandidate, TSearchSpace, TProblem>
+    private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates, ExecutionState state)
+        : CreationExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

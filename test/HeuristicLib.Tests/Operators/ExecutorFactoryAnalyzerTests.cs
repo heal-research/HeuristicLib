@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace HEAL.HeuristicLib.Tests.Operators;
 
 /// <summary>Compile real factory contracts before checking that child preparation cannot silently bypass resolution.</summary>
-public class ExecutionFactoryAnalyzerTests
+public class ExecutorFactoryAnalyzerTests
 {
     private const string Preamble = """
         using System.Collections.Generic;
@@ -22,8 +22,8 @@ public class ExecutionFactoryAnalyzerTests
 
         file record ChildMutator : Mutator<int>
         {
-            public override ExecutionFactory<IMutatorExecution<int, SS, P>> CreateExecutionFactory() => _ => new Execution();
-            private sealed class Execution : MutatorExecution<int, SS, P>
+            public override ExecutorFactory<IMutationExecutor<int, SS, P>> CreateExecutorFactory() => _ => new Executor();
+            private sealed class Executor : MutationExecutor<int, SS, P>
             {
                 public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, SS searchSpace, P problem) => parents;
             }
@@ -32,38 +32,38 @@ public class ExecutionFactoryAnalyzerTests
         """;
 
     [Theory]
-    [InlineData("IMutator<int>", "Child.CreateExecutionFactory<SS, P>()(scope)")]
-    [InlineData("ChildMutator", "Child.CreateExecutionFactory()(scope)")]
+    [InlineData("IMutator<int>", "Child.CreateExecutorFactory<SS, P>()(scope)")]
+    [InlineData("ChildMutator", "Child.CreateExecutorFactory()(scope)")]
     public async Task Reports_WhenAChildFactoryIsInvokedInsideTheBinding(string childType, string binding)
     {
         var diagnostics = await AnalyzeAsync(Preamble + $$"""
             file sealed record BypassingMutator : Mutator<int>
             {
                 public required {{childType}} Child { get; init; }
-                public override ExecutionFactory<IMutatorExecution<int, SS, P>> CreateExecutionFactory() => scope => {{binding}};
+                public override ExecutorFactory<IMutationExecutor<int, SS, P>> CreateExecutorFactory() => scope => {{binding}};
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutionFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
     }
 
     [Theory]
-    [InlineData("Child.CreateExecutionFactory<SS, P>()")]
-    [InlineData("Prepare(); ExecutionFactory<IMutatorExecution<int, SS, P>> Prepare() => Child.CreateExecutionFactory<SS, P>()")]
+    [InlineData("Child.CreateExecutorFactory<SS, P>()")]
+    [InlineData("Prepare(); ExecutorFactory<IMutationExecutor<int, SS, P>> Prepare() => Child.CreateExecutorFactory<SS, P>()")]
     public async Task Reports_WhenAChildFactoryIsPreparedDirectly(string preparation)
     {
         var diagnostics = await AnalyzeAsync(Preamble + $$"""
             file sealed record BypassingMutator : Mutator<int>
             {
                 public required IMutator<int> Child { get; init; }
-                public override ExecutionFactory<IMutatorExecution<int, SS, P>> CreateExecutionFactory()
+                public override ExecutorFactory<IMutationExecutor<int, SS, P>> CreateExecutorFactory()
                 {
                     return {{preparation}};
                 }
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutionFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
     }
 
     [Fact]
@@ -73,15 +73,15 @@ public class ExecutionFactoryAnalyzerTests
             file sealed record BypassingMutator : Mutator<int>
             {
                 public required IMutator<int> Child { get; init; }
-                public override ExecutionFactory<IMutatorExecution<int, SS, P>> CreateExecutionFactory()
+                public override ExecutorFactory<IMutationExecutor<int, SS, P>> CreateExecutorFactory()
                 {
-                    var factory = Child.CreateExecutionFactory<SS, P>();
+                    var factory = Child.CreateExecutorFactory<SS, P>();
                     return scope => factory(scope);
                 }
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutionFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class ExecutionFactoryAnalyzerTests
             file sealed record ResolvingMutator : Mutator<int>
             {
                 public required IMutator<int> Child { get; init; }
-                public override ExecutionFactory<IMutatorExecution<int, SS, P>> CreateExecutionFactory() => scope => scope.Resolve<int, SS, P>(Child);
+                public override ExecutorFactory<IMutationExecutor<int, SS, P>> CreateExecutorFactory() => scope => scope.Resolve<int, SS, P>(Child);
             }
             """);
 
@@ -104,7 +104,7 @@ public class ExecutionFactoryAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
             file static class DeliberateCaller
             {
-                public static IMutatorExecution<int, SS, P> Create(ChildMutator mutator) => mutator.CreateExecutionFactory()(ResolutionScope.Create());
+                public static IMutationExecutor<int, SS, P> Create(ChildMutator mutator) => mutator.CreateExecutorFactory()(ResolutionScope.Create());
             }
             """);
 
@@ -112,16 +112,16 @@ public class ExecutionFactoryAnalyzerTests
     }
 
     [Theory]
-    [InlineData("CreateExecutionFactory(1)")]
-    [InlineData("this.CreateExecutionFactory(1)")]
-    [InlineData("base.CreateExecutionFactory()")]
+    [InlineData("CreateExecutorFactory(1)")]
+    [InlineData("this.CreateExecutorFactory(1)")]
+    [InlineData("base.CreateExecutorFactory()")]
     public async Task DoesNotReport_WhenAFactoryHookDelegatesToItselfOrItsBase(string preparation)
     {
         var diagnostics = await AnalyzeAsync(Preamble + $$"""
             file sealed record DelegatingMutator : ChildMutator
             {
-                public override ExecutionFactory<IMutatorExecution<int, SS, P>> CreateExecutionFactory() => {{preparation}};
-                private ExecutionFactory<IMutatorExecution<int, SS, P>> CreateExecutionFactory(int unused) => base.CreateExecutionFactory();
+                public override ExecutorFactory<IMutationExecutor<int, SS, P>> CreateExecutorFactory() => {{preparation}};
+                private ExecutorFactory<IMutationExecutor<int, SS, P>> CreateExecutorFactory(int unused) => base.CreateExecutorFactory();
             }
             """);
 
@@ -135,12 +135,12 @@ public class ExecutionFactoryAnalyzerTests
             file sealed record BridgingMutator : IMutator<int>
             {
                 public required ChildMutator Child { get; init; }
-                ExecutionFactory<IMutatorExecution<int, TRunSearchSpace, TRunProblem>> IMutator<int>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
-                    scope => (IMutatorExecution<int, TRunSearchSpace, TRunProblem>)Child.CreateExecutionFactory()(scope);
+                ExecutorFactory<IMutationExecutor<int, TRunSearchSpace, TRunProblem>> IMutator<int>.CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
+                    scope => (IMutationExecutor<int, TRunSearchSpace, TRunProblem>)Child.CreateExecutorFactory()(scope);
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutionFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
     }
 
     [Fact]
@@ -149,8 +149,8 @@ public class ExecutionFactoryAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
             file sealed record BridgingMutator : ChildMutator, IMutator<int>
             {
-                ExecutionFactory<IMutatorExecution<int, TRunSearchSpace, TRunProblem>> IMutator<int>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
-                    (ExecutionFactory<IMutatorExecution<int, TRunSearchSpace, TRunProblem>>)CreateExecutionFactory();
+                ExecutorFactory<IMutationExecutor<int, TRunSearchSpace, TRunProblem>> IMutator<int>.CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
+                    (ExecutorFactory<IMutationExecutor<int, TRunSearchSpace, TRunProblem>>)CreateExecutorFactory();
             }
             """);
 
@@ -164,38 +164,38 @@ public class ExecutionFactoryAnalyzerTests
             file sealed record RecursiveMutator : ChildMutator
             {
                 public RecursiveMutator? Child { get; init; }
-                public override ExecutionFactory<IMutatorExecution<int, SS, P>> CreateExecutionFactory() =>
-                    Child is null ? base.CreateExecutionFactory() : Child.CreateExecutionFactory();
+                public override ExecutorFactory<IMutationExecutor<int, SS, P>> CreateExecutorFactory() =>
+                    Child is null ? base.CreateExecutorFactory() : Child.CreateExecutorFactory();
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutionFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
     }
 
     [Fact]
     public async Task Reports_WhenTheFactoryCallIsDeferredToAnExecutionMethod()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
-            file sealed class DeferredExecution(IMutator<int> child, ResolutionScope scope) : MutatorExecution<int, SS, P>
+            file sealed class DeferredExecutor(IMutator<int> child, ResolutionScope scope) : MutationExecutor<int, SS, P>
             {
                 public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, SS searchSpace, P problem) =>
                     Activate().Mutate(parents, random, searchSpace, problem);
-                private IMutatorExecution<int, SS, P> Activate() => child.CreateExecutionFactory<SS, P>()(scope);
+                private IMutationExecutor<int, SS, P> Activate() => child.CreateExecutorFactory<SS, P>()(scope);
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutionFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
     }
 
     [Theory]
-    [InlineData("source.CreateExecutionFactory<SS, P>()", 0)]
-    [InlineData("Other.CreateExecutionFactory<SS, P>()", 1)]
+    [InlineData("source.CreateExecutorFactory<SS, P>()", 0)]
+    [InlineData("Other.CreateExecutorFactory<SS, P>()", 1)]
     public async Task ResolutionPreparation_OnlyAllowsItsOwnSource(string preparation, int count)
     {
         var diagnostics = await AnalyzeAsync(Preamble + $$"""
             file static class CustomResolution
             {
-                public static IMutatorExecution<int, SS, P> Resolve(ResolutionScope scope, IMutator<int> configuration, IMutator<int> Other) =>
+                public static IMutationExecutor<int, SS, P> Resolve(ResolutionScope scope, IMutator<int> configuration, IMutator<int> Other) =>
                     scope.Resolve(configuration, source => {{preparation}},
                         static (_, _) => throw new System.InvalidOperationException());
             }
@@ -209,12 +209,12 @@ public class ExecutionFactoryAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
             file static class CustomResolution
             {
-                public static IMutatorExecution<int, SS, P> Resolve(ResolutionScope scope, IMutator<int> configuration) =>
-                    scope.Resolve<IMutator<int>, IMutatorExecution<int, SS, P>>(configuration, source => innerScope => source.CreateExecutionFactory<SS, P>()(innerScope),
+                public static IMutationExecutor<int, SS, P> Resolve(ResolutionScope scope, IMutator<int> configuration) =>
+                    scope.Resolve<IMutator<int>, IMutationExecutor<int, SS, P>>(configuration, source => innerScope => source.CreateExecutorFactory<SS, P>()(innerScope),
                         static (_, _) => throw new System.InvalidOperationException());
             }
             """);
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutionFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
     }
 
     [Fact]
@@ -223,29 +223,29 @@ public class ExecutionFactoryAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
             file sealed record CustomWrapper(IMutator<int> Child) : WrappingMutator<int>(Child)
             {
-                protected override WrapperExecutionFactory<IMutatorExecution<int, TSS, TP>> CreateWrapperFactory<TSS, TP>()
+                protected override WrapperExecutorFactory<IMutationExecutor<int, TSS, TP>> CreateWrapperFactory<TSS, TP>()
                 {
-                    var childFactory = Child.CreateExecutionFactory<TSS, TP>();
+                    var childFactory = Child.CreateExecutorFactory<TSS, TP>();
                     return inner => inner;
                 }
             }
             """);
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutionFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
     }
 
     [Fact]
     public async Task Reports_ForAConsumerDefinedExecutionContract()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
-            file interface ICustomExecution : IExecutionNode;
-            file sealed record CustomConfiguration : IConfigurationNode<ICustomExecution>
+            file interface ICustomExecutor : IExecutor;
+            file sealed record CustomConfiguration : IConfigurationNode<ICustomExecutor>
             {
-                public required IConfigurationNode<ICustomExecution> Child { get; init; }
-                public ExecutionFactory<ICustomExecution> CreateExecutionFactory() => scope => Child.CreateExecutionFactory()(scope);
+                public required IConfigurationNode<ICustomExecutor> Child { get; init; }
+                public ExecutorFactory<ICustomExecutor> CreateExecutorFactory() => scope => Child.CreateExecutorFactory()(scope);
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutionFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
     }
 
     [Fact]
@@ -254,11 +254,11 @@ public class ExecutionFactoryAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
             file sealed class UnrelatedChild
             {
-                public System.Func<ResolutionScope, int> CreateExecutionFactory() => _ => 0;
+                public System.Func<ResolutionScope, int> CreateExecutorFactory() => _ => 0;
             }
             file sealed class DeliberateCaller
             {
-                public int Build(ResolutionScope scope) => new UnrelatedChild().CreateExecutionFactory()(scope);
+                public int Build(ResolutionScope scope) => new UnrelatedChild().CreateExecutorFactory()(scope);
             }
             """);
 
@@ -279,8 +279,8 @@ public class ExecutionFactoryAnalyzerTests
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         compilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
-        var diagnostics = await compilation.WithAnalyzers([new ExecutionFactoryAnalyzer()]).GetAnalyzerDiagnosticsAsync();
+        var diagnostics = await compilation.WithAnalyzers([new ExecutorFactoryAnalyzer()]).GetAnalyzerDiagnosticsAsync();
         diagnostics.ShouldNotContain(static diagnostic => diagnostic.Id == "AD0001");
-        return [.. diagnostics.Where(static diagnostic => diagnostic.Id == ExecutionFactoryAnalyzer.DiagnosticId)];
+        return [.. diagnostics.Where(static diagnostic => diagnostic.Id == ExecutorFactoryAnalyzer.DiagnosticId)];
     }
 }

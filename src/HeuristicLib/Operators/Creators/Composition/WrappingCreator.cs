@@ -21,7 +21,7 @@ public abstract record WrappingCreator<TCandidate>
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildCreator);
 
     /// <summary>Prepares this operator once, then binds its child in each construction scope.</summary>
-    public ExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -31,16 +31,16 @@ public abstract record WrappingCreator<TCandidate>
 
     /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved child.</summary>
     /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
-    protected abstract WrapperExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected abstract WrapperExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
 }
 
-public abstract class WrappingCreatorExecution<TCandidate, TSearchSpace, TProblem>(ICreatorExecution<TCandidate, TSearchSpace, TProblem> childCreator)
-    : CreatorExecution<TCandidate, TSearchSpace, TProblem>
+public abstract class WrappingCreationExecutor<TCandidate, TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> childCreator)
+    : CreationExecutor<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ICreatorExecution<TCandidate, TSearchSpace, TProblem> ChildCreator { get; } = childCreator;
+    protected ICreationExecutor<TCandidate, TSearchSpace, TProblem> ChildCreator { get; } = childCreator;
 }

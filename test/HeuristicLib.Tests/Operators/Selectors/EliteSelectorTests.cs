@@ -61,9 +61,9 @@ public class EliteSelectorTests
         };
 
         var selector = new EliteSelector<string>(childSelector) { Elites = elites };
-        var execution = ResolutionScope.Create().Resolve<string, ISearchSpace<string>, IProblem<string, ISearchSpace<string>>>(selector);
+        var executor = ResolutionScope.Create().Resolve<string, ISearchSpace<string>, IProblem<string, ISearchSpace<string>>>(selector);
 
-        return execution.Select(population, SingleObjective.Minimize, count, new SequenceRandomNumberGenerator(0.5), null!, null!);
+        return executor.Select(population, SingleObjective.Minimize, count, new SequenceRandomNumberGenerator(0.5), null!, null!);
     }
 
     /// <summary>

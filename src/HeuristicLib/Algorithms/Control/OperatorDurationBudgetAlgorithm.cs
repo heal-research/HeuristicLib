@@ -34,29 +34,29 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
     {
         var duration = new DurationAccumulator();
         var measuring = Aspect.Create(Pointcut.Reference(ObservedOperator), DurationMeasuring.CreateAdvice(duration, TimeProvider));
         return scope =>
         {
             var childScope = scope.With(measuring);
-            return new OperatorDurationBudgetAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
+            return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
         };
     }
 }
 
-public sealed class OperatorDurationBudgetAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+public sealed class OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    private readonly IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
+    private readonly IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
     private readonly DurationAccumulator duration;
     private readonly TimeSpan maximumDuration;
 
-    public OperatorDurationBudgetAlgorithmExecution(IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, DurationAccumulator duration, TimeSpan maximumDuration)
+    public OperatorDurationBudgetAlgorithmExecutor(IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, DurationAccumulator duration, TimeSpan maximumDuration)
     {
         this.algorithm = algorithm;
         this.duration = duration;

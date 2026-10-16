@@ -17,11 +17,11 @@ public sealed class CountingInterceptorAdvice<TCandidate> : InterceptorAdvice<TC
         Counter = counter;
     }
 
-    public override WrapperExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(IInterceptor<TCandidate> interceptor) =>
-        childInterceptor => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor, Counter);
+    public override WrapperExecutorFactory<IInterceptionExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(IInterceptor<TCandidate> interceptor) =>
+        childInterceptor => new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor, Counter);
 
-    private sealed class Execution<TSearchSpace, TProblem, TSearchState>(IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, CountAccumulator counter)
-        : WrappingInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptor)
+    private sealed class Executor<TSearchSpace, TProblem, TSearchState>(IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, CountAccumulator counter)
+        : WrappingInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptor)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState

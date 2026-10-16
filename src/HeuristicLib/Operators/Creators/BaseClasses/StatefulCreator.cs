@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 /// <remarks>
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
-/// It must not contain operator or algorithm configurations, execution nodes or execution node resolution facilities.
+/// It must not contain operator or algorithm configurations, executors or executor resolution facilities.
 /// <see cref="CreateInitialState"/> must return a fresh state object for each preparation. Bindings of that execution share the state.
 /// Calls are not inherently thread safe.
 /// Use <see cref="Creator{TCandidate,TSearchSpace,TProblem}"/> when the creator needs execution graph dependencies.
@@ -22,14 +22,14 @@ public abstract record StatefulCreator<TCandidate, TSearchSpace, TProblem, TStat
 
     protected abstract IReadOnlyList<TCandidate> Create(int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override ExecutionFactory<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory()
+    public sealed override ExecutorFactory<ICreationExecutor<TCandidate, TSearchSpace, TProblem>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, CreateInitialState());
-        return _ => execution;
+        var executor = new Executor(this, CreateInitialState());
+        return _ => executor;
     }
 
-    private sealed class Execution(StatefulCreator<TCandidate, TSearchSpace, TProblem, TState> creator, TState state)
-        : CreatorExecution<TCandidate, TSearchSpace, TProblem>
+    private sealed class Executor(StatefulCreator<TCandidate, TSearchSpace, TProblem, TState> creator, TState state)
+        : CreationExecutor<TCandidate, TSearchSpace, TProblem>
     {
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             creator.Create(count, state, random, searchSpace, problem);
@@ -45,14 +45,14 @@ public abstract record StatefulCreator<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<TCandidate> Create(int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override ExecutionFactory<ICreatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutionFactory()
+    public sealed override ExecutorFactory<ICreationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, CreateInitialState());
-        return _ => execution;
+        var executor = new Executor(this, CreateInitialState());
+        return _ => executor;
     }
 
-    private sealed class Execution(StatefulCreator<TCandidate, TSearchSpace, TState> creator, TState state)
-        : CreatorExecution<TCandidate, TSearchSpace>
+    private sealed class Executor(StatefulCreator<TCandidate, TSearchSpace, TState> creator, TState state)
+        : CreationExecutor<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
             creator.Create(count, state, random, searchSpace);
@@ -67,14 +67,14 @@ public abstract record StatefulCreator<TCandidate, TState>
 
     protected abstract IReadOnlyList<TCandidate> Create(int count, TState state, IRandomNumberGenerator random);
 
-    public sealed override ExecutionFactory<ICreatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutionFactory()
+    public sealed override ExecutorFactory<ICreationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, CreateInitialState());
-        return _ => execution;
+        var executor = new Executor(this, CreateInitialState());
+        return _ => executor;
     }
 
-    private sealed class Execution(StatefulCreator<TCandidate, TState> creator, TState state)
-        : CreatorExecution<TCandidate>
+    private sealed class Executor(StatefulCreator<TCandidate, TState> creator, TState state)
+        : CreationExecutor<TCandidate>
     {
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random) =>
             creator.Create(count, state, random);

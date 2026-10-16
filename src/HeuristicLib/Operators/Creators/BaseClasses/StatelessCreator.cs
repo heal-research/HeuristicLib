@@ -6,34 +6,34 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Creators;
 
 public abstract record StatelessCreator<TCandidate, TSearchSpace, TProblem>
-    : Creator<TCandidate, TSearchSpace, TProblem>, ICreatorExecution<TCandidate, TSearchSpace, TProblem>
+    : Creator<TCandidate, TSearchSpace, TProblem>, ICreationExecutor<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public sealed override ExecutionFactory<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory() => _ => this;
+    public sealed override ExecutorFactory<ICreationExecutor<TCandidate, TSearchSpace, TProblem>> CreateExecutorFactory() => _ => this;
 
     public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
 public abstract record StatelessCreator<TCandidate, TSearchSpace>
-    : Creator<TCandidate, TSearchSpace>, ICreatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    : Creator<TCandidate, TSearchSpace>, ICreationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public sealed override ExecutionFactory<ICreatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutionFactory() => _ => this;
+    public sealed override ExecutorFactory<ICreationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutorFactory() => _ => this;
 
     public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    IReadOnlyList<TCandidate> ICreatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
+    IReadOnlyList<TCandidate> ICreationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
         Create(count, random, searchSpace);
 }
 
 public abstract record StatelessCreator<TCandidate>
-    : Creator<TCandidate>, ICreatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+    : Creator<TCandidate>, ICreationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
-    public sealed override ExecutionFactory<ICreatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutionFactory() => _ => this;
+    public sealed override ExecutorFactory<ICreationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutorFactory() => _ => this;
 
     public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random);
 
-    IReadOnlyList<TCandidate> ICreatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Create(int count, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+    IReadOnlyList<TCandidate> ICreationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Create(int count, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         Create(count, random);
 }

@@ -24,11 +24,11 @@ public sealed class DurationMeasuringSelectorAdvice<TCandidate> : SelectorAdvice
         TimeProvider = timeProvider;
     }
 
-    public override WrapperExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ISelector<TCandidate> selector) =>
-        childSelector => new Execution<TRunSearchSpace, TRunProblem>(childSelector, Duration, TimeProvider);
+    public override WrapperExecutorFactory<ISelectionExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ISelector<TCandidate> selector) =>
+        childSelector => new Executor<TRunSearchSpace, TRunProblem>(childSelector, Duration, TimeProvider);
 
-    private sealed class Execution<TSearchSpace, TProblem>(ISelectorExecution<TCandidate, TSearchSpace, TProblem> childSelector, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingSelectorExecution<TCandidate, TSearchSpace, TProblem>(childSelector)
+    private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> childSelector, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingSelectionExecutor<TCandidate, TSearchSpace, TProblem>(childSelector)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

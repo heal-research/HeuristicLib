@@ -21,7 +21,7 @@ public abstract record MultiCreator<TCandidate>
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildCreators]);
 
     /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
-    public ExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -35,15 +35,15 @@ public abstract record MultiCreator<TCandidate>
 
     /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
     /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
-    protected abstract CompositeExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected abstract CompositeExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class MultiCreatorExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> childCreators)
-    : CreatorExecution<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiCreationExecutor<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ICreationExecutor<TCandidate, TSearchSpace, TProblem>> childCreators)
+    : CreationExecutor<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> ChildCreators { get; } = childCreators;
+    protected ImmutableArray<ICreationExecutor<TCandidate, TSearchSpace, TProblem>> ChildCreators { get; } = childCreators;
 }

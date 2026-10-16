@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 /// <remarks>
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
-/// It must not contain operator or algorithm configurations, execution nodes or execution node resolution facilities.
+/// It must not contain operator or algorithm configurations, executors or executor resolution facilities.
 /// <see cref="CreateInitialState"/> must return a fresh state object for each preparation. Bindings of that execution share the state.
 /// Calls are not inherently thread safe.
 /// </remarks>
@@ -23,14 +23,14 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TProblem, T
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override ExecutionFactory<IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutionFactory()
+    public sealed override ExecutorFactory<IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, CreateInitialState());
-        return _ => execution;
+        var executor = new Executor(this, CreateInitialState());
+        return _ => executor;
     }
 
-    private sealed class Execution(StatefulInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TState> interceptor, TState state)
-        : InterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+    private sealed class Executor(StatefulInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TState> interceptor, TState state)
+        : InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             interceptor.Transform(currentState, previousState, state, random, searchSpace, problem);
@@ -47,14 +47,14 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TSearchStat
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override ExecutionFactory<IInterceptorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>> CreateExecutionFactory()
+    public sealed override ExecutorFactory<IInterceptionExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, CreateInitialState());
-        return _ => execution;
+        var executor = new Executor(this, CreateInitialState());
+        return _ => executor;
     }
 
-    private sealed class Execution(StatefulInterceptor<TCandidate, TSearchSpace, TSearchState, TState> interceptor, TState state)
-        : InterceptorExecution<TCandidate, TSearchSpace, TSearchState>
+    private sealed class Executor(StatefulInterceptor<TCandidate, TSearchSpace, TSearchState, TState> interceptor, TState state)
+        : InterceptionExecutor<TCandidate, TSearchSpace, TSearchState>
     {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
             interceptor.Transform(currentState, previousState, state, random, searchSpace);
@@ -70,14 +70,14 @@ public abstract record StatefulInterceptor<TCandidate, TSearchState, TState>
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random);
 
-    public sealed override ExecutionFactory<IInterceptorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>> CreateExecutionFactory()
+    public sealed override ExecutorFactory<IInterceptionExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, CreateInitialState());
-        return _ => execution;
+        var executor = new Executor(this, CreateInitialState());
+        return _ => executor;
     }
 
-    private sealed class Execution(StatefulInterceptor<TCandidate, TSearchState, TState> interceptor, TState state)
-        : InterceptorExecution<TCandidate, TSearchState>
+    private sealed class Executor(StatefulInterceptor<TCandidate, TSearchState, TState> interceptor, TState state)
+        : InterceptionExecutor<TCandidate, TSearchState>
     {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random) =>
             interceptor.Transform(currentState, previousState, state, random);

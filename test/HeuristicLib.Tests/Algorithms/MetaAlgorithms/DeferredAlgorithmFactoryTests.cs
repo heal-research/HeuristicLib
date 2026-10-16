@@ -21,11 +21,11 @@ public sealed class DeferredAlgorithmFactoryTests
         var reset = mode == ChildScopePolicy.Fresh;
         var prepared = new List<ProbeData>();
         var algorithm = new ProbeAlgorithm { Prepared = prepared.Add };
-        var execution = Resolve(ResolutionScope.Create(), algorithm.CycleWith(algorithm, maximumCycles: 2, scopePolicy: mode));
+        var executor = Resolve(ResolutionScope.Create(), algorithm.CycleWith(algorithm, maximumCycles: 2, scopePolicy: mode));
         var forks = new List<string>();
 
-        var first = await Run(execution, new RecordingRandom("first", forks));
-        var second = await Run(execution, new RecordingRandom("second", forks));
+        var first = await Run(executor, new RecordingRandom("first", forks));
+        var second = await Run(executor, new RecordingRandom("second", forks));
 
         first.Select(state => state.Value).ShouldBe([1, 2, 3, 4]);
         second.Select(state => state.Value).ShouldBe([1, 2, 3, 4]);
@@ -50,8 +50,8 @@ public sealed class DeferredAlgorithmFactoryTests
             ScopePolicy = ChildScopePolicy.Shared
         };
         var root = ResolutionScope.Create();
-        var execution = Resolve(root, cycle);
-        var first = await Run(execution);
+        var executor = Resolve(root, cycle);
+        var first = await Run(executor);
         first.Select(state => state.Call).ShouldBe([1, 1, 2, 2]);
         first[0].Data.ShouldBeSameAs(first[2].Data);
         first[0].Data.ShouldNotBeSameAs(first[1].Data);
@@ -62,7 +62,7 @@ public sealed class DeferredAlgorithmFactoryTests
         var ancestor = (await Run(Resolve(root, algorithm))).Single();
         ancestor.Data.ShouldBeSameAs(first[0].Data);
         ancestor.Call.ShouldBe(5);
-        var next = await Run(execution);
+        var next = await Run(executor);
         next.Select(state => state.Call).ShouldBe([6, 5, 7, 6]);
         next[0].Data.ShouldBeSameAs(first[0].Data);
     }
@@ -179,10 +179,10 @@ public sealed class DeferredAlgorithmFactoryTests
         var algorithm = new ProbeAlgorithm();
         var pipeline = new PipelineAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState>([algorithm, algorithm]);
         var root = ResolutionScope.Create();
-        var execution = Resolve(root, pipeline);
+        var executor = Resolve(root, pipeline);
         var forks = new List<string>();
-        var first = await Run(execution, new RecordingRandom("first", forks));
-        var second = await Run(execution, new RecordingRandom("second", forks));
+        var first = await Run(executor, new RecordingRandom("first", forks));
+        var second = await Run(executor, new RecordingRandom("second", forks));
         first.Select(state => state.Value).ShouldBe([1, 2]);
         first.Select(state => state.Call).ShouldBe([1, 1]);
         second.Select(state => state.Call).ShouldBe([1, 1]);
@@ -192,7 +192,7 @@ public sealed class DeferredAlgorithmFactoryTests
 
         var ancestor = (await Run(Resolve(root, algorithm))).Single();
         ancestor.Call.ShouldBe(1);
-        var inherited = await Run(execution);
+        var inherited = await Run(executor);
         inherited.Select(state => state.Call).ShouldBe([2, 3]);
         inherited.ShouldAllBe(state => ReferenceEquals(state.Data, ancestor.Data));
     }
@@ -467,13 +467,13 @@ public sealed class DeferredAlgorithmFactoryTests
     private static CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState> Cycle(ProbeAlgorithm algorithm, bool reset) =>
         new([algorithm, algorithm]) { MaximumCycles = 2, ScopePolicy = reset ? ChildScopePolicy.Fresh : ChildScopePolicy.Shared };
 
-    private static IAlgorithmExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState> Resolve(ResolutionScope scope, IAlgorithm<int, ProbeState> algorithm) =>
+    private static IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState> Resolve(ResolutionScope scope, IAlgorithm<int, ProbeState> algorithm) =>
         scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState>(algorithm);
 
-    private static async Task<List<ProbeState>> Run(IAlgorithmExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState> execution, IRandomNumberGenerator? random = null)
+    private static async Task<List<ProbeState>> Run(IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState> executor, IRandomNumberGenerator? random = null)
     {
         var states = new List<ProbeState>();
-        await foreach (var state in execution.RunStreamingAsync(problem, random ?? RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken))
+        await foreach (var state in executor.RunStreamingAsync(problem, random ?? RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken))
             states.Add(state);
         return states;
     }
@@ -493,15 +493,15 @@ public sealed class DeferredAlgorithmFactoryTests
         public int Steps { get; init; } = 1;
         public Action<ProbeData> Prepared { get; init; } = static _ => { };
 
-        public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, ProbeState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+        public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, ProbeState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         {
             var data = new ProbeData();
             Prepared(data);
-            return scope => new Execution<TRunSearchSpace, TRunProblem>(data, scope.Resolve<int, TRunSearchSpace, TRunProblem>(Mutator), Steps);
+            return scope => new Executor<TRunSearchSpace, TRunProblem>(data, scope.Resolve<int, TRunSearchSpace, TRunProblem>(Mutator), Steps);
         }
 
-        private sealed class Execution<TSearchSpace, TProblem>(ProbeData data, IMutatorExecution<int, TSearchSpace, TProblem> mutator, int steps)
-            : AlgorithmExecution<int, TSearchSpace, TProblem, ProbeState>
+        private sealed class Executor<TSearchSpace, TProblem>(ProbeData data, IMutationExecutor<int, TSearchSpace, TProblem> mutator, int steps)
+            : AlgorithmExecutor<int, TSearchSpace, TProblem, ProbeState>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
@@ -587,7 +587,7 @@ public sealed class DeferredAlgorithmFactoryTests
 
         private sealed class SelectedAdvice(Func<IMutator<TCandidate>, MutatorAdvice<TCandidate>> create) : MutatorAdvice<TCandidate>
         {
-            public override WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> configuration) =>
+            public override WrapperExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> configuration) =>
                 create(configuration).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(configuration);
         }
     }
@@ -598,7 +598,7 @@ public sealed class DeferredAlgorithmFactoryTests
 
         private sealed class SelectedAdvice(Func<IMutator<TCandidate>, MutatorAdvice<TCandidate>> create) : MutatorAdvice<TCandidate>
         {
-            public override WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> configuration) =>
+            public override WrapperExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> configuration) =>
                 create(configuration).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(configuration);
         }
     }

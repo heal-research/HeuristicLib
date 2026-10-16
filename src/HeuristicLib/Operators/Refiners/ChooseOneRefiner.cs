@@ -30,18 +30,18 @@ public sealed record ChooseOneRefiner<TCandidate>
     {
     }
 
-    protected override CompositeExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected override CompositeExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildRefiners.Count == 0)
             throw new InvalidOperationException("At least one refiner must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildRefiners.Count)
             throw new InvalidOperationException("Weights must have the same length as refiners.");
 
-        return childRefiners => new Execution<TRunSearchSpace, TRunProblem>(childRefiners, new(childRefiners, Weights));
+        return childRefiners => new Executor<TRunSearchSpace, TRunProblem>(childRefiners, new(childRefiners, Weights));
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> childRefiners, WeightedRouter<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> router)
-        : MultiRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiners)
+    private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> childRefiners, WeightedRouter<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> router)
+        : MultiRefinementExecutor<TCandidate, TSearchSpace, TProblem>(childRefiners)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

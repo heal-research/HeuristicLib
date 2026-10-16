@@ -18,9 +18,9 @@ public readonly struct RoarNetNeighborhood<TG, TS, TP, TM1>(
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
 {
-    private readonly IMoveApplierExecution<TG, TS, TP, TM1> applier = scope.For<TG, TS, TP>().Resolve(neighborhood.MoveApplier);
-    private readonly IMoveCreatorExecution<TG, TS, TP, TM1> creator = scope.For<TG, TS, TP>().Resolve(neighborhood.MoveCreator);
-    private readonly IMoveEvaluatorExecution<TG, TS, TP, TM1> evaluator = scope.For<TG, TS, TP>().Resolve(neighborhood.MoveEvaluator);
+    private readonly IMoveApplierExecutor<TG, TS, TP, TM1> applier = scope.For<TG, TS, TP>().Resolve(neighborhood.MoveApplier);
+    private readonly IMoveCreationExecutor<TG, TS, TP, TM1> creator = scope.For<TG, TS, TP>().Resolve(neighborhood.MoveCreator);
+    private readonly IMoveEvaluationExecutor<TG, TS, TP, TM1> evaluator = scope.For<TG, TS, TP>().Resolve(neighborhood.MoveEvaluator);
 
     private IRoarNetMove<TG> MakeMove(TM1 move) =>
         new RoarNetMove<TG, TS, TP, TM1>(move, this);

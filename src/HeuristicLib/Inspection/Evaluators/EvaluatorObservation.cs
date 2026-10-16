@@ -52,17 +52,17 @@ public sealed class EvaluatorObservationAdvice<TCandidate, TSearchSpace, TProble
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> evaluator)
+    public override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> evaluator)
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return inner => new Execution<TRunSearchSpace, TRunProblem>(evaluator, inner, observe);
+        return inner => new Executor<TRunSearchSpace, TRunProblem>(evaluator, inner, observe);
     }
 
-    private sealed class Execution<TRunSearchSpace, TRunProblem>(
+    private sealed class Executor<TRunSearchSpace, TRunProblem>(
         IEvaluator<TCandidate> observedEvaluator,
-        IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator,
+        IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator,
         Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
-        : WrappingEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>(childEvaluator)
+        : WrappingEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>(childEvaluator)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {

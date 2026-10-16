@@ -17,12 +17,12 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
 
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Interceptor);
 
-    /// <summary>Prepares persistent execution data and returns the contextual execution factory.</summary>
-    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() => CreateIterationFactory<TRunSearchSpace, TRunProblem>();
+    /// <summary>Prepares persistent execution data and returns the contextual executor factory.</summary>
+    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() => CreateIterationFactory<TRunSearchSpace, TRunProblem>();
 
     /// <summary>Prepares persistent execution data and returns a factory accepting the construction scope.</summary>
     /// <remarks>Allocate shared state here; resolve the optional interceptor and other children and construct nodes in the returned factory.</remarks>
-    protected abstract ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateIterationFactory<TRunSearchSpace, TRunProblem>()
+    protected abstract ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateIterationFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
@@ -44,17 +44,17 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProb
 {
     /// <summary>Prepares persistent execution data and returns a factory accepting the construction scope.</summary>
     /// <remarks>Allocate shared state here; resolve the optional interceptor and other children and construct nodes in the returned factory.</remarks>
-    protected abstract ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateIterationFactory();
+    protected abstract ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateIterationFactory();
 
-    /// <summary>Prepares persistent execution data and returns the contextual execution factory.</summary>
-    public ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutionFactory() => CreateIterationFactory();
+    /// <summary>Prepares persistent execution data and returns the contextual executor factory.</summary>
+    public ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutorFactory() => CreateIterationFactory();
 
     public override bool Fits(ExecutionSignature execution) =>
         base.Fits(execution)
         && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
         && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    public sealed override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public sealed override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -64,22 +64,22 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProb
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>>)CreateExecutionFactory();
+        return (ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>>)CreateExecutorFactory();
     }
 
-    protected sealed override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
+    protected sealed override ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
         throw new NotSupportedException("A bound algorithm prepares its factory through its own preparation method.");
 }
 
-public abstract class IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+public abstract class IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    private readonly IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor;
+    private readonly IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor;
 
-    protected IterativeAlgorithmExecution(IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor)
+    protected IterativeAlgorithmExecutor(IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor)
     {
         this.interceptor = interceptor;
     }

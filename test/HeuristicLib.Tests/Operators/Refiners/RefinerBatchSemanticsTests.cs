@@ -82,8 +82,8 @@ public class RefinerBatchSemanticsTests
         yield return ("single candidate", new IdentityRefiner(), null);
     }
 
-    private static IReadOnlyList<Individual> Refine(IRefinerExecution<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>> execution, params int[] values) =>
-        execution.Refine([.. values.Select(value => new Individual(value))], RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
+    private static IReadOnlyList<Individual> Refine(IRefinementExecutor<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>> executor, params int[] values) =>
+        executor.Refine([.. values.Select(value => new Individual(value))], RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
 
     private static readonly FuncProblem<Individual, DummySearchSpace<Individual>> Problem =
         FuncProblem.Create(static (Individual individual) => individual.Value, DummySearchSpace<Individual>.Instance, SingleObjective.Minimize);

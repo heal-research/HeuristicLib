@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Operators;
 
 public interface IOperator : IConfigurationNode;
 
-public interface IOperatorExecution : IExecutionNode;
+public interface IOperatorExecutor : IExecutor;
 
 /// <summary>
 /// Declares that a value recommends an operator for a specific operator role.

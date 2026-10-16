@@ -12,16 +12,16 @@ namespace HEAL.HeuristicLib.Operators;
 public record TransformedCreator<TCandidate>(ICreator<TCandidate> SourceCreator, IMutator<TCandidate> TransformationMutator)
     : ICreator<TCandidate>
 {
-    public ExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> => scope =>
     {
         var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Execution<TRunSearchSpace, TRunProblem>(typed.Resolve(SourceCreator), typed.Resolve(TransformationMutator));
+        return new Executor<TRunSearchSpace, TRunProblem>(typed.Resolve(SourceCreator), typed.Resolve(TransformationMutator));
     };
 
-    private sealed class Execution<TSearchSpace, TProblem>(ICreatorExecution<TCandidate, TSearchSpace, TProblem> creator, IMutatorExecution<TCandidate, TSearchSpace, TProblem> mutator)
-        : CreatorExecution<TCandidate, TSearchSpace, TProblem>
+    private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> creator, IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator)
+        : CreationExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

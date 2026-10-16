@@ -8,7 +8,7 @@ using CompositeSpace = HEAL.HeuristicLib.Encodings.Composite.CompositeSearchSpac
 
 namespace HEAL.HeuristicLib.Tests.Experimental.Operators;
 
-public class CompositeExecutionFactoryTests
+public class CompositeExecutorFactoryTests
 {
     [Fact]
     public void CompositeCreator_RebindsAdaptedChildrenWithoutResettingTheirCursors()

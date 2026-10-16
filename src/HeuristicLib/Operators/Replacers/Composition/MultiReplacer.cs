@@ -21,7 +21,7 @@ public abstract record MultiReplacer<TCandidate>
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildReplacers]);
 
     /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
-    public ExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<IReplacementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -35,15 +35,15 @@ public abstract record MultiReplacer<TCandidate>
 
     /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
     /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
-    protected abstract CompositeExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected abstract CompositeExecutorFactory<IReplacementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class MultiReplacerExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> childReplacers)
-    : ReplacerExecution<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiReplacementExecutor<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IReplacementExecutor<TCandidate, TSearchSpace, TProblem>> childReplacers)
+    : ReplacementExecutor<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> ChildReplacers { get; } = childReplacers;
+    protected ImmutableArray<IReplacementExecutor<TCandidate, TSearchSpace, TProblem>> ChildReplacers { get; } = childReplacers;
 }

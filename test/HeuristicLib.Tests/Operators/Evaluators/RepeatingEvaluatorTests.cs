@@ -78,8 +78,8 @@ public class RepeatingEvaluatorTests
 
         constructed.Repetitions.ShouldBe(repetitions);
         reconfigured.Repetitions.ShouldBe(repetitions);
-        Should.Throw<InvalidOperationException>(() => constructed.CreateExecutionFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>());
-        Should.Throw<InvalidOperationException>(() => reconfigured.CreateExecutionFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>());
+        Should.Throw<InvalidOperationException>(() => constructed.CreateExecutorFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>());
+        Should.Throw<InvalidOperationException>(() => reconfigured.CreateExecutorFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>());
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>

@@ -258,13 +258,13 @@ public class DynamicAnalysisTests
     {
         public IEvaluator<int> Evaluator { get; } = new ProblemEvaluator();
 
-        public override ExecutionFactory<AlgorithmExecution<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>> CreateExecutionFactory() =>
-            scope => new Execution(scope.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(Evaluator), Batches);
+        public override ExecutorFactory<AlgorithmExecutor<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>> CreateExecutorFactory() =>
+            scope => new Executor(scope.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(Evaluator), Batches);
 
-        private sealed class Execution(
-            IEvaluatorExecution<int, IntegerSearchSpace, IntegerDynamicProblem> evaluator,
+        private sealed class Executor(
+            IEvaluationExecutor<int, IntegerSearchSpace, IntegerDynamicProblem> evaluator,
             IReadOnlyList<IReadOnlyList<int>> batches)
-            : AlgorithmExecution<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
+            : AlgorithmExecutor<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
         {
             public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
                 IntegerDynamicProblem problem,

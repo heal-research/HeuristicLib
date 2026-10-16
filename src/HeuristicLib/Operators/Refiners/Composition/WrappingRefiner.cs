@@ -21,7 +21,7 @@ public abstract record WrappingRefiner<TCandidate>
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildRefiner);
 
     /// <summary>Prepares this operator once, then binds its child in each construction scope.</summary>
-    public ExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -31,16 +31,16 @@ public abstract record WrappingRefiner<TCandidate>
 
     /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved child.</summary>
     /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
-    protected abstract WrapperExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected abstract WrapperExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
 }
 
-public abstract class WrappingRefinerExecution<TCandidate, TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> childRefiner)
-    : RefinerExecution<TCandidate, TSearchSpace, TProblem>
+public abstract class WrappingRefinementExecutor<TCandidate, TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> childRefiner)
+    : RefinementExecutor<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IRefinerExecution<TCandidate, TSearchSpace, TProblem> ChildRefiner { get; } = childRefiner;
+    protected IRefinementExecutor<TCandidate, TSearchSpace, TProblem> ChildRefiner { get; } = childRefiner;
 }

@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
@@ -10,13 +11,13 @@ namespace HEAL.HeuristicLib.Operators;
 
 public interface ISelector<TCandidate> : IOperator
 {
-    ExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    ExecutorFactory<ISelectionExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public interface ISelectorExecution<TCandidate, in TSearchSpace, in TProblem>
-    : IOperatorExecution
+public interface ISelectionExecutor<TCandidate, in TSearchSpace, in TProblem>
+    : IOperatorExecutor
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -31,7 +32,7 @@ public abstract class SelectorAdvice<TCandidate> : Advice<ISelector<TCandidate>>
     /// survive rebuilding the execution graph here.
     /// </remarks>
     /// <param name="selector">The configuration the pointcut selected.</param>
-    public abstract WrapperExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ISelector<TCandidate> selector)
+    public abstract WrapperExecutorFactory<ISelectionExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ISelector<TCandidate> selector)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
@@ -40,33 +41,36 @@ public static class SelectorResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public ISelectorExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate> selector)
+        public ISelectionExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate> selector)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(selector, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
+            selector is IOperator<TCandidate, Selection> prepared
+                ? scope.ResolveOperator<TCandidate, Selection, TSearchSpace, TProblem, ISearchState, ISelectionExecutor<TCandidate, TSearchSpace, TProblem>>(
+                    prepared, Selection.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>()).Executor
+                : scope.Resolve(selector, static source => source.CreateExecutorFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(selector))]
-        public ISelectorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate>? selector)
+        public ISelectionExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate>? selector)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             selector is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem>(selector);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem>(
             ISelector<TCandidate> selector,
-            [NotNullWhen(true)] out ISelectorExecution<TCandidate, TSearchSpace, TProblem>? execution,
+            [NotNullWhen(true)] out ISelectionExecutor<TCandidate, TSearchSpace, TProblem>? executor,
             [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
         {
             try
             {
-                execution = scope.Resolve<TCandidate, TSearchSpace, TProblem>(selector);
+                executor = scope.Resolve<TCandidate, TSearchSpace, TProblem>(selector);
                 reason = null;
                 return true;
             }
             catch (InvalidOperationException exception)
             {
-                execution = null;
+                executor = null;
                 reason = exception.Message;
                 return false;
             }
@@ -77,21 +81,21 @@ public static class SelectorResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public ISelectorExecution<TCandidate, TSearchSpace, TProblem> Resolve(ISelector<TCandidate> selector) =>
+        public ISelectionExecutor<TCandidate, TSearchSpace, TProblem> Resolve(ISelector<TCandidate> selector) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(selector);
 
         [return: NotNullIfNotNull(nameof(selector))]
-        public ISelectorExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(ISelector<TCandidate>? selector) =>
+        public ISelectionExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional(ISelector<TCandidate>? selector) =>
             selector is null ? null : scope.Resolve(selector);
 
         public bool TryResolve(
             ISelector<TCandidate> selector,
-            [NotNullWhen(true)] out ISelectorExecution<TCandidate, TSearchSpace, TProblem>? execution,
+            [NotNullWhen(true)] out ISelectionExecutor<TCandidate, TSearchSpace, TProblem>? executor,
             [NotNullWhen(false)] out string? reason) =>
-            scope.Scope.TryResolve(selector, out execution, out reason);
+            scope.Scope.TryResolve(selector, out executor, out reason);
     }
 
-    private static WrapperExecutionFactory<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>(Advice advice, ISelector<TCandidate> selector)
+    private static WrapperExecutorFactory<ISelectionExecutor<TCandidate, TSearchSpace, TProblem>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>(Advice advice, ISelector<TCandidate> selector)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         ((SelectorAdvice<TCandidate>)advice).CreateWrapperFactory<TSearchSpace, TProblem>(selector);

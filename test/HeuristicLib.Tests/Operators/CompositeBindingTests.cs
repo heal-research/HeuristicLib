@@ -44,20 +44,20 @@ public class CompositeBindingTests
         var searchSpace = new BoundedRealVectorSearchSpace(3, -1.0, 1.0);
         var composite = new AgnosticTransformedCreator(new UniformDistributedCreator(searchSpace));
 
-        var execution = ResolutionScope.Create()
+        var executor = ResolutionScope.Create()
             .Resolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(composite);
 
-        execution.ShouldNotBeNull();
+        executor.ShouldNotBeNull();
     }
 
     /// <summary>How not to write it: the base fixes the triple, so the child is resolved at the wrong one.</summary>
     private sealed record LeafLadderTransformedCreator(ICreator<RealVector> Source) : Creator<RealVector>
     {
-        public override ExecutionFactory<ICreatorExecution<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>> CreateExecutionFactory() =>
-            scope => new Execution(scope.Resolve<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(Source));
+        public override ExecutorFactory<ICreationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>> CreateExecutorFactory() =>
+            scope => new Executor(scope.Resolve<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(Source));
 
-        private sealed class Execution(ICreatorExecution<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> source)
-            : CreatorExecution<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
+        private sealed class Executor(ICreationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> source)
+            : CreationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
         {
             public override IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) =>
                 source.Create(count, random, searchSpace, problem);
@@ -67,13 +67,13 @@ public class CompositeBindingTests
     /// <summary>How to write it: the run's types are method type arguments, so they reach the child.</summary>
     private sealed record AgnosticTransformedCreator(ICreator<RealVector> Source) : ICreator<RealVector>
     {
-        public ExecutionFactory<ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+        public ExecutorFactory<ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
             where TRunSearchSpace : class, ISearchSpace<RealVector>
             where TRunProblem : class, IProblem<RealVector, TRunSearchSpace> =>
-            scope => new Execution<TRunSearchSpace, TRunProblem>(scope.Resolve<RealVector, TRunSearchSpace, TRunProblem>(Source));
+            scope => new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve<RealVector, TRunSearchSpace, TRunProblem>(Source));
 
-        private sealed class Execution<TSearchSpace, TProblem>(ICreatorExecution<RealVector, TSearchSpace, TProblem> source)
-            : CreatorExecution<RealVector, TSearchSpace, TProblem>
+        private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<RealVector, TSearchSpace, TProblem> source)
+            : CreationExecutor<RealVector, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
         {

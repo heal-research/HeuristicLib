@@ -13,7 +13,7 @@ namespace HEAL.HeuristicLib.Algorithms;
 /// </remarks>
 public interface IAlgorithm<TCandidate> : IConfigurationNode
 {
-    ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
+    ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState;
@@ -23,13 +23,13 @@ public interface IAlgorithm<TCandidate> : IConfigurationNode
 public interface IAlgorithm<TCandidate, TSearchState> : IAlgorithm<TCandidate>
     where TSearchState : class, ISearchState
 {
-    ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public interface IAlgorithmExecution<TCandidate, in TSearchSpace, in TProblem, TSearchState>
-    : IExecutionNode
+public interface IAlgorithmExecutor<TCandidate, in TSearchSpace, in TProblem, TSearchState>
+    : IExecutor
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
@@ -46,7 +46,7 @@ public abstract class AlgorithmAdvice<TCandidate, TSearchState> : Advice<IAlgori
     /// survive rebuilding the execution graph here.
     /// </remarks>
     /// <param name="algorithm">The configuration the pointcut selected.</param>
-    public abstract WrapperExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IAlgorithm<TCandidate, TSearchState> algorithm)
+    public abstract WrapperExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
@@ -55,14 +55,14 @@ public static class AlgorithmResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate> algorithm)
+        public IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate> algorithm)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            scope.Resolve(algorithm, static source => source.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>);
+            scope.Resolve(algorithm, static source => source.CreateExecutorFactory<TSearchSpace, TProblem, TSearchState>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>);
 
         [return: NotNullIfNotNull(nameof(algorithm))]
-        public IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate>? algorithm)
+        public IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate>? algorithm)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
@@ -71,7 +71,7 @@ public static class AlgorithmResolutionExtensions
         /// <remarks>Reports rather than throws, so a caller can validate without catching.</remarks>
         public bool TryResolve<TCandidate, TSearchSpace, TProblem, TSearchState>(
             IAlgorithm<TCandidate> algorithm,
-            [NotNullWhen(true)] out IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? execution,
+            [NotNullWhen(true)] out IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? executor,
             [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -79,13 +79,13 @@ public static class AlgorithmResolutionExtensions
         {
             try
             {
-                execution = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+                executor = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
                 reason = null;
                 return true;
             }
             catch (InvalidOperationException exception)
             {
-                execution = null;
+                executor = null;
                 reason = exception.Message;
                 return false;
             }
@@ -97,21 +97,21 @@ public static class AlgorithmResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve(IAlgorithm<TCandidate> algorithm) =>
+        public IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve(IAlgorithm<TCandidate> algorithm) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 
         [return: NotNullIfNotNull(nameof(algorithm))]
-        public IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional(IAlgorithm<TCandidate>? algorithm) =>
+        public IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional(IAlgorithm<TCandidate>? algorithm) =>
             algorithm is null ? null : scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 
         public bool TryResolve(
             IAlgorithm<TCandidate> algorithm,
-            [NotNullWhen(true)] out IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? execution,
+            [NotNullWhen(true)] out IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? executor,
             [NotNullWhen(false)] out string? reason) =>
-            scope.Scope.TryResolve(algorithm, out execution, out reason);
+            scope.Scope.TryResolve(algorithm, out executor, out reason);
     }
 
-    private static WrapperExecutionFactory<IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>(Advice advice, IAlgorithm<TCandidate> algorithm)
+    private static WrapperExecutorFactory<IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>(Advice advice, IAlgorithm<TCandidate> algorithm)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState =>

@@ -230,11 +230,11 @@ public class CrossoverConfigurationEqualityTests
         {
         }
 
-        protected override CompositeExecutionFactory<ICrossoverExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childCrossovers => new Execution<TRunSearchSpace, TRunProblem>(childCrossovers);
+        protected override CompositeExecutorFactory<ICrossoverExecutor<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childCrossovers => new Executor<TRunSearchSpace, TRunProblem>(childCrossovers);
 
-        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICrossoverExecution<int, TSearchSpace, TProblem>> childCrossovers)
-            : MultiCrossoverExecution<int, TSearchSpace, TProblem>(childCrossovers)
+        private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<ICrossoverExecutor<int, TSearchSpace, TProblem>> childCrossovers)
+            : MultiCrossoverExecutor<int, TSearchSpace, TProblem>(childCrossovers)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
@@ -248,7 +248,7 @@ public class CrossoverConfigurationEqualityTests
         {
         }
 
-        protected override WrapperExecutionFactory<ICrossoverExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        protected override WrapperExecutorFactory<ICrossoverExecutor<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
             child => child;
     }
 

@@ -76,11 +76,11 @@ public class ReplacerConfigurationEqualityTests
         {
         }
 
-        protected override CompositeExecutionFactory<IReplacerExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childReplacers => new Execution<TRunSearchSpace, TRunProblem>(childReplacers);
+        protected override CompositeExecutorFactory<IReplacementExecutor<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childReplacers => new Executor<TRunSearchSpace, TRunProblem>(childReplacers);
 
-        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IReplacerExecution<int, TSearchSpace, TProblem>> childReplacers)
-            : MultiReplacerExecution<int, TSearchSpace, TProblem>(childReplacers)
+        private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IReplacementExecutor<int, TSearchSpace, TProblem>> childReplacers)
+            : MultiReplacementExecutor<int, TSearchSpace, TProblem>(childReplacers)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
@@ -94,7 +94,7 @@ public class ReplacerConfigurationEqualityTests
         {
         }
 
-        protected override WrapperExecutionFactory<IReplacerExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        protected override WrapperExecutorFactory<IReplacementExecutor<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
             child => child;
     }
 

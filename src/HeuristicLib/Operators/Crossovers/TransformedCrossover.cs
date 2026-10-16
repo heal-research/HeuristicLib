@@ -15,16 +15,16 @@ namespace HEAL.HeuristicLib.Operators;
 public record TransformedCrossover<TCandidate>(ICrossover<TCandidate> SourceCrossover, IMutator<TCandidate> TransformationMutator)
     : ICrossover<TCandidate>
 {
-    public ExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<ICrossoverExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> => scope =>
     {
         var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Execution<TRunSearchSpace, TRunProblem>(typed.Resolve(SourceCrossover), typed.Resolve(TransformationMutator));
+        return new Executor<TRunSearchSpace, TRunProblem>(typed.Resolve(SourceCrossover), typed.Resolve(TransformationMutator));
     };
 
-    private sealed class Execution<TSearchSpace, TProblem>(ICrossoverExecution<TCandidate, TSearchSpace, TProblem> crossover, IMutatorExecution<TCandidate, TSearchSpace, TProblem> mutator)
-        : CrossoverExecution<TCandidate, TSearchSpace, TProblem>
+    private sealed class Executor<TSearchSpace, TProblem>(ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> crossover, IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator)
+        : CrossoverExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

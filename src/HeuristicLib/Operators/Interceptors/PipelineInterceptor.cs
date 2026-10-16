@@ -15,11 +15,11 @@ public sealed record PipelineInterceptor<TCandidate>
     {
     }
 
-    protected override CompositeExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
-        childInterceptors => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptors);
+    protected override CompositeExecutorFactory<IInterceptionExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
+        childInterceptors => new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptors);
 
-    private sealed class Execution<TSearchSpace, TProblem, TSearchState>(ImmutableArray<IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
-        : MultiInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptors)
+    private sealed class Executor<TSearchSpace, TProblem, TSearchState>(ImmutableArray<IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
+        : MultiInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childInterceptors)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState

@@ -23,11 +23,11 @@ public sealed class DurationMeasuringTerminatorAdvice<TCandidate> : TerminatorAd
         TimeProvider = timeProvider;
     }
 
-    public override WrapperExecutionFactory<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(ITerminator<TCandidate> terminator) =>
-        childTerminator => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminator, Duration, TimeProvider);
+    public override WrapperExecutorFactory<ITerminationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(ITerminator<TCandidate> terminator) =>
+        childTerminator => new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminator, Duration, TimeProvider);
 
-    private sealed class Execution<TSearchSpace, TProblem, TSearchState>(ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingTerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminator)
+    private sealed class Executor<TSearchSpace, TProblem, TSearchState>(ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingTerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState

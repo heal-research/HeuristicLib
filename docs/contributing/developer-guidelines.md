@@ -110,13 +110,13 @@ recommendations.
 
 Follow the [layering rules](/contributing/architecture/layering) when adding or moving types. Assign a type by its
 responsibility, including where a namespace contains both contracts and implementations, and keep dependencies directed
-from higher layers to lower ones. Treat configuration and execution node as phases within those responsibilities.
+from higher layers to lower ones. Treat configuration and executor as phases within those responsibilities.
 
 ## § 4 Configuration and execution ownership
 
 See [execution resolution](/contributing/architecture/execution-resolution) for factory preparation, state sharing and contextual node binding.
 
-### § 4.1 Separate reusable configurations from execution nodes
+### § 4.1 Separate reusable configurations from executors
 
 Configurations own immutable settings and child configurations. Prepare persistent execution state once, then bind nodes with resolved children and observations for each context. Nodes own typed behavior and binding-local references; invocation-local values stay in the operation or iterator. Never store run data on a configuration.
 
@@ -126,17 +126,17 @@ Search states are public progress values. Do not use them to carry private count
 
 ### § 4.3 Resolve declared children through the resolution scope
 
-Preparation receives no scope. The returned `ExecutionFactory<TExecution>` receives a `ResolutionScope` construction frame; resolve children inside that factory and pass them to the node. Retain the frame only for child scopes, wrappers or delayed child construction. A meta-algorithm needing retained child state prepares one `ChildScopeSelector` and reuses it across bindings; each activation supplies its current construction scope. Do not add another scope abstraction or call a child's factory directly.
+Preparation receives no scope. The returned `ExecutorFactory<TExecutor>` receives a `ResolutionScope` construction frame; resolve children inside that factory and pass them to the node. Retain the frame only for child scopes, wrappers or delayed child construction. A meta-algorithm needing retained child state prepares one `ChildScopeSelector` and reuses it across bindings; each activation supplies its current construction scope. Do not add another scope abstraction or call a child's factory directly.
 
 Algorithms resolve only their configured parameters and create no operators of their own. Keep those parameters as supplied. Behavior derived from a parameter, such as a mutation rate, belongs in the algorithm's execution code. Independent operators doing real work must be parameters so observations and budgets can see them.
 
-Resolving a configuration an algorithm builds itself makes it visible to pointcuts, so selection can differ from what the user configured. This is an authoring guideline, not a rule enforced by the resolver. Advice wraps already resolved executions and introduces no configuration children.
+Resolving a configuration an algorithm builds itself makes it visible to pointcuts, so selection can differ from what the user configured. This is an authoring guideline, not a rule enforced by the resolver. Advice wraps already resolved executors and introduces no configuration children.
 
-### § 4.4 Expose one execution node factory
+### § 4.4 Expose one preparation entry
 
-Expose one public `CreateExecutionFactory(...)` method returning `ExecutionFactory<TExecution>` for the exact execution role. Do not add role named alternatives or hide it behind explicit interface implementation. Preparation runs once per selected logical execution; its returned factory may bind several nodes.
+Algorithms and existing nominal operator contracts expose one public `CreateExecutorFactory(...)` returning `ExecutorFactory<TExecutor>`. Operation-parameterized operators expose one public `CreateExecutorFactory()` returning `OperatorExecutorFactory`; its checked `GetExecutorFactory` creates construction views over the same persistent state. Do not add a second initializer per operation, role-named alternatives or a competing public factory. Preparation runs once per selected configuration owner; construction may bind several nodes.
 
-A topology base owns the public method and exposes one protected preparation hook: `CreateWrapperFactory` returns `WrapperExecutionFactory<TExecution>` for a wrapping base; `CreateCompositeFactory` returns `CompositeExecutionFactory<TExecution>` for a multi base. The hook prepares persistent state and returns a factory accepting the newly resolved children. Use the same execution role interface for the children and result. Derived authors construct their matching execution classes inside the returned delegate. Ordinary leaf operation overrides remain unchanged.
+A topology base owns the public method and exposes one protected preparation hook: `CreateWrapperFactory` returns `WrapperExecutorFactory<TExecutor>` for a wrapping base; `CreateCompositeFactory` returns `CompositeExecutorFactory<TExecutor>` for a multi base. The hook prepares persistent state and returns a factory accepting the newly resolved children. Use the same executor interface for the children and result. Derived authors construct their matching executor classes inside the returned delegate. Ordinary leaf operation overrides remain unchanged.
 
 ### § 4.5 Keep construction entry points semantically equivalent
 
@@ -149,21 +149,23 @@ A setting has one input path.
 - Required values are constructor parameters without defaults.
 - Optional values are `init` properties with defaults. Do not also put them in the constructor.
 - Every configuration property is `{ get; init; }` so `with` can vary it.
-- Execution node children and run data are `{ get; }` because executions are not reconfigured.
+- Executor children and run data are `{ get; }` because executions are not reconfigured.
 
 ### § 4.7 Validate complete configurations during preparation
 
-Retain configuration values unchanged during construction and `with`. Validate them in `CreateExecutionFactory` or the protected preparation hook and throw `InvalidOperationException` before execution begins. Bound bridges validate run-type compatibility before preparation. Do not add a separate validation API.
+Retain configuration values unchanged during construction and `with`. Validate them in `CreateExecutorFactory` or the protected preparation hook and throw `InvalidOperationException` before execution begins. Bound bridges validate run-type compatibility before preparation. Do not add a separate validation API.
+
+For operation-parameterized operators, validate immutable configuration in `CreateExecutorFactory`. `Fits` supplies preflight metadata; `OperatorExecutorFactory.GetExecutorFactory` authoritatively checks each run view before constructing nodes or resolving children. Bind selected advice before raw construction so unsupported metrics fail before child work. A failed view must not discard successful owner preparation.
 
 Persistent initialization must not depend on whichever binding first resolves a live child. Failed preparation is not cached, so a later resolution can retry. Successful preparation remains available when a later contextual construction or advice application fails; that binding can also be retried.
 
 ### § 4.8 Represent configured behavior with value strategies
 
-Represent configured behavior with a strategy interface whose implementations are immutable values. Do not use delegates because their equality depends on method and target identity and captured state is not persistable. Delegate adapters are limited to documented runtime only APIs. Execution factories are runtime preparation/binding machinery and are not persisted configuration strategies.
+Represent configured behavior with a strategy interface whose implementations are immutable values. Do not use delegates because their equality depends on method and target identity and captured state is not persistable. Delegate adapters are limited to documented runtime only APIs. Executor factories are runtime preparation/binding machinery and are not persisted configuration strategies.
 
 ### § 4.9 Use records only for value semantics
 
-Use a record only when structural equality is the contract. Use a class for a carrier that holds identity bearing dependencies such as an RNG, execution node or registry.
+Use a record only when structural equality is the contract. Use a class for a carrier that holds identity bearing dependencies such as an RNG, executor or registry.
 
 ### § 4.10 Validate operation inputs before side effects
 
@@ -175,11 +177,11 @@ Validate problem, search space and operation inputs in the role method before ra
 
 Configurations expose their settings and child configurations. Wrapping and multi bases own `ChildOperator` and `ChildOperators` or role specific equivalents.
 
-Execution nodes keep resolved children and machinery private or protected. Use nested operator only for descendants at any depth.
+Executors keep resolved children and machinery private or protected. Use nested operator only for descendants at any depth.
 
 ### § 4.12 Keep role authoring hierarchies symmetric
 
-Keep configuration and execution authoring hierarchies symmetric. Full role, wrapping and multi bases have matching execution bases. Derived configurations and executions use the matching pair. Pass required resolved children and prepared state through constructors. Rebinding must not reset persistent state or capture children from an earlier context.
+Keep configuration and execution authoring hierarchies symmetric. Full role, wrapping and multi bases have matching executor bases. Derived configurations and executions use the matching pair. Pass required resolved children and prepared state through constructors. Rebinding must not reset persistent state or capture children from an earlier context.
 
 ### § 4.13 Give each child slot one public name
 
@@ -194,11 +196,11 @@ Choose an authoring base by ownership. See [Operator implementation](/contributi
 
 - Use a stateless base for configuration data without mutable run data.
 - Use a stateful base for ordinary run data without execution graph dependencies.
-- Author an execution explicitly for child executions, disposable resources or custom execution structure.
+- Author an execution explicitly for child executors, disposable resources or custom execution structure.
 - Use a single item base for independent per item work.
 - Never put configurations, executions, registries, scopes or child bound delegates in framework managed operator state.
 
-Stateless and ordinary stateful leaf bases hide factory preparation. Composite authors separate persistent `ExecutionState state` from bound children. Execution nodes have no general disposal contract; resources still require an explicit lifecycle owner.
+Stateless and ordinary stateful leaf bases hide factory preparation. Composite authors separate persistent `ExecutionState state` from bound children. Executors have no general disposal contract; resources still require an explicit lifecycle owner.
 
 ### § 4.15 Keep single item batching explicit and deterministic
 
@@ -208,11 +210,11 @@ A single item base seals the batch operation and exposes `ExecutionConcurrency C
 
 Operator scaffolding remains checked in source. Do not add source generators, IDE actions or scaffolding commands for operator families. Coding agents may prepare ordinary source. Review, test and maintain it like handwritten code.
 
-### § 4.17 Give algorithms explicit execution nodes
+### § 4.17 Give algorithms explicit executors
 
-Algorithms use a configuration paired with an explicitly authored execution node. Persistent execution data is prepared once; child operators and interceptors bind per context. Active iterators retain their original children, RNG forks, progress and timers when another binding is created. See [Algorithms](/guide/fundamentals/algorithms).
+Algorithms use a configuration paired with an explicitly authored executor. Persistent execution data is prepared once; child operators and interceptors bind per context. Active iterators retain their original children, RNG forks, progress and timers when another binding is created. See [Algorithms](/guide/fundamentals/algorithms).
 
-Iterative bases expose public `CreateExecutionFactory` and a protected, scope-free `CreateIterationFactory` returning `ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>>`. Prepare persistent data in that hook. The returned factory resolves the optional interceptor and other declared children through its construction scope and passes them to the execution constructor. Derived algorithm authors own this wiring; the execution base applies the interceptor in its iteration loop. Bound bases check run-type compatibility before preparation.
+Iterative bases expose public `CreateExecutorFactory` and a protected, scope-free `CreateIterationFactory` returning `ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>>`. Prepare persistent data in that hook. The returned factory resolves the optional interceptor and other declared children through its construction scope and passes them to the executor constructor. Derived algorithm authors own this wiring; the executor base applies the interceptor in its iteration loop. Bound bases check run-type compatibility before preparation.
 
 ### § 4.18 Treat Roslyn analyzers as guardrails
 
@@ -222,7 +224,7 @@ Roslyn analyzers catch recognizable mistakes. They do not prove ownership invari
 
 Role executions expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
 
-Matching signatures do not satisfy another nominal role. `IOperator<TExecution>` only connects a configuration to its execution role.
+Matching signatures do not satisfy another nominal role. `IOperator<TCandidate, TOperation>` selects an operation through its descriptor; it does not change executor-interface membership. Public `OperationExecutorAdapter` adapters connect named methods to success and lifecycle hooks at preparation time without adding another invocation method to executors.
 
 ## § 5 Immutability and collection ownership
 
@@ -254,10 +256,10 @@ Choose collection types by meaning and ownership.
 | Parameter accepting a finite ordered collection        | `IReadOnlyList<T>`, snapshotted with `ToValueArray()` |
 | Mathematical coordinates with broadcasting             | `RealVector`, `IntegerVector`, `BoolVector`           |
 | Transient batch inside one operation, never retained   | `IReadOnlyList<T>`                                    |
-| Collection held by an execution node                   | `ImmutableArray<T>`                                   |
+| Collection held by an executor                         | `ImmutableArray<T>`                                   |
 | Lazy or sequence oriented API                          | `IEnumerable<T>`                                      |
 
-`ValueArray<T>` gives configuration records structural equality. `ImmutableArray<T>` compares backing array identity and belongs on execution nodes, where structural equality is unnecessary.
+`ValueArray<T>` gives configuration records structural equality. `ImmutableArray<T>` compares backing array identity and belongs on executors, where structural equality is unnecessary.
 
 ### § 5.5 Construct value arrays without accidental nesting
 
@@ -371,8 +373,8 @@ Where a parameter carries both, its documentation points at the member that defi
 ### § 8.3 Use variance only when substitution is meaningful
 
 - `TCandidate` is invariant throughout the public API. It identifies the exact shared representation.
-- Operator role interfaces declare `in TSearchSpace` and `in TProblem` so general operators compose with specific problems. New roles must do the same.
-- A returned type parameter cannot be contravariant. This makes `TSearchState` contravariant on `ITerminator` but invariant on `IInterceptor`.
+- Operator executor interfaces declare `in TSearchSpace` and `in TProblem` so general operators compose with specific problems. New roles must do the same.
+- A returned type parameter cannot be contravariant. This makes `TSearchState` contravariant on `ITerminationExecutor` but invariant on `IInterceptionExecutor`.
 - Other domain parameters use variance only for a concrete substitution requirement and use a domain specific name.
 - Sonar S3246 is disabled because permitted positions alone do not establish meaningful substitution.
 
@@ -381,18 +383,18 @@ Where a parameter carries both, its documentation points at the member that defi
 Reduced arities let authors omit operation inputs they do not use. Keep each role family consistent.
 
 The ladder is also where the search space and problem type arguments legitimately live. They have left the role
-contracts — every role is `I<Role><TCandidate>` — but an authoring base that reads a search space or a problem still
+contracts — nominal roles use `I<Role><TCandidate>` and the shared slot uses `IOperator<TCandidate, TOperation>` — but an authoring base that reads a search space or a problem still
 names it, deliberately, for two reasons. The base performs the type check, bridging the authored member into the
 candidate-only contract and reporting a mismatch when a run supplies types the operator was not written for, so the
 pair costs the author two type arguments and costs every consumer none. And for a stateless operator the
-configuration **is** the executable part: it has no separate execution node to receive those values later, so it
+configuration **is** the executable part: it has no separate executor to receive those values later, so it
 needs them in scope where it is written. Erasing them from the authoring layer would force stateless operators to
-grow an execution node purely to carry types, which is the boilerplate this ladder exists to remove.
+grow an executor purely to carry types, which is the boilerplate this ladder exists to remove.
 
 - A reduced configuration base derives from the next fuller configuration base.
-- A reduced execution base implements the full interface directly and forwards explicitly to one narrower abstract operation. It does not derive from the fuller execution base.
-- A reduced stateless base derives from the reduced configuration base and implements the role execution interface directly.
-- A reduced stateful base derives from the reduced configuration base. Its nested execution derives from the reduced execution base.
+- A reduced executor base implements the full interface directly and forwards explicitly to one narrower abstract operation. It does not derive from the fuller executor base.
+- A reduced stateless base derives from the reduced configuration base and implements the role executor interface directly.
+- A reduced stateful base derives from the reduced configuration base. Its nested executor derives from the reduced executor base.
 
 ### § 8.5 Reduce only arities that describe operation inputs
 
@@ -400,7 +402,7 @@ Reduce type arguments consumed by the operator's own code. Do not reduce type ar
 
 | Base                                                            | Reduced arities | Why                                    |
 | --------------------------------------------------------------- | :-------------: | -------------------------------------- |
-| `Mutator`, `MutatorExecution`                                   |       Yes       | No owned child                         |
+| `Mutator`, `MutationExecutor`                                   |       Yes       | No owned child                         |
 | `StatelessMutator`, `StatefulMutator`, `SingleCandidateMutator` |       Yes       | Type arguments describe operation data |
 | `WrappingMutator`, `MultiMutator`                               |       No        | Type arguments describe child slots    |
 
@@ -458,6 +460,8 @@ Build random APIs from one source of base random values.
 Use concept first scalar names such as `NextDouble` and target first output names such as `NextRealVectorUniform`. Do not add a competing distribution layer for the same sampling behavior.
 
 ### § 8.11 Let an API surface scale per role, never over hidden axes
+
+Operation descriptors may supply one adapter per operation/invocation profile. General operator advice reuses those adapters; do not add another matrix per advice type or run signature.
 
 Duplicating a member once per operator role is acceptable. Adding a role is a deliberate act, its author writes the
 role's members once from an obvious template, and no existing role is disturbed. The resolve family

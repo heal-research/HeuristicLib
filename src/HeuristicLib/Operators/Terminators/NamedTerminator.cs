@@ -15,7 +15,7 @@ public sealed record NamedTerminator<TCandidate> : WrappingTerminator<TCandidate
 
     public string Name { get; init; }
 
-    protected override WrapperExecutionFactory<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
+    protected override WrapperExecutorFactory<ITerminationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
         child => child;
 }
 

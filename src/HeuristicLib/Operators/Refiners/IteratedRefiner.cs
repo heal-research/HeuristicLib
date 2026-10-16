@@ -30,16 +30,16 @@ public sealed record IteratedRefiner<TCandidate>
         Iterations = iterations;
     }
 
-    protected override WrapperExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected override WrapperExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
     {
         if (Iterations <= 0)
             throw new InvalidOperationException("Iterations must be positive.");
 
-        return childRefiner => new Execution<TRunSearchSpace, TRunProblem>(childRefiner, Iterations);
+        return childRefiner => new Executor<TRunSearchSpace, TRunProblem>(childRefiner, Iterations);
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> childRefiner, int iterations)
-        : WrappingRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiner)
+    private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> childRefiner, int iterations)
+        : WrappingRefinementExecutor<TCandidate, TSearchSpace, TProblem>(childRefiner)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

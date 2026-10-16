@@ -34,7 +34,7 @@ public record EvolutionStrategy<TCandidate>
     /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
     public int? MaximumGenerations { get; init; } = EvolutionStrategyDefaults.MaximumGenerations;
 
-    protected override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
+    protected override ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
         scope =>
         {
             var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>();
@@ -42,24 +42,24 @@ public record EvolutionStrategy<TCandidate>
             var evaluator = typed.Resolve(Evaluator);
             var creator = typed.Resolve(Creator);
             var mutator = typed.Resolve(Mutator, out IMutationStrengthControl? strength);
-            return new Execution<TRunSearchSpace, TRunProblem>(interceptor, evaluator, creator, mutator, strength, typed.Resolve(Selector),
+            return new Executor<TRunSearchSpace, TRunProblem>(interceptor, evaluator, creator, mutator, strength, typed.Resolve(Selector),
                 typed.ResolveOptional(Crossover), typed.ResolveOptional(Refiner), PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
         };
 
-    private sealed class Execution<TSearchSpace, TProblem>(
-        IInterceptorExecution<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
-        IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICreatorExecution<TCandidate, TSearchSpace, TProblem> creator,
-        IMutatorExecution<TCandidate, TSearchSpace, TProblem> mutator,
+    private sealed class Executor<TSearchSpace, TProblem>(
+        IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
+        IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator,
+        ICreationExecutor<TCandidate, TSearchSpace, TProblem> creator,
+        IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator,
         IMutationStrengthControl? strength,
-        ISelectorExecution<TCandidate, TSearchSpace, TProblem> selector,
-        ICrossoverExecution<TCandidate, TSearchSpace, TProblem>? crossover,
-        IRefinerExecution<TCandidate, TSearchSpace, TProblem>? refiner,
+        ISelectionExecutor<TCandidate, TSearchSpace, TProblem> selector,
+        ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>? crossover,
+        IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? refiner,
         int populationSize,
         int numberOfChildren,
         EvolutionStrategyType strategy,
         int? maximumGenerations)
-        : IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
+        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

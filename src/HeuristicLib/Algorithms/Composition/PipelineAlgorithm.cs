@@ -23,8 +23,8 @@ public record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
-        scope => new PipelineAlgorithmExecution<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(scope, Algorithms);
+    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
+        scope => new PipelineAlgorithmExecutor<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(scope, Algorithms);
 }
 
 public static class PipelineAlgorithm
@@ -57,8 +57,8 @@ public static class PipelineAlgorithmExtensions
     }
 }
 
-public class PipelineAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+public class PipelineAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+    : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
@@ -67,7 +67,7 @@ public class PipelineAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TP
     private readonly ResolutionScope scope;
     protected readonly ImmutableArray<TAlgorithm> Algorithms;
 
-    public PipelineAlgorithmExecution(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms)
+    public PipelineAlgorithmExecutor(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms)
     {
         this.scope = scope;
         Algorithms = algorithms.ToImmutableArray();
@@ -82,9 +82,9 @@ public class PipelineAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TP
             ct.ThrowIfCancellationRequested();
             var algRng = random.Fork(index);
             var childScope = scope.CreateChildScope();
-            var algorithmExecution = childScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+            var algorithmExecutor = childScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 
-            await foreach (var newState in algorithmExecution.RunStreamingAsync(problem, algRng, state, ct))
+            await foreach (var newState in algorithmExecutor.RunStreamingAsync(problem, algRng, state, ct))
             {
                 state = newState;
                 yield return newState;

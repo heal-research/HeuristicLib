@@ -22,7 +22,7 @@ public abstract record MultiTerminator<TCandidate>
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildTerminators]);
 
     /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
-    public ExecutionFactory<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
+    public ExecutorFactory<ITerminationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState
@@ -33,17 +33,17 @@ public abstract record MultiTerminator<TCandidate>
 
     /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
     /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
-    protected abstract CompositeExecutionFactory<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
+    protected abstract CompositeExecutorFactory<ITerminationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState;
 }
 
-public abstract class MultiTerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
-    : TerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+public abstract class MultiTerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
+    : TerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> ChildTerminators { get; } = childTerminators;
+    protected ImmutableArray<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> ChildTerminators { get; } = childTerminators;
 }

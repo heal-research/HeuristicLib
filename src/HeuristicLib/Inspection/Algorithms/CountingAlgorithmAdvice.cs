@@ -18,11 +18,11 @@ public sealed class CountingAlgorithmAdvice<TCandidate, TSearchState> : Algorith
         Counter = counter;
     }
 
-    public override WrapperExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IAlgorithm<TCandidate, TSearchState> algorithm) =>
-        childAlgorithm => new Execution<TRunSearchSpace, TRunProblem>(childAlgorithm, Counter);
+    public override WrapperExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IAlgorithm<TCandidate, TSearchState> algorithm) =>
+        childAlgorithm => new Executor<TRunSearchSpace, TRunProblem>(childAlgorithm, Counter);
 
-    private sealed class Execution<TSearchSpace, TProblem>(IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> childAlgorithm, CountAccumulator counter)
-        : WrappingAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm)
+    private sealed class Executor<TSearchSpace, TProblem>(IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> childAlgorithm, CountAccumulator counter)
+        : WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

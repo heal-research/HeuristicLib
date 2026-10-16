@@ -36,7 +36,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
     where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
 {
     /// <summary>
-    /// Gets the dynamic problem this evaluator is bound to. Execution nodes observe its epoch clock and can only evaluate this problem.
+    /// Gets the dynamic problem this evaluator is bound to. Executors observe its epoch clock and can only evaluate this problem.
     /// </summary>
     public TProblem SourceProblem { get; init; }
 
@@ -54,10 +54,10 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
         BestKnownProvider = bestKnownProvider;
     }
 
-    protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
     {
         var state = new ExecutionState();
-        return childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy, state);
+        return childEvaluator => new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy, state);
     }
 
     private sealed class ExecutionState
@@ -66,7 +66,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
         public int BestKnownEpoch { get; set; } = -1;
     }
 
-    private sealed class Execution<TRunSearchSpace, TRunProblem> : WrappingEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>
+    private sealed class Executor<TRunSearchSpace, TRunProblem> : WrappingEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -75,7 +75,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
         private readonly RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy;
         private readonly ExecutionState state;
 
-        public Execution(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy, ExecutionState state)
+        public Executor(IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy, ExecutionState state)
             : base(childEvaluator)
         {
             this.sourceProblem = sourceProblem;

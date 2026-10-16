@@ -149,9 +149,9 @@ public class ObservationFactoryTests
             execution => execution.Transform(current, previous, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(transformed));
     }
 
-    private static void AssertContextualObservations<TExecution>(List<string> events,
-        Func<Action, Aspect> createAspect, Func<ResolutionScope, TExecution> resolve, Action<TExecution> invoke)
-        where TExecution : class, IExecutionNode
+    private static void AssertContextualObservations<TExecutor>(List<string> events,
+        Func<Action, Aspect> createAspect, Func<ResolutionScope, TExecutor> resolve, Action<TExecutor> invoke)
+        where TExecutor : class, IExecutor
     {
         var root = ResolutionScope.Create(createAspect(() => events.Add("parent")));
         var original = resolve(root);
@@ -216,11 +216,11 @@ public class ObservationFactoryTests
     {
         public IEvaluator<int> Evaluator { get; } = new ProblemEvaluator<int>();
 
-        public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
-            scope => new Execution<TRunSearchSpace, TRunProblem>(scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator));
+        public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
+            scope => new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator));
 
-        private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator)
-            : IAlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
+        private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator)
+            : IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

@@ -65,11 +65,11 @@ public sealed class AlgorithmObservationAdvice<TCandidate, TSearchSpace, TProble
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public override WrapperExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IAlgorithm<TCandidate, TSearchState> algorithm)
+    public override WrapperExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IAlgorithm<TCandidate, TSearchState> algorithm)
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
         var state = new ExecutionState();
-        return inner => new Execution<TRunSearchSpace, TRunProblem>(
+        return inner => new Executor<TRunSearchSpace, TRunProblem>(
             algorithm, inner, observe, state);
     }
 
@@ -78,12 +78,12 @@ public sealed class AlgorithmObservationAdvice<TCandidate, TSearchSpace, TProble
         public long Iteration { get; set; }
     }
 
-    private sealed class Execution<TRunSearchSpace, TRunProblem>(
+    private sealed class Executor<TRunSearchSpace, TRunProblem>(
         IAlgorithm<TCandidate, TSearchState> observedAlgorithm,
-        IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> childAlgorithm,
+        IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> childAlgorithm,
         Action<AlgorithmObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe,
         ExecutionState state)
-        : WrappingAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childAlgorithm)
+        : WrappingAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childAlgorithm)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {

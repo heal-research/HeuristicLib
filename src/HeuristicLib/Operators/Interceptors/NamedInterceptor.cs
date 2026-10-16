@@ -15,7 +15,7 @@ public sealed record NamedInterceptor<TCandidate> : WrappingInterceptor<TCandida
 
     public string Name { get; init; }
 
-    protected override WrapperExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
+    protected override WrapperExecutorFactory<IInterceptionExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
         child => child;
 }
 

@@ -51,14 +51,14 @@ public class HillClimberTests
 
     private sealed record ConstantCreator(int Value)
         : ICreator<int>,
-        ICreatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        ICreationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public ExecutionFactory<ICreatorExecution<int, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+        public ExecutorFactory<ICreationExecutor<int, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
             where TRunSearchSpace : class, ISearchSpace<int>
             where TRunProblem : class, IProblem<int, TRunSearchSpace>
         {
-            var execution = (ICreatorExecution<int, TRunSearchSpace, TRunProblem>)(object)this;
-            return _ => execution;
+            var executor = (ICreationExecutor<int, TRunSearchSpace, TRunProblem>)(object)this;
+            return _ => executor;
         }
 
         public IReadOnlyList<int> Create(
@@ -71,17 +71,17 @@ public class HillClimberTests
 
     private sealed record OffsetMutator(int Offset)
         : IMutator<int>,
-        IMutatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public ExecutionFactory<IMutatorExecution<int, TSearchSpace, TProblem>> CreateExecutionFactory<TSearchSpace, TProblem>()
+        public ExecutorFactory<IMutationExecutor<int, TSearchSpace, TProblem>> CreateExecutorFactory<TSearchSpace, TProblem>()
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
-            var execution = (IMutatorExecution<int, TSearchSpace, TProblem>)CreateBoundExecution();
-            return _ => execution;
+            var executor = (IMutationExecutor<int, TSearchSpace, TProblem>)CreateBoundExecution();
+            return _ => executor;
         }
 
-        private IMutatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecution() => this;
+        private IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecution() => this;
 
         public IReadOnlyList<int> Mutate(
             IReadOnlyList<int> parents,

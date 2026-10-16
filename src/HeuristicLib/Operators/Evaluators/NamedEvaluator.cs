@@ -15,7 +15,7 @@ public sealed record NamedEvaluator<TCandidate> : WrappingEvaluator<TCandidate>,
 
     public string Name { get; init; }
 
-    protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+    protected override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
         child => child;
 }
 

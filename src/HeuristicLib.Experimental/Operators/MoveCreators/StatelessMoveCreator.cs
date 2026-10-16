@@ -6,22 +6,22 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.MoveCreators;
 
 /// <remarks>
-/// A move creator that carries no mutable execution data is its own execution node, so it needs no separate instance
+/// A move creator that carries no mutable execution data is its own executor, so it needs no separate instance
 /// type. The type arguments are still the search space and problem it is written for, and a run it was not written
 /// for is reported when the execution graph is built.
 /// </remarks>
 public abstract record StatelessMoveCreator<TCandidate, TSearchSpace, TProblem, TMove>
-    : IMoveCreator<TCandidate, TMove>, IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>
+    : IMoveCreator<TCandidate, TMove>, IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public virtual ExecutionFactory<IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutionFactory() => _ => this;
+    public virtual ExecutorFactory<IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutorFactory() => _ => this;
 
     public abstract IEnumerable<TMove> Moves(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    ExecutionFactory<IMoveCreatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveCreator<TCandidate, TMove>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    ExecutorFactory<IMoveCreationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveCreator<TCandidate, TMove>.CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -31,6 +31,6 @@ public abstract record StatelessMoveCreator<TCandidate, TSearchSpace, TProblem, 
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (ExecutionFactory<IMoveCreatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutionFactory();
+        return (ExecutorFactory<IMoveCreationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutorFactory();
     }
 }

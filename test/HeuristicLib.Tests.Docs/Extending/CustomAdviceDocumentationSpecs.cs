@@ -22,13 +22,13 @@ public sealed class MutationLogAdvice<TCandidate> : MutatorAdvice<TCandidate>
         this.write = write;
     }
 
-    public override WrapperExecutionFactory<
-        IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>>
+    public override WrapperExecutorFactory<
+        IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>
         CreateWrapperFactory<TRunSearchSpace, TRunProblem>(
             IMutator<TCandidate> mutator)
     {
         var state = new JoinPointState();
-        return inner => new Execution<TRunSearchSpace, TRunProblem>(inner, mutator, state, write);
+        return inner => new Executor<TRunSearchSpace, TRunProblem>(inner, mutator, state, write);
     }
 
     private sealed class JoinPointState
@@ -36,12 +36,12 @@ public sealed class MutationLogAdvice<TCandidate> : MutatorAdvice<TCandidate>
         public int Calls { get; set; }
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(
-        IMutatorExecution<TCandidate, TSearchSpace, TProblem> inner,
+    private sealed class Executor<TSearchSpace, TProblem>(
+        IMutationExecutor<TCandidate, TSearchSpace, TProblem> inner,
         IMutator<TCandidate> source,
         JoinPointState state,
         Action<IMutator<TCandidate>, int, int> write)
-        : WrappingMutatorExecution<TCandidate, TSearchSpace, TProblem>(inner)
+        : WrappingMutationExecutor<TCandidate, TSearchSpace, TProblem>(inner)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

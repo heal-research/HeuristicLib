@@ -203,8 +203,8 @@ public class RefinerCompositionTests
 
     private static MultiplyRefiner Multiply(int factor) => new(factor);
 
-    private static IReadOnlyList<int> Refine(IRefinerExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> execution, params int[] candidates) =>
-        execution.Refine(candidates, RandomNumberGenerator.Create(42), DummySearchSpace<int>.Instance, CreateProblem());
+    private static IReadOnlyList<int> Refine(IRefinementExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> executor, params int[] candidates) =>
+        executor.Refine(candidates, RandomNumberGenerator.Create(42), DummySearchSpace<int>.Instance, CreateProblem());
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>
         FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);

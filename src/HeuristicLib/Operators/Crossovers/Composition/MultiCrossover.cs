@@ -21,7 +21,7 @@ public abstract record MultiCrossover<TCandidate>
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildCrossovers]);
 
     /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
-    public ExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<ICrossoverExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -35,15 +35,15 @@ public abstract record MultiCrossover<TCandidate>
 
     /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
     /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
-    protected abstract CompositeExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected abstract CompositeExecutorFactory<ICrossoverExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class MultiCrossoverExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ICrossoverExecution<TCandidate, TSearchSpace, TProblem>> childCrossovers)
-    : CrossoverExecution<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiCrossoverExecutor<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>> childCrossovers)
+    : CrossoverExecutor<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<ICrossoverExecution<TCandidate, TSearchSpace, TProblem>> ChildCrossovers { get; } = childCrossovers;
+    protected ImmutableArray<ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>> ChildCrossovers { get; } = childCrossovers;
 }

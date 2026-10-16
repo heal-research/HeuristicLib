@@ -18,11 +18,11 @@ public record NoSameMatesSelector<TCandidate>
 
     public int MaxAttempts { get; init; }
 
-    protected override WrapperExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-        childSelector => new Execution<TRunSearchSpace, TRunProblem>(childSelector, MaxAttempts);
+    protected override WrapperExecutorFactory<ISelectionExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        childSelector => new Executor<TRunSearchSpace, TRunProblem>(childSelector, MaxAttempts);
 
-    private sealed class Execution<TSearchSpace, TProblem>(ISelectorExecution<TCandidate, TSearchSpace, TProblem> childSelector, int maxAttempts)
-        : WrappingSelectorExecution<TCandidate, TSearchSpace, TProblem>(childSelector)
+    private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> childSelector, int maxAttempts)
+        : WrappingSelectionExecutor<TCandidate, TSearchSpace, TProblem>(childSelector)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

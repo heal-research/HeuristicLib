@@ -8,13 +8,13 @@ namespace HEAL.HeuristicLib.Operators.MoveCreators;
 
 public interface IMoveCreator<TCandidate, out TMove> : IOperator
 {
-    ExecutionFactory<IMoveCreatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    ExecutorFactory<IMoveCreationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TMove>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public interface IMoveCreatorExecution<in TCandidate, in TSearchSpace, in TProblem, out TMove>
-    : IOperatorExecution
+public interface IMoveCreationExecutor<in TCandidate, in TSearchSpace, in TProblem, out TMove>
+    : IOperatorExecutor
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -29,33 +29,33 @@ public static class MoveCreatorResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TCandidate, TSearchSpace, TProblem, TMove>(IMoveCreator<TCandidate, TMove> moveCreator)
+        public IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TCandidate, TSearchSpace, TProblem, TMove>(IMoveCreator<TCandidate, TMove> moveCreator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(moveCreator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TMove>);
+            scope.Resolve(moveCreator, static source => source.CreateExecutorFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TMove>);
 
         [return: NotNullIfNotNull(nameof(moveCreator))]
-        public IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TMove>(IMoveCreator<TCandidate, TMove>? moveCreator)
+        public IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TMove>(IMoveCreator<TCandidate, TMove>? moveCreator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             moveCreator is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveCreator);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem, TMove>(
             IMoveCreator<TCandidate, TMove> moveCreator,
-            [NotNullWhen(true)] out IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>? execution,
+            [NotNullWhen(true)] out IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? executor,
             [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
         {
             try
             {
-                execution = scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveCreator);
+                executor = scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveCreator);
                 reason = null;
                 return true;
             }
             catch (InvalidOperationException exception)
             {
-                execution = null;
+                executor = null;
                 reason = exception.Message;
                 return false;
             }
@@ -66,22 +66,22 @@ public static class MoveCreatorResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TMove>(IMoveCreator<TCandidate, TMove> moveCreator) =>
+        public IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TMove>(IMoveCreator<TCandidate, TMove> moveCreator) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TMove>(moveCreator);
 
         [return: NotNullIfNotNull(nameof(moveCreator))]
-        public IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TMove>(IMoveCreator<TCandidate, TMove>? moveCreator) =>
+        public IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TMove>(IMoveCreator<TCandidate, TMove>? moveCreator) =>
             moveCreator is null ? null : scope.Resolve(moveCreator);
 
         public bool TryResolve<TMove>(
             IMoveCreator<TCandidate, TMove> moveCreator,
-            [NotNullWhen(true)] out IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>? execution,
+            [NotNullWhen(true)] out IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? executor,
             [NotNullWhen(false)] out string? reason) =>
-            scope.Scope.TryResolve(moveCreator, out execution, out reason);
+            scope.Scope.TryResolve(moveCreator, out executor, out reason);
     }
 
-    private static WrapperExecutionFactory<IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TMove>(Advice advice, IMoveCreator<TCandidate, TMove> configuration)
+    private static WrapperExecutorFactory<IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TMove>(Advice advice, IMoveCreator<TCandidate, TMove> configuration)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        => throw new InvalidOperationException($"{advice.GetType().Name} is not a single-child wrapper for {typeof(IMoveCreator<TCandidate, TMove>).Name} producing {typeof(IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>).Name}.");
+        => throw new InvalidOperationException($"{advice.GetType().Name} is not a single-child wrapper for {typeof(IMoveCreator<TCandidate, TMove>).Name} producing {typeof(IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>).Name}.");
 }

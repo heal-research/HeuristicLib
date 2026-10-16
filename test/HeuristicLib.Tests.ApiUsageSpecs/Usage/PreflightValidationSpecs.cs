@@ -114,7 +114,7 @@ public class PreflightValidationSpecs
     /// space would reject.
     /// </summary>
     /// <remarks>
-    /// Reaching the execution node directly, as here, bypasses run creation and therefore the check. That is the
+    /// Reaching the executor directly, as here, bypasses run creation and therefore the check. That is the
     /// behavior a caller opts into with <c>validate: false</c>, stated as a mechanism rather than as a default.
     /// </remarks>
     [Fact]
@@ -123,12 +123,12 @@ public class PreflightValidationSpecs
         var mutator = new FlipOneBitMutator();
         SearchConfigurationValidation.Validate(mutator, Constrained).IsValid.ShouldBeFalse();
 
-        var execution = ResolutionScope.Create()
+        var executor = ResolutionScope.Create()
             .Resolve<BoolVector, FixedCardinalityBoolVectorSearchSpace, IProblem<BoolVector, FixedCardinalityBoolVectorSearchSpace>>(mutator);
         var inSpace = BoolVector.Create(true, true, false, false);
         Constrained.Contains(inSpace).ShouldBeTrue();
 
-        var mutated = execution.Mutate([inSpace], RandomNumberGenerator.Create(1), Constrained, null!)[0];
+        var mutated = executor.Mutate([inSpace], RandomNumberGenerator.Create(1), Constrained, null!)[0];
 
         // Nothing checked or complained at this level; the candidate simply left the space.
         Constrained.Contains(mutated).ShouldBeFalse();

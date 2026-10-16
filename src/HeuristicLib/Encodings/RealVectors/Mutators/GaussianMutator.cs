@@ -35,10 +35,10 @@ public record GaussianMutator
     /// The raw execution offers <see cref="IMutationStrengthControl"/> over its persistent strength.
     /// Algorithms project this control during resolution and invoke mutation through the wrapped execution.
     /// </summary>
-    public override ExecutionFactory<IMutatorExecution<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>> CreateExecutionFactory()
+    public override ExecutorFactory<IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>> CreateExecutorFactory()
     {
-        var execution = new Execution(MutationRate, new ExecutionState(MutationStrength));
-        return _ => execution;
+        var executor = new Executor(MutationRate, new ExecutionState(MutationStrength));
+        return _ => executor;
     }
 
     private sealed class ExecutionState(double mutationStrength)
@@ -46,8 +46,8 @@ public record GaussianMutator
         public double CurrentMutationStrength { get; set; } = mutationStrength;
     }
 
-    private sealed class Execution(double mutationRate, ExecutionState state)
-        : MutatorExecution<RealVector, BoundedRealVectorSearchSpace>, IMutationStrengthControl
+    private sealed class Executor(double mutationRate, ExecutionState state)
+        : MutationExecutor<RealVector, BoundedRealVectorSearchSpace>, IMutationStrengthControl
     {
         public double CurrentMutationStrength
         {

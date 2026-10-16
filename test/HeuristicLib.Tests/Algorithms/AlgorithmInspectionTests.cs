@@ -48,11 +48,11 @@ public sealed class AlgorithmInspectionTests
 
     private sealed record ProbeAlgorithm(ManualTimeProvider Time, bool Fail) : Algorithm<ProbeAlgorithm, int, PopulationState<int>>
     {
-        public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
-            _ => new Execution<TRunSearchSpace, TRunProblem>(Time, Fail);
+        public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
+            _ => new Executor<TRunSearchSpace, TRunProblem>(Time, Fail);
 
-        private sealed class Execution<TSearchSpace, TProblem>(ManualTimeProvider time, bool fail)
-            : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
+        private sealed class Executor<TSearchSpace, TProblem>(ManualTimeProvider time, bool fail)
+            : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

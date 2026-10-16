@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Experimental.Operators;
 
-public class MoveExecutionFactoryTests
+public class MoveExecutorFactoryTests
 {
     private static readonly UnrestrictedSearchSpace<int> SearchSpace = UnrestrictedSearchSpace<int>.Instance;
     private static readonly IProblem<int, UnrestrictedSearchSpace<int>> Problem = new NoProblem<int, UnrestrictedSearchSpace<int>>(SearchSpace);

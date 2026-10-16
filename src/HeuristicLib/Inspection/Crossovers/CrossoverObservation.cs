@@ -48,17 +48,17 @@ public sealed class CrossoverObservationAdvice<TCandidate, TSearchSpace, TProble
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public override WrapperExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICrossover<TCandidate> crossover)
+    public override WrapperExecutorFactory<ICrossoverExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICrossover<TCandidate> crossover)
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return inner => new Execution<TRunSearchSpace, TRunProblem>(crossover, inner, observe);
+        return inner => new Executor<TRunSearchSpace, TRunProblem>(crossover, inner, observe);
     }
 
-    private sealed class Execution<TRunSearchSpace, TRunProblem>(
+    private sealed class Executor<TRunSearchSpace, TRunProblem>(
         ICrossover<TCandidate> observedCrossover,
-        ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem> childCrossover,
+        ICrossoverExecutor<TCandidate, TRunSearchSpace, TRunProblem> childCrossover,
         Action<CrossoverObservation<TCandidate, TSearchSpace, TProblem>> observe)
-        : WrappingCrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>(childCrossover)
+        : WrappingCrossoverExecutor<TCandidate, TRunSearchSpace, TRunProblem>(childCrossover)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {

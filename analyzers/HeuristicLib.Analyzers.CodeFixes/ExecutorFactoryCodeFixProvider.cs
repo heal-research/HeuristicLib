@@ -8,11 +8,11 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace HEAL.HeuristicLib.Analyzers.CodeFixes;
 
-[ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(ExecutionFactoryCodeFixProvider))]
+[ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(ExecutorFactoryCodeFixProvider))]
 [Shared]
-public sealed class ExecutionFactoryCodeFixProvider : CodeFixProvider
+public sealed class ExecutorFactoryCodeFixProvider : CodeFixProvider
 {
-    public override ImmutableArray<string> FixableDiagnosticIds => [ExecutionFactoryAnalyzer.DiagnosticId];
+    public override ImmutableArray<string> FixableDiagnosticIds => [ExecutorFactoryAnalyzer.DiagnosticId];
 
     public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
@@ -27,7 +27,7 @@ public sealed class ExecutionFactoryCodeFixProvider : CodeFixProvider
         {
             var factory = root.FindNode(diagnostic.Location.SourceSpan, getInnermostNodeForTie: true).FirstAncestorOrSelf<InvocationExpressionSyntax>();
             if (factory?.Expression is not MemberAccessExpressionSyntax member
-                || model.GetTypeInfo(factory, context.CancellationToken).Type is not INamedTypeSymbol { Name: "ExecutionFactory", Arity: 1 } factoryType
+                || model.GetTypeInfo(factory, context.CancellationToken).Type is not INamedTypeSymbol { Name: "ExecutorFactory", Arity: 1 } factoryType
                 || factoryType.ContainingNamespace.ToDisplayString() != "HEAL.HeuristicLib.Execution")
                 continue;
 
@@ -73,7 +73,7 @@ public sealed class ExecutionFactoryCodeFixProvider : CodeFixProvider
             context.RegisterCodeFix(CodeAction.Create(
                 title: "Resolve child through the scope",
                 createChangedDocument: _ => Task.FromResult(changed),
-                equivalenceKey: nameof(ExecutionFactoryCodeFixProvider)), diagnostic);
+                equivalenceKey: nameof(ExecutorFactoryCodeFixProvider)), diagnostic);
         }
     }
 

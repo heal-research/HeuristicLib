@@ -21,7 +21,7 @@ public abstract record WrappingReplacer<TCandidate>
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildReplacer);
 
     /// <summary>Prepares this operator once, then binds its child in each construction scope.</summary>
-    public ExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<IReplacementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -31,16 +31,16 @@ public abstract record WrappingReplacer<TCandidate>
 
     /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved child.</summary>
     /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
-    protected abstract WrapperExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected abstract WrapperExecutorFactory<IReplacementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
 }
 
-public abstract class WrappingReplacerExecution<TCandidate, TSearchSpace, TProblem>(IReplacerExecution<TCandidate, TSearchSpace, TProblem> childReplacer)
-    : ReplacerExecution<TCandidate, TSearchSpace, TProblem>
+public abstract class WrappingReplacementExecutor<TCandidate, TSearchSpace, TProblem>(IReplacementExecutor<TCandidate, TSearchSpace, TProblem> childReplacer)
+    : ReplacementExecutor<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IReplacerExecution<TCandidate, TSearchSpace, TProblem> ChildReplacer { get; } = childReplacer;
+    protected IReplacementExecutor<TCandidate, TSearchSpace, TProblem> ChildReplacer { get; } = childReplacer;
 }

@@ -14,11 +14,11 @@ public sealed record PipelineRefiner<TCandidate>
     {
     }
 
-    protected override CompositeExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-        childRefiners => new Execution<TRunSearchSpace, TRunProblem>(childRefiners);
+    protected override CompositeExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+        childRefiners => new Executor<TRunSearchSpace, TRunProblem>(childRefiners);
 
-    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> childRefiners)
-        : MultiRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiners)
+    private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> childRefiners)
+        : MultiRefinementExecutor<TCandidate, TSearchSpace, TProblem>(childRefiners)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

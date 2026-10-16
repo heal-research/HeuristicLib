@@ -114,21 +114,21 @@ public class CycleAlgorithmAnalysisScenarios
             Evaluator = evaluator;
         }
 
-        public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
+        public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
             scope =>
             {
                 var typed = scope.For<int, TRunSearchSpace, TRunProblem, PopulationState<int>>();
-                return new Execution<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Interceptor), Candidate);
+                return new Executor<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Interceptor), Candidate);
             };
 
-        private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator, IInterceptorExecution<int, TSearchSpace, TProblem, PopulationState<int>> interceptor, int candidate)
-            : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
+        private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator, IInterceptionExecutor<int, TSearchSpace, TProblem, PopulationState<int>> interceptor, int candidate)
+            : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
-            private readonly IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator = evaluator;
+            private readonly IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator = evaluator;
 
-            private readonly IInterceptorExecution<int, TSearchSpace, TProblem, PopulationState<int>> interceptor = interceptor;
+            private readonly IInterceptionExecutor<int, TSearchSpace, TProblem, PopulationState<int>> interceptor = interceptor;
 
             private readonly int candidate = candidate;
 

@@ -28,18 +28,18 @@ public sealed record ChooseOneReplacer<TCandidate>
     {
     }
 
-    protected override CompositeExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected override CompositeExecutorFactory<IReplacementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildReplacers.Count == 0)
             throw new InvalidOperationException("At least one replacer must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildReplacers.Count)
             throw new InvalidOperationException("Weights must have the same length as replacers.");
 
-        return childReplacers => new Execution<TRunSearchSpace, TRunProblem>(childReplacers, new(childReplacers, Weights));
+        return childReplacers => new Executor<TRunSearchSpace, TRunProblem>(childReplacers, new(childReplacers, Weights));
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> childReplacers, WeightedItemSampler<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> sampler)
-        : MultiReplacerExecution<TCandidate, TSearchSpace, TProblem>(childReplacers)
+    private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IReplacementExecutor<TCandidate, TSearchSpace, TProblem>> childReplacers, WeightedItemSampler<IReplacementExecutor<TCandidate, TSearchSpace, TProblem>> sampler)
+        : MultiReplacementExecutor<TCandidate, TSearchSpace, TProblem>(childReplacers)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

@@ -1,8 +1,8 @@
 # Execution resolution
 
-Resolution selects persistent state by configuration reference and binds typed execution nodes with the requesting scope's aspects. Configurations prepare factories without a scope; the returned factories receive a construction scope and resolve their declared children.
+Resolution selects persistent state by configuration reference and binds typed executors with the requesting scope's aspects. Configurations prepare factories without a scope; the returned factories receive a construction scope and resolve their declared children.
 
-See [configuration vs execution nodes](/contributing/architecture/execution-nodes) for authoring responsibilities.
+See [configuration vs executors](/contributing/architecture/execution-nodes) for authoring responsibilities.
 
 ## State and construction
 
@@ -14,11 +14,21 @@ For each resolution:
 
 1. Find the configuration's prepared factory in the current state or its ancestors. Prepare it locally if none exists.
 2. Invoke that factory with the owner's state and the requesting aspects. Resolve children in that construction scope.
-3. Apply matching advice in scope order to the raw execution. Return the advised execution.
+3. Apply matching advice in scope order to the raw executor. Return the advised executor.
 
 A configuration selected first in a child stays local; a later selection in the parent does not replace it. Sibling states cannot see each other's local factories. A parent-first selection is reused by descendants. Dependencies resolve in the factory owner's state, so a direct child-local selection does not redirect an ancestor composite's dependencies.
 
 Resolution constructs nodes on every request. A prepared stateless or stateful leaf may return its existing raw node. Composite factories can construct fresh bindings around the same prepared state. Do not rely on advised node reference identity to identify a logical execution.
+
+### Operation-parameterized operators
+
+`IOperator<TCandidate, TOperation>` prepares one `OperatorExecutorFactory` per selected configuration reference. Its run-generic `GetExecutorFactory` returns checked construction factories for candidate, operation, search space, problem, run state and requested executor type. Several operations share the same prepared owner. Only factories are cached; contextual nodes and children are constructed for each resolution. `ExecutorFactory.FromFactory` preserves the authored executor type so compatible contravariant execution views remain usable through covariant `IExecutorWithControls<TExecutor>`.
+
+The generic and legacy paths use one owner table, ancestry, aspect chain and configuration-reference cycle guard. A nominal role resolver adapts a configuration declaring the corresponding generic contract through `ResolveOperator`; it does not call a second preparation method. Low-level factory callbacks cannot switch an already selected owner's preparation path. Existing role contracts and authoring bases remain until their consumer migrations.
+
+For the generic path, resolution checks the raw factory and all selected advice constructors before constructing the raw graph. `OperatorAdvice` prepares state once per advice/configuration/owner and binds each view separately; `OperatorAdvice<TCandidate, TOperation>` applies only to its selected operation. Unsupported advice produces an explicit binding diagnostic. Advice keys are weak. Failed view binding preserves successful owner and advice preparation.
+
+Descriptors supply named-method adapters for success and lifecycle hooks. Success receives declared candidate work: returned counts for candidate-producing operations, input count for evaluation; termination and interception do not support candidate metrics. Metric advice calls `RequireCandidateWork` during binding. Lifecycle tokens belong to individual invocations; cleanup runs after successful entry, including faults, and multiple failures preserve child/callback/cleanup order. Algorithms retain their separate streaming advice.
 
 ## Pointcuts, advice and join points
 
@@ -26,17 +36,17 @@ A `Pointcut<TConfiguration>` examines a configuration as it is resolved. `Pointc
 
 `And` and `Or`, also spelled `&` and `|`, combine pointcuts and short-circuit from left to right. `Not()` and `!` complement a selection within its declared configuration type: negating a mutator pointcut still excludes every other role.
 
-`Pointcut.Named<TConfiguration>(name)` matches `INamedConfiguration.Name` ordinally and case-sensitively. Concrete configurations can implement that contract, or users can configure a role-preserving wrapper through `operator.Named(name)` or `algorithm.Named(name)`. Named wrappers forward the child's execution and use the ordinary child resolution rules. They and their children remain separate selectable configurations. Repeated names select every matching configuration; they do not identify shared state or caller paths.
+`Pointcut.Named<TConfiguration>(name)` matches `INamedConfiguration.Name` ordinally and case-sensitively. Concrete configurations can implement that contract, or users can configure a role-preserving wrapper through `operator.Named(name)` or `algorithm.Named(name)`. Named wrappers forward the child's executor and use the ordinary child resolution rules. They and their children remain separate selectable configurations. Repeated names select every matching configuration; they do not identify shared state or caller paths.
 
 An `Aspect` stores ordered `(Pointcut, Advice)` pairs in `Advices`. `Aspect.Create(pointcut, advice)` creates one pair; derived constructors assign several pairs directly. Advice is a class with reference identity. Each role has a base beside its interface, such as `MutatorAdvice<TCandidate>`, whose `CreateWrapperFactory` accepts the configuration selected by the pointcut and the run's type parameters.
 
-The role's resolution extension supplies a callback that casts to that role's advice base and calls its wrapper factory. The returned `WrapperExecutionFactory<TExecution>` wraps an already resolved execution. Advice resolves no configured children and introduces no configuration nodes into selection. An explicitly configured wrapper remains a configuration and can be selected independently of its child.
+The role's resolution extension supplies a callback that casts to that role's advice base and calls its wrapper factory. The returned `WrapperExecutorFactory<TExecutor>` wraps an already resolved executor. Advice resolves no configured children and introduces no configuration nodes into selection. An explicitly configured wrapper remains a configuration and can be selected independently of its child.
 
-A join point is the execution built for one selected configuration. A shared configuration can have several contextual bindings; it does not identify one caller path or invocation. Resolution prepares advice once per advice instance, selected configuration and owner state. Allocate persistent join-point data in `CreateWrapperFactory`, before returning the wrapper constructor. Algorithm observation uses this boundary for its iteration counter. Invocation-local data stays in the operation or iterator.
+A join point is the executor built for one selected configuration. A shared configuration can have several contextual bindings; it does not identify one caller path or invocation. Resolution prepares advice once per advice instance, selected configuration and owner state. Allocate persistent join-point data in `CreateWrapperFactory`, before returning the wrapper constructor. Algorithm observation uses this boundary for its iteration counter. Invocation-local data stays in the operation or iterator.
 
 ## Ordering and shared advice
 
-The current scope's aspect layer precedes its parent's layers. Within each layer, aspect order and then pair order are application order. Earlier advice wraps closer to the raw execution; later advice wraps outside it. Entry order is reversed, while successful callbacks run in application order. Configured wrappers are already part of the raw graph.
+The current scope's aspect layer precedes its parent's layers. Within each layer, aspect order and then pair order are application order. Earlier advice wraps closer to the raw executor; later advice wraps outside it. Entry order is reversed, while successful callbacks run in application order. Configured wrappers are already part of the raw graph.
 
 Each advice instance applies once, at its first position in this chain. Two traces can include the same clock's advice without counting twice. A trace lists clock advice before its own observation, so the clock has advanced when it records an entry. Readding the clock later must not move that first position. If the same advice appears with two pointcuts, the first pairing wins without validation. Use separate advice instances to apply the same behavior at two distinct pointcuts; they may share a counter.
 
@@ -54,9 +64,11 @@ Retained selection uses the internal `CreateChildState` and `WithState` operatio
 
 ## Controls, failures and lifetime
 
-Control projection reads the raw execution after the entire advised chain succeeds. Invoke operations through the returned advised execution. Advice need not implement the source's control interfaces. A configured wrapper exposes its own controls; projection does not search its children.
+Control projection reads the raw executor after the entire advised chain succeeds. Invoke operations through the returned advised executor. Advice need not implement the source's control interfaces. A configured wrapper exposes its own controls; projection does not search its children.
 
-This leaves a known correctness bug: a configured wrapper can hide a child capability that its algorithm needs. Even a named forwarding wrapper can lose the child's control when child advice changes the forwarded execution type. See [Known capability loss](/guide/extending/operator-composition#known-capability-loss) for the effect on mutation-strength adaptation.
+The generic path returns both the advised `Executor` and its explicit `ControlProvider` of type `IExecutorControlProvider`. Transparent forwarding and inspection hooks preserve that provider. A replacement chooses its own controls or `EmptyExecutorControlProvider`; controls are queried only after the whole chain succeeds.
+
+The legacy path still has a known correctness bug: a configured wrapper can hide a child capability that its algorithm needs. Even a named forwarding wrapper can lose the child's control when child advice changes the forwarded executor type. See [Known capability loss](/guide/extending/operator-composition#known-capability-loss) for the effect on mutation-strength adaptation.
 
 Failed preparation or construction is not stored as a successful result and can be retried. Completed factories remain prepared when a later contextual binding fails. Recursive construction is detected across a root state and all its children. `TryResolve` converts `InvalidOperationException` to a reason; other exceptions propagate.
 

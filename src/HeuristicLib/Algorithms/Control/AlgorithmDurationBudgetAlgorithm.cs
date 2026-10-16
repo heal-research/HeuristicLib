@@ -21,21 +21,21 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
-        scope => new AlgorithmDurationBudgetAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), MaximumDuration, TimeProvider);
+    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
+        scope => new AlgorithmDurationBudgetAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), MaximumDuration, TimeProvider);
 }
 
-public sealed class AlgorithmDurationBudgetAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+public sealed class AlgorithmDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    private readonly IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
+    private readonly IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
     private readonly TimeSpan maximumDuration;
     private readonly TimeProvider timeProvider;
 
-    public AlgorithmDurationBudgetAlgorithmExecution(IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, TimeSpan maximumDuration, TimeProvider timeProvider)
+    public AlgorithmDurationBudgetAlgorithmExecutor(IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, TimeSpan maximumDuration, TimeProvider timeProvider)
     {
         this.algorithm = algorithm;
         this.maximumDuration = maximumDuration;

@@ -15,7 +15,7 @@ public sealed record NamedMutator<TCandidate> : WrappingMutator<TCandidate>, INa
 
     public string Name { get; init; }
 
-    protected override WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+    protected override WrapperExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
         child => child;
 }
 

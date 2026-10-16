@@ -18,11 +18,11 @@ public sealed class CountingRefinerAdvice<TCandidate> : RefinerAdvice<TCandidate
         Metric = metric;
     }
 
-    public override WrapperExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IRefiner<TCandidate> refiner) =>
-        childRefiner => new Execution<TRunSearchSpace, TRunProblem>(childRefiner, Counter, Metric);
+    public override WrapperExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IRefiner<TCandidate> refiner) =>
+        childRefiner => new Executor<TRunSearchSpace, TRunProblem>(childRefiner, Counter, Metric);
 
-    private sealed class Execution<TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> childRefiner, CountAccumulator counter, OperatorCountMetric metric)
-        : WrappingRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiner)
+    private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> childRefiner, CountAccumulator counter, OperatorCountMetric metric)
+        : WrappingRefinementExecutor<TCandidate, TSearchSpace, TProblem>(childRefiner)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

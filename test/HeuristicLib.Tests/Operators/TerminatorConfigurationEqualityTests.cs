@@ -69,7 +69,7 @@ public class TerminatorConfigurationEqualityTests
         {
         }
 
-        protected override WrapperExecutionFactory<ITerminatorExecution<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
+        protected override WrapperExecutorFactory<ITerminationExecutor<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
             child => child;
     }
 

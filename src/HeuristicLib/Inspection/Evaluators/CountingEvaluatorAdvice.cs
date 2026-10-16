@@ -20,11 +20,11 @@ public sealed class CountingEvaluatorAdvice<TCandidate>
         Metric = metric;
     }
 
-    public override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> evaluator) =>
-        childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, Counter, Metric);
+    public override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> evaluator) =>
+        childEvaluator => new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, Counter, Metric);
 
-    private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator, CountAccumulator counter, OperatorCountMetric metric)
-        : WrappingEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(childEvaluator)
+    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, CountAccumulator counter, OperatorCountMetric metric)
+        : WrappingEvaluationExecutor<TCandidate, TSearchSpace, TProblem>(childEvaluator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

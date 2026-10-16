@@ -15,7 +15,7 @@ public sealed record NamedCreator<TCandidate> : WrappingCreator<TCandidate>, INa
 
     public string Name { get; init; }
 
-    protected override WrapperExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+    protected override WrapperExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
         child => child;
 }
 

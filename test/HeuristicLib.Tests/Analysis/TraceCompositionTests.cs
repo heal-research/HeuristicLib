@@ -97,13 +97,13 @@ public class TraceCompositionTests
 
     private sealed class FailingAdvice : CreatorAdvice<RealVector>
     {
-        public override WrapperExecutionFactory<ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICreator<RealVector> creator) =>
+        public override WrapperExecutorFactory<ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICreator<RealVector> creator) =>
             throw new InvalidOperationException("Advice preparation failed.");
     }
 
     private sealed record FailingCreator : Creator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ExecutionFactory<ICreatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutionFactory() =>
+        public override ExecutorFactory<ICreationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutorFactory() =>
             throw new InvalidOperationException("Resolution failed.");
     }
 
@@ -549,12 +549,12 @@ public class TraceCompositionTests
 
     private sealed class ObservingCreatorAdvice(Action<int> observe) : CreatorAdvice<RealVector>
     {
-        public override WrapperExecutionFactory<ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICreator<RealVector> creator) =>
-            childCreator => new Execution<TRunSearchSpace, TRunProblem>(childCreator, observe);
+        public override WrapperExecutorFactory<ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICreator<RealVector> creator) =>
+            childCreator => new Executor<TRunSearchSpace, TRunProblem>(childCreator, observe);
 
-        private sealed class Execution<TSearchSpace, TProblem>(
-            ICreatorExecution<RealVector, TSearchSpace, TProblem> childCreator,
-            Action<int> observe) : ICreatorExecution<RealVector, TSearchSpace, TProblem>
+        private sealed class Executor<TSearchSpace, TProblem>(
+            ICreationExecutor<RealVector, TSearchSpace, TProblem> childCreator,
+            Action<int> observe) : ICreationExecutor<RealVector, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
         {

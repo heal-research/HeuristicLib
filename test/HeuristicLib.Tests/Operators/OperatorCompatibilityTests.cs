@@ -124,7 +124,7 @@ public class OperatorCompatibilityTests
     /// The two columns are the measurement. Before the crossover role dropped its search space and problem they
     /// were identical: assigning an operator into an algorithm slot was the compatibility check. The role now names
     /// only its candidate, so the compiler checks that alone and the search space and problem are checked when the
-    /// execution node is built. Every row where the columns differ is a check that moved from build time to
+    /// executor is built. Every row where the columns differ is a check that moved from build time to
     /// pre-flight, and the validation column still holds the answers the compiler used to give.
     /// </remarks>
     public static TheoryData<Type, Type, bool, bool> CrossoverCompatibility => new()
@@ -320,7 +320,7 @@ internal record IndependentAlgorithm<TCandidate, TSearchSpace, TProblem> : Algor
 {
     public ICrossover<TCandidate> Crossover { get; set; } = new IndependentCrossover<TCandidate>();
 
-    public override ExecutionFactory<AlgorithmExecution<TCandidate, TSearchSpace, TProblem, SearchState>> CreateExecutionFactory() => throw new NotSupportedException();
+    public override ExecutorFactory<AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, SearchState>> CreateExecutorFactory() => throw new NotSupportedException();
 }
 
 internal record IndependentAlgorithm<TCandidate, TSearchSpace> : IndependentAlgorithm<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
@@ -333,7 +333,7 @@ internal record PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permu
 {
     public ICrossover<Permutation> Crossover { get; set; } = new PermutationSpecificCrossover();
 
-    public override ExecutionFactory<AlgorithmExecution<Permutation, PermutationSearchSpace, TProblem, SearchState>> CreateExecutionFactory() => throw new NotSupportedException();
+    public override ExecutorFactory<AlgorithmExecutor<Permutation, PermutationSearchSpace, TProblem, SearchState>> CreateExecutorFactory() => throw new NotSupportedException();
 }
 
 internal record PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationSearchSpace>>;
@@ -342,7 +342,7 @@ public record TravelingSalesmanProblemSpecificAlgorithm : Algorithm<TravelingSal
 {
     public ICrossover<Permutation> Crossover { get; set; } = new TspSpecificCrossover();
 
-    public override ExecutionFactory<AlgorithmExecution<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState>> CreateExecutionFactory() => throw new NotSupportedException();
+    public override ExecutorFactory<AlgorithmExecutor<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState>> CreateExecutorFactory() => throw new NotSupportedException();
 }
 
 internal record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVectorEncodingSpecificAlgorithm<TProblem>, RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState>
@@ -350,7 +350,7 @@ internal record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVe
 {
     public ICrossover<RealVector> Crossover { get; set; } = new RealVectorSpecificCrossover();
 
-    public override ExecutionFactory<AlgorithmExecution<RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState>> CreateExecutionFactory() => throw new NotSupportedException();
+    public override ExecutorFactory<AlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState>> CreateExecutorFactory() => throw new NotSupportedException();
 }
 
 internal record RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, BoundedRealVectorSearchSpace>>;
@@ -359,7 +359,7 @@ public record TestFunctionProblemSpecificAlgorithm : Algorithm<TestFunctionProbl
 {
     public ICrossover<RealVector> Crossover { get; set; } = new TestFunctionProblemSpecificCrossover();
 
-    public override ExecutionFactory<AlgorithmExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SearchState>> CreateExecutionFactory() => throw new NotSupportedException();
+    public override ExecutorFactory<AlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SearchState>> CreateExecutorFactory() => throw new NotSupportedException();
 }
 
 internal record IndependentCrossover<TCandidate> : SingleCandidateCrossover<TCandidate>

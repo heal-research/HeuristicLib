@@ -19,11 +19,11 @@ public sealed class CountingSelectorAdvice<TCandidate> : SelectorAdvice<TCandida
         Metric = metric;
     }
 
-    public override WrapperExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ISelector<TCandidate> selector) =>
-        childSelector => new Execution<TRunSearchSpace, TRunProblem>(childSelector, Counter, Metric);
+    public override WrapperExecutorFactory<ISelectionExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ISelector<TCandidate> selector) =>
+        childSelector => new Executor<TRunSearchSpace, TRunProblem>(childSelector, Counter, Metric);
 
-    private sealed class Execution<TSearchSpace, TProblem>(ISelectorExecution<TCandidate, TSearchSpace, TProblem> childSelector, CountAccumulator counter, OperatorCountMetric metric)
-        : WrappingSelectorExecution<TCandidate, TSearchSpace, TProblem>(childSelector)
+    private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> childSelector, CountAccumulator counter, OperatorCountMetric metric)
+        : WrappingSelectionExecutor<TCandidate, TSearchSpace, TProblem>(childSelector)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

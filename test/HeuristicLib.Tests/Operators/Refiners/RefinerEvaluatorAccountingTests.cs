@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Tests.Operators.Refiners;
 
 public class RefinerEvaluatorAccountingTests
 {
-    // One configuration reference shares prepared accounting state across fresh execution nodes.
+    // One configuration reference shares prepared accounting state across fresh executors.
     [Fact]
     public void EvaluationAccounting_FollowsConfigurationInstanceIdentityRatherThanEquality()
     {

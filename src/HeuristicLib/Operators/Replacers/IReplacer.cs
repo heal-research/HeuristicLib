@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Replacers;
@@ -10,13 +11,13 @@ namespace HEAL.HeuristicLib.Operators;
 
 public interface IReplacer<TCandidate> : IOperator
 {
-    ExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    ExecutorFactory<IReplacementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public interface IReplacerExecution<TCandidate, in TSearchSpace, in TProblem>
-    : IOperatorExecution
+public interface IReplacementExecutor<TCandidate, in TSearchSpace, in TProblem>
+    : IOperatorExecutor
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -34,7 +35,7 @@ public abstract class ReplacerAdvice<TCandidate> : Advice<IReplacer<TCandidate>>
     /// survive rebuilding the execution graph here.
     /// </remarks>
     /// <param name="replacer">The configuration the pointcut selected.</param>
-    public abstract WrapperExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IReplacer<TCandidate> replacer)
+    public abstract WrapperExecutorFactory<IReplacementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IReplacer<TCandidate> replacer)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
@@ -43,33 +44,36 @@ public static class ReplacerResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public IReplacerExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate> replacer)
+        public IReplacementExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate> replacer)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(replacer, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
+            replacer is IOperator<TCandidate, Replacement> prepared
+                ? scope.ResolveOperator<TCandidate, Replacement, TSearchSpace, TProblem, ISearchState, IReplacementExecutor<TCandidate, TSearchSpace, TProblem>>(
+                    prepared, Replacement.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>()).Executor
+                : scope.Resolve(replacer, static source => source.CreateExecutorFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(replacer))]
-        public IReplacerExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate>? replacer)
+        public IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate>? replacer)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             replacer is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem>(
             IReplacer<TCandidate> replacer,
-            [NotNullWhen(true)] out IReplacerExecution<TCandidate, TSearchSpace, TProblem>? execution,
+            [NotNullWhen(true)] out IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? executor,
             [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
         {
             try
             {
-                execution = scope.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
+                executor = scope.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
                 reason = null;
                 return true;
             }
             catch (InvalidOperationException exception)
             {
-                execution = null;
+                executor = null;
                 reason = exception.Message;
                 return false;
             }
@@ -80,21 +84,21 @@ public static class ReplacerResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReplacerExecution<TCandidate, TSearchSpace, TProblem> Resolve(IReplacer<TCandidate> replacer) =>
+        public IReplacementExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IReplacer<TCandidate> replacer) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(replacer);
 
         [return: NotNullIfNotNull(nameof(replacer))]
-        public IReplacerExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IReplacer<TCandidate>? replacer) =>
+        public IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IReplacer<TCandidate>? replacer) =>
             replacer is null ? null : scope.Resolve(replacer);
 
         public bool TryResolve(
             IReplacer<TCandidate> replacer,
-            [NotNullWhen(true)] out IReplacerExecution<TCandidate, TSearchSpace, TProblem>? execution,
+            [NotNullWhen(true)] out IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? executor,
             [NotNullWhen(false)] out string? reason) =>
-            scope.Scope.TryResolve(replacer, out execution, out reason);
+            scope.Scope.TryResolve(replacer, out executor, out reason);
     }
 
-    private static WrapperExecutionFactory<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>(Advice advice, IReplacer<TCandidate> replacer)
+    private static WrapperExecutorFactory<IReplacementExecutor<TCandidate, TSearchSpace, TProblem>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>(Advice advice, IReplacer<TCandidate> replacer)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         ((ReplacerAdvice<TCandidate>)advice).CreateWrapperFactory<TSearchSpace, TProblem>(replacer);

@@ -18,11 +18,11 @@ public sealed class CountingMutatorAdvice<TCandidate> : MutatorAdvice<TCandidate
         Metric = metric;
     }
 
-    public override WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> mutator) =>
-        childMutator => new Execution<TRunSearchSpace, TRunProblem>(childMutator, Counter, Metric);
+    public override WrapperExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> mutator) =>
+        childMutator => new Executor<TRunSearchSpace, TRunProblem>(childMutator, Counter, Metric);
 
-    private sealed class Execution<TSearchSpace, TProblem>(IMutatorExecution<TCandidate, TSearchSpace, TProblem> childMutator, CountAccumulator counter, OperatorCountMetric metric)
-        : WrappingMutatorExecution<TCandidate, TSearchSpace, TProblem>(childMutator)
+    private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<TCandidate, TSearchSpace, TProblem> childMutator, CountAccumulator counter, OperatorCountMetric metric)
+        : WrappingMutationExecutor<TCandidate, TSearchSpace, TProblem>(childMutator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

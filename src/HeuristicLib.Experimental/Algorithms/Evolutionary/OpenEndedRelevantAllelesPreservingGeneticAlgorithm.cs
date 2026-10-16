@@ -29,27 +29,27 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>
     /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
     public int? MaximumGenerations { get; init; }
 
-    protected override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
+    protected override ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
         scope =>
         {
             var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>();
-            return new Execution<TRunSearchSpace, TRunProblem>(typed.ResolveOptional(Interceptor), typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover), typed.Resolve(Mutator), typed.Resolve(Selector), typed.ResolveOptional(Refiner), PopulationSize, Elites, MaxEffort, MaximumGenerations, Strictness);
+            return new Executor<TRunSearchSpace, TRunProblem>(typed.ResolveOptional(Interceptor), typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover), typed.Resolve(Mutator), typed.Resolve(Selector), typed.ResolveOptional(Refiner), PopulationSize, Elites, MaxEffort, MaximumGenerations, Strictness);
         };
 
-    private sealed class Execution<TSearchSpace, TProblem>(
-        IInterceptorExecution<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
-        IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICreatorExecution<TCandidate, TSearchSpace, TProblem> creator,
-        ICrossoverExecution<TCandidate, TSearchSpace, TProblem> crossover,
-        IMutatorExecution<TCandidate, TSearchSpace, TProblem> mutator,
-        ISelectorExecution<TCandidate, TSearchSpace, TProblem> selector,
-        IRefinerExecution<TCandidate, TSearchSpace, TProblem>? refiner,
+    private sealed class Executor<TSearchSpace, TProblem>(
+        IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
+        IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator,
+        ICreationExecutor<TCandidate, TSearchSpace, TProblem> creator,
+        ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> crossover,
+        IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator,
+        ISelectionExecutor<TCandidate, TSearchSpace, TProblem> selector,
+        IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? refiner,
         int populationSize,
         int elites,
         int maxEffort,
         int? maximumGenerations,
         double strictness)
-        : IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
+        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

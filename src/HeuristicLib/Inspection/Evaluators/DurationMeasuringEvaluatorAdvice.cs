@@ -25,11 +25,11 @@ public sealed class DurationMeasuringEvaluatorAdvice<TCandidate>
         TimeProvider = timeProvider;
     }
 
-    public override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> evaluator) =>
-        childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, Duration, TimeProvider);
+    public override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> evaluator) =>
+        childEvaluator => new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, Duration, TimeProvider);
 
-    private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(childEvaluator)
+    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingEvaluationExecutor<TCandidate, TSearchSpace, TProblem>(childEvaluator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

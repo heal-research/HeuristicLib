@@ -25,7 +25,7 @@ A configuration names only its candidate and, for algorithms, its search state. 
 
 Observation advice is a runtime class and may retain its callback. Its wrapper factory prepares persistent join-point state once per advice, configuration and owner state. Algorithm observation allocates its iteration counter there, so rebuilding contextual nodes does not reset the count. Invocation-local previous states stay in the iterator.
 
-Earlier advice wraps closer to the source execution and reports completed operations first. A trace therefore includes its clocks' advice before its own observation advice. Shared clocks keep their first position. A scope with no matching advice adds no observation wrapper.
+Earlier advice wraps closer to the source executor and reports completed operations first. A trace therefore includes its clocks' advice before its own observation advice. Shared clocks keep their first position. A scope with no matching advice adds no observation wrapper.
 
 Observation reads inputs, outputs and progress while preserving the observed computation. An algorithm that adapts to measured work uses inspection data in its explicit control flow rather than reading an analyzer's result. General aspects may change behavior; the observation contract applies to inspection and analysis.
 
@@ -77,7 +77,7 @@ The main package ships general-purpose traces. Specialized analysis belongs besi
 
 `AlgorithmRun`, `ExecutionStream` and `RunLifecycleState` belong to the `HEAL.HeuristicLib.Execution` namespace, with their source files grouped under `Execution/Runs`. Experiment runs remain in `HEAL.HeuristicLib.Experiments` and share `RunLifecycleState`.
 
-An algorithm run moves from `Preparing` to `Running` when its first stream starts. Disposing that stream between yielded root-algorithm states moves it to `Paused`; a later stream continues the same resolved execution and underlying iterator. Natural completion moves it to `Completed`, and a later stream is empty. Setup and execution failures move it to `Failed`.
+An algorithm run moves from `Preparing` to `Running` when its first stream starts. Disposing that stream between yielded root-algorithm states moves it to `Paused`; a later stream continues the same resolved executor and underlying iterator. Natural completion moves it to `Completed`, and a later stream is empty. Setup and execution failures move it to `Failed`.
 
 Each returned execution stream has one consumer, and a run permits only one active stream. Stream cancellation is cooperative at root-algorithm yield boundaries. It pauses the run instead of interrupting a partially executed iteration.
 

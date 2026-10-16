@@ -171,17 +171,17 @@ public sealed class ConcreteAlgorithmFactoryTests
 
     private sealed record IdentityInterceptor(Action Prepare) : IInterceptor<int>
     {
-        public ExecutionFactory<IInterceptorExecution<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
+        public ExecutorFactory<IInterceptionExecutor<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
             where TRunSearchSpace : class, ISearchSpace<int>
             where TRunProblem : class, IProblem<int, TRunSearchSpace>
             where TRunSearchState : class, ISearchState
         {
             Prepare();
-            var execution = new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>();
-            return _ => execution;
+            var executor = new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>();
+            return _ => executor;
         }
 
-        private sealed class Execution<TSearchSpace, TProblem, TSearchState> : IInterceptorExecution<int, TSearchSpace, TProblem, TSearchState>
+        private sealed class Executor<TSearchSpace, TProblem, TSearchState> : IInterceptionExecutor<int, TSearchSpace, TProblem, TSearchState>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
             where TSearchState : class, ISearchState

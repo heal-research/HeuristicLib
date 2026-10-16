@@ -18,11 +18,11 @@ public sealed class CountingCrossoverAdvice<TCandidate> : CrossoverAdvice<TCandi
         Metric = metric;
     }
 
-    public override WrapperExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICrossover<TCandidate> crossover) =>
-        childCrossover => new Execution<TRunSearchSpace, TRunProblem>(childCrossover, Counter, Metric);
+    public override WrapperExecutorFactory<ICrossoverExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICrossover<TCandidate> crossover) =>
+        childCrossover => new Executor<TRunSearchSpace, TRunProblem>(childCrossover, Counter, Metric);
 
-    private sealed class Execution<TSearchSpace, TProblem>(ICrossoverExecution<TCandidate, TSearchSpace, TProblem> childCrossover, CountAccumulator counter, OperatorCountMetric metric)
-        : WrappingCrossoverExecution<TCandidate, TSearchSpace, TProblem>(childCrossover)
+    private sealed class Executor<TSearchSpace, TProblem>(ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> childCrossover, CountAccumulator counter, OperatorCountMetric metric)
+        : WrappingCrossoverExecutor<TCandidate, TSearchSpace, TProblem>(childCrossover)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

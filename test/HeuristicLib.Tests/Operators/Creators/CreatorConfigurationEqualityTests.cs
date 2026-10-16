@@ -230,11 +230,11 @@ public class CreatorConfigurationEqualityTests
         {
         }
 
-        protected override CompositeExecutionFactory<ICreatorExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childCreators => new Execution<TRunSearchSpace, TRunProblem>(childCreators);
+        protected override CompositeExecutorFactory<ICreationExecutor<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
+            childCreators => new Executor<TRunSearchSpace, TRunProblem>(childCreators);
 
-        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICreatorExecution<int, TSearchSpace, TProblem>> childCreators)
-            : MultiCreatorExecution<int, TSearchSpace, TProblem>(childCreators)
+        private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<ICreationExecutor<int, TSearchSpace, TProblem>> childCreators)
+            : MultiCreationExecutor<int, TSearchSpace, TProblem>(childCreators)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
@@ -248,7 +248,7 @@ public class CreatorConfigurationEqualityTests
         {
         }
 
-        protected override WrapperExecutionFactory<ICreatorExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+        protected override WrapperExecutorFactory<ICreationExecutor<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
             child => child;
     }
 

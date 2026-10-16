@@ -205,7 +205,7 @@ var run = algorithm.CreateRun(problem, random)
 await run.CompleteAsync();
 ```
 
-Earlier advice wraps closer to the source execution. Here timing finishes before the observation callback, so logging is outside the measurement. Counting updates only after success; timing uses `finally` and records failed calls too.
+Earlier advice wraps closer to the source executor. Here timing finishes before the observation callback, so logging is outside the measurement. Counting updates only after success; timing uses `finally` and records failed calls too.
 
 To select several configurations, pair a pointcut with role advice:
 

@@ -4,7 +4,7 @@
 Start with [built-in operators](/guide/fundamentals/operators). Compose operators when several reusable policies should behave as one operator in an algorithm configuration.
 :::
 
-Operator composition builds a new operator configuration from one or more existing operator configurations. The resulting configuration remains reusable and resolves its child execution nodes as part of the execution graph.
+Operator composition builds a new operator configuration from one or more existing operator configurations. The resulting configuration remains reusable and resolves its child executors as part of the execution graph.
 
 Composition policies describe how child operations are coordinated. `Wrapping*` and `Multi*` bases are authoring infrastructure for implementing those policies. They do not prescribe behavior by themselves.
 
@@ -168,7 +168,7 @@ A refinement that has to pass through a worse candidate to reach a better one is
 
 Improvement checking evaluates twice, and the algorithm then evaluates the returned candidate itself, so the naive configuration costs three problem evaluations per refined candidate where an unchecked refiner costs one. That cost is deliberately visible rather than hidden, and it is controlled by one thing: whether the refiner and the algorithm hold the **same evaluator object**.
 
-Resolution uses configuration reference identity to select prepared execution state. Reusing the same evaluator object through the same resolution scope preserves that state, including its counters and caches. Execution objects are ephemeral bindings and may be rebuilt around that state for each context. Two separately constructed but structurally identical configurations have independent prepared state.
+Resolution uses configuration reference identity to select prepared execution state. Reusing the same evaluator object through the same resolution scope preserves that state, including its counters and caches. Executors are ephemeral bindings and may be rebuilt around that state for each context. Two separately constructed but structurally identical configurations have independent prepared state.
 
 The snippets in this section use these namespaces:
 
@@ -361,23 +361,23 @@ These types should document their own batching, state and cardinality behavior b
 
 ## Observation and inspection boundaries
 
-Inspection uses execution advice installed through aspects. `Aspect.Observe`, `Aspect.CountCalls` and `Aspect.MeasureDuration` select existing configurations and wrap their executions; they do not add observation, counting or timing configurations to the operator graph.
+Inspection uses execution advice installed through aspects. `Aspect.Observe`, `Aspect.CountCalls` and `Aspect.MeasureDuration` select existing configurations and wrap their executors; they do not add observation, counting or timing configurations to the operator graph.
 
 Selecting a complete composition observes its outer operation boundary and includes nested work. Selecting one child observes only calls reaching that child. For example, measuring a `TransformedCrossover` includes crossover and mutation work, while measuring its child crossover includes only crossover work.
 
 Counting and duration advice retain their supplied result accumulator. Independent root executions using the same accumulator also contribute to it. Counters increment after a successful child call. Duration measurement keeps timestamps local to each invocation and records elapsed time even when the child throws.
 
-A named configuration such as `mutator.Named("exploration")` supplies a selectable wrapper boundary while forwarding the child's execution. `Pointcut.Named<IMutator<TCandidate>>("exploration")` selects that wrapper. Broad role pointcuts may select both the wrapper and its child.
+A named configuration such as `mutator.Named("exploration")` supplies a selectable wrapper boundary while forwarding the child's executor. `Pointcut.Named<IMutator<TCandidate>>("exploration")` selects that wrapper. Broad role pointcuts may select both the wrapper and its child.
 
 See [Observability and analysis](/guide/execution/observability-and-analysis) for observation, counter, duration and pointcut APIs.
 
-## Specialized execution node capabilities
+## Specialized executor capabilities
 
-General wrappers and compositions preserve the operator role contract. Additional controls belong to the selected configuration's raw execution. `GaussianMutator` exposes `IMutationStrengthControl`, which changes execution-scoped mutation strength without providing a mutation operation.
+General wrappers and compositions preserve the operator role contract. Additional controls belong to the selected configuration's raw executor. `GaussianMutator` exposes `IMutationStrengthControl`, which changes execution-scoped mutation strength without providing a mutation operation.
 
-An observation wrapper can implement `IMutatorExecution` without implementing `IMutationStrengthControl`. An `is` check on the wrapped mutator would then hide the source's adaptation capability. Resolving the control separately lets an algorithm keep adapting the selected source while every mutation call passes through the observation wrapper. The control interface contains no mutation operation, so it supplies no alternative path for mutation calls to bypass observations.
+An observation wrapper can implement `IMutationExecutor` without implementing `IMutationStrengthControl`. An `is` check on the wrapped mutator would then hide the source's adaptation capability. Resolving the control separately lets an algorithm keep adapting the selected source while every mutation call passes through the observation wrapper. The control interface contains no mutation operation, so it supplies no alternative path for mutation calls to bypass observations.
 
-`EvolutionStrategy` projects this optional control during resolution and invokes mutation through the advised execution. Advice applied directly to the selected Gaussian configuration preserves access to its raw strength control. Rebinding preserves that selected state while applying the requesting scope's observations to mutation calls. Additional configured wrappers can still hide the control, as described below.
+`EvolutionStrategy` projects this optional control during resolution and invokes mutation through the advised executor. Advice applied directly to the selected Gaussian configuration preserves access to its raw strength control. Rebinding preserves that selected state while applying the requesting scope's observations to mutation calls. Additional configured wrappers can still hide the control, as described below.
 
 An algorithm author can request a control through its typed scope without supplying factory wiring:
 
@@ -385,7 +385,7 @@ An algorithm author can request a control through its typed scope without supply
 var mutator = typed.Resolve(Mutator, out IMutationStrengthControl? strength);
 ```
 
-Use `mutator` for mutation and `strength`, when non-null, to read or update the selected execution's strength.
+Use `mutator` for mutation and `strength`, when non-null, to read or update the selected executor's strength.
 
 An explicitly configured wrapper is a separate selected configuration. For example, assigning `PipelineMutator.Create(gaussian)` to `EvolutionStrategy.Mutator` exposes the pipeline's ordinary mutation role, so that configuration has no strength adaptation. A custom configured wrapper must deliberately expose `IMutationStrengthControl` if its own mutation behavior supports that control; the resolver does not search its children for additional capabilities.
 
@@ -394,16 +394,16 @@ An explicitly configured wrapper is a separate selected configuration. For examp
 ::: warning Known bug: wrapping can change algorithm control
 Wrappers preserve the ordinary operator role but can drop an additional capability that an algorithm needs. If `EvolutionStrategy` can no longer resolve `IMutationStrengthControl`, it silently stops adapting mutation strength. This is a correctness bug, even when the wrapper only inspects or names an operator.
 
-For example, `gaussian.Named("exploration")` forwards its child's execution. With no child advice, that execution exposes the Gaussian strength control. Counting or observing the Gaussian child makes the named wrapper forward an advised execution that may lack the control. A broad mutator pointcut can trigger the same loss. Selecting only the named boundary avoids this particular child-advice case; it does not solve capability preservation for wrappers in general.
+For example, `gaussian.Named("exploration")` forwards its child's executor. With no child advice, that execution exposes the Gaussian strength control. Counting or observing the Gaussian child makes the named wrapper forward an advised executor that may lack the control. A broad mutator pointcut can trigger the same loss. Selecting only the named boundary avoids this particular child-advice case; it does not solve capability preservation for wrappers in general.
 
-Until this is addressed, check which configuration the algorithm uses for control resolution and which capabilities its raw execution exposes. A pipeline or another configured wrapper may hide the capability even without inspection. Adding inspection must not be assumed to preserve algorithm behavior across such wrapper chains.
+Until this is addressed, check which configuration the algorithm uses for control resolution and which capabilities its raw executor exposes. A pipeline or another configured wrapper may hide the capability even without inspection. Adding inspection must not be assumed to preserve algorithm behavior across such wrapper chains.
 :::
 
-## Randomness and execution nodes
+## Randomness and executors
 
 Compositions whose role receives an explicit random number generator invoke children in the order defined by their policy. Random draw order is therefore part of reproducible behavior. Adding, removing or reordering child operators may change later random draws even when the same root seed is used. Interceptors and terminators do not receive a random number generator, so their built in compositions are deterministic with respect to child ordering unless a child depends on some other explicit input or external resource.
 
-Child configurations are resolved when each composition execution node is built. Reusing the same child configuration elsewhere through the same resolution scope preserves its prepared execution state. The resulting child execution objects may differ because each binding applies the requesting context's aspects.
+Child configurations are resolved when each composition executor is built. Reusing the same child configuration elsewhere through the same resolution scope preserves its prepared execution state. The resulting child executor objects may differ because each binding applies the requesting context's aspects.
 
 See [Reproducible randomness](/guide/execution/randomness) and [Running algorithms](/guide/execution/running-algorithms) for the underlying models.
 
@@ -413,7 +413,7 @@ Use the role specific `Wrapping*` base when a composition coordinates one child 
 
 Derive directly from the unprefixed role base when a composition coordinates different roles or needs a custom execution structure. `TransformedCreator` and `TransformedCrossover` follow this path because each coordinates both a source operator and a mutator.
 
-The authored execution node holds resolved child bindings and the prepared execution state needed for its context. Persistent mutable state is prepared once and survives rebuilding those bindings. The reusable configuration owns parameters and child configurations.
+The authored executor holds resolved child bindings and the prepared execution state needed for its context. Persistent mutable state is prepared once and survives rebuilding those bindings. The reusable configuration owns parameters and child configurations.
 
 ### A complete stateful composition
 
@@ -425,9 +425,9 @@ Use these imports in a C# project with implicit system usings enabled:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-type{csharp}
 
-The constructor retains child configurations through the multi base, which snapshots their collection. `CreateCompositeFactory` validates that collection and allocates `ExecutionState` once. The returned factory receives the current child executions from the base and builds a node around the same cursor. Allocating `ExecutionState` inside that returned factory would reset the cursor whenever another observation context binds the composition.
+The constructor retains child configurations through the multi base, which snapshots their collection. `CreateCompositeFactory` validates that collection and allocates `ExecutionState` once. The returned factory receives the current child executors from the base and builds a node around the same cursor. Allocating `ExecutionState` inside that returned factory would reset the cursor whenever another observation context binds the composition.
 
-The execution retains contextual child references through `MultiMutatorExecution`; it keeps only the cursor in shared state. `offspring` is local to one invocation. This example expects sequential calls: sharing the state does not serialize concurrent mutation operations.
+The executor retains contextual child references through `MultiMutationExecutor`; it keeps only the cursor in shared state. `offspring` is local to one invocation. This example expects sequential calls: sharing the state does not serialize concurrent mutation operations.
 
 #### Add inspection without restarting the sequence
 

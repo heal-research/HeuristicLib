@@ -30,18 +30,18 @@ public sealed record ChooseOneCrossover<TCandidate>
     {
     }
 
-    protected override CompositeExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected override CompositeExecutorFactory<ICrossoverExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildCrossovers.Count == 0)
             throw new InvalidOperationException("At least one crossover must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildCrossovers.Count)
             throw new InvalidOperationException("Weights must have the same length as crossovers.");
 
-        return childCrossovers => new Execution<TRunSearchSpace, TRunProblem>(childCrossovers, new(childCrossovers, Weights));
+        return childCrossovers => new Executor<TRunSearchSpace, TRunProblem>(childCrossovers, new(childCrossovers, Weights));
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICrossoverExecution<TCandidate, TSearchSpace, TProblem>> childCrossovers, WeightedRouter<ICrossoverExecution<TCandidate, TSearchSpace, TProblem>> router)
-        : MultiCrossoverExecution<TCandidate, TSearchSpace, TProblem>(childCrossovers)
+    private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>> childCrossovers, WeightedRouter<ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>> router)
+        : MultiCrossoverExecutor<TCandidate, TSearchSpace, TProblem>(childCrossovers)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

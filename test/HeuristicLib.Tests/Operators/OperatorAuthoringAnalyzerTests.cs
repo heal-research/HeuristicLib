@@ -57,7 +57,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               public sealed class State
               {
-                  public IExecutionNode? ChildExecution { get; set; }
+                  public IExecutor? ChildExecution { get; set; }
               }
 
               protected override State CreateInitialState() => new();
@@ -138,8 +138,8 @@ public class OperatorAuthoringAnalyzerTests
           {
               public sealed class State
               {
-                  public IExecutionNode[] Instances { get; set; } = [];
-                  public (int Count, IExecutionNode? Instance) Snapshot { get; set; }
+                  public IExecutor[] Instances { get; set; } = [];
+                  public (int Count, IExecutor? Instance) Snapshot { get; set; }
               }
 
               protected override State CreateInitialState() => new();
@@ -166,10 +166,10 @@ public class OperatorAuthoringAnalyzerTests
           {
               protected abstract TState CreateInitialState();
 
-              public ExecutionFactory<CustomOperatorExecution> CreateExecutionFactory() => _ => new();
+              public ExecutorFactory<CustomOperatorExecutor> CreateExecutorFactory() => _ => new();
           }
 
-          file sealed class CustomOperatorExecution : IOperatorExecution;
+          file sealed class CustomOperatorExecutor : IOperatorExecutor;
 
           file sealed record InvalidOperator : CustomStatefulOperator<InvalidOperator.State>
           {
@@ -281,11 +281,11 @@ public class OperatorAuthoringAnalyzerTests
     public async Task StatelessOperatorRule_UsesAuthoringShapeWithoutKnownBase()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record InvalidOperator : IOperator, IOperatorExecution
+          file sealed record InvalidOperator : IOperator, IOperatorExecutor
           {
               private int calls;
 
-              public ExecutionFactory<InvalidOperator> CreateExecutionFactory() => _ => this;
+              public ExecutorFactory<InvalidOperator> CreateExecutorFactory() => _ => this;
 
               public void Execute()
               {

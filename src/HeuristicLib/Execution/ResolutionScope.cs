@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Execution;
 /// A scope applies its own aspects, then those of the scope it was created from, so every scope sees its ancestors'
 /// aspects. The resolver provides no disposal or concurrency guarantees.
 /// </remarks>
-public sealed class ResolutionScope
+public sealed partial class ResolutionScope
 {
     private readonly State state;
     private readonly ResolutionScope? parent;
@@ -41,64 +41,64 @@ public sealed class ResolutionScope
     /// <summary>Applies this scope's aspects over another state.</summary>
     internal ResolutionScope WithState(State other) => new(other, parent, aspects);
 
-    public TExecution Resolve<TConfiguration, TExecution>(TConfiguration configuration,
-        Func<TConfiguration, ExecutionFactory<TExecution>> createExecutionFactory, Func<Advice, TConfiguration, WrapperExecutionFactory<TExecution>> createWrapperFactory)
+    public TExecutor Resolve<TConfiguration, TExecutor>(TConfiguration configuration,
+        Func<TConfiguration, ExecutorFactory<TExecutor>> createExecutorFactory, Func<Advice, TConfiguration, WrapperExecutorFactory<TExecutor>> createWrapperFactory)
         where TConfiguration : class, IConfigurationNode
-        where TExecution : class, IExecutionNode => Construct(configuration, createExecutionFactory, createWrapperFactory).Advised;
+        where TExecutor : class, IExecutor => Construct(configuration, createExecutorFactory, createWrapperFactory).Advised;
 
-    public TExecution Resolve<TExecution>(IConfigurationNode<TExecution> configuration)
-        where TExecution : class, IExecutionNode =>
-        Resolve(configuration, static source => source.CreateExecutionFactory(), UnavailableWrapperFactory<TExecution>);
+    public TExecutor Resolve<TExecutor>(IConfigurationNode<TExecutor> configuration)
+        where TExecutor : class, IExecutor =>
+        Resolve(configuration, static source => source.CreateExecutorFactory(), UnavailableWrapperFactory<TExecutor>);
 
     /// <remarks>
     /// Controls project from the raw execution only after the advised chain succeeds. Invoke operations through the
     /// returned chain. Configured wrappers expose their own controls; projection does not search their children.
     /// </remarks>
-    public TExecution Resolve<TConfiguration, TExecution, TControl>(TConfiguration configuration,
-        Func<TConfiguration, ExecutionFactory<TExecution>> createExecutionFactory, Func<Advice, TConfiguration, WrapperExecutionFactory<TExecution>> createWrapperFactory,
-        Func<TExecution, TControl?> selectControl, out TControl? control)
+    public TExecutor Resolve<TConfiguration, TExecutor, TControl>(TConfiguration configuration,
+        Func<TConfiguration, ExecutorFactory<TExecutor>> createExecutorFactory, Func<Advice, TConfiguration, WrapperExecutorFactory<TExecutor>> createWrapperFactory,
+        Func<TExecutor, TControl?> selectControl, out TControl? control)
         where TConfiguration : class, IConfigurationNode
-        where TExecution : class, IExecutionNode
+        where TExecutor : class, IExecutor
         where TControl : class
     {
-        var constructed = Construct(configuration, createExecutionFactory, createWrapperFactory);
+        var constructed = Construct(configuration, createExecutorFactory, createWrapperFactory);
         control = selectControl(constructed.Raw);
         return constructed.Advised;
     }
 
     [return: NotNullIfNotNull(nameof(configuration))]
-    public TExecution? ResolveOptional<TExecution>(IConfigurationNode<TExecution>? configuration)
-        where TExecution : class, IExecutionNode => configuration is null ? null : Resolve(configuration);
+    public TExecutor? ResolveOptional<TExecutor>(IConfigurationNode<TExecutor>? configuration)
+        where TExecutor : class, IExecutor => configuration is null ? null : Resolve(configuration);
 
-    public bool TryResolve<TExecution>(IConfigurationNode<TExecution> configuration,
-        [NotNullWhen(true)] out TExecution? execution, [NotNullWhen(false)] out string? reason)
-        where TExecution : class, IExecutionNode =>
-        TryResolve(configuration, static source => source.CreateExecutionFactory(), UnavailableWrapperFactory<TExecution>, out execution, out reason);
+    public bool TryResolve<TExecutor>(IConfigurationNode<TExecutor> configuration,
+        [NotNullWhen(true)] out TExecutor? executor, [NotNullWhen(false)] out string? reason)
+        where TExecutor : class, IExecutor =>
+        TryResolve(configuration, static source => source.CreateExecutorFactory(), UnavailableWrapperFactory<TExecutor>, out executor, out reason);
 
     /// <remarks>Invalid-operation failures become reasons; other exceptions propagate. Failed attempts may be retried.</remarks>
-    public bool TryResolve<TConfiguration, TExecution>(TConfiguration configuration,
-        Func<TConfiguration, ExecutionFactory<TExecution>> createExecutionFactory, Func<Advice, TConfiguration, WrapperExecutionFactory<TExecution>> createWrapperFactory,
-        [NotNullWhen(true)] out TExecution? execution, [NotNullWhen(false)] out string? reason)
+    public bool TryResolve<TConfiguration, TExecutor>(TConfiguration configuration,
+        Func<TConfiguration, ExecutorFactory<TExecutor>> createExecutorFactory, Func<Advice, TConfiguration, WrapperExecutorFactory<TExecutor>> createWrapperFactory,
+        [NotNullWhen(true)] out TExecutor? executor, [NotNullWhen(false)] out string? reason)
         where TConfiguration : class, IConfigurationNode
-        where TExecution : class, IExecutionNode
+        where TExecutor : class, IExecutor
     {
         try
         {
-            execution = Resolve(configuration, createExecutionFactory, createWrapperFactory);
+            executor = Resolve(configuration, createExecutorFactory, createWrapperFactory);
             reason = null;
             return true;
         }
         catch (InvalidOperationException exception)
         {
-            execution = null;
+            executor = null;
             reason = exception.Message;
             return false;
         }
     }
 
-    private static WrapperExecutionFactory<TExecution> UnavailableWrapperFactory<TExecution>(Advice advice, IConfigurationNode<TExecution> configuration)
-        where TExecution : class, IExecutionNode =>
-        throw new InvalidOperationException($"{advice.GetType().Name} cannot wrap {typeof(TExecution).Name}. Resolve through the role's typed resolution extension.");
+    private static WrapperExecutorFactory<TExecutor> UnavailableWrapperFactory<TExecutor>(Advice advice, IConfigurationNode<TExecutor> configuration)
+        where TExecutor : class, IExecutor =>
+        throw new InvalidOperationException($"{advice.GetType().Name} cannot wrap {typeof(TExecutor).Name}. Resolve through the role's typed resolution extension.");
 
     // Walks from this scope towards the root and yields each advice instance once, at its first position.
     // Once: an advice instance is the key for its prepared state, so applying it twice would wrap the execution twice
@@ -117,18 +117,18 @@ public sealed class ResolutionScope
                         yield return pair;
     }
 
-    private (TExecution Raw, TExecution Advised) Construct<TConfiguration, TExecution>(TConfiguration configuration,
-        Func<TConfiguration, ExecutionFactory<TExecution>> createExecutionFactory, Func<Advice, TConfiguration, WrapperExecutionFactory<TExecution>> createWrapperFactory)
+    private (TExecutor Raw, TExecutor Advised) Construct<TConfiguration, TExecutor>(TConfiguration configuration,
+        Func<TConfiguration, ExecutorFactory<TExecutor>> createExecutorFactory, Func<Advice, TConfiguration, WrapperExecutorFactory<TExecutor>> createWrapperFactory)
         where TConfiguration : class, IConfigurationNode
-        where TExecution : class, IExecutionNode
+        where TExecutor : class, IExecutor
     {
         if (!state.Constructing.Add(configuration))
             throw new InvalidOperationException($"Recursive construction of {configuration.GetType().Name}.");
         try
         {
-            var (factory, owner) = state.GetOrAdd(configuration, createExecutionFactory);
-            var raw = factory(WithState(owner));
-            var advised = raw;
+            var (factory, owner) = state.GetOrAdd(configuration, createExecutorFactory);
+            TExecutor raw = factory(WithState(owner));
+            TExecutor advised = raw;
             foreach (var (pointcut, advice) in Advices())
                 if (pointcut.Matches(configuration))
                     advised = owner.GetOrAddWrapperFactory(advice, configuration, createWrapperFactory)(advised);
@@ -137,32 +137,55 @@ public sealed class ResolutionScope
         finally { state.Constructing.Remove(configuration); }
     }
 
-    internal sealed class State(State? parent)
+    internal sealed partial class State(State? parent)
     {
         private readonly State? parent = parent;
-        private readonly Dictionary<IConfigurationNode, Delegate> factories = new(ReferenceEqualityComparer.Instance);
+        private readonly Dictionary<IConfigurationNode, ConfigurationResolutionEntry> owners = new(ReferenceEqualityComparer.Instance);
         private readonly ConditionalWeakTable<Advice, Dictionary<IConfigurationNode, Delegate>> wrapperFactories = new();
         internal HashSet<IConfigurationNode> Constructing { get; } = parent?.Constructing ?? new(ReferenceEqualityComparer.Instance);
 
-        internal (ExecutionFactory<TExecution> Factory, State Owner) GetOrAdd<TConfiguration, TExecution>(
-            TConfiguration configuration, Func<TConfiguration, ExecutionFactory<TExecution>> createExecutionFactory)
+        internal (ExecutorFactory<TExecutor> Factory, State Owner) GetOrAdd<TConfiguration, TExecutor>(
+            TConfiguration configuration, Func<TConfiguration, ExecutorFactory<TExecutor>> createExecutorFactory)
             where TConfiguration : class, IConfigurationNode
-            where TExecution : class, IExecutionNode
+            where TExecutor : class, IExecutor
         {
-            for (var current = this; current is not null; current = current.parent)
-                if (current.factories.TryGetValue(configuration, out var found))
-                    return (found as ExecutionFactory<TExecution> ?? throw new InvalidOperationException(
-                        $"{configuration.GetType().Name} was prepared for {found.GetType().GenericTypeArguments[0].Name}, not {typeof(TExecution).Name}. Resolve over a second search space or problem in its own scope."), current);
-            var created = createExecutionFactory(configuration);
-            factories.Add(configuration, created);
+            var selected = FindOwner(configuration);
+            if (selected is { } existing)
+            {
+                var found = existing.Entry.LegacyFactory ?? throw PreparationPathMismatch(configuration);
+                return (found as ExecutorFactory<TExecutor> ?? throw new InvalidOperationException(
+                    $"{configuration.GetType().Name} was prepared for {found.GetType().GenericTypeArguments[0].Name}, not {typeof(TExecutor).Name}. Resolve over a second search space or problem in its own scope."), existing.Owner);
+            }
+            var created = createExecutorFactory(configuration);
+            owners.Add(configuration, new ConfigurationResolutionEntry(created));
             return (created, this);
         }
 
+        private (ConfigurationResolutionEntry Entry, State Owner)? FindOwner(IConfigurationNode configuration)
+        {
+            for (var current = this; current is not null; current = current.parent)
+                if (current.owners.TryGetValue(configuration, out var found))
+                    return (found, current);
+            return null;
+        }
+
+        private static InvalidOperationException PreparationPathMismatch(IConfigurationNode configuration) =>
+            new($"{configuration.GetType().Name} already has a prepared owner through another preparation path. Resolve through its declared operator contract.");
+
+        private sealed class ConfigurationResolutionEntry
+        {
+            internal ConfigurationResolutionEntry(Delegate factory) { LegacyFactory = factory; }
+            internal ConfigurationResolutionEntry(OperatorResolutionEntry prepared) { Operator = prepared; }
+
+            internal Delegate? LegacyFactory { get; }
+            internal OperatorResolutionEntry? Operator { get; }
+        }
+
         /// <remarks>Called once per advice, join point and owner state; the result wraps each construction.</remarks>
-        internal WrapperExecutionFactory<TExecution> GetOrAddWrapperFactory<TConfiguration, TExecution>(Advice advice,
-            TConfiguration target, Func<Advice, TConfiguration, WrapperExecutionFactory<TExecution>> createWrapperFactory)
+        internal WrapperExecutorFactory<TExecutor> GetOrAddWrapperFactory<TConfiguration, TExecutor>(Advice advice,
+            TConfiguration target, Func<Advice, TConfiguration, WrapperExecutorFactory<TExecutor>> createWrapperFactory)
             where TConfiguration : class, IConfigurationNode
-            where TExecution : class, IExecutionNode
+            where TExecutor : class, IExecutor
         {
             var prepared = wrapperFactories.GetValue(advice, static _ => new(ReferenceEqualityComparer.Instance));
             if (!prepared.TryGetValue(target, out var found))
@@ -170,7 +193,7 @@ public sealed class ResolutionScope
                 found = createWrapperFactory(advice, target);
                 prepared.Add(target, found);
             }
-            return found as WrapperExecutionFactory<TExecution> ?? throw new InvalidOperationException($"Advice for {target.GetType().Name} is incompatible with {typeof(TExecution).Name}.");
+            return found as WrapperExecutorFactory<TExecutor> ?? throw new InvalidOperationException($"Advice for {target.GetType().Name} is incompatible with {typeof(TExecutor).Name}.");
         }
     }
 }

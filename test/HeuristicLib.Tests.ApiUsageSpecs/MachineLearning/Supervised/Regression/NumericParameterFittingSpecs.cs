@@ -42,7 +42,7 @@ public class NumericParameterFittingSpecs
     // Fitting minimizes squared error against the raw targets, which is not necessarily the problem's objective. Wrap
     // the refiner in an improvement check to keep a fitted candidate only when it actually improves that objective.
     // Passing the algorithm's own evaluator to the check makes its two comparison evaluations share that evaluator's
-    // execution node, so they count against the same budget and hit the same cache. Leaving the evaluator unset
+    // executor, so they count against the same budget and hit the same cache. Leaving the evaluator unset
     // gives the check a private one, whose evaluations stay invisible to budgets and analysis.
     [Fact]
     public void KeepingAFittedCandidateOnlyWhenItImprovesTheObjective()
@@ -129,7 +129,7 @@ public class NumericParameterFittingSpecs
     }
 
     // Whether refinement effort counts against the run's evaluation budget is decided by one thing: whether the
-    // algorithm and the improvement check hold the same evaluator object. Execution nodes resolve by reference, so
+    // algorithm and the improvement check hold the same evaluator object. Executors resolve by reference, so
     // one object means one counter. Sharing it makes the budget describe total effort including refinement; leaving the
     // check on its own evaluator keeps refinement outside the budget. Neither is a hidden default, and both are here.
     [Fact]

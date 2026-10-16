@@ -51,17 +51,17 @@ public sealed class MutatorObservationAdvice<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public override WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> mutator)
+    public override WrapperExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> mutator)
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return inner => new Execution<TRunSearchSpace, TRunProblem>(mutator, inner, observe);
+        return inner => new Executor<TRunSearchSpace, TRunProblem>(mutator, inner, observe);
     }
 
-    private sealed class Execution<TRunSearchSpace, TRunProblem>(
+    private sealed class Executor<TRunSearchSpace, TRunProblem>(
         IMutator<TCandidate> observedMutator,
-        IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childMutator,
+        IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childMutator,
         Action<MutatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
-        : WrappingMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>(childMutator)
+        : WrappingMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>(childMutator)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {

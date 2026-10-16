@@ -81,8 +81,8 @@ public class NoviceFrictionSpecs
     }
 
     /// <summary>
-    /// Naming the algorithm is still the moment its type becomes visible — <c>var</c> cannot help a field, a
-    /// parameter or a return type — but what it forces is now one type argument, and that argument is the one thing
+    /// Naming the algorithm is still the moment its type becomes visible â€” <c>var</c> cannot help a field, a
+    /// parameter or a return type â€” but what it forces is now one type argument, and that argument is the one thing
     /// the newcomer already knows they are optimizing.
     /// </summary>
     /// <remarks>
@@ -172,7 +172,7 @@ public class NoviceFrictionSpecs
     /// <summary>
     /// The same measurement on the migrated role, which is what the arity reduction buys. A mutator that reads
     /// <see cref="BoundedRealVectorSearchSpace"/> fills the one argument algorithm's slot, because the slot no longer
-    /// names a search space at all: the run supplies it when the execution node is created, and a mismatch is
+    /// names a search space at all: the run supplies it when the executor is created, and a mismatch is
     /// reported by the pre-flight check rather than by a conversion the author has to talk the compiler out of.
     /// </summary>
     [Fact]
@@ -262,7 +262,7 @@ public class NoviceFrictionSpecs
     /// now, and the assignment is simply accepted. That failure was pure arity cost and it is paid off.
     /// <para>
     /// The other failure remains, and it is not an arity question. Preserving an invariant is a postcondition on the
-    /// operator's output, and a postcondition is not a type, so no type argument was ever going to answer it — which
+    /// operator's output, and a postcondition is not a type, so no type argument was ever going to answer it â€” which
     /// is why removing the argument forfeits no guarantee that existed. The invariant contract is what answers it.
     /// The full compatibility table lives in <see cref="SearchSpaceCompatibilitySpecs"/>.
     /// </para>
@@ -314,9 +314,9 @@ public class NoviceFrictionSpecs
 
         // A scope serves one run, so each triple is asked in its own.
         ResolutionScope.Create()
-            .TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problemBound, out var execution, out var reason)
+            .TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problemBound, out var executor, out var reason)
             .ShouldBeTrue();
-        execution.ShouldNotBeNull();
+        executor.ShouldNotBeNull();
         reason.ShouldBeNull();
 
         ResolutionScope.Create()

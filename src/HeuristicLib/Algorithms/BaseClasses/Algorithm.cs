@@ -16,24 +16,24 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchState>
 {
     internal TSelf Self => (TSelf)this;
 
-    public abstract ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public abstract ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
     /// <summary>
     /// Agnostic in the search space and problem, so this base answers on the search state alone, which
-    /// <see cref="IAlgorithmExecution{TCandidate, TSearchSpace, TProblem, TSearchState}"/> is invariant in.
+    /// <see cref="IAlgorithmExecutor{TCandidate, TSearchSpace, TProblem, TSearchState}"/> is invariant in.
     /// </summary>
     public virtual bool Fits(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState);
 
-    ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> IAlgorithm<TCandidate>.CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
+    ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> IAlgorithm<TCandidate>.CreateExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
     {
         if (typeof(TRunSearchState) != typeof(TSearchState))
         {
             throw new InvalidOperationException($"{GetType().Name} produces {typeof(TSearchState).Name}, and cannot run producing {typeof(TRunSearchState).Name}.");
         }
 
-        return (ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>>)CreateExecutionFactory<TRunSearchSpace, TRunProblem>();
+        return (ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>>)CreateExecutorFactory<TRunSearchSpace, TRunProblem>();
     }
 }
 
@@ -52,14 +52,14 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public abstract ExecutionFactory<AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutionFactory();
+    public abstract ExecutorFactory<AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutorFactory();
 
     public override bool Fits(ExecutionSignature execution) =>
         base.Fits(execution)
         && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
         && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    public sealed override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public sealed override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -69,12 +69,12 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>>)CreateExecutionFactory();
+        return (ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>>)CreateExecutorFactory();
     }
 }
 
-public abstract class AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+public abstract class AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState

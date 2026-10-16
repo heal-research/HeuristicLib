@@ -21,7 +21,7 @@ public abstract record MultiRefiner<TCandidate>
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildRefiners]);
 
     /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
-    public ExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -35,15 +35,15 @@ public abstract record MultiRefiner<TCandidate>
 
     /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
     /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
-    protected abstract CompositeExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected abstract CompositeExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class MultiRefinerExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> childRefiners)
-    : RefinerExecution<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiRefinementExecutor<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> childRefiners)
+    : RefinementExecutor<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> ChildRefiners { get; } = childRefiners;
+    protected ImmutableArray<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> ChildRefiners { get; } = childRefiners;
 }

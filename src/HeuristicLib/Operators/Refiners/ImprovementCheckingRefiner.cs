@@ -63,16 +63,16 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     /// </remarks>
     public IImprovementCriterion Criterion { get; init; } = ImprovementChecking.Default;
 
-    public ExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> => scope =>
     {
         var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Execution<TRunSearchSpace, TRunProblem>(typed.Resolve(Refiner), typed.Resolve(Evaluator), Criterion);
+        return new Executor<TRunSearchSpace, TRunProblem>(typed.Resolve(Refiner), typed.Resolve(Evaluator), Criterion);
     };
 
-    private sealed class Execution<TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> refiner, IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
-        : RefinerExecution<TCandidate, TSearchSpace, TProblem>
+    private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> refiner, IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
+        : RefinementExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

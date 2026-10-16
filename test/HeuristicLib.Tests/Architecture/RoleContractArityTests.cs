@@ -16,8 +16,9 @@ public sealed class RoleContractArityTests
 {
     private static readonly Assembly Main = typeof(IOperator).Assembly;
 
-    private static readonly IReadOnlyList<Type> Roles = RolesDerivedFrom(typeof(IOperator));
-    private static readonly IReadOnlyList<Type> RoleExecutions = RolesDerivedFrom(typeof(IOperatorExecution));
+    // Nominal contracts remain until their consumers cut over; the shared consuming slot is checked separately.
+    private static readonly IReadOnlyList<Type> Roles = [.. RolesDerivedFrom(typeof(IOperator)).Where(type => type != typeof(IOperator<,>))];
+    private static readonly IReadOnlyList<Type> RoleExecutions = RolesDerivedFrom(typeof(IOperatorExecutor));
 
     public static TheoryData<Type> ConfigurationContracts => [.. Roles];
     public static TheoryData<Type> ExecutionContracts => [.. RoleExecutions];
@@ -32,6 +33,19 @@ public sealed class RoleContractArityTests
         RoleExecutions.Count.ShouldBe(Roles.Count);
     }
 
+    [Fact]
+    public void TheSharedConsumingContractNamesCandidateAndOperationAndCreatesOneFactory()
+    {
+        var contract = typeof(IOperator<,>);
+        contract.GetGenericArguments().Select(argument => argument.Name).ShouldBe(["TCandidate", "TOperation"]);
+        contract.GetInterfaces().ShouldContain(typeof(IOperator));
+        var factory = contract.GetMethod("CreateExecutorFactory")!;
+        factory.GetGenericArguments().ShouldBeEmpty();
+        factory.GetParameters().ShouldBeEmpty();
+        factory.ReturnType.ShouldBe(typeof(OperatorExecutorFactory));
+        contract.GetMethods().ShouldNotContain(method => method.Name == "Prepare");
+    }
+
     [Theory]
     [MemberData(nameof(ConfigurationContracts))]
     public void AConfiguredRole_NamesOnlyTheCandidate(Type role) =>
@@ -42,11 +56,11 @@ public sealed class RoleContractArityTests
     public void AConfiguredRole_PreparesItsTypedFactoryWithoutAScope(Type role)
     {
         var factory = role.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Single(method => method.Name == "CreateExecutionFactory");
+            .Single(method => method.Name == "CreateExecutorFactory");
 
         factory.GetParameters().ShouldBeEmpty();
-        factory.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutionFactory<>));
-        factory.ReturnType.GetGenericArguments().Single().GetInterfaces().ShouldContain(typeof(IOperatorExecution));
+        factory.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutorFactory<>));
+        factory.ReturnType.GetGenericArguments().Single().GetInterfaces().ShouldContain(typeof(IOperatorExecutor));
         role.GetMethods().ShouldNotContain(method => method.Name == "CreateExecutionInstance");
     }
 
@@ -55,16 +69,16 @@ public sealed class RoleContractArityTests
     public void ATopologyBase_PreparesBeforeReceivingItsResolvedChildren(Type topology)
     {
         var factory = topology.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Single(method => method.Name == "CreateExecutionFactory");
+            .Single(method => method.Name == "CreateExecutorFactory");
         var wrapper = topology.Name.StartsWith("Wrapping", StringComparison.Ordinal);
         var hook = topology.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .Single(method => method.IsAbstract && method.Name == (wrapper ? "CreateWrapperFactory" : "CreateCompositeFactory"));
 
         factory.GetParameters().ShouldBeEmpty();
-        factory.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutionFactory<>));
+        factory.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutorFactory<>));
         hook.IsFamily.ShouldBeTrue();
         hook.GetParameters().ShouldBeEmpty();
-        hook.ReturnType.GetGenericTypeDefinition().ShouldBe(wrapper ? typeof(WrapperExecutionFactory<>) : typeof(CompositeExecutionFactory<>));
+        hook.ReturnType.GetGenericTypeDefinition().ShouldBe(wrapper ? typeof(WrapperExecutorFactory<>) : typeof(CompositeExecutorFactory<>));
         var execution = hook.ReturnType.GetGenericArguments()[^1];
         execution.GetGenericTypeDefinition().ShouldBe(factory.ReturnType.GetGenericArguments().Single().GetGenericTypeDefinition());
         var constructor = hook.ReturnType.GetMethod("Invoke")!;
@@ -79,21 +93,21 @@ public sealed class RoleContractArityTests
     public void AnIterativeBase_UsesTheCommonFactoryAndRequiresAnIterativeExecution(Type algorithm)
     {
         var factories = algorithm.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Where(method => method.Name == "CreateExecutionFactory").ToArray();
+            .Where(method => method.Name == "CreateExecutorFactory").ToArray();
         factories.ShouldNotBeEmpty();
         foreach (var factory in factories)
         {
             factory.GetParameters().ShouldBeEmpty();
-            factory.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutionFactory<>));
+            factory.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutorFactory<>));
         }
         var hook = algorithm.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .Single(method => method.IsAbstract);
         hook.Name.ShouldBe("CreateIterationFactory");
         hook.IsFamily.ShouldBeTrue();
         hook.GetParameters().ShouldBeEmpty();
-        hook.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutionFactory<>));
+        hook.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutorFactory<>));
         var constructor = hook.ReturnType.GetMethod("Invoke")!;
-        constructor.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(IterativeAlgorithmExecution<,,,>));
+        constructor.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(IterativeAlgorithmExecutor<,,,>));
         constructor.GetParameters().Select(parameter => parameter.ParameterType).ShouldBe([typeof(ResolutionScope)]);
         algorithm.GetMethods().ShouldNotContain(method => method.Name == "CreateExecutionInstance");
     }

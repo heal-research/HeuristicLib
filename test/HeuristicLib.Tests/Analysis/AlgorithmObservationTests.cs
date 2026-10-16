@@ -232,7 +232,7 @@ public class AlgorithmObservationTests
     }
 
     /// <summary>
-    /// A cycle that recreates its execution nodes restarts the observed algorithm, so its iteration count restarts
+    /// A cycle that recreates its executors restarts the observed algorithm, so its iteration count restarts
     /// with it. Reusing the instances continues one algorithm, so the count continues.
     /// </summary>
     [Theory]

@@ -29,18 +29,18 @@ public sealed record ChooseOneMutator<TCandidate> : MultiMutator<TCandidate>
     {
     }
 
-    protected override CompositeExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected override CompositeExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildMutators.Count == 0)
             throw new InvalidOperationException("At least one mutator must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildMutators.Count)
             throw new InvalidOperationException("Weights must have the same length as mutators.");
 
-        return childMutators => new Execution<TRunSearchSpace, TRunProblem>(childMutators, new(childMutators, Weights));
+        return childMutators => new Executor<TRunSearchSpace, TRunProblem>(childMutators, new(childMutators, Weights));
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedRouter<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> router)
-        : MultiMutatorExecution<TCandidate, TSearchSpace, TProblem>(childMutators)
+    private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedRouter<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> router)
+        : MultiMutationExecutor<TCandidate, TSearchSpace, TProblem>(childMutators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

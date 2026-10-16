@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 /// <remarks>
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
-/// It must not contain operator or algorithm configurations, execution nodes or execution node resolution facilities.
+/// It must not contain operator or algorithm configurations, executors or executor resolution facilities.
 /// <see cref="CreateInitialState"/> must return a fresh state object for each preparation. Bindings of that execution share the state.
 /// Calls are not inherently thread safe.
 /// </remarks>
@@ -22,14 +22,14 @@ public abstract record StatefulTerminator<TCandidate, TSearchSpace, TProblem, TS
 
     protected abstract bool IsTerminalState(TSearchState searchState, TState state, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override ExecutionFactory<ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutionFactory()
+    public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, CreateInitialState());
-        return _ => execution;
+        var executor = new Executor(this, CreateInitialState());
+        return _ => executor;
     }
 
-    private sealed class Execution(StatefulTerminator<TCandidate, TSearchSpace, TProblem, TSearchState, TState> terminator, TState executionState)
-        : TerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+    private sealed class Executor(StatefulTerminator<TCandidate, TSearchSpace, TProblem, TSearchState, TState> terminator, TState executionState)
+        : TerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
         public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem) =>
             terminator.IsTerminalState(state, executionState, searchSpace, problem);
@@ -46,14 +46,14 @@ public abstract record StatefulTerminator<TCandidate, TSearchSpace, TSearchState
 
     protected abstract bool IsTerminalState(TSearchState searchState, TState state, TSearchSpace searchSpace);
 
-    public sealed override ExecutionFactory<ITerminatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>> CreateExecutionFactory()
+    public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, CreateInitialState());
-        return _ => execution;
+        var executor = new Executor(this, CreateInitialState());
+        return _ => executor;
     }
 
-    private sealed class Execution(StatefulTerminator<TCandidate, TSearchSpace, TSearchState, TState> terminator, TState executionState)
-        : TerminatorExecution<TCandidate, TSearchSpace, TSearchState>
+    private sealed class Executor(StatefulTerminator<TCandidate, TSearchSpace, TSearchState, TState> terminator, TState executionState)
+        : TerminationExecutor<TCandidate, TSearchSpace, TSearchState>
     {
         public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace) =>
             terminator.IsTerminalState(state, executionState, searchSpace);
@@ -69,14 +69,14 @@ public abstract record StatefulTerminator<TCandidate, TSearchState, TState>
 
     protected abstract bool IsTerminalState(TSearchState searchState, TState state);
 
-    public sealed override ExecutionFactory<ITerminatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>> CreateExecutionFactory()
+    public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, CreateInitialState());
-        return _ => execution;
+        var executor = new Executor(this, CreateInitialState());
+        return _ => executor;
     }
 
-    private sealed class Execution(StatefulTerminator<TCandidate, TSearchState, TState> terminator, TState executionState)
-        : TerminatorExecution<TCandidate, TSearchState>
+    private sealed class Executor(StatefulTerminator<TCandidate, TSearchState, TState> terminator, TState executionState)
+        : TerminationExecutor<TCandidate, TSearchState>
     {
         public override bool IsTerminalState(TSearchState state) => terminator.IsTerminalState(state, executionState);
     }
@@ -90,14 +90,14 @@ public abstract record StatefulTerminator<TCandidate, TState>
 
     protected abstract bool IsTerminalState(TState state);
 
-    public sealed override ExecutionFactory<ITerminatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>> CreateExecutionFactory()
+    public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, CreateInitialState());
-        return _ => execution;
+        var executor = new Executor(this, CreateInitialState());
+        return _ => executor;
     }
 
-    private sealed class Execution(StatefulTerminator<TCandidate, TState> terminator, TState executionState)
-        : TerminatorExecution<TCandidate>
+    private sealed class Executor(StatefulTerminator<TCandidate, TState> terminator, TState executionState)
+        : TerminationExecutor<TCandidate>
     {
         public override bool IsTerminalState() => terminator.IsTerminalState(executionState);
     }

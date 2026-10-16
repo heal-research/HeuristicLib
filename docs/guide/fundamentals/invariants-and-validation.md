@@ -221,7 +221,7 @@ foreach (var diagnostic in report.Diagnostics)
 Every form reports **every** failure it finds rather than stopping at the first, so one pass tells you everything to fix.
 
 ::: warning Resolution does not validate
-The check happens when a run is created. Reaching an execution node directly through
+The check happens when a run is created. Reaching an executor directly through
 `ResolutionScope.Resolve` bypasses it, by design — that is the same escape hatch as `validate: false`, and
 it is how the library's own internals build operators.
 :::

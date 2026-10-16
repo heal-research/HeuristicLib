@@ -23,11 +23,11 @@ public sealed class DurationMeasuringRefinerAdvice<TCandidate> : RefinerAdvice<T
         TimeProvider = timeProvider;
     }
 
-    public override WrapperExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IRefiner<TCandidate> refiner) =>
-        childRefiner => new Execution<TRunSearchSpace, TRunProblem>(childRefiner, Duration, TimeProvider);
+    public override WrapperExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IRefiner<TCandidate> refiner) =>
+        childRefiner => new Executor<TRunSearchSpace, TRunProblem>(childRefiner, Duration, TimeProvider);
 
-    private sealed class Execution<TSearchSpace, TProblem>(IRefinerExecution<TCandidate, TSearchSpace, TProblem> childRefiner, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingRefinerExecution<TCandidate, TSearchSpace, TProblem>(childRefiner)
+    private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> childRefiner, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingRefinementExecutor<TCandidate, TSearchSpace, TProblem>(childRefiner)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

@@ -21,7 +21,7 @@ public abstract record WrappingEvaluator<TCandidate>
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildEvaluator);
 
     /// <summary>Prepares this operator once, then binds its child in each construction scope.</summary>
-    public ExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -31,15 +31,15 @@ public abstract record WrappingEvaluator<TCandidate>
 
     /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved child.</summary>
     /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
-    protected abstract WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected abstract WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class WrappingEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator)
-    : EvaluatorExecution<TCandidate, TSearchSpace, TProblem>
+public abstract class WrappingEvaluationExecutor<TCandidate, TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator)
+    : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> ChildEvaluator { get; } = childEvaluator;
+    protected IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> ChildEvaluator { get; } = childEvaluator;
 }

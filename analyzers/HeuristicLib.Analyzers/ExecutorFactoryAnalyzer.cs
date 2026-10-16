@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis.Operations;
 namespace HEAL.HeuristicLib.Analyzers;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public sealed class ExecutionFactoryAnalyzer : DiagnosticAnalyzer
+public sealed class ExecutorFactoryAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "HLib0001";
 
@@ -17,7 +17,7 @@ public sealed class ExecutionFactoryAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticId,
         title: "Resolve child configurations through the scope",
-        messageFormat: "Do not prepare a child execution factory directly. Use ResolutionScope.Resolve(...) to preserve its wrappers and execution state.",
+        messageFormat: "Do not prepare a child executor factory directly. Use ResolutionScope.Resolve(...) to preserve its wrappers and execution state.",
         category: "Architecture",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -35,10 +35,10 @@ public sealed class ExecutionFactoryAnalyzer : DiagnosticAnalyzer
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
         if (context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken).Symbol is not IMethodSymbol target
-            || target.Name != "CreateExecutionFactory"
+            || target.Name != "CreateExecutorFactory"
             || target.IsStatic
             || target.Parameters.Length != 0
-            || !IsExecutionType(target.ReturnType, "ExecutionFactory")
+            || !IsExecutionType(target.ReturnType, "ExecutorFactory")
             || !HasContract(target.ContainingType, "IConfigurationNode"))
             return;
 
@@ -54,10 +54,10 @@ public sealed class ExecutionFactoryAnalyzer : DiagnosticAnalyzer
         for (var symbol = context.SemanticModel.GetEnclosingSymbol(invocation.SpanStart, context.CancellationToken);
              symbol is not null; symbol = symbol.ContainingSymbol)
         {
-            if (symbol is IMethodSymbol method && (IsExecutionType(method.ReturnType, "ExecutionFactory", "WrapperExecutionFactory", "CompositeExecutionFactory") || IsWrapperConstructor(method.ReturnType)
+            if (symbol is IMethodSymbol method && (IsExecutionType(method.ReturnType, "ExecutorFactory", "WrapperExecutorFactory", "CompositeExecutorFactory") || IsWrapperConstructor(method.ReturnType)
                 || method.Parameters.Any(static parameter => IsExecutionType(parameter.Type, "ResolutionScope"))))
                 return true;
-            if (symbol is INamedTypeSymbol type && HasContract(type, "IExecutionNode"))
+            if (symbol is INamedTypeSymbol type && HasContract(type, "IExecutor"))
                 return true;
         }
         return false;
@@ -68,7 +68,7 @@ public sealed class ExecutionFactoryAnalyzer : DiagnosticAnalyzer
         if (invocation.Expression is not MemberAccessExpressionSyntax member
             || invocation.Ancestors().OfType<LambdaExpressionSyntax>().FirstOrDefault() is not { Parent: ArgumentSyntax argument } lambda
             || context.SemanticModel.GetOperation(argument, context.CancellationToken) is not IArgumentOperation preparation
-            || preparation.Parameter?.Name != "createExecutionFactory"
+            || preparation.Parameter?.Name != "createExecutorFactory"
             || preparation.Parent is not IInvocationOperation resolution
             || !IsExecutionType(resolution.TargetMethod.ContainingType, "ResolutionScope")
             || context.SemanticModel.GetOperation(lambda, context.CancellationToken) is not IAnonymousFunctionOperation callback)
@@ -82,7 +82,7 @@ public sealed class ExecutionFactoryAnalyzer : DiagnosticAnalyzer
         type is INamedTypeSymbol { Name: "Func", TypeArguments.Length: 2 } function
         && function.ContainingNamespace.ToDisplayString() == "System"
         && SymbolEqualityComparer.Default.Equals(function.TypeArguments[0], function.TypeArguments[1])
-        && function.TypeArguments[0] is INamedTypeSymbol execution && HasContract(execution, "IExecutionNode");
+        && function.TypeArguments[0] is INamedTypeSymbol execution && HasContract(execution, "IExecutor");
 
     private static bool IsSelfReceiver(ExpressionSyntax expression)
     {

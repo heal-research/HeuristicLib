@@ -25,7 +25,7 @@ internal sealed record ProbeAlgorithm(
     int HoldAfterYieldMilliseconds = 0)
     : Algorithm<ProbeAlgorithm, int, PopulationState<int>>
 {
-    public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
     {
         Probe?.RecordSetup();
         if (FailDuringSetup)
@@ -33,11 +33,11 @@ internal sealed record ProbeAlgorithm(
             throw new InvalidOperationException($"Setup failed for {Value}.");
         }
 
-        return _ => new Execution<TRunSearchSpace, TRunProblem>(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState, HoldAfterYieldMilliseconds);
+        return _ => new Executor<TRunSearchSpace, TRunProblem>(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState, HoldAfterYieldMilliseconds);
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState, int holdAfterYieldMilliseconds)
-        : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
+    private sealed class Executor<TSearchSpace, TProblem>(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState, int holdAfterYieldMilliseconds)
+        : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
         where TSearchSpace : class, ISearchSpace<int>
         where TProblem : class, IProblem<int, TSearchSpace>
     {

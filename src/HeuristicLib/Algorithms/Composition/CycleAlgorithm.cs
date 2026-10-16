@@ -32,10 +32,10 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
     {
         var scopeSelector = new ChildScopeSelector(ScopePolicy);
-        return scope => new CycleAlgorithmExecution<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(
+        return scope => new CycleAlgorithmExecutor<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(
             scope, Algorithms, MaximumCycles, scopeSelector);
     }
 }
@@ -78,8 +78,8 @@ public static class CycleAlgorithmExtensions
     }
 }
 
-public class CycleAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+public class CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+    : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
@@ -90,7 +90,7 @@ public class CycleAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TProb
     protected readonly int? MaximumCycles;
     private readonly ChildScopeSelector scopeSelector;
 
-    public CycleAlgorithmExecution(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles,
+    public CycleAlgorithmExecutor(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles,
         ChildScopeSelector scopeSelector)
     {
         this.scope = scope;
@@ -116,9 +116,9 @@ public class CycleAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TProb
             {
                 ct.ThrowIfCancellationRequested();
                 var algorithmRng = cycleRng.Fork(algorithmIndex);
-                var algorithmExecution = ResolveAlgorithmExecution(algorithm);
+                var algorithmExecutor = ResolveAlgorithmExecution(algorithm);
 
-                await foreach (var newState in algorithmExecution.RunStreamingAsync(problem, algorithmRng, state, ct))
+                await foreach (var newState in algorithmExecutor.RunStreamingAsync(problem, algorithmRng, state, ct))
                 {
                     producedState = true;
                     state = newState;
@@ -133,6 +133,6 @@ public class CycleAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TProb
         }
     }
 
-    private IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> ResolveAlgorithmExecution(TAlgorithm algorithm) =>
+    private IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> ResolveAlgorithmExecution(TAlgorithm algorithm) =>
         scopeSelector.GetScopeFor(algorithm, scope).Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 }

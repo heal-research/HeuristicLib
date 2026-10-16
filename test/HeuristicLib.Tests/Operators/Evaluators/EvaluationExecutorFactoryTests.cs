@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Evaluators;
 
-public sealed class EvaluatorExecutionFactoryTests
+public sealed class EvaluationExecutorFactoryTests
 {
     [Theory]
     [InlineData(null)]
@@ -47,10 +47,10 @@ public sealed class EvaluatorExecutionFactoryTests
     {
         var calls = 0;
         var source = new CachingEvaluator<int>(new CountingEvaluator(() => { }, () => calls++)) { SizeLimit = 0 };
-        var execution = Resolve(ResolutionScope.Create(), source);
+        var executor = Resolve(ResolutionScope.Create(), source);
 
-        Evaluate(execution, 1).ShouldBe([new ObjectiveVector(101)]);
-        Evaluate(execution, 1).ShouldBe([new ObjectiveVector(201)]);
+        Evaluate(executor, 1).ShouldBe([new ObjectiveVector(101)]);
+        Evaluate(executor, 1).ShouldBe([new ObjectiveVector(201)]);
         calls.ShouldBe(2);
     }
 
@@ -110,13 +110,13 @@ public sealed class EvaluatorExecutionFactoryTests
         calls.ShouldBe(3);
     }
 
-    private static IEvaluatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> Resolve(ResolutionScope scope, IEvaluator<int> source) =>
+    private static IEvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> Resolve(ResolutionScope scope, IEvaluator<int> source) =>
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source);
 
-    private static IReadOnlyList<ObjectiveVector> Evaluate(IEvaluatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> execution, params int[] candidates)
+    private static IReadOnlyList<ObjectiveVector> Evaluate(IEvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> executor, params int[] candidates)
     {
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        return execution.Evaluate(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        return executor.Evaluate(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
     }
 
     private sealed class CounterState
@@ -149,11 +149,11 @@ public sealed class EvaluatorExecutionFactoryTests
             this.report = report;
         }
 
-        public override WrapperExecutionFactory<IEvaluatorExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<int> configuration) =>
-            child => new Execution<TRunSearchSpace, TRunProblem>(child, report);
+        public override WrapperExecutorFactory<IEvaluationExecutor<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<int> configuration) =>
+            child => new Executor<TRunSearchSpace, TRunProblem>(child, report);
 
-        private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<int, TSearchSpace, TProblem> child, Action<IReadOnlyList<int>> report)
-            : WrappingEvaluatorExecution<int, TSearchSpace, TProblem>(child)
+        private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> child, Action<IReadOnlyList<int>> report)
+            : WrappingEvaluationExecutor<int, TSearchSpace, TProblem>(child)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

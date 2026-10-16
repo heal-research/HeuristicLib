@@ -282,7 +282,7 @@ public class AlgorithmRunTests
 
     private sealed class PreparingAlgorithmAdvice(Action prepare) : AlgorithmAdvice<int, PopulationState<int>>
     {
-        public override WrapperExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IAlgorithm<int, PopulationState<int>> algorithm)
+        public override WrapperExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IAlgorithm<int, PopulationState<int>> algorithm)
         {
             prepare();
             return inner => inner;
@@ -291,7 +291,7 @@ public class AlgorithmRunTests
 
     private sealed class PreparingEvaluatorAdvice(Action prepare) : EvaluatorAdvice<int>
     {
-        public override WrapperExecutionFactory<IEvaluatorExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<int> evaluator)
+        public override WrapperExecutorFactory<IEvaluationExecutor<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<int> evaluator)
         {
             prepare();
             return inner => inner;
@@ -331,11 +331,11 @@ public class AlgorithmRunTests
     private sealed record DisposalTrackingAlgorithm(Func<ValueTask> Dispose)
         : Algorithm<DisposalTrackingAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        public override ExecutionFactory<AlgorithmExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>> CreateExecutionFactory() =>
-            _ => new Execution(Dispose);
+        public override ExecutorFactory<AlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>> CreateExecutorFactory() =>
+            _ => new Executor(Dispose);
 
-        private sealed class Execution(Func<ValueTask> dispose)
-            : AlgorithmExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>,
+        private sealed class Executor(Func<ValueTask> dispose)
+            : AlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>,
               IAsyncEnumerable<PopulationState<int>>, IAsyncEnumerator<PopulationState<int>>
         {
             private bool yielded;
@@ -364,11 +364,11 @@ public class AlgorithmRunTests
     private sealed record SequenceAlgorithm
         : Algorithm<SequenceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        public override ExecutionFactory<AlgorithmExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>> CreateExecutionFactory() =>
-            _ => new Execution();
+        public override ExecutorFactory<AlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>> CreateExecutorFactory() =>
+            _ => new Executor();
 
-        private sealed class Execution
-            : AlgorithmExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        private sealed class Executor
+            : AlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
         {
             public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
                 IProblem<int, DummySearchSpace<int>> problem,

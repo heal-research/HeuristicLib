@@ -24,14 +24,14 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
 {
     public int ExecutionCount { get; private set; }
 
-    public override ExecutionFactory<IEvaluatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> CreateExecutionFactory()
+    public override ExecutorFactory<IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> CreateExecutorFactory()
     {
         ExecutionCount++;
-        var execution = new Execution();
-        return _ => execution;
+        var executor = new Executor();
+        return _ => executor;
     }
 
-    private sealed class Execution : EvaluatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+    private sealed class Executor : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
             problem.Evaluate(candidates, random).ToArray();
@@ -43,14 +43,14 @@ public sealed record CountingExecutionAlgorithm(int Increment, IEvaluator<int> E
 {
     public int ExecutionCount { get; private set; }
 
-    public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
     {
         ExecutionCount++;
-        return scope => new Execution<TRunSearchSpace, TRunProblem>(Increment, scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator));
+        return scope => new Executor<TRunSearchSpace, TRunProblem>(Increment, scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator));
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(int increment, IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator)
-        : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
+    private sealed class Executor<TSearchSpace, TProblem>(int increment, IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator)
+        : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
         where TSearchSpace : class, ISearchSpace<int>
         where TProblem : class, IProblem<int, TSearchSpace>
     {

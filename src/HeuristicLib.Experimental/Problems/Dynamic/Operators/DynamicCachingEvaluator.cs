@@ -76,13 +76,13 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// <remarks>
     /// This evaluator serves exactly one problem instance, matched by identity, which <c>Evaluate</c> checks.
     /// </remarks>
-    protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
     {
         var state = new ExecutionState(SizeLimit, SourceProblem.CurrentEpoch);
-        return childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, GraceCount, state);
+        return childEvaluator => new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, GraceCount, state);
     }
 
-    private sealed class Execution<TRunSearchSpace, TRunProblem> : WrappingEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>
+    private sealed class Executor<TRunSearchSpace, TRunProblem> : WrappingEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -91,7 +91,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
         private readonly ICacheKeySelector<TCandidate, TKey> keySelector;
         private readonly long graceCount;
 
-        public Execution(IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> sourceProblem, ICacheKeySelector<TCandidate, TKey> keySelector, long graceCount, ExecutionState state)
+        public Executor(IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> sourceProblem, ICacheKeySelector<TCandidate, TKey> keySelector, long graceCount, ExecutionState state)
             : base(childEvaluator)
         {
             this.state = state;

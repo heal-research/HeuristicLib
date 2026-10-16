@@ -21,7 +21,7 @@ public abstract record MultiMutator<TCandidate>
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildMutators]);
 
     /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
-    public ExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -35,7 +35,7 @@ public abstract record MultiMutator<TCandidate>
 
     /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
     /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
-    protected abstract CompositeExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected abstract CompositeExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 
@@ -51,10 +51,10 @@ public abstract record MultiMutator<TCandidate>
         OperatorContractComposition.Requires<TCandidate>(ChildMutators);
 }
 
-public abstract class MultiMutatorExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> childMutators)
-    : MutatorExecution<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiMutationExecutor<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> childMutators)
+    : MutationExecutor<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> ChildMutators { get; } = childMutators;
+    protected ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> ChildMutators { get; } = childMutators;
 }

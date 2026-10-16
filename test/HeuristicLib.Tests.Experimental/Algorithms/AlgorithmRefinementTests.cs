@@ -299,8 +299,8 @@ public class AlgorithmRefinementTests
         public int BatchCount => counter.Batches;
         public int RefinedCount => counter.Candidates;
 
-        public override ExecutionFactory<IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutionFactory() =>
-            _ => new Execution(counter);
+        public override ExecutorFactory<IRefinementExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutorFactory() =>
+            _ => new Executor(counter);
 
         private sealed class Counter
         {
@@ -308,7 +308,7 @@ public class AlgorithmRefinementTests
             public int Candidates;
         }
 
-        private sealed class Execution(Counter counter) : IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Executor(Counter counter) : IRefinementExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
             {

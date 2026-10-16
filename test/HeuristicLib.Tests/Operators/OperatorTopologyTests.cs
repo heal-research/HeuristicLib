@@ -23,7 +23,7 @@ public class OperatorTopologyTests
 
     /// <summary>
     /// A migrated configuration contract names the candidate alone. The search space and problem the run supplies
-    /// arrive as method type arguments when the execution node is created, so they are not part of the type an
+    /// arrive as method type arguments when the executor is created, so they are not part of the type an
     /// author stores in a field, passes as a parameter or reuses across problems.
     /// </summary>
     /// <remarks>
@@ -50,19 +50,19 @@ public class OperatorTopologyTests
     }
 
     /// <summary>
-    /// An execution node is created for one run and runs over that run's search space and problem, so it names
+    /// An executor is created for one run and runs over that run's search space and problem, so it names
     /// both and stays contravariant in them. Every configuration contract has migrated, so only instance contracts
     /// remain here.
     /// </summary>
     [Theory]
-    [InlineData(typeof(ICreatorExecution<,,>))]
-    [InlineData(typeof(ICrossoverExecution<,,>))]
-    [InlineData(typeof(IEvaluatorExecution<,,>))]
-    [InlineData(typeof(IMutatorExecution<,,>))]
-    [InlineData(typeof(IReplacerExecution<,,>))]
-    [InlineData(typeof(ISelectorExecution<,,>))]
-    [InlineData(typeof(IInterceptorExecution<,,,>))]
-    [InlineData(typeof(ITerminatorExecution<,,,>))]
+    [InlineData(typeof(ICreationExecutor<,,>))]
+    [InlineData(typeof(ICrossoverExecutor<,,>))]
+    [InlineData(typeof(IEvaluationExecutor<,,>))]
+    [InlineData(typeof(IMutationExecutor<,,>))]
+    [InlineData(typeof(IReplacementExecutor<,,>))]
+    [InlineData(typeof(ISelectionExecutor<,,>))]
+    [InlineData(typeof(IInterceptionExecutor<,,,>))]
+    [InlineData(typeof(ITerminationExecutor<,,,>))]
     public void OperatorRoleContracts_PreserveCandidateAndUseContravariantContext(Type roleContract)
     {
         var typeParameters = roleContract.GetGenericArguments();
@@ -77,8 +77,8 @@ public class OperatorTopologyTests
     /// an interceptor returns it and therefore cannot be contravariant in it.
     /// </summary>
     [Theory]
-    [InlineData(typeof(IInterceptorExecution<,,,>), GenericParameterAttributes.None)]
-    [InlineData(typeof(ITerminatorExecution<,,,>), GenericParameterAttributes.Contravariant)]
+    [InlineData(typeof(IInterceptionExecutor<,,,>), GenericParameterAttributes.None)]
+    [InlineData(typeof(ITerminationExecutor<,,,>), GenericParameterAttributes.Contravariant)]
     public void SearchStateAwareRoleContracts_DeclareExpectedSearchStateVariance(Type roleContract, GenericParameterAttributes expectedVariance)
     {
         var searchState = roleContract.GetGenericArguments()[3];
@@ -110,7 +110,7 @@ public class OperatorTopologyTests
     public void OperatorExecutions_DoNotPubliclyExposeChildMachinery(string roleNamespace)
     {
         var publicChildProperties = OperatorTypesIn(roleNamespace)
-            .Where(type => typeof(IOperatorExecution).IsAssignableFrom(type))
+            .Where(type => typeof(IOperatorExecutor).IsAssignableFrom(type))
             .SelectMany(type => type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
             .Where(property => property.Name.StartsWith("Child", StringComparison.Ordinal))
             .Select(property => $"{property.DeclaringType}.{property.Name}")

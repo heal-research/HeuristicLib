@@ -815,7 +815,7 @@ public class OperatorBudgetAlgorithmTests
 
         private sealed class SelectedAdvice(Func<IEvaluator<TCandidate>, EvaluatorAdvice<TCandidate>> create) : EvaluatorAdvice<TCandidate>
         {
-            public override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> configuration) =>
+            public override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> configuration) =>
                 create(configuration).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(configuration);
         }
     }
@@ -826,7 +826,7 @@ public class OperatorBudgetAlgorithmTests
 
         private sealed class SelectedAdvice(Func<IEvaluator<TCandidate>, EvaluatorAdvice<TCandidate>> create) : EvaluatorAdvice<TCandidate>
         {
-            public override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> configuration) =>
+            public override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> configuration) =>
                 create(configuration).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(configuration);
         }
     }

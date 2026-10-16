@@ -229,14 +229,14 @@ public class ImprovementCheckingRefinerTests
         Refine(ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(acceptOnceAtTheEnd), 10).ShouldBe([5]);
     }
 
-    private static IReadOnlyList<int> Refine(IRefinerExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> execution, params int[] candidates) =>
-        Refine(execution, CreateProblem(), candidates);
+    private static IReadOnlyList<int> Refine(IRefinementExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> executor, params int[] candidates) =>
+        Refine(executor, CreateProblem(), candidates);
 
     private static IReadOnlyList<int> Refine(
-        IRefinerExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> execution,
+        IRefinementExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> executor,
         FuncProblem<int, DummySearchSpace<int>> problem,
         params int[] candidates) =>
-        execution.Refine(candidates, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        executor.Refine(candidates, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
     private static IEvaluator<int> CreateEvaluator() =>
         new CandidateValueEvaluator();

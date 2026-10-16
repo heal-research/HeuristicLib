@@ -21,15 +21,15 @@ public sealed record RoundRobinMutator<TCandidate> : MultiMutator<TCandidate>
     {
     }
 
-    protected override CompositeExecutionFactory<
-        IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>>
+    protected override CompositeExecutorFactory<
+        IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>
         CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildMutators.Count == 0)
             throw new InvalidOperationException("At least one mutator is required.");
 
         var state = new ExecutionState();
-        return children => new Execution<TRunSearchSpace, TRunProblem>(children, state);
+        return children => new Executor<TRunSearchSpace, TRunProblem>(children, state);
     }
 
     private sealed class ExecutionState
@@ -37,10 +37,10 @@ public sealed record RoundRobinMutator<TCandidate> : MultiMutator<TCandidate>
         public int NextChild { get; set; }
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(
-        ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> children,
+    private sealed class Executor<TSearchSpace, TProblem>(
+        ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children,
         ExecutionState state)
-        : MultiMutatorExecution<TCandidate, TSearchSpace, TProblem>(children)
+        : MultiMutationExecutor<TCandidate, TSearchSpace, TProblem>(children)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

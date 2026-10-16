@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
@@ -25,13 +26,13 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public interface IRefiner<TCandidate> : IOperator
 {
-    ExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    ExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public interface IRefinerExecution<TCandidate, in TSearchSpace, in TProblem>
-    : IOperatorExecution
+public interface IRefinementExecutor<TCandidate, in TSearchSpace, in TProblem>
+    : IOperatorExecutor
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -46,7 +47,7 @@ public abstract class RefinerAdvice<TCandidate> : Advice<IRefiner<TCandidate>>
     /// survive rebuilding the execution graph here.
     /// </remarks>
     /// <param name="refiner">The configuration the pointcut selected.</param>
-    public abstract WrapperExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IRefiner<TCandidate> refiner)
+    public abstract WrapperExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IRefiner<TCandidate> refiner)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
@@ -55,33 +56,36 @@ public static class RefinerResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public IRefinerExecution<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate> refiner)
+        public IRefinementExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate> refiner)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            scope.Resolve(refiner, static source => source.CreateExecutionFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
+            refiner is IOperator<TCandidate, Refinement> prepared
+                ? scope.ResolveOperator<TCandidate, Refinement, TSearchSpace, TProblem, ISearchState, IRefinementExecutor<TCandidate, TSearchSpace, TProblem>>(
+                    prepared, Refinement.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>()).Executor
+                : scope.Resolve(refiner, static source => source.CreateExecutorFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(refiner))]
-        public IRefinerExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate>? refiner)
+        public IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate>? refiner)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             refiner is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem>(refiner);
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem>(
             IRefiner<TCandidate> refiner,
-            [NotNullWhen(true)] out IRefinerExecution<TCandidate, TSearchSpace, TProblem>? execution,
+            [NotNullWhen(true)] out IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? executor,
             [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
         {
             try
             {
-                execution = scope.Resolve<TCandidate, TSearchSpace, TProblem>(refiner);
+                executor = scope.Resolve<TCandidate, TSearchSpace, TProblem>(refiner);
                 reason = null;
                 return true;
             }
             catch (InvalidOperationException exception)
             {
-                execution = null;
+                executor = null;
                 reason = exception.Message;
                 return false;
             }
@@ -92,21 +96,21 @@ public static class RefinerResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IRefinerExecution<TCandidate, TSearchSpace, TProblem> Resolve(IRefiner<TCandidate> refiner) =>
+        public IRefinementExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IRefiner<TCandidate> refiner) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem>(refiner);
 
         [return: NotNullIfNotNull(nameof(refiner))]
-        public IRefinerExecution<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IRefiner<TCandidate>? refiner) =>
+        public IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IRefiner<TCandidate>? refiner) =>
             refiner is null ? null : scope.Resolve(refiner);
 
         public bool TryResolve(
             IRefiner<TCandidate> refiner,
-            [NotNullWhen(true)] out IRefinerExecution<TCandidate, TSearchSpace, TProblem>? execution,
+            [NotNullWhen(true)] out IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? executor,
             [NotNullWhen(false)] out string? reason) =>
-            scope.Scope.TryResolve(refiner, out execution, out reason);
+            scope.Scope.TryResolve(refiner, out executor, out reason);
     }
 
-    private static WrapperExecutionFactory<IRefinerExecution<TCandidate, TSearchSpace, TProblem>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>(Advice advice, IRefiner<TCandidate> refiner)
+    private static WrapperExecutorFactory<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>(Advice advice, IRefiner<TCandidate> refiner)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         ((RefinerAdvice<TCandidate>)advice).CreateWrapperFactory<TSearchSpace, TProblem>(refiner);

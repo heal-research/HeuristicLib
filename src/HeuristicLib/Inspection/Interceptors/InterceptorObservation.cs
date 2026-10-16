@@ -59,17 +59,17 @@ public sealed class InterceptorObservationAdvice<TCandidate, TSearchSpace, TProb
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public override WrapperExecutionFactory<IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(IInterceptor<TCandidate> interceptor)
+    public override WrapperExecutorFactory<IInterceptionExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(IInterceptor<TCandidate> interceptor)
     {
         ObservationSignature.Require<TSearchSpace, TProblem, TSearchState, TRunSearchSpace, TRunProblem, TRunSearchState>(this);
-        return inner => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(interceptor, inner, observe);
+        return inner => new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>(interceptor, inner, observe);
     }
 
-    private sealed class Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(
+    private sealed class Executor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         IInterceptor<TCandidate> observedInterceptor,
-        IInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childInterceptor,
+        IInterceptionExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> childInterceptor,
         Action<InterceptorObservation<TCandidate, TSearchSpace, TProblem, TSearchState>> observe)
-        : WrappingInterceptorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor)
+        : WrappingInterceptionExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState

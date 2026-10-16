@@ -1,7 +1,7 @@
 namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>
-/// A configuration the <see cref="ResolutionScope"/> can resolve into an execution node.
+/// A configuration the <see cref="ResolutionScope"/> can resolve into an executor.
 /// </summary>
 public interface IConfigurationNode
 {
@@ -25,19 +25,21 @@ public interface IConfigurationNode
 }
 
 /// <summary>
-/// A configuration whose execution node type is known without a run's types, so it can prepare its typed factory.
+/// A configuration whose executor type is known without a run's types, so it can supply a typed factory directly.
 /// </summary>
 /// <remarks>
-/// Role configurations such as mutators are not of this kind: their execution type depends on the run's search space
+/// Role configurations such as mutators are not of this kind: their executor type depends on the run's search space
 /// and problem, so they are resolved through
-/// <see cref="ResolutionScope.Resolve{TConfiguration, TExecution}(TConfiguration, Func{TConfiguration, ExecutionFactory{TExecution}}, Func{Advice, TConfiguration, WrapperExecutionFactory{TExecution}})"/>
+/// <see cref="ResolutionScope.Resolve{TConfiguration, TExecutor}(TConfiguration, Func{TConfiguration, ExecutorFactory{TExecutor}}, Func{Advice, TConfiguration, WrapperExecutorFactory{TExecutor}})"/>
 /// instead.
 /// </remarks>
-public interface IConfigurationNode<out TExecution> : IConfigurationNode
-    where TExecution : class, IExecutionNode
+public interface IConfigurationNode<out TExecutor> : IConfigurationNode
+    where TExecutor : class, IExecutor
 {
-    /// <summary>Prepares persistent execution state once and returns a factory that can bind it repeatedly.</summary>
-    ExecutionFactory<TExecution> CreateExecutionFactory();
+    /// <summary>Creates shared execution data once and returns a function that constructs executors using that data.</summary>
+    ExecutorFactory<TExecutor> CreateExecutorFactory();
 }
 
-public interface IExecutionNode;
+/// <summary>A runtime object that performs operations, such as mutating candidates or running an algorithm.</summary>
+/// <remarks>Operation-specific interfaces define its callable methods. One executor can serve many calls.</remarks>
+public interface IExecutor;

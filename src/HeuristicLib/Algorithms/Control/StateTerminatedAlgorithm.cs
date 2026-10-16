@@ -17,12 +17,12 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchState>
 
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, Terminator);
 
-    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() => scope =>
+    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() => scope =>
     {
         var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
         // Resolve the terminator before the wrapped algorithm so elapsed-time terminators start before wrapped algorithm construction.
         var terminator = typed.Resolve(Terminator);
-        return new StateTerminatedAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(typed.Resolve(Algorithm), terminator);
+        return new StateTerminatedAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(typed.Resolve(Algorithm), terminator);
     };
 }
 
@@ -37,15 +37,15 @@ public static class StateTerminatedAlgorithm
         };
 }
 
-public class StateTerminatedAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
+public class StateTerminatedAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    protected readonly IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm;
-    protected readonly ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> Terminator;
+    protected readonly IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm;
+    protected readonly ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Terminator;
 
-    public StateTerminatedAlgorithmExecution(IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
+    public StateTerminatedAlgorithmExecutor(IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
     {
         Algorithm = algorithm;
         Terminator = terminator;

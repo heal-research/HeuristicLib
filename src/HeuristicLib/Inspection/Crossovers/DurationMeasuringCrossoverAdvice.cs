@@ -23,11 +23,11 @@ public sealed class DurationMeasuringCrossoverAdvice<TCandidate> : CrossoverAdvi
         TimeProvider = timeProvider;
     }
 
-    public override WrapperExecutionFactory<ICrossoverExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICrossover<TCandidate> crossover) =>
-        childCrossover => new Execution<TRunSearchSpace, TRunProblem>(childCrossover, Duration, TimeProvider);
+    public override WrapperExecutorFactory<ICrossoverExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICrossover<TCandidate> crossover) =>
+        childCrossover => new Executor<TRunSearchSpace, TRunProblem>(childCrossover, Duration, TimeProvider);
 
-    private sealed class Execution<TSearchSpace, TProblem>(ICrossoverExecution<TCandidate, TSearchSpace, TProblem> childCrossover, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingCrossoverExecution<TCandidate, TSearchSpace, TProblem>(childCrossover)
+    private sealed class Executor<TSearchSpace, TProblem>(ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> childCrossover, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingCrossoverExecutor<TCandidate, TSearchSpace, TProblem>(childCrossover)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

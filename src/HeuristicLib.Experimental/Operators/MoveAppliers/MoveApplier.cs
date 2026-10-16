@@ -18,8 +18,8 @@ public abstract record MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TS
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    private sealed record Execution(MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TState> MoveApplier, TState State)
-        : IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove>
+    private sealed record Executor(MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TState> MoveApplier, TState State)
+        : IMoveApplierExecutor<TCandidate, TSearchSpace, TProblem, TMove>
     {
         public TCandidate Apply(TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             MoveApplier.Apply(candidate, move, State, searchSpace, problem, random);
@@ -29,15 +29,15 @@ public abstract record MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TS
 
     protected abstract TState InitialState();
 
-    public virtual ExecutionFactory<IMoveApplierExecution<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutionFactory()
+    public virtual ExecutorFactory<IMoveApplierExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, InitialState());
-        return _ => execution;
+        var executor = new Executor(this, InitialState());
+        return _ => executor;
     }
 
     public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    ExecutionFactory<IMoveApplierExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveApplier<TCandidate, TMove>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    ExecutorFactory<IMoveApplierExecutor<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveApplier<TCandidate, TMove>.CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -47,6 +47,6 @@ public abstract record MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TS
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (ExecutionFactory<IMoveApplierExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutionFactory();
+        return (ExecutorFactory<IMoveApplierExecutor<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutorFactory();
     }
 }

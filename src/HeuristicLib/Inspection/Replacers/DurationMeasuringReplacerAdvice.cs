@@ -24,11 +24,11 @@ public sealed class DurationMeasuringReplacerAdvice<TCandidate> : ReplacerAdvice
         TimeProvider = timeProvider;
     }
 
-    public override WrapperExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IReplacer<TCandidate> replacer) =>
-        childReplacer => new Execution<TRunSearchSpace, TRunProblem>(childReplacer, Duration, TimeProvider);
+    public override WrapperExecutorFactory<IReplacementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IReplacer<TCandidate> replacer) =>
+        childReplacer => new Executor<TRunSearchSpace, TRunProblem>(childReplacer, Duration, TimeProvider);
 
-    private sealed class Execution<TSearchSpace, TProblem>(IReplacerExecution<TCandidate, TSearchSpace, TProblem> childReplacer, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingReplacerExecution<TCandidate, TSearchSpace, TProblem>(childReplacer)
+    private sealed class Executor<TSearchSpace, TProblem>(IReplacementExecutor<TCandidate, TSearchSpace, TProblem> childReplacer, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingReplacementExecutor<TCandidate, TSearchSpace, TProblem>(childReplacer)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

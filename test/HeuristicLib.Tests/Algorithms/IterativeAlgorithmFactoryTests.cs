@@ -20,7 +20,7 @@ public sealed class IterativeAlgorithmFactoryTests
         var interceptor = new AdvancingInterceptor(() => events.Add("prepare interceptor"));
         var source = CreateAlgorithm(bound, () => events.Add("prepare algorithm"), () => events.Add("bind algorithm"), interceptor);
 
-        var factory = source.CreateExecutionFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
+        var factory = source.CreateExecutorFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
         events.ShouldBe(["prepare algorithm"]);
 
         var parent = ResolutionScope.Create();
@@ -31,7 +31,7 @@ public sealed class IterativeAlgorithmFactoryTests
         (await Next(first)).Value.ShouldBe(101);
         (await Next(second)).Value.ShouldBe(202);
 
-        var independentFactory = source.CreateExecutionFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
+        var independentFactory = source.CreateExecutorFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
         (await Next(independentFactory(ResolutionScope.Create()))).Value.ShouldBe(101);
         events.Count(value => value == "prepare algorithm").ShouldBe(2);
         events.Count(value => value == "prepare interceptor").ShouldBe(2);
@@ -126,7 +126,7 @@ public sealed class IterativeAlgorithmFactoryTests
         var interceptor = new AdvancingInterceptor(() => interceptorPreparations++);
         var source = CreateAlgorithm(bound, () => throw failure, () => bindings++, interceptor);
 
-        Should.Throw<InvalidOperationException>(() => source.CreateExecutionFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()).ShouldBeSameAs(failure);
+        Should.Throw<InvalidOperationException>(() => source.CreateExecutorFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()).ShouldBeSameAs(failure);
 
         interceptorPreparations.ShouldBe(0);
         bindings.ShouldBe(0);
@@ -138,7 +138,7 @@ public sealed class IterativeAlgorithmFactoryTests
         var preparations = 0;
         var source = new BoundAlgorithm(() => preparations++, static () => { });
 
-        Should.Throw<InvalidOperationException>(() => source.CreateExecutionFactory<ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>());
+        Should.Throw<InvalidOperationException>(() => source.CreateExecutorFactory<ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>());
 
         preparations.ShouldBe(0);
     }
@@ -149,7 +149,7 @@ public sealed class IterativeAlgorithmFactoryTests
         var preparations = 0;
         var source = new BoundAlgorithm(() => preparations++, static () => { });
 
-        Should.Throw<InvalidOperationException>(() => source.CreateExecutionFactory<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>());
+        Should.Throw<InvalidOperationException>(() => source.CreateExecutorFactory<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>());
 
         preparations.ShouldBe(0);
     }
@@ -160,7 +160,7 @@ public sealed class IterativeAlgorithmFactoryTests
         var preparations = 0;
         IAlgorithm<int> source = new BoundAlgorithm(() => preparations++, static () => { });
 
-        Should.Throw<InvalidOperationException>(() => source.CreateExecutionFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, OtherState>());
+        Should.Throw<InvalidOperationException>(() => source.CreateExecutorFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, OtherState>());
 
         preparations.ShouldBe(0);
     }
@@ -170,7 +170,7 @@ public sealed class IterativeAlgorithmFactoryTests
     {
         var preparations = 0;
         var source = new WideProblemAlgorithm(() => preparations++);
-        var factory = source.CreateExecutionFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
+        var factory = source.CreateExecutorFactory<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
 
         (await Next(factory(ResolutionScope.Create()))).Value.ShouldBe(1);
         (await Next(factory(ResolutionScope.Create()))).Value.ShouldBe(2);
@@ -182,12 +182,12 @@ public sealed class IterativeAlgorithmFactoryTests
             ? new BoundAlgorithm(prepare, bind ?? (static () => { })) { Interceptor = interceptor }
             : new AgnosticAlgorithm(prepare, bind ?? (static () => { })) { Interceptor = interceptor };
 
-    private static IAlgorithmExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState> Resolve(ResolutionScope scope, IAlgorithm<int, ProbeState> source) =>
+    private static IAlgorithmExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState> Resolve(ResolutionScope scope, IAlgorithm<int, ProbeState> source) =>
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>(source);
 
-    private static async Task<ProbeState> Next(IAlgorithmExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState> execution)
+    private static async Task<ProbeState> Next(IAlgorithmExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState> executor)
     {
-        await using var iterator = execution.RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).GetAsyncEnumerator();
+        await using var iterator = executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).GetAsyncEnumerator();
         (await iterator.MoveNextAsync()).ShouldBeTrue();
         return iterator.Current;
     }
@@ -203,7 +203,7 @@ public sealed class IterativeAlgorithmFactoryTests
 
     private sealed record AgnosticAlgorithm(Action Prepare, Action Bind) : IterativeAlgorithm<AgnosticAlgorithm, int, ProbeState>
     {
-        protected override ExecutionFactory<IterativeAlgorithmExecution<int, TRunSearchSpace, TRunProblem, ProbeState>> CreateIterationFactory<TRunSearchSpace, TRunProblem>()
+        protected override ExecutorFactory<IterativeAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, ProbeState>> CreateIterationFactory<TRunSearchSpace, TRunProblem>()
         {
             Prepare();
             var state = new CounterState();
@@ -211,14 +211,14 @@ public sealed class IterativeAlgorithmFactoryTests
             {
                 var interceptor = scope.ResolveOptional<int, TRunSearchSpace, TRunProblem, ProbeState>(Interceptor);
                 Bind();
-                return new CounterExecution<TRunSearchSpace, TRunProblem>(interceptor, state);
+                return new CounterExecutor<TRunSearchSpace, TRunProblem>(interceptor, state);
             };
         }
     }
 
     private sealed record BoundAlgorithm(Action Prepare, Action Bind) : IterativeAlgorithm<BoundAlgorithm, int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>
     {
-        protected override ExecutionFactory<IterativeAlgorithmExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>> CreateIterationFactory()
+        protected override ExecutorFactory<IterativeAlgorithmExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>> CreateIterationFactory()
         {
             Prepare();
             var state = new CounterState();
@@ -226,23 +226,23 @@ public sealed class IterativeAlgorithmFactoryTests
             {
                 var interceptor = scope.ResolveOptional<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>(Interceptor);
                 Bind();
-                return new CounterExecution<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(interceptor, state);
+                return new CounterExecutor<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(interceptor, state);
             };
         }
     }
 
     private sealed record WideProblemAlgorithm(Action Prepare) : IterativeAlgorithm<WideProblemAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState>
     {
-        protected override ExecutionFactory<IterativeAlgorithmExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState>> CreateIterationFactory()
+        protected override ExecutorFactory<IterativeAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState>> CreateIterationFactory()
         {
             Prepare();
             var state = new CounterState();
-            return scope => new CounterExecution<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(scope.ResolveOptional<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState>(Interceptor), state);
+            return scope => new CounterExecutor<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(scope.ResolveOptional<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState>(Interceptor), state);
         }
     }
 
-    private sealed class CounterExecution<TSearchSpace, TProblem>(IInterceptorExecution<int, TSearchSpace, TProblem, ProbeState>? interceptor, CounterState state)
-        : IterativeAlgorithmExecution<int, TSearchSpace, TProblem, ProbeState>(interceptor)
+    private sealed class CounterExecutor<TSearchSpace, TProblem>(IInterceptionExecutor<int, TSearchSpace, TProblem, ProbeState>? interceptor, CounterState state)
+        : IterativeAlgorithmExecutor<int, TSearchSpace, TProblem, ProbeState>(interceptor)
         where TSearchSpace : class, ISearchSpace<int>
         where TProblem : class, IProblem<int, TSearchSpace>
     {

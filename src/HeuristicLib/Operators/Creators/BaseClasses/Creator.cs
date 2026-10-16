@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Creators;
 
 /// <remarks>
-/// Derive directly from this base when the creator owns child execution nodes or needs direct control over its execution structure.
+/// Derive directly from this base when the creator owns child executors or needs direct control over its execution structure.
 /// Use <see cref="StatelessCreator{TCandidate,TSearchSpace,TProblem}"/> when no mutable execution data is needed.
 /// Use <see cref="StatefulCreator{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
 /// <para>
@@ -21,11 +21,11 @@ public abstract record Creator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract ExecutionFactory<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory();
+    public abstract ExecutorFactory<ICreationExecutor<TCandidate, TSearchSpace, TProblem>> CreateExecutorFactory();
 
     public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    ExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> ICreator<TCandidate>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    ExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> ICreator<TCandidate>.CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -35,7 +35,7 @@ public abstract record Creator<TCandidate, TSearchSpace, TProblem>
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (ExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>>)CreateExecutionFactory();
+        return (ExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>)CreateExecutorFactory();
     }
 }
 
@@ -46,29 +46,29 @@ public abstract record Creator<TCandidate, TSearchSpace>
 public abstract record Creator<TCandidate>
     : Creator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
-public abstract class CreatorExecution<TCandidate, TSearchSpace, TProblem>
-    : ICreatorExecution<TCandidate, TSearchSpace, TProblem>
+public abstract class CreationExecutor<TCandidate, TSearchSpace, TProblem>
+    : ICreationExecutor<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-public abstract class CreatorExecution<TCandidate, TSearchSpace>
-    : ICreatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+public abstract class CreationExecutor<TCandidate, TSearchSpace>
+    : ICreationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    IReadOnlyList<TCandidate> ICreatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
+    IReadOnlyList<TCandidate> ICreationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
         Create(count, random, searchSpace);
 }
 
-public abstract class CreatorExecution<TCandidate>
-    : ICreatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+public abstract class CreationExecutor<TCandidate>
+    : ICreationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
     public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random);
 
-    IReadOnlyList<TCandidate> ICreatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Create(int count, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+    IReadOnlyList<TCandidate> ICreationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Create(int count, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         Create(count, random);
 }

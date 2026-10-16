@@ -162,14 +162,14 @@ public class CycleAlgorithmTests
     {
         public int ExecutionCount { get; private set; }
 
-        public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+        public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         {
             ExecutionCount++;
-            var execution = new Execution<TRunSearchSpace, TRunProblem>();
-            return _ => execution;
+            var executor = new Executor<TRunSearchSpace, TRunProblem>();
+            return _ => executor;
         }
 
-        private sealed class Execution<TSearchSpace, TProblem> : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
+        private sealed class Executor<TSearchSpace, TProblem> : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {

@@ -31,18 +31,18 @@ public sealed record ChooseOneCreator<TCandidate>
     {
     }
 
-    protected override CompositeExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected override CompositeExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildCreators.Count == 0)
             throw new InvalidOperationException("At least one creator must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildCreators.Count)
             throw new InvalidOperationException("Weights must have the same length as creators.");
 
-        return childCreators => new Execution<TRunSearchSpace, TRunProblem>(childCreators, new(childCreators, Weights));
+        return childCreators => new Executor<TRunSearchSpace, TRunProblem>(childCreators, new(childCreators, Weights));
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> childCreators, WeightedRouter<ICreatorExecution<TCandidate, TSearchSpace, TProblem>> router)
-        : MultiCreatorExecution<TCandidate, TSearchSpace, TProblem>(childCreators)
+    private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<ICreationExecutor<TCandidate, TSearchSpace, TProblem>> childCreators, WeightedRouter<ICreationExecutor<TCandidate, TSearchSpace, TProblem>> router)
+        : MultiCreationExecutor<TCandidate, TSearchSpace, TProblem>(childCreators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

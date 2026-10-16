@@ -18,11 +18,11 @@ public sealed class CountingCreatorAdvice<TCandidate> : CreatorAdvice<TCandidate
         Metric = metric;
     }
 
-    public override WrapperExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICreator<TCandidate> creator) =>
-        childCreator => new Execution<TRunSearchSpace, TRunProblem>(childCreator, Counter, Metric);
+    public override WrapperExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICreator<TCandidate> creator) =>
+        childCreator => new Executor<TRunSearchSpace, TRunProblem>(childCreator, Counter, Metric);
 
-    private sealed class Execution<TSearchSpace, TProblem>(ICreatorExecution<TCandidate, TSearchSpace, TProblem> childCreator, CountAccumulator counter, OperatorCountMetric metric)
-        : WrappingCreatorExecution<TCandidate, TSearchSpace, TProblem>(childCreator)
+    private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> childCreator, CountAccumulator counter, OperatorCountMetric metric)
+        : WrappingCreationExecutor<TCandidate, TSearchSpace, TProblem>(childCreator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

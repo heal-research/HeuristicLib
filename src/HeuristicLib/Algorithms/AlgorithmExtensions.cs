@@ -98,18 +98,18 @@ public static class AlgorithmExtensions
     }
 
     extension<TCandidate, TSearchSpace, TProblem, TSearchState>(
-        IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithmExecution)
+        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithmExecutor)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
         public async Task<TSearchState> CompleteAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default) =>
-            await algorithmExecution.RunStreamingAsync(problem, random, initialState, ct).LastAsync(ct);
+            await algorithmExecutor.RunStreamingAsync(problem, random, initialState, ct).LastAsync(ct);
 
         public IEnumerable<TSearchState> Stream(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default) =>
-            algorithmExecution.RunStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable(ct);
+            algorithmExecutor.RunStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable(ct);
 
         public TSearchState Complete(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default) =>
-            algorithmExecution.CompleteAsync(problem, random, initialState, ct).GetAwaiter().GetResult();
+            algorithmExecutor.CompleteAsync(problem, random, initialState, ct).GetAwaiter().GetResult();
     }
 }

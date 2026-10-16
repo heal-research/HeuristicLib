@@ -209,10 +209,10 @@ public class DynamicEvaluationCacheTests
         GC.KeepAlive(execution);
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        static (WeakReference Key, WeakReference Result) PrimeCache(IEvaluatorExecution<DummyGenotype, DummySearchSpace, DummyDynamicProblem> execution, DummyDynamicProblem problem)
+        static (WeakReference Key, WeakReference Result) PrimeCache(IEvaluationExecutor<DummyGenotype, DummySearchSpace, DummyDynamicProblem> executor, DummyDynamicProblem problem)
         {
             var candidate = new DummyGenotype(1);
-            var result = execution.Evaluate([candidate], TestRandoms.NoRandom, problem.SearchSpace, problem).Single();
+            var result = executor.Evaluate([candidate], TestRandoms.NoRandom, problem.SearchSpace, problem).Single();
             return (new WeakReference(candidate), new WeakReference(result));
         }
     }
@@ -245,10 +245,10 @@ public class DynamicEvaluationCacheTests
             return (EvaluateTwice(execution, problem).GetEnumerator(), new WeakReference(evaluator));
         }
 
-        static IEnumerable<ObjectiveVector> EvaluateTwice(IEvaluatorExecution<DummyGenotype, DummySearchSpace, DummyDynamicProblem> execution, DummyDynamicProblem problem)
+        static IEnumerable<ObjectiveVector> EvaluateTwice(IEvaluationExecutor<DummyGenotype, DummySearchSpace, DummyDynamicProblem> executor, DummyDynamicProblem problem)
         {
-            yield return execution.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem).Single();
-            yield return execution.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem).Single();
+            yield return executor.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem).Single();
+            yield return executor.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem).Single();
         }
     }
 

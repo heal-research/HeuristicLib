@@ -153,9 +153,9 @@ public sealed class NumericParameterFittingRefinerTests
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
         var refiner = new NumericParameterFittingRefiner { MaximumIterations = 100 }.CheckedForImprovement();
-        var execution = ResolutionScope.Create().Resolve<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(refiner);
+        var executor = ResolutionScope.Create().Resolve<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(refiner);
 
-        var refined = execution.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        var refined = executor.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
         refined.ShouldHaveSingleItem().ShouldBeSameAs(expression);
     }
@@ -167,9 +167,9 @@ public sealed class NumericParameterFittingRefinerTests
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
         var refiner = new NumericParameterFittingRefiner { MaximumIterations = 100 }.CheckedForImprovement();
-        var execution = ResolutionScope.Create().Resolve<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(refiner);
+        var executor = ResolutionScope.Create().Resolve<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(refiner);
 
-        var refined = execution.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        var refined = executor.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
         Predictions(refined.ShouldHaveSingleItem(), problem).ShouldBe(Targets, tolerance: 1e-8);
     }

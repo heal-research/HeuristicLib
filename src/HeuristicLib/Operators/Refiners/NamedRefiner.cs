@@ -15,7 +15,7 @@ public sealed record NamedRefiner<TCandidate> : WrappingRefiner<TCandidate>, INa
 
     public string Name { get; init; }
 
-    protected override WrapperExecutionFactory<IRefinerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+    protected override WrapperExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
         child => child;
 }
 

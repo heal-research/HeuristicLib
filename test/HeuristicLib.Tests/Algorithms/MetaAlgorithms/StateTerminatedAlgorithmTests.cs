@@ -185,15 +185,15 @@ public class StateTerminatedAlgorithmTests
     private sealed record RecordingAlgorithm(List<string> Events)
         : Algorithm<RecordingAlgorithm, int, PopulationState<int>>
     {
-        public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+        public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         {
             Events.Add("algorithm");
-            var execution = new Execution<TRunSearchSpace, TRunProblem>();
-            return _ => execution;
+            var executor = new Executor<TRunSearchSpace, TRunProblem>();
+            return _ => executor;
         }
 
-        private sealed class Execution<TSearchSpace, TProblem>
-            : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
+        private sealed class Executor<TSearchSpace, TProblem>
+            : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
@@ -208,17 +208,17 @@ public class StateTerminatedAlgorithmTests
     private sealed record RecordingResolveTerminator(List<string> Events)
         : ITerminator<int>
     {
-        public ExecutionFactory<ITerminatorExecution<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
+        public ExecutorFactory<ITerminationExecutor<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
             where TRunSearchSpace : class, ISearchSpace<int>
             where TRunProblem : class, IProblem<int, TRunSearchSpace>
             where TRunSearchState : class, ISearchState
         {
             Events.Add("terminator");
-            var execution = new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>();
-            return _ => execution;
+            var executor = new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>();
+            return _ => executor;
         }
 
-        private sealed class Execution<TSearchSpace, TProblem, TSearchState> : TerminatorExecution<int, TSearchSpace, TProblem, TSearchState>
+        private sealed class Executor<TSearchSpace, TProblem, TSearchState> : TerminationExecutor<int, TSearchSpace, TProblem, TSearchState>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
             where TSearchState : class, ISearchState

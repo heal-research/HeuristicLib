@@ -15,7 +15,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
-public sealed class RoleExecutionFactoryTests
+public sealed class RoleExecutorFactoryTests
 {
     [Theory]
     [InlineData(0)]
@@ -73,7 +73,7 @@ public sealed class RoleExecutionFactoryTests
     {
         var preparations = 0;
         var source = CreateMutator(arity, () => preparations++);
-        var factory = source.CreateExecutionFactory<BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var factory = source.CreateExecutorFactory<BoundedRealVectorSearchSpace, TestFunctionProblem>();
         preparations.ShouldBe(1);
 
         var first = factory(ResolutionScope.Create());
@@ -82,7 +82,7 @@ public sealed class RoleExecutionFactoryTests
         Next(second).ShouldBe(2);
         preparations.ShouldBe(1);
 
-        var independentFactory = source.CreateExecutionFactory<BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var independentFactory = source.CreateExecutorFactory<BoundedRealVectorSearchSpace, TestFunctionProblem>();
         Next(independentFactory(ResolutionScope.Create())).ShouldBe(1);
         preparations.ShouldBe(2);
     }
@@ -112,9 +112,9 @@ public sealed class RoleExecutionFactoryTests
         var scope = ResolutionScope.Create();
 
         scope.TryResolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(
-            source, out var execution, out var reason).ShouldBeFalse();
+            source, out var executor, out var reason).ShouldBeFalse();
 
-        execution.ShouldBeNull();
+        executor.ShouldBeNull();
         reason.ShouldNotBeNull();
         reason.ShouldContain(nameof(TestFunctionProblem));
         preparations.ShouldBe(0);
@@ -161,9 +161,9 @@ public sealed class RoleExecutionFactoryTests
         var source = new BoundInterceptor(() => preparations++);
 
         ResolutionScope.Create().TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-            source, out var execution, out var reason).ShouldBeFalse();
+            source, out var executor, out var reason).ShouldBeFalse();
 
-        execution.ShouldBeNull();
+        executor.ShouldBeNull();
         reason.ShouldNotBeNull();
         reason.ShouldContain(nameof(SingleSolutionState<RealVector>));
         preparations.ShouldBe(0);
@@ -178,9 +178,9 @@ public sealed class RoleExecutionFactoryTests
         var source = CreateAlgorithm(bound, () => preparations++);
 
         ResolutionScope.Create().TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-            source, out var execution, out var reason).ShouldBeFalse();
+            source, out var executor, out var reason).ShouldBeFalse();
 
-        execution.ShouldBeNull();
+        executor.ShouldBeNull();
         reason.ShouldNotBeNull();
         reason.ShouldContain(nameof(SingleSolutionState<RealVector>));
         preparations.ShouldBe(0);
@@ -193,7 +193,7 @@ public sealed class RoleExecutionFactoryTests
     {
         var preparations = 0;
         var source = CreateAlgorithm(bound, () => preparations++);
-        var factory = source.CreateExecutionFactory<BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>();
+        var factory = source.CreateExecutorFactory<BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>();
         preparations.ShouldBe(1);
 
         factory(ResolutionScope.Create()).ShouldNotBeNull();
@@ -207,7 +207,7 @@ public sealed class RoleExecutionFactoryTests
         var preparations = 0;
         var source = new BoundAlgorithm(() => preparations++);
 
-        Should.Throw<InvalidOperationException>(() => source.CreateExecutionFactory<BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>());
+        Should.Throw<InvalidOperationException>(() => source.CreateExecutorFactory<BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>());
 
         preparations.ShouldBe(0);
     }
@@ -223,10 +223,10 @@ public sealed class RoleExecutionFactoryTests
     private static IAlgorithm<RealVector> CreateAlgorithm(bool bound, Action prepare) =>
         bound ? new BoundAlgorithm(prepare) : new AgnosticAlgorithm(prepare);
 
-    private static double Next(IMutatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> execution)
+    private static double Next(IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> executor)
     {
         var problem = new TestFunctionProblem(new RastriginFunction(1));
-        return execution.Mutate([RealVector.Repeat(0, 1)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem)[0][0];
+        return executor.Mutate([RealVector.Repeat(0, 1)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem)[0][0];
     }
 
     private sealed class CounterState
@@ -274,11 +274,11 @@ public sealed class RoleExecutionFactoryTests
 
     private sealed class ObservingMutatorAdvice(Action<double> report) : MutatorAdvice<RealVector>
     {
-        public override WrapperExecutionFactory<IMutatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<RealVector> configuration) =>
-            inner => new Execution<TRunSearchSpace, TRunProblem>(inner, report);
+        public override WrapperExecutorFactory<IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<RealVector> configuration) =>
+            inner => new Executor<TRunSearchSpace, TRunProblem>(inner, report);
 
-        private sealed class Execution<TSearchSpace, TProblem>(IMutatorExecution<RealVector, TSearchSpace, TProblem> child, Action<double> report)
-            : IMutatorExecution<RealVector, TSearchSpace, TProblem>
+        private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, Action<double> report)
+            : IMutationExecutor<RealVector, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
@@ -317,24 +317,24 @@ public sealed class RoleExecutionFactoryTests
 
     private sealed record AgnosticAlgorithm(Action Prepare) : Algorithm<AgnosticAlgorithm, RealVector, SingleSolutionState<RealVector>>
     {
-        public override ExecutionFactory<IAlgorithmExecution<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+        public override ExecutorFactory<IAlgorithmExecutor<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         {
             Prepare();
-            return _ => new ProbeAlgorithmExecution<TRunSearchSpace, TRunProblem>();
+            return _ => new ProbeAlgorithmExecutor<TRunSearchSpace, TRunProblem>();
         }
     }
 
     private sealed record BoundAlgorithm(Action Prepare)
         : Algorithm<BoundAlgorithm, RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
-        public override ExecutionFactory<AlgorithmExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>> CreateExecutionFactory()
+        public override ExecutorFactory<AlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>> CreateExecutorFactory()
         {
             Prepare();
-            return _ => new ProbeAlgorithmExecution<BoundedRealVectorSearchSpace, TestFunctionProblem>();
+            return _ => new ProbeAlgorithmExecutor<BoundedRealVectorSearchSpace, TestFunctionProblem>();
         }
     }
 
-    private sealed class ProbeAlgorithmExecution<TSearchSpace, TProblem> : AlgorithmExecution<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>
+    private sealed class ProbeAlgorithmExecutor<TSearchSpace, TProblem> : AlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>
         where TSearchSpace : class, ISearchSpace<RealVector>
         where TProblem : class, IProblem<RealVector, TSearchSpace>
     {

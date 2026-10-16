@@ -90,10 +90,10 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     /// <see cref="DynamicProblem{TSelf, TCandidate, TSearchSpace}"/>, so it names the search space and problem it is
     /// written for and the base reconciles them with the run's.
     /// </remarks>
-    protected override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateIterationFactory()
+    protected override ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateIterationFactory()
     {
         var state = new ExecutionState();
-        return scope => new Execution(scope, scope.ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(Interceptor), scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Creator), scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Mutator), MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
+        return scope => new Executor(scope, scope.ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(Interceptor), scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Creator), scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Mutator), MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
             EvaluatorSelector, NoRacers, HallOfFameStrength, EarlyTerminationStrength, BurnInEpochs, MinimumModelObservationCount, ModelObservationInterval, ObjectiveValueSelector, state);
     }
 
@@ -106,11 +106,11 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         public long CompletedEpochs { get; set; }
     }
 
-    private sealed class Execution(
+    private sealed class Executor(
         ResolutionScope scope,
-        IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor,
-        ICreatorExecution<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> creator,
-        IMutatorExecution<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> mutator,
+        IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor,
+        ICreationExecutor<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> creator,
+        IMutationExecutor<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> mutator,
         MetaOptimizationSearchSpace metaSpace,
         EmptyMetaOptProblem emptyMetaOptProblem,
         IRacingStateMerger<TCandidate, TSearchState> stateMerger,
@@ -124,7 +124,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         int modelObservationInterval,
         Func<ObjectiveVector, double> objectiveValueSelector,
         ExecutionState state)
-        : IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor)
+        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor)
     {
         protected override TSearchState ExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random)
         {
@@ -395,18 +395,18 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     private sealed class PerformanceTrackingEvaluatorAdvice(PerformanceTrackingEvaluatorObserver observer)
         : EvaluatorAdvice<TCandidate>
     {
-        public override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> evaluator)
+        public override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> evaluator)
         {
             if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
                 throw ExecutionSignature.Mismatch(this, ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)), ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-            return inner => new PerformanceTrackingEvaluatorExecution<TRunSearchSpace, TRunProblem>(inner, observer);
+            return inner => new PerformanceTrackingEvaluationExecutor<TRunSearchSpace, TRunProblem>(inner, observer);
         }
     }
 
-    private sealed class PerformanceTrackingEvaluatorExecution<TRunSearchSpace, TRunProblem>(
-        IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem> innerEvaluator,
+    private sealed class PerformanceTrackingEvaluationExecutor<TRunSearchSpace, TRunProblem>(
+        IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> innerEvaluator,
         PerformanceTrackingEvaluatorObserver observer)
-        : IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>
+        : IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, HEAL.HeuristicLib.Problems.IProblem<TCandidate, TRunSearchSpace>
     {

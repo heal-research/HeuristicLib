@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 /// <remarks>
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
-/// It must not contain operator or algorithm configurations, execution nodes or execution node resolution facilities.
+/// It must not contain operator or algorithm configurations, executors or executor resolution facilities.
 /// <see cref="CreateInitialState"/> must return a fresh state object for each preparation. Bindings of that execution share the state.
 /// Calls are not inherently thread safe.
 /// Use <see cref="Crossover{TCandidate,TSearchSpace,TProblem}"/> when the crossover needs execution graph dependencies.
@@ -22,14 +22,14 @@ public abstract record StatefulCrossover<TCandidate, TSearchSpace, TProblem, TSt
 
     protected abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override ExecutionFactory<ICrossoverExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory()
+    public sealed override ExecutorFactory<ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, CreateInitialState());
-        return _ => execution;
+        var executor = new Executor(this, CreateInitialState());
+        return _ => executor;
     }
 
-    private sealed class Execution(StatefulCrossover<TCandidate, TSearchSpace, TProblem, TState> crossover, TState state)
-        : CrossoverExecution<TCandidate, TSearchSpace, TProblem>
+    private sealed class Executor(StatefulCrossover<TCandidate, TSearchSpace, TProblem, TState> crossover, TState state)
+        : CrossoverExecutor<TCandidate, TSearchSpace, TProblem>
     {
         public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             crossover.Cross(parents, state, random, searchSpace, problem);
@@ -45,14 +45,14 @@ public abstract record StatefulCrossover<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override ExecutionFactory<ICrossoverExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutionFactory()
+    public sealed override ExecutorFactory<ICrossoverExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, CreateInitialState());
-        return _ => execution;
+        var executor = new Executor(this, CreateInitialState());
+        return _ => executor;
     }
 
-    private sealed class Execution(StatefulCrossover<TCandidate, TSearchSpace, TState> crossover, TState state)
-        : CrossoverExecution<TCandidate, TSearchSpace>
+    private sealed class Executor(StatefulCrossover<TCandidate, TSearchSpace, TState> crossover, TState state)
+        : CrossoverExecutor<TCandidate, TSearchSpace>
     {
         public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
             crossover.Cross(parents, state, random, searchSpace);
@@ -67,14 +67,14 @@ public abstract record StatefulCrossover<TCandidate, TState>
 
     protected abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, TState state, IRandomNumberGenerator random);
 
-    public sealed override ExecutionFactory<ICrossoverExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutionFactory()
+    public sealed override ExecutorFactory<ICrossoverExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, CreateInitialState());
-        return _ => execution;
+        var executor = new Executor(this, CreateInitialState());
+        return _ => executor;
     }
 
-    private sealed class Execution(StatefulCrossover<TCandidate, TState> crossover, TState state)
-        : CrossoverExecution<TCandidate>
+    private sealed class Executor(StatefulCrossover<TCandidate, TState> crossover, TState state)
+        : CrossoverExecutor<TCandidate>
     {
         public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random) =>
             crossover.Cross(parents, state, random);

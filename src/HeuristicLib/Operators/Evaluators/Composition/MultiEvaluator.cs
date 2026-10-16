@@ -21,7 +21,7 @@ public abstract record MultiEvaluator<TCandidate>
     public virtual bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildEvaluators]);
 
     /// <summary>Prepares this operator once, then binds its children in each construction scope.</summary>
-    public ExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public ExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -35,15 +35,15 @@ public abstract record MultiEvaluator<TCandidate>
 
     /// <summary>Prepares persistent execution data and returns a constructor accepting the resolved children.</summary>
     /// <remarks>Allocate shared state here; construct nodes with their contextual children in the returned delegate.</remarks>
-    protected abstract CompositeExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected abstract CompositeExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
 }
 
-public abstract class MultiEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>> childEvaluators)
-    : EvaluatorExecution<TCandidate, TSearchSpace, TProblem>
+public abstract class MultiEvaluationExecutor<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>> childEvaluators)
+    : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>> ChildEvaluators { get; } = childEvaluators;
+    protected ImmutableArray<IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>> ChildEvaluators { get; } = childEvaluators;
 }

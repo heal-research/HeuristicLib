@@ -38,10 +38,10 @@ public class AdaptableMutationStrengthTests
     {
         var mutator = new GaussianMutator(1.0, 2.0);
         var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(mutator);
-        execution.ShouldBeAssignableTo<IMutationStrengthControl>().CurrentMutationStrength = 4.0;
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(mutator);
+        executor.ShouldBeAssignableTo<IMutationStrengthControl>().CurrentMutationStrength = 4.0;
 
-        var offspring = execution.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, CreateProblem(searchSpace));
+        var offspring = executor.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, CreateProblem(searchSpace));
 
         offspring.Single().ShouldBe(new RealVector(2.0));
     }
@@ -87,8 +87,8 @@ public class AdaptableMutationStrengthTests
         var algorithm = CreateAlgorithm(gaussian, problem);
         var calls = new CountAccumulator();
         var scope = observed ? ResolutionScope.Create(Aspect.CountCalls(gaussian, calls)) : ResolutionScope.Create();
-        var execution = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>(algorithm);
-        var states = execution.Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken).ToList();
+        var executor = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>(algorithm);
+        var states = executor.Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(state => state.Population.EvaluatedCandidates.Single().Candidate[0]).ShouldBe([0.0, -1.5, -2.5]);
         gaussian.MutationStrength.ShouldBe(3.0);

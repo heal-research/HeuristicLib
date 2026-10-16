@@ -170,7 +170,7 @@ public sealed class MutatorSelectionTests
 
     private sealed class CountingSelectedMutator(Func<IMutator<int>, CountAccumulator> counter) : MutatorAdvice<int>
     {
-        public override WrapperExecutionFactory<IMutatorExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<int> mutator) =>
+        public override WrapperExecutorFactory<IMutationExecutor<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<int> mutator) =>
             new CountingMutatorAdvice<int>(counter(mutator), OperatorCountMetric.Candidates).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(mutator);
     }
 

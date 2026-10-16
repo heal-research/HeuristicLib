@@ -13,14 +13,14 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public interface ITerminator<TCandidate> : IOperator
 {
-    ExecutionFactory<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
+    ExecutorFactory<ITerminationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState;
 }
 
-public interface ITerminatorExecution<TCandidate, in TSearchSpace, in TProblem, in TSearchState>
-    : IOperatorExecution
+public interface ITerminationExecutor<TCandidate, in TSearchSpace, in TProblem, in TSearchState>
+    : IOperatorExecutor
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
@@ -36,7 +36,7 @@ public abstract class TerminatorAdvice<TCandidate> : Advice<ITerminator<TCandida
     /// survive rebuilding the execution graph here.
     /// </remarks>
     /// <param name="terminator">The configuration the pointcut selected.</param>
-    public abstract WrapperExecutionFactory<ITerminatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(ITerminator<TCandidate> terminator)
+    public abstract WrapperExecutorFactory<ITerminationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(ITerminator<TCandidate> terminator)
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
         where TRunSearchState : class, ISearchState;
@@ -46,14 +46,17 @@ public static class TerminatorResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate> terminator)
+        public ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate> terminator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            scope.Resolve(terminator, static source => source.CreateExecutionFactory<TSearchSpace, TProblem, TSearchState>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>);
+            terminator is IOperator<TCandidate, Termination> prepared
+                ? scope.ResolveOperator<TCandidate, Termination, TSearchSpace, TProblem, TSearchState, ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>>(
+                    prepared, Termination.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TSearchState>()).Executor
+                : scope.Resolve(terminator, static source => source.CreateExecutorFactory<TSearchSpace, TProblem, TSearchState>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>);
 
         [return: NotNullIfNotNull(nameof(terminator))]
-        public ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate>? terminator)
+        public ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate>? terminator)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
@@ -61,7 +64,7 @@ public static class TerminatorResolutionExtensions
 
         public bool TryResolve<TCandidate, TSearchSpace, TProblem, TSearchState>(
             ITerminator<TCandidate> terminator,
-            [NotNullWhen(true)] out ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? execution,
+            [NotNullWhen(true)] out ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? executor,
             [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -69,13 +72,13 @@ public static class TerminatorResolutionExtensions
         {
             try
             {
-                execution = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
+                executor = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
                 reason = null;
                 return true;
             }
             catch (InvalidOperationException exception)
             {
-                execution = null;
+                executor = null;
                 reason = exception.Message;
                 return false;
             }
@@ -87,21 +90,21 @@ public static class TerminatorResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve(ITerminator<TCandidate> terminator) =>
+        public ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve(ITerminator<TCandidate> terminator) =>
             scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
 
         [return: NotNullIfNotNull(nameof(terminator))]
-        public ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional(ITerminator<TCandidate>? terminator) =>
+        public ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional(ITerminator<TCandidate>? terminator) =>
             terminator is null ? null : scope.Scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator);
 
         public bool TryResolve(
             ITerminator<TCandidate> terminator,
-            [NotNullWhen(true)] out ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? execution,
+            [NotNullWhen(true)] out ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? executor,
             [NotNullWhen(false)] out string? reason) =>
-            scope.Scope.TryResolve(terminator, out execution, out reason);
+            scope.Scope.TryResolve(terminator, out executor, out reason);
     }
 
-    private static WrapperExecutionFactory<ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>(Advice advice, ITerminator<TCandidate> terminator)
+    private static WrapperExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>(Advice advice, ITerminator<TCandidate> terminator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState =>

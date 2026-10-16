@@ -19,8 +19,8 @@ public abstract record MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, 
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    private sealed record Execution(MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, TState> MoveEvaluator, TState State)
-        : IMoveEvaluatorExecution<TCandidate, TSearchSpace, TProblem, TMove>
+    private sealed record Executor(MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, TState> MoveEvaluator, TState State)
+        : IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
     {
         public ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             MoveEvaluator.Apply(candidate, move, State, searchSpace, problem, random);
@@ -32,15 +32,15 @@ public abstract record MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, 
 
     protected abstract TState InitialState();
 
-    public virtual ExecutionFactory<IMoveEvaluatorExecution<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutionFactory()
+    public virtual ExecutorFactory<IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutorFactory()
     {
-        var execution = new Execution(this, InitialState());
-        return _ => execution;
+        var executor = new Executor(this, InitialState());
+        return _ => executor;
     }
 
     public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    ExecutionFactory<IMoveEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveEvaluator<TCandidate, TMove>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    ExecutorFactory<IMoveEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveEvaluator<TCandidate, TMove>.CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
     {
         if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
         {
@@ -50,6 +50,6 @@ public abstract record MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, 
                 ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        return (ExecutionFactory<IMoveEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutionFactory();
+        return (ExecutorFactory<IMoveEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutorFactory();
     }
 }

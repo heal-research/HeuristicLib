@@ -23,11 +23,11 @@ public sealed class DurationMeasuringMutatorAdvice<TCandidate> : MutatorAdvice<T
         TimeProvider = timeProvider;
     }
 
-    public override WrapperExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> mutator) =>
-        childMutator => new Execution<TRunSearchSpace, TRunProblem>(childMutator, Duration, TimeProvider);
+    public override WrapperExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> mutator) =>
+        childMutator => new Executor<TRunSearchSpace, TRunProblem>(childMutator, Duration, TimeProvider);
 
-    private sealed class Execution<TSearchSpace, TProblem>(IMutatorExecution<TCandidate, TSearchSpace, TProblem> childMutator, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingMutatorExecution<TCandidate, TSearchSpace, TProblem>(childMutator)
+    private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<TCandidate, TSearchSpace, TProblem> childMutator, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingMutationExecutor<TCandidate, TSearchSpace, TProblem>(childMutator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

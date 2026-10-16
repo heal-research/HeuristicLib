@@ -23,11 +23,11 @@ public sealed class DurationMeasuringCreatorAdvice<TCandidate> : CreatorAdvice<T
         TimeProvider = timeProvider;
     }
 
-    public override WrapperExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICreator<TCandidate> creator) =>
-        childCreator => new Execution<TRunSearchSpace, TRunProblem>(childCreator, Duration, TimeProvider);
+    public override WrapperExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICreator<TCandidate> creator) =>
+        childCreator => new Executor<TRunSearchSpace, TRunProblem>(childCreator, Duration, TimeProvider);
 
-    private sealed class Execution<TSearchSpace, TProblem>(ICreatorExecution<TCandidate, TSearchSpace, TProblem> childCreator, DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingCreatorExecution<TCandidate, TSearchSpace, TProblem>(childCreator)
+    private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> childCreator, DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingCreationExecutor<TCandidate, TSearchSpace, TProblem>(childCreator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {

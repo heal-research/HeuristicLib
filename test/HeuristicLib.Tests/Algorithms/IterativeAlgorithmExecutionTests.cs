@@ -9,34 +9,34 @@ public class IterativeAlgorithmExecutionTests
     [Fact]
     public async Task HasCompleted_IsCheckedBeforeExecutingAStep()
     {
-        var execution = new ProbeExecution { CompleteAtCount = 0 };
+        var executor = new ProbeExecutor { CompleteAtCount = 0 };
 
-        var states = await Collect(execution, ct: TestContext.Current.CancellationToken);
+        var states = await Collect(executor, ct: TestContext.Current.CancellationToken);
 
         states.ShouldBeEmpty();
-        execution.StepCalls.ShouldBe(0);
-        execution.Events.ShouldBe(["complete:0"]);
+        executor.StepCalls.ShouldBe(0);
+        executor.Events.ShouldBe(["complete:0"]);
     }
 
     [Fact]
     public async Task Cancellation_IsCheckedBeforeExecutingAStep()
     {
-        var execution = new ProbeExecution();
+        var executor = new ProbeExecutor();
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        await Should.ThrowAsync<OperationCanceledException>(async () => await Collect(execution, ct: cts.Token));
+        await Should.ThrowAsync<OperationCanceledException>(async () => await Collect(executor, ct: cts.Token));
 
-        execution.StepCalls.ShouldBe(0);
+        executor.StepCalls.ShouldBe(0);
     }
 
     [Fact]
     public async Task RandomForks_UseTheYieldedStateCount()
     {
-        var execution = new ProbeExecution { CompleteAtCount = 2 };
+        var executor = new ProbeExecutor { CompleteAtCount = 2 };
         var random = new RecordingRandom();
 
-        _ = await Collect(execution, random, ct: TestContext.Current.CancellationToken);
+        _ = await Collect(executor, random, ct: TestContext.Current.CancellationToken);
 
         random.ForkKeys.ShouldBe([0UL, 1UL]);
     }
@@ -45,9 +45,9 @@ public class IterativeAlgorithmExecutionTests
     public async Task TryExecuteStepReturningFalse_DoesNotYieldOrIntercept()
     {
         var interceptor = new RecordingInterceptor();
-        var execution = new ProbeExecution(interceptor) { StopBeforeFirstStep = true };
+        var executor = new ProbeExecutor(interceptor) { StopBeforeFirstStep = true };
 
-        var states = await Collect(execution, ct: TestContext.Current.CancellationToken);
+        var states = await Collect(executor, ct: TestContext.Current.CancellationToken);
 
         states.ShouldBeEmpty();
         interceptor.Calls.ShouldBe(0);
@@ -57,12 +57,12 @@ public class IterativeAlgorithmExecutionTests
     public async Task Interception_PrecedesTerminalStateEvaluation()
     {
         var interceptor = new RecordingInterceptor();
-        var execution = new ProbeExecution(interceptor) { TerminalAtValue = 2 };
+        var executor = new ProbeExecutor(interceptor) { TerminalAtValue = 2 };
 
-        var states = await Collect(execution, ct: TestContext.Current.CancellationToken);
+        var states = await Collect(executor, ct: TestContext.Current.CancellationToken);
 
         states.Select(state => state.Value).ShouldBe([2]);
-        execution.Events.ShouldBe(["complete:0", "step", "terminal:2"]);
+        executor.Events.ShouldBe(["complete:0", "step", "terminal:2"]);
     }
 
     [Fact]
@@ -70,9 +70,9 @@ public class IterativeAlgorithmExecutionTests
     {
         var interceptor = new RecordingInterceptor();
         var random = new RecordingRandom();
-        var execution = new ProbeExecution(interceptor) { TerminalAtValue = 2 };
+        var executor = new ProbeExecutor(interceptor) { TerminalAtValue = 2 };
 
-        _ = await Collect(execution, random, ct: TestContext.Current.CancellationToken);
+        _ = await Collect(executor, random, ct: TestContext.Current.CancellationToken);
 
         interceptor.Random.ShouldBeSameAs(random);
     }
@@ -80,31 +80,31 @@ public class IterativeAlgorithmExecutionTests
     [Fact]
     public async Task TerminalState_IsYieldedOnceBeforeCompletion()
     {
-        var execution = new ProbeExecution { TerminalAtValue = 1 };
+        var executor = new ProbeExecutor { TerminalAtValue = 1 };
 
-        var states = await Collect(execution, ct: TestContext.Current.CancellationToken);
+        var states = await Collect(executor, ct: TestContext.Current.CancellationToken);
 
         states.Select(state => state.Value).ShouldBe([1]);
-        execution.StepCalls.ShouldBe(1);
+        executor.StepCalls.ShouldBe(1);
     }
 
     [Fact]
     public async Task InitialState_IsPassedAsThePreviousState()
     {
         var initialState = new ProbeState(41);
-        var execution = new ProbeExecution { TerminalAtValue = 42 };
+        var executor = new ProbeExecutor { TerminalAtValue = 42 };
 
-        var states = await Collect(execution, initialState: initialState, ct: TestContext.Current.CancellationToken);
+        var states = await Collect(executor, initialState: initialState, ct: TestContext.Current.CancellationToken);
 
         states.Select(state => state.Value).ShouldBe([42]);
-        execution.FirstPreviousState.ShouldBeSameAs(initialState);
+        executor.FirstPreviousState.ShouldBeSameAs(initialState);
     }
 
-    private static async Task<List<ProbeState>> Collect(ProbeExecution execution, IRandomNumberGenerator? random = null, ProbeState? initialState = null, CancellationToken ct = default)
+    private static async Task<List<ProbeState>> Collect(ProbeExecutor executor, IRandomNumberGenerator? random = null, ProbeState? initialState = null, CancellationToken ct = default)
     {
         var problem = FuncProblem.Create((int value) => value, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var states = new List<ProbeState>();
-        await foreach (var state in execution.RunStreamingAsync(problem, random ?? new RecordingRandom(), initialState, ct))
+        await foreach (var state in executor.RunStreamingAsync(problem, random ?? new RecordingRandom(), initialState, ct))
         {
             states.Add(state);
         }
@@ -114,8 +114,8 @@ public class IterativeAlgorithmExecutionTests
 
     private sealed record ProbeState(int Value) : ISearchState;
 
-    private sealed class ProbeExecution(IInterceptorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>? interceptor = null)
-        : IterativeAlgorithmExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>(interceptor)
+    private sealed class ProbeExecutor(IInterceptionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>? interceptor = null)
+        : IterativeAlgorithmExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>(interceptor)
     {
         public int? CompleteAtCount { get; init; }
         public int? TerminalAtValue { get; init; }
@@ -157,7 +157,7 @@ public class IterativeAlgorithmExecutionTests
         }
     }
 
-    private sealed class RecordingInterceptor : IInterceptorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>
+    private sealed class RecordingInterceptor : IInterceptionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>
     {
         public int Calls { get; private set; }
         public IRandomNumberGenerator? Random { get; private set; }

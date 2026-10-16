@@ -148,9 +148,9 @@ public class AnalysisUsabilityTests
 
     private sealed record ManualEvaluator : Evaluator<int, DummySearchSpace<int>, TestProblem>
     {
-        public override ExecutionFactory<IEvaluatorExecution<int, DummySearchSpace<int>, TestProblem>> CreateExecutionFactory() => _ => new Execution();
+        public override ExecutorFactory<IEvaluationExecutor<int, DummySearchSpace<int>, TestProblem>> CreateExecutorFactory() => _ => new Executor();
 
-        private sealed class Execution : IEvaluatorExecution<int, DummySearchSpace<int>, TestProblem>
+        private sealed class Executor : IEvaluationExecutor<int, DummySearchSpace<int>, TestProblem>
         {
             public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random,
                 DummySearchSpace<int> searchSpace, TestProblem problem) =>

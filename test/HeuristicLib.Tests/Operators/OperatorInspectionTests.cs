@@ -95,11 +95,11 @@ public class OperatorInspectionTests
         var aspect = Aspect.CountCalls(creator, counter);
         aspect.Advices.Single().Advice.ShouldBeOfType<CountingCreatorAdvice<int>>().Counter.ShouldBeSameAs(counter);
         aspect.Advices.Single().Advice.ShouldBeOfType<CountingCreatorAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
-        var execution = ResolutionScope.Create(aspect).ResolveCreator(creator);
+        var executor = ResolutionScope.Create(aspect).ResolveCreator(creator);
         var problem = CreateProblem();
 
-        execution.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
     }
@@ -110,11 +110,11 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var creator = new SequenceCreator();
         var aspect = Aspect.CountCandidates(creator, counter);
-        var execution = ResolutionScope.Create(aspect).ResolveCreator(creator);
+        var executor = ResolutionScope.Create(aspect).ResolveCreator(creator);
         var problem = CreateProblem();
 
-        execution.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(4);
     }
@@ -128,11 +128,11 @@ public class OperatorInspectionTests
         var aspect = Aspect.MeasureDuration(creator, duration, timeProvider);
         aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringCreatorAdvice<int>>().Duration.ShouldBeSameAs(duration);
         aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringCreatorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveCreator(creator);
+        var executor = ResolutionScope.Create(aspect).ResolveCreator(creator);
         var problem = CreateProblem();
 
-        execution.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -142,11 +142,11 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var source = new ThrowingCreator();
-        var execution = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveCreator(source);
+        var executor = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveCreator(source);
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -157,11 +157,11 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var source = new ThrowingCreator();
-        var execution = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, timeProvider)).ResolveCreator(source);
+        var executor = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, timeProvider)).ResolveCreator(source);
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -174,11 +174,11 @@ public class OperatorInspectionTests
         var aspect = Aspect.CountCalls(mutator, counter);
         aspect.Advices.Single().Advice.ShouldBeOfType<CountingMutatorAdvice<int>>().Counter.ShouldBeSameAs(counter);
         aspect.Advices.Single().Advice.ShouldBeOfType<CountingMutatorAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
-        var execution = ResolutionScope.Create(aspect).ResolveMutator(mutator);
+        var executor = ResolutionScope.Create(aspect).ResolveMutator(mutator);
         var problem = CreateProblem();
 
-        execution.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
     }
@@ -189,11 +189,11 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var mutator = new AddOneMutator();
         var aspect = Aspect.CountCandidates(mutator, counter);
-        var execution = ResolutionScope.Create(aspect).ResolveMutator(mutator);
+        var executor = ResolutionScope.Create(aspect).ResolveMutator(mutator);
         var problem = CreateProblem();
 
-        execution.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(4);
     }
@@ -203,11 +203,11 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var source = new ThrowingMutator();
-        var execution = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveMutator(source);
+        var executor = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveMutator(source);
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -221,11 +221,11 @@ public class OperatorInspectionTests
         var aspect = Aspect.MeasureDuration(mutator, duration, timeProvider);
         aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringMutatorAdvice<int>>().Duration.ShouldBeSameAs(duration);
         aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringMutatorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveMutator(mutator);
+        var executor = ResolutionScope.Create(aspect).ResolveMutator(mutator);
         var problem = CreateProblem();
 
-        execution.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -237,11 +237,11 @@ public class OperatorInspectionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var mutator = new ThrowingMutator();
         var aspect = Aspect.MeasureDuration(mutator, duration, timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveMutator(mutator);
+        var executor = ResolutionScope.Create(aspect).ResolveMutator(mutator);
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -265,10 +265,10 @@ public class OperatorInspectionTests
             actualProblem.ShouldBeSameAs(problem);
             return actualParents;
         });
-        var execution = ResolutionScope.Create(Aspect.MeasureDuration(childMutator, innerDuration, timeProvider),
+        var executor = ResolutionScope.Create(Aspect.MeasureDuration(childMutator, innerDuration, timeProvider),
             Aspect.MeasureDuration(childMutator, outerDuration, timeProvider)).ResolveMutator(childMutator);
 
-        var result = execution.Mutate(parents, random, problem.SearchSpace, problem);
+        var result = executor.Mutate(parents, random, problem.SearchSpace, problem);
 
         result.ShouldBeSameAs(parents);
         calls.ShouldBe(1);
@@ -289,11 +289,11 @@ public class OperatorInspectionTests
             calls++;
             throw new InvalidOperationException();
         });
-        var execution = ResolutionScope.Create(Aspect.MeasureDuration(childMutator, innerDuration, timeProvider),
+        var executor = ResolutionScope.Create(Aspect.MeasureDuration(childMutator, innerDuration, timeProvider),
             Aspect.MeasureDuration(childMutator, outerDuration, timeProvider)).ResolveMutator(childMutator);
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         calls.ShouldBe(1);
         innerDuration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
@@ -308,15 +308,15 @@ public class OperatorInspectionTests
         var aspect = Aspect.CountCalls(crossover, counter);
         aspect.Advices.Single().Advice.ShouldBeOfType<CountingCrossoverAdvice<int>>().Counter.ShouldBeSameAs(counter);
         aspect.Advices.Single().Advice.ShouldBeOfType<CountingCrossoverAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
-        var execution = ResolutionScope.Create(aspect).ResolveCrossover(crossover);
+        var executor = ResolutionScope.Create(aspect).ResolveCrossover(crossover);
         var problem = CreateProblem();
 
-        execution.Cross(
+        executor.Cross(
             [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
-        execution.Cross(
+        executor.Cross(
             [Parents.From(4, 40)],
             RandomNumberGenerator.Create(2),
             problem.SearchSpace,
@@ -331,15 +331,15 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var crossover = new SumParentsCrossover();
         var aspect = Aspect.CountCandidates(crossover, counter);
-        var execution = ResolutionScope.Create(aspect).ResolveCrossover(crossover);
+        var executor = ResolutionScope.Create(aspect).ResolveCrossover(crossover);
         var problem = CreateProblem();
 
-        execution.Cross(
+        executor.Cross(
             [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
-        execution.Cross(
+        executor.Cross(
             [Parents.From(4, 40)],
             RandomNumberGenerator.Create(2),
             problem.SearchSpace,
@@ -357,15 +357,15 @@ public class OperatorInspectionTests
         var aspect = Aspect.MeasureDuration(crossover, duration, timeProvider);
         aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringCrossoverAdvice<int>>().Duration.ShouldBeSameAs(duration);
         aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringCrossoverAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveCrossover(crossover);
+        var executor = ResolutionScope.Create(aspect).ResolveCrossover(crossover);
         var problem = CreateProblem();
 
-        execution.Cross(
+        executor.Cross(
             [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
-        execution.Cross(
+        executor.Cross(
             [Parents.From(4, 40)],
             RandomNumberGenerator.Create(2),
             problem.SearchSpace,
@@ -379,11 +379,11 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var source = new ThrowingCrossover();
-        var execution = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveCrossover(source);
+        var executor = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveCrossover(source);
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -394,11 +394,11 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var source = new ThrowingCrossover();
-        var execution = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, timeProvider)).ResolveCrossover(source);
+        var executor = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, timeProvider)).ResolveCrossover(source);
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -411,11 +411,11 @@ public class OperatorInspectionTests
         var aspect = Aspect.CountCalls(selector, counter);
         aspect.Advices.Single().Advice.ShouldBeOfType<CountingSelectorAdvice<int>>().Counter.ShouldBeSameAs(counter);
         aspect.Advices.Single().Advice.ShouldBeOfType<CountingSelectorAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
-        var execution = ResolutionScope.Create(aspect).ResolveSelector(selector);
+        var executor = ResolutionScope.Create(aspect).ResolveSelector(selector);
         var problem = CreateProblem();
 
-        execution.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
     }
@@ -426,11 +426,11 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var selector = new FirstCandidatesSelector();
         var aspect = Aspect.CountCandidates(selector, counter);
-        var execution = ResolutionScope.Create(aspect).ResolveSelector(selector);
+        var executor = ResolutionScope.Create(aspect).ResolveSelector(selector);
         var problem = CreateProblem();
 
-        execution.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(3);
     }
@@ -440,11 +440,11 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var source = new ThrowingSelector();
-        var execution = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveSelector(source);
+        var executor = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveSelector(source);
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -458,11 +458,11 @@ public class OperatorInspectionTests
         var aspect = Aspect.MeasureDuration(selector, duration, timeProvider);
         aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringSelectorAdvice<int>>().Duration.ShouldBeSameAs(duration);
         aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringSelectorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveSelector(selector);
+        var executor = ResolutionScope.Create(aspect).ResolveSelector(selector);
         var problem = CreateProblem();
 
-        execution.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -474,11 +474,11 @@ public class OperatorInspectionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var selector = new ThrowingSelector();
         var aspect = Aspect.MeasureDuration(selector, duration, timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveSelector(selector);
+        var executor = ResolutionScope.Create(aspect).ResolveSelector(selector);
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -491,10 +491,10 @@ public class OperatorInspectionTests
         var aspect = Aspect.CountCalls(replacer, counter);
         aspect.Advices.Single().Advice.ShouldBeOfType<CountingReplacerAdvice<int>>().Counter.ShouldBeSameAs(counter);
         aspect.Advices.Single().Advice.ShouldBeOfType<CountingReplacerAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
-        var execution = ResolutionScope.Create(aspect).ResolveReplacer(replacer);
+        var executor = ResolutionScope.Create(aspect).ResolveReplacer(replacer);
         var problem = CreateProblem();
 
-        execution.Replace(
+        executor.Replace(
             CreateEvaluatedCandidates([1, 2, 3]),
             CreateEvaluatedCandidates([10, 20]),
             problem.Objective,
@@ -502,7 +502,7 @@ public class OperatorInspectionTests
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
-        execution.Replace(
+        executor.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
             problem.Objective,
@@ -520,10 +520,10 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var replacer = new FirstReplacementCandidatesReplacer();
         var aspect = Aspect.CountCandidates(replacer, counter);
-        var execution = ResolutionScope.Create(aspect).ResolveReplacer(replacer);
+        var executor = ResolutionScope.Create(aspect).ResolveReplacer(replacer);
         var problem = CreateProblem();
 
-        execution.Replace(
+        executor.Replace(
             CreateEvaluatedCandidates([1, 2, 3]),
             CreateEvaluatedCandidates([10, 20]),
             problem.Objective,
@@ -531,7 +531,7 @@ public class OperatorInspectionTests
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
-        execution.Replace(
+        executor.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
             problem.Objective,
@@ -548,10 +548,10 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var source = new ThrowingReplacer();
-        var execution = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveReplacer(source);
+        var executor = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveReplacer(source);
         var problem = CreateProblem();
 
-        Should.Throw<InvalidOperationException>(() => execution.Replace(
+        Should.Throw<InvalidOperationException>(() => executor.Replace(
             CreateEvaluatedCandidates([1]),
             CreateEvaluatedCandidates([2]),
             problem.Objective,
@@ -572,10 +572,10 @@ public class OperatorInspectionTests
         var aspect = Aspect.MeasureDuration(replacer, duration, timeProvider);
         aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringReplacerAdvice<int>>().Duration.ShouldBeSameAs(duration);
         aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringReplacerAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveReplacer(replacer);
+        var executor = ResolutionScope.Create(aspect).ResolveReplacer(replacer);
         var problem = CreateProblem();
 
-        execution.Replace(
+        executor.Replace(
             CreateEvaluatedCandidates([1, 2, 3]),
             CreateEvaluatedCandidates([10, 20]),
             problem.Objective,
@@ -583,7 +583,7 @@ public class OperatorInspectionTests
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
-        execution.Replace(
+        executor.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
             problem.Objective,
@@ -600,10 +600,10 @@ public class OperatorInspectionTests
     {
         var duration = new DurationAccumulator();
         var source = new ThrowingReplacer();
-        var execution = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)))).ResolveReplacer(source);
+        var executor = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)))).ResolveReplacer(source);
         var problem = CreateProblem();
 
-        Should.Throw<InvalidOperationException>(() => execution.Replace(
+        Should.Throw<InvalidOperationException>(() => executor.Replace(
             CreateEvaluatedCandidates([1]),
             CreateEvaluatedCandidates([2]),
             problem.Objective,
@@ -796,19 +796,19 @@ public class OperatorInspectionTests
     private sealed class CallbackMutator(MutateCallback callback)
         : IMutator<int>
     {
-        public ExecutionFactory<IMutatorExecution<int, TSearchSpace, TProblem>> CreateExecutionFactory<TSearchSpace, TProblem>()
+        public ExecutorFactory<IMutationExecutor<int, TSearchSpace, TProblem>> CreateExecutorFactory<TSearchSpace, TProblem>()
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
-            var execution = (IMutatorExecution<int, TSearchSpace, TProblem>)CreateBoundExecution();
-            return _ => execution;
+            var executor = (IMutationExecutor<int, TSearchSpace, TProblem>)CreateBoundExecution();
+            return _ => executor;
         }
 
-        private IMutatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateBoundExecution() =>
-            new Execution(callback);
+        private IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateBoundExecution() =>
+            new Executor(callback);
 
-        private sealed class Execution(MutateCallback callback)
-            : IMutatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+        private sealed class Executor(MutateCallback callback)
+            : IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
         {
             public IReadOnlyList<int> Mutate(
                 IReadOnlyList<int> parents,
@@ -1007,49 +1007,49 @@ file static class OperatorResolution
 {
     extension(ResolutionScope scope)
     {
-        public ICreatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCreator(ICreator<int> creator) =>
+        public ICreationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCreator(ICreator<int> creator) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator);
 
-        public ICrossoverExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCrossover(ICrossover<int> crossover) =>
+        public ICrossoverExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCrossover(ICrossover<int> crossover) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover);
 
-        public IMutatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IMutator<int> mutator) =>
+        public IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IMutator<int> mutator) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
 
-        public ISelectorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveSelector(ISelector<int> selector) =>
+        public ISelectionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveSelector(ISelector<int> selector) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
 
-        public IReplacerExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveReplacer(IReplacer<int> replacer) =>
+        public IReplacementExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveReplacer(IReplacer<int> replacer) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(replacer);
     }
 
     extension(ICreator<int> creator)
     {
-        public ICreatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCreatorExecution() =>
+        public ICreationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCreatorExecution() =>
             ResolutionScope.Create().ResolveCreator(creator);
     }
 
     extension(ICrossover<int> crossover)
     {
-        public ICrossoverExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCrossoverExecution() =>
+        public ICrossoverExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCrossoverExecution() =>
             ResolutionScope.Create().ResolveCrossover(crossover);
     }
 
     extension(IMutator<int> mutator)
     {
-        public IMutatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateMutatorExecution() =>
+        public IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateMutatorExecution() =>
             ResolutionScope.Create().ResolveMutator(mutator);
     }
 
     extension(ISelector<int> selector)
     {
-        public ISelectorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateSelectorExecution() =>
+        public ISelectionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateSelectorExecution() =>
             ResolutionScope.Create().ResolveSelector(selector);
     }
 
     extension(IReplacer<int> replacer)
     {
-        public IReplacerExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateReplacerExecution() =>
+        public IReplacementExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateReplacerExecution() =>
             ResolutionScope.Create().ResolveReplacer(replacer);
     }
 }

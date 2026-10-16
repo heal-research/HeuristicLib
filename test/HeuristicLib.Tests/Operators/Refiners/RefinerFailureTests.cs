@@ -96,10 +96,10 @@ public class RefinerFailureTests
 
     private sealed record FailingAfterBatchesRefiner(int SuccessfulBatches) : Refiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ExecutionFactory<IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutionFactory()
+        public override ExecutorFactory<IRefinementExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutorFactory()
         {
             var counter = new Counter();
-            return _ => new Execution(counter, SuccessfulBatches);
+            return _ => new Executor(counter, SuccessfulBatches);
         }
 
         private sealed class Counter
@@ -107,7 +107,7 @@ public class RefinerFailureTests
             public int Batches;
         }
 
-        private sealed class Execution(Counter counter, int successfulBatches) : IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Executor(Counter counter, int successfulBatches) : IRefinementExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
             public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
                 counter.Batches++ < successfulBatches ? candidates : throw new InvalidOperationException("Refinement failed.");

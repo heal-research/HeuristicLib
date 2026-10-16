@@ -15,7 +15,7 @@ public sealed record NamedReplacer<TCandidate> : WrappingReplacer<TCandidate>, I
 
     public string Name { get; init; }
 
-    protected override WrapperExecutionFactory<IReplacerExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
+    protected override WrapperExecutorFactory<IReplacementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
         child => child;
 }
 

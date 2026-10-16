@@ -28,18 +28,18 @@ public sealed record ChooseOneSelector<TCandidate>
     {
     }
 
-    protected override CompositeExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected override CompositeExecutorFactory<ISelectionExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
     {
         if (ChildSelectors.Count == 0)
             throw new InvalidOperationException("At least one selector must be provided.");
         if (Weights.Count > 0 && Weights.Count != ChildSelectors.Count)
             throw new InvalidOperationException("Weights must have the same length as selectors.");
 
-        return childSelectors => new Execution<TRunSearchSpace, TRunProblem>(childSelectors, new(childSelectors, Weights));
+        return childSelectors => new Executor<TRunSearchSpace, TRunProblem>(childSelectors, new(childSelectors, Weights));
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> childSelectors, WeightedItemSampler<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> sampler)
-        : MultiSelectorExecution<TCandidate, TSearchSpace, TProblem>(childSelectors)
+    private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<ISelectionExecutor<TCandidate, TSearchSpace, TProblem>> childSelectors, WeightedItemSampler<ISelectionExecutor<TCandidate, TSearchSpace, TProblem>> sampler)
+        : MultiSelectionExecutor<TCandidate, TSearchSpace, TProblem>(childSelectors)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
