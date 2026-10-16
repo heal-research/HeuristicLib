@@ -1,0 +1,324 @@
+using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.OperatorRolePrototype;
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems.TestFunctions;
+using HEAL.HeuristicLib.Random;
+
+namespace OperatorRoleConsumer;
+
+public static class Program
+{
+    private static int assertions;
+    private static readonly TestFunctionProblem Problem = new(new SphereFunction(1));
+    private static readonly RealVector[] Input = [new(2.0)];
+
+    public static void Main()
+    {
+        Run("public authoring, inference and generic composition", PublicApi);
+        Run("one owner, multiple operations and complete construction views", MultipleViews);
+        Run("contravariant termination in both view orders; invariant interception rejection", StateVariance);
+        Run("parent/child ownership, no hoisting and reference identity", Ownership);
+        Run("Fresh/Retained/Shared use the shipping child selector", Activation);
+        Run("contextual child nodes retain their original binding", ContextualChildren);
+        Run("preparation, binding and construction failures remain retryable", Failures);
+        Run("cycles share the shipping guard across operations and legacy graphs", Cycles);
+        Run("discarded fresh owners and configurations are collectible", Lifetime);
+        Console.WriteLine($"PASS {assertions} assertions in 9 groups; consumer assembly={typeof(Program).Assembly.GetName().Name}");
+        AdviceCases.Run();
+        LifecycleCases.Run();
+    }
+
+    private static void Run(string name, Action test)
+    {
+        test();
+        Console.WriteLine($"PASS {name}");
+    }
+
+    private static void Check(bool condition, string description)
+    {
+        assertions++;
+        if (!condition)
+            throw new InvalidOperationException($"Assertion {assertions}: {description}");
+    }
+
+    private static void Reject(Action action, string expected)
+    {
+        try { action(); }
+        catch (InvalidOperationException exception)
+        {
+            Check(exception.Message.Contains(expected, StringComparison.Ordinal), $"diagnostic includes '{expected}'");
+            return;
+        }
+        throw new InvalidOperationException($"Expected rejection: {expected}");
+    }
+
+    private static ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Typed(ResolutionScope scope) =>
+        scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+
+    private static double Invoke(IMutatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> execution) =>
+        execution.Mutate(Input, RandomNumberGenerator.Create(7), Problem.SearchSpace, Problem)[0][0];
+
+    private static void PublicApi()
+    {
+        var typed = Typed(ResolutionScope.Create());
+        IOperator<RealVector, Mutation> mutation = new IdentityMutation();
+        IOperator<RealVector, Evaluation> evaluation = new SphereEvaluation();
+        var named = mutation.Named("inner").Named("outer");
+        Check(ReferenceEquals(typed.Resolve(mutation), typed.Resolve(named)), "names add no callable node");
+        Check(ReferenceEquals(Input, typed.Resolve(named).Mutate(Input, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem)),
+            "stateless author overrides only its domain method");
+        Check(typed.Resolve(evaluation).Evaluate(Input, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem).Count == 1,
+            "evaluation keeps objective-vector results");
+        Check(Pointcut.Named<IOperator<RealVector, Mutation>>("outer").Matches(named), "common pointcuts recognize generic names");
+        Check(!Pointcut.Reference(mutation).Matches(named), "wrapper and child remain separate configurations");
+        IOperator<RealVector, Mutation> counting = new CountingMutation();
+        Check(Invoke(typed.Resolve(counting)) == 1 && Invoke(typed.Resolve(counting.Named("count"))) == 2,
+            "stateful author overrides CreateInitialState and domain method only");
+        Check(typed.ResolveOptional((IOperator<RealVector, Mutation>?)null) is null, "optional resolution infers its operation");
+        Check(typed.TryResolve(mutation, out var resolved, out var reason) && resolved is not null && reason is null,
+            "TryResolve needs no explicit execution type");
+
+        IOperator<RealVector, Checksum> checksum = new SharedOperations(new ProbeLog());
+        Check(typed.Resolve(new Forward<RealVector, Checksum>(checksum).Named("external")).Read() == 3,
+            "external descriptor and topology use public APIs across the assembly boundary");
+        var recommendation = new ChecksumRecommendation();
+        Check(recommendation.TryCreateRecommendedOperator(out var first) &&
+            recommendation.TryCreateRecommendedOperator(out var second) && !ReferenceEquals(first, second),
+            "common marker accepts an external operation recommendation with fresh configurations");
+    }
+
+    private static void MultipleViews()
+    {
+        foreach (var evaluationFirst in new[] { false, true })
+        {
+            var log = new ProbeLog();
+            var source = new SharedOperations(log);
+            var root = ResolutionScope.Create();
+            var typed = Typed(root);
+            IOperator<RealVector, Mutation> mutation = source;
+            IOperator<RealVector, Evaluation> evaluation = source;
+            if (evaluationFirst) _ = typed.Resolve(evaluation);
+            var operation = typed.Resolve(mutation, out ILiveValue? control);
+            Check(control is not null && control.Value == 3, "control projects from selected owner");
+            control!.Value = 12;
+            _ = typed.Resolve(evaluation);
+            Check(Invoke(operation) == 12 && typed.Resolve((IOperator<RealVector, Checksum>)source).Read() == 12,
+                "mutation and external operation see shared live state");
+            var named = typed.Resolve(mutation.Named("one").Named("two"), out ILiveValue? namedControl);
+            Check(ReferenceEquals(control, namedControl) && ReferenceEquals(operation, named), "forwarding preserves controls and operation");
+            _ = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>().Resolve(mutation);
+            Check(log.Preparations == 1 && log.Bindings == 4,
+                "one owner has mutation, evaluation, external and actual-state construction views");
+            _ = typed.Resolve(mutation);
+            Check(log.Bindings == 4, "successful view factory is cached");
+            Check(Invoke(Typed(ResolutionScope.Create()).Resolve(mutation)) == 3 && log.Preparations == 2,
+                "an independent root starts with independent state");
+        }
+    }
+
+    private static void StateVariance()
+    {
+        foreach (var narrowFirst in new[] { false, true })
+        {
+            var source = new SharedOperations(new ProbeLog());
+            IOperator<RealVector, Termination> termination = source;
+            var scope = ResolutionScope.Create();
+            var broad = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
+            var narrow = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
+            if (narrowFirst) _ = narrow.Resolve(termination.Named("narrow"));
+            _ = broad.Resolve(termination.Named("broad"));
+            _ = narrow.Resolve(termination.Named("narrow"));
+            Check(source.Log.Preparations == 1, "broad authored terminator supports both views without new preparation");
+            Check(!narrow.Resolve(termination).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem), "terminator remains callable");
+        }
+        var interceptor = new IdentityInterceptor(new ProbeLog());
+        var root = ResolutionScope.Create();
+        var exact = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
+        var broadState = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
+        Reject(() => broadState.Resolve(interceptor), "cannot provide");
+        Check(interceptor.Log.Preparations == 1 && interceptor.Log.Constructions == 0,
+            "incompatible invariant view rejects before invoking the raw constructor");
+        var state = new ProbeState();
+        Check(ReferenceEquals(state, exact.Resolve(interceptor).Transform(state, null, RandomNumberGenerator.Create(1),
+            Problem.SearchSpace, Problem)), "failed invariant view leaves successful preparation usable");
+        Check(!broadState.TryResolve(interceptor, out var missing, out var reason) && missing is null &&
+            reason.Contains("cannot provide", StringComparison.Ordinal), "invariant mismatch has a useful TryResolve reason");
+        Check(interceptor.Log.Preparations == 1 && interceptor.Log.Constructions == 1,
+            "failed second view neither reinitializes the owner nor constructs a node");
+    }
+
+    private static void Ownership()
+    {
+        IOperator<RealVector, Mutation> source = new CountingMutation();
+        var parent = ResolutionScope.Create();
+        var child = parent.CreateChildScope();
+        var local = Typed(child).Resolve(source);
+        var ancestor = Typed(parent).Resolve(source);
+        Check(!ReferenceEquals(local, ancestor) && Invoke(local) == 1 && Invoke(ancestor) == 1, "child-first preparation is not hoisted");
+        Check(ReferenceEquals(local, Typed(child).Resolve(source)), "new parent owner does not replace an existing child owner");
+        var nextChild = parent.CreateChildScope();
+        Check(ReferenceEquals(ancestor, Typed(nextChild).Resolve(source)), "parent-first owner is reused by descendants");
+        Check(ReferenceEquals(ancestor, Typed(parent.With()).Resolve(source)), "With shares prepared owner state");
+        IOperator<RealVector, Mutation> equalCopy = new CountingMutation();
+        Check(source.Equals(equalCopy) && !ReferenceEquals(ancestor, Typed(parent).Resolve(equalCopy)), "value-equal records have separate owners");
+
+        var firstChild = ResolutionScope.Create();
+        var left = firstChild.CreateChildScope();
+        var right = firstChild.CreateChildScope();
+        Check(!ReferenceEquals(Typed(left).Resolve(source), Typed(right).Resolve(source)), "siblings do not see sibling-local owners");
+    }
+
+    private static void Activation()
+    {
+        foreach (var policy in new[] { ChildScopePolicy.Fresh, ChildScopePolicy.Retained, ChildScopePolicy.Shared })
+        {
+            IOperator<RealVector, Mutation> source = new CountingMutation();
+            var root = ResolutionScope.Create();
+            var selector = new ChildScopeSelector(policy);
+            var first = Typed(selector.GetScopeFor(source, root)).Resolve(source);
+            var second = Typed(selector.GetScopeFor(source, root.With())).Resolve(source);
+            Check(ReferenceEquals(first, second) == (policy != ChildScopePolicy.Fresh), $"{policy} activation identity");
+            Check(Invoke(first) == 1 && Invoke(second) == (policy == ChildScopePolicy.Fresh ? 1 : 2), $"{policy} state trajectory");
+        }
+    }
+
+    private static void ContextualChildren()
+    {
+        IOperator<RealVector, Mutation> child = new NodeTokenMutation();
+        IOperator<RealVector, Mutation> source = new ContextualMutation(child);
+        var root = ResolutionScope.Create();
+        var first = Typed(root).Resolve(source);
+        var second = Typed(root.With()).Resolve(source);
+        Check(!ReferenceEquals(first, second) && Invoke(first) == 1 && Invoke(second) == 2 && Invoke(first) == 1,
+            "rebinding constructs new nodes without replacing an earlier node's children");
+
+        IOperator<RealVector, Mutation> counter = new CountingMutation();
+        var parent = ResolutionScope.Create();
+        var localScope = parent.CreateChildScope();
+        var local = Typed(localScope).Resolve(counter);
+        var parentComposite = new ContextualMutation(counter);
+        var parentNode = Typed(parent).Resolve(parentComposite);
+        var descendantNode = Typed(localScope).Resolve(parentComposite);
+        Check(Invoke(local) == 1 && Invoke(parentNode) == 1 && Invoke(descendantNode) == 2,
+            "ancestor-owned composite dependencies use its owner state despite a child-local selection");
+    }
+
+    private static void Failures()
+    {
+        var uncheckedSource = new SharedOperations(new ProbeLog());
+        Reject(() => ResolutionScope.Create().ResolveOperator<RealVector, Mutation, BoundedRealVectorSearchSpace,
+            TestFunctionProblem, ISearchState, IChecksumExecution>(uncheckedSource,
+            Mutation.CreateBinding<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>()), "requires");
+        Check(uncheckedSource.Log.Preparations == 0, "incorrect external resolution bridge rejects before owner preparation");
+        var log = new ProbeLog { FailPreparation = true };
+        var source = new SharedOperations(log);
+        IOperator<RealVector, Mutation> mutation = source;
+        var typed = Typed(ResolutionScope.Create());
+        Reject(() => typed.Resolve(mutation), "preparation failure");
+        log.FailPreparation = false;
+        log.FailBinding = true;
+        Reject(() => typed.Resolve(mutation), "binding failure");
+        Check(log.Preparations == 2 && log.Constructions == 0, "failed preparation retries; failed binding constructs no node");
+        log.FailBinding = false;
+        log.FailConstruction = true;
+        Reject(() => typed.Resolve(mutation), "construction failure");
+        log.FailConstruction = false;
+        Check(Invoke(typed.Resolve(mutation)) == 3 && log.Preparations == 2 && log.Bindings == 2,
+            "successful preparation and view factory survive construction failure");
+        var selected = Aspect.Create(Pointcut.Reference(mutation), new UnimplementedAdvice());
+        Reject(() => Typed(typed.Scope.With(selected)).Resolve(mutation), "Supported extension bases");
+        Check(log.Constructions == 2, "unsupported selected advice rejects before raw construction");
+        Check(Invoke(typed.Resolve(mutation)) == 3, "advice rejection leaves unadvised owner usable");
+    }
+
+    private static void Cycles()
+    {
+        var source = new CyclicOperations();
+        Reject(() => Typed(ResolutionScope.Create()).Resolve((IOperator<RealVector, Mutation>)source), "Recursive construction");
+        Check(source.Preparations == 1, "changing operation does not create a second owner or evade cycle detection");
+        var mixed = new MixedCycle();
+        Reject(() => Typed(ResolutionScope.Create()).Resolve(mixed), "Recursive construction");
+        var legacy = new LegacyNode();
+        var scope = ResolutionScope.Create();
+        Check(ReferenceEquals(scope.Resolve(legacy), scope.With().Resolve(legacy)), "shipping legacy resolution remains available");
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static (WeakReference Source, WeakReference Execution) MakeDiscarded(ResolutionScope root)
+    {
+        IOperator<RealVector, Mutation> source = new CountingMutation();
+        var execution = Typed(root.CreateChildScope()).Resolve(source);
+        return (new WeakReference(source), new WeakReference(execution));
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference MakeFreshExecution(ResolutionScope root, IOperator<RealVector, Mutation> source) =>
+        new(Typed(root.CreateChildScope()).Resolve(source));
+
+    private static void Lifetime()
+    {
+        var root = ResolutionScope.Create();
+        IOperator<RealVector, Mutation> retainedSource = new CountingMutation();
+        var discarded = MakeDiscarded(root);
+        var discardedExecution = MakeFreshExecution(root, retainedSource);
+        for (var attempt = 0; attempt < 5 && (discarded.Source.IsAlive || discarded.Execution.IsAlive || discardedExecution.IsAlive); attempt++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+        }
+        Check(!discarded.Source.IsAlive && !discarded.Execution.IsAlive, "live root does not retain discarded child owner or source");
+        Check(!discardedExecution.IsAlive, "live source does not retain discarded fresh execution");
+        GC.KeepAlive(root);
+        GC.KeepAlive(retainedSource);
+    }
+
+    private sealed class UnimplementedAdvice : Advice<IOperator<RealVector, Mutation>>;
+
+    private sealed class Node : IExecutionNode;
+
+    private sealed class LegacyNode : IConfigurationNode<Node>
+    {
+        public ExecutionFactory<Node> CreateExecutionFactory()
+        {
+            var node = new Node();
+            return _ => node;
+        }
+    }
+
+    private sealed class CyclicOperations : IOperator<RealVector, Mutation>, IOperator<RealVector, Evaluation>
+    {
+        public int Preparations { get; private set; }
+        public PreparedOperator Prepare()
+        {
+            Preparations++;
+            return PreparedOperator.Raw<IMutatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>(scope =>
+            {
+                _ = Typed(scope).Resolve((IOperator<RealVector, Evaluation>)this);
+                throw new InvalidOperationException("Cycle was not detected.");
+            });
+        }
+    }
+
+    private sealed class MixedCycle : IOperator<RealVector, Mutation>
+    {
+        public PreparedOperator Prepare() =>
+            PreparedOperator.Raw<IMutatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>(scope =>
+            {
+                _ = scope.Resolve(new Bridge(this));
+                throw new InvalidOperationException("Mixed cycle was not detected.");
+            });
+
+        private sealed class Bridge(IOperator<RealVector, Mutation> child) : IConfigurationNode<Node>
+        {
+            public ExecutionFactory<Node> CreateExecutionFactory() => scope =>
+            {
+                _ = Typed(scope).Resolve(child);
+                return new Node();
+            };
+        }
+    }
+}
