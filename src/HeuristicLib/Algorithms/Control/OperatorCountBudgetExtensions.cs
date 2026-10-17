@@ -23,24 +23,24 @@ public static class OperatorCountBudgetExtensions
             };
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchState, IEvaluator<TCandidate>> LimitedToEvaluatorCalls(
-            IEvaluator<TCandidate> evaluator,
+        public OperatorBudgetAlgorithm<TCandidate, TSearchState, IOperator<Evaluation, TCandidate>> LimitedToEvaluatorCalls(
+            IOperator<Evaluation, TCandidate> evaluator,
             int maximumCalls)
         {
             return algorithm.LimitedToCount(
                 evaluator,
                 maximumCalls,
-                new EvaluatorCounting<TCandidate>(OperatorCountMetric.Calls));
+                new OperatorCounting<Evaluation, TCandidate>(OperatorCountMetric.Calls));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchState, IEvaluator<TCandidate>> LimitedToEvaluatedCandidates(
-            IEvaluator<TCandidate> evaluator,
+        public OperatorBudgetAlgorithm<TCandidate, TSearchState, IOperator<Evaluation, TCandidate>> LimitedToEvaluatedCandidates(
+            IOperator<Evaluation, TCandidate> evaluator,
             int maximumCandidates)
         {
             return algorithm.LimitedToCount(
                 evaluator,
                 maximumCandidates,
-                new EvaluatorCounting<TCandidate>(OperatorCountMetric.Candidates));
+                new OperatorCounting<Evaluation, TCandidate>(OperatorCountMetric.Candidates));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, ICreator<TCandidate>> LimitedToCreatorCalls(
@@ -83,24 +83,24 @@ public static class OperatorCountBudgetExtensions
                 new CrossoverCounting<TCandidate>(OperatorCountMetric.Candidates));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchState, IMutator<TCandidate>> LimitedToMutatorCalls(
-            IMutator<TCandidate> mutator,
+        public OperatorBudgetAlgorithm<TCandidate, TSearchState, IOperator<Mutation, TCandidate>> LimitedToMutatorCalls(
+            IOperator<Mutation, TCandidate> mutator,
             int maximumCalls)
         {
             return algorithm.LimitedToCount(
                 mutator,
                 maximumCalls,
-                new MutatorCounting<TCandidate>(OperatorCountMetric.Calls));
+                new OperatorCounting<Mutation, TCandidate>(OperatorCountMetric.Calls));
         }
 
-        public OperatorBudgetAlgorithm<TCandidate, TSearchState, IMutator<TCandidate>> LimitedToMutatedCandidates(
-            IMutator<TCandidate> mutator,
+        public OperatorBudgetAlgorithm<TCandidate, TSearchState, IOperator<Mutation, TCandidate>> LimitedToMutatedCandidates(
+            IOperator<Mutation, TCandidate> mutator,
             int maximumCandidates)
         {
             return algorithm.LimitedToCount(
                 mutator,
                 maximumCandidates,
-                new MutatorCounting<TCandidate>(OperatorCountMetric.Candidates));
+                new OperatorCounting<Mutation, TCandidate>(OperatorCountMetric.Candidates));
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchState, IRefiner<TCandidate>> LimitedToRefinerCalls(

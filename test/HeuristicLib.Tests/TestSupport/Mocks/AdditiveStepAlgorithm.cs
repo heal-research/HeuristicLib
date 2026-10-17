@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 public sealed record AdditiveStepAlgorithm(int Increment)
     : Algorithm<AdditiveStepAlgorithm, int, PopulationState<int>>
 {
-    public IEvaluator<int> Evaluator { get; init; } = new ProblemEvaluator<int>();
+    public IOperator<Evaluation, int> Evaluator { get; init; } = new ProblemEvaluator<int>();
 
     public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
         scope => new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator), Increment);

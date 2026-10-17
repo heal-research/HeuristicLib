@@ -14,22 +14,32 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Tests.Docs.Extending;
 
 #region stateful-composition-type
-public sealed record RoundRobinMutator<TCandidate> : MultiMutator<TCandidate>
+public sealed record RoundRobinMutator<TCandidate> : MultiOperator<Mutation, TCandidate>
 {
-    public RoundRobinMutator(IReadOnlyList<IMutator<TCandidate>> childMutators)
+    public RoundRobinMutator(IReadOnlyList<IOperator<Mutation, TCandidate>> childMutators)
         : base(childMutators)
     {
     }
 
-    protected override CompositeExecutorFactory<
-        IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>
-        CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected override OperatorExecutorFactory CreateOperatorFactory()
     {
-        if (ChildMutators.Count == 0)
+        if (ChildOperators.Count == 0)
             throw new InvalidOperationException("At least one mutator is required.");
+        return new Factory(this, new ExecutionState());
+    }
 
-        var state = new ExecutionState();
-        return children => new Executor<TRunSearchSpace, TRunProblem>(children, state);
+    private sealed class Factory(RoundRobinMutator<TCandidate> source, ExecutionState state)
+        : OperatorExecutorFactory<Mutation, TCandidate>
+    {
+        public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
+            OperationExecutorAdapter<Mutation, TCandidate, TSearchSpace, TProblem, TSearchState> adapter) =>
+            ExecutorFactory.FromFactory<IMutationExecutor<TCandidate, TSearchSpace, TProblem>>(scope =>
+            {
+                var typed = scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>();
+                ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children =
+                    [.. source.ChildOperators.Select(child => typed.Resolve(child))];
+                return new Executor<TSearchSpace, TProblem>(children, state);
+            });
     }
 
     private sealed class ExecutionState

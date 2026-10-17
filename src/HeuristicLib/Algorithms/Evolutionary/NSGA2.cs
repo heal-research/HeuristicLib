@@ -15,10 +15,10 @@ public record NSGA2<TCandidate>
     public int PopulationSize { get; init; } = NSGA2Defaults.PopulationSize;
     public required ICreator<TCandidate> Creator { get; init; }
     public required ICrossover<TCandidate> Crossover { get; init; }
-    public required IMutator<TCandidate> Mutator { get; init; }
+    public required IOperator<Mutation, TCandidate> Mutator { get; init; }
     public ISelector<TCandidate> Selector { get; init; } = NSGA2Defaults.Selector<TCandidate>();
     public IReplacer<TCandidate> Replacer { get; init; } = NSGA2Defaults.Replacer<TCandidate>();
-    public IEvaluator<TCandidate> Evaluator { get; init; } = NSGA2Defaults.Evaluator<TCandidate>();
+    public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = NSGA2Defaults.Evaluator<TCandidate>();
 
     /// <summary>
     /// Gets the probability that an offspring is mutated. The expected value is in <c>[0, 1]</c>.
@@ -116,10 +116,10 @@ public static class NSGA2
         Problem<TProblem, TCandidate, TSearchSpace> problem,
         ICreator<TCandidate>? creator = null,
         ICrossover<TCandidate>? crossover = null,
-        IMutator<TCandidate>? mutator = null,
+        IOperator<Mutation, TCandidate>? mutator = null,
         ISelector<TCandidate>? selector = null,
         IReplacer<TCandidate>? replacer = null,
-        IEvaluator<TCandidate>? evaluator = null,
+        IOperator<Evaluation, TCandidate>? evaluator = null,
         IRefiner<TCandidate>? refiner = null,
         IInterceptor<TCandidate>? interceptor = null,
         int populationSize = NSGA2Defaults.PopulationSize,
@@ -164,10 +164,10 @@ public static class NSGA2
         ISearchSpace<TCandidate> searchSpace,
         ICreator<TCandidate>? creator = null,
         ICrossover<TCandidate>? crossover = null,
-        IMutator<TCandidate>? mutator = null,
+        IOperator<Mutation, TCandidate>? mutator = null,
         ISelector<TCandidate>? selector = null,
         IReplacer<TCandidate>? replacer = null,
-        IEvaluator<TCandidate>? evaluator = null,
+        IOperator<Evaluation, TCandidate>? evaluator = null,
         IRefiner<TCandidate>? refiner = null,
         IInterceptor<TCandidate>? interceptor = null,
         int populationSize = NSGA2Defaults.PopulationSize,
@@ -203,10 +203,10 @@ public static class NSGA2
     public static NSGA2<TCandidate> Create<TCandidate>(
         ICreator<TCandidate> creator,
         ICrossover<TCandidate> crossover,
-        IMutator<TCandidate> mutator,
+        IOperator<Mutation, TCandidate> mutator,
         ISelector<TCandidate>? selector = null,
         IReplacer<TCandidate>? replacer = null,
-        IEvaluator<TCandidate>? evaluator = null,
+        IOperator<Evaluation, TCandidate>? evaluator = null,
         IRefiner<TCandidate>? refiner = null,
         IInterceptor<TCandidate>? interceptor = null,
         int populationSize = NSGA2Defaults.PopulationSize,

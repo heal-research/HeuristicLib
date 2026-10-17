@@ -64,7 +64,7 @@ public class ObservationFactoryTests
     public void MutatorObservation_RebindsItsPredecessorAndPreservesSourceAndResult()
     {
         var events = new List<string>();
-        IMutator<int> source = new RecordingMutator(events);
+        IOperator<Mutation, int> source = new RecordingMutator(events);
         IReadOnlyList<int> parents = [1, 2];
         var problem = CreateProblem();
         AssertContextualObservations(events,
@@ -108,7 +108,7 @@ public class ObservationFactoryTests
     {
         var events = new List<string>();
         IReadOnlyList<ObjectiveVector> objectiveVectors = [new(3.0)];
-        IEvaluator<int> source = new RecordingEvaluator(events, objectiveVectors);
+        IOperator<Evaluation, int> source = new RecordingEvaluator(events, objectiveVectors);
         IReadOnlyList<int> candidates = [3];
         var problem = CreateProblem();
         AssertContextualObservations(events,
@@ -214,7 +214,7 @@ public class ObservationFactoryTests
 
     private sealed record TwoStepAlgorithm : Algorithm<TwoStepAlgorithm, int, PopulationState<int>>
     {
-        public IEvaluator<int> Evaluator { get; } = new ProblemEvaluator<int>();
+        public IOperator<Evaluation, int> Evaluator { get; } = new ProblemEvaluator<int>();
 
         public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
             scope => new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator));

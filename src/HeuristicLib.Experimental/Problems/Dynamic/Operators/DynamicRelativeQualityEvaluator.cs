@@ -31,7 +31,7 @@ public sealed class FuncBestKnownObjectiveProvider<TCandidate, TSearchSpace, TPr
 /// than to a problem type, and a run over any other problem is refused when it evaluates.
 /// </remarks>
 public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem>
-    : WrappingEvaluator<TCandidate>
+    : WrappingOperator<Evaluation, TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
 {
@@ -47,17 +47,29 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
 
     public RelativeQualityZeroBestKnownPolicy ZeroBestKnownPolicy { get; init; } = RelativeQualityZeroBestKnownPolicy.SignedInfinity;
 
-    public DynamicRelativeQualityEvaluator(IEvaluator<TCandidate> childEvaluator, TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider)
+    public DynamicRelativeQualityEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider)
         : base(childEvaluator)
     {
         SourceProblem = problem;
         BestKnownProvider = bestKnownProvider;
     }
 
-    protected override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected override OperatorExecutorFactory CreateOperatorFactory()
     {
         var state = new ExecutionState();
-        return childEvaluator => new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy, state);
+        return new Factory(this, state);
+    }
+
+    private sealed class Factory(DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> source, ExecutionState state) : OperatorExecutorFactory<Evaluation, TCandidate>
+    {
+        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
+            ExecutorFactory.FromFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
+            {
+                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
+                var childEvaluator = typed.Resolve(source.ChildOperator);
+                return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.SourceProblem, source.BestKnownProvider, source.ZeroBestKnownPolicy, state);
+            });
     }
 
     private sealed class ExecutionState
@@ -108,7 +120,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
 
 public static class DynamicRelativeQualityEvaluator
 {
-    public static DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate> childEvaluator, TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider)
+    public static DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IOperator<Evaluation, TCandidate> childEvaluator, TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace> =>
         new(childEvaluator, problem, bestKnownProvider);
@@ -116,7 +128,7 @@ public static class DynamicRelativeQualityEvaluator
 
 public static class DynamicRelativeQualityEvaluatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate> evaluator)
+    extension<TCandidate, TSearchSpace, TProblem>(IOperator<Evaluation, TCandidate> evaluator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
     {

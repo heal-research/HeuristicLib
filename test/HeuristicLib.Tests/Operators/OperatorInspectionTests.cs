@@ -23,7 +23,7 @@ public class OperatorInspectionTests
         var observedCalls = new CountAccumulator();
         var leaf = new AdvancingMutator(() => preparations++);
         var source = leaf;
-        var aspect = Aspect.Create(Pointcut.Reference(source), new CountingMutatorAdvice<int>(counter, metric));
+        var aspect = Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice<Mutation, int>(counter, metric));
         var problem = CreateProblem();
         var random = RandomNumberGenerator.Create(1);
         var parent = ResolutionScope.Create(aspect);
@@ -172,8 +172,8 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var mutator = new AddOneMutator();
         var aspect = Aspect.CountCalls(mutator, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingMutatorAdvice<int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingMutatorAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Mutation, int>>().Counter.ShouldBeSameAs(counter);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Mutation, int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
         var executor = ResolutionScope.Create(aspect).ResolveMutator(mutator);
         var problem = CreateProblem();
 
@@ -219,8 +219,8 @@ public class OperatorInspectionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var mutator = new AddOneMutator();
         var aspect = Aspect.MeasureDuration(mutator, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringMutatorAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringMutatorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Mutation, int>>().Duration.ShouldBeSameAs(duration);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Mutation, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var executor = ResolutionScope.Create(aspect).ResolveMutator(mutator);
         var problem = CreateProblem();
 
@@ -794,14 +794,12 @@ public class OperatorInspectionTests
         FuncProblem<int, DummySearchSpace<int>> problem);
 
     private sealed class CallbackMutator(MutateCallback callback)
-        : IMutator<int>
+        : IOperator<Mutation, int>
     {
-        public ExecutorFactory<IMutationExecutor<int, TSearchSpace, TProblem>> CreateExecutorFactory<TSearchSpace, TProblem>()
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        public OperatorExecutorFactory CreateExecutorFactory()
         {
-            var executor = (IMutationExecutor<int, TSearchSpace, TProblem>)CreateBoundExecution();
-            return _ => executor;
+            var executor = CreateBoundExecution();
+            return OperatorExecutorFactory.FromFactory(_ => executor);
         }
 
         private IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateBoundExecution() =>
@@ -1013,7 +1011,7 @@ file static class OperatorResolution
         public ICrossoverExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCrossover(ICrossover<int> crossover) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover);
 
-        public IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IMutator<int> mutator) =>
+        public IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IOperator<Mutation, int> mutator) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
 
         public ISelectionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveSelector(ISelector<int> selector) =>
@@ -1035,7 +1033,7 @@ file static class OperatorResolution
             ResolutionScope.Create().ResolveCrossover(crossover);
     }
 
-    extension(IMutator<int> mutator)
+    extension(IOperator<Mutation, int> mutator)
     {
         public IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateMutatorExecution() =>
             ResolutionScope.Create().ResolveMutator(mutator);

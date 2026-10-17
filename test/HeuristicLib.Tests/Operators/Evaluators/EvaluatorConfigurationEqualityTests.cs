@@ -12,7 +12,7 @@ public class EvaluatorConfigurationEqualityTests
     {
         var child = new OffsetEvaluator(1);
 
-        new IdentityEvaluator(child).ChildEvaluator.ShouldBeSameAs(child);
+        new IdentityEvaluator(child).ChildOperator.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -20,12 +20,12 @@ public class EvaluatorConfigurationEqualityTests
     {
         var first = new OffsetEvaluator(1);
         var second = new OffsetEvaluator(2);
-        var children = new List<IEvaluator<int>> { first, second };
+        var children = new List<IOperator<Evaluation, int>> { first, second };
         var evaluator = new FirstOfEvaluator(children);
 
         children.Clear();
 
-        evaluator.ChildEvaluators.ShouldBe([first, second]);
+        evaluator.ChildOperators.ShouldBe([first, second]);
     }
 
     [Fact]
@@ -81,15 +81,29 @@ public class EvaluatorConfigurationEqualityTests
     }
 
     private sealed record FirstOfEvaluator
-        : MultiEvaluator<int>
+        : MultiOperator<Evaluation, int>
     {
-        public FirstOfEvaluator(IReadOnlyList<IEvaluator<int>> childEvaluators)
+        public FirstOfEvaluator(IReadOnlyList<IOperator<Evaluation, int>> childEvaluators)
             : base(childEvaluators)
         {
         }
 
-        protected override CompositeExecutorFactory<IEvaluationExecutor<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childEvaluators => new Executor<TRunSearchSpace, TRunProblem>(childEvaluators);
+        protected override OperatorExecutorFactory CreateOperatorFactory()
+        {
+            return new Factory(this);
+        }
+
+        private sealed class Factory(FirstOfEvaluator source) : OperatorExecutorFactory<Evaluation, int>
+        {
+            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
+                OperationExecutorAdapter<Evaluation, int, TSearchSpace, TProblem, TSearchState> adapter) =>
+                ExecutorFactory.FromFactory<IEvaluationExecutor<int, TSearchSpace, TProblem>>(scope =>
+                {
+                    var typed = scope.For<int, TSearchSpace, TProblem, TSearchState>();
+                    System.Collections.Immutable.ImmutableArray<IEvaluationExecutor<int, TSearchSpace, TProblem>> children = [.. source.ChildOperators.Select(child => typed.Resolve(child))];
+                    return new Executor<TSearchSpace, TProblem>(children);
+                });
+        }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IEvaluationExecutor<int, TSearchSpace, TProblem>> childEvaluators)
             : MultiEvaluationExecutor<int, TSearchSpace, TProblem>(childEvaluators)
@@ -100,14 +114,23 @@ public class EvaluatorConfigurationEqualityTests
                 ChildEvaluators[0].Evaluate(candidates, random, searchSpace, problem);
         }
     }
-    private sealed record IdentityEvaluator : WrappingEvaluator<int>
+    private sealed record IdentityEvaluator : WrappingOperator<Evaluation, int>
     {
-        public IdentityEvaluator(IEvaluator<int> child) : base(child)
+        public IdentityEvaluator(IOperator<Evaluation, int> child) : base(child)
         {
         }
 
-        protected override WrapperExecutorFactory<IEvaluationExecutor<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-            child => child;
+        protected override OperatorExecutorFactory CreateOperatorFactory()
+        {
+            return new Factory(this);
+        }
+
+        private sealed class Factory(IdentityEvaluator source) : OperatorExecutorFactory<Evaluation, int>
+        {
+            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
+                OperationExecutorAdapter<Evaluation, int, TSearchSpace, TProblem, TSearchState> adapter) =>
+                adapter.Forward(source.ChildOperator);
+        }
     }
 
 }

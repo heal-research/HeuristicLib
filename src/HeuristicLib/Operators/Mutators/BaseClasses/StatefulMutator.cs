@@ -22,7 +22,7 @@ public abstract record StatefulMutator<TCandidate, TSearchSpace, TProblem, TStat
 
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override ExecutorFactory<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;
@@ -45,7 +45,7 @@ public abstract record StatefulMutator<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override ExecutorFactory<IMutationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<IMutationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;
@@ -67,7 +67,7 @@ public abstract record StatefulMutator<TCandidate, TState>
 
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state, IRandomNumberGenerator random);
 
-    public sealed override ExecutorFactory<IMutationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<IMutationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;

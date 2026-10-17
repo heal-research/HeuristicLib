@@ -11,7 +11,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// Evaluates every candidate repeatedly and aggregates the resulting objective vectors.
 /// </summary>
 public sealed record RepeatingEvaluator<TCandidate>
-    : WrappingEvaluator<TCandidate>
+    : WrappingOperator<Evaluation, TCandidate>
 {
     /// <summary>
     /// Gets the total number of evaluations performed for each candidate.
@@ -22,18 +22,29 @@ public sealed record RepeatingEvaluator<TCandidate>
 
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
-    public RepeatingEvaluator(IEvaluator<TCandidate> childEvaluator, int repetitions)
+    public RepeatingEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, int repetitions)
         : base(childEvaluator)
     {
         Repetitions = repetitions;
     }
 
-    protected override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected override OperatorExecutorFactory CreateOperatorFactory()
     {
         if (Repetitions <= 0)
             throw new InvalidOperationException("Repetitions must be positive.");
+        return new Factory(this);
+    }
 
-        return childEvaluator => new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, Repetitions, Aggregator, Concurrency);
+    private sealed class Factory(RepeatingEvaluator<TCandidate> source) : OperatorExecutorFactory<Evaluation, TCandidate>
+    {
+        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
+            ExecutorFactory.FromFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
+            {
+                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
+                var childEvaluator = typed.Resolve(source.ChildOperator);
+                return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.Repetitions, source.Aggregator, source.Concurrency);
+            });
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency)
@@ -66,7 +77,7 @@ public sealed record RepeatingEvaluator<TCandidate>
 
 public static class RepeatingEvaluator
 {
-    public static RepeatingEvaluator<TCandidate> Create<TCandidate>(IEvaluator<TCandidate> childEvaluator, int repetitions) =>
+    public static RepeatingEvaluator<TCandidate> Create<TCandidate>(IOperator<Evaluation, TCandidate> childEvaluator, int repetitions) =>
         new(childEvaluator, repetitions);
 }
 
@@ -117,7 +128,7 @@ public sealed record WorstObjectiveVectorAggregator : IObjectiveVectorAggregator
 
 public static class RepeatingEvaluatorExtensions
 {
-    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
+    extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
     {
         public RepeatingEvaluator<TCandidate> AsRepeated(int repetitions) =>
             new(evaluator, repetitions);

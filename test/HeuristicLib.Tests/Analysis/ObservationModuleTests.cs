@@ -38,7 +38,7 @@ public class ObservationModuleTests
     [Fact]
     public void AnObservationWrittenForANarrowerProblem_IsReportedWhenTheGraphIsResolved()
     {
-        IMutator<int> mutator = new AddOneMutator();
+        IOperator<Mutation, int> mutator = new AddOneMutator();
         var scope = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, _ => { }));
 
         var exception = Should.Throw<InvalidOperationException>(() =>
@@ -54,7 +54,7 @@ public class ObservationModuleTests
     [Fact]
     public void AMismatch_NamesGenericTypesWithTheirTypeArguments()
     {
-        IMutator<int> mutator = new AddOneMutator();
+        IOperator<Mutation, int> mutator = new AddOneMutator();
         var scope = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, _ => { }));
 
         var exception = Should.Throw<InvalidOperationException>(() =>
@@ -72,10 +72,10 @@ public class ObservationModuleTests
     [Fact]
     public void AnEvaluatorObservation_ReportsTheObservedEvaluatorAndComposesWithABudget()
     {
-        IEvaluator<int> evaluator = new ProblemEvaluator<int>();
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
         var problem = CreateProblem();
         var counter = new CountAccumulator();
-        var observed = new List<IEvaluator<int>>();
+        var observed = new List<IOperator<Evaluation, int>>();
         var root = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, observation => observed.Add(observation.Evaluator)));
         var budget = root.CreateChildScope(Aspect.CountCalls(evaluator, counter));
 
@@ -115,7 +115,7 @@ public class ObservationModuleTests
     [Fact]
     public void AnImplicitlyTypedLambda_ObservesWithoutNamingTheSearchSpaceOrProblem()
     {
-        IMutator<int> mutator = new AddOneMutator();
+        IOperator<Mutation, int> mutator = new AddOneMutator();
         var problem = CreateProblem();
         var offspring = new List<int>();
         var scope = ResolutionScope.Create(Aspect.Observe(mutator, observation => offspring.AddRange(observation.Offspring)));
@@ -152,8 +152,8 @@ public class ObservationModuleTests
     [Fact]
     public void AnObservation_AcceptsMethodGroupsTypedAtTheObservedTypes()
     {
-        IEvaluator<int> evaluator = new ProblemEvaluator<int>();
-        IMutator<int> mutator = new AddOneMutator();
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
+        IOperator<Mutation, int> mutator = new AddOneMutator();
         var algorithm = new AdditiveStepAlgorithm(2);
         var problem = CreateProblem();
         var recorder = new BoundRecorder();

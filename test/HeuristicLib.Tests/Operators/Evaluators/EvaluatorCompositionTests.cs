@@ -83,7 +83,7 @@ public class EvaluatorCompositionTests
         result[0].ShouldBe(new ObjectiveVector(3.0));
     }
 
-    private static IEvaluator<int> CreateEvaluator() =>
+    private static IOperator<Evaluation, int> CreateEvaluator() =>
         new ProblemEvaluator();
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>

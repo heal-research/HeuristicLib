@@ -8,9 +8,9 @@ namespace HEAL.HeuristicLib.Execution;
 
 public sealed partial class ResolutionScope
 {
-    public IExecutorWithControls<TExecutor> ResolveOperator<TCandidate, TOperation, TSearchSpace, TProblem,
-        TRunSearchState, TExecutor>(IOperator<TCandidate, TOperation> source,
-        OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter)
+    public IExecutorWithControls<TExecutor> ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem,
+        TRunSearchState, TExecutor>(IOperator<TOperation, TCandidate> source,
+        OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
         where TOperation : IOperationDescriptor<TOperation>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -20,7 +20,8 @@ public sealed partial class ResolutionScope
         if (adapter.ExecutorType != typeof(TExecutor))
             throw new InvalidOperationException($"{typeof(TOperation)} requires {adapter.ExecutorType}, not {typeof(TExecutor)}.");
         if (!source.Fits(ExecutionSignature.For<TSearchSpace, TProblem, TRunSearchState>()))
-            throw ExecutionSignature.Mismatch(source, "its declared signature",
+            throw ExecutionSignature.Mismatch(source,
+                source is Operator<TOperation, TCandidate> authored ? authored.SupportedExecutionDescription : "its declared signature",
                 ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TRunSearchState)));
         if (!state.Constructing.Add(source))
             throw new InvalidOperationException($"Recursive construction of {source.GetType().Name} through {typeof(TOperation).Name}.");
@@ -40,7 +41,7 @@ public sealed partial class ResolutionScope
             foreach (var (pointcut, advice) in Advices())
                 if (pointcut.Matches(source))
                 {
-                    var wrapper = GetOperatorAdviceFactory<TCandidate, TOperation, TSearchSpace, TProblem,
+                    var wrapper = GetOperatorAdviceFactory<TOperation, TCandidate, TSearchSpace, TProblem,
                         TRunSearchState, TExecutor>(entry, advice, source, adapter, view);
                     if (wrapper is not null)
                         wrappers.Add(wrapper);
@@ -55,10 +56,10 @@ public sealed partial class ResolutionScope
         finally { state.Constructing.Remove(source); }
     }
 
-    private static WrapperExecutorFactory<IExecutorWithControls<TExecutor>>? GetOperatorAdviceFactory<TCandidate,
-        TOperation, TSearchSpace, TProblem, TRunSearchState, TExecutor>(OperatorResolutionEntry owner, Advice advice,
-        IOperator<TCandidate, TOperation> source,
-        OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter, OperatorExecutorSignature view)
+    private static WrapperExecutorFactory<IExecutorWithControls<TExecutor>>? GetOperatorAdviceFactory<TOperation,
+        TCandidate, TSearchSpace, TProblem, TRunSearchState, TExecutor>(OperatorResolutionEntry owner, Advice advice,
+        IOperator<TOperation, TCandidate> source,
+        OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter, OperatorExecutorSignature view)
         where TOperation : IOperationDescriptor<TOperation>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -74,18 +75,18 @@ public sealed partial class ResolutionScope
                 return (WrapperExecutorFactory<IExecutorWithControls<TExecutor>>)cached;
             wrapper = ((OperatorAdviceWrapperFactory)prepared.WrapperFactory).GetWrapperFactory(source, adapter);
         }
-        else if (advice is OperatorAdvice<TCandidate, TOperation> typed)
+        else if (advice is OperatorAdvice<TOperation, TCandidate> typed)
         {
             prepared = owner.GetOrAddAdvice(advice, () => typed.CreateWrapperFactory(source));
             if (prepared.Wrappers.TryGetValue(view, out var cached))
                 return (WrapperExecutorFactory<IExecutorWithControls<TExecutor>>)cached;
-            wrapper = ((OperatorAdviceWrapperFactory<TCandidate, TOperation>)prepared.WrapperFactory).GetWrapperFactory(source, adapter);
+            wrapper = ((OperatorAdviceWrapperFactory<TOperation, TCandidate>)prepared.WrapperFactory).GetWrapperFactory(source, adapter);
         }
         else if (advice is ITypedOperatorAdvice)
             return null;
         else
             throw new InvalidOperationException($"{advice.GetType().FullName} cannot bind operation {typeof(TOperation).Name} " +
-                $"on {source.GetType().Name}. Supported extension bases are OperatorAdvice and OperatorAdvice<TCandidate, TOperation>.");
+                $"on {source.GetType().Name}. Supported extension bases are OperatorAdvice and OperatorAdvice<TOperation, TCandidate>.");
 
         // Check before caching or invoking the raw factory. Failed view binding preserves prepared advice state.
         var constructor = wrapper.GetFor<TExecutor>();
@@ -121,8 +122,8 @@ public sealed partial class ResolutionScope
 
     internal sealed partial class State
     {
-        internal (OperatorResolutionEntry Entry, State Owner) GetOrAddOperatorOwner<TCandidate, TOperation>(
-            IOperator<TCandidate, TOperation> source) where TOperation : IOperationDescriptor<TOperation>
+        internal (OperatorResolutionEntry Entry, State Owner) GetOrAddOperatorOwner<TOperation, TCandidate>(
+            IOperator<TOperation, TCandidate> source) where TOperation : IOperationDescriptor<TOperation>
         {
             var selected = FindOwner(source);
             if (selected is { } existing)

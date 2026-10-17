@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>Identifies choosing survivors from a population and its offspring when declaring an operator slot.</summary>
 public sealed class Replacement : IOperationDescriptor<Replacement>
 {
-    public static OperationExecutorAdapter<TCandidate, Replacement, TSearchSpace, TProblem, TRunSearchState>
+    public static OperationExecutorAdapter<Replacement, TCandidate, TSearchSpace, TProblem, TRunSearchState>
         CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -18,7 +18,7 @@ public sealed class Replacement : IOperationDescriptor<Replacement>
         new ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>();
 
     private sealed class ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>
-        : OperationExecutorAdapter<TCandidate, Replacement, TSearchSpace, TProblem, TRunSearchState,
+        : OperationExecutorAdapter<Replacement, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             IReplacementExecutor<TCandidate, TSearchSpace, TProblem>>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -58,6 +58,20 @@ public sealed class Replacement : IOperationDescriptor<Replacement>
                 }
                 finally { notifier.Finish(); }
             }
+        }
+
+        protected override IReplacementExecutor<TCandidate, TSearchSpace, TProblem> CreatePolicyExecutor(ImmutableArray<IReplacementExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) =>
+            new PolicyExecutor(children, policy);
+
+        private sealed class PolicyExecutor(ImmutableArray<IReplacementExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) : IReplacementExecutor<TCandidate, TSearchSpace, TProblem>
+        {
+            public IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random,
+                TSearchSpace searchSpace, TProblem problem) =>
+                policy.Execute(children, (previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem), random, static (child, args) =>
+                {
+                    var result = child.Replace(args.previousPopulation, args.offspringPopulation, args.objective, args.count, args.random, args.searchSpace, args.problem);
+                    return new OperationCallResult<IReadOnlyList<EvaluatedCandidate<TCandidate>>>(result, result.Count);
+                }).Value;
         }
 
         private sealed class SuccessCallbackExecutor<TCallback>(IReplacementExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback)

@@ -29,6 +29,6 @@ public static class GeneticAlgorithmDefaults
     public static ISelector<TCandidate> Selector<TCandidate>() =>
         new TournamentSelector<TCandidate>(TournamentSize);
 
-    public static IEvaluator<TCandidate> Evaluator<TCandidate>() =>
+    public static IOperator<Evaluation, TCandidate> Evaluator<TCandidate>() =>
         new ProblemEvaluator<TCandidate>();
 }

@@ -22,9 +22,9 @@ public sealed class ConcreteOperatorFactoryTests
     {
         ICreator<int> creator = new ConstantCreator();
         ICrossover<int> crossover = SelectFirstParentCrossover<int>.Instance;
-        IMutator<int> mutator = new AddOneMutator();
+        IOperator<Mutation, int> mutator = new AddOneMutator();
         IRefiner<int> refiner = new SubtractOneRefiner();
-        IEvaluator<int> evaluator = new ProblemEvaluator<int>();
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
         ISelector<int> female = new RangeSelector(0);
         ISelector<int> male = new RangeSelector(1);
         var transformedCreator = new TransformedCreator<int>(creator, mutator);

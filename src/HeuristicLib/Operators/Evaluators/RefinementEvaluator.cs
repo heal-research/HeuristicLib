@@ -27,7 +27,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// </para>
 /// </remarks>
 public sealed record RefinementEvaluator<TCandidate>
-    : IEvaluator<TCandidate>
+    : Operator<Evaluation, TCandidate>
 {
     public RefinementEvaluator(IRefiner<TCandidate> refiner)
     {
@@ -47,15 +47,22 @@ public sealed record RefinementEvaluator<TCandidate>
     /// invisible to budgets and analysis. Supply the same evaluator configuration the algorithm uses to have these
     /// evaluations counted, limited or served from one shared cache.
     /// </remarks>
-    public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
+    public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
-    public ExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> => scope =>
+    public override bool Fits(ExecutionSignature execution) => execution.Fits(Evaluator, Refiner);
+
+    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
+
+    private sealed class Factory(RefinementEvaluator<TCandidate> source) : OperatorExecutorFactory<Evaluation, TCandidate>
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Executor<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Refiner));
-    };
+        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
+            ExecutorFactory.FromFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
+            {
+                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
+                return new Executor<TRunSearchSpace, TRunProblem>(typed.Resolve(source.Evaluator), typed.Resolve(source.Refiner));
+            });
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator, IRefinementExecutor<TCandidate, TSearchSpace, TProblem> refiner)
         : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>
@@ -83,13 +90,13 @@ public static class RefinementEvaluator
     public static RefinementEvaluator<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner) =>
         new(refiner);
 
-    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IEvaluator<TCandidate> evaluator) =>
+    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IOperator<Evaluation, TCandidate> evaluator) =>
         new(refiner) { Evaluator = evaluator };
 }
 
 public static class RefinementEvaluatorExtensions
 {
-    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
+    extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
     {
         public RefinementEvaluator<TCandidate> AppliedAfterRefinement(IRefiner<TCandidate> refiner) =>
             new RefinementEvaluator<TCandidate>(refiner) { Evaluator = evaluator };

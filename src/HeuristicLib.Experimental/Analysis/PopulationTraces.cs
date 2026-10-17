@@ -32,7 +32,7 @@ public static class PopulationTraces
         /// one iteration, which is what a clearing window used to provide without keeping the rest.
         /// </remarks>
         public static TraceAnalyzer<IReadOnlyList<ObjectiveVector>> TraceAllObjectiveVectors<T>(
-            IEvaluator<T> evaluator,
+            IOperator<Evaluation, T> evaluator,
             IReadOnlyList<Clock>? clocks = null,
             TraceRetention? retention = null) =>
             Analyzer.Trace(

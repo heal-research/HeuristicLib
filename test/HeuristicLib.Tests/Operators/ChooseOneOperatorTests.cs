@@ -19,14 +19,14 @@ public class ChooseOneOperatorTests
     {
         var first = new AddOffsetMutator(1);
         var second = new AddOffsetMutator(2);
-        var mutators = new List<IMutator<int>> { first, second };
+        var mutators = new List<IOperator<Mutation, int>> { first, second };
         var weightValues = new[] { 1.0, 2.0 };
         var configuration = new ChooseOneMutator<int>(mutators) { Weights = weightValues.ToValueArray() };
 
         mutators.Clear();
         weightValues[0] = 100.0;
 
-        configuration.ChildMutators.ShouldBe([first, second]);
+        configuration.ChildOperators.ShouldBe([first, second]);
         configuration.Weights.ShouldBe([1.0, 2.0]);
     }
 
@@ -138,7 +138,7 @@ public class ChooseOneOperatorTests
     {
         ImmutableArray<ICreator<int>> creators = [new ConstantCreator(100), new ConstantCreator(200)];
         ImmutableArray<ICrossover<int>> crossovers = [new FirstParentCrossover(100), new SecondParentCrossover(200)];
-        ImmutableArray<IMutator<int>> mutators = [new AddOffsetMutator(100), new AddOffsetMutator(200)];
+        ImmutableArray<IOperator<Mutation, int>> mutators = [new AddOffsetMutator(100), new AddOffsetMutator(200)];
         ImmutableArray<ISelector<int>> selectors = [new FirstCandidatesSelector(), new LastCandidatesSelector()];
         ImmutableArray<IReplacer<int>> replacers = [new PreviousCandidatesReplacer(), new OffspringCandidatesReplacer()];
         var creatorFromFactory = ChooseOneCreator.Create(new ConstantCreator(100), new ConstantCreator(200));
@@ -162,7 +162,7 @@ public class ChooseOneOperatorTests
     [Fact]
     public void ChooseOneMutator_EmptyWeights_AreRetainedAsUniformSelection()
     {
-        var mutators = new IMutator<int>[]
+        var mutators = new IOperator<Mutation, int>[]
         {
             new AddOffsetMutator(1),
             new AddOffsetMutator(2),
@@ -294,7 +294,7 @@ public class ChooseOneOperatorTests
 
         emptyCreator.ChildCreators.ShouldBeEmpty();
         emptyCrossover.ChildCrossovers.ShouldBeEmpty();
-        emptyMutator.ChildMutators.ShouldBeEmpty();
+        emptyMutator.ChildOperators.ShouldBeEmpty();
         emptySelector.ChildSelectors.ShouldBeEmpty();
         emptyReplacer.ChildReplacers.ShouldBeEmpty();
         Should.Throw<InvalidOperationException>(() => scope.ResolveCreator(emptyCreator));
@@ -309,7 +309,7 @@ public class ChooseOneOperatorTests
     {
         var creator = ChooseOneCreator.Create(new ConstantCreator(1)) with { ChildCreators = [] };
         var crossover = ChooseOneCrossover.Create(new FirstParentCrossover(1)) with { ChildCrossovers = [] };
-        var mutator = ChooseOneMutator.Create(new AddOffsetMutator(1)) with { ChildMutators = [] };
+        var mutator = ChooseOneMutator.Create(new AddOffsetMutator(1)) with { ChildOperators = [] };
         var selector = ChooseOneSelector.Create(new FirstCandidatesSelector()) with { ChildSelectors = [] };
         var replacer = ChooseOneReplacer.Create(new PreviousCandidatesReplacer()) with { ChildReplacers = [] };
         var scope = ResolutionScope.Create();
@@ -518,11 +518,11 @@ public class ChooseOneOperatorTests
     [Fact]
     public void PipelineMutator_DefaultImmutableArray_IsNormalizedToEmpty()
     {
-        ImmutableArray<IMutator<int>> childMutators = default;
+        ImmutableArray<IOperator<Mutation, int>> childMutators = default;
 
         var pipeline = new PipelineMutator<int>(childMutators);
 
-        pipeline.ChildMutators.ShouldBeEmpty();
+        pipeline.ChildOperators.ShouldBeEmpty();
     }
 
     [Fact]
@@ -677,16 +677,14 @@ public class ChooseOneOperatorTests
         public required int Value { get; init; }
     }
 
-    private sealed class CountingExecutionMutator : IMutator<int>
+    private sealed class CountingExecutionMutator : IOperator<Mutation, int>
     {
         public int ExecutionsCreated { get; private set; }
 
-        public ExecutorFactory<IMutationExecutor<int, TSearchSpace, TProblem>> CreateExecutorFactory<TSearchSpace, TProblem>()
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        public OperatorExecutorFactory CreateExecutorFactory()
         {
-            var executor = (IMutationExecutor<int, TSearchSpace, TProblem>)CreateBoundExecution();
-            return _ => executor;
+            var executor = CreateBoundExecution();
+            return OperatorExecutorFactory.FromFactory(_ => executor);
         }
 
         private IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecution()
@@ -714,14 +712,12 @@ public class ChooseOneOperatorTests
         IProblem<int, DummySearchSpace<int>> problem);
 
     private sealed record CallbackExecutionMutator(MutationCallback Callback)
-        : IMutator<int>
+        : IOperator<Mutation, int>
     {
-        public ExecutorFactory<IMutationExecutor<int, TSearchSpace, TProblem>> CreateExecutorFactory<TSearchSpace, TProblem>()
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        public OperatorExecutorFactory CreateExecutorFactory()
         {
-            var executor = (IMutationExecutor<int, TSearchSpace, TProblem>)CreateBoundExecution();
-            return _ => executor;
+            var executor = CreateBoundExecution();
+            return OperatorExecutorFactory.FromFactory(_ => executor);
         }
 
         private IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecution() =>
@@ -761,7 +757,7 @@ file static class OperatorResolution
         public ICrossoverExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCrossover(ICrossover<int> crossover) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover);
 
-        public IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IMutator<int> mutator) =>
+        public IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IOperator<Mutation, int> mutator) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
 
         public ISelectionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveSelector(ISelector<int> selector) =>
@@ -783,7 +779,7 @@ file static class OperatorResolution
             ResolutionScope.Create().ResolveCrossover(crossover);
     }
 
-    extension(IMutator<int> mutator)
+    extension(IOperator<Mutation, int> mutator)
     {
         public IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateMutatorExecution() =>
             ResolutionScope.Create().ResolveMutator(mutator);

@@ -9,7 +9,7 @@ public record PermutationSearchSpace(int Length)
     : SearchSpace<Permutation>,
       IRecommends<ICreator<Permutation>>,
       IRecommends<ICrossover<Permutation>>,
-      IRecommends<IMutator<Permutation>>
+      IRecommends<IOperator<Mutation, Permutation>>
 {
     //uniqueness of elements is guaranteed by Permutation class
     public override bool Contains(Permutation candidate) => candidate.Count == Length;
@@ -29,7 +29,7 @@ public record PermutationSearchSpace(int Length)
         return true;
     }
 
-    public bool TryCreateRecommendedOperator([NotNullWhen(true)] out IMutator<Permutation>? recommendation)
+    public bool TryCreateRecommendedOperator([NotNullWhen(true)] out IOperator<Mutation, Permutation>? recommendation)
     {
         recommendation = new InversionMutator();
         return true;

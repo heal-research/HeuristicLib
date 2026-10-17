@@ -27,6 +27,6 @@ public static class NSGA2Defaults
     public static IReplacer<TCandidate> Replacer<TCandidate>() =>
         new ParetoCrowdingReplacer<TCandidate>(DominateOnEquals);
 
-    public static IEvaluator<TCandidate> Evaluator<TCandidate>() =>
+    public static IOperator<Evaluation, TCandidate> Evaluator<TCandidate>() =>
         new ProblemEvaluator<TCandidate>();
 }

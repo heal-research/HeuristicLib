@@ -17,9 +17,9 @@ public interface IOperationSuccessCallback
 /// </summary>
 public abstract class OperatorAdviceWrapperFactory
 {
-    public abstract WrapperExecutorFactory GetWrapperFactory<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState>(
-        IOperator<TCandidate, TOperation> source,
-        OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter)
+    public abstract WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
+        IOperator<TOperation, TCandidate> source,
+        OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
         where TOperation : IOperationDescriptor<TOperation>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -27,11 +27,11 @@ public abstract class OperatorAdviceWrapperFactory
 }
 
 /// <summary>Provides advice wrappers for one selected operator and operation, keeping advice data when wrappers are rebuilt.</summary>
-public abstract class OperatorAdviceWrapperFactory<TCandidate, TOperation> where TOperation : IOperationDescriptor<TOperation>
+public abstract class OperatorAdviceWrapperFactory<TOperation, TCandidate> where TOperation : IOperationDescriptor<TOperation>
 {
     public abstract WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TRunSearchState>(
-        IOperator<TCandidate, TOperation> source,
-        OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter)
+        IOperator<TOperation, TCandidate> source,
+        OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState;

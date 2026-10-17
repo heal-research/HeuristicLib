@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Analyzers.CodeFixes;
-using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Operators.Crossovers;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
@@ -18,36 +18,36 @@ public class ExecutorFactoryCodeFixTests
         using HEAL.HeuristicLib.Algorithms;
         using HEAL.HeuristicLib.Execution;
         using HEAL.HeuristicLib.Operators;
-        using HEAL.HeuristicLib.Operators.Mutators;
+        using HEAL.HeuristicLib.Operators.Crossovers;
         using HEAL.HeuristicLib.Problems;
         using HEAL.HeuristicLib.Random;
         using HEAL.HeuristicLib.SearchSpaces;
         using SS = HEAL.HeuristicLib.SearchSpaces.ISearchSpace<int>;
         using P = HEAL.HeuristicLib.Problems.IProblem<int, HEAL.HeuristicLib.SearchSpaces.ISearchSpace<int>>;
 
-        file sealed record ChildMutator : Mutator<int>
+        file sealed record ChildCrossover : Crossover<int>
         {
-            public override ExecutorFactory<IMutationExecutor<int, SS, P>> CreateExecutorFactory() => _ => new Executor();
-            private sealed class Executor : MutationExecutor<int, SS, P>
+            public override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateExecutorFactory() => _ => new Executor();
+            private sealed class Executor : CrossoverExecutor<int, SS, P>
             {
-                public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, SS searchSpace, P problem) => parents;
+                public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random, SS searchSpace, P problem) => [];
             }
         }
 
         """;
 
     [Theory]
-    [InlineData("IMutator<int>", "Child.CreateExecutorFactory<SS, P>()(scope)")]
-    [InlineData("ChildMutator", "Child.CreateExecutorFactory()(scope)")]
-    [InlineData("ChildMutator", "(Child.CreateExecutorFactory())(scope)")]
-    [InlineData("ChildMutator", "Child.CreateExecutorFactory().Invoke(scope)")]
+    [InlineData("ICrossover<int>", "Child.CreateExecutorFactory<SS, P>()(scope)")]
+    [InlineData("ChildCrossover", "Child.CreateExecutorFactory()(scope)")]
+    [InlineData("ChildCrossover", "(Child.CreateExecutorFactory())(scope)")]
+    [InlineData("ChildCrossover", "Child.CreateExecutorFactory().Invoke(scope)")]
     public async Task FixedCode_Compiles_ForImmediateFactoryInvocation(string childType, string binding)
     {
         var fixedSource = await ApplyFixAsync(Preamble + $$"""
-            file sealed record BypassingMutator : Mutator<int>
+            file sealed record BypassingCrossover : Crossover<int>
             {
                 public required {{childType}} Child { get; init; }
-                public override ExecutorFactory<IMutationExecutor<int, SS, P>> CreateExecutorFactory() => scope => {{binding}};
+                public override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateExecutorFactory() => scope => {{binding}};
             }
             """);
 
@@ -59,10 +59,10 @@ public class ExecutorFactoryCodeFixTests
     public async Task FixedCode_Compiles_WhenPreparationReturnsTheChildFactory()
     {
         var fixedSource = await ApplyFixAsync(Preamble + """
-            file sealed record BypassingMutator : Mutator<int>
+            file sealed record BypassingCrossover : Crossover<int>
             {
-                public required IMutator<int> Child { get; init; }
-                public override ExecutorFactory<IMutationExecutor<int, SS, P>> CreateExecutorFactory() => Child.CreateExecutorFactory<SS, P>();
+                public required ICrossover<int> Child { get; init; }
+                public override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateExecutorFactory() => Child.CreateExecutorFactory<SS, P>();
             }
             """);
 
@@ -74,11 +74,11 @@ public class ExecutorFactoryCodeFixTests
     public async Task FixedCode_Compiles_ForDeferredResolutionThroughAScopeField()
     {
         var fixedSource = await ApplyFixAsync(Preamble + """
-            file sealed class DeferredExecutor(IMutator<int> child, ResolutionScope scope) : MutationExecutor<int, SS, P>
+            file sealed class DeferredExecutor(ICrossover<int> child, ResolutionScope scope) : CrossoverExecutor<int, SS, P>
             {
-                public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, SS searchSpace, P problem) =>
-                    Activate().Mutate(parents, random, searchSpace, problem);
-                private IMutationExecutor<int, SS, P> Activate() => child.CreateExecutorFactory<SS, P>()(scope.CreateChildScope());
+                public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random, SS searchSpace, P problem) =>
+                    Activate().Cross(parents, random, searchSpace, problem);
+                private ICrossoverExecutor<int, SS, P> Activate() => child.CreateExecutorFactory<SS, P>()(scope.CreateChildScope());
             }
             """);
 
@@ -165,16 +165,42 @@ public class ExecutorFactoryCodeFixTests
     public async Task DoesNotOfferAPartialFix_ForAStoredFactory()
     {
         await ApplyFixAsync(Preamble + """
-            file sealed record BypassingMutator : Mutator<int>
+            file sealed record BypassingCrossover : Crossover<int>
             {
-                public required IMutator<int> Child { get; init; }
-                public override ExecutorFactory<IMutationExecutor<int, SS, P>> CreateExecutorFactory()
+                public required ICrossover<int> Child { get; init; }
+                public override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateExecutorFactory()
                 {
                     var factory = Child.CreateExecutorFactory<SS, P>();
                     return scope => factory(scope);
                 }
             }
             """, expectFix: false);
+    }
+
+    [Fact]
+    public async Task DoesNotOfferAPartialFix_ForAGenericOwnerFactory()
+    {
+        await ApplyFixAsync(Preamble + """
+            file sealed record GenericWrapper(IOperator<Mutation, int> Child) : WrappingOperator<Mutation, int>(Child)
+            {
+                protected override OperatorExecutorFactory CreateOperatorFactory() => Child.CreateExecutorFactory();
+            }
+            """, expectFix: false);
+    }
+
+    [Fact]
+    public async Task FixedCode_Compiles_ForTheProtectedLeafFactoryHook()
+    {
+        var fixedSource = await ApplyFixAsync(Preamble + """
+            file sealed record RecursiveLeaf : HEAL.HeuristicLib.Operators.Mutators.Mutator<int>
+            {
+                public required RecursiveLeaf Child { get; init; }
+                protected override ExecutorFactory<IMutationExecutor<int, SS, P>> CreateFactory() =>
+                    Child.CreateFactory();
+            }
+            """);
+        fixedSource.Replace(" ", "").ShouldContain("scope.Resolve<int,SS,P>(Child)");
+        await AssertCompilesWithoutDiagnosticAsync(fixedSource);
     }
 
     private static async Task<string> ApplyFixAsync(string source, bool expectFix = true)
@@ -224,6 +250,6 @@ public class ExecutorFactoryCodeFixTests
     [
         .. ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))?.Split(Path.PathSeparator)
             .Select(static path => MetadataReference.CreateFromFile(path)) ?? [],
-        MetadataReference.CreateFromFile(typeof(Mutator<>).Assembly.Location)
+        MetadataReference.CreateFromFile(typeof(Crossover<>).Assembly.Location)
     ];
 }

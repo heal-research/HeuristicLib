@@ -18,7 +18,7 @@ Stateless operators use role-specific stateless bases. Operators with ordinary e
 
 A configuration prepares an `ExecutorFactory<TExecutor>` without a scope. Allocate persistent counters, caches and helper data before returning that factory. Its construction callback receives a `ResolutionScope`; resolve every child through it and pass the resolved child to the node constructor. Invocation-local values stay in the operation or iterator. Never store run data on a configuration.
 
-The operation-parameterized contract adds two stages: `IOperator<TCandidate, TOperation>.CreateExecutorFactory()` creates one `OperatorExecutorFactory` with persistent state, and `GetExecutorFactory(OperationExecutorAdapter<...>)` creates checked factories for the requested views of that owner. Binding must not initialize state again or retain an earlier view's children. The returned factories still resolve children through their construction scope. Existing nominal role bases and algorithm factories keep their current preparation entry points during migration.
+The operation-parameterized contract adds two stages: `IOperator<TOperation, TCandidate>.CreateExecutorFactory()` creates one `OperatorExecutorFactory` with persistent state, and `GetExecutorFactory(OperationExecutorAdapter<...>)` creates checked factories for the requested views of that owner. Binding must not initialize state again or retain an earlier view's children. The returned factories still resolve children through their construction scope. Existing nominal role bases and algorithm factories keep their current preparation entry points during migration.
 
 A prepared leaf may return one retained raw executor. Composite factories can return fresh nodes around the same persistent state. Therefore the same configuration does not promise the same node reference on every resolve. A parent caller keeps its original children and observations when another context binds the same state.
 
@@ -26,7 +26,7 @@ A prepared leaf may return one retained raw executor. Composite factories can re
 
 Configured wrappers are ordinary configurations with declared children. A wrapping base prepares a `WrapperExecutorFactory<TExecutor>` through its protected hook and supplies the child resolved by the construction scope.
 
-Advice is separate from the configuration graph. Its role-specific `CreateWrapperFactory` receives the configuration the pointcut selected and prepares a constructor accepting the already resolved executor. It introduces no configured children. Observation advice reports successful operator calls or states yielded by an algorithm; standalone counting and timing advice avoid observation allocations.
+Advice is separate from the configuration graph. For mutation and evaluation, `OperatorAdvice.CreateWrapperFactory` receives the selected configuration and returns a factory that binds operation-adapter wrappers to run signatures. Other roles retain their role-specific advice constructors. It introduces no configured children. Observation advice reports successful operator calls or states yielded by an algorithm; standalone counting and timing advice avoid observation allocations.
 
 Use `Aspect.Observe`, `Aspect.CountCalls`, `Aspect.CountCandidates` or `Aspect.MeasureDuration` from `Inspection` for predefined behavior. Add the result to a run with `AddAspect`, or pass aspects to `ResolutionScope.Create`, `With` or `CreateChildScope`.
 

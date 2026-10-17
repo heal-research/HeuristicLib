@@ -17,8 +17,8 @@ public sealed class MutatorSelectionTests
         var small = new StepMutator(1);
         var large = new StepMutator(5);
         var mutator = ChooseOneMutator.Create<int>(small, large);
-        var counts = new Dictionary<IMutator<int>, CountAccumulator>(ReferenceEqualityComparer.Instance);
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IMutator<int>>(), new CountingSelectedMutator(source =>
+        var counts = new Dictionary<IOperator<Mutation, int>, CountAccumulator>(ReferenceEqualityComparer.Instance);
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IOperator<Mutation, int>>(), new CountingSelectedMutator(source =>
         {
             var count = new CountAccumulator();
             counts.Add(source, count);
@@ -38,8 +38,8 @@ public sealed class MutatorSelectionTests
         var first = new StepMutator(1);
         var second = new StepMutator(2);
         var cycle = Algorithm(first).CycleWith(Algorithm(second), maximumCycles: 2);
-        var activations = new List<(IMutator<int> Source, CountAccumulator Mutations)>();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IMutator<int>>(), new CountingSelectedMutator(source =>
+        var activations = new List<(IOperator<Mutation, int> Source, CountAccumulator Mutations)>();
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IOperator<Mutation, int>>(), new CountingSelectedMutator(source =>
         {
             var mutations = new CountAccumulator();
             activations.Add((source, mutations));
@@ -73,7 +73,7 @@ public sealed class MutatorSelectionTests
     [InlineData(true, double.PositiveInfinity)]
     public async Task MutationRate_MatchesExplicitAppliedAtRate_WithTheSameSeed(bool nsga, double rate)
     {
-        IMutator<int> source = new RandomStepMutator();
+        IOperator<Mutation, int> source = new RandomStepMutator();
         var ga = Algorithm(source) with { MutationRate = rate, PopulationSize = 16, MaximumGenerations = 5, Evaluator = new RandomEvaluator() };
         var nsga2 = AsNsga2(ga);
         var explicitMutator = rate >= 1 ? source : source.AppliedAtRate(rate);
@@ -94,10 +94,10 @@ public sealed class MutatorSelectionTests
     [InlineData(true)]
     public async Task MutationRate_OnlyOffersConfiguredSources_AndCountersSeeOnlyRoutedCandidates(bool nsga)
     {
-        IMutator<int> source = new StepMutator(1);
-        var offered = new List<IMutator<int>>();
+        IOperator<Mutation, int> source = new StepMutator(1);
+        var offered = new List<IOperator<Mutation, int>>();
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.Create(new OfferedMutators(offered), new CountingMutatorAdvice<int>(count, OperatorCountMetric.Candidates)));
+        var scope = ResolutionScope.Create(Aspect.Create(new OfferedMutators(offered), new CountingOperatorAdvice<Mutation, int>(count, OperatorCountMetric.Candidates)));
         var algorithm = Algorithm(source) with { PopulationSize = 16, MaximumGenerations = 2, MutationRate = 0.5 };
 
         var states = await States(scope, nsga ? AsNsga2(algorithm) : algorithm);
@@ -114,7 +114,7 @@ public sealed class MutatorSelectionTests
     [Fact]
     public async Task PausedAlgorithm_KeepsItsMutator_WhenAnotherContextAddsASourceObserver()
     {
-        IMutator<int> source = new StepMutator(1);
+        IOperator<Mutation, int> source = new StepMutator(1);
         var algorithm = Algorithm(source) with { PopulationSize = 16, MaximumGenerations = 3, MutationRate = 0.5 };
         var parent = ResolutionScope.Create();
         await using var paused = Run(parent, algorithm).GetAsyncEnumerator(TestContext.Current.CancellationToken);
@@ -151,7 +151,7 @@ public sealed class MutatorSelectionTests
     [InlineData(true, true, double.NegativeInfinity)]
     public async Task NonMutatingRates_DoNotObserveTheConfiguredSource_EvenWhenItIsTheSharedNoChangeMutator(bool nsga, bool noChange, double rate)
     {
-        IMutator<int> source = noChange ? NoChangeMutator<int>.Instance : new StepMutator(1);
+        IOperator<Mutation, int> source = noChange ? NoChangeMutator<int>.Instance : new StepMutator(1);
         var count = new CountAccumulator();
         var scope = ResolutionScope.Create(Aspect.CountCandidates(source, count));
         var algorithm = Algorithm(source) with { MutationRate = rate };
@@ -159,22 +159,22 @@ public sealed class MutatorSelectionTests
         count.CurrentCount.ShouldBe(0);
     }
 
-    private sealed class OfferedMutators(List<IMutator<int>> offered) : Pointcut<IMutator<int>>
+    private sealed class OfferedMutators(List<IOperator<Mutation, int>> offered) : Pointcut<IOperator<Mutation, int>>
     {
-        public override bool Matches(IMutator<int> mutator)
+        public override bool Matches(IOperator<Mutation, int> mutator)
         {
             offered.Add(mutator);
             return true;
         }
     }
 
-    private sealed class CountingSelectedMutator(Func<IMutator<int>, CountAccumulator> counter) : MutatorAdvice<int>
+    private sealed class CountingSelectedMutator(Func<IOperator<Mutation, int>, CountAccumulator> counter) : OperatorAdvice<Mutation, int>
     {
-        public override WrapperExecutorFactory<IMutationExecutor<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<int> mutator) =>
-            new CountingMutatorAdvice<int>(counter(mutator), OperatorCountMetric.Candidates).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(mutator);
+        public override OperatorAdviceWrapperFactory<Mutation, int> CreateWrapperFactory(IOperator<Mutation, int> mutator) =>
+            new CountingOperatorAdvice<Mutation, int>(counter(mutator), OperatorCountMetric.Candidates).CreateWrapperFactory(mutator);
     }
 
-    private static GeneticAlgorithm<int> Algorithm(IMutator<int> mutator) => new()
+    private static GeneticAlgorithm<int> Algorithm(IOperator<Mutation, int> mutator) => new()
     {
         Creator = new ConstantCreator(),
         Crossover = SelectFirstParentCrossover<int>.Instance,

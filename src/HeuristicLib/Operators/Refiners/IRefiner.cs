@@ -17,7 +17,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// A refiner differs from a mutator by intent. A mutator perturbs a candidate to create variation, while a refiner
 /// moves a candidate towards a better one along a specific dimension of quality. Where objective values guide the
 /// refinement or decide whether to keep its result, the refiner takes an
-/// <see cref="IEvaluator{TCandidate}"/> as a configured dependency, which keeps those evaluations
+/// <see cref="IOperator{Evaluation, TCandidate}"/> as a configured dependency, which keeps those evaluations
 /// visible to budgets, termination, caching and analysis.
 /// <para>
 /// Continuing the search with the refined candidate is Lamarckian refinement. <c>RefinementEvaluator</c> instead
@@ -59,8 +59,8 @@ public static class RefinerResolutionExtensions
         public IRefinementExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate> refiner)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            refiner is IOperator<TCandidate, Refinement> prepared
-                ? scope.ResolveOperator<TCandidate, Refinement, TSearchSpace, TProblem, ISearchState, IRefinementExecutor<TCandidate, TSearchSpace, TProblem>>(
+            refiner is IOperator<Refinement, TCandidate> prepared
+                ? scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, ISearchState, IRefinementExecutor<TCandidate, TSearchSpace, TProblem>>(
                     prepared, Refinement.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>()).Executor
                 : scope.Resolve(refiner, static source => source.CreateExecutorFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 

@@ -41,7 +41,7 @@ public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchStat
     /// Decides which candidates are the same graph node. Defaults to <see cref="EqualityComparer{T}.Default"/>.
     /// </param>
     public RankAnalyzer(IReadOnlyList<ICrossover<TCandidate>>? crossovers = null,
-                        IReadOnlyList<IMutator<TCandidate>>? mutators = null,
+                        IReadOnlyList<IOperator<Mutation, TCandidate>>? mutators = null,
                         IReadOnlyList<IAlgorithm<TCandidate, TSearchState>>? algorithms = null,
                         IEqualityComparer<TCandidate>? equality = null,
                         IComparer<ObjectiveVector>? objectiveComparer = null)
@@ -105,7 +105,7 @@ public static class RankAnalysisTraces
         /// </summary>
         public static RankAnalyzer<T, ISearchSpace<T>, IProblem<T, ISearchSpace<T>>, TR> Rank<T, TR>(
             ICrossover<T>? crossover = null,
-            IMutator<T>? mutator = null,
+            IOperator<Mutation, T>? mutator = null,
             IAlgorithm<T, TR>? algorithm = null,
             IEqualityComparer<T>? equality = null,
             IComparer<ObjectiveVector>? objectiveComparer = null)
@@ -113,7 +113,7 @@ public static class RankAnalysisTraces
             where TR : PopulationState<T> =>
             new(
                 crossover is null ? null : (IReadOnlyList<ICrossover<T>>)[crossover],
-                mutator is null ? null : (IReadOnlyList<IMutator<T>>)[mutator],
+                mutator is null ? null : (IReadOnlyList<IOperator<Mutation, T>>)[mutator],
                 algorithm is null ? null : (IReadOnlyList<IAlgorithm<T, TR>>)[algorithm],
                 equality, objectiveComparer);
     }

@@ -35,10 +35,10 @@ public sealed class ExecutorFactoryAnalyzer : DiagnosticAnalyzer
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
         if (context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken).Symbol is not IMethodSymbol target
-            || target.Name != "CreateExecutorFactory"
+            || target.Name is not ("CreateExecutorFactory" or "CreateFactory" or "CreateOperatorFactory")
             || target.IsStatic
             || target.Parameters.Length != 0
-            || !IsExecutionType(target.ReturnType, "ExecutorFactory")
+            || !IsExecutionType(target.ReturnType, "ExecutorFactory", "OperatorExecutorFactory")
             || !HasContract(target.ContainingType, "IConfigurationNode"))
             return;
 
@@ -54,7 +54,7 @@ public sealed class ExecutorFactoryAnalyzer : DiagnosticAnalyzer
         for (var symbol = context.SemanticModel.GetEnclosingSymbol(invocation.SpanStart, context.CancellationToken);
              symbol is not null; symbol = symbol.ContainingSymbol)
         {
-            if (symbol is IMethodSymbol method && (IsExecutionType(method.ReturnType, "ExecutorFactory", "WrapperExecutorFactory", "CompositeExecutorFactory") || IsWrapperConstructor(method.ReturnType)
+            if (symbol is IMethodSymbol method && (IsExecutionType(method.ReturnType, "ExecutorFactory", "OperatorExecutorFactory", "WrapperExecutorFactory", "CompositeExecutorFactory") || IsWrapperConstructor(method.ReturnType)
                 || method.Parameters.Any(static parameter => IsExecutionType(parameter.Type, "ResolutionScope"))))
                 return true;
             if (symbol is INamedTypeSymbol type && HasContract(type, "IExecutor"))

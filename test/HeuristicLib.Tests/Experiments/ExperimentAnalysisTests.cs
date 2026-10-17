@@ -38,7 +38,7 @@ public class ExperimentAnalysisTests
     {
         public int Observations { get; private set; }
 
-        public OrderedEvaluationModule(IEvaluator<int> evaluator, int marker, List<int> invocationOrder)
+        public OrderedEvaluationModule(IOperator<Evaluation, int> evaluator, int marker, List<int> invocationOrder)
         {
             Advices = Aspect.Observe(evaluator, _ =>
         {
@@ -138,7 +138,7 @@ public class ExperimentAnalysisTests
         public EvaluationResult Result { get; } = new();
 
         public OrderedEvaluationAnalyzer(
-        IEvaluator<int> evaluator,
+        IOperator<Evaluation, int> evaluator,
         int marker,
         List<int> invocationOrder)
         {

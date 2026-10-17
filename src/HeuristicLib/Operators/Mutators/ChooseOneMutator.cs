@@ -12,7 +12,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// <remarks>
 /// Each selected mutator must return exactly one result for every parent assigned to it.
 /// </remarks>
-public sealed record ChooseOneMutator<TCandidate> : MultiMutator<TCandidate>
+public sealed record ChooseOneMutator<TCandidate> : MultiOperator<Mutation, TCandidate>
 {
     /// <summary>
     /// Relative selection weight of each child mutator, in child order. An empty collection selects every child
@@ -24,19 +24,30 @@ public sealed record ChooseOneMutator<TCandidate> : MultiMutator<TCandidate>
     /// </remarks>
     public ValueArray<double> Weights { get; init; }
 
-    public ChooseOneMutator(IReadOnlyList<IMutator<TCandidate>> childMutators)
+    public ChooseOneMutator(IReadOnlyList<IOperator<Mutation, TCandidate>> childMutators)
         : base(childMutators)
     {
     }
 
-    protected override CompositeExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>()
+    protected override OperatorExecutorFactory CreateOperatorFactory()
     {
-        if (ChildMutators.Count == 0)
+        if (ChildOperators.Count == 0)
             throw new InvalidOperationException("At least one mutator must be provided.");
-        if (Weights.Count > 0 && Weights.Count != ChildMutators.Count)
+        if (Weights.Count > 0 && Weights.Count != ChildOperators.Count)
             throw new InvalidOperationException("Weights must have the same length as mutators.");
+        return new Factory(this);
+    }
 
-        return childMutators => new Executor<TRunSearchSpace, TRunProblem>(childMutators, new(childMutators, Weights));
+    private sealed class Factory(ChooseOneMutator<TCandidate> source) : OperatorExecutorFactory<Mutation, TCandidate>
+    {
+        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            OperationExecutorAdapter<Mutation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
+            ExecutorFactory.FromFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
+            {
+                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
+                ImmutableArray<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> childMutators = [.. source.ChildOperators.Select(child => typed.Resolve(child))];
+                return new Executor<TRunSearchSpace, TRunProblem>(childMutators, new(childMutators, source.Weights));
+            });
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> childMutators, WeightedRouter<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> router)
@@ -51,16 +62,16 @@ public sealed record ChooseOneMutator<TCandidate> : MultiMutator<TCandidate>
 
 public static class ChooseOneMutator
 {
-    public static ChooseOneMutator<TCandidate> Create<TCandidate>(params IReadOnlyList<IMutator<TCandidate>> childMutators) =>
+    public static ChooseOneMutator<TCandidate> Create<TCandidate>(params IReadOnlyList<IOperator<Mutation, TCandidate>> childMutators) =>
         new(childMutators);
 
-    public static ChooseOneMutator<TCandidate> Create<TCandidate>(IReadOnlyList<IMutator<TCandidate>> childMutators, IReadOnlyList<double> weights) =>
+    public static ChooseOneMutator<TCandidate> Create<TCandidate>(IReadOnlyList<IOperator<Mutation, TCandidate>> childMutators, IReadOnlyList<double> weights) =>
         new(childMutators) { Weights = weights.ToValueArray() };
 }
 
 public static class ChooseOneMutatorExtensions
 {
-    extension<TCandidate>(IMutator<TCandidate> mutator)
+    extension<TCandidate>(IOperator<Mutation, TCandidate> mutator)
     {
         public ChooseOneMutator<TCandidate> AppliedAtRate(double mutationRate) =>
             ChooseOneMutator.Create([mutator, new NoChangeMutator<TCandidate>()], WeightedRouter.RateWeights(mutationRate));

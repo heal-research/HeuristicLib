@@ -12,32 +12,14 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 /// <para>
 /// The type arguments are the search space and problem this mutator is written for. The base bridges to whatever a
 /// run requests, and a request the mutator was not written for is reported when the execution graph is built. A
-/// mutator that owns children stays agnostic and derives from <see cref="WrappingMutator{TCandidate}"/> or
-/// <see cref="MultiMutator{TCandidate}"/> instead.
+/// mutator that owns children stays agnostic and derives from <see cref="WrappingOperator{Mutation, TCandidate}"/> or
+/// <see cref="MultiOperator{Mutation, TCandidate}"/> instead.
 /// </para>
 /// </remarks>
 public abstract record Mutator<TCandidate, TSearchSpace, TProblem>
-    : IMutator<TCandidate>
+    : Operator<Mutation, TCandidate, TSearchSpace, TProblem, IMutationExecutor<TCandidate, TSearchSpace, TProblem>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    public abstract ExecutorFactory<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> CreateExecutorFactory();
-
-    public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
-
-    ExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> IMutator<TCandidate>.CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-    {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
-                this,
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
-
-        return (ExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>)CreateExecutorFactory();
-    }
-}
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
 public abstract record Mutator<TCandidate, TSearchSpace>
     : Mutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>

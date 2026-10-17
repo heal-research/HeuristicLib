@@ -109,8 +109,8 @@ public static class CrossoverResolutionExtensions
         public ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate> crossover)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-            crossover is IOperator<TCandidate, Crossover> prepared
-                ? scope.ResolveOperator<TCandidate, Crossover, TSearchSpace, TProblem, ISearchState, ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>>(
+            crossover is IOperator<Crossover, TCandidate> prepared
+                ? scope.ResolveOperator<Crossover, TCandidate, TSearchSpace, TProblem, ISearchState, ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>>(
                     prepared, Crossover.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>()).Executor
                 : scope.Resolve(crossover, static source => source.CreateExecutorFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 

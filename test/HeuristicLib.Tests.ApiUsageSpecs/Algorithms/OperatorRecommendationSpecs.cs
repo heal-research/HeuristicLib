@@ -277,7 +277,7 @@ public class OperatorRecommendationSpecs
             new BoundedRealVectorSearchSpace(dimension, minimum: -1.0, maximum: 1.0)),
           IRecommends<ICreator<RealVector>>,
           IRecommends<ICrossover<RealVector>>,
-          IRecommends<IMutator<RealVector>>
+          IRecommends<IOperator<Mutation, RealVector>>
     {
         public bool TryCreateRecommendedOperator(
             [NotNullWhen(true)] out ICreator<RealVector>? recommendation)
@@ -294,7 +294,7 @@ public class OperatorRecommendationSpecs
         }
 
         public bool TryCreateRecommendedOperator(
-            [NotNullWhen(true)] out IMutator<RealVector>? recommendation)
+            [NotNullWhen(true)] out IOperator<Mutation, RealVector>? recommendation)
         {
             recommendation = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1);
             return true;

@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>
 /// Creates a candidate batch and then always applies one mutator to the created batch.
 /// </summary>
-public record TransformedCreator<TCandidate>(ICreator<TCandidate> SourceCreator, IMutator<TCandidate> TransformationMutator)
+public record TransformedCreator<TCandidate>(ICreator<TCandidate> SourceCreator, IOperator<Mutation, TCandidate> TransformationMutator)
     : ICreator<TCandidate>
 {
     public ExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
@@ -35,7 +35,7 @@ public record TransformedCreator<TCandidate>(ICreator<TCandidate> SourceCreator,
 
 public static class TransformedCreator
 {
-    public static TransformedCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> creator, IMutator<TCandidate> mutator) =>
+    public static TransformedCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> creator, IOperator<Mutation, TCandidate> mutator) =>
         new(creator, mutator);
 }
 
@@ -43,7 +43,7 @@ public static class TransformedCreatorExtensions
 {
     extension<TCandidate>(ICreator<TCandidate> creator)
     {
-        public TransformedCreator<TCandidate> TransformWith(IMutator<TCandidate> mutator) =>
+        public TransformedCreator<TCandidate> TransformWith(IOperator<Mutation, TCandidate> mutator) =>
             TransformedCreator.Create(creator, mutator);
     }
 }

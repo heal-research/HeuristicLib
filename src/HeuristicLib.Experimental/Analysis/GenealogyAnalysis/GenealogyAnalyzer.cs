@@ -37,7 +37,7 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
     /// Keeps parent links for the latest generation only, discarding older generations as each new one closes.
     /// </param>
     public GenealogyAnalyzer(IReadOnlyList<ICrossover<TCandidate>>? crossovers = null,
-                             IReadOnlyList<IMutator<TCandidate>>? mutators = null,
+                             IReadOnlyList<IOperator<Mutation, TCandidate>>? mutators = null,
                              IReadOnlyList<IAlgorithm<TCandidate, TSearchState>>? algorithms = null,
                              IEqualityComparer<TCandidate>? equality = null,
                              bool saveSpace = false)
@@ -51,7 +51,7 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
     /// </summary>
     internal GenealogyAnalyzer(GenealogyGraph<TCandidate> graph,
                                IReadOnlyList<ICrossover<TCandidate>>? crossovers,
-                               IReadOnlyList<IMutator<TCandidate>>? mutators,
+                               IReadOnlyList<IOperator<Mutation, TCandidate>>? mutators,
                                IReadOnlyList<IAlgorithm<TCandidate, TSearchState>>? algorithms,
                                bool saveSpace)
     {
@@ -106,7 +106,7 @@ public static class GenealogyAnalysisTraces
         /// </summary>
         public static GenealogyAnalyzer<T, ISearchSpace<T>, IProblem<T, ISearchSpace<T>>, TR> Genealogy<T, TR>(
             ICrossover<T>? crossover = null,
-            IMutator<T>? mutator = null,
+            IOperator<Mutation, T>? mutator = null,
             IAlgorithm<T, TR>? algorithm = null,
             IEqualityComparer<T>? equality = null,
             bool saveSpace = false,
@@ -115,7 +115,7 @@ public static class GenealogyAnalysisTraces
             where TR : PopulationState<T> =>
             new(
                 crossover is null ? null : (IReadOnlyList<ICrossover<T>>)[crossover],
-                mutator is null ? null : (IReadOnlyList<IMutator<T>>)[mutator],
+                mutator is null ? null : (IReadOnlyList<IOperator<Mutation, T>>)[mutator],
                 algorithm is null ? null : (IReadOnlyList<IAlgorithm<T, TR>>)[algorithm],
                 equality,
                 saveSpace)

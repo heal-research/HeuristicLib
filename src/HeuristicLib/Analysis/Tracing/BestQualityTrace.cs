@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Analysis;
 
 public static class BestSoFarTraces
 {
-    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
+    extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
     {
         /// <summary>Accumulates the best value across evaluator calls. By default, records only improvements.</summary>
         public TraceAnalyzer<ObjectiveVector> TraceBestSoFar(IReadOnlyList<Clock>? clocks = null,
@@ -21,7 +21,7 @@ public static class BestSoFarTraces
                 Aggregate.BestCandidateSoFar<TCandidate>(), clocks, retention ?? TraceRetention.OnChange(), objectiveComparer);
     }
 
-    extension<TCandidate>(IReadOnlyList<IEvaluator<TCandidate>> evaluators)
+    extension<TCandidate>(IReadOnlyList<IOperator<Evaluation, TCandidate>> evaluators)
     {
         /// <summary>Accumulates the best value across several evaluators into one trace.</summary>
         public TraceAnalyzer<ObjectiveVector> TraceBestSoFar(IReadOnlyList<Clock>? clocks = null,

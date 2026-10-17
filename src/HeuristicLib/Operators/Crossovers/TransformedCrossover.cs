@@ -12,7 +12,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// <remarks>
 /// The mutator is invoked for every crossover result batch. A rate controlled mutator may be supplied when conditional mutation is explicitly desired.
 /// </remarks>
-public record TransformedCrossover<TCandidate>(ICrossover<TCandidate> SourceCrossover, IMutator<TCandidate> TransformationMutator)
+public record TransformedCrossover<TCandidate>(ICrossover<TCandidate> SourceCrossover, IOperator<Mutation, TCandidate> TransformationMutator)
     : ICrossover<TCandidate>
 {
     public ExecutorFactory<ICrossoverExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
@@ -38,7 +38,7 @@ public record TransformedCrossover<TCandidate>(ICrossover<TCandidate> SourceCros
 
 public static class TransformedCrossover
 {
-    public static TransformedCrossover<TCandidate> Create<TCandidate>(ICrossover<TCandidate> crossover, IMutator<TCandidate> mutator) =>
+    public static TransformedCrossover<TCandidate> Create<TCandidate>(ICrossover<TCandidate> crossover, IOperator<Mutation, TCandidate> mutator) =>
         new(crossover, mutator);
 }
 
@@ -46,7 +46,7 @@ public static class TransformedCrossoverExtensions
 {
     extension<TCandidate>(ICrossover<TCandidate> crossover)
     {
-        public TransformedCrossover<TCandidate> TransformWith(IMutator<TCandidate> mutator) =>
+        public TransformedCrossover<TCandidate> TransformWith(IOperator<Mutation, TCandidate> mutator) =>
             TransformedCrossover.Create(crossover, mutator);
     }
 }

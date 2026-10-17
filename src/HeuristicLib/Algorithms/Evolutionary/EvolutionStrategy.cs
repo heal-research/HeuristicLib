@@ -21,9 +21,9 @@ public record EvolutionStrategy<TCandidate>
     public int NumberOfChildren { get; init; } = EvolutionStrategyDefaults.NumberOfChildren;
     public EvolutionStrategyType Strategy { get; init; } = EvolutionStrategyDefaults.Strategy;
     public required ICreator<TCandidate> Creator { get; init; }
-    public required IMutator<TCandidate> Mutator { get; init; }
+    public required IOperator<Mutation, TCandidate> Mutator { get; init; }
     public ICrossover<TCandidate>? Crossover { get; init; }
-    public IEvaluator<TCandidate> Evaluator { get; init; } = EvolutionStrategyDefaults.Evaluator<TCandidate>();
+    public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = EvolutionStrategyDefaults.Evaluator<TCandidate>();
     public ISelector<TCandidate> Selector { get; init; } = EvolutionStrategyDefaults.Selector<TCandidate>();
     public IRefiner<TCandidate>? Refiner { get; init; }
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Mutator, Crossover, Evaluator, Selector, Refiner);
@@ -150,10 +150,10 @@ public static class EvolutionStrategy
     public static EvolutionStrategy<TCandidate> For<TProblem, TCandidate, TSearchSpace>(
         Problem<TProblem, TCandidate, TSearchSpace> problem,
         ICreator<TCandidate>? creator = null,
-        IMutator<TCandidate>? mutator = null,
+        IOperator<Mutation, TCandidate>? mutator = null,
         ICrossover<TCandidate>? crossover = null,
         ISelector<TCandidate>? selector = null,
-        IEvaluator<TCandidate>? evaluator = null,
+        IOperator<Evaluation, TCandidate>? evaluator = null,
         IRefiner<TCandidate>? refiner = null,
         IInterceptor<TCandidate>? interceptor = null,
         int populationSize = EvolutionStrategyDefaults.PopulationSize,
@@ -198,10 +198,10 @@ public static class EvolutionStrategy
     public static EvolutionStrategy<TCandidate> For<TCandidate>(
         ISearchSpace<TCandidate> searchSpace,
         ICreator<TCandidate>? creator = null,
-        IMutator<TCandidate>? mutator = null,
+        IOperator<Mutation, TCandidate>? mutator = null,
         ICrossover<TCandidate>? crossover = null,
         ISelector<TCandidate>? selector = null,
-        IEvaluator<TCandidate>? evaluator = null,
+        IOperator<Evaluation, TCandidate>? evaluator = null,
         IRefiner<TCandidate>? refiner = null,
         IInterceptor<TCandidate>? interceptor = null,
         int populationSize = EvolutionStrategyDefaults.PopulationSize,
@@ -236,10 +236,10 @@ public static class EvolutionStrategy
     /// </summary>
     public static EvolutionStrategy<TCandidate> Create<TCandidate>(
         ICreator<TCandidate> creator,
-        IMutator<TCandidate> mutator,
+        IOperator<Mutation, TCandidate> mutator,
         ICrossover<TCandidate>? crossover = null,
         ISelector<TCandidate>? selector = null,
-        IEvaluator<TCandidate>? evaluator = null,
+        IOperator<Evaluation, TCandidate>? evaluator = null,
         IRefiner<TCandidate>? refiner = null,
         IInterceptor<TCandidate>? interceptor = null,
         int populationSize = EvolutionStrategyDefaults.PopulationSize,

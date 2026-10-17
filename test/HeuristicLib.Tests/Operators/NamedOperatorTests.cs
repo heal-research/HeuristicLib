@@ -16,7 +16,7 @@ public sealed class NamedOperatorTests
         var explored = new CountAccumulator();
         var childCalls = new CountAccumulator();
         var scope = ResolutionScope.Create(
-            Aspect.Create(Pointcut.Named<IMutator<int>>("exploration"), new CountingMutatorAdvice<int>(explored, OperatorCountMetric.Calls)),
+            Aspect.Create(Pointcut.Named<IOperator<Mutation, int>>("exploration"), new CountingOperatorAdvice<Mutation, int>(explored, OperatorCountMetric.Calls)),
             Aspect.CountCalls(leaf, childCalls));
         var typedScope = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
@@ -31,7 +31,7 @@ public sealed class NamedOperatorTests
 
         explored.CurrentCount.ShouldBe(2);
         childCalls.CurrentCount.ShouldBe(4);
-        Pointcut.Named<IMutator<int>>("exploration").Matches(leaf).ShouldBeFalse();
+        Pointcut.Named<IOperator<Mutation, int>>("exploration").Matches(leaf).ShouldBeFalse();
     }
 
     [Fact]
@@ -41,10 +41,10 @@ public sealed class NamedOperatorTests
         var original = child.Named("exploration");
         var copy = original with { Name = "refinement" };
 
-        copy.ChildMutator.ShouldBeSameAs(child);
+        copy.ChildOperator.ShouldBeSameAs(child);
         original.Name.ShouldBe("exploration");
-        Pointcut.Named<IMutator<int>>("exploration").Matches(copy).ShouldBeFalse();
-        Pointcut.Named<IMutator<int>>("refinement").Matches(copy).ShouldBeTrue();
+        Pointcut.Named<IOperator<Mutation, int>>("exploration").Matches(copy).ShouldBeFalse();
+        Pointcut.Named<IOperator<Mutation, int>>("refinement").Matches(copy).ShouldBeTrue();
         Pointcut.Reference(original).Matches(copy).ShouldBeFalse();
     }
 
@@ -54,8 +54,8 @@ public sealed class NamedOperatorTests
         var scope = ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>();
         ICreator<int> creator = new SequenceCreator();
         ICrossover<int> crossover = new SelectFirstParentCrossover<int>();
-        IEvaluator<int> evaluator = new ProblemEvaluator<int>();
-        IMutator<int> mutator = new AdvancingMutator();
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
+        IOperator<Mutation, int> mutator = new AdvancingMutator();
         IRefiner<int> refiner = new NoChangeRefiner<int>();
         IReplacer<int> replacer = new CommaSelectionReplacer<int>();
         ISelector<int> selector = new TournamentSelector<int>(2);

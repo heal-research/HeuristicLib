@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>Identifies selecting candidates from a population when declaring an operator slot.</summary>
 public sealed class Selection : IOperationDescriptor<Selection>
 {
-    public static OperationExecutorAdapter<TCandidate, Selection, TSearchSpace, TProblem, TRunSearchState>
+    public static OperationExecutorAdapter<Selection, TCandidate, TSearchSpace, TProblem, TRunSearchState>
         CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -18,7 +18,7 @@ public sealed class Selection : IOperationDescriptor<Selection>
         new ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>();
 
     private sealed class ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>
-        : OperationExecutorAdapter<TCandidate, Selection, TSearchSpace, TProblem, TRunSearchState,
+        : OperationExecutorAdapter<Selection, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             ISelectionExecutor<TCandidate, TSearchSpace, TProblem>>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -58,6 +58,20 @@ public sealed class Selection : IOperationDescriptor<Selection>
                 }
                 finally { notifier.Finish(); }
             }
+        }
+
+        protected override ISelectionExecutor<TCandidate, TSearchSpace, TProblem> CreatePolicyExecutor(ImmutableArray<ISelectionExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) =>
+            new PolicyExecutor(children, policy);
+
+        private sealed class PolicyExecutor(ImmutableArray<ISelectionExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) : ISelectionExecutor<TCandidate, TSearchSpace, TProblem>
+        {
+            public IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random,
+                TSearchSpace searchSpace, TProblem problem) =>
+                policy.Execute(children, (population, objective, count, random, searchSpace, problem), random, static (child, args) =>
+                {
+                    var result = child.Select(args.population, args.objective, args.count, args.random, args.searchSpace, args.problem);
+                    return new OperationCallResult<IReadOnlyList<EvaluatedCandidate<TCandidate>>>(result, result.Count);
+                }).Value;
         }
 
         private sealed class SuccessCallbackExecutor<TCallback>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback)

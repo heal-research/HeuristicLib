@@ -24,7 +24,7 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
 {
     public int ExecutionCount { get; private set; }
 
-    public override ExecutorFactory<IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> CreateExecutorFactory()
+    protected override ExecutorFactory<IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> CreateFactory()
     {
         ExecutionCount++;
         var executor = new Executor();
@@ -38,7 +38,7 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
     }
 }
 
-public sealed record CountingExecutionAlgorithm(int Increment, IEvaluator<int> Evaluator)
+public sealed record CountingExecutionAlgorithm(int Increment, IOperator<Evaluation, int> Evaluator)
     : Algorithm<CountingExecutionAlgorithm, int, PopulationState<int>>
 {
     public int ExecutionCount { get; private set; }

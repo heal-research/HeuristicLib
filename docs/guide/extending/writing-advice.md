@@ -2,11 +2,11 @@
 
 Write advice when a runtime policy should wrap selected algorithm or operator executions without adding child configurations to the algorithm's configuration graph. Examples include recording a domain-specific event or bridging an operation to a host application's logging system.
 
-Use a configured operator or composition when its settings and children belong in the reusable algorithm configuration. General advice can also change behavior, but predefined inspection advice observes without intentionally changing inputs or outputs. Wrapping can still hide optional controls; see the [known capability-loss bug](/guide/extending/operator-composition#known-capability-loss).
+Use a configured operator or composition when its settings and children belong in the reusable algorithm configuration. General advice can also change behavior, but predefined inspection advice observes without intentionally changing inputs or outputs. Mutation and evaluation advice preserves the selected executor's control provider.
 
 ## Select a role and implement its advice
 
-This example logs each successful mutation batch with its selected configuration, call number and offspring count. Derive from `MutatorAdvice<TCandidate>` because the advice wraps mutation executions. The class is runtime machinery and holds a callback; it is not a persistable configuration record.
+This example logs each successful mutation batch with its selected configuration, call number and offspring count. Derive from `OperatorAdvice<Mutation, TCandidate>` because the advice wraps mutation executions. The class is runtime machinery and holds a callback; it is not a persistable configuration record.
 
 Use these imports in a C# project with implicit system usings enabled:
 
@@ -14,9 +14,9 @@ Use these imports in a C# project with implicit system usings enabled:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/CustomAdviceDocumentationSpecs.cs#custom-advice-type{csharp}
 
-`CreateWrapperFactory` receives the configuration selected by the pointcut and the run's search-space and problem types. It prepares `JoinPointState` once per advice instance, selected configuration and owner state. The returned factory wraps the already resolved executor. Advice neither resolves its source again nor constructs a configuration wrapper.
+`CreateWrapperFactory` receives the selected configuration once per advice instance and configuration owner. Its returned `Factory` retains the call count. For each run signature, `GetWrapperFactory` asks the operation adapter to call `Callback.OnSucceeded` after a successful operation. Advice neither resolves its source again nor constructs a configuration wrapper.
 
-The prepared call counter survives rebuilding the execution binding. Each bound node retains its own inner execution, and `offspring` belongs to one operation. The wrapper forwards the supplied parents, random source, search space and problem unchanged and returns the child's result. It logs only after the child succeeds. If the child throws, no message is written; an exception from `write` propagates after the child has completed.
+The prepared call counter survives rebuilding the execution binding. Each executor retains its own child. The mutation adapter forwards parents, random source, search space and problem unchanged, returns the child's result and supplies its offspring count to the callback. It logs only after the child succeeds. If the child throws, no message is written; an exception from `write` propagates after the child has completed.
 
 This counter expects sequential calls for a join point. A shared logging sink must also synchronize its own writes if several executions can call it concurrently. Advice preparation and shared state do not provide synchronization.
 
@@ -32,7 +32,7 @@ The initial population is created and evaluated without mutation. The next two g
 
 Add the aspect while the run is preparing. The run collects it; resolution constructs the advised executor when the run starts. The same aspect can be passed to `ResolutionScope.Create`, `With` or `CreateChildScope` for direct execution construction.
 
-To cover every mutator over real vectors, replace `Pointcut.Reference(mutator)` with `Pointcut.OfType<IMutator<RealVector>>()`. Each selected configuration has its own prepared call counter, while all messages go to the supplied sink. Reference pointcuts use object identity, so a copy made with `with` is a separate source. See [Observability and analysis](/guide/execution/observability-and-analysis#select-configurations-by-properties-or-names) for property and name matching.
+To cover every mutator over real vectors, replace `Pointcut.Reference(mutator)` with `Pointcut.OfType<IOperator<Mutation, RealVector>>()`. Each selected configuration has its own prepared call counter, while all messages go to the supplied sink. Reference pointcuts use object identity, so a copy made with `with` is a separate source. See [Observability and analysis](/guide/execution/observability-and-analysis#select-configurations-by-properties-or-names) for property and name matching.
 
 ## Keep ownership and ordering explicit
 

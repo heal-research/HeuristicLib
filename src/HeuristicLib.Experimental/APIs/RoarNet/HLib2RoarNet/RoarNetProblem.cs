@@ -24,8 +24,8 @@ public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
 {
     public RoarNetProblem(
         TP Problem,
-        IEvaluator<TG> Evaluator,
-        IEvaluator<TG> BoundsEvaluator,
+        IOperator<Evaluation, TG> Evaluator,
+        IOperator<Evaluation, TG> BoundsEvaluator,
         INeighborhood<TG, TM1> ConstructionNeighborhood,
         INeighborhood<TG, TM2> DestructionNeighborhood,
         INeighborhood<TG, TM3> LocalNeighborhood,

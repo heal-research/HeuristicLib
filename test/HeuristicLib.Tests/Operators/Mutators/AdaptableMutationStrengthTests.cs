@@ -148,7 +148,51 @@ public class AdaptableMutationStrengthTests
         calls.CurrentCount.ShouldBe(2);
     }
 
-    private static EvolutionStrategy<RealVector> CreateAlgorithm(IMutator<RealVector> mutator, FuncProblem<RealVector, BoundedRealVectorSearchSpace> problem) => new()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TransparentWrappers_PreserveEvolutionStrategyOutputsAndStrengthAcrossRetainedContexts(bool ancestorOwnsGaussian)
+    {
+        var raw = Capture(wrapped: false);
+        var wrapped = Capture(wrapped: true);
+        wrapped.ShouldBe(raw);
+        raw.Select(item => item.Strength).Distinct().Count().ShouldBeGreaterThan(3);
+
+        List<(double Candidate, double Strength)> Capture(bool wrapped)
+        {
+            var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
+            var problem = CreateProblem(searchSpace);
+            var gaussian = new GaussianMutator(1.0, 3.0);
+            IOperator<Mutation, RealVector> mutator = wrapped ? gaussian.Retry(3).Named("inner").Named("outer") : gaussian;
+            var algorithm = CreateAlgorithm(mutator, problem);
+            var root = ResolutionScope.Create();
+            if (ancestorOwnsGaussian)
+                _ = root.For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>>()
+                    .Resolve(gaussian);
+            var selector = new ChildScopeSelector(ChildScopePolicy.Retained);
+            var result = new List<(double, double)>();
+            IMutationStrengthControl? previous = null;
+            for (var activation = 0; activation < 2; activation++)
+            {
+                var calls = new CountAccumulator();
+                var scope = selector.GetScopeFor(algorithm, root.With(Aspect.CountCalls(mutator, calls)));
+                var typed = scope.For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>();
+                _ = typed.Resolve(mutator, out IMutationStrengthControl? strength);
+                _ = typed.Resolve(gaussian, out IMutationStrengthControl? childStrength);
+                strength.ShouldNotBeNull().ShouldBeSameAs(childStrength);
+                if (previous is not null)
+                    strength.ShouldBeSameAs(previous);
+                previous = strength;
+                foreach (var state in typed.Resolve(algorithm).Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken))
+                    result.Add((state.Population.Single().Candidate[0], strength.CurrentMutationStrength));
+                calls.CurrentCount.ShouldBe(2);
+            }
+            gaussian.MutationStrength.ShouldBe(3.0);
+            return result;
+        }
+    }
+
+    private static EvolutionStrategy<RealVector> CreateAlgorithm(IOperator<Mutation, RealVector> mutator, FuncProblem<RealVector, BoundedRealVectorSearchSpace> problem) => new()
     {
         PopulationSize = 1,
         NumberOfChildren = 1,

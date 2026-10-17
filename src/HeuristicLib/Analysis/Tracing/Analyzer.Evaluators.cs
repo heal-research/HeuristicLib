@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Analysis;
 public static partial class Analyzer
 {
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TValue, TResult>(
-        IEvaluator<TCandidate> evaluator,
+        IOperator<Evaluation, TCandidate> evaluator,
         IMeasurement<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>, TValue> measurement,
         IAggregation<TValue, TResult> aggregation, IReadOnlyList<Clock>? clocks = null,
         TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null)
@@ -19,18 +19,18 @@ public static partial class Analyzer
         Trace([evaluator], measurement, aggregation, clocks, retention, objectiveComparer);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TValue, TResult>(
-        IReadOnlyList<IEvaluator<TCandidate>> evaluators,
+        IReadOnlyList<IOperator<Evaluation, TCandidate>> evaluators,
         IMeasurement<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>, TValue> measurement,
         IAggregation<TValue, TResult> aggregation, IReadOnlyList<Clock>? clocks = null,
         TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        TraceAnalyzer<TResult>.Create<IEvaluator<TCandidate>, EvaluatorObservation<TCandidate, TSearchSpace, TProblem>, TProblem, TValue>(evaluators,
+        TraceAnalyzer<TResult>.Create<IOperator<Evaluation, TCandidate>, EvaluatorObservation<TCandidate, TSearchSpace, TProblem>, TProblem, TValue>(evaluators,
             static (source, record) => Aspect.Observe(source, record),
             measurement, aggregation, clocks, retention, objectiveComparer);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TValue, TResult>(
-        IEvaluator<TCandidate> evaluator,
+        IOperator<Evaluation, TCandidate> evaluator,
         Func<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>, IReadOnlyList<TValue>> measure,
         IAggregation<TValue, TResult> aggregation, IReadOnlyList<Clock>? clocks = null,
         TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null)
@@ -40,7 +40,7 @@ public static partial class Analyzer
             aggregation, clocks, retention, objectiveComparer);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TResult>(
-        IEvaluator<TCandidate> evaluator,
+        IOperator<Evaluation, TCandidate> evaluator,
         Func<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>, TResult> value,
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -48,7 +48,7 @@ public static partial class Analyzer
         Trace([evaluator], value, clocks, retention);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TSearchSpace, TProblem, TResult>(
-        IReadOnlyList<IEvaluator<TCandidate>> evaluators,
+        IReadOnlyList<IOperator<Evaluation, TCandidate>> evaluators,
         Func<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>, TResult> value,
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -60,7 +60,7 @@ public static partial class Analyzer
     // Observes at the interface search space and problem, so an implicitly typed lambda needs no type arguments.
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TValue, TResult>(
-        IEvaluator<TCandidate> evaluator,
+        IOperator<Evaluation, TCandidate> evaluator,
         Func<EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>, IReadOnlyList<TValue>> measure,
         IAggregation<TValue, TResult> aggregation, IReadOnlyList<Clock>? clocks = null,
         TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null) =>
@@ -68,13 +68,13 @@ public static partial class Analyzer
             aggregation, clocks, retention, objectiveComparer);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TResult>(
-        IEvaluator<TCandidate> evaluator,
+        IOperator<Evaluation, TCandidate> evaluator,
         Func<EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>, TResult> value,
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null) =>
         Trace([evaluator], value, clocks, retention);
 
     public static TraceAnalyzer<TResult> Trace<TCandidate, TResult>(
-        IReadOnlyList<IEvaluator<TCandidate>> evaluators,
+        IReadOnlyList<IOperator<Evaluation, TCandidate>> evaluators,
         Func<EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>, TResult> value,
         IReadOnlyList<Clock>? clocks = null, TraceRetention? retention = null) =>
         TraceAnalyzer<TResult>.Create(evaluators,

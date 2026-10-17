@@ -7,8 +7,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation.Fixtures.Authoring;
 
-public abstract record LeafOperator<TCandidate, TOperation, TSearchSpace, TProblem, TExecutor>
-    : IOperator<TCandidate, TOperation>
+public abstract record LeafOperator<TOperation, TCandidate, TSearchSpace, TProblem, TExecutor>
+    : IOperator<TOperation, TCandidate>
     where TOperation : IOperationDescriptor<TOperation>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -23,7 +23,7 @@ public abstract record LeafOperator<TCandidate, TOperation, TSearchSpace, TProbl
 }
 
 public abstract record Mutator<TCandidate, TSearchSpace, TProblem>
-    : LeafOperator<TCandidate, Mutation, TSearchSpace, TProblem, IMutationExecutor<TCandidate, TSearchSpace, TProblem>>
+    : LeafOperator<Mutation, TCandidate, TSearchSpace, TProblem, IMutationExecutor<TCandidate, TSearchSpace, TProblem>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
@@ -66,7 +66,7 @@ public abstract record StatefulMutator<TCandidate, TState> : Mutator<TCandidate>
     }
 }
 
-public abstract record StatelessEvaluator<TCandidate> : LeafOperator<TCandidate, Evaluation,
+public abstract record StatelessEvaluator<TCandidate> : LeafOperator<Evaluation, TCandidate,
     ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>,
     IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>>,
     IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>

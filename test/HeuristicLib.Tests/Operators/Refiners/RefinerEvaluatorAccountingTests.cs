@@ -100,7 +100,7 @@ public class RefinerEvaluatorAccountingTests
         counter.CurrentCount.ShouldBe(4);
     }
 
-    private static IEvaluator<int> CreateEvaluator() =>
+    private static IOperator<Evaluation, int> CreateEvaluator() =>
         new CandidateValueEvaluator();
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>

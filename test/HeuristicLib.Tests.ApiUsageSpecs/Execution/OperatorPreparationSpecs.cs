@@ -13,13 +13,13 @@ public sealed class OperatorPreparationSpecs
     [Fact]
     public void ExternalOperationAndGenericTopologyParticipateInGeneralAdvice()
     {
-        IOperator<RealVector, ReadValue> source = new ValueSource(42);
-        var forwarded = new Forward<RealVector, ReadValue>(source);
+        IOperator<ReadValue, RealVector> source = new ValueSource(42);
+        var forwarded = new Forward<ReadValue, RealVector>(source);
         var counter = new Counter();
         var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), counter));
 
         var binding = ReadValue.CreateExecutorAdapter<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
-        var bound = scope.ResolveOperator<RealVector, ReadValue, BoundedRealVectorSearchSpace, TestFunctionProblem,
+        var bound = scope.ResolveOperator<ReadValue, RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem,
             ISearchState, IReadValueExecutor>(forwarded, binding);
 
         bound.Executor.Read().ShouldBe(42);
@@ -41,19 +41,28 @@ public sealed class OperatorPreparationSpecs
 
     private sealed class ReadValue : IOperationDescriptor<ReadValue>
     {
-        public static OperationExecutorAdapter<TCandidate, ReadValue, TSearchSpace, TProblem, TRunSearchState>
+        public static OperationExecutorAdapter<ReadValue, TCandidate, TSearchSpace, TProblem, TRunSearchState>
             CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TRunSearchState : class, ISearchState => new ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>();
 
         private sealed class ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>
-            : OperationExecutorAdapter<TCandidate, ReadValue, TSearchSpace, TProblem, TRunSearchState, IReadValueExecutor>
+            : OperationExecutorAdapter<ReadValue, TCandidate, TSearchSpace, TProblem, TRunSearchState, IReadValueExecutor>
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TRunSearchState : class, ISearchState
         {
             public override bool SupportsCandidateWork => false;
+
+            protected override IReadValueExecutor CreatePolicyExecutor(System.Collections.Immutable.ImmutableArray<IReadValueExecutor> children, SynchronousPolicy policy) =>
+                new PolicyRead(children, policy);
+
+            private sealed class PolicyRead(System.Collections.Immutable.ImmutableArray<IReadValueExecutor> children, SynchronousPolicy policy) : IReadValueExecutor
+            {
+                public int Read() => policy.Execute(children, default(ValueTuple), null,
+                    static (child, _) => new OperationCallResult<int>(child.Read(), 0)).Value;
+            }
 
             protected override IReadValueExecutor CreateSuccessCallbackExecutor<TCallback>(IReadValueExecutor child, TCallback callback) =>
                 new SuccessfulRead<TCallback>(child, callback);
@@ -93,7 +102,7 @@ public sealed class OperatorPreparationSpecs
         }
     }
 
-    private sealed record ValueSource(int Value) : IOperator<RealVector, ReadValue>
+    private sealed record ValueSource(int Value) : IOperator<ReadValue, RealVector>
     {
         public OperatorExecutorFactory CreateExecutorFactory() => OperatorExecutorFactory.FromFactory<IReadValueExecutor>(_ => new Executor(Value));
 
@@ -104,18 +113,18 @@ public sealed class OperatorPreparationSpecs
         }
     }
 
-    private sealed record Forward<TCandidate, TOperation>(IOperator<TCandidate, TOperation> ChildOperator)
-        : IOperator<TCandidate, TOperation> where TOperation : IOperationDescriptor<TOperation>
+    private sealed record Forward<TOperation, TCandidate>(IOperator<TOperation, TCandidate> ChildOperator)
+        : IOperator<TOperation, TCandidate> where TOperation : IOperationDescriptor<TOperation>
     {
         public bool Fits(ExecutionSignature execution) => ChildOperator.Fits(execution);
         public IOperatorContract<TCandidate>? CandidateContract => ChildOperator.CandidateContract;
         public OperatorExecutorFactory CreateExecutorFactory() => new Factory(ChildOperator);
 
-        private sealed class Factory(IOperator<TCandidate, TOperation> child) : OperatorExecutorFactory
+        private sealed class Factory(IOperator<TOperation, TCandidate> child) : OperatorExecutorFactory
         {
-            public override ExecutorFactory GetExecutorFactory<TBoundCandidate, TBoundOperation, TSearchSpace, TProblem, TRunSearchState>(
-                OperationExecutorAdapter<TBoundCandidate, TBoundOperation, TSearchSpace, TProblem, TRunSearchState> adapter) =>
-                child is IOperator<TBoundCandidate, TBoundOperation> typed
+            public override ExecutorFactory GetExecutorFactory<TBoundOperation, TBoundCandidate, TSearchSpace, TProblem, TRunSearchState>(
+                OperationExecutorAdapter<TBoundOperation, TBoundCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
+                child is IOperator<TBoundOperation, TBoundCandidate> typed
                     ? adapter.Forward(typed)
                     : throw new InvalidOperationException("Incompatible forwarding view.");
         }
@@ -128,9 +137,9 @@ public sealed class OperatorPreparationSpecs
 
         private sealed class WrapperFactory(Counter counter) : OperatorAdviceWrapperFactory
         {
-            public override WrapperExecutorFactory GetWrapperFactory<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState>(
-                IOperator<TCandidate, TOperation> source,
-                OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter) =>
+            public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
+                IOperator<TOperation, TCandidate> source,
+                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
                 adapter.Success(new Hook(counter));
         }
 

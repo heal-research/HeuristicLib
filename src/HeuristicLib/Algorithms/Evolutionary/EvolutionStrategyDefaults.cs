@@ -18,6 +18,6 @@ public static class EvolutionStrategyDefaults
     public static ISelector<TCandidate> Selector<TCandidate>() =>
         new RandomSelector<TCandidate>();
 
-    public static IEvaluator<TCandidate> Evaluator<TCandidate>() =>
+    public static IOperator<Evaluation, TCandidate> Evaluator<TCandidate>() =>
         new ProblemEvaluator<TCandidate>();
 }

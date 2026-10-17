@@ -155,18 +155,22 @@ public class NoviceFrictionSpecs
     {
         var algorithm = typeof(GeneticAlgorithm<RealVector>);
 
-        // Every slot, terminators and interceptors included, names the candidate and nothing else.
+        // Slots omit run types; migrated slots additionally identify their operation.
         string[] slots =
         [
             nameof(GeneticAlgorithm<RealVector>.Creator), nameof(GeneticAlgorithm<RealVector>.Crossover),
-            nameof(GeneticAlgorithm<RealVector>.Mutator), nameof(GeneticAlgorithm<RealVector>.Selector),
+            nameof(GeneticAlgorithm<RealVector>.Selector),
             nameof(GeneticAlgorithm<RealVector>.Terminator), nameof(GeneticAlgorithm<RealVector>.Interceptor)
         ];
 
         foreach (var slot in slots)
         {
-            algorithm.GetProperty(slot)!.PropertyType.GetGenericArguments().ShouldHaveSingleItem();
+            algorithm.GetProperty(slot)!.PropertyType.GetGenericArguments().ShouldBe([typeof(RealVector)]);
         }
+        algorithm.GetProperty(nameof(GeneticAlgorithm<RealVector>.Mutator))!.PropertyType
+            .ShouldBe(typeof(IOperator<Mutation, RealVector>));
+        algorithm.GetProperty(nameof(GeneticAlgorithm<RealVector>.Evaluator))!.PropertyType
+            .ShouldBe(typeof(IOperator<Evaluation, RealVector>));
     }
 
     /// <summary>
@@ -178,13 +182,13 @@ public class NoviceFrictionSpecs
     [Fact]
     public void TheOneArgumentAlgorithm_TakesAnOperatorThatReadsTheSearchSpace()
     {
-        IMutator<RealVector> encodingBoundMutator =
+        IOperator<Mutation, RealVector> encodingBoundMutator =
             new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1);
 
         var mutatorSlot = typeof(GeneticAlgorithm<RealVector>)
             .GetProperty(nameof(GeneticAlgorithm<RealVector>.Mutator))!;
 
-        mutatorSlot.PropertyType.ShouldBe(typeof(IMutator<RealVector>));
+        mutatorSlot.PropertyType.ShouldBe(typeof(IOperator<Mutation, RealVector>));
         mutatorSlot.PropertyType.IsInstanceOfType(encodingBoundMutator).ShouldBeTrue();
     }
 
@@ -276,11 +280,11 @@ public class NoviceFrictionSpecs
 
         // Accepted, and should not be. A single flip takes the candidate straight out of the constrained space, and
         // no arrangement of type arguments would have caught it, because it is a fact about the output.
-        IMutator<BoolVector> constrainedSlot = new FlipOneBitMutator();
+        IOperator<Mutation, BoolVector> constrainedSlot = new FlipOneBitMutator();
 
         // Accepted, and now rightly so. This was CS0266 before the reduction: the slot named the unconstrained space,
         // BitSwapMutator named the narrower one, and contravariance ran the wrong way. The slot names neither now.
-        IMutator<BoolVector> wideSlot = new BitSwapMutator();
+        IOperator<Mutation, BoolVector> wideSlot = new BitSwapMutator();
 
         var flipped = new FlipOneBitMutator().MutateCandidate(candidate, RandomNumberGenerator.Create(seed: 1));
 

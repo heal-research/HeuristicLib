@@ -256,7 +256,7 @@ public class DynamicAnalysisTests
     private sealed record BatchEvaluationAlgorithm(IReadOnlyList<IReadOnlyList<int>> Batches)
         : Algorithm<BatchEvaluationAlgorithm, int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
     {
-        public IEvaluator<int> Evaluator { get; } = new ProblemEvaluator();
+        public IOperator<Evaluation, int> Evaluator { get; } = new ProblemEvaluator();
 
         public override ExecutorFactory<AlgorithmExecutor<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>> CreateExecutorFactory() =>
             scope => new Executor(scope.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(Evaluator), Batches);

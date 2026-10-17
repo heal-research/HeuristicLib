@@ -13,9 +13,9 @@ public record GeneticAlgorithm<TCandidate>
     public int PopulationSize { get; init; } = GeneticAlgorithmDefaults.PopulationSize;
     public required ICreator<TCandidate> Creator { get; init; }
     public required ICrossover<TCandidate> Crossover { get; init; }
-    public required IMutator<TCandidate> Mutator { get; init; }
+    public required IOperator<Mutation, TCandidate> Mutator { get; init; }
     public ITerminator<TCandidate>? Terminator { get; init; }
-    public IEvaluator<TCandidate> Evaluator { get; init; } = GeneticAlgorithmDefaults.Evaluator<TCandidate>();
+    public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = GeneticAlgorithmDefaults.Evaluator<TCandidate>();
     public IRefiner<TCandidate>? Refiner { get; init; }
 
     /// <summary>
@@ -120,9 +120,9 @@ public static class GeneticAlgorithm
         Problem<TProblem, TCandidate, TSearchSpace> problem,
         ICreator<TCandidate>? creator = null,
         ICrossover<TCandidate>? crossover = null,
-        IMutator<TCandidate>? mutator = null,
+        IOperator<Mutation, TCandidate>? mutator = null,
         ISelector<TCandidate>? selector = null,
-        IEvaluator<TCandidate>? evaluator = null,
+        IOperator<Evaluation, TCandidate>? evaluator = null,
         IRefiner<TCandidate>? refiner = null,
         ITerminator<TCandidate>? terminator = null,
         IInterceptor<TCandidate>? interceptor = null,
@@ -174,9 +174,9 @@ public static class GeneticAlgorithm
         ISearchSpace<TCandidate> searchSpace,
         ICreator<TCandidate>? creator = null,
         ICrossover<TCandidate>? crossover = null,
-        IMutator<TCandidate>? mutator = null,
+        IOperator<Mutation, TCandidate>? mutator = null,
         ISelector<TCandidate>? selector = null,
-        IEvaluator<TCandidate>? evaluator = null,
+        IOperator<Evaluation, TCandidate>? evaluator = null,
         IRefiner<TCandidate>? refiner = null,
         ITerminator<TCandidate>? terminator = null,
         IInterceptor<TCandidate>? interceptor = null,
@@ -219,9 +219,9 @@ public static class GeneticAlgorithm
     public static GeneticAlgorithm<TCandidate> Create<TCandidate>(
         ICreator<TCandidate> creator,
         ICrossover<TCandidate> crossover,
-        IMutator<TCandidate> mutator,
+        IOperator<Mutation, TCandidate> mutator,
         ISelector<TCandidate>? selector = null,
-        IEvaluator<TCandidate>? evaluator = null,
+        IOperator<Evaluation, TCandidate>? evaluator = null,
         IRefiner<TCandidate>? refiner = null,
         ITerminator<TCandidate>? terminator = null,
         IInterceptor<TCandidate>? interceptor = null,

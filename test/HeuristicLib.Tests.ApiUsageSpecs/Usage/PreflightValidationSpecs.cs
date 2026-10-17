@@ -40,7 +40,7 @@ public class PreflightValidationSpecs
 
         report.IsValid.ShouldBeFalse();
         var diagnostic = report.Diagnostics.ShouldHaveSingleItem();
-        diagnostic.Path.ShouldContain("ChildMutators[1]");
+        diagnostic.Path.ShouldContain("ChildOperators[1]");
         diagnostic.Message.ShouldContain(nameof(FlipOneBitMutator));
         diagnostic.Message.ShouldContain("Cardinality(2)");
     }
@@ -68,7 +68,7 @@ public class PreflightValidationSpecs
         var report = SearchConfigurationValidation.Validate(pipeline, Unconstrained);
 
         var diagnostic = report.Diagnostics.ShouldHaveSingleItem();
-        diagnostic.Path.ShouldEndWith("ChildMutators[1]");
+        diagnostic.Path.ShouldEndWith("ChildOperators[1]");
         diagnostic.Message.ShouldContain(nameof(SwapSecondTrueMutator));
 
         var exception = Should.Throw<InvalidOperationException>(report.ThrowIfInvalid);

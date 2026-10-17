@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>Identifies combining parent groups into offspring when declaring an operator slot.</summary>
 public sealed class Crossover : IOperationDescriptor<Crossover>
 {
-    public static OperationExecutorAdapter<TCandidate, Crossover, TSearchSpace, TProblem, TRunSearchState>
+    public static OperationExecutorAdapter<Crossover, TCandidate, TSearchSpace, TProblem, TRunSearchState>
         CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -17,7 +17,7 @@ public sealed class Crossover : IOperationDescriptor<Crossover>
         new ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>();
 
     private sealed class ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>
-        : OperationExecutorAdapter<TCandidate, Crossover, TSearchSpace, TProblem, TRunSearchState,
+        : OperationExecutorAdapter<Crossover, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -57,6 +57,20 @@ public sealed class Crossover : IOperationDescriptor<Crossover>
                 }
                 finally { notifier.Finish(); }
             }
+        }
+
+        protected override ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> CreatePolicyExecutor(ImmutableArray<ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) =>
+            new PolicyExecutor(children, policy);
+
+        private sealed class PolicyExecutor(ImmutableArray<ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) : ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>
+        {
+            public IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random,
+                TSearchSpace searchSpace, TProblem problem) =>
+                policy.Execute(children, (parents, random, searchSpace, problem), random, static (child, args) =>
+                {
+                    var result = child.Cross(args.parents, args.random, args.searchSpace, args.problem);
+                    return new OperationCallResult<IReadOnlyList<TCandidate>>(result, result.Count);
+                }).Value;
         }
 
         private sealed class SuccessCallbackExecutor<TCallback>(ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback)

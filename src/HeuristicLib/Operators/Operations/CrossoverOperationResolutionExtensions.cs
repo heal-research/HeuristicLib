@@ -9,40 +9,40 @@ namespace HEAL.HeuristicLib.Operators;
 public static class CrossoverOperationResolutionExtensions
 {
     public static ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<TCandidate, Crossover> source)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<Crossover, TCandidate> source)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        scope.Scope.ResolveOperator<TCandidate, Crossover, TSearchSpace, TProblem, ISearchState,
+        scope.Scope.ResolveOperator<Crossover, TCandidate, TSearchSpace, TProblem, ISearchState,
             ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>>(source, Crossover.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>()).Executor;
 
     public static ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem, TControl>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<TCandidate, Crossover> source, out TControl? control)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<Crossover, TCandidate> source, out TControl? control)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TControl : class
     {
-        var bound = scope.Scope.ResolveOperator<TCandidate, Crossover, TSearchSpace, TProblem, ISearchState,
+        var bound = scope.Scope.ResolveOperator<Crossover, TCandidate, TSearchSpace, TProblem, ISearchState,
             ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>>(source, Crossover.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>());
         control = bound.ControlProvider.Get<TControl>();
         return bound.Executor;
     }
 
     public static ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<TCandidate, Crossover> source)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Crossover, TCandidate> source)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState =>
-        scope.Scope.ResolveOperator<TCandidate, Crossover, TSearchSpace, TProblem, TRunSearchState,
+        scope.Scope.ResolveOperator<Crossover, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>>(source, Crossover.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()).Executor;
 
     public static ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem, TRunSearchState, TControl>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<TCandidate, Crossover> source, out TControl? control)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Crossover, TCandidate> source, out TControl? control)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState
         where TControl : class
     {
-        var bound = scope.Scope.ResolveOperator<TCandidate, Crossover, TSearchSpace, TProblem, TRunSearchState,
+        var bound = scope.Scope.ResolveOperator<Crossover, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>>(source, Crossover.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>());
         control = bound.ControlProvider.Get<TControl>();
         return bound.Executor;
@@ -50,19 +50,19 @@ public static class CrossoverOperationResolutionExtensions
 
     [return: NotNullIfNotNull(nameof(source))]
     public static ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<TCandidate, Crossover>? source)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<Crossover, TCandidate>? source)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> => source is null ? null : scope.Resolve(source);
 
     [return: NotNullIfNotNull(nameof(source))]
     public static ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<TCandidate, Crossover>? source)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Crossover, TCandidate>? source)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState => source is null ? null : scope.Resolve(source);
 
     public static bool TryResolve<TCandidate, TSearchSpace, TProblem>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<TCandidate, Crossover> source,
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<Crossover, TCandidate> source,
         [NotNullWhen(true)] out ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -82,7 +82,7 @@ public static class CrossoverOperationResolutionExtensions
     }
 
     public static bool TryResolve<TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<TCandidate, Crossover> source,
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Crossover, TCandidate> source,
         [NotNullWhen(true)] out ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>

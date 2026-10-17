@@ -148,7 +148,7 @@ public class AnalysisUsabilityTests
 
     private sealed record ManualEvaluator : Evaluator<int, DummySearchSpace<int>, TestProblem>
     {
-        public override ExecutorFactory<IEvaluationExecutor<int, DummySearchSpace<int>, TestProblem>> CreateExecutorFactory() => _ => new Executor();
+        protected override ExecutorFactory<IEvaluationExecutor<int, DummySearchSpace<int>, TestProblem>> CreateFactory() => _ => new Executor();
 
         private sealed class Executor : IEvaluationExecutor<int, DummySearchSpace<int>, TestProblem>
         {

@@ -15,8 +15,8 @@ public class PointcutSpecs
     [Fact]
     public void AReferenceRetainsItsDeclaredRole()
     {
-        IMutator<RealVector> mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
-        Pointcut<IMutator<RealVector>> selected = Pointcut.Reference(mutator);
+        IOperator<Mutation, RealVector> mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
+        Pointcut<IOperator<Mutation, RealVector>> selected = Pointcut.Reference(mutator);
 
         selected.Matches(mutator).ShouldBeTrue();
         selected.Matches(new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5)).ShouldBeFalse();
@@ -28,7 +28,7 @@ public class PointcutSpecs
         var smallMutation = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
         var largeMutation = smallMutation with { MutationStrength = 2.0 };
 
-        Pointcut<IMutator<RealVector>> selectedMutators = Pointcut.Predicate<IMutator<RealVector>>(
+        Pointcut<IOperator<Mutation, RealVector>> selectedMutators = Pointcut.Predicate<IOperator<Mutation, RealVector>>(
             mutator => mutator is GaussianMutator { MutationStrength: < 1 });
         Pointcut<GaussianMutator> selectedGaussianMutators = Pointcut.Predicate<GaussianMutator>(
             mutator => mutator.MutationStrength < 1);
@@ -43,10 +43,10 @@ public class PointcutSpecs
     public void NamesCanBePropertiesOnConfiguredWrappers()
     {
         var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
-        var exploration = new NamedMutator<RealVector>(child, "exploration");
-        var refinement = new NamedMutator<RealVector>(child, "refinement");
-        var allMutators = Pointcut.OfType<IMutator<RealVector>>();
-        Pointcut<IMutator<RealVector>> selected = allMutators
+        var exploration = new Named<Mutation, RealVector>(child, "exploration");
+        var refinement = new Named<Mutation, RealVector>(child, "refinement");
+        var allMutators = Pointcut.OfType<IOperator<Mutation, RealVector>>();
+        Pointcut<IOperator<Mutation, RealVector>> selected = allMutators
             .And(new ExplorationMutations());
 
         // Matches examines supplied nodes; an aspect applies a selection while resolving.
@@ -59,8 +59,8 @@ public class PointcutSpecs
     public void NamingWrappersCanRetainTheirSharedChildExecution()
     {
         var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
-        var exploration = new NamedMutator<RealVector>(child, "exploration");
-        var refinement = new NamedMutator<RealVector>(child, "refinement");
+        var exploration = new Named<Mutation, RealVector>(child, "exploration");
+        var refinement = new Named<Mutation, RealVector>(child, "refinement");
         var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
 
         var explorationExecutor = scope.Resolve(exploration);
@@ -75,10 +75,10 @@ public class PointcutSpecs
     {
         var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
         var first = child.Named("exploration");
-        var second = NamedMutator.Create(child, "exploration");
-        var refinement = new NamedMutator<RealVector>(child, "refinement");
-        Pointcut<IMutator<RealVector>> selected = Pointcut.Named<IMutator<RealVector>>("exploration") &
-            !Pointcut.Reference<IMutator<RealVector>>(first);
+        var second = Named.Create(child, "exploration");
+        var refinement = new Named<Mutation, RealVector>(child, "refinement");
+        Pointcut<IOperator<Mutation, RealVector>> selected = Pointcut.Named<IOperator<Mutation, RealVector>>("exploration") &
+            !Pointcut.Reference<IOperator<Mutation, RealVector>>(first);
         IConfigurationNode[] nodes = [child, first, second, refinement];
 
         var matches = nodes.Where(selected.Matches).ToArray();
@@ -89,14 +89,14 @@ public class PointcutSpecs
     [Fact]
     public void ReferenceAndRoleSelectionsComposeWithoutLosingTheRole()
     {
-        IMutator<RealVector> preferred = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
-        IMutator<RealVector> alternative = new GaussianMutator(mutationRate: 0.2, mutationStrength: 2.0);
+        IOperator<Mutation, RealVector> preferred = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
+        IOperator<Mutation, RealVector> alternative = new GaussianMutator(mutationRate: 0.2, mutationStrength: 2.0);
         var exactReference = Pointcut.Reference(preferred);
-        var smallMutations = Pointcut.OfType<IMutator<RealVector>>()
+        var smallMutations = Pointcut.OfType<IOperator<Mutation, RealVector>>()
             .And(new SmallMutations());
 
-        Pointcut<IMutator<RealVector>> selected = exactReference.Or(smallMutations);
-        Pointcut<IMutator<RealVector>> sameSelection = exactReference | smallMutations;
+        Pointcut<IOperator<Mutation, RealVector>> selected = exactReference.Or(smallMutations);
+        Pointcut<IOperator<Mutation, RealVector>> sameSelection = exactReference | smallMutations;
         IConfigurationNode[] nodes = [preferred, alternative];
 
         nodes.Where(selected.Matches).ShouldBe([preferred]);
@@ -107,12 +107,12 @@ public class PointcutSpecs
     public void APropertyConditionCanBeReusedAsASelector()
     {
         var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
-        IMutator<RealVector> exploration = new NamedMutator<RealVector>(child, "exploration");
-        IMutator<RealVector> refinement = new NamedMutator<RealVector>(child, "refinement");
+        IOperator<Mutation, RealVector> exploration = new Named<Mutation, RealVector>(child, "exploration");
+        IOperator<Mutation, RealVector> refinement = new Named<Mutation, RealVector>(child, "refinement");
         var namedExploration = new ExplorationMutations();
 
         var namedReferences = Pointcut.Reference(exploration) | Pointcut.Reference(refinement);
-        Pointcut<IMutator<RealVector>> selected = namedReferences & namedExploration;
+        Pointcut<IOperator<Mutation, RealVector>> selected = namedReferences & namedExploration;
         var sameSelection = namedReferences.And(new ExplorationMutations());
         IConfigurationNode[] nodes = [child, exploration, refinement];
 
@@ -142,7 +142,7 @@ public class PointcutSpecs
         var mutations = new CountAccumulator();
         var counting = useSubclass
             ? new MutationCounter(mutations)
-            : Aspect.Create(Pointcut.OfType<IMutator<RealVector>>(), new CountingMutatorAdvice<RealVector>(mutations, OperatorCountMetric.Calls));
+            : Aspect.Create(Pointcut.OfType<IOperator<Mutation, RealVector>>(), new CountingOperatorAdvice<Mutation, RealVector>(mutations, OperatorCountMetric.Calls));
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
             .AddAspect(counting);
@@ -240,22 +240,22 @@ public class PointcutSpecs
 
     private sealed class MutationCounter : Aspect
     {
-        private static readonly Pointcut<IMutator<RealVector>> Mutators = Pointcut.OfType<IMutator<RealVector>>();
+        private static readonly Pointcut<IOperator<Mutation, RealVector>> Mutators = Pointcut.OfType<IOperator<Mutation, RealVector>>();
 
         public MutationCounter(CountAccumulator mutations)
         {
-            Advices = [(Mutators, new CountingMutatorAdvice<RealVector>(mutations, OperatorCountMetric.Calls))];
+            Advices = [(Mutators, new CountingOperatorAdvice<Mutation, RealVector>(mutations, OperatorCountMetric.Calls))];
         }
     }
 
-    private sealed class SmallMutations : Pointcut<IMutator<RealVector>>
+    private sealed class SmallMutations : Pointcut<IOperator<Mutation, RealVector>>
     {
-        public override bool Matches(IMutator<RealVector> mutator) => mutator is GaussianMutator { MutationStrength: < 1.0 };
+        public override bool Matches(IOperator<Mutation, RealVector> mutator) => mutator is GaussianMutator { MutationStrength: < 1.0 };
     }
 
-    private sealed class ExplorationMutations : Pointcut<IMutator<RealVector>>
+    private sealed class ExplorationMutations : Pointcut<IOperator<Mutation, RealVector>>
     {
-        public override bool Matches(IMutator<RealVector> mutator) => mutator is NamedMutator<RealVector> { Name: "exploration" };
+        public override bool Matches(IOperator<Mutation, RealVector> mutator) => mutator is Named<Mutation, RealVector> { Name: "exploration" };
     }
 
     private sealed class AspectGroup : Aspect

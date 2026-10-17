@@ -71,9 +71,9 @@ public sealed class CountCalls(CallCounter total, AdviceLog log) : OperatorAdvic
     // Deliberately retains its advice key: the weak-cache test must handle a key/value reference cycle.
     private sealed class WrapperFactory(CountCalls advice, CallCountState state) : OperatorAdviceWrapperFactory
     {
-        public override WrapperExecutorFactory GetWrapperFactory<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState>(
-            IOperator<TCandidate, TOperation> source,
-            OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter)
+        public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
+            IOperator<TOperation, TCandidate> source,
+            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
         {
             advice.RecordBinding(source);
             return adapter.Success(advice.CreateHook(state));
@@ -87,18 +87,18 @@ public sealed class CountCalls(CallCounter total, AdviceLog log) : OperatorAdvic
     private CountHook CreateHook(CallCountState state) => new(total, state, log);
 }
 
-public sealed class CountCalls<TCandidate, TOperation>(CallCounter total, AdviceLog log)
-    : OperatorAdvice<TCandidate, TOperation> where TOperation : IOperationDescriptor<TOperation>
+public sealed class CountCalls<TOperation, TCandidate>(CallCounter total, AdviceLog log)
+    : OperatorAdvice<TOperation, TCandidate> where TOperation : IOperationDescriptor<TOperation>
 {
-    public override OperatorAdviceWrapperFactory<TCandidate, TOperation> CreateWrapperFactory(IOperator<TCandidate, TOperation> source) =>
+    public override OperatorAdviceWrapperFactory<TOperation, TCandidate> CreateWrapperFactory(IOperator<TOperation, TCandidate> source) =>
         new WrapperFactory(this, log.Prepare(source));
 
-    private sealed class WrapperFactory(CountCalls<TCandidate, TOperation> advice, CallCountState state)
-        : OperatorAdviceWrapperFactory<TCandidate, TOperation>
+    private sealed class WrapperFactory(CountCalls<TOperation, TCandidate> advice, CallCountState state)
+        : OperatorAdviceWrapperFactory<TOperation, TCandidate>
     {
         public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TRunSearchState>(
-            IOperator<TCandidate, TOperation> source,
-            OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter)
+            IOperator<TOperation, TCandidate> source,
+            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
         {
             advice.RecordBinding(source);
             return adapter.Success(advice.CreateHook(state));
@@ -112,20 +112,20 @@ public sealed class CountCalls<TCandidate, TOperation>(CallCounter total, Advice
     private CountHook CreateHook(CallCountState state) => new(total, state, log);
 }
 
-public sealed class WrongViewAdvice(CallCounter total, AdviceLog log) : OperatorAdvice<RealVector, Mutation>
+public sealed class WrongViewAdvice(CallCounter total, AdviceLog log) : OperatorAdvice<Mutation, RealVector>
 {
     public bool ReturnWrongView { get; set; } = true;
 
-    public override OperatorAdviceWrapperFactory<RealVector, Mutation> CreateWrapperFactory(
-        IOperator<RealVector, Mutation> source) =>
+    public override OperatorAdviceWrapperFactory<Mutation, RealVector> CreateWrapperFactory(
+        IOperator<Mutation, RealVector> source) =>
         new WrapperFactory(this, log.Prepare(source));
 
     private sealed class WrapperFactory(WrongViewAdvice advice, CallCountState state)
-        : OperatorAdviceWrapperFactory<RealVector, Mutation>
+        : OperatorAdviceWrapperFactory<Mutation, RealVector>
     {
         public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TRunSearchState>(
-            IOperator<RealVector, Mutation> source,
-            OperationExecutorAdapter<RealVector, Mutation, TSearchSpace, TProblem, TRunSearchState> adapter) =>
+            IOperator<Mutation, RealVector> source,
+            OperationExecutorAdapter<Mutation, RealVector, TSearchSpace, TProblem, TRunSearchState> adapter) =>
             advice.BindView(source, adapter.Success(new CountHook(advice.Total, state, advice.Log)));
     }
 

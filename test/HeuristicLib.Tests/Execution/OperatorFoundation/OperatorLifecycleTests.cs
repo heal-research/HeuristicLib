@@ -112,17 +112,17 @@ public sealed class OperatorLifecycleTests
         var advice = new LifecycleAdvice(probe);
         var source = new SharedOperations(new ProbeLog());
         var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), advice));
-        var mutation = Typed(scope).Resolve((IOperator<RealVector, Mutation>)source, out ILiveValue? control);
+        var mutation = Typed(scope).Resolve((IOperator<Mutation, RealVector>)source, out ILiveValue? control);
         control!.Value = 14;
         Check(mutation.Mutate(Input, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem)[0][0] == 14,
             "lifecycle wrappers preserve the live state used by the callable operation");
-        _ = Typed(scope).Resolve((IOperator<RealVector, Evaluation>)source).Evaluate([Input[0], Input[0]],
+        _ = Typed(scope).Resolve((IOperator<Evaluation, RealVector>)source).Evaluate([Input[0], Input[0]],
             RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem);
-        Check(Typed(scope).Resolve((IOperator<RealVector, Checksum>)source).Read() == 14, "an external scalar adapter uses the shared lifecycle protocol");
+        Check(Typed(scope).Resolve((IOperator<Checksum, RealVector>)source).Read() == 14, "an external scalar adapter uses the shared lifecycle protocol");
         var broad = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
         var narrow = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
-        _ = broad.Resolve((IOperator<RealVector, Termination>)source).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem);
-        _ = narrow.Resolve(((IOperator<RealVector, Termination>)source).Named("term")).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem);
+        _ = broad.Resolve((IOperator<Termination, RealVector>)source).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem);
+        _ = narrow.Resolve(((IOperator<Termination, RealVector>)source).Named("term")).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem);
         Check(probe.Preparations == 1 && probe.Bindings == 5 && source.Log.Preparations == 1,
             "general lifecycle preparation is shared while operation/state constructors remain separate");
         var interceptor = new IdentityInterceptor(new ProbeLog());
@@ -242,9 +242,9 @@ public sealed class OperatorLifecycleTests
         }
         private sealed class WrapperFactory(Probe probe) : OperatorAdviceWrapperFactory
         {
-            public override WrapperExecutorFactory GetWrapperFactory<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState>(
-                IOperator<TCandidate, TOperation> source,
-                OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter)
+            public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
+                IOperator<TOperation, TCandidate> source,
+                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
             {
                 probe.Bindings++;
                 return adapter.Hooks<Hooks, Token>(new Hooks(probe));

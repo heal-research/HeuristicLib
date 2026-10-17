@@ -38,15 +38,15 @@ public static class OperatorDurationBudgetExtensions
             };
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IEvaluator<TCandidate>> LimitedToEvaluatorDuration(
-            IEvaluator<TCandidate> evaluator,
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IOperator<Evaluation, TCandidate>> LimitedToEvaluatorDuration(
+            IOperator<Evaluation, TCandidate> evaluator,
             TimeSpan maximumDuration)
         {
             return algorithm.LimitedToEvaluatorDuration(evaluator, maximumDuration, TimeProvider.System);
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IEvaluator<TCandidate>> LimitedToEvaluatorDuration(
-            IEvaluator<TCandidate> evaluator,
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IOperator<Evaluation, TCandidate>> LimitedToEvaluatorDuration(
+            IOperator<Evaluation, TCandidate> evaluator,
             TimeSpan maximumDuration,
             TimeProvider timeProvider)
         {
@@ -54,7 +54,7 @@ public static class OperatorDurationBudgetExtensions
                 evaluator,
                 maximumDuration,
                 timeProvider,
-                new EvaluatorDurationMeasuring<TCandidate>());
+                new OperatorDurationMeasuring<Evaluation, TCandidate>());
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, ICreator<TCandidate>> LimitedToCreatorDuration(
@@ -95,15 +95,15 @@ public static class OperatorDurationBudgetExtensions
                 new CrossoverDurationMeasuring<TCandidate>());
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IMutator<TCandidate>> LimitedToMutatorDuration(
-            IMutator<TCandidate> mutator,
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IOperator<Mutation, TCandidate>> LimitedToMutatorDuration(
+            IOperator<Mutation, TCandidate> mutator,
             TimeSpan maximumDuration)
         {
             return algorithm.LimitedToMutatorDuration(mutator, maximumDuration, TimeProvider.System);
         }
 
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IMutator<TCandidate>> LimitedToMutatorDuration(
-            IMutator<TCandidate> mutator,
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IOperator<Mutation, TCandidate>> LimitedToMutatorDuration(
+            IOperator<Mutation, TCandidate> mutator,
             TimeSpan maximumDuration,
             TimeProvider timeProvider)
         {
@@ -111,7 +111,7 @@ public static class OperatorDurationBudgetExtensions
                 mutator,
                 maximumDuration,
                 timeProvider,
-                new MutatorDurationMeasuring<TCandidate>());
+                new OperatorDurationMeasuring<Mutation, TCandidate>());
         }
 
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, IRefiner<TCandidate>> LimitedToRefinerDuration(

@@ -9,21 +9,21 @@ namespace HEAL.HeuristicLib.Operators;
 public static class InterceptionOperationResolutionExtensions
 {
     public static IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<TCandidate, Interception> source)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Interception, TCandidate> source)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState =>
-        scope.Scope.ResolveOperator<TCandidate, Interception, TSearchSpace, TProblem, TRunSearchState,
+        scope.Scope.ResolveOperator<Interception, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>>(source, Interception.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()).Executor;
 
     public static IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TRunSearchState, TControl>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<TCandidate, Interception> source, out TControl? control)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Interception, TCandidate> source, out TControl? control)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState
         where TControl : class
     {
-        var bound = scope.Scope.ResolveOperator<TCandidate, Interception, TSearchSpace, TProblem, TRunSearchState,
+        var bound = scope.Scope.ResolveOperator<Interception, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>>(source, Interception.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>());
         control = bound.ControlProvider.Get<TControl>();
         return bound.Executor;
@@ -31,13 +31,13 @@ public static class InterceptionOperationResolutionExtensions
 
     [return: NotNullIfNotNull(nameof(source))]
     public static IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<TCandidate, Interception>? source)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Interception, TCandidate>? source)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState => source is null ? null : scope.Resolve(source);
 
     public static bool TryResolve<TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<TCandidate, Interception> source,
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Interception, TCandidate> source,
         [NotNullWhen(true)] out IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>? executor, [NotNullWhen(false)] out string? reason)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>

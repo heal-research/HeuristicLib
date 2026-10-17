@@ -318,7 +318,7 @@ See also: Executor, Operation descriptor, Operation invocation, Operator roles.
 
 Status: `Canonical`
 
-An operation descriptor identifies which operation an operator contract selects. For example, `Mutation` in `IOperator<TCandidate, Mutation>` identifies mutation, whose executor interface is `IMutationExecutor<...>`.
+An operation descriptor identifies which operation an operator contract selects. For example, `Mutation` in `IOperator<Mutation, TCandidate>` identifies mutation, whose executor interface is `IMutationExecutor<...>`.
 
 The descriptor represents the kind of action. The executor performs it, and each call is a separate invocation.
 
@@ -497,13 +497,15 @@ Status: `Canonical`
 
 A configuration node is a configuration considered as a node in the configuration graph. Its identity is the configuration object's reference, not its value equality or one occurrence along a caller path. Several configurations may refer to the same child node.
 
-Configuration is accepted shorthand for configuration node when the context is clear. Use node when graph membership needs emphasis, or a role-specific term such as mutator when the role is known. The common interface is `IConfigurationNode`, including its generic form. Role-specific configuration names such as `IOperator` and `IMutator` do not acquire a `Node` suffix.
+Configuration is accepted shorthand for configuration node when the context is clear. Use node when graph membership needs emphasis, or a role-specific term such as mutator when the role is known. The common interface is `IConfigurationNode`, including its generic form. Role-specific configuration names such as `IOperator` and `IOperator<Mutation, TCandidate>` do not acquire a `Node` suffix.
 
 The generic `IConfigurationNode<TExecutor>` prepares an `ExecutorFactory<TExecutor>` through `CreateExecutorFactory()`. Core run-typed roles expose the same preparation method with their run type parameters. This factory receives a construction scope and binds a typed executor to its resolution context; it is runtime machinery, not a configuration value strategy.
 
-`IOperator<TCandidate, TOperation>` instead prepares one `OperatorExecutorFactory` through `CreateExecutorFactory()`. Its checked construction views share persistent state across operations and compatible run signatures. `OperationExecutorAdapter` is an advanced preparation adapter; the callable runtime object remains an executor.
+`IOperator<TOperation, TCandidate>` instead prepares one `OperatorExecutorFactory` through `CreateExecutorFactory()`. Its checked construction views share persistent state across operations and compatible run signatures. `OperationExecutorAdapter` is an advanced preparation adapter; the callable runtime object remains an executor.
 
-Wrapping and multi bases centralize preparation through `CreateWrapperFactory` and `CreateCompositeFactory`. Their returned `WrapperExecutorFactory<TExecutor>` and `CompositeExecutorFactory<TExecutor>` receive one resolved child or an ordered immutable array of children. The children and result share the same executor interface.
+Generic mutation/evaluation authoring bases use protected `CreateFactory` for fixed-signature leaves and `CreateOperatorFactory` for run-generic compositions. Their child properties are `ChildOperator` and `ChildOperators`.
+
+Remaining nominal wrapping and multi bases centralize preparation through `CreateWrapperFactory` and `CreateCompositeFactory`. Their returned `WrapperExecutorFactory<TExecutor>` and `CompositeExecutorFactory<TExecutor>` receive one resolved child or an ordered immutable array of children. The children and result share the same executor interface.
 
 Iterative algorithm bases centralize preparation through `CreateIterationFactory`. Its returned `ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>>` receives a construction scope. The algorithm author resolves the optional interceptor and other declared children through that scope and passes them to the iterative executor constructor.
 

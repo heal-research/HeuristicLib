@@ -2,7 +2,7 @@
 
 **Decision status**: The generic consuming contract remains the accepted direction. Standalone prototype checkpoints stopped after checkpoint 3 on 2026-10-16. Continue the remaining questions through actual core migrations, reusing `prototypes/operator-role-integrated` and moving useful checks into regular tests.
 
-**Implementation status**: Package 1 integrates the production foundation: all nine descriptors, checked carriers, covariant bound views, one configuration-owner table, view-specific factories, controls and general/typed advice with success/lifecycle adapters. Existing role contracts and authoring bases remain. Policy/composite profiles, production inspection conveniences, role cutovers, hosting canaries, performance and net-reduction gates continue in their owning migrations; they are not claimed by this foundation.
+**Implementation status**: Package 1 supplies the production resolver/advice foundation. Package 2 cuts mutation and evaluation over to `IOperator<TOperation, TCandidate>` across repository consumers, with generic naming/retry, shared counting/timing, adapted observations and real GA/EvolutionStrategy canaries. All 3,092 solution tests pass; Package 2 acceptance remains blocked by the numerical evaluation performance gate. Other nominal roles and composite-policy construction remain for their owning packages.
 
 **Target**: .NET 10 and C# 14, using the SDK selected by `global.json`.
 
@@ -23,11 +23,13 @@ Apply this vocabulary throughout the implementation, API excerpts, tests, sample
 
 The glossary records the current vocabulary. Historical measurement reports retain the names of the implementations they measured. No compatibility aliases or forwarding APIs are introduced.
 
+**Generic parameter ordering decision (2026-10-17; accepted)**: Put the operation descriptor first in types and generic methods. Keep the candidate/context group together: `TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, ...`, omitting absent parameters and retaining managed `TState` last. Use `IOperator<Mutation, RealVector>` consistently across the current implementation and later packages. This changes parameter order only; operation and executor meanings remain unchanged. Historical prototype sources remain snapshots.
+
 ## 1. Problem, scope and success criteria
 
 The concrete problem is duplicated composition and inspection machinery across nine operator roles. A generic configuration wrapper cannot implement arbitrary nominal interfaces such as `IMutator<TCandidate>`, so sharing only wrapper internals leaves nominal configuration shells in every role.
 
-The selected solution changes consuming slots to `IOperator<TCandidate, TOperation>`, with descriptors such as `Mutation` and `Evaluation`. Generic `Named`, `Retry` and whole-call choice configurations then fit those slots directly. Role-specific operation methods and ordinary leaf authoring signatures remain: `Mutate`, `Evaluate`, `Cross`, and their single-item counterparts are useful domain APIs.
+The selected solution changes consuming slots to `IOperator<TOperation, TCandidate>`, with descriptors such as `Mutation` and `Evaluation`. Generic `Named`, `Retry` and whole-call choice configurations then fit those slots directly. Role-specific operation methods and ordinary leaf authoring signatures remain: `Mutate`, `Evaluate`, `Cross`, and their single-item counterparts are useful domain APIs.
 
 The migration must achieve all of the following:
 
@@ -61,7 +63,7 @@ Keep the existing non-generic `HEAL.HeuristicLib.Operators.IOperator : IConfigur
 ```csharp
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IOperator<TCandidate, TOperation> : IOperator
+public interface IOperator<TOperation, TCandidate> : IOperator
     where TOperation : IOperationDescriptor<TOperation>
 {
     IOperatorContract<TCandidate>? CandidateContract =>
@@ -71,11 +73,11 @@ public interface IOperator<TCandidate, TOperation> : IOperator
 }
 ```
 
-`IOperator<TCandidate, TOperation>` is the single consuming contract for an operator slot. Remove nominal configuration interfaces such as `IMutator<TCandidate>` at their per-role cutover, migrating every in-repository caller. Keep role-specific executor interfaces such as `IMutationExecutor<...>`. `TCandidate` remains invariant.
+`IOperator<TOperation, TCandidate>` is the single consuming contract for an operator slot. Remove nominal configuration interfaces such as `IMutator<TCandidate>` at their per-role cutover, migrating every in-repository caller. Keep role-specific executor interfaces such as `IMutationExecutor<...>`. `TCandidate` remains invariant.
 
-`IAlgorithm<TCandidate>` and `IAlgorithm<TCandidate, TSearchState>` remain in `Algorithms`, including heterogeneous algorithm collections and their current hosting surface. An algorithm never implements `IOperator<TCandidate, AlgorithmOperation<...>>`. Synchronous operator composition therefore has no overload accepting an algorithm.
+`IAlgorithm<TCandidate>` and `IAlgorithm<TCandidate, TSearchState>` remain in `Algorithms`, including heterogeneous algorithm collections and their current hosting surface. An algorithm never implements `IOperator<AlgorithmOperation<...>, TCandidate>`. Synchronous operator composition therefore has no overload accepting an algorithm.
 
-Keep `IRecommends<TOperator> where TOperator : class, IOperator`. A recommendation for mutation becomes `IRecommends<IOperator<TCandidate, Mutation>>`. Preserve explicit value > problem recommendation > search-space recommendation, decline-and-continue behavior, aggregated missing-parameter diagnostics, and a fresh configuration for each successful recommendation. `Create(...)` infers from required operators; `For(...)` consults recommendations. Optional collaborators continue to use their current defaults rather than acquiring new recommendation rules.
+Keep `IRecommends<TOperator> where TOperator : class, IOperator`. A recommendation for mutation becomes `IRecommends<IOperator<Mutation, TCandidate>>`. Preserve explicit value > problem recommendation > search-space recommendation, decline-and-continue behavior, aggregated missing-parameter diagnostics, and a fresh configuration for each successful recommendation. `Create(...)` infers from required operators; `For(...)` consults recommendations. Optional collaborators continue to use their current defaults rather than acquiring new recommendation rules.
 
 ### 2.2 One preparation owner, several typed construction views
 
@@ -90,8 +92,8 @@ namespace HEAL.HeuristicLib.Execution;
 public abstract class OperatorExecutorFactory
 {
     public abstract ExecutorFactory GetExecutorFactory<
-        TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState>(
-        OperationExecutorAdapter<TCandidate, TOperation,
+        TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
+        OperationExecutorAdapter<TOperation, TCandidate,
             TSearchSpace, TProblem, TRunSearchState> adapter)
         where TOperation : IOperationDescriptor<TOperation>
         where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -115,7 +117,7 @@ Descriptors use domain nouns and provide their binding through a static declarat
 ```csharp
 public interface IOperationDescriptor<TSelf> where TSelf : IOperationDescriptor<TSelf>
 {
-    static abstract OperationExecutorAdapter<TCandidate, TSelf,
+    static abstract OperationExecutorAdapter<TSelf, TCandidate,
         TSearchSpace, TProblem, TRunSearchState>
         CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -155,9 +157,9 @@ public abstract Type ExecutorType { get; }
 public abstract bool SupportsCandidateWork { get; }
 public abstract WrapperExecutorFactory Identity();
 public abstract ExecutorFactory Wrap(
-    IOperator<TCandidate, TOperation> child, WrapperExecutorFactory wrapper);
+    IOperator<TOperation, TCandidate> child, WrapperExecutorFactory wrapper);
 public abstract ExecutorFactory Compose(
-    IReadOnlyList<IOperator<TCandidate, TOperation>> children,
+    IReadOnlyList<IOperator<TOperation, TCandidate>> children,
     CompositeExecutorFactory composite);
 public abstract WrapperExecutorFactory PolicyWrapper(SynchronousPolicy policy);
 public abstract CompositeExecutorFactory PolicyComposite(SynchronousPolicy policy);
@@ -175,7 +177,7 @@ Keep checked wrapper and composite carriers initially. A later simplification is
 
 ### 2.5 Typed resolution stays convenient
 
-Retain thin `Resolve`, `ResolveOptional` and `TryResolve` overloads whose parameter is the corresponding closed operation contract. For example, a mutation overload takes `IOperator<TCandidate, Mutation>` and returns `IMutationExecutor<TCandidate, TSearchSpace, TProblem>`. A typed scope therefore still supports `typed.Resolve(mutator)` and the control-returning form without explicit executor type arguments. These adapters do not recreate nominal configuration interfaces or wrappers.
+Retain thin `Resolve`, `ResolveOptional` and `TryResolve` overloads whose parameter is the corresponding closed operation contract. For example, a mutation overload takes `IOperator<Mutation, TCandidate>` and returns `IMutationExecutor<TCandidate, TSearchSpace, TProblem>`. A typed scope therefore still supports `typed.Resolve(mutator)` and the control-returning form without explicit executor type arguments. These adapters do not recreate nominal configuration interfaces or wrappers.
 
 Supply one such family per built-in operation; an external operation author supplies its corresponding typed extension through the same binding bridge. Do not attempt to infer a hidden `TExecutor` solely from a constraint, or claim C# can obtain an associated executor type from `TOperation`. The shared resolver checks the prepared carrier, while each thin operation extension supplies its named executor type statically.
 
@@ -228,7 +230,7 @@ Cycle detection remains keyed by configuration reference across all views and re
 
 ### 3.3 Multi-operation configurations
 
-Support a configuration implementing several `IOperator<TCandidate, TOperation>` interfaces in one owner scope. It implements `CreateExecutorFactory()` once. A prepared raw executor may implement all of its named executor contracts, or an explicit prepared object may construct distinct operation nodes over the same private state.
+Support a configuration implementing several `IOperator<TOperation, TCandidate>` interfaces in one owner scope. It implements `CreateExecutorFactory()` once. A prepared raw executor may implement all of its named executor contracts, or an explicit prepared object may construct distinct operation nodes over the same private state.
 
 The prepared object's binding implementation declares those views; there is no library registry of known operation combinations. Resolving the second operation must not reinitialize the shared state, regardless of resolution order. Operations with intentionally independent state use separate configuration objects. Contract queries and typed advice use the selected operation view, not an arbitrary first interface on the object.
 
@@ -258,7 +260,7 @@ The control suite covers stacked names/retry/advice; updates observed by later c
 
 ### 4.1 Generic whole-call topologies
 
-`Named<TCandidate, TOperation>` adds metadata and forwards the child. It creates no extra callable operation node when no advice selects it. Wrapper and child remain separately selectable configurations, with reference identity preserved.
+`Named<TOperation, TCandidate>` adds metadata and forwards the child. It creates no extra callable operation node when no advice selects it. Wrapper and child remain separately selectable configurations, with reference identity preserved.
 
 `ChooseCall<TCandidate, TOperation>` snapshots children and `Weights` into `ValueArray<T>`, prepares a `WeightedItemSampler` once, and selects one child for the entire invocation. Empty weights mean uniform sampling. Preserve `WeightedIndexSampler` semantics for zero, negative, NaN and infinite weights, as well as existing random-draw behavior. Reject an empty child collection or mismatched nonempty weight length during preparation. Do not replace the sampler with `NextDouble() * childCount`.
 
@@ -283,9 +285,9 @@ Retain weights, snapshots, weighted edge cases, rate helpers and their existing 
 
 ### 4.3 Retry is explicit, bounded and non-transactional
 
-`Retry<TCandidate, TOperation>` catches only a directly thrown `RetryableFailure`. `MaximumAttempts` includes the first call and must be at least one; `.Retry(2)` permits two calls. Exhaustion propagates the last original failure. Other exceptions, cancellation and `AggregateException` are not unwrapped or retried. This preserves the batch engine's failure shape.
+`Retry<TOperation, TCandidate>` catches only a directly thrown `RetryableOperationException`. `MaximumAttempts` includes the first call and must be at least one; `.Retry(2)` permits two calls. Exhaustion propagates the last original failure. Other exceptions, cancellation and `AggregateException` are not unwrapped or retried. This preserves the batch engine's failure shape.
 
-Every attempt uses the same input values, child executor and RNG object. The wrapper makes no random draws and performs no fork, rewind or snapshot. Draws and state changes made by a failed attempt remain; there is no rollback of partial child effects or inspection data. An operator may signal `RetryableFailure` only when another invocation under that contract is meaningful. An external operation does not become transaction-safe merely because its signature is synchronous.
+Every attempt uses the same input values, child executor and RNG object. The wrapper makes no random draws and performs no fork, rewind or snapshot. Draws and state changes made by a failed attempt remain; there is no rollback of partial child effects or inspection data. An operator may signal `RetryableOperationException` only when another invocation under that contract is meaningful. An external operation does not become transaction-safe merely because its signature is synchronous.
 
 Keep retry as configured behavior and counting/timing as advice. The shared invocation engine does not introduce an `AdvisedOperator` configuration or a second persistence model for runtime advice.
 
@@ -293,7 +295,7 @@ Keep retry as configured behavior and counting/timing as advice. The shared invo
 
 ### 5.1 A real protocol for general and typed operator advice
 
-Add a public non-generic `OperatorAdvice : Advice<IOperator>` for operation-independent synchronous concerns. It prepares a `OperatorAdviceWrapperFactory` once per advice/configuration/owner. That prepared object has a run-generic `GetExecutorFactory` method receiving the typed source and `OperationExecutorAdapter`; it calls `binding.Success(...)`, `binding.Hooks(...)` or `binding.PolicyWrapper(...)` as appropriate. For example:
+Add a public non-generic `OperatorAdvice : Advice<IOperator>` for operation-independent synchronous concerns. It prepares a `OperatorAdviceWrapperFactory` once per advice/configuration/owner. That factory has a run-generic `GetWrapperFactory` method receiving the typed source and `OperationExecutorAdapter`; it calls `binding.Success(...)`, `binding.Hooks(...)` or `binding.PolicyWrapper(...)` as appropriate. For example:
 
 ```csharp
 public abstract class OperatorAdvice : Advice<IOperator>
@@ -304,9 +306,9 @@ public abstract class OperatorAdvice : Advice<IOperator>
 public abstract class OperatorAdviceWrapperFactory
 {
     public abstract WrapperExecutorFactory GetWrapperFactory<
-        TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState>(
-        IOperator<TCandidate, TOperation> source,
-        OperationExecutorAdapter<TCandidate, TOperation,
+        TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
+        IOperator<TOperation, TCandidate> source,
+        OperationExecutorAdapter<TOperation, TCandidate,
             TSearchSpace, TProblem, TRunSearchState> adapter)
         where TOperation : IOperationDescriptor<TOperation>
         where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -317,11 +319,11 @@ public abstract class OperatorAdviceWrapperFactory
 
 An external allocation tracker or call counter can implement this once and participate on an external operation through that operation's binding adapter. This replaces the previous incomplete `MemoryAllocationAspect` example, which omitted its essential dispatch mechanism.
 
-Keep `OperatorAdvice<TCandidate, TOperation>` for typed observations and operation-specific policies. It likewise separates once-only preparation from run-specific wrapper binding, and its base supplies the internal dispatch bridge. Advice applicability includes the selected operation view: mutation-specific advice on a configuration implementing mutation and evaluation applies only to mutation. General `OperatorAdvice` can apply to both, sharing its intentionally common prepared state. Pointcuts still select configuration references; this adds no caller-path or occurrence selection model.
+Keep `OperatorAdvice<TOperation, TCandidate>` for typed observations and operation-specific policies. It likewise separates once-only preparation from run-specific wrapper binding, and its base supplies the internal dispatch bridge. Advice applicability includes the selected operation view: mutation-specific advice on a configuration implementing mutation and evaluation applies only to mutation. General `OperatorAdvice` can apply to both, sharing its intentionally common prepared state. Pointcuts still select configuration references; this adds no caller-path or occurrence selection model.
 
 Resolution dispatches through the supported general/typed preparation protocols. Do not cast every matching advice to one closed generic advice base. A matching unsupported `Advice` subclass fails with `InvalidOperationException` naming its type, the selected operation and the supported extension bases; it never leaks `InvalidCastException`. The generic `Advice<TConfiguration>` base alone does not promise that it can wrap an arbitrary operation method.
 
-Inspection factories receiving `IOperator<TCandidate, TOperation>` retain that operation filter in their advice, including candidate clocks and budgets. The same object may implement several operation interfaces, so a reference pointcut alone is insufficient to restrict its operation view. An explicitly general factory receiving only the non-generic `IOperator` may observe all its operation views. Reuse the hook implementation behind these adapters; do not manufacture another per-role counter implementation.
+Inspection factories receiving `IOperator<TOperation, TCandidate>` retain that operation filter in their advice, including candidate clocks and budgets. The same object may implement several operation interfaces, so a reference pointcut alone is insufficient to restrict its operation view. An explicitly general factory receiving only the non-generic `IOperator` may observe all its operation views. Reuse the hook implementation behind these adapters; do not manufacture another per-role counter implementation.
 
 Preserve first-position advice deduplication, scope-layer order and typed source identity. Exact wrapper constructors are created/cached for the current view, while persistent advice state is prepared once. The wrapper-factory delegate is invariant; do not assume bound-view covariance makes old wrapper delegates interchangeable.
 
@@ -444,6 +446,14 @@ Cut over mutation and evaluation across **all** in-repository consumers, includi
 During this package a GA may have new mutation/evaluation slots and still have legacy creator/crossover/selector/refiner/terminator/interceptor slots. This is intentional per-slot coexistence, not two contracts for the same slot. Generic wrappers are promised only for the roles already cut over; no temporary public nominal wrapper shim is needed. Migrate a role across projects in one package rather than breaking callers until Package 5.
 
 Preserve seeded GA results generation by generation, with defaults and edge cases covered separately from small explicit fixtures. Use `EvolutionStrategy` to prove actual per-generation mutation-strength adaptation through `Retry(...).Named(...).Named(...)` plus inspection. Compare raw and transparent-wrapped control trajectories and outputs; test parent/child and retained contexts.
+
+Implemented on 2026-10-17: mutation/evaluation consumers, authoring bases, naming/retry, counting/timing and observations use the generic contract. Regular tests cover all nine policy adapters, external scalar policies, retry boundaries and EvolutionStrategy outputs/strength through stacked wrappers in retained and ancestor-owned contexts. GA histories match `f576e14a`, including recommended operators with default settings and separate rate/limit cases. Historical prototype sources are unchanged.
+
+Validation: Release solution build, all 3,091 solution tests, documentation build, whitespace/style verification, error-level analyzer verification, changed Markdown formatting and package creation pass.
+
+**Performance gate failed.** Three-process BenchmarkDotNet and alternating paired measurements confirm cheap-path budgets and 0 B additional warmed allocations. Numerical Gaussian paths meet 2%; broad `ProblemEvaluator` duration, three-layer instrumentation and retry have paired median overheads of 2.6%, 23.8% and 12.4%. A fixed-signature diagnostic also fails for the stack. The cause remains unresolved; fix evaluation wrapping before Package 3. Construction, failure-path and scalar measurements, adapted harness source and raw provenance remain local under `artifacts/operator-role-package2`.
+
+Source cost across `src` and `analyzers`: Package 2 adds 973 and removes 1,043 C# lines (net -70), including all nine policy adapters and helpers. Packages 1 and 2 remain net +1,995 against `94641d41`; overall source reduction is not yet established.
 
 **Gate**: core, API usage, affected Experimental/PythonInterop and documentation validation pass, affected scenario canaries pass, the solution builds, section 8 budgets pass, and source/extension-cost evidence still justifies continuing. Full solution tests are required for this first substantial consumer cutover.
 

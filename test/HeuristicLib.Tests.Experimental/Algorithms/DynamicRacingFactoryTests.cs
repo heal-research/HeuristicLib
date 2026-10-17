@@ -204,7 +204,7 @@ public sealed class DynamicRacingFactoryTests
 
     private sealed record LifetimeProbeAlgorithm : Algorithm<LifetimeProbeAlgorithm, int, PopulationState<int>>
     {
-        public IEvaluator<int> Evaluator { get; } = new ProblemEvaluator<int>();
+        public IOperator<Evaluation, int> Evaluator { get; } = new ProblemEvaluator<int>();
         public Action BeforeMove { get; init; } = static () => { };
         public required Action Started { get; init; }
         public required Action Disposed { get; init; }

@@ -29,7 +29,7 @@ public static class EpochWorkTrace
         /// evaluation count says how much work happened, and the environment version says what scored it.
         /// </remarks>
         public static TraceAnalyzer<int> TraceEpochWork<TCandidate, TSearchSpace>(
-            IEvaluator<TCandidate> at,
+            IOperator<Evaluation, TCandidate> at,
             Clock<long> evaluations,
             EpochClock<TCandidate, TSearchSpace> epoch)
             where TSearchSpace : class, ISearchSpace<TCandidate> =>

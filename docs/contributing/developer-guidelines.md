@@ -136,7 +136,9 @@ Resolving a configuration an algorithm builds itself makes it visible to pointcu
 
 Algorithms and existing nominal operator contracts expose one public `CreateExecutorFactory(...)` returning `ExecutorFactory<TExecutor>`. Operation-parameterized operators expose one public `CreateExecutorFactory()` returning `OperatorExecutorFactory`; its checked `GetExecutorFactory` creates construction views over the same persistent state. Do not add a second initializer per operation, role-named alternatives or a competing public factory. Preparation runs once per selected configuration owner; construction may bind several nodes.
 
-A topology base owns the public method and exposes one protected preparation hook: `CreateWrapperFactory` returns `WrapperExecutorFactory<TExecutor>` for a wrapping base; `CreateCompositeFactory` returns `CompositeExecutorFactory<TExecutor>` for a multi base. The hook prepares persistent state and returns a factory accepting the newly resolved children. Use the same executor interface for the children and result. Derived authors construct their matching executor classes inside the returned delegate. Ordinary leaf operation overrides remain unchanged.
+Mutation and evaluation authoring bases own the public entry. Fixed-signature leaves override protected `CreateFactory()`; generic compositions override `CreateOperatorFactory()` and return an `OperatorExecutorFactory<TOperation, TCandidate>` that resolves current children for each run signature. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
+
+Remaining nominal topology bases own the public method and expose one protected preparation hook: `CreateWrapperFactory` returns `WrapperExecutorFactory<TExecutor>` for a wrapping base; `CreateCompositeFactory` returns `CompositeExecutorFactory<TExecutor>` for a multi base. The hook prepares persistent state and returns a factory accepting the newly resolved children. Use the same executor interface for the children and result. Derived authors construct their matching executor classes inside the returned delegate. Ordinary leaf operation overrides remain unchanged.
 
 ### § 4.5 Keep construction entry points semantically equivalent
 
@@ -224,7 +226,7 @@ Roslyn analyzers catch recognizable mistakes. They do not prove ownership invari
 
 Role executions expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
 
-Matching signatures do not satisfy another nominal role. `IOperator<TCandidate, TOperation>` selects an operation through its descriptor; it does not change executor-interface membership. Public `OperationExecutorAdapter` adapters connect named methods to success and lifecycle hooks at preparation time without adding another invocation method to executors.
+Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its descriptor; it does not change executor-interface membership. Public `OperationExecutorAdapter` adapters connect named methods to success and lifecycle hooks at preparation time without adding another invocation method to executors.
 
 ## § 5 Immutability and collection ownership
 
@@ -383,7 +385,7 @@ Where a parameter carries both, its documentation points at the member that defi
 Reduced arities let authors omit operation inputs they do not use. Keep each role family consistent.
 
 The ladder is also where the search space and problem type arguments legitimately live. They have left the role
-contracts — nominal roles use `I<Role><TCandidate>` and the shared slot uses `IOperator<TCandidate, TOperation>` — but an authoring base that reads a search space or a problem still
+contracts — nominal roles use `I<Role><TCandidate>` and the shared slot uses `IOperator<TOperation, TCandidate>` — but an authoring base that reads a search space or a problem still
 names it, deliberately, for two reasons. The base performs the type check, bridging the authored member into the
 candidate-only contract and reporting a mismatch when a run supplies types the operator was not written for, so the
 pair costs the author two type arguments and costs every consumer none. And for a stateless operator the
@@ -404,7 +406,7 @@ Reduce type arguments consumed by the operator's own code. Do not reduce type ar
 | --------------------------------------------------------------- | :-------------: | -------------------------------------- |
 | `Mutator`, `MutationExecutor`                                   |       Yes       | No owned child                         |
 | `StatelessMutator`, `StatefulMutator`, `SingleCandidateMutator` |       Yes       | Type arguments describe operation data |
-| `WrappingMutator`, `MultiMutator`                               |       No        | Type arguments describe child slots    |
+| `WrappingOperator`, `MultiOperator`                             |       No        | Type arguments describe child slots    |
 
 Keep topology type arguments open so their children determine them. Reduced arities are authoring conveniences, not separate contracts: a role contract names only the candidate, and every rung of the ladder reaches it through the bridge described in § 8.4.
 
@@ -428,6 +430,8 @@ Do not make callers spell generic arguments available values can determine.
 ### § 8.7 Keep operator parameter groups in a common order
 
 Order parameters as primary inputs, RNG, search space and problem. Omit groups that do not apply. Lower level inputs that replace a search space occupy its position.
+
+Generic types and methods that name an operation descriptor put it first: `TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, ...`, omitting parameters that do not apply. Keep managed `TState` last. Apply this order across operator contracts, authoring bases, compositions, advice, factories, adapters and resolution methods. For example, use `IOperator<Mutation, RealVector>`. Families without an operation parameter retain their established order.
 
 ### § 8.8 Expose direct static implementations when the operation needs one
 

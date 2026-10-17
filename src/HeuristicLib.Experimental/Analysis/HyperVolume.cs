@@ -40,7 +40,7 @@ public static class HyperVolumeTraces
         /// </remarks>
         public static TraceAnalyzer<double> TraceHyperVolume<T>(
             ObjectiveVector referencePoint,
-            IEvaluator<T> evaluator,
+            IOperator<Evaluation, T> evaluator,
             IReadOnlyList<Clock>? clocks = null,
             TraceRetention? retention = null) =>
             Analyzer.Trace(

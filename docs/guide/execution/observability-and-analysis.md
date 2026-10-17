@@ -32,7 +32,7 @@ An analyzer is one of several ways to see what a run does. Pick by what you need
 
 Inspection preserves the observed computation while recording its own observations, counts, durations and clocks. Analyzers derive results from those observations. Observation callbacks must preserve the operation's inputs and outputs; they receive live references rather than isolated deep copies. General aspects may change behavior, and explicit algorithm policies such as budgets may read inspection data to decide when to stop.
 
-There is a [known capability-loss bug](/guide/extending/operator-composition#known-capability-loss): wrapping can hide optional controls from an algorithm, so adding inspection inside a configured wrapper can change adaptation even when the advice preserves inputs and outputs.
+Mutation and evaluation inspection forwards the selected executor's control provider. Generic naming and retry wrappers preserve it too, so inspection through those wrappers keeps mutation-strength adaptation. Composites expose their own controls.
 
 ## Choose a boundary and a clock
 
@@ -64,12 +64,12 @@ Name a configured operator through `.Named(name)` and select that boundary expli
 
 ```csharp
 var exploration = mutator.Named("exploration");
-var selected = Pointcut.Named<IMutator<RealVector>>("exploration");
-var excluded = !Pointcut.Reference<IMutator<RealVector>>(exploration);
+var selected = Pointcut.Named<IOperator<Mutation, RealVector>>("exploration");
+var excluded = !Pointcut.Reference<IOperator<Mutation, RealVector>>(exploration);
 var otherExploration = selected & excluded;
 ```
 
-The receiver here is an `IMutator<RealVector>`. Named wrappers exist for creators, crossovers, evaluators, mutators, refiners, replacers, selectors, interceptors, terminators and algorithms. Their constructors and `NamedMutator.Create`-style factories are also available. A consumer-defined configuration can implement `INamedConfiguration` directly.
+The receiver here is an `IOperator<Mutation, RealVector>`. Named wrappers exist for creators, crossovers, evaluators, mutators, refiners, replacers, selectors, interceptors, terminators and algorithms. Mutation and evaluation use `Named.Create(child, name)`; other roles retain their role-specific construction companions. A consumer-defined configuration can implement `INamedConfiguration` directly.
 
 Names compare exactly and case-sensitively. Several nodes may share a name, and all match. The wrapper and its child are separate configuration nodes: name matching selects the wrapper, while a broad role pointcut can select both boundaries. Names do not change execution sharing or create caller paths. The child's concrete properties remain on the child configuration.
 
@@ -101,7 +101,7 @@ Retention runs after measurement and aggregation. It controls stored entries and
 Some analysis produces one mutable summary rather than a history. Derive from `AccumulatingAnalyzer`, assign observation advice in the constructor, and update the summary under `Sync`:
 
 ```csharp
-public CandidateSummaryAnalyzer(IEvaluator<TCandidate> evaluator)
+public CandidateSummaryAnalyzer(IOperator<Evaluation, TCandidate> evaluator)
 {
     Advices = Aspect.Observe(evaluator, Record).Advices;
 }
@@ -210,16 +210,16 @@ Earlier advice wraps closer to the source executor. Here timing finishes before 
 To select several configurations, pair a pointcut with role advice:
 
 ```csharp
-var counting = Aspect.Create(Pointcut.OfType<IMutator<RealVector>>(),
-    new CountingMutatorAdvice<RealVector>(counter, OperatorCountMetric.Candidates));
+var counting = Aspect.Create(Pointcut.OfType<IOperator<Mutation, RealVector>>(),
+    new CountingOperatorAdvice<Mutation, RealVector>(counter, OperatorCountMetric.Candidates));
 ```
 
 Custom selection derives a small class:
 
 ```csharp
-sealed class SmallMutations : Pointcut<IMutator<RealVector>>
+sealed class SmallMutations : Pointcut<IOperator<Mutation, RealVector>>
 {
-    public override bool Matches(IMutator<RealVector> mutator) =>
+    public override bool Matches(IOperator<Mutation, RealVector> mutator) =>
         mutator is GaussianMutator { MutationStrength: < 1.0 };
 }
 ```

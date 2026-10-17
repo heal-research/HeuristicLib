@@ -25,19 +25,19 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 {
     public DynamicRacingAlgorithm(MetaOptimizationSearchSpace metaSpace,
                                   ICreator<MetaOptimizationGenotype> creator,
-                                  IMutator<MetaOptimizationGenotype> mutator,
+                                  IOperator<Mutation, MetaOptimizationGenotype> mutator,
                                   IRacingStateMerger<TCandidate, TSearchState> stateMerger,
                                   Func<MetaOptimizationGenotype, TAlgorithm> algBuilder,
-                                  Func<TAlgorithm, IEvaluator<TCandidate>> evaluatorSelector)
+                                  Func<TAlgorithm, IOperator<Evaluation, TCandidate>> evaluatorSelector)
         : this(metaSpace, creator, mutator, stateMerger, (candidate, _) => algBuilder(candidate), evaluatorSelector)
     { }
 
     public DynamicRacingAlgorithm(MetaOptimizationSearchSpace metaSpace,
                                   ICreator<MetaOptimizationGenotype> creator,
-                                  IMutator<MetaOptimizationGenotype> mutator,
+                                  IOperator<Mutation, MetaOptimizationGenotype> mutator,
                                   Func<TSearchState[], TSearchState> stateMerger,
                                   Func<MetaOptimizationGenotype, TAlgorithm> algBuilder,
-                                  Func<TAlgorithm, IEvaluator<TCandidate>> evaluatorSelector)
+                                  Func<TAlgorithm, IOperator<Evaluation, TCandidate>> evaluatorSelector)
         : this(metaSpace, creator, mutator,
             new DelegatingRacingStateMerger<TCandidate, TSearchState>((states, _) => stateMerger(states.ToArray())),
             (candidate, _) => algBuilder(candidate), evaluatorSelector)
@@ -45,10 +45,10 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
     public DynamicRacingAlgorithm(MetaOptimizationSearchSpace metaSpace,
                                   ICreator<MetaOptimizationGenotype> creator,
-                                  IMutator<MetaOptimizationGenotype> mutator,
+                                  IOperator<Mutation, MetaOptimizationGenotype> mutator,
                                   IRacingStateMerger<TCandidate, TSearchState> stateMerger,
                                   Func<MetaOptimizationGenotype, TAlgorithm?, TAlgorithm> algBuilder,
-                                  Func<TAlgorithm, IEvaluator<TCandidate>> evaluatorSelector)
+                                  Func<TAlgorithm, IOperator<Evaluation, TCandidate>> evaluatorSelector)
     {
         MetaSpace = metaSpace;
         Creator = creator;
@@ -61,11 +61,11 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
     public IRacingStateMerger<TCandidate, TSearchState> StateMerger { get; }
     public ICreator<MetaOptimizationGenotype> Creator { get; }
-    public IMutator<MetaOptimizationGenotype> Mutator { get; }
+    public IOperator<Mutation, MetaOptimizationGenotype> Mutator { get; }
     private MetaOptimizationSearchSpace MetaSpace { get; }
     private EmptyMetaOptProblem EmptyMetaOptProblem { get; }
     public Func<MetaOptimizationGenotype, TAlgorithm?, TAlgorithm> AlgBuilder { get; }
-    public Func<TAlgorithm, IEvaluator<TCandidate>> EvaluatorSelector { get; }
+    public Func<TAlgorithm, IOperator<Evaluation, TCandidate>> EvaluatorSelector { get; }
     public required int NoRacers { get; init; } = 2;
     public double HallOfFameStrength { get; init; } = 0.1;
     public double EarlyTerminationStrength { get; init; } = 0.1;
@@ -115,7 +115,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         EmptyMetaOptProblem emptyMetaOptProblem,
         IRacingStateMerger<TCandidate, TSearchState> stateMerger,
         Func<MetaOptimizationGenotype, TAlgorithm?, TAlgorithm> algorithmBuilder,
-        Func<TAlgorithm, IEvaluator<TCandidate>> evaluatorSelector,
+        Func<TAlgorithm, IOperator<Evaluation, TCandidate>> evaluatorSelector,
         int noRacers,
         double hallOfFameStrength,
         double earlyTerminationStrength,
@@ -332,11 +332,11 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
     private sealed class Entry : IDisposable
     {
-        private readonly IEvaluator<TCandidate> evaluator;
+        private readonly IOperator<Evaluation, TCandidate> evaluator;
         private readonly PerformanceTrackingEvaluatorObserver performanceObserver;
         private IEnumerator<TSearchState>? running;
 
-        public Entry(TAlgorithm algorithm, IEvaluator<TCandidate> evaluator, MetaOptimizationGenotype candidate, TProblem problem, IRandomNumberGenerator random,
+        public Entry(TAlgorithm algorithm, IOperator<Evaluation, TCandidate> evaluator, MetaOptimizationGenotype candidate, TProblem problem, IRandomNumberGenerator random,
                      TSearchState? initialState, CancellationToken ct, ResolutionScope parentRegistry, int modelObservationInterval, Func<ObjectiveVector, double> objectiveValueSelector)
         {
             Algorithm = algorithm;
@@ -393,13 +393,23 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     /// Reports one contender's evaluations to its own performance observer, without affecting sibling contenders.
     /// </summary>
     private sealed class PerformanceTrackingEvaluatorAdvice(PerformanceTrackingEvaluatorObserver observer)
-        : EvaluatorAdvice<TCandidate>
+        : OperatorAdvice<Evaluation, TCandidate>
     {
-        public override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> evaluator)
+        public override OperatorAdviceWrapperFactory<Evaluation, TCandidate> CreateWrapperFactory(IOperator<Evaluation, TCandidate> evaluator) => new Factory(this, observer);
+
+        private sealed class Factory(PerformanceTrackingEvaluatorAdvice advice, PerformanceTrackingEvaluatorObserver observer)
+            : OperatorAdviceWrapperFactory<Evaluation, TCandidate>
         {
-            if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-                throw ExecutionSignature.Mismatch(this, ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)), ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-            return inner => new PerformanceTrackingEvaluationExecutor<TRunSearchSpace, TRunProblem>(inner, observer);
+            public override WrapperExecutorFactory GetWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
+                IOperator<Evaluation, TCandidate> source,
+                OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter)
+            {
+                if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
+                    throw ExecutionSignature.Mismatch(advice, ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)), ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
+                return WrapperExecutorFactory.From<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(child =>
+                    new ExecutorWithControls<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(
+                        new PerformanceTrackingEvaluationExecutor<TRunSearchSpace, TRunProblem>(child.Executor, observer), child.ControlProvider));
+            }
         }
     }
 

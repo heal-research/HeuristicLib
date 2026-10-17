@@ -16,7 +16,7 @@ public static class Measurement
         => new();
 
     public static EvaluatedCandidatesFromEvaluationMeasurement<TCandidate> Candidates<TCandidate>(
-        IEvaluator<TCandidate> evaluator)
+        IOperator<Evaluation, TCandidate> evaluator)
         => new();
 
     public static ObjectiveVectorsMeasurement<TCandidate, TSearchState> ObjectiveVectors<TCandidate, TSearchState>(
@@ -30,7 +30,7 @@ public static class Measurement
         => new();
 
     public static ObjectiveVectorsFromEvaluationMeasurement<TCandidate> ObjectiveVectors<TCandidate>(
-        IEvaluator<TCandidate> evaluator)
+        IOperator<Evaluation, TCandidate> evaluator)
         => new();
 
     public static OffspringMeasurement<TCandidate> Offspring<TCandidate>(

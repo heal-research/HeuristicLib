@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>A reusable operator configuration supporting the operation identified by TOperation.</summary>
-public interface IOperator<TCandidate, TOperation> : IOperator
+public interface IOperator<TOperation, TCandidate> : IOperator
     where TOperation : IOperationDescriptor<TOperation>
 {
     IOperatorContract<TCandidate>? CandidateContract => this as IOperatorContract<TCandidate>;
@@ -19,7 +19,7 @@ public interface IOperator<TCandidate, TOperation> : IOperator
 /// <summary>Identifies an operation, such as mutation or evaluation, and supplies the adapter for its executor interface.</summary>
 public interface IOperationDescriptor<TSelf> where TSelf : IOperationDescriptor<TSelf>
 {
-    static abstract OperationExecutorAdapter<TCandidate, TSelf, TSearchSpace, TProblem, TRunSearchState>
+    static abstract OperationExecutorAdapter<TSelf, TCandidate, TSearchSpace, TProblem, TRunSearchState>
         CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>

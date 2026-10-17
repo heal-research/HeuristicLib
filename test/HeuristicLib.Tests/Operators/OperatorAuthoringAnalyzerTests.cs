@@ -82,7 +82,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               public sealed class State
               {
-                  public List<IMutator<int>> Children
+                  public List<IOperator<Mutation, int>> Children
                       { get; } = new();
               }
 
@@ -412,7 +412,7 @@ public class OperatorAuthoringAnalyzerTests
         var projectAssemblies = new[]
         {
             typeof(StatefulMutator<,>).Assembly.Location,
-            typeof(IMutator<>).Assembly.Location
+            typeof(IOperator<,>).Assembly.Location
         }.Distinct().Select(static path => MetadataReference.CreateFromFile(path));
 
         var compilation = CSharpCompilation.Create(

@@ -12,8 +12,8 @@ public record HillClimber<TCandidate>
     : IterativeAlgorithm<HillClimber<TCandidate>, TCandidate, SingleSolutionState<TCandidate>>
 {
     public required ICreator<TCandidate> Creator { get; init; }
-    public required IMutator<TCandidate> Mutator { get; init; }
-    public IEvaluator<TCandidate> Evaluator { get; init; } = HillClimberDefaults.Evaluator<TCandidate>();
+    public required IOperator<Mutation, TCandidate> Mutator { get; init; }
+    public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = HillClimberDefaults.Evaluator<TCandidate>();
     public IRefiner<TCandidate>? Refiner { get; init; }
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Mutator, Evaluator, Refiner);
 
@@ -126,8 +126,8 @@ public static class HillClimber
     public static HillClimber<TCandidate> For<TProblem, TCandidate, TSearchSpace>(
         Problem<TProblem, TCandidate, TSearchSpace> problem,
         ICreator<TCandidate>? creator = null,
-        IMutator<TCandidate>? mutator = null,
-        IEvaluator<TCandidate>? evaluator = null,
+        IOperator<Mutation, TCandidate>? mutator = null,
+        IOperator<Evaluation, TCandidate>? evaluator = null,
         IRefiner<TCandidate>? refiner = null,
         IInterceptor<TCandidate>? interceptor = null,
         LocalSearchDirection direction = HillClimberDefaults.Direction,
@@ -166,8 +166,8 @@ public static class HillClimber
     public static HillClimber<TCandidate> For<TCandidate>(
         ISearchSpace<TCandidate> searchSpace,
         ICreator<TCandidate>? creator = null,
-        IMutator<TCandidate>? mutator = null,
-        IEvaluator<TCandidate>? evaluator = null,
+        IOperator<Mutation, TCandidate>? mutator = null,
+        IOperator<Evaluation, TCandidate>? evaluator = null,
         IRefiner<TCandidate>? refiner = null,
         IInterceptor<TCandidate>? interceptor = null,
         LocalSearchDirection direction = HillClimberDefaults.Direction,
@@ -198,8 +198,8 @@ public static class HillClimber
     /// </summary>
     public static HillClimber<TCandidate> Create<TCandidate>(
         ICreator<TCandidate> creator,
-        IMutator<TCandidate> mutator,
-        IEvaluator<TCandidate>? evaluator = null,
+        IOperator<Mutation, TCandidate> mutator,
+        IOperator<Evaluation, TCandidate>? evaluator = null,
         IRefiner<TCandidate>? refiner = null,
         IInterceptor<TCandidate>? interceptor = null,
         LocalSearchDirection direction = HillClimberDefaults.Direction,

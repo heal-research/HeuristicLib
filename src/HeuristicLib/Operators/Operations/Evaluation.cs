@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>Identifies evaluating candidates when declaring an operator slot.</summary>
 public sealed class Evaluation : IOperationDescriptor<Evaluation>
 {
-    public static OperationExecutorAdapter<TCandidate, Evaluation, TSearchSpace, TProblem, TRunSearchState>
+    public static OperationExecutorAdapter<Evaluation, TCandidate, TSearchSpace, TProblem, TRunSearchState>
         CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -18,7 +18,7 @@ public sealed class Evaluation : IOperationDescriptor<Evaluation>
         new ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>();
 
     private sealed class ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>
-        : OperationExecutorAdapter<TCandidate, Evaluation, TSearchSpace, TProblem, TRunSearchState,
+        : OperationExecutorAdapter<Evaluation, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -58,6 +58,20 @@ public sealed class Evaluation : IOperationDescriptor<Evaluation>
                 }
                 finally { notifier.Finish(); }
             }
+        }
+
+        protected override IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> CreatePolicyExecutor(ImmutableArray<IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) =>
+            new PolicyExecutor(children, policy);
+
+        private sealed class PolicyExecutor(ImmutableArray<IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) : IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>
+        {
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random,
+                TSearchSpace searchSpace, TProblem problem) =>
+                policy.Execute(children, (candidates, random, searchSpace, problem), random, static (child, args) =>
+                {
+                    var result = child.Evaluate(args.candidates, args.random, args.searchSpace, args.problem);
+                    return new OperationCallResult<IReadOnlyList<ObjectiveVector>>(result, args.candidates.Count);
+                }).Value;
         }
 
         private sealed class SuccessCallbackExecutor<TCallback>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback)

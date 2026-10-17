@@ -73,17 +73,21 @@ public sealed class RoleExecutorFactoryTests
     {
         var preparations = 0;
         var source = CreateMutator(arity, () => preparations++);
-        var factory = source.CreateExecutorFactory<BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var factory = source.CreateExecutorFactory().GetExecutorFactory(
+            Mutation.CreateExecutorAdapter<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>())
+            .GetFor<IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>();
         preparations.ShouldBe(1);
 
-        var first = factory(ResolutionScope.Create());
-        var second = factory(ResolutionScope.Create());
+        var first = factory(ResolutionScope.Create()).Executor;
+        var second = factory(ResolutionScope.Create()).Executor;
         Next(first).ShouldBe(1);
         Next(second).ShouldBe(2);
         preparations.ShouldBe(1);
 
-        var independentFactory = source.CreateExecutorFactory<BoundedRealVectorSearchSpace, TestFunctionProblem>();
-        Next(independentFactory(ResolutionScope.Create())).ShouldBe(1);
+        var independentFactory = source.CreateExecutorFactory().GetExecutorFactory(
+            Mutation.CreateExecutorAdapter<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>())
+            .GetFor<IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>();
+        Next(independentFactory(ResolutionScope.Create()).Executor).ShouldBe(1);
         preparations.ShouldBe(2);
     }
 
@@ -212,7 +216,7 @@ public sealed class RoleExecutorFactoryTests
         preparations.ShouldBe(0);
     }
 
-    private static IMutator<RealVector> CreateMutator(int arity, Action prepare) => arity switch
+    private static IOperator<Mutation, RealVector> CreateMutator(int arity, Action prepare) => arity switch
     {
         0 => new BoundMutator(prepare),
         1 => new SearchSpaceMutator(prepare),
@@ -272,10 +276,19 @@ public sealed class RoleExecutorFactoryTests
             [RealVector.Repeat(++state.Calls, 1)];
     }
 
-    private sealed class ObservingMutatorAdvice(Action<double> report) : MutatorAdvice<RealVector>
+    private sealed class ObservingMutatorAdvice(Action<double> report) : OperatorAdvice<Mutation, RealVector>
     {
-        public override WrapperExecutorFactory<IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<RealVector> configuration) =>
-            inner => new Executor<TRunSearchSpace, TRunProblem>(inner, report);
+        public override OperatorAdviceWrapperFactory<Mutation, RealVector> CreateWrapperFactory(IOperator<Mutation, RealVector> configuration) => new Factory(report);
+
+        private sealed class Factory(Action<double> report) : OperatorAdviceWrapperFactory<Mutation, RealVector>
+        {
+            public override WrapperExecutorFactory GetWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
+                IOperator<Mutation, RealVector> source,
+                OperationExecutorAdapter<Mutation, RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
+                WrapperExecutorFactory.From<IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>>(child =>
+                    new ExecutorWithControls<IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>>(
+                        new Executor<TRunSearchSpace, TRunProblem>(child.Executor, report), child.ControlProvider));
+        }
 
         private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, Action<double> report)
             : IMutationExecutor<RealVector, TSearchSpace, TProblem>

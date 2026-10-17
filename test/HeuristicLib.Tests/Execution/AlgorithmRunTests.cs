@@ -289,12 +289,19 @@ public class AlgorithmRunTests
         }
     }
 
-    private sealed class PreparingEvaluatorAdvice(Action prepare) : EvaluatorAdvice<int>
+    private sealed class PreparingEvaluatorAdvice(Action prepare) : OperatorAdvice<Evaluation, int>
     {
-        public override WrapperExecutorFactory<IEvaluationExecutor<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<int> evaluator)
+        public override OperatorAdviceWrapperFactory<Evaluation, int> CreateWrapperFactory(IOperator<Evaluation, int> evaluator)
         {
             prepare();
-            return inner => inner;
+            return new Factory();
+        }
+
+        private sealed class Factory : OperatorAdviceWrapperFactory<Evaluation, int>
+        {
+            public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TSearchState>(
+                IOperator<Evaluation, int> source,
+                OperationExecutorAdapter<Evaluation, int, TSearchSpace, TProblem, TSearchState> adapter) => adapter.Identity();
         }
     }
 
@@ -303,7 +310,7 @@ public class AlgorithmRunTests
         public int PreparationCount { get; private set; }
         public PreparationCountingAspect()
         {
-            Advices = [(Pointcut.OfType<IEvaluator<int>>(), new PreparingEvaluatorAdvice(() => PreparationCount++))];
+            Advices = [(Pointcut.OfType<IOperator<Evaluation, int>>(), new PreparingEvaluatorAdvice(() => PreparationCount++))];
         }
     }
 
@@ -311,7 +318,7 @@ public class AlgorithmRunTests
 
     private sealed class ObservingAnalyzer : Aspect
     {
-        public ObservingAnalyzer(IEvaluator<int> evaluator, Action observed)
+        public ObservingAnalyzer(IOperator<Evaluation, int> evaluator, Action observed)
         {
             Advices = Aspect.Observe(evaluator, _ => observed()).Advices;
         }
@@ -319,7 +326,7 @@ public class AlgorithmRunTests
 
     private sealed class WrappingAnalyzer : Aspect
     {
-        public WrappingAnalyzer(IEvaluator<int> evaluator, Action observed)
+        public WrappingAnalyzer(IOperator<Evaluation, int> evaluator, Action observed)
         {
             Advices = [(Pointcut.Reference(evaluator), new EvaluatorObservationAdvice<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(_ => observed()))];
         }

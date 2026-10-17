@@ -28,7 +28,7 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var gaussian = new GaussianMutator(1.0, 3.0);
-        IMutator<RealVector> mutator = gaussian;
+        IOperator<Mutation, RealVector> mutator = gaussian;
         var observedCalls = 0;
         var scope = ResolutionScope.Create(Aspect.Observe(mutator, _ => observedCalls++));
         var executor = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator, out IMutationStrengthControl? strength);
@@ -95,7 +95,7 @@ public class OperatorAuthoringSpecs
     public void StatefulMutator_AuthoringExample_SharesAncestorStateWhileIndependentRunsStartFresh()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        IMutator<RealVector> mutator = new CountingStatefulMutator();
+        IOperator<Mutation, RealVector> mutator = new CountingStatefulMutator();
         var runScope = ResolutionScope.Create();
         var outer = runScope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator);
         var inner = runScope.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator);
@@ -166,7 +166,7 @@ public class OperatorAuthoringSpecs
     [Fact]
     public void MutatorCompositionFactories_InferRoleTypes()
     {
-        IMutator<RealVector> childMutator = new PullTowardZeroMutator();
+        IOperator<Mutation, RealVector> childMutator = new PullTowardZeroMutator();
         var counting = Aspect.CountCalls(childMutator, new CountAccumulator());
         counting.Advices.Single().Pointcut.Matches(childMutator).ShouldBeTrue();
     }
@@ -459,8 +459,8 @@ public class OperatorAuthoringSpecs
         var first = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(multi)
             .Evaluate([RealVector.Repeat(4.0, 3)], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
-        wrapping.ChildEvaluator.ShouldBeSameAs(child);
-        multi.ChildEvaluators[0].ShouldBeSameAs(child);
+        wrapping.ChildOperator.ShouldBeSameAs(child);
+        multi.ChildOperators[0].ShouldBeSameAs(child);
         wrapped.ShouldBe([new ObjectiveVector(3.0)]);
         first.ShouldBe([new ObjectiveVector(4.0)]);
     }
@@ -468,16 +468,16 @@ public class OperatorAuthoringSpecs
     [Fact]
     public void EvaluatorCompositionFactories_InferRoleTypes()
     {
-        IEvaluator<RealVector> child = new FirstValueEvaluator();
+        IOperator<Evaluation, RealVector> child = new FirstValueEvaluator();
         var counting = Aspect.CountCalls(child, new CountAccumulator());
         var duration = Aspect.MeasureDuration(child, new DurationAccumulator());
         var repeating = child.AsRepeated(3, ObjectiveVectorAggregation.Median);
         var caching = child.Cached(new FirstCoordinateCacheKeySelector());
         counting.Advices.Single().Pointcut.Matches(child).ShouldBeTrue();
         duration.Advices.Single().Pointcut.Matches(child).ShouldBeTrue();
-        repeating.ChildEvaluator.ShouldBeSameAs(child);
+        repeating.ChildOperator.ShouldBeSameAs(child);
         repeating.Aggregator.ShouldBe(ObjectiveVectorAggregation.Median);
-        caching.ChildEvaluator.ShouldBeSameAs(child);
+        caching.ChildOperator.ShouldBeSameAs(child);
         caching.KeySelector.ShouldBe(new FirstCoordinateCacheKeySelector());
     }
 
@@ -811,7 +811,7 @@ public class OperatorAuthoringSpecs
     private static IReadOnlyList<EvaluatedCandidate<RealVector>> CreatePopulation(params double[] values) =>
         values.Select(value => EvaluatedCandidate.From(RealVector.Repeat(value, 3), new ObjectiveVector(value))).ToArray();
 
-    private static IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> ResolveMutator(IMutator<RealVector> mutator)
+    private static IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> ResolveMutator(IOperator<Mutation, RealVector> mutator)
     {
         return ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(mutator);
     }
@@ -932,10 +932,10 @@ public class OperatorAuthoringSpecs
         }
     }
 
-    private sealed record ForwardingEvaluator(IEvaluator<RealVector> Inner)
+    private sealed record ForwardingEvaluator(IOperator<Evaluation, RealVector> Inner)
         : Evaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ExecutorFactory<EvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutorFactory() =>
+        protected override ExecutorFactory<EvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateFactory() =>
             scope => new Executor(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
 
         private sealed class Executor(IEvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> inner)
@@ -947,15 +947,29 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record ForwardingWrappingEvaluator
-        : WrappingEvaluator<RealVector>
+        : WrappingOperator<Evaluation, RealVector>
     {
-        public ForwardingWrappingEvaluator(IEvaluator<RealVector> childEvaluator)
+        public ForwardingWrappingEvaluator(IOperator<Evaluation, RealVector> childEvaluator)
             : base(childEvaluator)
         {
         }
 
-        protected override WrapperExecutorFactory<IEvaluationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-            childEvaluator => new Executor<TRunSearchSpace, TRunProblem>(childEvaluator);
+        protected override OperatorExecutorFactory CreateOperatorFactory()
+        {
+            return new Factory(this);
+        }
+
+        private sealed class Factory(ForwardingWrappingEvaluator source) : OperatorExecutorFactory<Evaluation, RealVector>
+        {
+            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
+                OperationExecutorAdapter<Evaluation, RealVector, TSearchSpace, TProblem, TSearchState> adapter) =>
+                ExecutorFactory.FromFactory<IEvaluationExecutor<RealVector, TSearchSpace, TProblem>>(scope =>
+                {
+                    var typed = scope.For<RealVector, TSearchSpace, TProblem, TSearchState>();
+                    var child = typed.Resolve(source.ChildOperator);
+                    return new Executor<TSearchSpace, TProblem>(child);
+                });
+        }
 
         private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<RealVector, TSearchSpace, TProblem> childEvaluator)
             : WrappingEvaluationExecutor<RealVector, TSearchSpace, TProblem>(childEvaluator)
@@ -968,15 +982,29 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record FirstMultiEvaluator
-        : MultiEvaluator<RealVector>
+        : MultiOperator<Evaluation, RealVector>
     {
-        public FirstMultiEvaluator(IReadOnlyList<IEvaluator<RealVector>> childEvaluators)
+        public FirstMultiEvaluator(IReadOnlyList<IOperator<Evaluation, RealVector>> childEvaluators)
             : base(childEvaluators)
         {
         }
 
-        protected override CompositeExecutorFactory<IEvaluationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childEvaluators => new Executor<TRunSearchSpace, TRunProblem>(childEvaluators);
+        protected override OperatorExecutorFactory CreateOperatorFactory()
+        {
+            return new Factory(this);
+        }
+
+        private sealed class Factory(FirstMultiEvaluator source) : OperatorExecutorFactory<Evaluation, RealVector>
+        {
+            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
+                OperationExecutorAdapter<Evaluation, RealVector, TSearchSpace, TProblem, TSearchState> adapter) =>
+                ExecutorFactory.FromFactory<IEvaluationExecutor<RealVector, TSearchSpace, TProblem>>(scope =>
+                {
+                    var typed = scope.For<RealVector, TSearchSpace, TProblem, TSearchState>();
+                    System.Collections.Immutable.ImmutableArray<IEvaluationExecutor<RealVector, TSearchSpace, TProblem>> children = [.. source.ChildOperators.Select(child => typed.Resolve(child))];
+                    return new Executor<TSearchSpace, TProblem>(children);
+                });
+        }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IEvaluationExecutor<RealVector, TSearchSpace, TProblem>> childEvaluators)
             : MultiEvaluationExecutor<RealVector, TSearchSpace, TProblem>(childEvaluators)
@@ -1449,15 +1477,29 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record ApplyTwiceMutator
-        : WrappingMutator<RealVector>
+        : WrappingOperator<Mutation, RealVector>
     {
-        public ApplyTwiceMutator(IMutator<RealVector> childMutator)
+        public ApplyTwiceMutator(IOperator<Mutation, RealVector> childMutator)
             : base(childMutator)
         {
         }
 
-        protected override WrapperExecutorFactory<IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-            childMutator => new Executor<TRunSearchSpace, TRunProblem>(childMutator);
+        protected override OperatorExecutorFactory CreateOperatorFactory()
+        {
+            return new Factory(this);
+        }
+
+        private sealed class Factory(ApplyTwiceMutator source) : OperatorExecutorFactory<Mutation, RealVector>
+        {
+            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
+                OperationExecutorAdapter<Mutation, RealVector, TSearchSpace, TProblem, TSearchState> adapter) =>
+                ExecutorFactory.FromFactory<IMutationExecutor<RealVector, TSearchSpace, TProblem>>(scope =>
+                {
+                    var typed = scope.For<RealVector, TSearchSpace, TProblem, TSearchState>();
+                    var child = typed.Resolve(source.ChildOperator);
+                    return new Executor<TSearchSpace, TProblem>(child);
+                });
+        }
 
         private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> childMutator)
             : WrappingMutationExecutor<RealVector, TSearchSpace, TProblem>(childMutator)
@@ -1472,9 +1514,9 @@ public class OperatorAuthoringSpecs
         }
     }
 
-    private sealed record CallOffsetMutator : WrappingMutator<RealVector>
+    private sealed record CallOffsetMutator : WrappingOperator<Mutation, RealVector>
     {
-        public CallOffsetMutator(IMutator<RealVector> childMutator) : base(childMutator)
+        public CallOffsetMutator(IOperator<Mutation, RealVector> childMutator) : base(childMutator)
         {
         }
 
@@ -1483,10 +1525,22 @@ public class OperatorAuthoringSpecs
             public int Calls;
         }
 
-        protected override WrapperExecutorFactory<IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+        protected override OperatorExecutorFactory CreateOperatorFactory()
         {
             var state = new ExecutionState();
-            return child => new Executor<TRunSearchSpace, TRunProblem>(child, state);
+            return new Factory(this, state);
+        }
+
+        private sealed class Factory(CallOffsetMutator source, ExecutionState state) : OperatorExecutorFactory<Mutation, RealVector>
+        {
+            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
+                OperationExecutorAdapter<Mutation, RealVector, TSearchSpace, TProblem, TSearchState> adapter) =>
+                ExecutorFactory.FromFactory<IMutationExecutor<RealVector, TSearchSpace, TProblem>>(scope =>
+                {
+                    var typed = scope.For<RealVector, TSearchSpace, TProblem, TSearchState>();
+                    var child = typed.Resolve(source.ChildOperator);
+                    return new Executor<TSearchSpace, TProblem>(child, state);
+                });
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, ExecutionState state)
@@ -1566,15 +1620,29 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record PreferFirstMultiMutator
-        : MultiMutator<RealVector>
+        : MultiOperator<Mutation, RealVector>
     {
-        public PreferFirstMultiMutator(ImmutableArray<IMutator<RealVector>> childMutators)
+        public PreferFirstMultiMutator(ImmutableArray<IOperator<Mutation, RealVector>> childMutators)
             : base(childMutators)
         {
         }
 
-        protected override CompositeExecutorFactory<IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childMutators => new Executor<TRunSearchSpace, TRunProblem>(childMutators);
+        protected override OperatorExecutorFactory CreateOperatorFactory()
+        {
+            return new Factory(this);
+        }
+
+        private sealed class Factory(PreferFirstMultiMutator source) : OperatorExecutorFactory<Mutation, RealVector>
+        {
+            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
+                OperationExecutorAdapter<Mutation, RealVector, TSearchSpace, TProblem, TSearchState> adapter) =>
+                ExecutorFactory.FromFactory<IMutationExecutor<RealVector, TSearchSpace, TProblem>>(scope =>
+                {
+                    var typed = scope.For<RealVector, TSearchSpace, TProblem, TSearchState>();
+                    System.Collections.Immutable.ImmutableArray<IMutationExecutor<RealVector, TSearchSpace, TProblem>> children = [.. source.ChildOperators.Select(child => typed.Resolve(child))];
+                    return new Executor<TSearchSpace, TProblem>(children);
+                });
+        }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<RealVector, TSearchSpace, TProblem>> childMutators)
             : MultiMutationExecutor<RealVector, TSearchSpace, TProblem>(childMutators)

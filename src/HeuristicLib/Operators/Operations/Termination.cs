@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>Identifies deciding whether a search should stop when declaring an operator slot.</summary>
 public sealed class Termination : IOperationDescriptor<Termination>
 {
-    public static OperationExecutorAdapter<TCandidate, Termination, TSearchSpace, TProblem, TRunSearchState>
+    public static OperationExecutorAdapter<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState>
         CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -16,7 +16,7 @@ public sealed class Termination : IOperationDescriptor<Termination>
         new ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>();
 
     private sealed class ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>
-        : OperationExecutorAdapter<TCandidate, Termination, TSearchSpace, TProblem, TRunSearchState,
+        : OperationExecutorAdapter<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -55,6 +55,19 @@ public sealed class Termination : IOperationDescriptor<Termination>
                 }
                 finally { notifier.Finish(); }
             }
+        }
+
+        protected override ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState> CreatePolicyExecutor(ImmutableArray<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>> children, SynchronousPolicy policy) =>
+            new PolicyExecutor(children, policy);
+
+        private sealed class PolicyExecutor(ImmutableArray<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>> children, SynchronousPolicy policy) : ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>
+        {
+            public bool IsTerminalState(TRunSearchState state, TSearchSpace searchSpace, TProblem problem) =>
+                policy.Execute(children, (state, searchSpace, problem), null, static (child, args) =>
+                {
+                    var result = child.IsTerminalState(args.state, args.searchSpace, args.problem);
+                    return new OperationCallResult<bool>(result, 0);
+                }).Value;
         }
 
         private sealed class SuccessCallbackExecutor<TCallback>(ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState> child, TCallback callback)

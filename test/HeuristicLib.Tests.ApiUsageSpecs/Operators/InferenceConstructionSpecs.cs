@@ -115,8 +115,8 @@ public class InferenceConstructionSpecs
         reconfiguredAlgorithm.Evaluator.ShouldBeSameAs(directEvaluator);
         reconfiguredAlgorithm.Selector.ShouldBeSameAs(tournamentSelector);
         reconfiguredAlgorithm.Interceptor.ShouldBeSameAs(identityInterceptor);
-        pipelineMutator.ChildMutators.Count.ShouldBe(2);
-        fluentPipelineMutator.ChildMutators.Count.ShouldBe(2);
+        pipelineMutator.ChildOperators.Count.ShouldBe(2);
+        fluentPipelineMutator.ChildOperators.Count.ShouldBe(2);
         transformedCreator.SourceCreator.ShouldBeSameAs(algorithm.Creator);
         fluentTransformedCreator.SourceCreator.ShouldBeSameAs(algorithm.Creator);
         transformedCrossover.SourceCrossover.ShouldBeSameAs(algorithm.Crossover);

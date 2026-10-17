@@ -9,7 +9,7 @@ An analyzer is a stateful `Aspect` that owns collected data and exposes typed re
 Algorithms and operators remain unaware of analysis. Predefined observation records, advice and `Aspect.Observe` factories live in `HEAL.HeuristicLib.Inspection`:
 
 ```csharp
-public SeparateEvaluatorAnalyzer(IEvaluator<TCandidate> first, IEvaluator<TCandidate> second)
+public SeparateEvaluatorAnalyzer(IOperator<Evaluation, TCandidate> first, IOperator<Evaluation, TCandidate> second)
 {
     Advices =
     [

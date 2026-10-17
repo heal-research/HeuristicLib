@@ -23,7 +23,7 @@ public sealed class ParetoFrontAnalyzer<T, TS, TP> : AccumulatingAnalyzer
 
     public ParetoFrontAnalyzer(ObjectiveDirections problemObjective,
                                ObjectiveVector referencePoint,
-                               params IReadOnlyList<IEvaluator<T>> evaluators)
+                               params IReadOnlyList<IOperator<Evaluation, T>> evaluators)
     {
         if (evaluators.Count == 0)
             throw new ArgumentException("An analyzer needs at least one observation source.", nameof(evaluators));

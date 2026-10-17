@@ -238,7 +238,7 @@ public class ImprovementCheckingRefinerTests
         params int[] candidates) =>
         executor.Refine(candidates, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
 
-    private static IEvaluator<int> CreateEvaluator() =>
+    private static IOperator<Evaluation, int> CreateEvaluator() =>
         new CandidateValueEvaluator();
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>

@@ -27,16 +27,19 @@ public sealed class OperationBindingTests
     [InlineData(8, 0)]
     public void EveryDescriptorPreservesItsDomainCallAndReportsDeclaredWork(int operation, int expectedWork)
     {
-        foreach (var lifecycle in new[] { false, true })
+        foreach (var profile in new[] { 0, 1, 2 })
         {
+            var lifecycle = profile == 1;
             var source = new AllOperations();
             var probe = new HookProbe();
-            var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe, lifecycle)));
+            var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe, lifecycle, profile == 2)));
             Invoke(scope, source, operation);
             probe.Work.ShouldBe(expectedWork);
             probe.Successes.ShouldBe(1);
             probe.Cleanups.ShouldBe(lifecycle ? 1 : 0);
             source.Calls.ShouldBe(1);
+            if (profile == 2)
+                probe.HasRandom.ShouldBe(operation != 7);
         }
     }
 
@@ -86,7 +89,7 @@ public sealed class OperationBindingTests
     public void UnsupportedExternalScalarMetricRejectsBeforeItsChildIsResolved()
     {
         var child = new SharedOperations(new ProbeLog());
-        var source = new Forward<RealVector, Checksum>(child);
+        var source = new Forward<Checksum, RealVector>(child);
         var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CandidateMetric()));
         var failure = Assert.Throws<InvalidOperationException>(() =>
             scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(source));
@@ -103,32 +106,32 @@ public sealed class OperationBindingTests
         switch (operation)
         {
             case 0:
-                typed.Resolve((IOperator<RealVector, Creation>)source).Create(3, random, space, Problem).ShouldBeSameAs(AllOperations.Output);
+                typed.Resolve((IOperator<Creation, RealVector>)source).Create(3, random, space, Problem).ShouldBeSameAs(AllOperations.Output);
                 break;
             case 1:
-                typed.Resolve((IOperator<RealVector, Crossover>)source).Cross([new(Candidates[0], Candidates[1])], random, space, Problem).ShouldBeSameAs(AllOperations.Output);
+                typed.Resolve((IOperator<Crossover, RealVector>)source).Cross([new(Candidates[0], Candidates[1])], random, space, Problem).ShouldBeSameAs(AllOperations.Output);
                 break;
             case 2:
-                typed.Resolve((IOperator<RealVector, Mutation>)source).Mutate(Candidates, random, space, Problem).ShouldBeSameAs(AllOperations.Output);
+                typed.Resolve((IOperator<Mutation, RealVector>)source).Mutate(Candidates, random, space, Problem).ShouldBeSameAs(AllOperations.Output);
                 break;
             case 3:
-                typed.Resolve((IOperator<RealVector, Evaluation>)source).Evaluate(Candidates, random, space, Problem).ShouldBeEmpty();
+                typed.Resolve((IOperator<Evaluation, RealVector>)source).Evaluate(Candidates, random, space, Problem).ShouldBeEmpty();
                 break;
             case 4:
-                typed.Resolve((IOperator<RealVector, Selection>)source).Select(population, Problem.Objective, 3, random, space, Problem).ShouldBeSameAs(AllOperations.Population);
+                typed.Resolve((IOperator<Selection, RealVector>)source).Select(population, Problem.Objective, 3, random, space, Problem).ShouldBeSameAs(AllOperations.Population);
                 break;
             case 5:
-                typed.Resolve((IOperator<RealVector, Refinement>)source).Refine(Candidates, random, space, Problem).ShouldBeSameAs(AllOperations.Output);
+                typed.Resolve((IOperator<Refinement, RealVector>)source).Refine(Candidates, random, space, Problem).ShouldBeSameAs(AllOperations.Output);
                 break;
             case 6:
-                typed.Resolve((IOperator<RealVector, Replacement>)source).Replace(population, population, Problem.Objective, 3, random, space, Problem).ShouldBeSameAs(AllOperations.Population);
+                typed.Resolve((IOperator<Replacement, RealVector>)source).Replace(population, population, Problem.Objective, 3, random, space, Problem).ShouldBeSameAs(AllOperations.Population);
                 break;
             case 7:
-                typed.Resolve((IOperator<RealVector, Termination>)source).IsTerminalState(new ProbeState(), space, Problem).ShouldBeTrue();
+                typed.Resolve((IOperator<Termination, RealVector>)source).IsTerminalState(new ProbeState(), space, Problem).ShouldBeTrue();
                 break;
             case 8:
                 var state = new ProbeState();
-                typed.Resolve((IOperator<RealVector, Interception>)source).Transform(state, null, random, space, Problem).ShouldBeSameAs(state);
+                typed.Resolve((IOperator<Interception, RealVector>)source).Transform(state, null, random, space, Problem).ShouldBeSameAs(state);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(operation));
@@ -137,6 +140,7 @@ public sealed class OperationBindingTests
 
     private sealed class HookProbe
     {
+        public bool HasRandom { get; set; }
         public int Work { get; set; }
         public int Successes { get; set; }
         public int Cleanups { get; set; }
@@ -152,16 +156,31 @@ public sealed class OperationBindingTests
         public void OnFinished(long token) { token.ShouldBe(17); probe.Cleanups++; }
     }
 
-    private sealed class ProbeAdvice(HookProbe probe, bool lifecycle) : OperatorAdvice
+    private sealed class ProbeAdvice(HookProbe probe, bool lifecycle, bool policy = false) : OperatorAdvice
     {
-        public override OperatorAdviceWrapperFactory CreateWrapperFactory(IOperator source) => new WrapperFactory(probe, lifecycle);
+        public override OperatorAdviceWrapperFactory CreateWrapperFactory(IOperator source) => new WrapperFactory(probe, lifecycle, policy);
 
-        private sealed class WrapperFactory(HookProbe probe, bool lifecycle) : OperatorAdviceWrapperFactory
+        private sealed class WrapperFactory(HookProbe probe, bool lifecycle, bool policy) : OperatorAdviceWrapperFactory
         {
-            public override WrapperExecutorFactory GetWrapperFactory<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState>(
-                IOperator<TCandidate, TOperation> source,
-                OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter) =>
+            public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
+                IOperator<TOperation, TCandidate> source,
+                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
+                policy ? adapter.PolicyWrapper(new RecordingPolicy(probe)) :
                 lifecycle ? adapter.Hooks<Hooks, long>(new Hooks(probe)) : adapter.Success(new Hooks(probe));
+        }
+    }
+
+    private sealed class RecordingPolicy(HookProbe probe) : SynchronousPolicy
+    {
+        public override OperationCallResult<TResult> Execute<TExecutor, TArguments, TResult>(
+            ImmutableArray<TExecutor> children, TArguments arguments, IRandomNumberGenerator? random,
+            Func<TExecutor, TArguments, OperationCallResult<TResult>> next)
+        {
+            probe.HasRandom = random is not null;
+            var result = next(children.Single(), arguments);
+            probe.Work = result.CandidateWork;
+            probe.Successes++;
+            return result;
         }
     }
 
@@ -171,9 +190,9 @@ public sealed class OperationBindingTests
 
         private sealed class WrapperFactory : OperatorAdviceWrapperFactory
         {
-            public override WrapperExecutorFactory GetWrapperFactory<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState>(
-                IOperator<TCandidate, TOperation> source,
-                OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter)
+            public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
+                IOperator<TOperation, TCandidate> source,
+                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
             {
                 adapter.RequireCandidateWork(source, "candidate budget");
                 return adapter.Identity();
@@ -181,10 +200,10 @@ public sealed class OperationBindingTests
         }
     }
 
-    private sealed class AllOperations : IOperator<RealVector, Creation>, IOperator<RealVector, Crossover>,
-        IOperator<RealVector, Mutation>, IOperator<RealVector, Evaluation>, IOperator<RealVector, Selection>,
-        IOperator<RealVector, Refinement>, IOperator<RealVector, Replacement>, IOperator<RealVector, Termination>,
-        IOperator<RealVector, Interception>
+    private sealed class AllOperations : IOperator<Creation, RealVector>, IOperator<Crossover, RealVector>,
+        IOperator<Mutation, RealVector>, IOperator<Evaluation, RealVector>, IOperator<Selection, RealVector>,
+        IOperator<Refinement, RealVector>, IOperator<Replacement, RealVector>, IOperator<Termination, RealVector>,
+        IOperator<Interception, RealVector>
     {
         public static readonly RealVector[] Output = [new(4.0), new(5.0)];
         public static readonly IReadOnlyList<EvaluatedCandidate<RealVector>> Population = Output.ToEvaluated<RealVector>([4.0, 5.0]);

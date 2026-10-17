@@ -29,21 +29,38 @@ public sealed class RoleContractArityTests
     [Fact]
     public void EveryRole_DeclaresBothHalves()
     {
-        Roles.Count.ShouldBe(9);
-        RoleExecutions.Count.ShouldBe(Roles.Count);
+        Roles.Count.ShouldBe(7);
+        RoleExecutions.Count.ShouldBe(9);
     }
 
     [Fact]
-    public void TheSharedConsumingContractNamesCandidateAndOperationAndCreatesOneFactory()
+    public void TheSharedConsumingContractNamesOperationThenCandidateAndCreatesOneFactory()
     {
         var contract = typeof(IOperator<,>);
-        contract.GetGenericArguments().Select(argument => argument.Name).ShouldBe(["TCandidate", "TOperation"]);
+        contract.GetGenericArguments().Select(argument => argument.Name).ShouldBe(["TOperation", "TCandidate"]);
         contract.GetInterfaces().ShouldContain(typeof(IOperator));
         var factory = contract.GetMethod("CreateExecutorFactory")!;
         factory.GetGenericArguments().ShouldBeEmpty();
         factory.GetParameters().ShouldBeEmpty();
         factory.ReturnType.ShouldBe(typeof(OperatorExecutorFactory));
         contract.GetMethods().ShouldNotContain(method => method.Name == "Prepare");
+    }
+
+    [Fact]
+    public void PublicOperationParametersComeFirstInTypesAndMethods()
+    {
+        var types = Main.GetExportedTypes();
+        var signatures = types.Select(type => (Name: type.ToString(), Parameters: type.GetGenericArguments()))
+            .Concat(types.SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
+                .Select(method => (Name: $"{method.DeclaringType}.{method.Name}", Parameters: method.GetGenericArguments())));
+        foreach (var (name, parameters) in signatures)
+        {
+            var operation = Array.FindIndex(parameters, parameter => parameter.IsGenericParameter &&
+                parameter.GetGenericParameterConstraints().Any(constraint => constraint.IsGenericType &&
+                    constraint.GetGenericTypeDefinition() == typeof(IOperationDescriptor<>)));
+            if (operation >= 0)
+                operation.ShouldBe(0, name);
+        }
     }
 
     [Theory]

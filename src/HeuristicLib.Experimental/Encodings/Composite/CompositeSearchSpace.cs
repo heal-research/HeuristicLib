@@ -28,7 +28,7 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     public bool Contains(CompositeGenotype<T1, T2> candidate) => SearchSpace.Contains(candidate.Part1) && SearchSpace2.Contains(candidate.Part2);
 
     public Creator CombineCreators(ICreator<T1> operator1, ICreator<T2> operator2) => new(operator1, operator2);
-    public Mutator CombineMutator(IMutator<T1> operator1, IMutator<T2> operator2) => new(operator1, operator2);
+    public Mutator CombineMutator(IOperator<Mutation, T1> operator1, IOperator<Mutation, T2> operator2) => new(operator1, operator2);
     public Crossover CombineCrossover(ICrossover<T1> operator1, ICrossover<T2> operator2) => new(operator1, operator2);
 
     public sealed class CreationExecutorPair(ICreationExecutor<T1, TS1, IProblem<T1, TS1>> operatorExecutor1, ICreationExecutor<T2, TS2, IProblem<T2, TS2>> operatorExecutor2)
@@ -116,28 +116,16 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
         public IMutationExecutor<T2, TS2, IProblem<T2, TS2>> OperatorExecution2 { get; } = operatorExecutor2;
     }
 
-    public record Mutator(IMutator<T1> Operator1, IMutator<T2> Operator2)
-        : IMutator<CompositeGenotype<T1, T2>>
+    public record Mutator(IOperator<Mutation, T1> Operator1, IOperator<Mutation, T2> Operator2)
+        : Operator<Mutation, CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>, IMutationExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>>
     {
         public bool All { get; init; } = true;
 
-        public ExecutorFactory<IMutationExecutor<CompositeGenotype<T1, T2>, TSearchSpace, TProblem>> CreateExecutorFactory<TSearchSpace, TProblem>()
-            where TSearchSpace : class, ISearchSpace<CompositeGenotype<T1, T2>>
-            where TProblem : class, IProblem<CompositeGenotype<T1, T2>, TSearchSpace> => scope =>
-        {
-            var executor = new Executor(
+        protected override ExecutorFactory<IMutationExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>> CreateFactory() => scope =>
+            new Executor(
                 scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
                 scope.Resolve<T2, TS2, IProblem<T2, TS2>>(Operator2),
                 All);
-
-            if (executor is not IMutationExecutor<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> typed)
-            {
-                throw new InvalidOperationException(
-                    $"{GetType().Name} is written for {typeof(CompositeSearchSpace<T1, TS1, T2, TS2>).Name} and cannot run over {typeof(TSearchSpace).Name}.");
-            }
-
-            return typed;
-        };
 
         private sealed class Executor(IMutationExecutor<T1, TS1, IProblem<T1, TS1>> operatorExecutor1, IMutationExecutor<T2, TS2, IProblem<T2, TS2>> operatorExecutor2, bool all)
             : IMutationExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>

@@ -12,27 +12,9 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 /// Use <see cref="StatefulEvaluator{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
 /// </remarks>
 public abstract record Evaluator<TCandidate, TSearchSpace, TProblem>
-    : IEvaluator<TCandidate>
+    : Operator<Evaluation, TCandidate, TSearchSpace, TProblem, IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    public abstract ExecutorFactory<IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>> CreateExecutorFactory();
-
-    public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
-
-    ExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> IEvaluator<TCandidate>.CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-    {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
-                this,
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
-
-        return (ExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>)CreateExecutorFactory();
-    }
-}
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
 public abstract record Evaluator<TCandidate, TSearchSpace>
     : Evaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>

@@ -9,7 +9,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 public sealed record LimitEvaluator<TCandidate>
-    : WrappingEvaluator<TCandidate>
+    : WrappingOperator<Evaluation, TCandidate>
 {
     public int MaxEvaluations { get; init; }
 
@@ -25,16 +25,28 @@ public sealed record LimitEvaluator<TCandidate>
     /// </summary>
     public bool EnforceLimitWithinBatch { get; init; }
 
-    public LimitEvaluator(IEvaluator<TCandidate> childEvaluator, int maxEvaluations)
+    public LimitEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, int maxEvaluations)
         : base(childEvaluator)
     {
         MaxEvaluations = maxEvaluations;
     }
 
-    protected override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected override OperatorExecutorFactory CreateOperatorFactory()
     {
         var counter = new CountAccumulator();
-        return childEvaluator => new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch, counter);
+        return new Factory(this, counter);
+    }
+
+    private sealed class Factory(LimitEvaluator<TCandidate> source, CountAccumulator counter) : OperatorExecutorFactory<Evaluation, TCandidate>
+    {
+        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
+            ExecutorFactory.FromFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
+            {
+                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
+                var childEvaluator = typed.Resolve(source.ChildOperator);
+                return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.MaxEvaluations, source.FallbackObjectiveVector, source.EnforceLimitWithinBatch, counter);
+            });
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch, CountAccumulator counter)
@@ -72,7 +84,7 @@ public sealed record LimitEvaluator<TCandidate>
 
 public static class LimitEvaluatorExtensions
 {
-    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
+    extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
     {
         public LimitEvaluator<TCandidate> LimitEvaluations(int maxEvaluations, ObjectiveVector? fallbackObjectiveVector = null, bool enforceLimitWithinBatch = false)
         {

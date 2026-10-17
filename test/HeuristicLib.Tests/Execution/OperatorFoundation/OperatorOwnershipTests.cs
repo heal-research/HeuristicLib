@@ -38,25 +38,25 @@ public sealed class OperatorOwnershipTests
     public void PublicApi()
     {
         var typed = Typed(ResolutionScope.Create());
-        IOperator<RealVector, Mutation> mutation = new IdentityMutation();
-        IOperator<RealVector, Evaluation> evaluation = new SphereEvaluation();
+        IOperator<Mutation, RealVector> mutation = new IdentityMutation();
+        IOperator<Evaluation, RealVector> evaluation = new SphereEvaluation();
         var named = mutation.Named("inner").Named("outer");
         Check(ReferenceEquals(typed.Resolve(mutation), typed.Resolve(named)), "names add no callable node");
         Check(ReferenceEquals(Input, typed.Resolve(named).Mutate(Input, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem)),
             "stateless author overrides only its domain method");
         Check(typed.Resolve(evaluation).Evaluate(Input, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem).Count == 1,
             "evaluation keeps objective-vector results");
-        Check(Pointcut.Named<IOperator<RealVector, Mutation>>("outer").Matches(named), "common pointcuts recognize generic names");
+        Check(Pointcut.Named<IOperator<Mutation, RealVector>>("outer").Matches(named), "common pointcuts recognize generic names");
         Check(!Pointcut.Reference(mutation).Matches(named), "wrapper and child remain separate configurations");
-        IOperator<RealVector, Mutation> counting = new CountingMutation();
+        IOperator<Mutation, RealVector> counting = new CountingMutation();
         Check(Invoke(typed.Resolve(counting)) == 1 && Invoke(typed.Resolve(counting.Named("count"))) == 2,
             "stateful author overrides CreateInitialState and domain method only");
-        Check(typed.ResolveOptional((IOperator<RealVector, Mutation>?)null) is null, "optional resolution infers its operation");
+        Check(typed.ResolveOptional((IOperator<Mutation, RealVector>?)null) is null, "optional resolution infers its operation");
         Check(typed.TryResolve(mutation, out var resolved, out var reason) && resolved is not null && reason is null,
             "TryResolve needs no explicit executor type");
 
-        IOperator<RealVector, Checksum> checksum = new SharedOperations(new ProbeLog());
-        Check(typed.Resolve(new Forward<RealVector, Checksum>(checksum).Named("external")).Read() == 3,
+        IOperator<Checksum, RealVector> checksum = new SharedOperations(new ProbeLog());
+        Check(typed.Resolve(new Forward<Checksum, RealVector>(checksum).Named("external")).Read() == 3,
             "external descriptor and topology use public APIs across the assembly boundary");
         var recommendation = new ChecksumRecommendation();
         Check(recommendation.TryCreateRecommendedOperator(out var first) &&
@@ -73,15 +73,15 @@ public sealed class OperatorOwnershipTests
             var source = new SharedOperations(log);
             var root = ResolutionScope.Create();
             var typed = Typed(root);
-            IOperator<RealVector, Mutation> mutation = source;
-            IOperator<RealVector, Evaluation> evaluation = source;
+            IOperator<Mutation, RealVector> mutation = source;
+            IOperator<Evaluation, RealVector> evaluation = source;
             if (evaluationFirst)
                 _ = typed.Resolve(evaluation);
             var operation = typed.Resolve(mutation, out ILiveValue? control);
             Check(control is not null && control.Value == 3, "control projects from selected owner");
             control!.Value = 12;
             _ = typed.Resolve(evaluation);
-            Check(Invoke(operation) == 12 && typed.Resolve((IOperator<RealVector, Checksum>)source).Read() == 12,
+            Check(Invoke(operation) == 12 && typed.Resolve((IOperator<Checksum, RealVector>)source).Read() == 12,
                 "mutation and external operation see shared live state");
             var named = typed.Resolve(mutation.Named("one").Named("two"), out ILiveValue? namedControl);
             Check(ReferenceEquals(control, namedControl) && ReferenceEquals(operation, named), "forwarding preserves controls and operation");
@@ -101,7 +101,7 @@ public sealed class OperatorOwnershipTests
         foreach (var narrowFirst in new[] { false, true })
         {
             var source = new SharedOperations(new ProbeLog());
-            IOperator<RealVector, Termination> termination = source;
+            IOperator<Termination, RealVector> termination = source;
             var scope = ResolutionScope.Create();
             var broad = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
             var narrow = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
@@ -131,7 +131,7 @@ public sealed class OperatorOwnershipTests
     [Fact]
     public void Ownership()
     {
-        IOperator<RealVector, Mutation> source = new CountingMutation();
+        IOperator<Mutation, RealVector> source = new CountingMutation();
         var parent = ResolutionScope.Create();
         var child = parent.CreateChildScope();
         var local = Typed(child).Resolve(source);
@@ -141,7 +141,7 @@ public sealed class OperatorOwnershipTests
         var nextChild = parent.CreateChildScope();
         Check(ReferenceEquals(ancestor, Typed(nextChild).Resolve(source)), "parent-first owner is reused by descendants");
         Check(ReferenceEquals(ancestor, Typed(parent.With()).Resolve(source)), "With shares prepared owner state");
-        IOperator<RealVector, Mutation> equalCopy = new CountingMutation();
+        IOperator<Mutation, RealVector> equalCopy = new CountingMutation();
         Check(source.Equals(equalCopy) && !ReferenceEquals(ancestor, Typed(parent).Resolve(equalCopy)), "value-equal records have separate owners");
 
         var firstChild = ResolutionScope.Create();
@@ -155,7 +155,7 @@ public sealed class OperatorOwnershipTests
     {
         foreach (var policy in new[] { ChildScopePolicy.Fresh, ChildScopePolicy.Retained, ChildScopePolicy.Shared })
         {
-            IOperator<RealVector, Mutation> source = new CountingMutation();
+            IOperator<Mutation, RealVector> source = new CountingMutation();
             var root = ResolutionScope.Create();
             var selector = new ChildScopeSelector(policy);
             var first = Typed(selector.GetScopeFor(source, root)).Resolve(source);
@@ -168,15 +168,15 @@ public sealed class OperatorOwnershipTests
     [Fact]
     public void ContextualChildren()
     {
-        IOperator<RealVector, Mutation> child = new NodeTokenMutation();
-        IOperator<RealVector, Mutation> source = new ContextualMutation(child);
+        IOperator<Mutation, RealVector> child = new NodeTokenMutation();
+        IOperator<Mutation, RealVector> source = new ContextualMutation(child);
         var root = ResolutionScope.Create();
         var first = Typed(root).Resolve(source);
         var second = Typed(root.With()).Resolve(source);
         Check(!ReferenceEquals(first, second) && Invoke(first) == 1 && Invoke(second) == 2 && Invoke(first) == 1,
             "rebinding constructs new nodes without replacing an earlier node's children");
 
-        IOperator<RealVector, Mutation> counter = new CountingMutation();
+        IOperator<Mutation, RealVector> counter = new CountingMutation();
         var parent = ResolutionScope.Create();
         var localScope = parent.CreateChildScope();
         var local = Typed(localScope).Resolve(counter);
@@ -191,13 +191,13 @@ public sealed class OperatorOwnershipTests
     public void Failures()
     {
         var uncheckedSource = new SharedOperations(new ProbeLog());
-        Reject(() => ResolutionScope.Create().ResolveOperator<RealVector, Mutation, BoundedRealVectorSearchSpace,
+        Reject(() => ResolutionScope.Create().ResolveOperator<Mutation, RealVector, BoundedRealVectorSearchSpace,
             TestFunctionProblem, ISearchState, IChecksumExecutor>(uncheckedSource,
             Mutation.CreateExecutorAdapter<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>()), "requires");
         Check(uncheckedSource.Log.Preparations == 0, "incorrect external resolution bridge rejects before owner preparation");
         var log = new ProbeLog { FailPreparation = true };
         var source = new SharedOperations(log);
-        IOperator<RealVector, Mutation> mutation = source;
+        IOperator<Mutation, RealVector> mutation = source;
         var typed = Typed(ResolutionScope.Create());
         Reject(() => typed.Resolve(mutation), "preparation failure");
         log.FailPreparation = false;
@@ -220,7 +220,7 @@ public sealed class OperatorOwnershipTests
     public void Cycles()
     {
         var source = new CyclicOperations();
-        Reject(() => Typed(ResolutionScope.Create()).Resolve((IOperator<RealVector, Mutation>)source), "Recursive construction");
+        Reject(() => Typed(ResolutionScope.Create()).Resolve((IOperator<Mutation, RealVector>)source), "Recursive construction");
         Check(source.Preparations == 1, "changing operation does not create a second owner or evade cycle detection");
         var mixed = new MixedCycle();
         Reject(() => Typed(ResolutionScope.Create()).Resolve(mixed), "Recursive construction");
@@ -232,20 +232,20 @@ public sealed class OperatorOwnershipTests
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static (WeakReference Source, WeakReference Execution) MakeDiscarded(ResolutionScope root)
     {
-        IOperator<RealVector, Mutation> source = new CountingMutation();
+        IOperator<Mutation, RealVector> source = new CountingMutation();
         var executor = Typed(root.CreateChildScope()).Resolve(source);
         return (new WeakReference(source), new WeakReference(executor));
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static WeakReference MakeFreshExecution(ResolutionScope root, IOperator<RealVector, Mutation> source) =>
+    private static WeakReference MakeFreshExecution(ResolutionScope root, IOperator<Mutation, RealVector> source) =>
         new(Typed(root.CreateChildScope()).Resolve(source));
 
     [Fact]
     public void Lifetime()
     {
         var root = ResolutionScope.Create();
-        IOperator<RealVector, Mutation> retainedSource = new CountingMutation();
+        IOperator<Mutation, RealVector> retainedSource = new CountingMutation();
         var discarded = MakeDiscarded(root);
         var discardedExecution = MakeFreshExecution(root, retainedSource);
         for (var attempt = 0; attempt < 5 && (discarded.Source.IsAlive || discarded.Execution.IsAlive || discardedExecution.IsAlive); attempt++)
@@ -260,7 +260,7 @@ public sealed class OperatorOwnershipTests
         GC.KeepAlive(retainedSource);
     }
 
-    private sealed class UnimplementedAdvice : Advice<IOperator<RealVector, Mutation>>;
+    private sealed class UnimplementedAdvice : Advice<IOperator<Mutation, RealVector>>;
 
     private sealed class Node : IExecutor;
 
@@ -273,7 +273,7 @@ public sealed class OperatorOwnershipTests
         }
     }
 
-    private sealed class CyclicOperations : IOperator<RealVector, Mutation>, IOperator<RealVector, Evaluation>
+    private sealed class CyclicOperations : IOperator<Mutation, RealVector>, IOperator<Evaluation, RealVector>
     {
         public int Preparations { get; private set; }
         public OperatorExecutorFactory CreateExecutorFactory()
@@ -281,13 +281,13 @@ public sealed class OperatorOwnershipTests
             Preparations++;
             return OperatorExecutorFactory.FromFactory<IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>(scope =>
             {
-                _ = Typed(scope).Resolve((IOperator<RealVector, Evaluation>)this);
+                _ = Typed(scope).Resolve((IOperator<Evaluation, RealVector>)this);
                 throw new InvalidOperationException("Cycle was not detected.");
             });
         }
     }
 
-    private sealed class MixedCycle : IOperator<RealVector, Mutation>
+    private sealed class MixedCycle : IOperator<Mutation, RealVector>
     {
         public OperatorExecutorFactory CreateExecutorFactory() =>
             OperatorExecutorFactory.FromFactory<IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>(scope =>
@@ -296,7 +296,7 @@ public sealed class OperatorOwnershipTests
                 throw new InvalidOperationException("Mixed cycle was not detected.");
             });
 
-        private sealed class Bridge(IOperator<RealVector, Mutation> child) : IConfigurationNode<Node>
+        private sealed class Bridge(IOperator<Mutation, RealVector> child) : IConfigurationNode<Node>
         {
             public ExecutorFactory<Node> CreateExecutorFactory() => scope =>
             {

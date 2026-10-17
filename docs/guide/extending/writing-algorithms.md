@@ -29,7 +29,7 @@ public sealed record SingleCreateAlgorithm
 {
     public required ICreator<RealVector> Creator { get; init; }
 
-    public IEvaluator<RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
+    public IOperator<Evaluation, RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
     protected override ExecutorFactory<IterativeAlgorithmExecutor<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
         scope =>

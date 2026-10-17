@@ -22,7 +22,7 @@ public abstract record StatefulEvaluator<TCandidate, TSearchSpace, TProblem, TSt
 
     protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override ExecutorFactory<IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;
@@ -44,7 +44,7 @@ public abstract record StatefulEvaluator<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override ExecutorFactory<IEvaluationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<IEvaluationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;
@@ -65,7 +65,7 @@ public abstract record StatefulEvaluator<TCandidate, TState>
 
     protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random);
 
-    public sealed override ExecutorFactory<IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;

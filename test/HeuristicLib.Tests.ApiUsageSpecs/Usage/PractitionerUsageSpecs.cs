@@ -403,14 +403,14 @@ public class PractitionerUsageSpecs
         var counter = new CountAccumulator();
         var duration = new DurationAccumulator();
 
-        var counted = new CountingMutatorAdvice<RealVector>(counter, OperatorCountMetric.Candidates);
+        var counted = new CountingOperatorAdvice<Mutation, RealVector>(counter, OperatorCountMetric.Candidates);
         var measured = Aspect.MeasureDuration(mutator, duration);
 
         Aspect.Create(Pointcut.Reference(mutator), counted).Advices.Single().Pointcut.Matches(mutator).ShouldBeTrue();
         counted.Counter.ShouldBeSameAs(counter);
         counted.Metric.ShouldBe(OperatorCountMetric.Candidates);
         measured.Advices.Single().Pointcut.Matches(mutator).ShouldBeTrue();
-        measured.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringMutatorAdvice<RealVector>>().Duration.ShouldBeSameAs(duration);
+        measured.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Mutation, RealVector>>().Duration.ShouldBeSameAs(duration);
     }
 
     [Fact]
@@ -452,7 +452,7 @@ public class PractitionerUsageSpecs
             .LimitedToCount(
                 algorithm.Mutator,
                 maximumCount: 20,
-                counting: new MutatorCounting<RealVector>(OperatorCountMetric.Candidates))
+                counting: new OperatorCounting<Mutation, RealVector>(OperatorCountMetric.Candidates))
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),

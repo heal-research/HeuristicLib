@@ -17,7 +17,7 @@ public sealed class EvaluationClock<TCandidate>
 {
     private long evaluations;
 
-    public EvaluationClock(IEvaluator<TCandidate> evaluator)
+    public EvaluationClock(IOperator<Evaluation, TCandidate> evaluator)
     {
         Advices = Aspect.Observe(evaluator, Record).Advices;
     }
@@ -35,7 +35,7 @@ public static class EvaluatorClockExtensions
         /// <summary>
         /// Creates a clock counting the candidates one chosen evaluator has evaluated.
         /// </summary>
-        public static EvaluationClock<TCandidate> FromEvaluations<TCandidate>(IEvaluator<TCandidate> evaluator) =>
+        public static EvaluationClock<TCandidate> FromEvaluations<TCandidate>(IOperator<Evaluation, TCandidate> evaluator) =>
             new(evaluator);
     }
 }

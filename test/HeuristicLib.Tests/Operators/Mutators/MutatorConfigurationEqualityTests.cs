@@ -60,7 +60,7 @@ public class MutatorConfigurationEqualityTests
     [Fact]
     public void ChooseOneMutator_WithDifferentWeights_IsNotEqual()
     {
-        var children = new IMutator<int>[]
+        var children = new IOperator<Mutation, int>[]
         {
             new AddOffsetMutator(1),
             new AddOffsetMutator(2),
@@ -147,12 +147,12 @@ public class MutatorConfigurationEqualityTests
     {
         var first = new AddOffsetMutator(1);
         var second = new AddOffsetMutator(2);
-        var childMutators = new List<IMutator<int>> { first, second };
+        var childMutators = new List<IOperator<Mutation, int>> { first, second };
         var mutator = new FirstOfMutator(childMutators);
 
         childMutators.Clear();
 
-        mutator.ChildMutators.ShouldBe([first, second]);
+        mutator.ChildOperators.ShouldBe([first, second]);
     }
 
     private sealed record AddOffsetMutator(int Offset) : SingleCandidateMutator<int, DummySearchSpace<int>>
@@ -165,15 +165,29 @@ public class MutatorConfigurationEqualityTests
     /// structural equality follows from <c>ChildMutators</c> being a value array.
     /// </summary>
     private sealed record FirstOfMutator
-        : MultiMutator<int>
+        : MultiOperator<Mutation, int>
     {
-        public FirstOfMutator(IReadOnlyList<IMutator<int>> childMutators)
+        public FirstOfMutator(IReadOnlyList<IOperator<Mutation, int>> childMutators)
             : base(childMutators)
         {
         }
 
-        protected override CompositeExecutorFactory<IMutationExecutor<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childMutators => new Executor<TRunSearchSpace, TRunProblem>(childMutators);
+        protected override OperatorExecutorFactory CreateOperatorFactory()
+        {
+            return new Factory(this);
+        }
+
+        private sealed class Factory(FirstOfMutator source) : OperatorExecutorFactory<Mutation, int>
+        {
+            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
+                OperationExecutorAdapter<Mutation, int, TSearchSpace, TProblem, TSearchState> adapter) =>
+                ExecutorFactory.FromFactory<IMutationExecutor<int, TSearchSpace, TProblem>>(scope =>
+                {
+                    var typed = scope.For<int, TSearchSpace, TProblem, TSearchState>();
+                    System.Collections.Immutable.ImmutableArray<IMutationExecutor<int, TSearchSpace, TProblem>> children = [.. source.ChildOperators.Select(child => typed.Resolve(child))];
+                    return new Executor<TSearchSpace, TProblem>(children);
+                });
+        }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<int, TSearchSpace, TProblem>> childMutators)
             : MultiMutationExecutor<int, TSearchSpace, TProblem>(childMutators)

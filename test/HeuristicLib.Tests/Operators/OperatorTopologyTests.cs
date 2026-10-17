@@ -34,8 +34,6 @@ public class OperatorTopologyTests
     [Theory]
     [InlineData(typeof(ICreator<>))]
     [InlineData(typeof(ICrossover<>))]
-    [InlineData(typeof(IEvaluator<>))]
-    [InlineData(typeof(IMutator<>))]
     [InlineData(typeof(IRefiner<>))]
     [InlineData(typeof(IReplacer<>))]
     [InlineData(typeof(ISelector<>))]

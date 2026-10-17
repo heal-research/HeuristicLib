@@ -103,11 +103,11 @@ public class CycleAlgorithmAnalysisScenarios
     {
         public int Candidate { get; }
 
-        public IEvaluator<int> Evaluator { get; }
+        public IOperator<Evaluation, int> Evaluator { get; }
 
         public IInterceptor<int> Interceptor { get; }
 
-        public SingleStepAlgorithm(int candidate, IEvaluator<int> evaluator, IInterceptor<int> interceptor)
+        public SingleStepAlgorithm(int candidate, IOperator<Evaluation, int> evaluator, IInterceptor<int> interceptor)
         {
             Candidate = candidate;
             Interceptor = interceptor;
@@ -150,7 +150,7 @@ public class CycleAlgorithmAnalysisScenarios
     {
         public ExecutionState Result { get; } = new();
 
-        public EvaluationTraceAnalysis(IEvaluator<int> evaluator)
+        public EvaluationTraceAnalysis(IOperator<Evaluation, int> evaluator)
         {
             Advices = Aspect.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record).Advices;
         }

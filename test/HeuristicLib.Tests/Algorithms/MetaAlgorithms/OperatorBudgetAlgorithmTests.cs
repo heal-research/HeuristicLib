@@ -276,7 +276,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Evaluator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)),
-            new EvaluatorDurationMeasuring<RealVector>())
+            new OperatorDurationMeasuring<Evaluation, RealVector>())
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -430,7 +430,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.LimitedToCount(
             algorithm.Mutator,
             maximumCount: 1,
-            counting: new MutatorCounting<RealVector>(OperatorCountMetric.Calls))
+            counting: new OperatorCounting<Mutation, RealVector>(OperatorCountMetric.Calls))
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -475,7 +475,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.LimitedToCount(
             algorithm.Mutator,
             maximumCount: 6,
-            counting: new MutatorCounting<RealVector>(OperatorCountMetric.Candidates))
+            counting: new OperatorCounting<Mutation, RealVector>(OperatorCountMetric.Candidates))
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -542,7 +542,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.LimitedToCount(
             algorithm.Evaluator,
             maximumCount: 1,
-            counting: new EvaluatorCounting<RealVector>(OperatorCountMetric.Calls))
+            counting: new OperatorCounting<Evaluation, RealVector>(OperatorCountMetric.Calls))
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -622,12 +622,12 @@ public class OperatorBudgetAlgorithmTests
         var algorithm = CreateAlgorithm(problem);
 
         var budgeted =
-            new OperatorBudgetAlgorithm<RealVector, PopulationState<RealVector>, IEvaluator<RealVector>>
+            new OperatorBudgetAlgorithm<RealVector, PopulationState<RealVector>, IOperator<Evaluation, RealVector>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
                 MaximumCount = maximumCount,
-                Counting = new EvaluatorCounting<RealVector>(OperatorCountMetric.Calls)
+                Counting = new OperatorCounting<Evaluation, RealVector>(OperatorCountMetric.Calls)
             };
 
         budgeted.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
@@ -642,12 +642,12 @@ public class OperatorBudgetAlgorithmTests
         var algorithm = CreateAlgorithm(problem);
 
         var budgeted =
-            new OperatorDurationBudgetAlgorithm<RealVector, PopulationState<RealVector>, IEvaluator<RealVector>>
+            new OperatorDurationBudgetAlgorithm<RealVector, PopulationState<RealVector>, IOperator<Evaluation, RealVector>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
                 MaximumDuration = TimeSpan.FromTicks(ticks),
-                DurationMeasuring = new EvaluatorDurationMeasuring<RealVector>()
+                DurationMeasuring = new OperatorDurationMeasuring<Evaluation, RealVector>()
             };
 
         budgeted.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
@@ -707,7 +707,7 @@ public class OperatorBudgetAlgorithmTests
             new RecordingEvaluatorDurationMeasuring<RealVector>((observedOperator, duration, timeProvider) =>
             {
                 measuredOperators.Add(observedOperator.GetType());
-                return new DurationMeasuringEvaluatorAdvice<RealVector>(duration, timeProvider);
+                return new DurationMeasuringOperatorAdvice<Evaluation, RealVector>(duration, timeProvider);
             }));
 
         await budgeted.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(quality)
@@ -770,7 +770,7 @@ public class OperatorBudgetAlgorithmTests
     {
         public int ObservedCandidates { get; private set; }
 
-        public EvaluationObservingAnalyzer(IEvaluator<RealVector> evaluator)
+        public EvaluationObservingAnalyzer(IOperator<Evaluation, RealVector> evaluator)
         {
             Advices = Aspect.Observe<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator, Record).Advices;
         }
@@ -809,25 +809,25 @@ public class OperatorBudgetAlgorithmTests
             return HasTerminated;
         }
     }
-    private sealed record RecordingEvaluatorCounting<TCandidate>(Func<IEvaluator<TCandidate>, CountAccumulator, EvaluatorAdvice<TCandidate>> Create) : IOperatorCounting<IEvaluator<TCandidate>>
+    private sealed record RecordingEvaluatorCounting<TCandidate>(Func<IOperator<Evaluation, TCandidate>, CountAccumulator, OperatorAdvice<Evaluation, TCandidate>> Create) : IOperatorCounting<IOperator<Evaluation, TCandidate>>
     {
-        public Advice<IEvaluator<TCandidate>> CreateAdvice(CountAccumulator counter) => new SelectedAdvice(source => Create(source, counter));
+        public Advice<IOperator<Evaluation, TCandidate>> CreateAdvice(CountAccumulator counter) => new SelectedAdvice(source => Create(source, counter));
 
-        private sealed class SelectedAdvice(Func<IEvaluator<TCandidate>, EvaluatorAdvice<TCandidate>> create) : EvaluatorAdvice<TCandidate>
+        private sealed class SelectedAdvice(Func<IOperator<Evaluation, TCandidate>, OperatorAdvice<Evaluation, TCandidate>> create) : OperatorAdvice<Evaluation, TCandidate>
         {
-            public override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> configuration) =>
-                create(configuration).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(configuration);
+            public override OperatorAdviceWrapperFactory<Evaluation, TCandidate> CreateWrapperFactory(IOperator<Evaluation, TCandidate> configuration) =>
+                create(configuration).CreateWrapperFactory(configuration);
         }
     }
 
-    private sealed record RecordingEvaluatorDurationMeasuring<TCandidate>(Func<IEvaluator<TCandidate>, DurationAccumulator, TimeProvider, EvaluatorAdvice<TCandidate>> Create) : IOperatorDurationMeasuring<IEvaluator<TCandidate>>
+    private sealed record RecordingEvaluatorDurationMeasuring<TCandidate>(Func<IOperator<Evaluation, TCandidate>, DurationAccumulator, TimeProvider, OperatorAdvice<Evaluation, TCandidate>> Create) : IOperatorDurationMeasuring<IOperator<Evaluation, TCandidate>>
     {
-        public Advice<IEvaluator<TCandidate>> CreateAdvice(DurationAccumulator duration, TimeProvider timeProvider) => new SelectedAdvice(source => Create(source, duration, timeProvider));
+        public Advice<IOperator<Evaluation, TCandidate>> CreateAdvice(DurationAccumulator duration, TimeProvider timeProvider) => new SelectedAdvice(source => Create(source, duration, timeProvider));
 
-        private sealed class SelectedAdvice(Func<IEvaluator<TCandidate>, EvaluatorAdvice<TCandidate>> create) : EvaluatorAdvice<TCandidate>
+        private sealed class SelectedAdvice(Func<IOperator<Evaluation, TCandidate>, OperatorAdvice<Evaluation, TCandidate>> create) : OperatorAdvice<Evaluation, TCandidate>
         {
-            public override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> configuration) =>
-                create(configuration).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(configuration);
+            public override OperatorAdviceWrapperFactory<Evaluation, TCandidate> CreateWrapperFactory(IOperator<Evaluation, TCandidate> configuration) =>
+                create(configuration).CreateWrapperFactory(configuration);
         }
     }
 

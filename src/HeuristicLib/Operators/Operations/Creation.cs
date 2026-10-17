@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>Identifies creating candidates when declaring an operator slot.</summary>
 public sealed class Creation : IOperationDescriptor<Creation>
 {
-    public static OperationExecutorAdapter<TCandidate, Creation, TSearchSpace, TProblem, TRunSearchState>
+    public static OperationExecutorAdapter<Creation, TCandidate, TSearchSpace, TProblem, TRunSearchState>
         CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -17,7 +17,7 @@ public sealed class Creation : IOperationDescriptor<Creation>
         new ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>();
 
     private sealed class ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>
-        : OperationExecutorAdapter<TCandidate, Creation, TSearchSpace, TProblem, TRunSearchState,
+        : OperationExecutorAdapter<Creation, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             ICreationExecutor<TCandidate, TSearchSpace, TProblem>>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -57,6 +57,20 @@ public sealed class Creation : IOperationDescriptor<Creation>
                 }
                 finally { notifier.Finish(); }
             }
+        }
+
+        protected override ICreationExecutor<TCandidate, TSearchSpace, TProblem> CreatePolicyExecutor(ImmutableArray<ICreationExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) =>
+            new PolicyExecutor(children, policy);
+
+        private sealed class PolicyExecutor(ImmutableArray<ICreationExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) : ICreationExecutor<TCandidate, TSearchSpace, TProblem>
+        {
+            public IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random,
+                TSearchSpace searchSpace, TProblem problem) =>
+                policy.Execute(children, (count, random, searchSpace, problem), random, static (child, args) =>
+                {
+                    var result = child.Create(args.count, args.random, args.searchSpace, args.problem);
+                    return new OperationCallResult<IReadOnlyList<TCandidate>>(result, result.Count);
+                }).Value;
         }
 
         private sealed class SuccessCallbackExecutor<TCallback>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback)

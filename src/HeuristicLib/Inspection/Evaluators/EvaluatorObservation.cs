@@ -9,7 +9,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Inspection;
 
 public sealed record EvaluatorObservation<TCandidate, TSearchSpace, TProblem>(
-    IEvaluator<TCandidate> Evaluator,
+    IOperator<Evaluation, TCandidate> Evaluator,
     IReadOnlyList<ObjectiveVector> ObjectiveVectors,
     IReadOnlyList<TCandidate> Candidates,
     TSearchSpace SearchSpace,
@@ -27,7 +27,7 @@ public static class EvaluatorObservations
         /// run over types the observation was not written for is reported when the execution graph is built.
         /// </remarks>
         public static Aspect Observe<TCandidate, TSearchSpace, TProblem>(
-            IEvaluator<TCandidate> evaluator,
+            IOperator<Evaluation, TCandidate> evaluator,
             Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
@@ -39,7 +39,7 @@ public static class EvaluatorObservations
         /// them from it. The observation fits every run over the candidate.
         /// </remarks>
         public static Aspect Observe<TCandidate>(
-            IEvaluator<TCandidate> evaluator,
+            IOperator<Evaluation, TCandidate> evaluator,
             Action<EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> observe) =>
             Aspect.Observe<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>(evaluator, observe);
     }
@@ -48,18 +48,30 @@ public static class EvaluatorObservations
 /// <summary>Reports every call to each evaluator its pointcut selects.</summary>
 /// <param name="observe">Receives each observation on the thread that called the evaluator.</param>
 public sealed class EvaluatorObservationAdvice<TCandidate, TSearchSpace, TProblem>(
-    Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe) : EvaluatorAdvice<TCandidate>
+    Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe) : OperatorAdvice<Evaluation, TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<TCandidate> evaluator)
+    public override OperatorAdviceWrapperFactory<Evaluation, TCandidate> CreateWrapperFactory(IOperator<Evaluation, TCandidate> evaluator) =>
+        new Factory(evaluator, observe, this);
+
+    private sealed class Factory(IOperator<Evaluation, TCandidate> source,
+        Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe, Advice advice)
+        : OperatorAdviceWrapperFactory<Evaluation, TCandidate>
     {
-        ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
-        return inner => new Executor<TRunSearchSpace, TRunProblem>(evaluator, inner, observe);
+        public override WrapperExecutorFactory GetWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            IOperator<Evaluation, TCandidate> selected,
+            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter)
+        {
+            ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(advice);
+            return WrapperExecutorFactory.From<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(child =>
+                new ExecutorWithControls<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(
+                    new Executor<TRunSearchSpace, TRunProblem>(source, child.Executor, observe), child.ControlProvider));
+        }
     }
 
     private sealed class Executor<TRunSearchSpace, TRunProblem>(
-        IEvaluator<TCandidate> observedEvaluator,
+        IOperator<Evaluation, TCandidate> observedEvaluator,
         IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator,
         Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
         : WrappingEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>(childEvaluator)

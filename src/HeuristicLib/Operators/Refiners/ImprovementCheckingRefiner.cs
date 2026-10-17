@@ -50,7 +50,7 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     /// invisible to budgets and analysis. Supply the same evaluator configuration the algorithm uses to have these
     /// evaluations counted, limited or served from one shared cache.
     /// </remarks>
-    public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
+    public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
     /// <summary>
     /// Gets the criterion deciding whether a refined candidate is kept.
@@ -109,10 +109,10 @@ public static class ImprovementCheckingRefiner
     public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IImprovementCriterion criterion) =>
         new(refiner) { Criterion = criterion };
 
-    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IEvaluator<TCandidate> evaluator) =>
+    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IOperator<Evaluation, TCandidate> evaluator) =>
         new(refiner) { Evaluator = evaluator };
 
-    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IEvaluator<TCandidate> evaluator, IImprovementCriterion criterion) =>
+    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IOperator<Evaluation, TCandidate> evaluator, IImprovementCriterion criterion) =>
         new(refiner) { Evaluator = evaluator, Criterion = criterion };
 }
 
@@ -325,10 +325,10 @@ public static class ImprovementCheckingRefinerExtensions
         public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement(IImprovementCriterion criterion) =>
             new ImprovementCheckingRefiner<TCandidate>(refiner) { Criterion = criterion };
 
-        public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement(IEvaluator<TCandidate> evaluator) =>
+        public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement(IOperator<Evaluation, TCandidate> evaluator) =>
             new ImprovementCheckingRefiner<TCandidate>(refiner) { Evaluator = evaluator };
 
-        public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement(IEvaluator<TCandidate> evaluator, IImprovementCriterion criterion) =>
+        public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement(IOperator<Evaluation, TCandidate> evaluator, IImprovementCriterion criterion) =>
             new ImprovementCheckingRefiner<TCandidate>(refiner) { Evaluator = evaluator, Criterion = criterion };
     }
 }

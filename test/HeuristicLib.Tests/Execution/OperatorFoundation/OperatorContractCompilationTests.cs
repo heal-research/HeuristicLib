@@ -7,12 +7,12 @@ namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation;
 public sealed class OperatorContractCompilationTests
 {
     [Theory]
-    [InlineData("IOperator<RealVector, Mutation> slot = mutation;", null)]
-    [InlineData("IOperator<string, Mutation> slot = mutation;", "CS0266")]
-    [InlineData("IOperator<RealVector, Evaluation> slot = mutation;", "CS0266")]
-    [InlineData("IOperator<RealVector, Mutation> slot = algorithm;", "CS0266")]
-    [InlineData("Forward<RealVector, Mutation>(algorithm);", "CS1503")]
-    [InlineData("_ = Aspect.Create(Pointcut.OfType<IOperator<RealVector, Mutation>>(), evaluationAdvice);", "CS0311")]
+    [InlineData("IOperator<Mutation, RealVector> slot = mutation;", null)]
+    [InlineData("IOperator<Mutation, string> slot = mutation;", "CS0266")]
+    [InlineData("IOperator<Evaluation, RealVector> slot = mutation;", "CS0266")]
+    [InlineData("IOperator<Mutation, RealVector> slot = algorithm;", "CS0266")]
+    [InlineData("Forward<Mutation, RealVector>(algorithm);", "CS1503")]
+    [InlineData("_ = Aspect.Create(Pointcut.OfType<IOperator<Mutation, RealVector>>(), evaluationAdvice);", "CS0311")]
     public void CandidateOperationAlgorithmAndAdviceBoundariesAreCheckedByTheCompiler(string statement, string? expectedDiagnostic)
     {
         var tree = CSharpSyntaxTree.ParseText($$"""
@@ -23,13 +23,13 @@ public sealed class OperatorContractCompilationTests
 
             public static class Consumer
             {
-                public static void Use(IOperator<RealVector, Mutation> mutation, IAlgorithm<RealVector> algorithm,
-                    OperatorAdvice<RealVector, Evaluation> evaluationAdvice)
+                public static void Use(IOperator<Mutation, RealVector> mutation, IAlgorithm<RealVector> algorithm,
+                    OperatorAdvice<Evaluation, RealVector> evaluationAdvice)
                 {
                     {{statement}}
                 }
 
-                private static void Forward<TCandidate, TOperation>(IOperator<TCandidate, TOperation> source)
+                private static void Forward<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source)
                     where TOperation : IOperationDescriptor<TOperation> { }
             }
             """);

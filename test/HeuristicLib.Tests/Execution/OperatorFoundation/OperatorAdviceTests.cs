@@ -53,14 +53,14 @@ public sealed class OperatorAdviceTests
         foreach (var evaluationFirst in new[] { false, true })
         {
             var source = new SharedOperations(new ProbeLog());
-            IOperator<RealVector, Mutation> mutation = source;
-            IOperator<RealVector, Evaluation> evaluation = source;
+            IOperator<Mutation, RealVector> mutation = source;
+            IOperator<Evaluation, RealVector> evaluation = source;
             var generalTotal = new CallCounter();
             var generalLog = new AdviceLog();
             var typedTotal = new CallCounter();
             var typedLog = new AdviceLog();
             var general = Aspect.Create(Pointcut.Reference(source), new CountCalls(generalTotal, generalLog));
-            var typedAdvice = Aspect.Create(Pointcut.Reference(mutation), new CountCalls<RealVector, Mutation>(typedTotal, typedLog));
+            var typedAdvice = Aspect.Create(Pointcut.Reference(mutation), new CountCalls<Mutation, RealVector>(typedTotal, typedLog));
             var root = ResolutionScope.Create(general, typedAdvice);
             var scope = Typed(root);
             if (evaluationFirst)
@@ -71,9 +71,9 @@ public sealed class OperatorAdviceTests
             _ = Invoke(scope.Resolve(mutation));
             if (!evaluationFirst)
                 _ = scope.Resolve(evaluation).Evaluate(Input, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem);
-            Check(scope.Resolve((IOperator<RealVector, Checksum>)source).Read() == 3, "general advice dispatches to an external scalar adapter");
+            Check(scope.Resolve((IOperator<Checksum, RealVector>)source).Read() == 3, "general advice dispatches to an external scalar adapter");
             var term = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
-            _ = term.Resolve((IOperator<RealVector, Termination>)source).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem);
+            _ = term.Resolve((IOperator<Termination, RealVector>)source).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem);
             Check(generalTotal.Value == 4 && typedTotal.Value == 1, "general counts all operations; typed counts only mutation");
             Check(generalLog.Preparations == 1 && generalLog.Bindings == 4 && generalLog.StateAt(0).Calls == 4,
                 "one general prepared state has four operation-specific wrapper constructors");
@@ -96,7 +96,7 @@ public sealed class OperatorAdviceTests
         foreach (var narrowFirst in new[] { false, true })
         {
             var source = new SharedOperations(new ProbeLog());
-            IOperator<RealVector, Termination> term = source;
+            IOperator<Termination, RealVector> term = source;
             var named = term.Named("state").Named("outer");
             var generalLog = new AdviceLog();
             var typedLog = new AdviceLog();
@@ -104,9 +104,9 @@ public sealed class OperatorAdviceTests
             var total = new CallCounter();
             var root = ResolutionScope.Create(
                 Aspect.Create(Pointcut.Reference(source), new CountCalls(total, generalLog)),
-                Aspect.Create(Pointcut.Reference(term), new CountCalls<RealVector, Termination>(new CallCounter(), typedLog)),
-                Aspect.Create(Pointcut.Reference((IOperator<RealVector, Mutation>)source),
-                    new CountCalls<RealVector, Mutation>(new CallCounter(), skippedLog)));
+                Aspect.Create(Pointcut.Reference(term), new CountCalls<Termination, RealVector>(new CallCounter(), typedLog)),
+                Aspect.Create(Pointcut.Reference((IOperator<Mutation, RealVector>)source),
+                    new CountCalls<Mutation, RealVector>(new CallCounter(), skippedLog)));
             var broad = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
             var narrow = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
             if (narrowFirst)
@@ -141,7 +141,7 @@ public sealed class OperatorAdviceTests
     [Fact]
     public void Ordering()
     {
-        IOperator<RealVector, Mutation> source = new IdentityMutation();
+        IOperator<Mutation, RealVector> source = new IdentityMutation();
         var order = new List<string>();
         var total = new CallCounter();
         var localLog = new AdviceLog { AfterSuccess = () => order.Add("local") };
@@ -187,7 +187,7 @@ public sealed class OperatorAdviceTests
     public void ControlsAndContexts()
     {
         var source = new SharedOperations(new ProbeLog());
-        IOperator<RealVector, Mutation> mutation = source;
+        IOperator<Mutation, RealVector> mutation = source;
         var inner = mutation.Named("inner");
         var outer = inner.Named("outer");
         var root = ResolutionScope.Create();
@@ -209,7 +209,7 @@ public sealed class OperatorAdviceTests
         Check(new IOperator[] { source, inner, outer }.All(selected =>
             log.PreparedSources.Count(item => ReferenceEquals(item.Target, selected)) == 1), "each join point retains its selected source identity");
 
-        IOperator<RealVector, Mutation> child = new CountingMutation();
+        IOperator<Mutation, RealVector> child = new CountingMutation();
         var composite = new ContextualMutation(child);
         var originalScope = ResolutionScope.Create();
         var original = Typed(originalScope).Resolve(composite);
@@ -227,7 +227,7 @@ public sealed class OperatorAdviceTests
     {
         foreach (var policy in new[] { ChildScopePolicy.Fresh, ChildScopePolicy.Retained, ChildScopePolicy.Shared })
         {
-            IOperator<RealVector, Mutation> source = new CountingMutation();
+            IOperator<Mutation, RealVector> source = new CountingMutation();
             var log = new AdviceLog();
             var total = new CallCounter();
             var aspect = Aspect.Create(Pointcut.Reference(source), new CountCalls(total, log));
@@ -240,7 +240,7 @@ public sealed class OperatorAdviceTests
             Check(policy == ChildScopePolicy.Fresh ? log.StateAt(0).Calls == 1 && log.StateAt(1).Calls == 1 : log.StateAt(0).Calls == 2,
                 $"{policy} advice counters follow owner lifetime rather than contextual node lifetime");
         }
-        IOperator<RealVector, Mutation> shared = new CountingMutation();
+        IOperator<Mutation, RealVector> shared = new CountingMutation();
         var sharedLog = new AdviceLog();
         var sharedAspect = Aspect.Create(Pointcut.Reference(shared), new CountCalls(new CallCounter(), sharedLog));
         var parent = ResolutionScope.Create(sharedAspect);
@@ -289,14 +289,14 @@ public sealed class OperatorAdviceTests
             "a failed carrier check is not cached as a successful wrapper and does not discard prepared advice state");
 
         var termSource = new SharedOperations(new ProbeLog());
-        IOperator<RealVector, Termination> term = termSource;
+        IOperator<Termination, RealVector> term = termSource;
         var generalLog = new AdviceLog();
         var typedLog = new AdviceLog();
         var generalTotal = new CallCounter();
         var typedTotal = new CallCounter();
         var root = ResolutionScope.Create(
             Aspect.Create(Pointcut.Reference(term), new CountCalls(generalTotal, generalLog)),
-            Aspect.Create(Pointcut.Reference(term), new CountCalls<RealVector, Termination>(typedTotal, typedLog)));
+            Aspect.Create(Pointcut.Reference(term), new CountCalls<Termination, RealVector>(typedTotal, typedLog)));
         var broad = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
         var narrow = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
         _ = broad.Resolve(term).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem);
@@ -327,9 +327,9 @@ public sealed class OperatorAdviceTests
         var log = new AdviceLog();
         var counter = new CallCounter();
         var scope = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountCalls(counter, log))));
-        Reject(() => scope.Resolve((IOperator<RealVector, Mutation>)source), "construction failure");
+        Reject(() => scope.Resolve((IOperator<Mutation, RealVector>)source), "construction failure");
         source.Log.FailConstruction = false;
-        _ = Invoke(scope.Resolve((IOperator<RealVector, Mutation>)source));
+        _ = Invoke(scope.Resolve((IOperator<Mutation, RealVector>)source));
         Check(log.Preparations == 1 && log.Bindings == 1 && counter.Value == 1 && source.Log.Preparations == 1,
             "raw construction failure preserves prepared operator and advice factories");
 
@@ -338,16 +338,16 @@ public sealed class OperatorAdviceTests
         var constructionScope = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.Reference(constructionSource), construction)));
         var sentinel = new ControlSentinel();
         ILiveValue? control = sentinel;
-        RejectSame(() => constructionScope.Resolve((IOperator<RealVector, Mutation>)constructionSource, out control), construction.Failure);
+        RejectSame(() => constructionScope.Resolve((IOperator<Mutation, RealVector>)constructionSource, out control), construction.Failure);
         Check(ReferenceEquals(control, sentinel) && constructionSource.Log.Constructions == 1,
             "a wrapper constructor failure exposes no controls even though the raw node was constructed");
         construction.Fail = false;
-        _ = constructionScope.Resolve((IOperator<RealVector, Mutation>)constructionSource, out control);
+        _ = constructionScope.Resolve((IOperator<Mutation, RealVector>)constructionSource, out control);
         Check(!ReferenceEquals(control, sentinel) && construction.Preparations == 1 && construction.Bindings == 1 &&
             constructionSource.Log.Preparations == 1, "wrapper construction retries over existing prepared owner and advice state");
 
         var invocation = new InvocationLog();
-        IOperator<RealVector, Mutation> throwing = new ThrowingMutation(invocation);
+        IOperator<Mutation, RealVector> throwing = new ThrowingMutation(invocation);
         var inner = new CallCounter();
         var outer = new CallCounter();
         var outerLog = new AdviceLog();
@@ -371,7 +371,7 @@ public sealed class OperatorAdviceTests
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static (WeakReference Advice, WeakReference State) DiscardAdvice(ResolutionScope root, IOperator<RealVector, Mutation> source)
+    private static (WeakReference Advice, WeakReference State) DiscardAdvice(ResolutionScope root, IOperator<Mutation, RealVector> source)
     {
         var log = new AdviceLog();
         var advice = new CountCalls(new CallCounter(), log);
@@ -382,14 +382,14 @@ public sealed class OperatorAdviceTests
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static (WeakReference Source, WeakReference Execution, WeakReference State) DiscardFreshState(ResolutionScope root, Aspect aspect, AdviceLog log)
     {
-        IOperator<RealVector, Mutation> source = new CountingMutation();
+        IOperator<Mutation, RealVector> source = new CountingMutation();
         var executor = Typed(root.CreateChildScope(aspect)).Resolve(source);
         return (new WeakReference(source), new WeakReference(executor), log.States[^1]);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static (IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Executor,
-        WeakReference State, CallCounter Total) KeepExecution(ResolutionScope root, IOperator<RealVector, Mutation> source)
+        WeakReference State, CallCounter Total) KeepExecution(ResolutionScope root, IOperator<Mutation, RealVector> source)
     {
         var log = new AdviceLog();
         var counter = new CallCounter();
@@ -401,7 +401,7 @@ public sealed class OperatorAdviceTests
     public void Lifetime()
     {
         var root = ResolutionScope.Create();
-        IOperator<RealVector, Mutation> source = new CountingMutation();
+        IOperator<Mutation, RealVector> source = new CountingMutation();
         var discardedAdvice = DiscardAdvice(root, source);
         var log = new AdviceLog();
         var advice = new CountCalls(new CallCounter(), log);
@@ -440,7 +440,7 @@ public sealed class OperatorAdviceTests
         public int Value { get; set; } = -1;
     }
 
-    private sealed class UnsupportedAdvice : Advice<IOperator<RealVector, Mutation>>;
+    private sealed class UnsupportedAdvice : Advice<IOperator<Mutation, RealVector>>;
 
     private sealed class InvocationLog
     {
@@ -459,23 +459,23 @@ public sealed class OperatorAdviceTests
         }
     }
 
-    private sealed class ConstructionFailureAdvice : OperatorAdvice<RealVector, Mutation>
+    private sealed class ConstructionFailureAdvice : OperatorAdvice<Mutation, RealVector>
     {
         public bool Fail { get; set; } = true;
         public int Preparations { get; private set; }
         public int Bindings { get; private set; }
         public Exception Failure { get; } = new InvalidOperationException("fixture wrapper constructor failure");
 
-        public override OperatorAdviceWrapperFactory<RealVector, Mutation> CreateWrapperFactory(IOperator<RealVector, Mutation> source)
+        public override OperatorAdviceWrapperFactory<Mutation, RealVector> CreateWrapperFactory(IOperator<Mutation, RealVector> source)
         {
             Preparations++;
             return new WrapperFactory(this);
         }
 
-        private sealed class WrapperFactory(ConstructionFailureAdvice advice) : OperatorAdviceWrapperFactory<RealVector, Mutation>
+        private sealed class WrapperFactory(ConstructionFailureAdvice advice) : OperatorAdviceWrapperFactory<Mutation, RealVector>
         {
-            public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TRunSearchState>(IOperator<RealVector, Mutation> source,
-                OperationExecutorAdapter<RealVector, Mutation, TSearchSpace, TProblem, TRunSearchState> adapter)
+            public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TRunSearchState>(IOperator<Mutation, RealVector> source,
+                OperationExecutorAdapter<Mutation, RealVector, TSearchSpace, TProblem, TRunSearchState> adapter)
             {
                 advice.Bindings++;
                 return WrapperExecutorFactory.From<IMutationExecutor<RealVector, TSearchSpace, TProblem>>(child =>

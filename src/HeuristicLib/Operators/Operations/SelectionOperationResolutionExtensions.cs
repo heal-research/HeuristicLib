@@ -9,40 +9,40 @@ namespace HEAL.HeuristicLib.Operators;
 public static class SelectionOperationResolutionExtensions
 {
     public static ISelectionExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<TCandidate, Selection> source)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<Selection, TCandidate> source)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        scope.Scope.ResolveOperator<TCandidate, Selection, TSearchSpace, TProblem, ISearchState,
+        scope.Scope.ResolveOperator<Selection, TCandidate, TSearchSpace, TProblem, ISearchState,
             ISelectionExecutor<TCandidate, TSearchSpace, TProblem>>(source, Selection.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>()).Executor;
 
     public static ISelectionExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem, TControl>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<TCandidate, Selection> source, out TControl? control)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<Selection, TCandidate> source, out TControl? control)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TControl : class
     {
-        var bound = scope.Scope.ResolveOperator<TCandidate, Selection, TSearchSpace, TProblem, ISearchState,
+        var bound = scope.Scope.ResolveOperator<Selection, TCandidate, TSearchSpace, TProblem, ISearchState,
             ISelectionExecutor<TCandidate, TSearchSpace, TProblem>>(source, Selection.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>());
         control = bound.ControlProvider.Get<TControl>();
         return bound.Executor;
     }
 
     public static ISelectionExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<TCandidate, Selection> source)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Selection, TCandidate> source)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState =>
-        scope.Scope.ResolveOperator<TCandidate, Selection, TSearchSpace, TProblem, TRunSearchState,
+        scope.Scope.ResolveOperator<Selection, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             ISelectionExecutor<TCandidate, TSearchSpace, TProblem>>(source, Selection.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()).Executor;
 
     public static ISelectionExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem, TRunSearchState, TControl>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<TCandidate, Selection> source, out TControl? control)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Selection, TCandidate> source, out TControl? control)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState
         where TControl : class
     {
-        var bound = scope.Scope.ResolveOperator<TCandidate, Selection, TSearchSpace, TProblem, TRunSearchState,
+        var bound = scope.Scope.ResolveOperator<Selection, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             ISelectionExecutor<TCandidate, TSearchSpace, TProblem>>(source, Selection.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>());
         control = bound.ControlProvider.Get<TControl>();
         return bound.Executor;
@@ -50,19 +50,19 @@ public static class SelectionOperationResolutionExtensions
 
     [return: NotNullIfNotNull(nameof(source))]
     public static ISelectionExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<TCandidate, Selection>? source)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<Selection, TCandidate>? source)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> => source is null ? null : scope.Resolve(source);
 
     [return: NotNullIfNotNull(nameof(source))]
     public static ISelectionExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<TCandidate, Selection>? source)
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Selection, TCandidate>? source)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState => source is null ? null : scope.Resolve(source);
 
     public static bool TryResolve<TCandidate, TSearchSpace, TProblem>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<TCandidate, Selection> source,
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<Selection, TCandidate> source,
         [NotNullWhen(true)] out ISelectionExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -82,7 +82,7 @@ public static class SelectionOperationResolutionExtensions
     }
 
     public static bool TryResolve<TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<TCandidate, Selection> source,
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Selection, TCandidate> source,
         [NotNullWhen(true)] out ISelectionExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>

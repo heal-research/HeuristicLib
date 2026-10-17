@@ -48,26 +48,13 @@ public record SwapMutator : SingleCandidateMutator<Permutation>
 }
 ```
 
-Reduction changes what the author declares, not where the operator fits. **The role contract names only the candidate.** `IMutator<Permutation>` is the whole contract, so the `SwapMutator` above fills any mutator slot over permutations, and so does an operator authored at the fullest rung against a specific problem.
+Reduction changes what the author declares, not where the operator fits. **Mutation and evaluation slots name the candidate and operation, without run types.** `IOperator<Mutation, Permutation>` is the whole contract, so the `SwapMutator` above fills any mutator slot over permutations, and so does an operator authored at the fullest rung against a specific problem.
 
 The arity lives in the authoring bases: the base performs the type check when a run supplies types the operator was not written for, and for a stateless operator the configuration _is_ the executable part, so it needs the search space and problem in scope where it is written. A consumer, field or child property never names them.
 
-Wrapping and multi bases are agnostic in the search space and the problem, and take **one** type argument:
+`WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>` store one child or an ordered child collection. They forward `Fits` and candidate contracts. Their protected `CreateOperatorFactory()` initializes persistent data once; the returned `OperatorExecutorFactory<TOperation, TCandidate>` constructs executors for the run's search-space, problem and state types. Resolve children through the supplied construction scope.
 
-```csharp
-public sealed record RetryingMutator<TCandidate>(IMutator<TCandidate> ChildMutator, int Attempts)
-    : WrappingMutator<TCandidate>(ChildMutator)
-{
-    protected override WrapperExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-        childMutator => new Executor<TRunSearchSpace, TRunProblem>(childMutator, Attempts);
-
-    // Nested execution, generic in the run's types and constrained the same way.
-}
-```
-
-Leaf authors may name fixed search-space and problem types; a composite forwards the run's types rather than naming what its children were written for. The run's search space and problem arrive as _method_ type arguments on `CreateWrapperFactory`, are threaded into a nested generic executor class, and the child is resolved against them. A problem-specific child composes in exactly as a universal one does, because the child slot is `IMutator<TCandidate>` either way.
-
-The cost of that agnosticism falls on the composite's author, and only there: a generic method with a constraint clause and a nested generic executor class, instead of a plain nested class. Leaf authoring is unchanged, and every consumer of the composite names one type argument.
+Use `.Named("name")` for a transparent selectable boundary and `.Retry(3)` to allow up to three attempts after a directly thrown `RetryableOperationException`. Both preserve the child's control provider. The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) shows the complete authoring pattern. Roles not yet using `IOperator<TOperation, TCandidate>` retain their nominal topology bases.
 
 > Watch the last type argument. The stateful bases end in `TState`, so `StatefulMutator<TCandidate, TSearchSpace, TState>` and `StatefulMutator<TCandidate, TSearchSpace, TProblem>` have the same shape. Passing a problem where the state belongs compiles and silently produces a problem-agnostic operator whose state is a problem. `HLib0004` reports this.
 
@@ -124,13 +111,13 @@ Framework managed state does not have a disposal lifecycle. Do not put disposabl
 
 ## Explicit executors
 
-The configuration describes reusable parameters and graph structure. `CreateExecutorFactory()` prepares persistent execution data without a scope. Its returned factory resolves child configurations through the supplied scope and creates a node for that context. The executor owns typed operation logic and resolved child references; prepared mutable data survives contextual rebinding.
+The configuration describes reusable parameters and graph structure. For mutation and evaluation, the protected `CreateFactory()` prepares persistent execution data without a scope. Its returned factory resolves child configurations through the supplied scope and creates a node for that context. The executor owns typed operation logic and resolved child references; prepared mutable data survives contextual rebinding.
 
 ```csharp
-private sealed record ForwardingEvaluator(IEvaluator<RealVector> Inner)
+private sealed record ForwardingEvaluator(IOperator<Evaluation, RealVector> Inner)
     : Evaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
 {
-    public override ExecutorFactory<EvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutorFactory() =>
+    protected override ExecutorFactory<IEvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateFactory() =>
         scope => new Executor(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
 
     private sealed class Executor(IEvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> inner)
@@ -160,36 +147,13 @@ Some specialized operators expose a configured starting value and a mutable curr
 
 The same mutator configuration can therefore be reused for independent runs without one run changing another run's starting strength. This is a specialized contract, not a general convention that operator configuration properties become mutable on executors.
 
-Checking the wrapped mutator with `is IMutationStrengthControl` is insufficient: an observation wrapper can implement the mutation role without implementing the source's additional control interface. Resolve the control separately from the selected configuration's raw executor, and keep mutation calls on the advised executor. This protects advice directly on that source; configured wrappers can still hide child controls, a [known correctness bug](/guide/extending/operator-composition#known-capability-loss). See [Controls, failures and lifetime](/contributing/architecture/execution-resolution#controls-failures-and-lifetime) for the current projection boundary.
+Checking the wrapped mutator with `is IMutationStrengthControl` is insufficient: an observation wrapper can implement the mutation role without implementing the source's additional control interface. Resolve the control separately from the selected configuration's raw executor, and keep mutation calls on the advised executor. Generic naming, retry and inspection wrappers forward the child's control provider. A composite exposes its own controls; the resolver does not search arbitrary children. See [Controls, failures and lifetime](/contributing/architecture/execution-resolution#controls-failures-and-lifetime) for the current projection boundary.
 
 ## Wrapping and multi operators
 
-Wrapping and multi bases are shortcuts for common explicit executor topologies:
+Mutation and evaluation use `WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>`, with `ChildOperator` and `ChildOperators` configuration properties. Their executors may use role-specific storage such as `WrappingMutationExecutor.ChildMutator`. Keep shared counters and caches in the factory owner, and resolve current children inside its returned construction function. Existing executors keep their original children when a new context is resolved.
 
-Their public `CreateExecutorFactory` method calls a protected preparation hook without a scope or live children. The hook allocates persistent data once and returns a typed constructor:
-
-- `CreateWrapperFactory` returns a `WrapperExecutorFactory<TExecutor>` receiving one resolved child.
-- `CreateCompositeFactory` returns a `CompositeExecutorFactory<TExecutor>` receiving an ordered immutable array of resolved children, preserving repeated references and empty collections.
-
-Both factories use the same executor interface for the children and the returned node. The public `ExecutorFactory<TExecutor>` receives a construction scope; the topology factories receive children that the base resolves through that scope.
-
-The returned executor factory resolves children through its construction scope and invokes that constructor for each binding. A new observation context can therefore supply new child nodes without recreating state or changing an existing node's children. Allocate shared counters, caches and helper data before returning the constructor; transient operation data stays in the operation.
-
-```csharp
-protected override WrapperExecutorFactory<IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
-{
-    var state = new ExecutionState();
-    return child => new Executor<TRunSearchSpace, TRunProblem>(child, state);
-}
-```
-
-`test/HeuristicLib.Tests.ApiUsageSpecs/Operators/OperatorAuthoringSpecs.cs` includes stateful and stateless examples.
-
-Each topology is represented by a matching configuration and executor pair, such as `WrappingSelector<...>` with `WrappingSelectionExecutor<...>`. Derived configurations and their nested executors use the corresponding pair consistently. The executor base provides canonical protected child storage and preserves the same topology at the type level. Required resolved children are constructor dependencies rather than optionally initialized properties.
-
-These bases do not have separate stateless and stateful variants. Their purpose is already to coordinate an execution graph. Use the unprefixed role base when a wrapping or multi topology does not fit.
-
-Reach for them when the children are identified by being children and nothing more. `PipelineMutator` and `ChooseOneMutator` apply their children interchangeably, so the inherited `ChildMutators` is the honest name for the slot, and they add no name of their own.
+The remaining nominal roles retain `CreateWrapperFactory` and `CreateCompositeFactory` hooks. Those return constructors receiving one resolved child or an immutable array of children. Their matching executor bases provide protected child storage.
 
 When a child plays a specific part in the operation, derive from the unprefixed role base instead and declare that child yourself:
 

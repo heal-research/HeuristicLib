@@ -13,48 +13,41 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Tests.Docs.Extending;
 
 #region custom-advice-type
-public sealed class MutationLogAdvice<TCandidate> : MutatorAdvice<TCandidate>
+public sealed class MutationLogAdvice<TCandidate> : OperatorAdvice<Mutation, TCandidate>
 {
-    private readonly Action<IMutator<TCandidate>, int, int> write;
+    private readonly Action<IOperator<Mutation, TCandidate>, int, int> write;
 
-    public MutationLogAdvice(Action<IMutator<TCandidate>, int, int> write)
+    public MutationLogAdvice(Action<IOperator<Mutation, TCandidate>, int, int> write)
     {
         this.write = write;
     }
 
-    public override WrapperExecutorFactory<
-        IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>
-        CreateWrapperFactory<TRunSearchSpace, TRunProblem>(
-            IMutator<TCandidate> mutator)
-    {
-        var state = new JoinPointState();
-        return inner => new Executor<TRunSearchSpace, TRunProblem>(inner, mutator, state, write);
-    }
+    public override OperatorAdviceWrapperFactory<Mutation, TCandidate> CreateWrapperFactory(
+        IOperator<Mutation, TCandidate> mutator) => new Factory(mutator, write);
 
-    private sealed class JoinPointState
+    private sealed class Factory(
+        IOperator<Mutation, TCandidate> mutator,
+        Action<IOperator<Mutation, TCandidate>, int, int> write) : OperatorAdviceWrapperFactory<Mutation, TCandidate>
     {
-        public int Calls { get; set; }
-    }
+        private int calls;
 
-    private sealed class Executor<TSearchSpace, TProblem>(
-        IMutationExecutor<TCandidate, TSearchSpace, TProblem> inner,
-        IMutator<TCandidate> source,
-        JoinPointState state,
-        Action<IMutator<TCandidate>, int, int> write)
-        : WrappingMutationExecutor<TCandidate, TSearchSpace, TProblem>(inner)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        public override IReadOnlyList<TCandidate> Mutate(
-            IReadOnlyList<TCandidate> parents,
-            IRandomNumberGenerator random,
-            TSearchSpace searchSpace,
-            TProblem problem)
+        public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TSearchState>(
+            IOperator<Mutation, TCandidate> source,
+            OperationExecutorAdapter<Mutation, TCandidate, TSearchSpace, TProblem, TSearchState> adapter) =>
+            adapter.Success(new Callback(this));
+
+        private void Record(int candidateWork)
         {
-            var offspring = ChildMutator.Mutate(parents, random, searchSpace, problem);
-            state.Calls++;
-            write(source, state.Calls, offspring.Count);
-            return offspring;
+            calls++;
+            write(mutator, calls, candidateWork);
+        }
+
+        private readonly struct Callback(Factory owner) : IOperationSuccessCallback
+        {
+            public void OnSucceeded(int candidateWork)
+            {
+                owner.Record(candidateWork);
+            }
         }
     }
 }

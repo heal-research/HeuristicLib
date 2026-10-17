@@ -45,9 +45,9 @@ public sealed class AlpsMutationCompositionTests
     public async Task BroadMutatorSelection_SeesOnlyTheConfiguredSource_AndCountsOnlyRoutedOffspring()
     {
         var algorithm = CreateAlgorithm(0.5) with { MaximumGenerations = 2 };
-        var offered = new List<IMutator<int>>();
+        var offered = new List<IOperator<Mutation, int>>();
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.Create(new OfferedMutators(offered), new CountingMutatorAdvice<int>(count, OperatorCountMetric.Candidates)));
+        var scope = ResolutionScope.Create(Aspect.Create(new OfferedMutators(offered), new CountingOperatorAdvice<Mutation, int>(count, OperatorCountMetric.Candidates)));
 
         var states = await States(scope, algorithm);
         offered.ShouldBe([algorithm.Mutator]);
@@ -78,9 +78,9 @@ public sealed class AlpsMutationCompositionTests
         count.CurrentCount.ShouldBe(0);
     }
 
-    private sealed class OfferedMutators(List<IMutator<int>> offered) : Pointcut<IMutator<int>>
+    private sealed class OfferedMutators(List<IOperator<Mutation, int>> offered) : Pointcut<IOperator<Mutation, int>>
     {
-        public override bool Matches(IMutator<int> configuration)
+        public override bool Matches(IOperator<Mutation, int> configuration)
         {
             offered.Add(configuration);
             return true;

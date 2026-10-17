@@ -9,7 +9,7 @@ using Microsoft.Extensions.Caching.Memory;
 namespace HEAL.HeuristicLib.Operators;
 
 public record CachingEvaluator<TCandidate, TKey>
-    : WrappingEvaluator<TCandidate>
+    : WrappingOperator<Evaluation, TCandidate>
     where TCandidate : notnull
     where TKey : notnull
 {
@@ -25,18 +25,30 @@ public record CachingEvaluator<TCandidate, TKey>
     /// </summary>
     public long? SizeLimit { get; init; }
 
-    public CachingEvaluator(IEvaluator<TCandidate> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector)
+    public CachingEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector)
         : base(childEvaluator)
     {
         KeySelector = keySelector;
     }
 
-    protected override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected override OperatorExecutorFactory CreateOperatorFactory()
     {
         // Keep statistics disabled: MemoryCache's thread-local statistics can retain the cache and its entries
         // on a live thread after the prepared execution state is released.
         var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = SizeLimit });
-        return childEvaluator => new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, cache);
+        return new Factory(this, cache);
+    }
+
+    private sealed class Factory(CachingEvaluator<TCandidate, TKey> source, MemoryCache cache) : OperatorExecutorFactory<Evaluation, TCandidate>
+    {
+        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
+            ExecutorFactory.FromFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
+            {
+                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
+                var childEvaluator = typed.Resolve(source.ChildOperator);
+                return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.KeySelector, cache);
+            });
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, MemoryCache cache)
@@ -106,7 +118,7 @@ public sealed record CachingEvaluator<TCandidate>
     : CachingEvaluator<TCandidate, TCandidate>
     where TCandidate : notnull
 {
-    public CachingEvaluator(IEvaluator<TCandidate> childEvaluator)
+    public CachingEvaluator(IOperator<Evaluation, TCandidate> childEvaluator)
         : base(childEvaluator, CacheKeySelection<TCandidate>.Identity)
     {
     }
@@ -141,7 +153,7 @@ public static class CacheKeySelection<TCandidate>
 
 public static class CachingEvaluatorExtensions
 {
-    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
+    extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
         where TCandidate : notnull
     {
         public CachingEvaluator<TCandidate, TKey> Cached<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit = null) where TKey : notnull =>

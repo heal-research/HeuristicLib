@@ -42,7 +42,7 @@ public sealed record CountingMutation : StatefulMutator<RealVector, CountingMuta
     }
 }
 
-public sealed record ContextualMutation(IOperator<RealVector, Mutation> ChildOperator)
+public sealed record ContextualMutation(IOperator<Mutation, RealVector> ChildOperator)
     : Mutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
 {
     protected override ExecutorFactory<IMutationExecutor<RealVector, BoundedRealVectorSearchSpace,
@@ -73,8 +73,8 @@ public interface ILiveValue
     int Value { get; set; }
 }
 
-public sealed record SharedOperations(ProbeLog Log) : IOperator<RealVector, Mutation>,
-    IOperator<RealVector, Evaluation>, IOperator<RealVector, Termination>, IOperator<RealVector, Checksum>
+public sealed record SharedOperations(ProbeLog Log) : IOperator<Mutation, RealVector>,
+    IOperator<Evaluation, RealVector>, IOperator<Termination, RealVector>, IOperator<Checksum, RealVector>
 {
     public OperatorExecutorFactory CreateExecutorFactory()
     {
@@ -93,8 +93,8 @@ public sealed record SharedOperations(ProbeLog Log) : IOperator<RealVector, Muta
 
     private sealed class Factory(ProbeLog log, ExecutorFactory factory) : OperatorExecutorFactory
     {
-        public override ExecutorFactory GetExecutorFactory<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState>(
-            OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter)
+        public override ExecutorFactory GetExecutorFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
+            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
         {
             log.Bindings++;
             if (log.FailBinding)
@@ -124,7 +124,7 @@ public sealed record SharedOperations(ProbeLog Log) : IOperator<RealVector, Muta
 public sealed class ProbeState : ISearchState;
 public sealed class OtherState : ISearchState;
 
-public sealed record IdentityInterceptor(ProbeLog Log) : IOperator<RealVector, Interception>
+public sealed record IdentityInterceptor(ProbeLog Log) : IOperator<Interception, RealVector>
 {
     public OperatorExecutorFactory CreateExecutorFactory()
     {

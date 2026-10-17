@@ -235,7 +235,7 @@ public class AutoEcPaperScenarioTests
     private static GeneticAlgorithm<Permutation>
         CreatePermutationGa(
             ActivatedTravelingSalesmanProblem problem,
-            IEvaluator<Permutation> evaluator,
+            IOperator<Evaluation, Permutation> evaluator,
             CompositeGenotype<RealVector, IntegerVector> hyperParameters)
     {
         return new GeneticAlgorithm<Permutation>
@@ -253,7 +253,7 @@ public class AutoEcPaperScenarioTests
 
     private static GeneticAlgorithm<RealVector> CreateGa(
         MovingPeaksProblem problem,
-        IEvaluator<RealVector> evaluator,
+        IOperator<Evaluation, RealVector> evaluator,
         CompositeGenotype<RealVector, IntegerVector> hyperParameters)
     {
         return new GeneticAlgorithm<RealVector>

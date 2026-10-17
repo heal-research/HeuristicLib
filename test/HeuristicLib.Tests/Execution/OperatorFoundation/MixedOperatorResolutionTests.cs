@@ -19,19 +19,19 @@ public sealed class MixedOperatorResolutionTests
     [InlineData(true)]
     public void NominalResolutionAdaptsToTheDeclaredPreparedOwnerInEitherOrder(bool legacyFirst)
     {
-        var source = new DualMutation();
+        var source = new DualCrossover();
         var counter = new CallCounter();
         var log = new AdviceLog();
         var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountCalls(counter, log)));
         var typed = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
-        IMutator<RealVector> legacy = source;
-        IOperator<RealVector, Mutation> current = source;
+        ICrossover<RealVector> legacy = source;
+        IOperator<Crossover, RealVector> current = source;
         var first = legacyFirst ? typed.Resolve(legacy) : typed.Resolve(current);
         var second = legacyFirst ? typed.Resolve(current) : typed.Resolve(legacy);
         Invoke(first).ShouldBe(1);
         Invoke(second).ShouldBe(2);
         var child = root.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
-        var operation = child.Resolve(legacy, out ILiveValue? control);
+        var operation = child.Resolve(current, out ILiveValue? control);
         control.ShouldNotBeNull().Value.ShouldBe(2);
         control.Value = 12;
         Invoke(operation).ShouldBe(13);
@@ -44,9 +44,9 @@ public sealed class MixedOperatorResolutionTests
     [Fact]
     public void MixedChildrenUseTheSameAncestryAndAspectsInBothDirections()
     {
-        var source = new DualMutation();
-        IOperator<RealVector, Mutation> current = source;
-        IMutator<RealVector> legacy = new LegacyForward(current);
+        var source = new DualCrossover();
+        IOperator<Crossover, RealVector> current = source;
+        ICrossover<RealVector> legacy = new LegacyForward(current);
         var outer = new CurrentForward(legacy);
         var counter = new CallCounter();
         var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountCalls(counter, new AdviceLog())));
@@ -71,31 +71,31 @@ public sealed class MixedOperatorResolutionTests
     [InlineData(true)]
     public void LowLevelCallbacksCannotCreateAnIndependentOwnerForTheSameConfiguration(bool legacyFirst)
     {
-        var source = new DualMutation();
+        var source = new DualCrossover();
         var root = ResolutionScope.Create();
         var typed = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
-        IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> LegacyCallback() =>
-            root.Resolve<DualMutation, IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>(
-                source, _ => _ => new DualMutation.Executor(), (_, _) => static child => child);
+        ICrossoverExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> LegacyCallback() =>
+            root.Resolve<DualCrossover, ICrossoverExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>(
+                source, _ => _ => new DualCrossover.Executor(), (_, _) => static child => child);
         if (legacyFirst)
         {
             _ = LegacyCallback();
-            Assert.Throws<InvalidOperationException>(() => typed.Resolve((IOperator<RealVector, Mutation>)source))
+            Assert.Throws<InvalidOperationException>(() => typed.Resolve((IOperator<Crossover, RealVector>)source))
                 .Message.ShouldContain("preparation path");
             source.Preparations.ShouldBe(0);
         }
         else
         {
-            _ = typed.Resolve((IOperator<RealVector, Mutation>)source);
+            _ = typed.Resolve((IOperator<Crossover, RealVector>)source);
             Assert.Throws<InvalidOperationException>(() => LegacyCallback()).Message.ShouldContain("preparation path");
             source.Preparations.ShouldBe(1);
         }
     }
 
-    private static double Invoke(IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> operation) =>
-        operation.Mutate([new RealVector(0.0)], RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem)[0][0];
+    private static double Invoke(ICrossoverExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> operation) =>
+        operation.Cross([Parents.From(new RealVector(0.0), new RealVector(0.0))], RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem)[0][0];
 
-    private sealed class DualMutation : IMutator<RealVector>, IOperator<RealVector, Mutation>
+    private sealed class DualCrossover : ICrossover<RealVector>, IOperator<Crossover, RealVector>
     {
         public int Preparations { get; private set; }
         public int LegacyPreparations { get; private set; }
@@ -107,7 +107,7 @@ public sealed class MixedOperatorResolutionTests
             return OperatorExecutorFactory.FromFactory<Executor>(_ => executor);
         }
 
-        public ExecutorFactory<IMutationExecutor<RealVector, TSearchSpace, TProblem>> CreateExecutorFactory<TSearchSpace, TProblem>()
+        public ExecutorFactory<ICrossoverExecutor<RealVector, TSearchSpace, TProblem>> CreateExecutorFactory<TSearchSpace, TProblem>()
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
@@ -116,36 +116,36 @@ public sealed class MixedOperatorResolutionTests
         }
 
         internal sealed class Executor : ILiveValue,
-            IMutationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
+            ICrossoverExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
         {
             public int Value { get; set; }
 
-            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random,
+            public IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, IRandomNumberGenerator random,
                 ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) =>
                 [new RealVector((double)++Value)];
         }
     }
 
-    private sealed record LegacyForward(IOperator<RealVector, Mutation> Child) : IMutator<RealVector>
+    private sealed record LegacyForward(IOperator<Crossover, RealVector> Child) : ICrossover<RealVector>
     {
-        public ExecutorFactory<IMutationExecutor<RealVector, TSearchSpace, TProblem>> CreateExecutorFactory<TSearchSpace, TProblem>()
+        public ExecutorFactory<ICrossoverExecutor<RealVector, TSearchSpace, TProblem>> CreateExecutorFactory<TSearchSpace, TProblem>()
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace> =>
             scope => scope.For<RealVector, TSearchSpace, TProblem>().Resolve(Child);
     }
 
-    private sealed record CurrentForward(IMutator<RealVector> Child) : IOperator<RealVector, Mutation>
+    private sealed record CurrentForward(ICrossover<RealVector> Child) : IOperator<Crossover, RealVector>
     {
         public OperatorExecutorFactory CreateExecutorFactory() => new Factory(Child);
 
-        private sealed class Factory(IMutator<RealVector> child) : OperatorExecutorFactory
+        private sealed class Factory(ICrossover<RealVector> child) : OperatorExecutorFactory
         {
-            public override ExecutorFactory GetExecutorFactory<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState>(
-                OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter)
+            public override ExecutorFactory GetExecutorFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
+                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
             {
-                if (child is not IMutator<TCandidate> typed || typeof(TOperation) != typeof(Mutation))
+                if (child is not ICrossover<TCandidate> typed || typeof(TOperation) != typeof(Crossover))
                     throw new InvalidOperationException("Wrong operation view.");
-                return ExecutorFactory.FromFactory<IMutationExecutor<TCandidate, TSearchSpace, TProblem>>(
+                return ExecutorFactory.FromFactory<ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>>(
                     scope => scope.For<TCandidate, TSearchSpace, TProblem>().Resolve(typed));
             }
         }

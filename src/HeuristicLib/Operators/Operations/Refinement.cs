@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>Identifies refining candidates when declaring an operator slot.</summary>
 public sealed class Refinement : IOperationDescriptor<Refinement>
 {
-    public static OperationExecutorAdapter<TCandidate, Refinement, TSearchSpace, TProblem, TRunSearchState>
+    public static OperationExecutorAdapter<Refinement, TCandidate, TSearchSpace, TProblem, TRunSearchState>
         CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -17,7 +17,7 @@ public sealed class Refinement : IOperationDescriptor<Refinement>
         new ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>();
 
     private sealed class ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>
-        : OperationExecutorAdapter<TCandidate, Refinement, TSearchSpace, TProblem, TRunSearchState,
+        : OperationExecutorAdapter<Refinement, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             IRefinementExecutor<TCandidate, TSearchSpace, TProblem>>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -57,6 +57,20 @@ public sealed class Refinement : IOperationDescriptor<Refinement>
                 }
                 finally { notifier.Finish(); }
             }
+        }
+
+        protected override IRefinementExecutor<TCandidate, TSearchSpace, TProblem> CreatePolicyExecutor(ImmutableArray<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) =>
+            new PolicyExecutor(children, policy);
+
+        private sealed class PolicyExecutor(ImmutableArray<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) : IRefinementExecutor<TCandidate, TSearchSpace, TProblem>
+        {
+            public IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random,
+                TSearchSpace searchSpace, TProblem problem) =>
+                policy.Execute(children, (candidates, random, searchSpace, problem), random, static (child, args) =>
+                {
+                    var result = child.Refine(args.candidates, args.random, args.searchSpace, args.problem);
+                    return new OperationCallResult<IReadOnlyList<TCandidate>>(result, result.Count);
+                }).Value;
         }
 
         private sealed class SuccessCallbackExecutor<TCallback>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback)

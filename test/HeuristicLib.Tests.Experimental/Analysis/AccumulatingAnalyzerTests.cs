@@ -43,7 +43,7 @@ public class AccumulatingAnalyzerTests
     /// <summary>Scores a candidate against two conflicting objectives, so every candidate stays on the front.</summary>
     private sealed record SketchEvaluator : Evaluator<int, SketchSearchSpace, SketchProblem>
     {
-        public override ExecutorFactory<IEvaluationExecutor<int, SketchSearchSpace, SketchProblem>> CreateExecutorFactory() => _ => new Executor();
+        protected override ExecutorFactory<IEvaluationExecutor<int, SketchSearchSpace, SketchProblem>> CreateFactory() => _ => new Executor();
 
         private sealed class Executor : IEvaluationExecutor<int, SketchSearchSpace, SketchProblem>
         {

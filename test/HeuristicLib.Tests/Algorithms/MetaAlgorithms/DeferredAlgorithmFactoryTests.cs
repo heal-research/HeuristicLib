@@ -166,7 +166,7 @@ public sealed class DeferredAlgorithmFactoryTests
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static WeakReference RunUnderTemporaryObserver(ResolutionScope root,
-        CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState> cycle, IMutator<int> mutator)
+        CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState> cycle, IOperator<Mutation, int> mutator)
     {
         var observer = Aspect.Observe(mutator, _ => { });
         Run(Resolve(root.With(observer), cycle)).GetAwaiter().GetResult();
@@ -234,7 +234,7 @@ public sealed class DeferredAlgorithmFactoryTests
         var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
         var accumulators = new List<object>();
         IAlgorithm<int, ProbeState> budget = measureDuration
-            ? new OperatorDurationBudgetAlgorithm<int, ProbeState, IMutator<int>>
+            ? new OperatorDurationBudgetAlgorithm<int, ProbeState, IOperator<Mutation, int>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Mutator,
@@ -244,10 +244,10 @@ public sealed class DeferredAlgorithmFactoryTests
                 {
                     source.ShouldBeSameAs(algorithm.Mutator);
                     accumulators.Add(duration);
-                    return new DurationMeasuringMutatorAdvice<int>(duration, timeProvider);
+                    return new DurationMeasuringOperatorAdvice<Mutation, int>(duration, timeProvider);
                 })
             }
-            : new OperatorBudgetAlgorithm<int, ProbeState, IMutator<int>>
+            : new OperatorBudgetAlgorithm<int, ProbeState, IOperator<Mutation, int>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Mutator,
@@ -256,7 +256,7 @@ public sealed class DeferredAlgorithmFactoryTests
                 {
                     source.ShouldBeSameAs(algorithm.Mutator);
                     accumulators.Add(count);
-                    return new CountingMutatorAdvice<int>(count, OperatorCountMetric.Calls);
+                    return new CountingOperatorAdvice<Mutation, int>(count, OperatorCountMetric.Calls);
                 })
             };
         var root = ResolutionScope.Create();
@@ -297,7 +297,7 @@ public sealed class DeferredAlgorithmFactoryTests
         CountAccumulator? count = null;
         DurationAccumulator? duration = null;
         IAlgorithm<int, ProbeState> budget = measureDuration
-            ? new OperatorDurationBudgetAlgorithm<int, ProbeState, IMutator<int>>
+            ? new OperatorDurationBudgetAlgorithm<int, ProbeState, IOperator<Mutation, int>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Mutator,
@@ -306,10 +306,10 @@ public sealed class DeferredAlgorithmFactoryTests
                 DurationMeasuring = new RecordingMutatorDurationMeasuring<int>((source, accumulator, provider) =>
                 {
                     duration = accumulator;
-                    return new DurationMeasuringMutatorAdvice<int>(accumulator, provider);
+                    return new DurationMeasuringOperatorAdvice<Mutation, int>(accumulator, provider);
                 })
             }
-            : new OperatorBudgetAlgorithm<int, ProbeState, IMutator<int>>
+            : new OperatorBudgetAlgorithm<int, ProbeState, IOperator<Mutation, int>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Mutator,
@@ -317,7 +317,7 @@ public sealed class DeferredAlgorithmFactoryTests
                 Counting = new RecordingMutatorCounting<int>((source, accumulator) =>
                 {
                     count = accumulator;
-                    return new CountingMutatorAdvice<int>(accumulator, OperatorCountMetric.Calls);
+                    return new CountingOperatorAdvice<Mutation, int>(accumulator, OperatorCountMetric.Calls);
                 })
             };
         var root = ResolutionScope.Create();
@@ -372,7 +372,7 @@ public sealed class DeferredAlgorithmFactoryTests
         var duration = new DurationAccumulator();
         var declarations = 0;
         IAlgorithm<int, ProbeState> budget = measureDuration
-            ? new OperatorDurationBudgetAlgorithm<int, ProbeState, IMutator<int>>
+            ? new OperatorDurationBudgetAlgorithm<int, ProbeState, IOperator<Mutation, int>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Mutator,
@@ -382,10 +382,10 @@ public sealed class DeferredAlgorithmFactoryTests
                 {
                     declarations++;
                     duration = accumulator;
-                    return new DurationMeasuringMutatorAdvice<int>(accumulator, timeProvider);
+                    return new DurationMeasuringOperatorAdvice<Mutation, int>(accumulator, timeProvider);
                 })
             }
-            : new OperatorBudgetAlgorithm<int, ProbeState, IMutator<int>>
+            : new OperatorBudgetAlgorithm<int, ProbeState, IOperator<Mutation, int>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Mutator,
@@ -394,7 +394,7 @@ public sealed class DeferredAlgorithmFactoryTests
                 {
                     declarations++;
                     count = accumulator;
-                    return new CountingMutatorAdvice<int>(accumulator, OperatorCountMetric.Calls);
+                    return new CountingOperatorAdvice<Mutation, int>(accumulator, OperatorCountMetric.Calls);
                 })
             };
         var root = ResolutionScope.Create(trace);
@@ -489,7 +489,7 @@ public sealed class DeferredAlgorithmFactoryTests
 
     private sealed record ProbeAlgorithm : Algorithm<ProbeAlgorithm, int, ProbeState>
     {
-        public IMutator<int> Mutator { get; init; } = new PassThroughMutator();
+        public IOperator<Mutation, int> Mutator { get; init; } = new PassThroughMutator();
         public int Steps { get; init; } = 1;
         public Action<ProbeData> Prepared { get; init; } = static _ => { };
 
@@ -542,7 +542,7 @@ public sealed class DeferredAlgorithmFactoryTests
     {
         private long calls;
         protected override long ReadTime() => calls;
-        public MutationCallClock(IMutator<int> mutator)
+        public MutationCallClock(IOperator<Mutation, int> mutator)
         {
             Advices = Aspect.Observe(mutator, _ => calls++).Advices;
         }
@@ -581,25 +581,25 @@ public sealed class DeferredAlgorithmFactoryTests
             return new RecordingRandom(childPath, Forks);
         }
     }
-    private sealed record RecordingMutatorCounting<TCandidate>(Func<IMutator<TCandidate>, CountAccumulator, MutatorAdvice<TCandidate>> Create) : IOperatorCounting<IMutator<TCandidate>>
+    private sealed record RecordingMutatorCounting<TCandidate>(Func<IOperator<Mutation, TCandidate>, CountAccumulator, OperatorAdvice<Mutation, TCandidate>> Create) : IOperatorCounting<IOperator<Mutation, TCandidate>>
     {
-        public Advice<IMutator<TCandidate>> CreateAdvice(CountAccumulator counter) => new SelectedAdvice(source => Create(source, counter));
+        public Advice<IOperator<Mutation, TCandidate>> CreateAdvice(CountAccumulator counter) => new SelectedAdvice(source => Create(source, counter));
 
-        private sealed class SelectedAdvice(Func<IMutator<TCandidate>, MutatorAdvice<TCandidate>> create) : MutatorAdvice<TCandidate>
+        private sealed class SelectedAdvice(Func<IOperator<Mutation, TCandidate>, OperatorAdvice<Mutation, TCandidate>> create) : OperatorAdvice<Mutation, TCandidate>
         {
-            public override WrapperExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> configuration) =>
-                create(configuration).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(configuration);
+            public override OperatorAdviceWrapperFactory<Mutation, TCandidate> CreateWrapperFactory(IOperator<Mutation, TCandidate> configuration) =>
+                create(configuration).CreateWrapperFactory(configuration);
         }
     }
 
-    private sealed record RecordingMutatorDurationMeasuring<TCandidate>(Func<IMutator<TCandidate>, DurationAccumulator, TimeProvider, MutatorAdvice<TCandidate>> Create) : IOperatorDurationMeasuring<IMutator<TCandidate>>
+    private sealed record RecordingMutatorDurationMeasuring<TCandidate>(Func<IOperator<Mutation, TCandidate>, DurationAccumulator, TimeProvider, OperatorAdvice<Mutation, TCandidate>> Create) : IOperatorDurationMeasuring<IOperator<Mutation, TCandidate>>
     {
-        public Advice<IMutator<TCandidate>> CreateAdvice(DurationAccumulator duration, TimeProvider timeProvider) => new SelectedAdvice(source => Create(source, duration, timeProvider));
+        public Advice<IOperator<Mutation, TCandidate>> CreateAdvice(DurationAccumulator duration, TimeProvider timeProvider) => new SelectedAdvice(source => Create(source, duration, timeProvider));
 
-        private sealed class SelectedAdvice(Func<IMutator<TCandidate>, MutatorAdvice<TCandidate>> create) : MutatorAdvice<TCandidate>
+        private sealed class SelectedAdvice(Func<IOperator<Mutation, TCandidate>, OperatorAdvice<Mutation, TCandidate>> create) : OperatorAdvice<Mutation, TCandidate>
         {
-            public override WrapperExecutorFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IMutator<TCandidate> configuration) =>
-                create(configuration).CreateWrapperFactory<TRunSearchSpace, TRunProblem>(configuration);
+            public override OperatorAdviceWrapperFactory<Mutation, TCandidate> CreateWrapperFactory(IOperator<Mutation, TCandidate> configuration) =>
+                create(configuration).CreateWrapperFactory(configuration);
         }
     }
 

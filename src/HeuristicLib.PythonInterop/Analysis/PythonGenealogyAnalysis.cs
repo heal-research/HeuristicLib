@@ -281,7 +281,7 @@ public class PythonGenealogyAnalysis
         parameters.Crossover ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Crossover));
 
     /// <inheritdoc cref="RequireCreator{TCandidate, TSearchSpace}"/>
-    private static IMutator<TCandidate> RequireMutator<TCandidate, TSearchSpace>(
+    private static IOperator<Mutation, TCandidate> RequireMutator<TCandidate, TSearchSpace>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters)
         where TSearchSpace : class, ISearchSpace<TCandidate> =>
         parameters.Mutator ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Mutator));
@@ -292,9 +292,9 @@ public class PythonGenealogyAnalysis
     private static MyAnalyzers<TCandidate> CreateAnalyzers<TCandidate, TSearchSpace, TSearchState>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters,
         IAlgorithm<TCandidate, TSearchState> algorithm,
-        IEvaluator<TCandidate> evaluator,
+        IOperator<Evaluation, TCandidate> evaluator,
         ICrossover<TCandidate>? crossover,
-        IMutator<TCandidate>? mutator,
+        IOperator<Mutation, TCandidate>? mutator,
         Action<PopulationState<TCandidate>>? callback)
         where TCandidate : notnull
         where TSearchSpace : class, ISearchSpace<TCandidate>

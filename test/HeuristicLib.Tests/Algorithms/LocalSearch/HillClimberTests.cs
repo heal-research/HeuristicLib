@@ -70,15 +70,13 @@ public class HillClimberTests
     }
 
     private sealed record OffsetMutator(int Offset)
-        : IMutator<int>,
+        : IOperator<Mutation, int>,
         IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public ExecutorFactory<IMutationExecutor<int, TSearchSpace, TProblem>> CreateExecutorFactory<TSearchSpace, TProblem>()
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        public OperatorExecutorFactory CreateExecutorFactory()
         {
-            var executor = (IMutationExecutor<int, TSearchSpace, TProblem>)CreateBoundExecution();
-            return _ => executor;
+            var executor = CreateBoundExecution();
+            return OperatorExecutorFactory.FromFactory(_ => executor);
         }
 
         private IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecution() => this;

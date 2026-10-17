@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>Identifies mutating candidates when declaring an operator slot.</summary>
 public sealed class Mutation : IOperationDescriptor<Mutation>
 {
-    public static OperationExecutorAdapter<TCandidate, Mutation, TSearchSpace, TProblem, TRunSearchState>
+    public static OperationExecutorAdapter<Mutation, TCandidate, TSearchSpace, TProblem, TRunSearchState>
         CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -17,7 +17,7 @@ public sealed class Mutation : IOperationDescriptor<Mutation>
         new ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>();
 
     private sealed class ExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>
-        : OperationExecutorAdapter<TCandidate, Mutation, TSearchSpace, TProblem, TRunSearchState,
+        : OperationExecutorAdapter<Mutation, TCandidate, TSearchSpace, TProblem, TRunSearchState,
             IMutationExecutor<TCandidate, TSearchSpace, TProblem>>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -57,6 +57,20 @@ public sealed class Mutation : IOperationDescriptor<Mutation>
                 }
                 finally { notifier.Finish(); }
             }
+        }
+
+        protected override IMutationExecutor<TCandidate, TSearchSpace, TProblem> CreatePolicyExecutor(ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) =>
+            new PolicyExecutor(children, policy);
+
+        private sealed class PolicyExecutor(ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) : IMutationExecutor<TCandidate, TSearchSpace, TProblem>
+        {
+            public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random,
+                TSearchSpace searchSpace, TProblem problem) =>
+                policy.Execute(children, (parents, random, searchSpace, problem), random, static (child, args) =>
+                {
+                    var result = child.Mutate(args.parents, args.random, args.searchSpace, args.problem);
+                    return new OperationCallResult<IReadOnlyList<TCandidate>>(result, result.Count);
+                }).Value;
         }
 
         private sealed class SuccessCallbackExecutor<TCallback>(IMutationExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback)

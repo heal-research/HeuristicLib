@@ -10,9 +10,9 @@ public sealed class CallCountingAdvice(CountAccumulator counter) : OperatorAdvic
 
     private sealed class WrapperFactory(CountAccumulator counter) : OperatorAdviceWrapperFactory
     {
-        public override WrapperExecutorFactory GetWrapperFactory<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState>(
-            IOperator<TCandidate, TOperation> source,
-            OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter) =>
+        public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
+            IOperator<TOperation, TCandidate> source,
+            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
             adapter.Success(new CountSuccess(counter));
     }
 
@@ -31,9 +31,9 @@ public sealed class DurationAdvice(DurationAccumulator duration, TimeProvider ti
 
     private sealed class WrapperFactory(DurationAccumulator duration, TimeProvider time) : OperatorAdviceWrapperFactory
     {
-        public override WrapperExecutorFactory GetWrapperFactory<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState>(
-            IOperator<TCandidate, TOperation> source,
-            OperationExecutorAdapter<TCandidate, TOperation, TSearchSpace, TProblem, TRunSearchState> adapter) =>
+        public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
+            IOperator<TOperation, TCandidate> source,
+            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
             adapter.Hooks<DurationHooks, long>(new DurationHooks(duration, time));
     }
 

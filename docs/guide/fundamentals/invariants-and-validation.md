@@ -20,7 +20,7 @@ var constrained = new FixedCardinalityBoolVectorSearchSpace(length: 4, cardinali
 
 // Accepted by the compiler. One flip changes the number of set elements, so the
 // candidate leaves the space on the first mutation.
-IMutator<BoolVector> slot = new FlipOneBitMutator();
+IOperator<Mutation, BoolVector> slot = new FlipOneBitMutator();
 ```
 
 The invariant system closes the gap with values instead of types. Operators and search spaces each state what they mean, and the statements are compared.
@@ -164,8 +164,8 @@ It is also cheap: two type checks, about 4 ns, paid once per operator per run ra
 run it was given forwards to them:
 
 ```csharp
-// WrappingMutator<TCandidate>
-public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildMutator);
+// WrappingOperator<Mutation, TCandidate>
+public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildOperator);
 
 // GeneticAlgorithm<TCandidate>
 public override bool Fits(ExecutionSignature execution) =>
@@ -238,7 +238,7 @@ Diagnostics carry the path that leads to the operator:
 var pipeline = PipelineMutator.Create(new BitSwapMutator(), new FlipOneBitMutator());
 var report = SearchConfigurationValidation.Validate(pipeline, constrained);
 
-report.Diagnostics.Single().Path;    // "PipelineMutator.ChildMutators[1]"
+report.Diagnostics.Single().Path;    // "PipelineMutator.ChildOperators[1]"
 ```
 
 A composition's own failure is suppressed when a child already reported the same invariant. A composed operator inherits its children's limits, so repeating them would bury the one diagnostic naming the operator you actually have to change.

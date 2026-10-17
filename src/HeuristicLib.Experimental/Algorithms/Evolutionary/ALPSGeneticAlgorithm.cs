@@ -19,9 +19,9 @@ public record AlpsGeneticAlgorithm<TCandidate>
     public required int PopulationSize { get; init; }
     public required ICreator<TCandidate> Creator { get; init; }
     public required ICrossover<TCandidate> Crossover { get; init; }
-    public required IMutator<TCandidate> Mutator { get; init; }
+    public required IOperator<Mutation, TCandidate> Mutator { get; init; }
     public required ISelector<TCandidate> Selector { get; init; }
-    public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
+    public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
     public int Elites { get; init; }
     public IRefiner<TCandidate>? Refiner { get; init; }

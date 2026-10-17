@@ -16,7 +16,7 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 /// its results are returned but not cached. The batch is not retried, and results already obtained from cache are not reevaluated.
 /// </remarks>
 public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
-    : WrappingEvaluator<TCandidate>
+    : WrappingOperator<Evaluation, TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TCandidate : notnull
     where TKey : notnull
@@ -60,7 +60,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// </summary>
     public long? SizeLimit { get; init; }
 
-    public DynamicCachingEvaluator(IEvaluator<TCandidate> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> problem, ICacheKeySelector<TCandidate, TKey> keySelector)
+    public DynamicCachingEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> problem, ICacheKeySelector<TCandidate, TKey> keySelector)
         : base(childEvaluator)
     {
         SourceProblem = problem;
@@ -76,10 +76,22 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// <remarks>
     /// This evaluator serves exactly one problem instance, matched by identity, which <c>Evaluate</c> checks.
     /// </remarks>
-    protected override WrapperExecutorFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected override OperatorExecutorFactory CreateOperatorFactory()
     {
         var state = new ExecutionState(SizeLimit, SourceProblem.CurrentEpoch);
-        return childEvaluator => new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, GraceCount, state);
+        return new Factory(this, state);
+    }
+
+    private sealed class Factory(DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey> source, ExecutionState state) : OperatorExecutorFactory<Evaluation, TCandidate>
+    {
+        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
+            ExecutorFactory.FromFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
+            {
+                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
+                var childEvaluator = typed.Resolve(source.ChildOperator);
+                return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.SourceProblem, source.KeySelector, source.GraceCount, state);
+            });
     }
 
     private sealed class Executor<TRunSearchSpace, TRunProblem> : WrappingEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>
@@ -195,7 +207,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
 
 public static class DynamicCachedEvaluatorExtension
 {
-    extension<TCandidate>(IEvaluator<TCandidate> evaluator) where TCandidate : class
+    extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator) where TCandidate : class
     {
         public DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey> Cached<TSearchSpace, TKey>(IDynamicProblem<TCandidate, TSearchSpace> problem, ICacheKeySelector<TCandidate, TKey> keySelector)
             where TSearchSpace : class, ISearchSpace<TCandidate>

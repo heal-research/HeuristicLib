@@ -40,7 +40,7 @@ public sealed record AdjacentSwapMutator : SingleCandidateMutator<Permutation>
 }
 ```
 
-Assign it anywhere an `IMutator<Permutation>` is expected — the role contract names only the candidate, so an operator authored at any rung of the ladder fits:
+Assign it anywhere an `IOperator<Permutation, Mutation>` is expected — the slot names the candidate and operation without requiring run types, so an operator authored at any rung of the ladder fits:
 
 ```csharp
 var algorithm = GeneticAlgorithm.For(problem)
@@ -61,9 +61,9 @@ Use a stateful base for ordinary mutable execution data. It prepares one state o
 
 The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), executors and repository analyzer rules.
 
-For a wrapping operator, override the protected `CreateWrapperFactory` hook and return `WrapperExecutorFactory<TExecutor>`; for a multi operator, override `CreateCompositeFactory` and return `CompositeExecutorFactory<TExecutor>`. The executor type is the role interface shared by the children and result. Prepare counters or caches in that hook, then return a factory that receives the resolved child or ordered child array. The base resolves those children for each context. Keep persistent data outside the returned delegate so a child observation does not reset it.
+For mutation and evaluation, derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override `CreateOperatorFactory()` to initialize shared state once and return a factory that binds the run's types. Resolve children inside its construction function. A fixed-signature leaf using the explicit executor base instead overrides `CreateFactory()`.
 
-Configured compositions use these protected hooks. Advice instead derives from a role-specific base such as `MutatorAdvice<TCandidate>` and wraps the execution supplied to its public `CreateWrapperFactory` method. See [Write custom advice](/guide/extending/writing-advice) for a complete example.
+Custom advice derives from `OperatorAdvice<TOperation, TCandidate>`. Its `CreateWrapperFactory` receives the selected source; the returned factory uses the operation adapter for success callbacks, lifecycle hooks or a synchronous policy. See [Write custom advice](/guide/extending/writing-advice) for a complete example. The remaining operator roles retain their role-specific topology and advice hooks.
 
 The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) implements a complete round-robin mutator and follows its cursor through a new inspection context and an independent root execution.
 

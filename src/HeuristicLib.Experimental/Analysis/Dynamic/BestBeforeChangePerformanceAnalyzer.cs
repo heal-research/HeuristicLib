@@ -35,7 +35,7 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
     private double objectiveValueSum;
 
     public BestBeforeChangePerformanceAnalyzer(TProblem problem,
-                                               IReadOnlyList<IEvaluator<TCandidate>> evaluators,
+                                               IReadOnlyList<IOperator<Evaluation, TCandidate>> evaluators,
                                                Func<ObjectiveVector, double>? objectiveValueSelector = null,
                                                int predictionEpochMultiplier = 10)
     {

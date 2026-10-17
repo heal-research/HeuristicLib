@@ -126,7 +126,7 @@ public class AlgorithmAuthoringSpecs
         : IterativeAlgorithm<SingleCreateAlgorithm, RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
         public required ICreator<RealVector> Creator { get; init; }
-        public IEvaluator<RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
+        public IOperator<Evaluation, RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
         protected override ExecutorFactory<IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>> CreateIterationFactory() =>
             scope =>
@@ -155,7 +155,7 @@ public class AlgorithmAuthoringSpecs
         : IterativeAlgorithm<DoubleCreateAlgorithm, RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
         public required ICreator<RealVector> Creator { get; init; }
-        public IEvaluator<RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
+        public IOperator<Evaluation, RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
         protected override ExecutorFactory<IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>> CreateIterationFactory()
         {
@@ -267,18 +267,16 @@ public class AlgorithmAuthoringSpecs
         }
     }
 
-    private sealed class InstancingEvaluator : IEvaluator<RealVector>
+    private sealed class InstancingEvaluator : IOperator<Evaluation, RealVector>
     {
         public int ExecutionsCreated { get; private set; }
         public int EvaluateCalls { get; private set; }
 
-        public ExecutorFactory<IEvaluationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-            where TRunSearchSpace : class, ISearchSpace<RealVector>
-            where TRunProblem : class, IProblem<RealVector, TRunSearchSpace>
+        public OperatorExecutorFactory CreateExecutorFactory()
         {
             ExecutionsCreated++;
-            var executor = (IEvaluationExecutor<RealVector, TRunSearchSpace, TRunProblem>)(object)new Executor(this);
-            return _ => executor;
+            var executor = new Executor(this);
+            return OperatorExecutorFactory.FromFactory<IEvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>(_ => executor);
         }
 
         private sealed class Executor(InstancingEvaluator owner)

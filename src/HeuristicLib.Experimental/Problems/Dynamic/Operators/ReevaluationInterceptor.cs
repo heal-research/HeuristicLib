@@ -14,10 +14,10 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
 {
-    public IEvaluator<TCandidate> Evaluator { get; init; }
+    public IOperator<Evaluation, TCandidate> Evaluator { get; init; }
     public TProblem SourceProblem { get; init; }
 
-    public ReevaluationInterceptor(IEvaluator<TCandidate> evaluator, TProblem sourceProblem)
+    public ReevaluationInterceptor(IOperator<Evaluation, TCandidate> evaluator, TProblem sourceProblem)
     {
         Evaluator = evaluator;
         SourceProblem = sourceProblem;
@@ -55,7 +55,7 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
 
 public static class ReevaluationInterceptor
 {
-    public static ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(IEvaluator<TCandidate> evaluator, TProblem sourceProblem)
+    public static ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(IOperator<Evaluation, TCandidate> evaluator, TProblem sourceProblem)
         where TSearchState : PopulationState<TCandidate>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace> =>

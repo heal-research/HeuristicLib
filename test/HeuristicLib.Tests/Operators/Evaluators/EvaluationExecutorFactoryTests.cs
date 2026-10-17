@@ -31,7 +31,7 @@ public sealed class EvaluationExecutorFactoryTests
         GC.KeepAlive(problem);
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        static (WeakReference Candidate, WeakReference Result) CreateCachedReferences(IEvaluator<object> source, FuncProblem<object, DummySearchSpace<object>> problem)
+        static (WeakReference Candidate, WeakReference Result) CreateCachedReferences(IOperator<Evaluation, object> source, FuncProblem<object, DummySearchSpace<object>> problem)
         {
             var scope = ResolutionScope.Create();
             var execution = scope.Resolve<object, DummySearchSpace<object>, FuncProblem<object, DummySearchSpace<object>>>(source);
@@ -110,7 +110,7 @@ public sealed class EvaluationExecutorFactoryTests
         calls.ShouldBe(3);
     }
 
-    private static IEvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> Resolve(ResolutionScope scope, IEvaluator<int> source) =>
+    private static IEvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> Resolve(ResolutionScope scope, IOperator<Evaluation, int> source) =>
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source);
 
     private static IReadOnlyList<ObjectiveVector> Evaluate(IEvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> executor, params int[] candidates)
@@ -140,7 +140,7 @@ public sealed class EvaluationExecutorFactoryTests
         }
     }
 
-    private sealed class ObservingEvaluatorAdvice : EvaluatorAdvice<int>
+    private sealed class ObservingEvaluatorAdvice : OperatorAdvice<Evaluation, int>
     {
         private readonly Action<IReadOnlyList<int>> report;
 
@@ -149,8 +149,17 @@ public sealed class EvaluationExecutorFactoryTests
             this.report = report;
         }
 
-        public override WrapperExecutorFactory<IEvaluationExecutor<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IEvaluator<int> configuration) =>
-            child => new Executor<TRunSearchSpace, TRunProblem>(child, report);
+        public override OperatorAdviceWrapperFactory<Evaluation, int> CreateWrapperFactory(IOperator<Evaluation, int> configuration) => new Factory(report);
+
+        private sealed class Factory(Action<IReadOnlyList<int>> report) : OperatorAdviceWrapperFactory<Evaluation, int>
+        {
+            public override WrapperExecutorFactory GetWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
+                IOperator<Evaluation, int> source,
+                OperationExecutorAdapter<Evaluation, int, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
+                WrapperExecutorFactory.From<IEvaluationExecutor<int, TRunSearchSpace, TRunProblem>>(child =>
+                    new ExecutorWithControls<IEvaluationExecutor<int, TRunSearchSpace, TRunProblem>>(
+                        new Executor<TRunSearchSpace, TRunProblem>(child.Executor, report), child.ControlProvider));
+        }
 
         private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> child, Action<IReadOnlyList<int>> report)
             : WrappingEvaluationExecutor<int, TSearchSpace, TProblem>(child)

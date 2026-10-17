@@ -74,8 +74,9 @@ public class RoleBindingTests
     /// <summary>Calls the role's own <c>TryResolve</c> reflectively, so the test is the same for all nine.</summary>
     private static (object? Execution, string? Reason) TryResolve(string role, Type problem, bool viaTypedScope = false)
     {
-        var extensions = typeof(IMutator<>).Assembly
-            .GetType($"HEAL.HeuristicLib.Operators.{role}ResolutionExtensions")!;
+        var extensionName = role switch { "Mutator" => "MutationOperation", "Evaluator" => "EvaluationOperation", _ => role };
+        var extensions = typeof(IOperator<,>).Assembly
+            .GetType($"HEAL.HeuristicLib.Operators.{extensionName}ResolutionExtensions")!;
 
         var stateAware = role is "Terminator" or "Interceptor";
         Type[] typeArguments = stateAware
@@ -101,7 +102,8 @@ public class RoleBindingTests
         var tryResolve = extensions
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Single(method => method.Name == "TryResolve"
-                && method.GetParameters()[0].ParameterType.IsGenericType == viaTypedScope)
+                && method.GetParameters()[0].ParameterType.IsGenericType == viaTypedScope
+                && method.GetGenericArguments().Length == typeArguments.Length)
             .MakeGenericMethod(typeArguments);
         var arguments = new[] { receiver, BoundOperators[role], null, null };
         tryResolve.Invoke(null, arguments);
