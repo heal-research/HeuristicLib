@@ -98,23 +98,59 @@ public sealed class RetryOperatorTests
     }
 
     [Fact]
-    public void AConsumerDefinedPolicy_CanRepeatBothMutationAndExternalScalarCalls()
+    public void NestedRetries_RespectBothAttemptLimitsAndCountingBoundaries()
     {
-        var mutations = 0;
-        var leaf = new CallbackMutator((_, _) => [++mutations]);
-        var twice = new Twice<Mutation, int>(leaf);
+        var attempts = 0;
+        var leaf = new CallbackMutator((_, _) => ++attempts < 4 ? throw new RetryableOperationException("again") : [attempts]);
+        var inner = leaf.Retry(2);
+        var outer = inner.Retry(2);
         var childCalls = new CountAccumulator();
+        var innerCalls = new CountAccumulator();
         var outerCalls = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.CountCalls(leaf, childCalls), Aspect.CountCalls(twice, outerCalls));
-        scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(twice)
-            .Mutate([0], RandomNumberGenerator.Create(1), Space.Instance, Problem()).ShouldBe([2]);
-        childCalls.CurrentCount.ShouldBe(2);
+        var scope = ResolutionScope.Create(Aspect.CountCalls(leaf, childCalls),
+            Aspect.CountCalls(inner, innerCalls), Aspect.CountCalls(outer, outerCalls));
+        scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(outer)
+            .Mutate([0], RandomNumberGenerator.Create(1), Space.Instance, Problem()).ShouldBe([4]);
+        attempts.ShouldBe(4);
+        childCalls.CurrentCount.ShouldBe(1);
+        innerCalls.CurrentCount.ShouldBe(1);
         outerCalls.CurrentCount.ShouldBe(1);
+    }
 
-        var reads = 0;
-        var scalar = new Twice<Checksum, RealVector>(new ScalarSource(() => ++reads));
-        ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>()
-            .Resolve(scalar).Read().ShouldBe(2);
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void DirectRetryHelper_RejectsInvalidLimitsBeforeCallingTheDelegate(int maximumAttempts)
+    {
+        var calls = 0;
+        Should.Throw<ArgumentOutOfRangeException>(() => Retry.Execute(17, value => { calls++; return value; }, maximumAttempts));
+        calls.ShouldBe(0);
+    }
+
+    [Fact]
+    public void Retry_ReturnsTheChildResultWithoutReadingItsCount()
+    {
+        var result = new UncountableList();
+        var attempts = 0;
+        var source = new CallbackMutator((_, _) => { attempts++; return result; }).Retry(3);
+        var executor = ResolutionScope.Create().Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source);
+
+        executor.Mutate([1], RandomNumberGenerator.Create(1), Space.Instance, Problem()).ShouldBeSameAs(result);
+        attempts.ShouldBe(1);
+    }
+
+    [Fact]
+    public void CallCountingAndDuration_DoNotReadTheCandidateCount()
+    {
+        var result = new UncountableList();
+        var source = new CallbackMutator((_, _) => result);
+        var calls = new CountAccumulator();
+        var time = new DurationAccumulator();
+        var executor = ResolutionScope.Create(Aspect.CountCalls(source, calls), Aspect.MeasureDuration(source, time))
+            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source);
+
+        executor.Mutate([1], RandomNumberGenerator.Create(1), Space.Instance, Problem()).ShouldBeSameAs(result);
+        calls.CurrentCount.ShouldBe(1);
     }
 
     [Fact]
@@ -142,28 +178,12 @@ public sealed class RetryOperatorTests
         counter.CurrentCount.ShouldBe(30_000);
     }
 
-    private sealed record Twice<TOperation, TCandidate>(IOperator<TOperation, TCandidate> Child)
-        : WrappingOperator<TOperation, TCandidate>(Child) where TOperation : IOperationDescriptor<TOperation>
+    private sealed class UncountableList : IReadOnlyList<int>
     {
-        protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(Child);
-
-        private sealed class Factory(IOperator<TOperation, TCandidate> child) : OperatorExecutorFactory<TOperation, TCandidate>
-        {
-            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
-                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState> adapter) =>
-                adapter.Wrap(child, adapter.PolicyWrapper(new TwicePolicy()));
-        }
-    }
-
-    private sealed class TwicePolicy : SynchronousPolicy
-    {
-        public override OperationCallResult<TResult> Execute<TExecutor, TArguments, TResult>(
-            ImmutableArray<TExecutor> children, TArguments arguments, IRandomNumberGenerator? random,
-            Func<TExecutor, TArguments, OperationCallResult<TResult>> next)
-        {
-            _ = next(children[0], arguments);
-            return next(children[0], arguments);
-        }
+        public int Count => throw new InvalidOperationException("Retry must not inspect the result.");
+        public int this[int index] => throw new InvalidOperationException("Retry must not inspect the result.");
+        public IEnumerator<int> GetEnumerator() => throw new InvalidOperationException("Retry must not inspect the result.");
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
     private sealed record CallbackMutator(Func<IReadOnlyList<int>, IRandomNumberGenerator, IReadOnlyList<int>> Callback)

@@ -87,6 +87,56 @@ public class OperatorInspectionTests
         preparations.ShouldBe(2);
     }
 
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void DurationMeasuringMutator_PreservesOperationAndTimerFailures(bool failOperation, bool failTimer)
+    {
+        var operationFailure = new InvalidOperationException("operation");
+        var timerFailure = new InvalidOperationException("timer");
+        var calls = 0;
+        var timestamps = 0;
+        var source = new CallbackMutator((parents, _, _, _) =>
+        {
+            calls++;
+            return failOperation ? throw operationFailure : parents;
+        });
+        var time = new CallbackTimeProvider(() => ++timestamps == 2 && failTimer ? throw timerFailure : timestamps);
+        var duration = new DurationAccumulator();
+        var executor = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, time)).ResolveMutator(source);
+        var problem = CreateProblem();
+
+        var failure = Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        if (failOperation && failTimer)
+            failure.ShouldBeOfType<AggregateException>().InnerExceptions.ShouldBe([operationFailure, timerFailure]);
+        else
+            failure.ShouldBeSameAs(failOperation ? operationFailure : timerFailure);
+        calls.ShouldBe(1);
+        timestamps.ShouldBe(2);
+    }
+
+    [Fact]
+    public void DurationMeasuringMutator_WhenStartingTheTimerFails_DoesNotCallTheOperationOrFinishTheTimer()
+    {
+        var failure = new InvalidOperationException("timer start");
+        var calls = 0;
+        var timestamps = 0;
+        var source = new CallbackMutator((parents, _, _, _) => { calls++; return parents; });
+        var time = new CallbackTimeProvider(() => { timestamps++; throw failure; });
+        var duration = new DurationAccumulator();
+        var executor = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, time)).ResolveMutator(source);
+        var problem = CreateProblem();
+
+        Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem))
+            .ShouldBeSameAs(failure);
+
+        calls.ShouldBe(0);
+        timestamps.ShouldBe(1);
+        duration.CurrentDuration.ShouldBe(TimeSpan.Zero);
+    }
+
     [Fact]
     public void CountCreatorCalls_IncrementsOncePerCreateCall()
     {
@@ -973,6 +1023,11 @@ public class OperatorInspectionTests
     private sealed record CounterState : SearchState
     {
         public required int Value { get; init; }
+    }
+
+    private sealed class CallbackTimeProvider(Func<long> timestamp) : TimeProvider
+    {
+        public override long GetTimestamp() => timestamp();
     }
 
     private sealed class AdvancingTimeProvider(TimeSpan step) : TimeProvider

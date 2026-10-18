@@ -52,15 +52,18 @@ public sealed class AdviceLog
     public CallCountState StateAt(int index) => (CallCountState)States[index].Target!;
 }
 
-public readonly struct CountHook(CallCounter total, CallCountState state, AdviceLog log) : IOperationSuccessCallback
+public sealed class CountInvocationWrapper(CallCounter total, CallCountState state, AdviceLog log) : IInvocationWrapper
 {
-    public void OnSucceeded(int candidateWork)
+    public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
+        Func<TArguments, TResult, int>? countCandidateWork) => arguments =>
     {
+        var result = invokeChild(arguments);
         state.Calls++;
-        state.LastCandidateWork = candidateWork;
+        state.LastCandidateWork = countCandidateWork?.Invoke(arguments, result) ?? 0;
         total.Value++;
         log.AfterSuccess?.Invoke();
-    }
+        return result;
+    };
 }
 
 // One external general counter, with no enumeration of operations or execution signatures.
@@ -76,7 +79,7 @@ public sealed class CountCalls(CallCounter total, AdviceLog log) : OperatorAdvic
             OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
         {
             advice.RecordBinding(source);
-            return adapter.Success(advice.CreateHook(state));
+            return adapter.WrapInvocation(advice.CreateCallFactory(state));
         }
     }
 
@@ -84,7 +87,7 @@ public sealed class CountCalls(CallCounter total, AdviceLog log) : OperatorAdvic
     {
         log.Bind(source);
     }
-    private CountHook CreateHook(CallCountState state) => new(total, state, log);
+    private CountInvocationWrapper CreateCallFactory(CallCountState state) => new(total, state, log);
 }
 
 public sealed class CountCalls<TOperation, TCandidate>(CallCounter total, AdviceLog log)
@@ -101,7 +104,7 @@ public sealed class CountCalls<TOperation, TCandidate>(CallCounter total, Advice
             OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
         {
             advice.RecordBinding(source);
-            return adapter.Success(advice.CreateHook(state));
+            return adapter.WrapInvocation(advice.CreateCallFactory(state));
         }
     }
 
@@ -109,7 +112,7 @@ public sealed class CountCalls<TOperation, TCandidate>(CallCounter total, Advice
     {
         log.Bind(source);
     }
-    private CountHook CreateHook(CallCountState state) => new(total, state, log);
+    private CountInvocationWrapper CreateCallFactory(CallCountState state) => new(total, state, log);
 }
 
 public sealed class WrongViewAdvice(CallCounter total, AdviceLog log) : OperatorAdvice<Mutation, RealVector>
@@ -126,7 +129,7 @@ public sealed class WrongViewAdvice(CallCounter total, AdviceLog log) : Operator
         public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TRunSearchState>(
             IOperator<Mutation, RealVector> source,
             OperationExecutorAdapter<Mutation, RealVector, TSearchSpace, TProblem, TRunSearchState> adapter) =>
-            advice.BindView(source, adapter.Success(new CountHook(advice.Total, state, advice.Log)));
+            advice.BindView(source, adapter.WrapInvocation(new CountInvocationWrapper(advice.Total, state, advice.Log)));
     }
 
     private CallCounter Total => total;

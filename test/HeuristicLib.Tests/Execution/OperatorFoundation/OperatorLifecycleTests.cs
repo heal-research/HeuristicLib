@@ -132,7 +132,7 @@ public sealed class OperatorLifecycleTests
             .Resolve(interceptor).Transform(state, null, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem)),
             "interception keeps its exact state result through lifecycle advice");
         Check(probe.Work.SequenceEqual(new[] { 1, 2, 0, 0, 0, 0 }) && probe.SuccessCalls == 6,
-            "lifecycle success receives the operation's declared work without manufacturing work for scalar/state operations");
+            "a call factory can observe declared work separately from lifecycle callbacks");
     }
 
     [Fact]
@@ -201,7 +201,7 @@ public sealed class OperatorLifecycleTests
 
     private readonly record struct Token(int Id);
 
-    private readonly struct Hooks(Probe probe) : IOperationCallCallbacks<Token>
+    private readonly struct Hooks(Probe probe) : IInvocationCallbacks<Token>
     {
         public Token OnStarting()
         {
@@ -211,11 +211,10 @@ public sealed class OperatorLifecycleTests
                 ThrowFailure(failure);
             return new Token(id);
         }
-        public void OnSucceeded(Token token, int candidateWork)
+        public void OnSucceeded(Token token)
         {
             probe.Events.Add($"success:{token.Id}");
             probe.SuccessCalls++;
-            probe.Work.Add(candidateWork);
             if (probe.CallbackFailure is { } failure)
                 ThrowFailure(failure);
         }
@@ -240,15 +239,24 @@ public sealed class OperatorLifecycleTests
             probe.Preparations++;
             return new WrapperFactory(probe);
         }
-        private sealed class WrapperFactory(Probe probe) : OperatorAdviceWrapperFactory
+        private sealed class WrapperFactory(Probe probe) : OperatorAdviceWrapperFactory, IInvocationWrapper
         {
             public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
                 IOperator<TOperation, TCandidate> source,
                 OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
             {
                 probe.Bindings++;
-                return adapter.Hooks<Hooks, Token>(new Hooks(probe));
+                return adapter.WrapInvocation(this);
             }
+
+            public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
+                Func<TArguments, TResult, int>? countCandidateWork) =>
+                new CallbackInvocationWrapper<Hooks, Token>(new Hooks(probe)).Wrap<TArguments, TResult>(arguments =>
+                {
+                    var result = invokeChild(arguments);
+                    probe.Work.Add(countCandidateWork?.Invoke(arguments, result) ?? 0);
+                    return result;
+                }, countCandidateWork);
         }
     }
 

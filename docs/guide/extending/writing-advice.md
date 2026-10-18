@@ -14,9 +14,9 @@ Use these imports in a C# project with implicit system usings enabled:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/CustomAdviceDocumentationSpecs.cs#custom-advice-type{csharp}
 
-`CreateWrapperFactory` receives the selected configuration once per advice instance and configuration owner. Its returned `Factory` retains the call count. For each run signature, `GetWrapperFactory` asks the operation adapter to call `Callback.OnSucceeded` after a successful operation. Advice neither resolves its source again nor constructs a configuration wrapper.
+`CreateWrapperFactory` receives the selected configuration once per advice instance and configuration owner. Its returned `Factory` retains the call count. For each run signature, `GetWrapperFactory` selects `adapter.WrapInvocation(this)`. During executor construction, `Wrap` receives the typed child-call function and the operation's candidate-count function. It returns a function that calls the child, calculates the count and records the message after success. Advice neither resolves its source again nor constructs a configuration wrapper.
 
-The prepared call counter survives rebuilding the execution binding. Each executor retains its own child. The mutation adapter forwards parents, random source, search space and problem unchanged, returns the child's result and supplies its offspring count to the callback. It logs only after the child succeeds. If the child throws, no message is written; an exception from `write` propagates after the child has completed.
+The prepared call counter survives rebuilding the execution binding. Each executor retains its own child. The mutation adapter forwards parents, random source, search space and problem unchanged and defines candidate work as the returned offspring count. The logging factory chooses to calculate that count after the child succeeds. If the child throws, no message is written; an exception from `write` propagates after the child has completed.
 
 This counter expects sequential calls for a join point. A shared logging sink must also synchronize its own writes if several executions can call it concurrently. Advice preparation and shared state do not provide synchronization.
 

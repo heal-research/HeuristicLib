@@ -25,64 +25,22 @@ public sealed class Creation : IOperationDescriptor<Creation>
     {
         public override bool SupportsCandidateWork => true;
 
-        protected override ICreationExecutor<TCandidate, TSearchSpace, TProblem> CreateSuccessCallbackExecutor<TCallback>(
-            ICreationExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback) => new SuccessCallbackExecutor<TCallback>(child, callback);
+        protected override ICreationExecutor<TCandidate, TSearchSpace, TProblem> CreateInvocationWrapperExecutor(
+            ICreationExecutor<TCandidate, TSearchSpace, TProblem> child, IInvocationWrapper invocationWrapper) =>
+            new InvocationWrapperExecutor(invocationWrapper.Wrap<
+                (int count, IRandomNumberGenerator random,
+                    TSearchSpace searchSpace, TProblem problem), IReadOnlyList<TCandidate>>(
+                args => child.Create(args.count, args.random, args.searchSpace, args.problem), static (_, result) => result.Count));
 
-        protected override ICreationExecutor<TCandidate, TSearchSpace, TProblem> CreateCallCallbacksExecutor<TCallbacks, TCallData>(
-            ICreationExecutor<TCandidate, TSearchSpace, TProblem> child, TCallbacks callbacks) => new CallCallbacksExecutor<TCallbacks, TCallData>(child, callbacks);
-
-        private sealed class CallCallbacksExecutor<TCallbacks, TCallData>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> child, TCallbacks callbacks)
-            : ICreationExecutor<TCandidate, TSearchSpace, TProblem> where TCallbacks : struct, IOperationCallCallbacks<TCallData>
-        {
-            public IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random,
-                TSearchSpace searchSpace, TProblem problem)
-            {
-                var notifier = new OperationCallNotifier<TCallbacks, TCallData>(callbacks);
-                try
-                {
-                    IReadOnlyList<TCandidate> result;
-                    int work;
-                    try
-                    {
-                        result = child.Create(count, random, searchSpace, problem);
-                        work = result.Count;
-                    }
-                    catch (Exception failure)
-                    {
-                        notifier.NotifyFailed(failure);
-                        throw;
-                    }
-                    notifier.NotifySucceeded(work);
-                    return result;
-                }
-                finally { notifier.Finish(); }
-            }
-        }
-
-        protected override ICreationExecutor<TCandidate, TSearchSpace, TProblem> CreatePolicyExecutor(ImmutableArray<ICreationExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) =>
-            new PolicyExecutor(children, policy);
-
-        private sealed class PolicyExecutor(ImmutableArray<ICreationExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) : ICreationExecutor<TCandidate, TSearchSpace, TProblem>
+        private sealed class InvocationWrapperExecutor(
+            Func<(int count, IRandomNumberGenerator random,
+                TSearchSpace searchSpace, TProblem problem), IReadOnlyList<TCandidate>> invoke)
+            : ICreationExecutor<TCandidate, TSearchSpace, TProblem>
         {
             public IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random,
                 TSearchSpace searchSpace, TProblem problem) =>
-                policy.Execute(children, (count, random, searchSpace, problem), random, static (child, args) =>
-                {
-                    var result = child.Create(args.count, args.random, args.searchSpace, args.problem);
-                    return new OperationCallResult<IReadOnlyList<TCandidate>>(result, result.Count);
-                }).Value;
+                invoke((count, random, searchSpace, problem));
         }
 
-        private sealed class SuccessCallbackExecutor<TCallback>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback)
-            : ICreationExecutor<TCandidate, TSearchSpace, TProblem> where TCallback : struct, IOperationSuccessCallback
-        {
-            public IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random,
-                TSearchSpace searchSpace, TProblem problem)
-            {
-                var result = child.Create(count, random, searchSpace, problem);
-                callback.OnSucceeded(result.Count);
-                return result;
-            }
-        }
     }
 }

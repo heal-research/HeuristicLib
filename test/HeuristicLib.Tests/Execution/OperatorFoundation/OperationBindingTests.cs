@@ -27,20 +27,101 @@ public sealed class OperationBindingTests
     [InlineData(8, 0)]
     public void EveryDescriptorPreservesItsDomainCallAndReportsDeclaredWork(int operation, int expectedWork)
     {
-        foreach (var profile in new[] { 0, 1, 2 })
+        foreach (var lifecycle in new[] { false, true })
         {
-            var lifecycle = profile == 1;
             var source = new AllOperations();
             var probe = new HookProbe();
-            var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe, lifecycle, profile == 2)));
+            var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe, lifecycle)));
             Invoke(scope, source, operation);
             probe.Work.ShouldBe(expectedWork);
             probe.Successes.ShouldBe(1);
             probe.Cleanups.ShouldBe(lifecycle ? 1 : 0);
             source.Calls.ShouldBe(1);
-            if (profile == 2)
-                probe.HasRandom.ShouldBe(operation != 7);
         }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(6)]
+    [InlineData(7)]
+    [InlineData(8)]
+    public void EveryDescriptorRetriesItsNamedCallWithoutReconstructingTheChild(int operation)
+    {
+        foreach (var failures in new[] { 0, 2, 3 })
+        {
+            var failure = new RetryableOperationException("again");
+            var source = new AllOperations { Failure = failure, FailuresBeforeSuccess = failures };
+            var error = Record.Exception(() => Invoke(ResolutionScope.Create(), source, operation, retry: true));
+            if (failures < 3)
+                error.ShouldBeNull();
+            else
+                error.ShouldBeSameAs(failure);
+            source.Calls.ShouldBe(Math.Min(failures + 1, 3));
+            source.Preparations.ShouldBe(1);
+            source.Constructions.ShouldBe(1);
+            source.RandomSources[0].ShouldSatisfyAllConditions(
+                random => (random is not null).ShouldBe(operation != 7),
+                random => source.RandomSources.ShouldAllBe(value => ReferenceEquals(value, random)));
+        }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(6)]
+    [InlineData(7)]
+    [InlineData(8)]
+    public void EveryDescriptorSupportsAnInvocationWrapperThatInvokesItsChildTwice(int operation)
+    {
+        var source = new AllOperations();
+        var factory = new RepeatingInvocationWrapper();
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new InvocationWrapperAdvice(factory)));
+
+        Invoke(scope, source, operation);
+
+        factory.Constructions.ShouldBe(1);
+        source.Preparations.ShouldBe(1);
+        source.Constructions.ShouldBe(1);
+        source.Calls.ShouldBe(2);
+        source.RandomSources.ShouldAllBe(random => ReferenceEquals(random, source.RandomSources[0]));
+    }
+
+    [Fact]
+    public void InvocationWrappersBindOncePerExecutorAndRetainTheirOwnChildAdvice()
+    {
+        var source = new AllOperations();
+        IOperator<Mutation, RealVector> mutation = source;
+        var factory = new RepeatingInvocationWrapper();
+        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new InvocationWrapperAdvice(factory)));
+        var first = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutation);
+        factory.Constructions.ShouldBe(1);
+        source.Calls.ShouldBe(0);
+        var random = RandomNumberGenerator.Create(1);
+        for (var i = 0; i < 3; i++)
+            first.Mutate(Candidates, random, Problem.SearchSpace, Problem).ShouldBeSameAs(AllOperations.Output);
+        factory.Constructions.ShouldBe(1);
+
+        var contextCalls = new CountAccumulator();
+        var second = root.With(Aspect.CountCalls(mutation, contextCalls))
+            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutation);
+        factory.Constructions.ShouldBe(2);
+        second.Mutate(Candidates, random, Problem.SearchSpace, Problem).ShouldBeSameAs(AllOperations.Output);
+        contextCalls.CurrentCount.ShouldBe(2);
+        first.Mutate(Candidates, random, Problem.SearchSpace, Problem).ShouldBeSameAs(AllOperations.Output);
+        contextCalls.CurrentCount.ShouldBe(2);
+        source.Preparations.ShouldBe(1);
+        source.Constructions.ShouldBe(2);
+        source.Calls.ShouldBe(10);
+        factory.Constructions.ShouldBe(2);
     }
 
     [Theory]
@@ -97,41 +178,43 @@ public sealed class OperationBindingTests
         child.Log.Preparations.ShouldBe(0);
     }
 
-    private static void Invoke(ResolutionScope scope, AllOperations source, int operation)
+    private static void Invoke(ResolutionScope scope, AllOperations source, int operation, bool retry = false)
     {
         var typed = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
         var random = RandomNumberGenerator.Create(1);
         var space = Problem.SearchSpace;
         var population = Candidates.ToEvaluated<RealVector>([1.0, 2.0, 3.0]);
+        IOperator<TOperation, RealVector> Wrap<TOperation>(IOperator<TOperation, RealVector> child)
+            where TOperation : IOperationDescriptor<TOperation> => retry ? child.Retry(3) : child;
         switch (operation)
         {
             case 0:
-                typed.Resolve((IOperator<Creation, RealVector>)source).Create(3, random, space, Problem).ShouldBeSameAs(AllOperations.Output);
+                typed.Resolve(Wrap((IOperator<Creation, RealVector>)source)).Create(3, random, space, Problem).ShouldBeSameAs(AllOperations.Output);
                 break;
             case 1:
-                typed.Resolve((IOperator<Crossover, RealVector>)source).Cross([new(Candidates[0], Candidates[1])], random, space, Problem).ShouldBeSameAs(AllOperations.Output);
+                typed.Resolve(Wrap((IOperator<Crossover, RealVector>)source)).Cross([new(Candidates[0], Candidates[1])], random, space, Problem).ShouldBeSameAs(AllOperations.Output);
                 break;
             case 2:
-                typed.Resolve((IOperator<Mutation, RealVector>)source).Mutate(Candidates, random, space, Problem).ShouldBeSameAs(AllOperations.Output);
+                typed.Resolve(Wrap((IOperator<Mutation, RealVector>)source)).Mutate(Candidates, random, space, Problem).ShouldBeSameAs(AllOperations.Output);
                 break;
             case 3:
-                typed.Resolve((IOperator<Evaluation, RealVector>)source).Evaluate(Candidates, random, space, Problem).ShouldBeEmpty();
+                typed.Resolve(Wrap((IOperator<Evaluation, RealVector>)source)).Evaluate(Candidates, random, space, Problem).ShouldBeEmpty();
                 break;
             case 4:
-                typed.Resolve((IOperator<Selection, RealVector>)source).Select(population, Problem.Objective, 3, random, space, Problem).ShouldBeSameAs(AllOperations.Population);
+                typed.Resolve(Wrap((IOperator<Selection, RealVector>)source)).Select(population, Problem.Objective, 3, random, space, Problem).ShouldBeSameAs(AllOperations.Population);
                 break;
             case 5:
-                typed.Resolve((IOperator<Refinement, RealVector>)source).Refine(Candidates, random, space, Problem).ShouldBeSameAs(AllOperations.Output);
+                typed.Resolve(Wrap((IOperator<Refinement, RealVector>)source)).Refine(Candidates, random, space, Problem).ShouldBeSameAs(AllOperations.Output);
                 break;
             case 6:
-                typed.Resolve((IOperator<Replacement, RealVector>)source).Replace(population, population, Problem.Objective, 3, random, space, Problem).ShouldBeSameAs(AllOperations.Population);
+                typed.Resolve(Wrap((IOperator<Replacement, RealVector>)source)).Replace(population, population, Problem.Objective, 3, random, space, Problem).ShouldBeSameAs(AllOperations.Population);
                 break;
             case 7:
-                typed.Resolve((IOperator<Termination, RealVector>)source).IsTerminalState(new ProbeState(), space, Problem).ShouldBeTrue();
+                typed.Resolve(Wrap((IOperator<Termination, RealVector>)source)).IsTerminalState(new ProbeState(), space, Problem).ShouldBeTrue();
                 break;
             case 8:
                 var state = new ProbeState();
-                typed.Resolve((IOperator<Interception, RealVector>)source).Transform(state, null, random, space, Problem).ShouldBeSameAs(state);
+                typed.Resolve(Wrap((IOperator<Interception, RealVector>)source)).Transform(state, null, random, space, Problem).ShouldBeSameAs(state);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(operation));
@@ -140,47 +223,74 @@ public sealed class OperationBindingTests
 
     private sealed class HookProbe
     {
-        public bool HasRandom { get; set; }
         public int Work { get; set; }
         public int Successes { get; set; }
         public int Cleanups { get; set; }
         public Exception? Failure { get; set; }
     }
 
-    private readonly struct Hooks(HookProbe probe) : IOperationSuccessCallback, IOperationCallCallbacks<long>
+    private readonly struct Hooks(HookProbe probe) : IInvocationCallbacks<long>
     {
         public long OnStarting() => 17;
-        public void OnSucceeded(int candidateWork) { probe.Work = candidateWork; probe.Successes++; }
-        public void OnSucceeded(long token, int candidateWork) { token.ShouldBe(17); OnSucceeded(candidateWork); }
+        public void OnSucceeded(long token) { token.ShouldBe(17); probe.Successes++; }
         public void OnFailed(long token, Exception failure) { token.ShouldBe(17); probe.Failure = failure; }
         public void OnFinished(long token) { token.ShouldBe(17); probe.Cleanups++; }
     }
 
-    private sealed class ProbeAdvice(HookProbe probe, bool lifecycle, bool policy = false) : OperatorAdvice
+    private sealed class ProbeAdvice(HookProbe probe, bool lifecycle) : OperatorAdvice
     {
-        public override OperatorAdviceWrapperFactory CreateWrapperFactory(IOperator source) => new WrapperFactory(probe, lifecycle, policy);
+        public override OperatorAdviceWrapperFactory CreateWrapperFactory(IOperator source) => new WrapperFactory(probe, lifecycle);
 
-        private sealed class WrapperFactory(HookProbe probe, bool lifecycle, bool policy) : OperatorAdviceWrapperFactory
+        private sealed class WrapperFactory(HookProbe probe, bool lifecycle) : OperatorAdviceWrapperFactory, IInvocationWrapper
         {
             public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
                 IOperator<TOperation, TCandidate> source,
                 OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
-                policy ? adapter.PolicyWrapper(new RecordingPolicy(probe)) :
-                lifecycle ? adapter.Hooks<Hooks, long>(new Hooks(probe)) : adapter.Success(new Hooks(probe));
+                adapter.WrapInvocation(this);
+
+            public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
+                Func<TArguments, TResult, int>? countCandidateWork)
+            {
+                Func<TArguments, TResult> observeWork = arguments =>
+                {
+                    var result = invokeChild(arguments);
+                    probe.Work = countCandidateWork?.Invoke(arguments, result) ?? 0;
+                    if (!lifecycle)
+                        probe.Successes++;
+                    return result;
+                };
+                return lifecycle
+                    ? new CallbackInvocationWrapper<Hooks, long>(new Hooks(probe)).Wrap(observeWork, countCandidateWork)
+                    : observeWork;
+            }
         }
     }
 
-    private sealed class RecordingPolicy(HookProbe probe) : SynchronousPolicy
+    private sealed class RepeatingInvocationWrapper : IInvocationWrapper
     {
-        public override OperationCallResult<TResult> Execute<TExecutor, TArguments, TResult>(
-            ImmutableArray<TExecutor> children, TArguments arguments, IRandomNumberGenerator? random,
-            Func<TExecutor, TArguments, OperationCallResult<TResult>> next)
+        public int Constructions { get; private set; }
+
+        public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
+            Func<TArguments, TResult, int>? countCandidateWork)
         {
-            probe.HasRandom = random is not null;
-            var result = next(children.Single(), arguments);
-            probe.Work = result.CandidateWork;
-            probe.Successes++;
-            return result;
+            Constructions++;
+            return arguments =>
+            {
+                _ = invokeChild(arguments);
+                return invokeChild(arguments);
+            };
+        }
+    }
+
+    private sealed class InvocationWrapperAdvice(IInvocationWrapper invocationWrapper) : OperatorAdvice
+    {
+        public override OperatorAdviceWrapperFactory CreateWrapperFactory(IOperator source) => new WrapperFactory(invocationWrapper);
+
+        private sealed class WrapperFactory(IInvocationWrapper invocationWrapper) : OperatorAdviceWrapperFactory
+        {
+            public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
+                IOperator<TOperation, TCandidate> source,
+                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) => adapter.WrapInvocation(invocationWrapper);
         }
     }
 
@@ -211,6 +321,8 @@ public sealed class OperationBindingTests
         public int Constructions { get; private set; }
         public int Calls { get; private set; }
         public Exception? Failure { get; init; }
+        public int FailuresBeforeSuccess { get; init; } = int.MaxValue;
+        public List<IRandomNumberGenerator?> RandomSources { get; } = [];
 
         public OperatorExecutorFactory CreateExecutorFactory()
         {
@@ -219,10 +331,11 @@ public sealed class OperationBindingTests
             return OperatorExecutorFactory.FromFactory<Executor>(_ => { Constructions++; return executor; });
         }
 
-        private void Call()
+        private void Call(IRandomNumberGenerator? random)
         {
+            RandomSources.Add(random);
             Calls++;
-            if (Failure is { } failure)
+            if (Failure is { } failure && Calls <= FailuresBeforeSuccess)
                 throw failure;
         }
 
@@ -237,16 +350,16 @@ public sealed class OperationBindingTests
             ITerminationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, ISearchState>,
             IInterceptionExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, ProbeState>
         {
-            public IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(); return Output; }
-            public IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(); return Output; }
-            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(); return Output; }
+            public IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return Output; }
+            public IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return Output; }
+            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return Output; }
             // Empty objective output deliberately distinguishes input work from result cardinality.
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(); return []; }
-            public IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(); return Population; }
-            public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(); return Output; }
-            public IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(); return Population; }
-            public bool IsTerminalState(ISearchState state, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(); return true; }
-            public ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(); return currentState; }
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return []; }
+            public IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return Population; }
+            public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return Output; }
+            public IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return Population; }
+            public bool IsTerminalState(ISearchState state, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(null); return true; }
+            public ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return currentState; }
         }
     }
 }

@@ -26,64 +26,22 @@ public sealed class Selection : IOperationDescriptor<Selection>
     {
         public override bool SupportsCandidateWork => true;
 
-        protected override ISelectionExecutor<TCandidate, TSearchSpace, TProblem> CreateSuccessCallbackExecutor<TCallback>(
-            ISelectionExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback) => new SuccessCallbackExecutor<TCallback>(child, callback);
+        protected override ISelectionExecutor<TCandidate, TSearchSpace, TProblem> CreateInvocationWrapperExecutor(
+            ISelectionExecutor<TCandidate, TSearchSpace, TProblem> child, IInvocationWrapper invocationWrapper) =>
+            new InvocationWrapperExecutor(invocationWrapper.Wrap<
+                (IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random,
+                    TSearchSpace searchSpace, TProblem problem), IReadOnlyList<EvaluatedCandidate<TCandidate>>>(
+                args => child.Select(args.population, args.objective, args.count, args.random, args.searchSpace, args.problem), static (_, result) => result.Count));
 
-        protected override ISelectionExecutor<TCandidate, TSearchSpace, TProblem> CreateCallCallbacksExecutor<TCallbacks, TCallData>(
-            ISelectionExecutor<TCandidate, TSearchSpace, TProblem> child, TCallbacks callbacks) => new CallCallbacksExecutor<TCallbacks, TCallData>(child, callbacks);
-
-        private sealed class CallCallbacksExecutor<TCallbacks, TCallData>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> child, TCallbacks callbacks)
-            : ISelectionExecutor<TCandidate, TSearchSpace, TProblem> where TCallbacks : struct, IOperationCallCallbacks<TCallData>
-        {
-            public IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random,
-                TSearchSpace searchSpace, TProblem problem)
-            {
-                var notifier = new OperationCallNotifier<TCallbacks, TCallData>(callbacks);
-                try
-                {
-                    IReadOnlyList<EvaluatedCandidate<TCandidate>> result;
-                    int work;
-                    try
-                    {
-                        result = child.Select(population, objective, count, random, searchSpace, problem);
-                        work = result.Count;
-                    }
-                    catch (Exception failure)
-                    {
-                        notifier.NotifyFailed(failure);
-                        throw;
-                    }
-                    notifier.NotifySucceeded(work);
-                    return result;
-                }
-                finally { notifier.Finish(); }
-            }
-        }
-
-        protected override ISelectionExecutor<TCandidate, TSearchSpace, TProblem> CreatePolicyExecutor(ImmutableArray<ISelectionExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) =>
-            new PolicyExecutor(children, policy);
-
-        private sealed class PolicyExecutor(ImmutableArray<ISelectionExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) : ISelectionExecutor<TCandidate, TSearchSpace, TProblem>
+        private sealed class InvocationWrapperExecutor(
+            Func<(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random,
+                TSearchSpace searchSpace, TProblem problem), IReadOnlyList<EvaluatedCandidate<TCandidate>>> invoke)
+            : ISelectionExecutor<TCandidate, TSearchSpace, TProblem>
         {
             public IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random,
                 TSearchSpace searchSpace, TProblem problem) =>
-                policy.Execute(children, (population, objective, count, random, searchSpace, problem), random, static (child, args) =>
-                {
-                    var result = child.Select(args.population, args.objective, args.count, args.random, args.searchSpace, args.problem);
-                    return new OperationCallResult<IReadOnlyList<EvaluatedCandidate<TCandidate>>>(result, result.Count);
-                }).Value;
+                invoke((population, objective, count, random, searchSpace, problem));
         }
 
-        private sealed class SuccessCallbackExecutor<TCallback>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback)
-            : ISelectionExecutor<TCandidate, TSearchSpace, TProblem> where TCallback : struct, IOperationSuccessCallback
-        {
-            public IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random,
-                TSearchSpace searchSpace, TProblem problem)
-            {
-                var result = child.Select(population, objective, count, random, searchSpace, problem);
-                callback.OnSucceeded(result.Count);
-                return result;
-            }
-        }
     }
 }

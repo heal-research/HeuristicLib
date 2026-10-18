@@ -27,14 +27,27 @@ public sealed class MutationLogAdvice<TCandidate> : OperatorAdvice<Mutation, TCa
 
     private sealed class Factory(
         IOperator<Mutation, TCandidate> mutator,
-        Action<IOperator<Mutation, TCandidate>, int, int> write) : OperatorAdviceWrapperFactory<Mutation, TCandidate>
+        Action<IOperator<Mutation, TCandidate>, int, int> write)
+        : OperatorAdviceWrapperFactory<Mutation, TCandidate>, IInvocationWrapper
     {
         private int calls;
 
         public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TSearchState>(
             IOperator<Mutation, TCandidate> source,
             OperationExecutorAdapter<Mutation, TCandidate, TSearchSpace, TProblem, TSearchState> adapter) =>
-            adapter.Success(new Callback(this));
+            adapter.WrapInvocation(this);
+
+        public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
+            Func<TArguments, TResult, int>? countCandidateWork)
+        {
+            var count = countCandidateWork ?? throw new InvalidOperationException("Mutation must supply its candidate count.");
+            return arguments =>
+            {
+                var result = invokeChild(arguments);
+                Record(count(arguments, result));
+                return result;
+            };
+        }
 
         private void Record(int candidateWork)
         {
@@ -42,13 +55,6 @@ public sealed class MutationLogAdvice<TCandidate> : OperatorAdvice<Mutation, TCa
             write(mutator, calls, candidateWork);
         }
 
-        private readonly struct Callback(Factory owner) : IOperationSuccessCallback
-        {
-            public void OnSucceeded(int candidateWork)
-            {
-                owner.Record(candidateWork);
-            }
-        }
     }
 }
 #endregion custom-advice-type

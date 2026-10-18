@@ -1,8 +1,8 @@
 # Operator Parameterization and Role Unification
 
-**Decision status**: The generic consuming contract remains the accepted direction. Standalone prototype checkpoints stopped after checkpoint 3 on 2026-10-16. Continue the remaining questions through actual core migrations, reusing `prototypes/operator-role-integrated` and moving useful checks into regular tests.
+**Decision status**: The generic consuming contract remains the accepted direction. Standalone prototype checkpoints stopped after checkpoint 3 on 2026-10-16. Continue the remaining questions through actual core migrations, reusing `prototypes/operator-role-integrated` and moving useful checks into regular tests. Execution and resolution design simplification is required during Package 2 closure, before the Package 3 role cutovers; the concrete redesign remains open.
 
-**Implementation status**: Package 1 supplies the production resolver/advice foundation. Package 2 cuts mutation and evaluation over to `IOperator<TOperation, TCandidate>` across repository consumers, with generic naming/retry, shared counting/timing, adapted observations and real GA/EvolutionStrategy canaries. All 3,092 solution tests pass; Package 2 acceptance remains blocked by the numerical evaluation performance gate. Other nominal roles and composite-policy construction remain for their owning packages.
+**Implementation status**: Package 1 supplies the production resolver/advice foundation. Package 2 cuts mutation and evaluation over to `IOperator<TOperation, TCandidate>` across repository consumers, with generic naming/retry, shared counting/timing, adapted observations and real GA/EvolutionStrategy canaries. All 3,121 solution tests pass; Package 2 acceptance remains blocked by the performance gate. Other nominal roles and whole-call choice remain for their owning packages.
 
 **Target**: .NET 10 and C# 14, using the SDK selected by `global.json`.
 
@@ -18,10 +18,12 @@ Apply this vocabulary throughout the implementation, API excerpts, tests, sample
 - `PreparedOperator` becomes `OperatorExecutorFactory`; the checked non-generic `PreparedFactory` and `PreparedWrapper` become `ExecutorFactory` and `WrapperExecutorFactory`, alongside their existing generic delegate families. `PreparedOperatorAdvice` becomes `OperatorAdviceWrapperFactory`. The planned `PreparedComposite` follows the `CompositeExecutorFactory` family.
 - `BoundExecution` and `IBoundExecution` become `ExecutorWithControls` and `IExecutorWithControls`, with `Executor` and `ControlProvider` properties. `IControls`, `ExecutionControls` and `NoControls` become `IExecutorControlProvider`, `ObjectControlProvider` and `EmptyExecutorControlProvider`.
 - `IOperation` becomes `IOperationDescriptor`; `OperationBinding` becomes `OperationExecutorAdapter`. `TOperation`, the descriptor names and named operation methods such as `Mutate` remain unchanged.
-- `ISuccessHook`, `ICallHooks` and `CallFrame` become `IOperationSuccessCallback`, `IOperationCallCallbacks` and `OperationCallNotifier`. Starting callbacks return call data, such as a timestamp, used by the remaining callbacks for that invocation.
+- `ICallHooks` and `CallFrame` become `IInvocationCallbacks` and `InvocationNotifier`, used by the optional `CallbackInvocationWrapper`. Starting callbacks return invocation-local data, such as a timestamp. The intermediate `IOperationSuccessCallback` is removed by the call-wrapper consolidation below.
 - Factory entry points use `CreateExecutorFactory` and `GetExecutorFactory`; advice uses `CreateWrapperFactory` and `GetWrapperFactory`; descriptors use `CreateExecutorAdapter`. These names change no initialization, sharing, callback or operation behavior.
 
 The glossary records the current vocabulary. Historical measurement reports retain the names of the implementations they measured. No compatibility aliases or forwarding APIs are introduced.
+
+**Invocation naming decision (2026-10-18; accepted)**: An operation is the supported action; an invocation is one actual use, such as invoking mutation through `Mutate`. Use `IInvocationWrapper` and `IInvocationCallbacks` for behavior around one invocation. Wrapper implementations use the behavior followed by `InvocationWrapper`, including `CallbackInvocationWrapper` and `CountingInvocationWrapper`; the adapter exposes `WrapInvocation`. `InvocationNotifier` notifies callbacks at invocation entry, success, failure and completion, keeping invocation data and preserving failures. Its name is accepted; its need as a separate type remains open for Package 2a. These are naming changes only; responsibilities, visibility and execution remain unchanged. Keep named executor methods and `OperationExecutorAdapter`; reconsider broader factory, adapter and helper responsibilities in Package 2a.
 
 **Generic parameter ordering decision (2026-10-17; accepted)**: Put the operation descriptor first in types and generic methods. Keep the candidate/context group together: `TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, ...`, omitting absent parameters and retaining managed `TState` last. Use `IOperator<Mutation, RealVector>` consistently across the current implementation and later packages. This changes parameter order only; operation and executor meanings remain unchanged. Historical prototype sources remain snapshots.
 
@@ -144,7 +146,7 @@ Retain existing role operation signatures and result representations. In particu
 
 Executor interfaces keep meaningful contravariance in search space and problem. The termination executor remains contravariant in search state; interception remains invariant because it returns that state type. Invalid substitution fails at binding with a useful signature diagnostic.
 
-There is no `ISynchronousOperation` marker because every `IOperationDescriptor` binding must implement the synchronous invocation protocol below. There is no empty candidate-counting marker; metric applicability is explicitly checked at binding, as specified in section 5.
+There is no `ISynchronousOperation` marker because operation adapters implement the synchronous executor signatures below. There is no empty candidate-counting marker; metric applicability is explicitly checked at binding, as specified in section 5.
 
 ### 2.4 Public operation executor adapters
 
@@ -161,19 +163,27 @@ public abstract ExecutorFactory Wrap(
 public abstract ExecutorFactory Compose(
     IReadOnlyList<IOperator<TOperation, TCandidate>> children,
     CompositeExecutorFactory composite);
-public abstract WrapperExecutorFactory PolicyWrapper(SynchronousPolicy policy);
-public abstract CompositeExecutorFactory PolicyComposite(SynchronousPolicy policy);
-public abstract WrapperExecutorFactory Success<TCallback>(TCallback hook)
-    where TCallback : struct, IOperationSuccessCallback;
-public abstract WrapperExecutorFactory Hooks<TCallbacks, TCallData>(TCallbacks hooks)
-    where TCallbacks : struct, IOperationCallCallbacks<TCallData>;
+public abstract WrapperExecutorFactory WrapInvocation(IInvocationWrapper invocationWrapper);
 ```
 
-`Forward(child)` is a concrete convenience implemented as `Wrap(child, Identity())`, not another abstract responsibility. The typed implementation base, which knows `TExecutor`, implements checked carriers, child resolution, identity, wrapping and multi-child construction once. An operation author supplies adapters from its named operation method to the three invocation profiles: success, lifecycle hooks and around policy. The former prototype's `ISynchronousBinding` facilities move into this mandatory protocol; removing the marker must not remove those facilities.
+`Forward(child)` is a concrete convenience implemented as `Wrap(child, Identity())`, not another abstract responsibility. The typed implementation base, which knows `TExecutor`, implements checked carriers, child resolution, identity and wrapping once. An operation author supplies one named-method call bridge and its candidate-work rule. Counting, lifecycle behavior and retry use that same bridge. Multi-child construction and whole-call choice belong to Package 3.
 
-The policy invocation uses typed arguments, a typed result and a cached static continuation. Arguments may be value tuples/structs, without boxing or per-call closure creation. Do not add a second universal `Invoke` method to domain executor interfaces. Erasure/checking is confined to preparing or binding factories, never repeated in the operation hot path.
+The public runtime extension contract is:
 
-Keep checked wrapper and composite carriers initially. A later simplification is acceptable only if it preserves owner preparation, variance, controls, external implementation and measured costs. Package 0 settles the public protocol before production migration; delegate simplification is no longer an open-ended production-foundation spike.
+```csharp
+public interface IInvocationWrapper
+{
+    Func<TArguments, TResult> Wrap<TArguments, TResult>(
+        Func<TArguments, TResult> invokeChild,
+        Func<TArguments, TResult, int>? countCandidateWork);
+}
+```
+
+The operation adapter supplies the typed child function and calls Wrap once per constructed executor. The named method passes its inputs as a value tuple to the returned function; an argument-free operation uses `ValueTuple`. The optional count function defines candidate work from those inputs and the result; null means unsupported. Only consumers measuring candidate work invoke it, after success. Delegates and captures are created during construction and retained by that executor, never cached on the prepared owner. New bindings wrap their current children and advice. The contract covers entire synchronous calls; operation-specific transformations still use typed executors. It carries no child array, RNG slot or result carrier. Do not add a second universal `Invoke` method to domain executor interfaces. Erasure/checking remains confined to preparing or binding factories.
+
+**Open call wrapping decision (2026-10-17; accepted)**: Use `IInvocationWrapper` and `WrapInvocation` as the stable primitive for operation-independent call behavior. Remove feature-specific retry hooks and the separate `Success`/`Hooks` adapter profiles, including their per-operation executors and `IOperationSuccessCallback`. Retry, call/candidate counting and duration use ordinary invocation wrappers. `CallbackInvocationWrapper` retains optional lifecycle callbacks and their shared failure handling above that primitive; callbacks carry no candidate counts. External wrappers and advice use the same contract for built-in and external operations without core changes. `SynchronousPolicy`/`ISynchronousPolicy`, `OperationCallResult` and `RetryPolicy` remain removed. Preserve named operation signatures, exception selection, attempt limits, controls, ownership and lifecycle semantics.
+
+Keep checked wrapper carriers. A later simplification is acceptable only if it preserves owner preparation, variance, controls, external implementation and measured costs. Validate further composition requirements during the owning core migrations rather than extending standalone prototypes.
 
 ### 2.5 Typed resolution stays convenient
 
@@ -289,13 +299,13 @@ Retain weights, snapshots, weighted edge cases, rate helpers and their existing 
 
 Every attempt uses the same input values, child executor and RNG object. The wrapper makes no random draws and performs no fork, rewind or snapshot. Draws and state changes made by a failed attempt remain; there is no rollback of partial child effects or inspection data. An operator may signal `RetryableOperationException` only when another invocation under that contract is meaningful. An external operation does not become transaction-safe merely because its signature is synchronous.
 
-Keep retry as configured behavior and counting/timing as advice. The shared invocation engine does not introduce an `AdvisedOperator` configuration or a second persistence model for runtime advice.
+Keep retry as configured behavior and counting/timing as advice. `Retry.Execute` is a runtime call helper; it does not prepare configurations or resolve children. No `AdvisedOperator` configuration or second persistence model is introduced for runtime advice.
 
 ## 5. Inspection, advice dispatch and metric applicability
 
 ### 5.1 A real protocol for general and typed operator advice
 
-Add a public non-generic `OperatorAdvice : Advice<IOperator>` for operation-independent synchronous concerns. It prepares a `OperatorAdviceWrapperFactory` once per advice/configuration/owner. That factory has a run-generic `GetWrapperFactory` method receiving the typed source and `OperationExecutorAdapter`; it calls `binding.Success(...)`, `binding.Hooks(...)` or `binding.PolicyWrapper(...)` as appropriate. For example:
+Add a public non-generic `OperatorAdvice : Advice<IOperator>` for operation-independent synchronous concerns. It prepares a `OperatorAdviceWrapperFactory` once per advice/configuration/owner. That factory has a run-generic `GetWrapperFactory` method receiving the typed source and `OperationExecutorAdapter`; it calls `adapter.WrapInvocation(...)`. For example:
 
 ```csharp
 public abstract class OperatorAdvice : Advice<IOperator>
@@ -319,7 +329,7 @@ public abstract class OperatorAdviceWrapperFactory
 
 An external allocation tracker or call counter can implement this once and participate on an external operation through that operation's binding adapter. This replaces the previous incomplete `MemoryAllocationAspect` example, which omitted its essential dispatch mechanism.
 
-Keep `OperatorAdvice<TOperation, TCandidate>` for typed observations and operation-specific policies. It likewise separates once-only preparation from run-specific wrapper binding, and its base supplies the internal dispatch bridge. Advice applicability includes the selected operation view: mutation-specific advice on a configuration implementing mutation and evaluation applies only to mutation. General `OperatorAdvice` can apply to both, sharing its intentionally common prepared state. Pointcuts still select configuration references; this adds no caller-path or occurrence selection model.
+Keep `OperatorAdvice<TOperation, TCandidate>` for typed observations and operation-specific callbacks. It likewise separates once-only preparation from run-specific wrapper binding, and its base supplies the internal dispatch bridge. Advice applicability includes the selected operation view: mutation-specific advice on a configuration implementing mutation and evaluation applies only to mutation. General `OperatorAdvice` can apply to both, sharing its intentionally common prepared state. Pointcuts still select configuration references; this adds no caller-path or occurrence selection model.
 
 Resolution dispatches through the supported general/typed preparation protocols. Do not cast every matching advice to one closed generic advice base. A matching unsupported `Advice` subclass fails with `InvalidOperationException` naming its type, the selected operation and the supported extension bases; it never leaks `InvalidCastException`. The generic `Advice<TConfiguration>` base alone does not promise that it can wrap an arbitrary operation method.
 
@@ -333,7 +343,7 @@ Select **preparation/binding-time rejection** for unsupported candidate metrics.
 
 `CountCandidates`, candidate clocks, count-based terminators and candidate budgets must require `binding.SupportsCandidateWork` before constructing an operator view. A selected unsupported operation throws `InvalidOperationException` with the operation, metric and configuration identified. It must never silently skip the metric or pretend that an unsupported operation processed zero candidates.
 
-A binding with candidate work supplies the count after a successful call according to section 2.3. An external scalar operation declares no candidate work; an external batch operation can declare and report its own work without a marker or library edit. Count totals describe work at the selected boundary, not unique candidates or hidden nested evaluations.
+A binding with candidate work supplies a typed counting function according to section 2.3. Candidate-counting advice invokes it only after success. Call counting, duration and retry ignore it. An external scalar operation declares no candidate work; an external batch operation can supply its own counting function without a marker or library edit. Count totals describe work at the selected boundary, not unique candidates or hidden nested evaluations, and do not imply that the call can be split into independent items.
 
 A budget validates applicability when its selected target is bound, before that target can execute. When the target is absent from the algorithm graph, preserve the current no-match behavior: no counter advances and no new source-discovery traversal is introduced. Include an explicit unsupported-target-in-graph case so a selected but unsupported metric cannot leave a running budget silently inert.
 
@@ -341,7 +351,7 @@ Replace the old `UNSUPPORTED_METRIC` negative compiler probe with a runtime bind
 
 ### 5.3 Success, fault and cleanup semantics
 
-Use separate lightweight success hooks, lifecycle hooks with an invocation-local token, and around policies. Counting records a completed successful boundary. Duration includes failed calls and is recorded during cleanup. Do not allocate observation records for simple counting/timing.
+Implement success handling through ordinary invocation wrappers. The optional callback wrapper uses an invocation-local token and shares cleanup/failure handling across operations. Counting records a completed successful boundary. Duration includes failed calls and is recorded during cleanup. Retry is separate configured behavior. Do not allocate observation records for simple counting/timing.
 
 The hook failure contract is explicit:
 
@@ -364,6 +374,8 @@ Retain stateless, stateful and explicit-executor authoring at all existing reduc
 
 `BatchExecution` continues to own item RNG forks, sequential/concurrent scheduling, order and exception behavior. A single-item base seals its batch method and retains `ExecutionConcurrency`. Use static callbacks with explicit state, without per-call closures. Ordinary stateful leaves prepare one fresh state per owner; composite executors get prepared state and newly resolved children separately.
 
+**Batch modeling proposal (2026-10-17; open)**: Keep call wrapping independent of collection shape. Distinguish one operation call over a batch, independent item mapping, and chunking a call into sub-batches. `BatchExecution` remains shared low-level scheduling machinery; single-item authoring bases explicitly opt into mapping. Population-dependent selection/replacement and native batch evaluation keep their whole-call semantics. A future generic chunking/mapping wrapper would require an explicit capability defining splitting, result assembly, logical item/RNG identity and failure/retry boundaries; neither a list argument nor candidate-work counting establishes that capability. This proposal changes no batch APIs in this package.
+
 Configurations use records and immutable value strategies. Required collaborators use required constructor parameters, following developer guidelines section 4.6; existing required-property algorithm construction remains supported and is not expanded into a new competing input path. Optional settings are `init` properties with defaults. Keep object initializers and `with`, and snapshot retained ordered collections into `ValueArray<T>`. Remove the prototype's redundant `With<Property>` layer rather than shipping it.
 
 Constructors, static inference companions and fluent child-composition extensions must produce equivalent configurations. Do not claim that every `with` eliminates allocation: a single `with` batches setting changes into one record copy; copying a configuration creates a new source identity for resolution and pointcuts.
@@ -379,12 +391,12 @@ Preserve `EvolutionStrategyDefaults` and every other algorithm's own defaults. S
 
 ## 7. Extensibility and repository-rule reconciliation
 
-An external package must be able to compile each of these stories independently against the integrated prototype assembly:
+An external package must be able to compile each of these stories independently against the library assembly as its owning migration lands:
 
 1. A custom synchronous scalar operation, its binding and a candidate-focused configuration, using generic naming, retry, whole-call choice, call counting and duration.
 2. A custom batch operation reporting candidate work and participating in candidate clocks/budgets; a scalar counterpart rejected for those metrics.
 3. One general custom advice implementation applied to built-in and external operations, including termination and interception, without enumerating them.
-4. A generic `Twice` wrapper using `binding.PolicyWrapper` for both built-in and external operations, with its controls and counting boundaries specified.
+4. A generic external `Twice` wrapper implementing `IInvocationWrapper`, applied unchanged to built-in and external operations, with controls and counting boundaries specified. Verify construction-time wrapping and contextual rebinding separately from repeated invocation.
 5. One configuration and raw executor implementing two operations, shared once-only state, typed advice restricted to one operation and general advice spanning both.
 6. A custom control interface and custom operation recommendation, with a fresh recommended configuration each time.
 
@@ -396,7 +408,7 @@ The following changes to current guidance are part of the production packages, n
 - Sections 4.12 and 8.3–8.5: retain role configuration/executor symmetry, reduced arities and meaningful executor-interface variance; replace only nominal configuration membership with the generic consuming contract. No public per-role shims remain.
 - Section 8.11: one adapter per operation/profile remains acceptable. Measure that matrix explicitly; do not introduce a second hidden matrix per aspect type or run-type combination in public APIs.
 - Layering: operator consuming contracts/descriptors belong with operator composition contracts; preparation/binding carriers and dispatch belong with execution machinery. Inspection owns metrics and typed observations; `TraceAnalyzer` remains in `Analysis`. Hosting never acquires an Analysis dependency.
-- The backlog rejection of typed universal invocation is reopened only for generic **configuration slots** and shared policy/advice adapters. Named domain operation methods remain. The nominal-membership premise changes because slots now accept the generic contract; C# has not gained structural interface membership.
+- The backlog rejection of typed universal invocation is reopened only for generic **configuration slots** and shared call-wrapper/advice adapters. Named domain operation methods remain. The nominal-membership premise changes because slots now accept the generic contract; C# has not gained structural interface membership.
 - The rejection of static execution-role advice/factory objects is reopened narrowly for explicit configuration-owned prepared state and view adaptation. Add no static wrapping members to contravariant executor interfaces, and require the multi-operation fixture before accepting the additional carrier cost.
 - The rejection of binding as public runtime vocabulary remains: `OperationExecutorAdapter` is the advanced preparation adapter, while the callable runtime object remains an executor. The rejection of source generation and advice-as-configured-wrapper systems also remains.
 
@@ -412,7 +424,7 @@ Use these initial acceptance budgets for Package 0 and the production canary:
 
 - Unadvised generic resolution and `Named` return the same callable node as their child where forwarding suffices; there is no added operation dispatch or invocation allocation.
 - Extra warmed per-invocation allocations are 0 B for success counting, actual duration measurement, whole-call choice, a retry that succeeds on its first attempt and representative three-layer stacks. Measure incremental bytes relative to equivalent leaf work. Construction, result storage and failures/exception reporting are accounted for separately.
-- Shared success counting may add at most 5 ns/call over an equivalent direct counter. Actual lifecycle/duration wrapping may add at most 10 ns/call over an equivalent direct duration wrapper. A general around-policy path may add at most 25 ns/call over the corresponding direct policy. These are absolute cheap-path deltas, not a promise of zero relative slowdown.
+- Shared success counting may add at most 5 ns/call over an equivalent direct counter. Actual lifecycle/duration wrapping may add at most 10 ns/call over an equivalent direct duration wrapper. Shared whole-call choice/retry may add at most 25 ns/call over the corresponding direct implementation. These are absolute cheap-path deltas, not a promise of zero relative slowdown.
 - On representative 32-candidate numerical mutation and evaluation batches, the median end-to-end overhead must also stay within 2% of equivalent direct instrumentation. Cheap single-value/single-candidate cases use the absolute budgets above. Both cheap and numerical gates must pass; expensive work does not excuse a failed cheap-path budget.
 
 Use matching counters, synchronization, `TimeProvider`, inputs and continuation behavior in each direct/shared comparison. Run Release, warm tiered execution, include several isolated process runs, report distribution and uncertainty, and retain environment/backend hashes. Use a benchmark harness with allocation diagnostics and an anti-elision sink. If uncertainty straddles a budget, improve the measurement before claiming success. Do not repeatedly broaden or rerun checks after a stable result unless a change or unresolved concern justifies it.
@@ -425,7 +437,7 @@ Packages are sequential and independently reviewable. Package 0 is retained evid
 
 ### Package 0 — Retained integrated evidence
 
-The three checkpoints under `prototypes/operator-role-integrated` remain historical evidence. Do not extend the checkpoint/report series. Ownership, advice, lifecycle and external-extension fixtures move into regular tests as the corresponding core code lands. Validate the remaining policy, routing, canary, hosting, performance and size questions during their actual migrations; section 8 still gates broader consumer cutover.
+The three checkpoints under `prototypes/operator-role-integrated` remain historical evidence. Do not extend the checkpoint/report series. Ownership, advice, lifecycle and external-extension fixtures move into regular tests as the corresponding core code lands. Validate the remaining retry, choice, routing, canary, hosting, performance and size questions during their actual migrations; section 8 still gates broader consumer cutover.
 
 ### Package 1 — Production foundation and resolver ownership
 
@@ -447,15 +459,32 @@ During this package a GA may have new mutation/evaluation slots and still have l
 
 Preserve seeded GA results generation by generation, with defaults and edge cases covered separately from small explicit fixtures. Use `EvolutionStrategy` to prove actual per-generation mutation-strength adaptation through `Retry(...).Named(...).Named(...)` plus inspection. Compare raw and transparent-wrapped control trajectories and outputs; test parent/child and retained contexts.
 
-Implemented on 2026-10-17: mutation/evaluation consumers, authoring bases, naming/retry, counting/timing and observations use the generic contract. Regular tests cover all nine policy adapters, external scalar policies, retry boundaries and EvolutionStrategy outputs/strength through stacked wrappers in retained and ancestor-owned contexts. GA histories match `f576e14a`, including recommended operators with default settings and separate rate/limit cases. Historical prototype sources are unchanged.
+Implemented on 2026-10-17: mutation/evaluation consumers, authoring bases, naming/retry, counting/timing and observations use the generic contract. All nine operation adapters have one call bridge, with optional candidate-work projection; separate success/lifecycle executors are removed. Regular tests cover external `Twice` on built-in/external operations, construction-time wrapping and contextual child advice, retry boundaries, controls and EvolutionStrategy outputs/strength through stacked wrappers in retained and ancestor-owned contexts. GA histories match `f576e14a`, including recommended operators with default settings and separate rate/limit cases. Historical prototype sources are unchanged.
 
-Validation: Release solution build, all 3,091 solution tests, documentation build, whitespace/style verification, error-level analyzer verification, changed Markdown formatting and package creation pass.
+Validation: Release solution build and all 3,121 solution tests pass, including external API usage and the migrated published advice example. Tests cover same-child retry across all nine descriptors, same arguments/RNG, exhaustion, nested wrappers, live controls, operation/timer failure ordering and call counting/timing that never reads candidate counts. Documentation build, whitespace/style verification, error-level analyzer verification, changed Markdown formatting and package creation pass.
 
-**Performance gate failed.** Three-process BenchmarkDotNet and alternating paired measurements confirm cheap-path budgets and 0 B additional warmed allocations. Numerical Gaussian paths meet 2%; broad `ProblemEvaluator` duration, three-layer instrumentation and retry have paired median overheads of 2.6%, 23.8% and 12.4%. A fixed-signature diagnostic also fails for the stack. The cause remains unresolved; fix evaluation wrapping before Package 3. Construction, failure-path and scalar measurements, adapted harness source and raw provenance remain local under `artifacts/operator-role-package2`.
+**Performance gate remains failed.** Three fresh isolated alternating paired runs retain the original workloads and direct references. Consolidated counting/duration/retry add approximately 1.9/6.2/1.8 ns on cheap success paths, within their absolute budgets, with no extra warmed success allocation. Numerical mutation counting/duration/stack meet 2%; mutation retry's 2.2% estimate has uncertainty spanning the budget. Evaluation counting/duration/stack/retry have paired median overheads of 7.6%/9.4%/22.3%/12.1%, all above 2%. The simpler extension contract does not resolve performance acceptance. Fix the failed/uncertain budgets before Package 3. Adapted harness source, distributions, construction/failure/scalar measurements and raw provenance remain local under `artifacts/operator-role-package2`.
 
-Source cost across `src` and `analyzers`: Package 2 adds 973 and removes 1,043 C# lines (net -70), including all nine policy adapters and helpers. Packages 1 and 2 remain net +1,995 against `94641d41`; overall source reduction is not yet established.
+Source cost across `src` and `analyzers`: Package 2 is net -409 C# lines against `f576e14a`, including all nine call-wrapper bridges, the public factory contract and optional lifecycle helper. Packages 1 and 2 remain net +1,656 against `94641d41`; overall source reduction is not yet established.
 
 **Gate**: core, API usage, affected Experimental/PythonInterop and documentation validation pass, affected scenario canaries pass, the solution builds, section 8 budgets pass, and source/extension-cost evidence still justifies continuing. Full solution tests are required for this first substantial consumer cutover.
+
+### Package 2a — Execution and resolution design simplification
+
+**Decision (2026-10-18; need and scope accepted, concrete design open)**: Reduce construction machinery exposed to authors, invocation indirections and overlapping execution/resolution abstractions. Better names or authoring helpers alone do not satisfy this step; improve the underlying architecture and call path.
+
+**System-wide scope; motivating example**: The duration advice illustrates a recurring design problem. Its general form requires an inner `WrapperFactory` whose `GetWrapperFactory` method has five generic parameters, a correspondingly parameterized `OperationExecutorAdapter`, a `CallbackInvocationWrapper` and a separate callback implementation to express a small timing concern. The production duration advice follows the same construction structure. Use this as evidence of excessive concepts, authored plumbing and invocation indirections across the system, not as a request to spot-fix duration advice. Review the complete execution/resolution design and compare coherent alternatives across leaves, stateful compositions, wrappers, advice and external operations. A shorter duration implementation alone cannot establish that the architecture is simpler.
+
+**Placement**: Perform this as part of closing Package 2, before Package 3 spreads the design to more roles. Prefer starting after the coherent current call-wrapper implementation is validated and committed as a comparison baseline; bounded prerequisite fixes may come first. Package 2a need not wait for Package 2's failed performance gate to pass, and does not waive that gate.
+
+- Simplify ordinary operator, wrapper and advice authoring. Keep signature binding and checked construction mechanics inside the library wherever authors do not need to control them.
+- Shorten actual invocation chains and reduce redundant runtime wrappers and named-method/delegate conversions. Preserve configuration boundaries, advice order, retry/counting semantics and controls.
+- Consolidate duplicated resolution and advice construction logic while preserving configuration-reference ownership, shared state, contextual children, variance, failure/retry behavior and weak advice lifetimes. Keep streaming algorithm contracts independent.
+- Remove unnecessary public implementation types and overlapping responsibilities. Review callback helpers, control-provider implementations and identity forwarding; keep batch scheduling separate from the common call-wrapping contract.
+
+Before implementation, compare the smallest coherent simplification with a simpler architectural alternative under developer guidelines § 2.1. Show representative leaf, wrapper, advice and external-operation usage, the resulting construction/call paths, and which concepts each alternative adds or removes. Direct call-wrapper authoring and composing adjacent wrappers behind one named-method bridge are candidates, not accepted implementation decisions. Obtain acceptance of the concrete design before changing contracts or responsibilities.
+
+**Gate**: Demonstrate fewer exposed construction concepts and fewer unnecessary invocation transitions, with a concise before/after explanation and updated source/extension-cost evidence. Preserve external operation and wrapper extensibility, named executor methods and existing ownership/control guarantees. Validate affected core, API usage, documentation and algorithm canaries, plus the Release solution build/tests. Reuse section 8's workloads and unchanged performance/allocation budgets; no standalone prototype or checkpoint-report series. Complete this step and Package 2 acceptance before Package 3.
 
 ### Package 3 — Remaining candidate operations and routing
 

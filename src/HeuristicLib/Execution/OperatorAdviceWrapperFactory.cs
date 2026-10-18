@@ -5,12 +5,6 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Execution;
 
-/// <summary>Receives a notification after an operation returns successfully, including its candidate-work count.</summary>
-public interface IOperationSuccessCallback
-{
-    void OnSucceeded(int candidateWork);
-}
-
 /// <summary>
 /// Provides functions that wrap an executor with advice. Keeps data, such as a call counter, for one advice instance
 /// and one selected operator configuration when executors are constructed again.

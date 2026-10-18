@@ -25,64 +25,22 @@ public sealed class Mutation : IOperationDescriptor<Mutation>
     {
         public override bool SupportsCandidateWork => true;
 
-        protected override IMutationExecutor<TCandidate, TSearchSpace, TProblem> CreateSuccessCallbackExecutor<TCallback>(
-            IMutationExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback) => new SuccessCallbackExecutor<TCallback>(child, callback);
+        protected override IMutationExecutor<TCandidate, TSearchSpace, TProblem> CreateInvocationWrapperExecutor(
+            IMutationExecutor<TCandidate, TSearchSpace, TProblem> child, IInvocationWrapper invocationWrapper) =>
+            new InvocationWrapperExecutor(invocationWrapper.Wrap<
+                (IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random,
+                    TSearchSpace searchSpace, TProblem problem), IReadOnlyList<TCandidate>>(
+                args => child.Mutate(args.parents, args.random, args.searchSpace, args.problem), static (_, result) => result.Count));
 
-        protected override IMutationExecutor<TCandidate, TSearchSpace, TProblem> CreateCallCallbacksExecutor<TCallbacks, TCallData>(
-            IMutationExecutor<TCandidate, TSearchSpace, TProblem> child, TCallbacks callbacks) => new CallCallbacksExecutor<TCallbacks, TCallData>(child, callbacks);
-
-        private sealed class CallCallbacksExecutor<TCallbacks, TCallData>(IMutationExecutor<TCandidate, TSearchSpace, TProblem> child, TCallbacks callbacks)
-            : IMutationExecutor<TCandidate, TSearchSpace, TProblem> where TCallbacks : struct, IOperationCallCallbacks<TCallData>
-        {
-            public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random,
-                TSearchSpace searchSpace, TProblem problem)
-            {
-                var notifier = new OperationCallNotifier<TCallbacks, TCallData>(callbacks);
-                try
-                {
-                    IReadOnlyList<TCandidate> result;
-                    int work;
-                    try
-                    {
-                        result = child.Mutate(parents, random, searchSpace, problem);
-                        work = result.Count;
-                    }
-                    catch (Exception failure)
-                    {
-                        notifier.NotifyFailed(failure);
-                        throw;
-                    }
-                    notifier.NotifySucceeded(work);
-                    return result;
-                }
-                finally { notifier.Finish(); }
-            }
-        }
-
-        protected override IMutationExecutor<TCandidate, TSearchSpace, TProblem> CreatePolicyExecutor(ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) =>
-            new PolicyExecutor(children, policy);
-
-        private sealed class PolicyExecutor(ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) : IMutationExecutor<TCandidate, TSearchSpace, TProblem>
+        private sealed class InvocationWrapperExecutor(
+            Func<(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random,
+                TSearchSpace searchSpace, TProblem problem), IReadOnlyList<TCandidate>> invoke)
+            : IMutationExecutor<TCandidate, TSearchSpace, TProblem>
         {
             public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random,
                 TSearchSpace searchSpace, TProblem problem) =>
-                policy.Execute(children, (parents, random, searchSpace, problem), random, static (child, args) =>
-                {
-                    var result = child.Mutate(args.parents, args.random, args.searchSpace, args.problem);
-                    return new OperationCallResult<IReadOnlyList<TCandidate>>(result, result.Count);
-                }).Value;
+                invoke((parents, random, searchSpace, problem));
         }
 
-        private sealed class SuccessCallbackExecutor<TCallback>(IMutationExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback)
-            : IMutationExecutor<TCandidate, TSearchSpace, TProblem> where TCallback : struct, IOperationSuccessCallback
-        {
-            public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random,
-                TSearchSpace searchSpace, TProblem problem)
-            {
-                var result = child.Mutate(parents, random, searchSpace, problem);
-                callback.OnSucceeded(result.Count);
-                return result;
-            }
-        }
     }
 }

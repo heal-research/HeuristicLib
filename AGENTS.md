@@ -20,6 +20,25 @@ Follow the developer guidelines for implementation, public APIs and documentatio
 
 Unresolved work and rejected approaches are recorded in [the developer backlog](plans/developer-backlog.md). Check relevant rejected approaches before proposing a previously discussed direction.
 
+## Architecture checkpoint
+
+Discuss architectural changes with the developer and obtain explicit acceptance before implementing them. A change is architectural when it:
+
+- adds, removes or reshapes a public or shared type, interface, base class, generic parameter, role or child slot;
+- moves a responsibility, dependency, or state ownership or lifetime across types, layers or packages;
+- changes a contract, or how execution, resolution or advice work;
+- introduces a new pattern, wrapper, adapter, registry or execution mechanism.
+
+Routine changes that follow established patterns may proceed. Before editing code, state in one line whether the change is routine or architectural.
+
+Before seeking agreement, inspect the relevant code and guidance yourself. Present the design as developer guidelines § 2.1 describes, together with unresolved risks or assumptions and a recommendation.
+
+Ask only about requirements and tradeoffs, recommend an answer to each question, and challenge weak designs, including the developer's own suggestions. For designs with several open decisions, use the `grilling` skill. Resolve material objections before implementing. Record accepted decisions in the relevant plan under `plans/`; accepted decisions need no repeated approval.
+
+A general implementation or refactoring request does not approve an agent-invented redesign. List unrequested architectural improvements as suggestions in the final reply instead of implementing them.
+
+Return to the discussion when implementation deviates from the accepted design, including when the code starts to need workarounds, flags, casts, parallel hierarchies or adapters that the design did not name. Do not patch around a design problem.
+
 ## Repository map
 
 - `src/HeuristicLib`: core public contracts and library implementations.

@@ -17,7 +17,7 @@ Each steering document has one responsibility:
 | [Developer guidelines](/contributing/developer-guidelines) | How contributors implement those requirements and goals                                                  |
 | [Glossary](/guide/glossary)                                | Which terminology is canonical                                                                           |
 | `plans/developer-backlog.md`                               | Which follow up work and design decisions remain unresolved and which approaches were tried and rejected |
-| `AGENTS.md`                                                | How contributors navigate and validate the repository                                                    |
+| `AGENTS.md`                                                | How contributors navigate and validate the repository and which design changes agents discuss first      |
 
 Topic pages must not become alternative policy documents.
 
@@ -38,10 +38,11 @@ User-facing documentation describes current behavior and contracts. Keep library
 ### § 2.1 Start with the user problem
 
 1. State the concrete problem.
-2. Compare meaningful alternatives.
+2. Compare meaningful alternatives, including the smallest change within the existing design and the simplest coherent design if it differs.
 3. Show the chosen tradeoffs through representative usage.
-4. Prefer designs that make intended usage obvious and misuse difficult.
-5. Update implementation, tests, API usage specs and documentation together.
+4. State the concepts each alternative adds and removes.
+5. Prefer designs that make intended usage obvious and misuse difficult.
+6. Update implementation, tests, API usage specs and documentation together.
 
 ### § 2.2 Establish important user flows with executable specs
 
@@ -226,7 +227,7 @@ Roslyn analyzers catch recognizable mistakes. They do not prove ownership invari
 
 Role executions expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
 
-Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its descriptor; it does not change executor-interface membership. Public `OperationExecutorAdapter` adapters connect named methods to success and lifecycle hooks at preparation time without adding another invocation method to executors.
+Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its descriptor; it does not change executor-interface membership. Public `OperationExecutorAdapter` adapters connect named methods to `IInvocationWrapper` during executor construction. Invocation wrappers receive a typed child function and an optional candidate-work function. Named operation methods reuse the returned functions. Success handling and lifecycle callbacks are implemented above this single call bridge; no invocation method is added to executor interfaces.
 
 ## § 5 Immutability and collection ownership
 
@@ -465,7 +466,7 @@ Use concept first scalar names such as `NextDouble` and target first output name
 
 ### § 8.11 Let an API surface scale per role, never over hidden axes
 
-Operation descriptors may supply one adapter per operation/invocation profile. General operator advice reuses those adapters; do not add another matrix per advice type or run signature.
+Operation-parameterized descriptors supply one named-method call adapter. General wrappers and advice reuse `WrapInvocation` and `IInvocationWrapper`; do not add another matrix per wrapper, advice type or run signature. Candidate-work semantics are supplied as a typed counting function and evaluated only by consumers needing that metric. Do not add adapter members for retry, success callbacks or lifecycle callbacks.
 
 Duplicating a member once per operator role is acceptable. Adding a role is a deliberate act, its author writes the
 role's members once from an obvious template, and no existing role is disturbed. The resolve family

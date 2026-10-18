@@ -32,54 +32,14 @@ public sealed class ChecksumExecutorAdapter<TCandidate, TSearchSpace, TProblem, 
 {
     public override bool SupportsCandidateWork => false;
 
-    protected override IChecksumExecutor CreateSuccessCallbackExecutor<TCallback>(IChecksumExecutor child, TCallback callback) =>
-        new SuccessCallbackExecutor<TCallback>(child, callback);
+    protected override IChecksumExecutor CreateInvocationWrapperExecutor(IChecksumExecutor child, IInvocationWrapper invocationWrapper) =>
+        new InvocationWrapperExecutor(invocationWrapper.Wrap<ValueTuple, int>(_ => child.Read(), null));
 
-    protected override IChecksumExecutor CreateCallCallbacksExecutor<TCallbacks, TCallData>(IChecksumExecutor child, TCallbacks callbacks) =>
-        new CallCallbacksExecutor<TCallbacks, TCallData>(child, callbacks);
-
-    protected override IChecksumExecutor CreatePolicyExecutor(ImmutableArray<IChecksumExecutor> children, SynchronousPolicy policy) =>
-        new PolicyExecutor(children, policy);
-
-    private sealed class PolicyExecutor(ImmutableArray<IChecksumExecutor> children, SynchronousPolicy policy) : IChecksumExecutor
+    private sealed class InvocationWrapperExecutor(Func<ValueTuple, int> invoke) : IChecksumExecutor
     {
-        public int Read() => policy.Execute(children, default(ValueTuple), null,
-            static (child, _) => new OperationCallResult<int>(child.Read(), 0)).Value;
+        public int Read() => invoke(default);
     }
 
-    private sealed class CallCallbacksExecutor<TCallbacks, TCallData>(IChecksumExecutor child, TCallbacks callbacks) : IChecksumExecutor
-        where TCallbacks : struct, IOperationCallCallbacks<TCallData>
-    {
-        public int Read()
-        {
-            var notifier = new OperationCallNotifier<TCallbacks, TCallData>(callbacks);
-            try
-            {
-                int result;
-                try
-                { result = child.Read(); }
-                catch (Exception failure)
-                {
-                    notifier.NotifyFailed(failure);
-                    throw;
-                }
-                notifier.NotifySucceeded(0);
-                return result;
-            }
-            finally { notifier.Finish(); }
-        }
-    }
-
-    private sealed class SuccessCallbackExecutor<TCallback>(IChecksumExecutor child, TCallback callback) : IChecksumExecutor
-        where TCallback : struct, IOperationSuccessCallback
-    {
-        public int Read()
-        {
-            var result = child.Read();
-            callback.OnSucceeded(0);
-            return result;
-        }
-    }
 }
 
 public static class ChecksumResolutionExtensions

@@ -25,64 +25,22 @@ public sealed class Refinement : IOperationDescriptor<Refinement>
     {
         public override bool SupportsCandidateWork => true;
 
-        protected override IRefinementExecutor<TCandidate, TSearchSpace, TProblem> CreateSuccessCallbackExecutor<TCallback>(
-            IRefinementExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback) => new SuccessCallbackExecutor<TCallback>(child, callback);
+        protected override IRefinementExecutor<TCandidate, TSearchSpace, TProblem> CreateInvocationWrapperExecutor(
+            IRefinementExecutor<TCandidate, TSearchSpace, TProblem> child, IInvocationWrapper invocationWrapper) =>
+            new InvocationWrapperExecutor(invocationWrapper.Wrap<
+                (IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random,
+                    TSearchSpace searchSpace, TProblem problem), IReadOnlyList<TCandidate>>(
+                args => child.Refine(args.candidates, args.random, args.searchSpace, args.problem), static (_, result) => result.Count));
 
-        protected override IRefinementExecutor<TCandidate, TSearchSpace, TProblem> CreateCallCallbacksExecutor<TCallbacks, TCallData>(
-            IRefinementExecutor<TCandidate, TSearchSpace, TProblem> child, TCallbacks callbacks) => new CallCallbacksExecutor<TCallbacks, TCallData>(child, callbacks);
-
-        private sealed class CallCallbacksExecutor<TCallbacks, TCallData>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> child, TCallbacks callbacks)
-            : IRefinementExecutor<TCandidate, TSearchSpace, TProblem> where TCallbacks : struct, IOperationCallCallbacks<TCallData>
-        {
-            public IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random,
-                TSearchSpace searchSpace, TProblem problem)
-            {
-                var notifier = new OperationCallNotifier<TCallbacks, TCallData>(callbacks);
-                try
-                {
-                    IReadOnlyList<TCandidate> result;
-                    int work;
-                    try
-                    {
-                        result = child.Refine(candidates, random, searchSpace, problem);
-                        work = result.Count;
-                    }
-                    catch (Exception failure)
-                    {
-                        notifier.NotifyFailed(failure);
-                        throw;
-                    }
-                    notifier.NotifySucceeded(work);
-                    return result;
-                }
-                finally { notifier.Finish(); }
-            }
-        }
-
-        protected override IRefinementExecutor<TCandidate, TSearchSpace, TProblem> CreatePolicyExecutor(ImmutableArray<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) =>
-            new PolicyExecutor(children, policy);
-
-        private sealed class PolicyExecutor(ImmutableArray<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> children, SynchronousPolicy policy) : IRefinementExecutor<TCandidate, TSearchSpace, TProblem>
+        private sealed class InvocationWrapperExecutor(
+            Func<(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random,
+                TSearchSpace searchSpace, TProblem problem), IReadOnlyList<TCandidate>> invoke)
+            : IRefinementExecutor<TCandidate, TSearchSpace, TProblem>
         {
             public IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random,
                 TSearchSpace searchSpace, TProblem problem) =>
-                policy.Execute(children, (candidates, random, searchSpace, problem), random, static (child, args) =>
-                {
-                    var result = child.Refine(args.candidates, args.random, args.searchSpace, args.problem);
-                    return new OperationCallResult<IReadOnlyList<TCandidate>>(result, result.Count);
-                }).Value;
+                invoke((candidates, random, searchSpace, problem));
         }
 
-        private sealed class SuccessCallbackExecutor<TCallback>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> child, TCallback callback)
-            : IRefinementExecutor<TCandidate, TSearchSpace, TProblem> where TCallback : struct, IOperationSuccessCallback
-        {
-            public IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random,
-                TSearchSpace searchSpace, TProblem problem)
-            {
-                var result = child.Refine(candidates, random, searchSpace, problem);
-                callback.OnSucceeded(result.Count);
-                return result;
-            }
-        }
     }
 }

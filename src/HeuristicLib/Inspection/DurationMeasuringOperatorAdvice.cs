@@ -21,21 +21,24 @@ public sealed class DurationMeasuringOperatorAdvice<TOperation, TCandidate> : Op
     public override OperatorAdviceWrapperFactory<TOperation, TCandidate> CreateWrapperFactory(IOperator<TOperation, TCandidate> source) =>
         new Factory(Duration, TimeProvider);
 
-    private readonly struct Callbacks(DurationAccumulator duration, TimeProvider timeProvider) : IOperationCallCallbacks<long>
-    {
-        public long OnStarting() => timeProvider.GetTimestamp();
-        public void OnSucceeded(long callData, int candidateWork) { }
-        public void OnFailed(long callData, Exception failure) { }
-        public void OnFinished(long callData) => duration.AddDuration(timeProvider.GetElapsedTime(callData));
-    }
-
     private sealed class Factory(DurationAccumulator duration, TimeProvider timeProvider) : OperatorAdviceWrapperFactory<TOperation, TCandidate>
     {
+        private readonly CallbackInvocationWrapper<OperatorDurationCallbacks, long> invocationWrapper =
+            new(new OperatorDurationCallbacks(duration, timeProvider));
+
         public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TRunSearchState>(
             IOperator<TOperation, TCandidate> source,
             OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
-            adapter.Hooks<Callbacks, long>(new Callbacks(duration, timeProvider));
+            adapter.WrapInvocation(invocationWrapper);
     }
+}
+
+internal readonly struct OperatorDurationCallbacks(DurationAccumulator duration, TimeProvider timeProvider) : IInvocationCallbacks<long>
+{
+    public long OnStarting() => timeProvider.GetTimestamp();
+    public void OnSucceeded(long invocationData) { }
+    public void OnFailed(long invocationData, Exception failure) { }
+    public void OnFinished(long invocationData) => duration.AddDuration(timeProvider.GetElapsedTime(invocationData));
 }
 
 public sealed record OperatorDurationMeasuring<TOperation, TCandidate> : IOperatorDurationMeasuring<IOperator<TOperation, TCandidate>>

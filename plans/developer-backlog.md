@@ -240,6 +240,10 @@ The list-level approach was first rejected as duplicating the rate logic on a th
 
 The first node-selector draft used `Where(predicate)`. During the September 2026 composition review it was replaced by `And(predicate)`: a selector builds a definition rather than returning an enumerable, and a predicate condition is already intersection with a predicate selector. The overload constructs that selector and delegates to the same `And(selector)` implementation. Keeping both spellings would add a second public name for the same operation. Reconsider only if predicate filtering acquires a responsibility different from Boolean intersection; LINQ familiarity alone does not require another spelling.
 
+### Synchronous policy engine and retry-specific adapter hooks
+
+Rejected during the operation-parameterization rework on 2026-10-17. `SynchronousPolicy`, then `ISynchronousPolicy`, generalized retry into a call engine with child selection, RNG and candidate-work result metadata. Its replacement, `RetryWrapper`, put a concrete feature on every operation adapter and closed new wrapper behavior to external assemblies. Use the smaller `IInvocationWrapper` contract: at construction, wrap one typed child-call delegate and retain the returned function in the executor. Separate success/lifecycle adapter profiles were also removed; they repeated execution code and calculated candidate counts for consumers that discarded them. Operations now supply an optional typed work-count function, and lifecycle callbacks are optional behavior above call wrapping. New whole-invocation wrappers require no adapter changes. Whole-call choice still belongs to its own migration. An earlier duration-policy experiment regressed mixed mutation/evaluation measurements; measure the consolidated call-wrapper path against the original workloads, direct references and 2% numerical budget. Raw measurements remain local under `artifacts/operator-role-package2`.
+
 ### Typed operator invocation
 
 Prototyped during the operator rework in August 2026 and rolled back.
@@ -252,7 +256,7 @@ Role executors therefore expose their named operation — `Mutate`, `Cross`, `Se
 
 Reopening this would need a language or runtime mechanism that lets one generic implementation satisfy several nominal role contracts without a per-role leaf. Current C# has none.
 
-The [operator role parameterization plan](operator-role-parameterization-rework.md) changes the consuming-slot premise to `IOperator<TCandidate, TOperation>` and reopens shared configuration/advice adapters on that basis. Package 1 adds descriptor adapters while preserving named execution methods. It does not restore universal execution invocation, source generation or advice expressed as configured wrappers; policy and consumer migrations must still justify their cost.
+The [operator role parameterization plan](operator-role-parameterization-rework.md) changes the consuming-slot premise to `IOperator<TOperation, TCandidate>` and reopens shared configuration/advice adapters on that basis. Package 1 adds descriptor adapters while preserving named execution methods. It does not restore universal execution invocation, source generation or advice expressed as configured wrappers; retry and consumer migrations must still justify their cost.
 
 ### Algorithm construction through builders, problem witnesses and value-dependent recommendations
 

@@ -1,9 +1,12 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
@@ -11,10 +14,45 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
 public sealed class OperatorPreparationSpecs
 {
     [Fact]
-    public void ExternalOperationAndGenericTopologyParticipateInGeneralAdvice()
+    public void AnExternalInvocationWrapperSupportsABuiltInOperationWithoutChangingItsAdapter()
+    {
+        IOperator<Mutation, RealVector> source = new IdentityMutation();
+        var twice = new Twice<Mutation, RealVector>(source);
+        var childCalls = new CountAccumulator();
+        var wrapperCalls = new CountAccumulator();
+        var executor = ResolutionScope.Create(Aspect.CountCalls(source, childCalls), Aspect.CountCalls(twice, wrapperCalls))
+            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(twice);
+        var problem = new TestFunctionProblem(new SphereFunction(1));
+        IReadOnlyList<RealVector> parents = [new(1.0)];
+
+        executor.Mutate(parents, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(parents);
+        childCalls.CurrentCount.ShouldBe(2);
+        wrapperCalls.CurrentCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void TheSameExternalInvocationWrapperSupportsAnExternalOperationAndForwardsItsControls()
+    {
+        var source = new ValueSource(42);
+        var twice = new Twice<ReadValue, RealVector>(source);
+        var counter = new Counter();
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), counter));
+        var adapter = ReadValue.CreateExecutorAdapter<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
+        var bound = scope.ResolveOperator<ReadValue, RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem,
+            ISearchState, IReadValueExecutor>(twice, adapter);
+
+        bound.Executor.Read().ShouldBe(42);
+        counter.Calls.ShouldBe(2);
+        bound.ControlProvider.Get<IValueControl>().ShouldNotBeNull().Value = 43;
+        bound.Executor.Read().ShouldBe(43);
+        counter.Calls.ShouldBe(4);
+    }
+
+    [Fact]
+    public void ExternalOperationAndRetryParticipateInGeneralAdviceAndForwardControls()
     {
         IOperator<ReadValue, RealVector> source = new ValueSource(42);
-        var forwarded = new Forward<ReadValue, RealVector>(source);
+        var forwarded = new Forward<ReadValue, RealVector>(source).Retry(2);
         var counter = new Counter();
         var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), counter));
 
@@ -55,50 +93,14 @@ public sealed class OperatorPreparationSpecs
         {
             public override bool SupportsCandidateWork => false;
 
-            protected override IReadValueExecutor CreatePolicyExecutor(System.Collections.Immutable.ImmutableArray<IReadValueExecutor> children, SynchronousPolicy policy) =>
-                new PolicyRead(children, policy);
+            protected override IReadValueExecutor CreateInvocationWrapperExecutor(IReadValueExecutor child, IInvocationWrapper invocationWrapper) =>
+                new InvocationWrapperExecutor(invocationWrapper.Wrap<ValueTuple, int>(_ => child.Read(), null));
 
-            private sealed class PolicyRead(System.Collections.Immutable.ImmutableArray<IReadValueExecutor> children, SynchronousPolicy policy) : IReadValueExecutor
+            private sealed class InvocationWrapperExecutor(Func<ValueTuple, int> invoke) : IReadValueExecutor
             {
-                public int Read() => policy.Execute(children, default(ValueTuple), null,
-                    static (child, _) => new OperationCallResult<int>(child.Read(), 0)).Value;
+                public int Read() => invoke(default);
             }
 
-            protected override IReadValueExecutor CreateSuccessCallbackExecutor<TCallback>(IReadValueExecutor child, TCallback callback) =>
-                new SuccessfulRead<TCallback>(child, callback);
-
-            protected override IReadValueExecutor CreateCallCallbacksExecutor<TCallbacks, TCallData>(IReadValueExecutor child, TCallbacks callbacks) =>
-                new LifecycleRead<TCallbacks, TCallData>(child, callbacks);
-        }
-
-        private sealed class SuccessfulRead<TCallback>(IReadValueExecutor child, TCallback callback) : IReadValueExecutor
-            where TCallback : struct, IOperationSuccessCallback
-        {
-            public int Read()
-            {
-                var value = child.Read();
-                callback.OnSucceeded(0);
-                return value;
-            }
-        }
-
-        private sealed class LifecycleRead<TCallbacks, TCallData>(IReadValueExecutor child, TCallbacks callbacks) : IReadValueExecutor
-            where TCallbacks : struct, IOperationCallCallbacks<TCallData>
-        {
-            public int Read()
-            {
-                var call = new OperationCallNotifier<TCallbacks, TCallData>(callbacks);
-                try
-                {
-                    int result;
-                    try
-                    { result = child.Read(); }
-                    catch (Exception failure) { call.NotifyFailed(failure); throw; }
-                    call.NotifySucceeded(0);
-                    return result;
-                }
-                finally { call.Finish(); }
-            }
         }
     }
 
@@ -110,6 +112,33 @@ public sealed class OperatorPreparationSpecs
         {
             public int Value { get; set; } = value;
             public int Read() => Value;
+        }
+    }
+
+    private sealed record IdentityMutation : StatelessMutator<RealVector>
+    {
+        public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) => parents;
+    }
+
+    // This configuration and its call factory use only public APIs and enumerate no operations.
+    private sealed record Twice<TOperation, TCandidate>(IOperator<TOperation, TCandidate> ChildOperator)
+        : WrappingOperator<TOperation, TCandidate>(ChildOperator) where TOperation : IOperationDescriptor<TOperation>
+    {
+        protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(ChildOperator);
+
+        private sealed class Factory(IOperator<TOperation, TCandidate> child)
+            : OperatorExecutorFactory<TOperation, TCandidate>, IInvocationWrapper
+        {
+            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TRunSearchState>(
+                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
+                adapter.Wrap(child, adapter.WrapInvocation(this));
+
+            public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
+            Func<TArguments, TResult, int>? countCandidateWork) => arguments =>
+            {
+                _ = invokeChild(arguments);
+                return invokeChild(arguments);
+            };
         }
     }
 
@@ -135,17 +164,19 @@ public sealed class OperatorPreparationSpecs
         public int Calls { get; private set; }
         public override OperatorAdviceWrapperFactory CreateWrapperFactory(IOperator source) => new WrapperFactory(this);
 
-        private sealed class WrapperFactory(Counter counter) : OperatorAdviceWrapperFactory
+        private sealed class WrapperFactory(Counter counter) : OperatorAdviceWrapperFactory, IInvocationWrapper
         {
             public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
                 IOperator<TOperation, TCandidate> source,
-                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
-                adapter.Success(new Hook(counter));
-        }
+                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) => adapter.WrapInvocation(this);
 
-        private readonly struct Hook(Counter counter) : IOperationSuccessCallback
-        {
-            public void OnSucceeded(int candidateWork) { counter.Calls++; }
+            public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
+                Func<TArguments, TResult, int>? countCandidateWork) => arguments =>
+            {
+                var result = invokeChild(arguments);
+                counter.Calls++;
+                return result;
+            };
         }
     }
 }

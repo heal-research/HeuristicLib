@@ -328,7 +328,7 @@ See also: Executor, Operation, Operation invocation.
 
 Status: `Canonical`
 
-An operation invocation is one call to an operation method, such as one call to `Mutate`. Operation call is an accepted synonym.
+An operation invocation is one call to an operation method, such as one call to `Mutate`. A caller invokes mutation through an executor's `Mutate` method. Operation call is an accepted synonym; invocation is used in wrapper and callback type names.
 
 An executor can receive many invocations. A duration measurement around an operation call measures that invocation rather than the lifetime of its executor.
 
@@ -704,6 +704,26 @@ Configured wrappers belong to the configuration graph. Advice wraps the raw exec
 Changing the chain can rebuild nodes and child bindings without preparing their persistent state again.
 
 See also: Advice, Aspect, Configuration, Executor, Resolution scope.
+
+### Invocation wrapper
+
+Status: `Canonical`
+
+An invocation wrapper takes a function that calls a child operator and returns a function adding behavior such as retry, timing or counting. The operation adapter supplies the typed child function during executor construction. The executor reuses the returned function for its named method's calls.
+
+`IInvocationWrapper` represents this contract. For example, retry creates a function that repeats the child call after a retryable failure. The operation also supplies an optional candidate-work counting function; only wrappers measuring candidate work invoke it. Child-bound functions stay with the constructed executor so another binding gets its own children and advice.
+
+See also: Operation invocation, Executor, Wrapper chain, Retry.
+
+### Retry
+
+Status: `Canonical`
+
+Retry is a configured wrapper, represented by `Retry<TOperation, TCandidate>`, that repeats a child call only when it throws `RetryableOperationException`. Its maximum number of attempts includes the first call.
+
+Attempts reuse the child, input values and RNG. Failed attempts' state changes and random draws remain; retry provides no rollback.
+
+See also: Child operator, Operation, Executor, Random number generator (RNG).
 
 ### Random number generator (RNG)
 

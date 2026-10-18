@@ -8,20 +8,19 @@ public sealed class CallCountingAdvice(CountAccumulator counter) : OperatorAdvic
 {
     public override OperatorAdviceWrapperFactory CreateWrapperFactory(IOperator source) => new WrapperFactory(counter);
 
-    private sealed class WrapperFactory(CountAccumulator counter) : OperatorAdviceWrapperFactory
+    private sealed class WrapperFactory(CountAccumulator counter) : OperatorAdviceWrapperFactory, IInvocationWrapper
     {
         public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
             IOperator<TOperation, TCandidate> source,
-            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
-            adapter.Success(new CountSuccess(counter));
-    }
+            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) => adapter.WrapInvocation(this);
 
-    private readonly struct CountSuccess(CountAccumulator counter) : IOperationSuccessCallback
-    {
-        public void OnSucceeded(int candidateWork)
+        public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
+            Func<TArguments, TResult, int>? countCandidateWork) => arguments =>
         {
+            var result = invokeChild(arguments);
             counter.IncrementBy(1);
-        }
+            return result;
+        };
     }
 }
 
@@ -34,13 +33,13 @@ public sealed class DurationAdvice(DurationAccumulator duration, TimeProvider ti
         public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
             IOperator<TOperation, TCandidate> source,
             OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
-            adapter.Hooks<DurationHooks, long>(new DurationHooks(duration, time));
+            adapter.WrapInvocation(new CallbackInvocationWrapper<DurationHooks, long>(new DurationHooks(duration, time)));
     }
 
-    private readonly struct DurationHooks(DurationAccumulator duration, TimeProvider time) : IOperationCallCallbacks<long>
+    private readonly struct DurationHooks(DurationAccumulator duration, TimeProvider time) : IInvocationCallbacks<long>
     {
         public long OnStarting() => time.GetTimestamp();
-        public void OnSucceeded(long token, int candidateWork) { }
+        public void OnSucceeded(long token) { }
         public void OnFailed(long token, Exception failure) { }
         public void OnFinished(long token)
         {

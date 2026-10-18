@@ -5,10 +5,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Execution;
 
-/// <summary>Connects an operation's executor interface to shared forwarding and advice code.</summary>
+/// <summary>Connects an operation's named executor method to forwarding, call wrappers and advice.</summary>
 /// <remarks>
-/// Implements how the operation is wrapped and how successful calls report candidate work. For example, mutation's
-/// adapter calls Mutate and reports the returned candidate count. External operation descriptors supply their own adapter.
+/// Implements how the operation is wrapped and supplies its candidate-work counting function. For example, mutation's
+/// adapter calls Mutate and counts returned candidates. External operation descriptors supply their own adapter.
 /// </remarks>
 public abstract class OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>
     where TOperation : IOperationDescriptor<TOperation>
@@ -24,20 +24,19 @@ public abstract class OperationExecutorAdapter<TOperation, TCandidate, TSearchSp
     }
 
     public abstract Type ExecutorType { get; }
-    /// <summary>Whether success callbacks receive a meaningful candidate-work count for this operation.</summary>
+    /// <summary>Whether the operation supplies a meaningful candidate-work counting function.</summary>
     /// <remarks>Metric advice must check applicability during binding, before constructing the execution graph.</remarks>
     public abstract bool SupportsCandidateWork { get; }
     public abstract WrapperExecutorFactory Identity();
     public abstract ExecutorFactory Wrap(IOperator<TOperation, TCandidate> child, WrapperExecutorFactory wrapper);
-    public abstract WrapperExecutorFactory Success<TCallback>(TCallback callback) where TCallback : struct, IOperationSuccessCallback;
-    public abstract WrapperExecutorFactory Hooks<TCallbacks, TCallData>(TCallbacks callbacks) where TCallbacks : struct, IOperationCallCallbacks<TCallData>;
-    public abstract WrapperExecutorFactory PolicyWrapper(SynchronousPolicy policy);
+    /// <summary>Constructs a named-method executor using the supplied factory to wrap its typed child call.</summary>
+    public abstract WrapperExecutorFactory WrapInvocation(IInvocationWrapper invocationWrapper);
 
     public ExecutorFactory Forward(IOperator<TOperation, TCandidate> child) => Wrap(child, Identity());
 }
 
 /// <summary>Implements shared wrapping and child resolution for an operation whose executor interface is TExecutor.</summary>
-/// <remarks>Derived adapters implement the operation's named method and notify the supplied callbacks.</remarks>
+/// <remarks>Derived adapters connect the named method to a typed child function and candidate-work counting rule.</remarks>
 public abstract class OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState, TExecutor>
     : OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>
     where TOperation : IOperationDescriptor<TOperation>
@@ -50,25 +49,11 @@ public abstract class OperationExecutorAdapter<TOperation, TCandidate, TSearchSp
 
     public sealed override WrapperExecutorFactory Identity() => WrapperExecutorFactory.From<TExecutor>(static child => child);
 
-    public sealed override WrapperExecutorFactory Success<TCallback>(TCallback callback) =>
-        WrapperExecutorFactory.From<TExecutor>(child =>
-            new ExecutorWithControls<TExecutor>(CreateSuccessCallbackExecutor(child.Executor, callback), child.ControlProvider));
-
-    protected abstract TExecutor CreateSuccessCallbackExecutor<TCallback>(TExecutor child, TCallback callback)
-        where TCallback : struct, IOperationSuccessCallback;
-
-    public sealed override WrapperExecutorFactory Hooks<TCallbacks, TCallData>(TCallbacks callbacks) =>
-        WrapperExecutorFactory.From<TExecutor>(child =>
-            new ExecutorWithControls<TExecutor>(CreateCallCallbacksExecutor<TCallbacks, TCallData>(child.Executor, callbacks), child.ControlProvider));
-
-    protected abstract TExecutor CreateCallCallbacksExecutor<TCallbacks, TCallData>(TExecutor child, TCallbacks callbacks)
-        where TCallbacks : struct, IOperationCallCallbacks<TCallData>;
-
-    public sealed override WrapperExecutorFactory PolicyWrapper(SynchronousPolicy policy) =>
+    public sealed override WrapperExecutorFactory WrapInvocation(IInvocationWrapper invocationWrapper) =>
         WrapperExecutorFactory.From<TExecutor>(child => new ExecutorWithControls<TExecutor>(
-            CreatePolicyExecutor([child.Executor], policy), child.ControlProvider));
+            CreateInvocationWrapperExecutor(child.Executor, invocationWrapper), child.ControlProvider));
 
-    protected abstract TExecutor CreatePolicyExecutor(ImmutableArray<TExecutor> children, SynchronousPolicy policy);
+    protected abstract TExecutor CreateInvocationWrapperExecutor(TExecutor child, IInvocationWrapper invocationWrapper);
 
     public sealed override ExecutorFactory Wrap(IOperator<TOperation, TCandidate> child, WrapperExecutorFactory wrapper)
     {
