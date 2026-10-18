@@ -95,14 +95,12 @@ public class EvaluatorConfigurationEqualityTests
 
         private sealed class Factory(FirstOfEvaluator source) : OperatorExecutorFactory<Evaluation, int>
         {
-            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
-                OperationExecutorAdapter<Evaluation, int, TSearchSpace, TProblem, TSearchState> adapter) =>
-                ExecutorFactory.FromFactory<IEvaluationExecutor<int, TSearchSpace, TProblem>>(scope =>
-                {
-                    var typed = scope.For<int, TSearchSpace, TProblem, TSearchState>();
-                    System.Collections.Immutable.ImmutableArray<IEvaluationExecutor<int, TSearchSpace, TProblem>> children = [.. source.ChildOperators.Select(child => typed.Resolve(child))];
-                    return new Executor<TSearchSpace, TProblem>(children);
-                });
+            protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+                ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
+            {
+                System.Collections.Immutable.ImmutableArray<IEvaluationExecutor<int, TSearchSpace, TProblem>> children = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
+                return new Executor<TSearchSpace, TProblem>(children);
+            }
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IEvaluationExecutor<int, TSearchSpace, TProblem>> childEvaluators)
@@ -120,17 +118,7 @@ public class EvaluatorConfigurationEqualityTests
         {
         }
 
-        protected override OperatorExecutorFactory CreateOperatorFactory()
-        {
-            return new Factory(this);
-        }
-
-        private sealed class Factory(IdentityEvaluator source) : OperatorExecutorFactory<Evaluation, int>
-        {
-            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
-                OperationExecutorAdapter<Evaluation, int, TSearchSpace, TProblem, TSearchState> adapter) =>
-                adapter.Forward(source.ChildOperator);
-        }
+        protected override OperatorExecutorFactory CreateOperatorFactory() => OperatorExecutorFactory.Forward(ChildOperator);
     }
 
 }

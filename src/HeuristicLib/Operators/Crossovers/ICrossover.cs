@@ -110,8 +110,7 @@ public static class CrossoverResolutionExtensions
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             crossover is IOperator<Crossover, TCandidate> prepared
-                ? scope.ResolveOperator<Crossover, TCandidate, TSearchSpace, TProblem, ISearchState, ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>>(
-                    prepared, Crossover.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>()).Executor
+                ? (ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Crossover, TCandidate, TSearchSpace, TProblem, ISearchState>(prepared)
                 : scope.Resolve(crossover, static source => source.CreateExecutorFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 
         /// <remarks>A true result carries the instance the run will use, so validating and creating are one step.</remarks>

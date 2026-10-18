@@ -393,30 +393,23 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     /// Reports one contender's evaluations to its own performance observer, without affecting sibling contenders.
     /// </summary>
     private sealed class PerformanceTrackingEvaluatorAdvice(PerformanceTrackingEvaluatorObserver observer)
-        : OperatorAdvice<Evaluation, TCandidate>
+        : EvaluatorAdvice<TCandidate>
     {
-        public override OperatorAdviceWrapperFactory<Evaluation, TCandidate> CreateWrapperFactory(IOperator<Evaluation, TCandidate> evaluator) => new Factory(this, observer);
-
-        private sealed class Factory(PerformanceTrackingEvaluatorAdvice advice, PerformanceTrackingEvaluatorObserver observer)
-            : OperatorAdviceWrapperFactory<Evaluation, TCandidate>
+        protected override void Check<TRunSearchSpace, TRunProblem>(IOperator<Evaluation, TCandidate> evaluator)
         {
-            public override WrapperExecutorFactory GetWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
-                IOperator<Evaluation, TCandidate> source,
-                OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter)
-            {
-                if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-                    throw ExecutionSignature.Mismatch(advice, ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)), ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-                return WrapperExecutorFactory.From<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(child =>
-                    new ExecutorWithControls<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(
-                        new PerformanceTrackingEvaluationExecutor<TRunSearchSpace, TRunProblem>(child.Executor, observer), child.ControlProvider));
-            }
+            if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
+                throw ExecutionSignature.Mismatch(this, ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)), ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
+
+        protected override IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> Wrap<TRunSearchSpace, TRunProblem>(
+            IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> executor, IOperator<Evaluation, TCandidate> evaluator) =>
+            new PerformanceTrackingEvaluationExecutor<TRunSearchSpace, TRunProblem>(executor, observer);
     }
 
     private sealed class PerformanceTrackingEvaluationExecutor<TRunSearchSpace, TRunProblem>(
         IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> innerEvaluator,
         PerformanceTrackingEvaluatorObserver observer)
-        : IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>
+        : IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>, IExecutorControlProvider
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, HEAL.HeuristicLib.Problems.IProblem<TCandidate, TRunSearchSpace>
     {
@@ -426,6 +419,8 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             observer.AfterEvaluation(objectiveVectors, candidates, (TProblem)(object)problem);
             return objectiveVectors;
         }
+
+        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(innerEvaluator);
     }
 
     private sealed class PerformanceTrackingEvaluatorObserver

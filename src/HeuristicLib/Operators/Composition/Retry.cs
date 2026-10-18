@@ -26,21 +26,24 @@ public sealed record Retry<TOperation, TCandidate> : WrappingOperator<TOperation
     {
         if (MaximumAttempts < 1)
             throw new InvalidOperationException("MaximumAttempts must be positive.");
-        return new Factory(ChildOperator, MaximumAttempts);
+        return OperatorExecutorFactory.WrapInvocation(ChildOperator, new RetryWrapper(MaximumAttempts));
     }
+}
 
-    private sealed class Factory(IOperator<TOperation, TCandidate> child, int maximumAttempts)
-        : OperatorExecutorFactory<TOperation, TCandidate>, IInvocationWrapper
+file readonly struct RetryWrapper(int maximumAttempts) : IInvocationWrapper
+{
+    public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
     {
-        public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TRunSearchState>(
-            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
-            adapter.Wrap(child, adapter.WrapInvocation(this));
-
-        public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
-            Func<TArguments, TResult, int>? countCandidateWork)
+        for (var attempt = 1; ; attempt++)
         {
-            var attempts = maximumAttempts;
-            return arguments => Retry.Execute(arguments, invokeChild, attempts);
+            try
+            {
+                return invocation.Proceed();
+            }
+            catch (RetryableOperationException) when (attempt < maximumAttempts)
+            {
+                // Retry with the same arguments.
+            }
         }
     }
 }
@@ -49,24 +52,6 @@ public static class Retry
 {
     public static Retry<TOperation, TCandidate> Create<TOperation, TCandidate>(IOperator<TOperation, TCandidate> childOperator, int maximumAttempts)
         where TOperation : IOperationDescriptor<TOperation> => new(childOperator, maximumAttempts);
-
-    /// <summary>Invokes a typed delegate with the same arguments until it succeeds or exhausts its allowed attempts.</summary>
-    /// <remarks>
-    /// MaximumAttempts includes the first call. Only RetryableOperationException is retried; the last failure is
-    /// rethrown unchanged. Arguments may be a value tuple containing the operation's inputs.
-    /// Reuse a delegate created during executor construction to avoid a new closure for each call.
-    /// This helper executes calls; it does not resolve or prepare child configurations.
-    /// </remarks>
-    public static TResult Execute<TArguments, TResult>(TArguments arguments, Func<TArguments, TResult> execute, int maximumAttempts)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumAttempts);
-        for (var attempt = 1; ; attempt++)
-        {
-            try
-            { return execute(arguments); }
-            catch (RetryableOperationException) when (attempt < maximumAttempts) { }
-        }
-    }
 }
 
 public static class RetryOperatorExtensions

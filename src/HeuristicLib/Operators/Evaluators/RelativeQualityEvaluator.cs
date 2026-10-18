@@ -37,14 +37,12 @@ public sealed record RelativeQualityEvaluator<TCandidate>
 
     private sealed class Factory(RelativeQualityEvaluator<TCandidate> source) : OperatorExecutorFactory<Evaluation, TCandidate>
     {
-        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
-            ExecutorFactory.FromFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
-            {
-                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
-                var childEvaluator = typed.Resolve(source.ChildOperator);
-                return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.BestKnown, source.ZeroBestKnownPolicy);
-            });
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+        {
+            var childEvaluator = scope.Resolve(source.ChildOperator);
+            return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.BestKnown, source.ZeroBestKnownPolicy);
+        }
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, ObjectiveVector bestKnown, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)

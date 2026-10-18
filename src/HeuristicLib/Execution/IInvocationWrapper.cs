@@ -1,16 +1,30 @@
 namespace HEAL.HeuristicLib.Execution;
 
-/// <summary>Takes a function that invokes a child operator and returns a function adding behavior such as retry, timing or counting.</summary>
+/// <summary>Adds behavior, such as timing, counting or retry, around calls to an executor's operation method.</summary>
 /// <remarks>
-/// An operation adapter calls Wrap once when constructing an executor. The returned function is reused for
-/// its invocations; TArguments contains the operation's inputs, usually as a value tuple. The supplied function
-/// calls an already resolved child. Keep child-bound functions in the constructed executor, not in this wrapper.
-/// The optional candidate-work function supplies the operation's counting rule. Invoke it only when needed;
-/// null means candidate counting is unsupported. It does not determine whether the call can be split into items.
-/// Implementations wrap invocations during executor construction and are not persisted configuration strategies.
+/// An operation adapter builds the wrapper into the executor it constructs; each call to that executor's named method,
+/// such as Mutate, passes one invocation to <see cref="Invoke{TInvocation, TResult}"/>. Implement wrappers as small
+/// immutable structs so that each call is compiled for the wrapper type. Keep data that outlives a call, such as a
+/// counter, in a referenced object.
 /// </remarks>
 public interface IInvocationWrapper
 {
-    Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
-        Func<TArguments, TResult, int>? countCandidateWork);
+    /// <summary>Performs one invocation, calling <see cref="IInvocation{TResult}.Proceed"/> to run the wrapped method.</summary>
+    TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>;
+}
+
+/// <summary>One call to an executor's operation method together with its arguments, such as one call to Mutate.</summary>
+public interface IInvocation<TResult>
+{
+    /// <summary>Calls the wrapped operation method with the original arguments.</summary>
+    /// <remarks>May be called more than once; every call reuses the same arguments and random number generator.</remarks>
+    TResult Proceed();
+
+    /// <summary>Returns the candidate work of a successful call, such as the number of mutated candidates.</summary>
+    /// <remarks>
+    /// Operations without candidate work throw <see cref="NotSupportedException"/>, and their adapters report
+    /// <see cref="OperationExecutorAdapter.SupportsCandidateWork"/> as false. The count describes this call's boundary;
+    /// it does not imply that the call can be split into independent items.
+    /// </remarks>
+    int CountCandidateWork(TResult result);
 }

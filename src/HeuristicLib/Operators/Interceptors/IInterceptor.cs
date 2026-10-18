@@ -52,8 +52,7 @@ public static class InterceptorResolutionExtensions
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
             interceptor is IOperator<Interception, TCandidate> prepared
-                ? scope.ResolveOperator<Interception, TCandidate, TSearchSpace, TProblem, TSearchState, IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>>(
-                    prepared, Interception.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TSearchState>()).Executor
+                ? (IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>)scope.ResolveOperator<Interception, TCandidate, TSearchSpace, TProblem, TSearchState>(prepared)
                 : scope.Resolve(interceptor, static source => source.CreateExecutorFactory<TSearchSpace, TProblem, TSearchState>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>);
 
         [return: NotNullIfNotNull(nameof(interceptor))]

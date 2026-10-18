@@ -585,10 +585,18 @@ public sealed class DeferredAlgorithmFactoryTests
     {
         public Advice<IOperator<Mutation, TCandidate>> CreateAdvice(CountAccumulator counter) => new SelectedAdvice(source => Create(source, counter));
 
+        // Creates the recorded advice for the first selected operator and delegates to it.
         private sealed class SelectedAdvice(Func<IOperator<Mutation, TCandidate>, OperatorAdvice<Mutation, TCandidate>> create) : OperatorAdvice<Mutation, TCandidate>
         {
-            public override OperatorAdviceWrapperFactory<Mutation, TCandidate> CreateWrapperFactory(IOperator<Mutation, TCandidate> configuration) =>
-                create(configuration).CreateWrapperFactory(configuration);
+            private OperatorAdvice<Mutation, TCandidate>? selected;
+
+            public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
+                IOperator<Mutation, TCandidate> source) => Select(source).Check<TSearchSpace, TProblem, TSearchState>(operation, source);
+
+            public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+                IOperator<Mutation, TCandidate> source) => Select(source).Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
+
+            private OperatorAdvice<Mutation, TCandidate> Select(IOperator<Mutation, TCandidate> source) => selected ??= create(source);
         }
     }
 
@@ -596,10 +604,18 @@ public sealed class DeferredAlgorithmFactoryTests
     {
         public Advice<IOperator<Mutation, TCandidate>> CreateAdvice(DurationAccumulator duration, TimeProvider timeProvider) => new SelectedAdvice(source => Create(source, duration, timeProvider));
 
+        // Creates the recorded advice for the first selected operator and delegates to it.
         private sealed class SelectedAdvice(Func<IOperator<Mutation, TCandidate>, OperatorAdvice<Mutation, TCandidate>> create) : OperatorAdvice<Mutation, TCandidate>
         {
-            public override OperatorAdviceWrapperFactory<Mutation, TCandidate> CreateWrapperFactory(IOperator<Mutation, TCandidate> configuration) =>
-                create(configuration).CreateWrapperFactory(configuration);
+            private OperatorAdvice<Mutation, TCandidate>? selected;
+
+            public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
+                IOperator<Mutation, TCandidate> source) => Select(source).Check<TSearchSpace, TProblem, TSearchState>(operation, source);
+
+            public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+                IOperator<Mutation, TCandidate> source) => Select(source).Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
+
+            private OperatorAdvice<Mutation, TCandidate> Select(IOperator<Mutation, TCandidate> source) => selected ??= create(source);
         }
     }
 

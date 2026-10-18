@@ -377,7 +377,7 @@ General wrappers and compositions preserve the operator role contract. Additiona
 
 An observation wrapper can implement `IMutationExecutor` without implementing `IMutationStrengthControl`. An `is` check on the wrapped mutator would then hide the source's adaptation capability. Resolving the control separately lets an algorithm keep adapting the selected source while every mutation call passes through the observation wrapper. The control interface contains no mutation operation, so it supplies no alternative path for mutation calls to bypass observations.
 
-`EvolutionStrategy` projects this optional control during resolution and invokes mutation through the advised executor. Advice applied directly to the selected Gaussian configuration preserves access to its raw strength control. Rebinding preserves that selected state while applying the requesting scope's observations to mutation calls. Generic naming and retry wrappers preserve the same control provider, including through child inspection.
+`EvolutionStrategy` projects this optional control during resolution and invokes mutation through the advised executor. Advice applied directly to the selected Gaussian configuration preserves access to its raw strength control. Rebinding preserves that selected state while applying the requesting scope's observations to mutation calls. Generic naming and retry wrappers pass on the same controls, including through child inspection.
 
 An algorithm author can request a control through its typed scope without supplying factory wiring:
 
@@ -391,7 +391,7 @@ An explicitly configured wrapper is a separate selected configuration. For examp
 
 ### Transparent wrappers and controls
 
-Mutation and evaluation use `IOperator<TOperation, TCandidate>`. Their generic `Named` and `Retry` wrappers forward the child's control provider along with its executor. Stacking `gaussian.Retry(3).Named("inner").Named("outer")` therefore keeps `EvolutionStrategy` strength adaptation, including when inspection wraps the Gaussian child.
+Mutation and evaluation use `IOperator<TOperation, TCandidate>`. Their generic `Named` and `Retry` wrappers pass on the child's controls along with its executor: an executor implementing `IExecutorControlProvider` supplies another executor's controls, and `ExecutorControls.Find` follows it. Stacking `gaussian.Retry(3).Named("inner").Named("outer")` therefore keeps `EvolutionStrategy` strength adaptation, including when inspection wraps the Gaussian child.
 
 `Retry(3)` includes the first attempt. It catches only a directly thrown `RetryableOperationException`; cancellation, ordinary failures and aggregate exceptions propagate. Every attempt receives the same arguments, child and RNG. Failed attempts retain their random draws, state changes and inspection effects; retry provides no rollback.
 
@@ -423,7 +423,7 @@ Use these imports in a C# project with implicit system usings enabled:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-type{csharp}
 
-The constructor retains child configurations through the multi base, which snapshots their collection. `CreateOperatorFactory` validates that collection and allocates `ExecutionState` once. Its returned factory resolves current children through the construction scope and builds an executor around the same cursor. Allocating `ExecutionState` inside that returned factory would reset the cursor whenever another observation context binds the composition.
+The constructor retains child configurations through the multi base, which snapshots their collection. `CreateOperatorFactory` validates that collection and allocates `ExecutionState` once. The returned `Factory` keeps that cursor; its `CreateExecutor` resolves the current children through the typed scope it receives and builds an executor around the same cursor. Allocating `ExecutionState` inside `CreateExecutor` would reset the cursor whenever another observation context binds the composition.
 
 The executor retains contextual child references through `MultiMutationExecutor`; it keeps only the cursor in shared state. `offspring` is local to one invocation. This example expects sequential calls: sharing the state does not serialize concurrent mutation operations.
 

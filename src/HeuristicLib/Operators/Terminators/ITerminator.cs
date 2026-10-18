@@ -51,8 +51,7 @@ public static class TerminatorResolutionExtensions
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState =>
             terminator is IOperator<Termination, TCandidate> prepared
-                ? scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TSearchState, ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>>(
-                    prepared, Termination.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TSearchState>()).Executor
+                ? (ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>)scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TSearchState>(prepared)
                 : scope.Resolve(terminator, static source => source.CreateExecutorFactory<TSearchSpace, TProblem, TSearchState>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem, TSearchState>);
 
         [return: NotNullIfNotNull(nameof(terminator))]

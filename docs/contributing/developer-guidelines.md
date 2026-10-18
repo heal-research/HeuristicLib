@@ -135,9 +135,9 @@ Resolving a configuration an algorithm builds itself makes it visible to pointcu
 
 ### § 4.4 Expose one preparation entry
 
-Algorithms and existing nominal operator contracts expose one public `CreateExecutorFactory(...)` returning `ExecutorFactory<TExecutor>`. Operation-parameterized operators expose one public `CreateExecutorFactory()` returning `OperatorExecutorFactory`; its checked `GetExecutorFactory` creates construction views over the same persistent state. Do not add a second initializer per operation, role-named alternatives or a competing public factory. Preparation runs once per selected configuration owner; construction may bind several nodes.
+Algorithms and existing nominal operator contracts expose one public `CreateExecutorFactory(...)` returning `ExecutorFactory<TExecutor>`. Operation-parameterized operators expose one public `CreateExecutorFactory()` returning `OperatorExecutorFactory`; its `CreateExecutor` constructs executors for any supported operation and run types over the same persistent state. Do not add a second initializer per operation, role-named alternatives or a competing public factory. Preparation runs once per selected configuration owner; construction may bind several nodes.
 
-Mutation and evaluation authoring bases own the public entry. Fixed-signature leaves override protected `CreateFactory()`; generic compositions override `CreateOperatorFactory()` and return an `OperatorExecutorFactory<TOperation, TCandidate>` that resolves current children for each run signature. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
+Mutation and evaluation authoring bases own the public entry. Fixed-signature leaves override protected `CreateFactory()`; generic compositions override `CreateOperatorFactory()` and return an `OperatorExecutorFactory<TOperation, TCandidate>` whose `CreateExecutor` resolves current children through its typed scope. Transparent generic wrappers return `OperatorExecutorFactory.Forward` or `OperatorExecutorFactory.WrapInvocation`. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
 
 Remaining nominal topology bases own the public method and expose one protected preparation hook: `CreateWrapperFactory` returns `WrapperExecutorFactory<TExecutor>` for a wrapping base; `CreateCompositeFactory` returns `CompositeExecutorFactory<TExecutor>` for a multi base. The hook prepares persistent state and returns a factory accepting the newly resolved children. Use the same executor interface for the children and result. Derived authors construct their matching executor classes inside the returned delegate. Ordinary leaf operation overrides remain unchanged.
 
@@ -158,7 +158,7 @@ A setting has one input path.
 
 Retain configuration values unchanged during construction and `with`. Validate them in `CreateExecutorFactory` or the protected preparation hook and throw `InvalidOperationException` before execution begins. Bound bridges validate run-type compatibility before preparation. Do not add a separate validation API.
 
-For operation-parameterized operators, validate immutable configuration in `CreateExecutorFactory`. `Fits` supplies preflight metadata; `OperatorExecutorFactory.GetExecutorFactory` authoritatively checks each run view before constructing nodes or resolving children. Bind selected advice before raw construction so unsupported metrics fail before child work. A failed view must not discard successful owner preparation.
+For operation-parameterized operators, validate immutable configuration in `CreateExecutorFactory`. `Fits` supplies preflight metadata, and resolution checks each constructed executor against the requested executor interface. Advice rejects an operator it cannot wrap in `Check`, which runs before raw construction so unsupported metrics fail before child work. A failed construction must not discard successful owner preparation.
 
 Persistent initialization must not depend on whichever binding first resolves a live child. Failed preparation is not cached, so a later resolution can retry. Successful preparation remains available when a later contextual construction or advice application fails; that binding can also be retried.
 
@@ -227,7 +227,7 @@ Roslyn analyzers catch recognizable mistakes. They do not prove ownership invari
 
 Role executions expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
 
-Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its descriptor; it does not change executor-interface membership. Public `OperationExecutorAdapter` adapters connect named methods to `IInvocationWrapper` during executor construction. Invocation wrappers receive a typed child function and an optional candidate-work function. Named operation methods reuse the returned functions. Success handling and lifecycle callbacks are implemented above this single call bridge; no invocation method is added to executor interfaces.
+Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its descriptor; it does not change executor-interface membership. Public `OperationExecutorAdapter` adapters connect named methods to `IInvocationWrapper` during executor construction. Each wrapping executor passes a call to its struct wrapper as a struct `IInvocation<TResult>`, whose `Proceed` calls the wrapped named method and whose `CountCandidateWork` supplies the operation's counting rule. No invocation method is added to executor interfaces.
 
 ## § 5 Immutability and collection ownership
 
@@ -466,7 +466,7 @@ Use concept first scalar names such as `NextDouble` and target first output name
 
 ### § 8.11 Let an API surface scale per role, never over hidden axes
 
-Operation-parameterized descriptors supply one named-method call adapter. General wrappers and advice reuse `WrapInvocation` and `IInvocationWrapper`; do not add another matrix per wrapper, advice type or run signature. Candidate-work semantics are supplied as a typed counting function and evaluated only by consumers needing that metric. Do not add adapter members for retry, success callbacks or lifecycle callbacks.
+Operation-parameterized descriptors supply one named-method call adapter. General wrappers and advice reuse `WrapInvocation` and `IInvocationWrapper`; do not add another matrix per wrapper, advice type or run signature. Candidate-work semantics are supplied by the invocation and evaluated only by wrappers needing that metric. Do not add adapter members for retry, timing, counting or other individual behaviors. A typed advice base per role, such as `MutatorAdvice`, is acceptable because it varies over roles only.
 
 Duplicating a member once per operator role is acceptable. Adding a role is a deliberate act, its author writes the
 role's members once from an obvious template, and no existing role is disturbed. The resolve family

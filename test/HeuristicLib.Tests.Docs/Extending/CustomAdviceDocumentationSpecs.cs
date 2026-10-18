@@ -13,51 +13,59 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Tests.Docs.Extending;
 
 #region custom-advice-type
-public sealed class MutationLogAdvice<TCandidate> : OperatorAdvice<Mutation, TCandidate>
+public sealed class MutationLogAdvice<TCandidate>(Action<IOperator<Mutation, TCandidate>, int, int> write)
+    : MutatorAdvice<TCandidate>
 {
-    private readonly Action<IOperator<Mutation, TCandidate>, int, int> write;
+    private int calls;
 
-    public MutationLogAdvice(Action<IOperator<Mutation, TCandidate>, int, int> write)
-    {
-        this.write = write;
-    }
+    protected override IMutationExecutor<TCandidate, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
+        IMutationExecutor<TCandidate, TSearchSpace, TProblem> executor, IOperator<Mutation, TCandidate> mutator) =>
+        new LoggingExecutor<TSearchSpace, TProblem>(executor, mutator, this);
 
-    public override OperatorAdviceWrapperFactory<Mutation, TCandidate> CreateWrapperFactory(
-        IOperator<Mutation, TCandidate> mutator) => new Factory(mutator, write);
+    private void Record(IOperator<Mutation, TCandidate> mutator, int offspring) => write(mutator, ++calls, offspring);
 
-    private sealed class Factory(
+    private sealed class LoggingExecutor<TSearchSpace, TProblem>(
+        IMutationExecutor<TCandidate, TSearchSpace, TProblem> executor,
         IOperator<Mutation, TCandidate> mutator,
-        Action<IOperator<Mutation, TCandidate>, int, int> write)
-        : OperatorAdviceWrapperFactory<Mutation, TCandidate>, IInvocationWrapper
+        MutationLogAdvice<TCandidate> advice)
+        : IMutationExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        private int calls;
-
-        public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TSearchState>(
-            IOperator<Mutation, TCandidate> source,
-            OperationExecutorAdapter<Mutation, TCandidate, TSearchSpace, TProblem, TSearchState> adapter) =>
-            adapter.WrapInvocation(this);
-
-        public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
-            Func<TArguments, TResult, int>? countCandidateWork)
+        public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random,
+            TSearchSpace searchSpace, TProblem problem)
         {
-            var count = countCandidateWork ?? throw new InvalidOperationException("Mutation must supply its candidate count.");
-            return arguments =>
-            {
-                var result = invokeChild(arguments);
-                Record(count(arguments, result));
-                return result;
-            };
+            var offspring = executor.Mutate(parents, random, searchSpace, problem);
+            advice.Record(mutator, offspring.Count);
+            return offspring;
         }
 
-        private void Record(int candidateWork)
-        {
-            calls++;
-            write(mutator, calls, candidateWork);
-        }
-
+        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
     }
 }
 #endregion custom-advice-type
+
+#region general-advice-type
+public sealed class SlowCallAdvice(TimeSpan threshold, TimeProvider time, Action<IOperator, TimeSpan> report) : OperatorAdvice
+{
+    public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source) =>
+        operation.WrapInvocation(executor, new ReportSlowCalls(threshold, time, report, source));
+
+    private readonly struct ReportSlowCalls(TimeSpan threshold, TimeProvider time, Action<IOperator, TimeSpan> report,
+        IOperator source) : IInvocationWrapper
+    {
+        public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
+        {
+            var start = time.GetTimestamp();
+            var result = invocation.Proceed();
+            var elapsed = time.GetElapsedTime(start);
+            if (elapsed >= threshold)
+                report(source, elapsed);
+            return result;
+        }
+    }
+}
+#endregion general-advice-type
 
 public sealed class CustomAdviceDocumentationSpecs
 {
@@ -98,7 +106,7 @@ public sealed class CustomAdviceDocumentationSpecs
     }
 
     [Fact]
-    public void RebindingKeepsJoinPointStateWhileIndependentRootsStartFresh()
+    public void TheAdviceObjectOwnsItsCallCounterAcrossRebindingAndRoots()
     {
         var mutator = new NoChangeMutator<RealVector>();
         var calls = new List<int>();
@@ -106,7 +114,7 @@ public sealed class CustomAdviceDocumentationSpecs
         var logging = Aspect.Create(Pointcut.Reference(mutator), advice);
         var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
         var problem = FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);
-        var random = RandomNumberGenerator.Create(seed: 42);
+        var random = RandomNumberGenerator.Create(42);
         IReadOnlyList<RealVector> parents = [new RealVector(0.0)];
         var scope = ResolutionScope.Create(logging);
         var original = scope.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(mutator);
@@ -118,6 +126,35 @@ public sealed class CustomAdviceDocumentationSpecs
             .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(mutator);
         independent.Mutate(parents, random, searchSpace, problem);
 
-        calls.ShouldBe([1, 2, 1]);
+        calls.ShouldBe([1, 2, 3]);
+    }
+
+    [Fact]
+    public async Task GeneralAdviceWrapsEveryOperationOfTheSelectedOperators()
+    {
+        var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
+        var problem = FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);
+        var algorithm = new GeneticAlgorithm<RealVector>
+        {
+            Creator = new UniformDistributedCreator(),
+            Crossover = SelectFirstParentCrossover<RealVector>.Instance,
+            Mutator = new NoChangeMutator<RealVector>(),
+            PopulationSize = 4,
+            MutationRate = 1.0,
+            MaximumGenerations = 3
+        };
+
+        #region general-advice-run
+        var slow = new List<string>();
+        var advice = new SlowCallAdvice(TimeSpan.Zero, TimeProvider.System,
+            (source, elapsed) => slow.Add(source.GetType().Name));
+        var operators = Pointcut.Reference<IOperator>(algorithm.Mutator) | Pointcut.Reference<IOperator>(algorithm.Evaluator);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
+            .AddAspect(Aspect.Create(operators, advice));
+        #endregion general-advice-run
+        await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        slow.ShouldContain(algorithm.Mutator.GetType().Name);
+        slow.ShouldContain(algorithm.Evaluator.GetType().Name);
     }
 }

@@ -37,14 +37,12 @@ public sealed record RepeatingEvaluator<TCandidate>
 
     private sealed class Factory(RepeatingEvaluator<TCandidate> source) : OperatorExecutorFactory<Evaluation, TCandidate>
     {
-        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
-            ExecutorFactory.FromFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
-            {
-                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
-                var childEvaluator = typed.Resolve(source.ChildOperator);
-                return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.Repetitions, source.Aggregator, source.Concurrency);
-            });
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+        {
+            var childEvaluator = scope.Resolve(source.ChildOperator);
+            return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.Repetitions, source.Aggregator, source.Concurrency);
+        }
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency)

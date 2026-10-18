@@ -45,8 +45,7 @@ public static class SelectorResolutionExtensions
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             selector is IOperator<Selection, TCandidate> prepared
-                ? scope.ResolveOperator<Selection, TCandidate, TSearchSpace, TProblem, ISearchState, ISelectionExecutor<TCandidate, TSearchSpace, TProblem>>(
-                    prepared, Selection.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>()).Executor
+                ? (ISelectionExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Selection, TCandidate, TSearchSpace, TProblem, ISearchState>(prepared)
                 : scope.Resolve(selector, static source => source.CreateExecutorFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(selector))]

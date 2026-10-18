@@ -55,13 +55,9 @@ public sealed record RefinementEvaluator<TCandidate>
 
     private sealed class Factory(RefinementEvaluator<TCandidate> source) : OperatorExecutorFactory<Evaluation, TCandidate>
     {
-        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
-            ExecutorFactory.FromFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
-            {
-                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
-                return new Executor<TRunSearchSpace, TRunProblem>(typed.Resolve(source.Evaluator), typed.Resolve(source.Refiner));
-            });
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.Evaluator), scope.Resolve(source.Refiner));
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator, IRefinementExecutor<TCandidate, TSearchSpace, TProblem> refiner)

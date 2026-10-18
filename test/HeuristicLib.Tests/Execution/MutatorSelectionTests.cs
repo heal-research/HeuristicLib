@@ -170,8 +170,11 @@ public sealed class MutatorSelectionTests
 
     private sealed class CountingSelectedMutator(Func<IOperator<Mutation, int>, CountAccumulator> counter) : OperatorAdvice<Mutation, int>
     {
-        public override OperatorAdviceWrapperFactory<Mutation, int> CreateWrapperFactory(IOperator<Mutation, int> mutator) =>
-            new CountingOperatorAdvice<Mutation, int>(counter(mutator), OperatorCountMetric.Candidates).CreateWrapperFactory(mutator);
+        // Each resolution of a selected mutator records its own counter.
+        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+            IOperator<Mutation, int> mutator) =>
+            new CountingOperatorAdvice<Mutation, int>(counter(mutator), OperatorCountMetric.Candidates)
+                .Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, mutator);
     }
 
     private static GeneticAlgorithm<int> Algorithm(IOperator<Mutation, int> mutator) => new()

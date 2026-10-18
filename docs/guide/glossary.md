@@ -328,7 +328,7 @@ See also: Executor, Operation, Operation invocation.
 
 Status: `Canonical`
 
-An operation invocation is one call to an operation method, such as one call to `Mutate`. A caller invokes mutation through an executor's `Mutate` method. Operation call is an accepted synonym; invocation is used in wrapper and callback type names.
+An operation invocation is one call to an operation method, such as one call to `Mutate`. A caller invokes mutation through an executor's `Mutate` method. Operation call is an accepted synonym; invocation is used in wrapper type names such as `IInvocation<TResult>` and `IInvocationWrapper`.
 
 An executor can receive many invocations. A duration measurement around an operation call measures that invocation rather than the lifetime of its executor.
 
@@ -501,7 +501,7 @@ Configuration is accepted shorthand for configuration node when the context is c
 
 The generic `IConfigurationNode<TExecutor>` prepares an `ExecutorFactory<TExecutor>` through `CreateExecutorFactory()`. Core run-typed roles expose the same preparation method with their run type parameters. This factory receives a construction scope and binds a typed executor to its resolution context; it is runtime machinery, not a configuration value strategy.
 
-`IOperator<TOperation, TCandidate>` instead prepares one `OperatorExecutorFactory` through `CreateExecutorFactory()`. Its checked construction views share persistent state across operations and compatible run signatures. `OperationExecutorAdapter` is an advanced preparation adapter; the callable runtime object remains an executor.
+`IOperator<TOperation, TCandidate>` instead prepares one `OperatorExecutorFactory` through `CreateExecutorFactory()`. Its `CreateExecutor` constructs executors sharing that persistent state across operations and compatible run signatures. `OperationExecutorAdapter` is an advanced construction adapter; the callable runtime object remains an executor.
 
 Generic mutation/evaluation authoring bases use protected `CreateFactory` for fixed-signature leaves and `CreateOperatorFactory` for run-generic compositions. Their child properties are `ChildOperator` and `ChildOperators`.
 
@@ -555,7 +555,7 @@ Advice wraps the executors built for the configurations a pointcut selects. It c
 
 The single `Advice` concept provides around advice. Its wrapper can run code around an operation, change its arguments or results, or decide whether to invoke it. Advice is not restricted to observation.
 
-`Advice<TConfiguration>` identifies the configuration role it can advise. A role advice base prepares a wrapper factory for the selected configuration and the run's types. Resolution compares advice by reference and keeps its prepared state once per advice instance, selected configuration and owner state. Observation, counting and duration measurement are predefined advice.
+`Advice<TConfiguration>` identifies the configuration role it can advise. Operator advice checks a selected operator before its executor is built and wraps each executor built for it: `OperatorAdvice` covers every operation, `OperatorAdvice<TOperation, TCandidate>` one operation, and role bases such as `MutatorAdvice<TCandidate>` receive typed executors. Algorithm advice and the remaining nominal role advice prepare a wrapper factory once per advice instance, selected configuration and owner state. Resolution compares advice by reference. Observation, counting and duration measurement are predefined advice.
 
 See also: Aspect, Configuration node, Join point, Pointcut.
 
@@ -563,7 +563,7 @@ See also: Aspect, Configuration node, Join point, Pointcut.
 
 Status: `Canonical`
 
-A join point is the executor built for one configuration selected by a pointcut. Its advice can be rebound around another contextual executor while retaining the prepared join-point state.
+A join point is the executor built for one configuration selected by a pointcut. Advice can wrap another contextual executor for the same configuration; algorithm advice retains its prepared join-point state when it does, while operator advice keeps its data on the advice object.
 
 A join point does not identify one invocation or one occurrence of a configuration along a caller path.
 
@@ -709,9 +709,9 @@ See also: Advice, Aspect, Configuration, Executor, Resolution scope.
 
 Status: `Canonical`
 
-An invocation wrapper takes a function that calls a child operator and returns a function adding behavior such as retry, timing or counting. The operation adapter supplies the typed child function during executor construction. The executor reuses the returned function for its named method's calls.
+An invocation wrapper adds behavior such as retry, timing or counting around each call to an executor's named method. The operation adapter builds it into one wrapping executor, which passes every call to the wrapper as an invocation holding the wrapped executor and the call's arguments.
 
-`IInvocationWrapper` represents this contract. For example, retry creates a function that repeats the child call after a retryable failure. The operation also supplies an optional candidate-work counting function; only wrappers measuring candidate work invoke it. Child-bound functions stay with the constructed executor so another binding gets its own children and advice.
+`IInvocationWrapper` represents this contract and is implemented by small structs. The wrapper calls the invocation's `Proceed()` to run the wrapped method; retry, for example, calls it again after a retryable failure. Wrappers measuring candidate work ask the invocation for `CountCandidateWork(result)`. Each wrapping executor holds its own wrapped executor, so another binding gets its own children and advice.
 
 See also: Operation invocation, Executor, Wrapper chain, Retry.
 

@@ -31,15 +31,13 @@ public sealed record RoundRobinMutator<TCandidate> : MultiOperator<Mutation, TCa
     private sealed class Factory(RoundRobinMutator<TCandidate> source, ExecutionState state)
         : OperatorExecutorFactory<Mutation, TCandidate>
     {
-        public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
-            OperationExecutorAdapter<Mutation, TCandidate, TSearchSpace, TProblem, TSearchState> adapter) =>
-            ExecutorFactory.FromFactory<IMutationExecutor<TCandidate, TSearchSpace, TProblem>>(scope =>
-            {
-                var typed = scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>();
-                ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children =
-                    [.. source.ChildOperators.Select(child => typed.Resolve(child))];
-                return new Executor<TSearchSpace, TProblem>(children, state);
-            });
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+        {
+            ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children =
+                [.. source.ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor<TSearchSpace, TProblem>(children, state);
+        }
     }
 
     private sealed class ExecutionState

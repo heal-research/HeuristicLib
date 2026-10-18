@@ -1,7 +1,4 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -17,13 +14,7 @@ public sealed record Named<TOperation, TCandidate> : WrappingOperator<TOperation
 
     public string Name { get; init; }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(ChildOperator);
-
-    private sealed class Factory(IOperator<TOperation, TCandidate> child) : OperatorExecutorFactory<TOperation, TCandidate>
-    {
-        public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TRunSearchState>(
-            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) => adapter.Forward(child);
-    }
+    protected override OperatorExecutorFactory CreateOperatorFactory() => OperatorExecutorFactory.Forward(ChildOperator);
 }
 
 public static class Named

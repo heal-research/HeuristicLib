@@ -41,14 +41,12 @@ public record CachingEvaluator<TCandidate, TKey>
 
     private sealed class Factory(CachingEvaluator<TCandidate, TKey> source, MemoryCache cache) : OperatorExecutorFactory<Evaluation, TCandidate>
     {
-        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
-            ExecutorFactory.FromFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
-            {
-                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
-                var childEvaluator = typed.Resolve(source.ChildOperator);
-                return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.KeySelector, cache);
-            });
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+        {
+            var childEvaluator = scope.Resolve(source.ChildOperator);
+            return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.KeySelector, cache);
+        }
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, MemoryCache cache)

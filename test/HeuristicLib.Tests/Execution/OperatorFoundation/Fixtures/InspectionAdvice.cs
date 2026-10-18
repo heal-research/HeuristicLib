@@ -6,44 +6,38 @@ namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation.Fix
 
 public sealed class CallCountingAdvice(CountAccumulator counter) : OperatorAdvice
 {
-    public override OperatorAdviceWrapperFactory CreateWrapperFactory(IOperator source) => new WrapperFactory(counter);
+    public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source) =>
+        operation.WrapInvocation(executor, new CallCounting(counter));
 
-    private sealed class WrapperFactory(CountAccumulator counter) : OperatorAdviceWrapperFactory, IInvocationWrapper
+    private readonly struct CallCounting(CountAccumulator counter) : IInvocationWrapper
     {
-        public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-            IOperator<TOperation, TCandidate> source,
-            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) => adapter.WrapInvocation(this);
-
-        public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
-            Func<TArguments, TResult, int>? countCandidateWork) => arguments =>
+        public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
         {
-            var result = invokeChild(arguments);
+            var result = invocation.Proceed();
             counter.IncrementBy(1);
             return result;
-        };
+        }
     }
 }
 
 public sealed class DurationAdvice(DurationAccumulator duration, TimeProvider time) : OperatorAdvice
 {
-    public override OperatorAdviceWrapperFactory CreateWrapperFactory(IOperator source) => new WrapperFactory(duration, time);
+    public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source) =>
+        operation.WrapInvocation(executor, new MeasureDuration(duration, time));
 
-    private sealed class WrapperFactory(DurationAccumulator duration, TimeProvider time) : OperatorAdviceWrapperFactory
+    private readonly struct MeasureDuration(DurationAccumulator duration, TimeProvider time) : IInvocationWrapper
     {
-        public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-            IOperator<TOperation, TCandidate> source,
-            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
-            adapter.WrapInvocation(new CallbackInvocationWrapper<DurationHooks, long>(new DurationHooks(duration, time)));
-    }
-
-    private readonly struct DurationHooks(DurationAccumulator duration, TimeProvider time) : IInvocationCallbacks<long>
-    {
-        public long OnStarting() => time.GetTimestamp();
-        public void OnSucceeded(long token) { }
-        public void OnFailed(long token, Exception failure) { }
-        public void OnFinished(long token)
+        public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
         {
-            duration.AddDuration(time.GetElapsedTime(token));
+            var start = time.GetTimestamp();
+            try
+            {
+                return invocation.Proceed();
+            }
+            finally
+            {
+                duration.AddDuration(time.GetElapsedTime(start));
+            }
         }
     }
 }

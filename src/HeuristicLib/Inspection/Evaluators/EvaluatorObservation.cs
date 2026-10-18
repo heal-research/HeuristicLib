@@ -48,33 +48,22 @@ public static class EvaluatorObservations
 /// <summary>Reports every call to each evaluator its pointcut selects.</summary>
 /// <param name="observe">Receives each observation on the thread that called the evaluator.</param>
 public sealed class EvaluatorObservationAdvice<TCandidate, TSearchSpace, TProblem>(
-    Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe) : OperatorAdvice<Evaluation, TCandidate>
+    Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe) : EvaluatorAdvice<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public override OperatorAdviceWrapperFactory<Evaluation, TCandidate> CreateWrapperFactory(IOperator<Evaluation, TCandidate> evaluator) =>
-        new Factory(evaluator, observe, this);
+    protected override void Check<TRunSearchSpace, TRunProblem>(IOperator<Evaluation, TCandidate> evaluator) =>
+        ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
 
-    private sealed class Factory(IOperator<Evaluation, TCandidate> source,
-        Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe, Advice advice)
-        : OperatorAdviceWrapperFactory<Evaluation, TCandidate>
-    {
-        public override WrapperExecutorFactory GetWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            IOperator<Evaluation, TCandidate> selected,
-            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter)
-        {
-            ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(advice);
-            return WrapperExecutorFactory.From<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(child =>
-                new ExecutorWithControls<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(
-                    new Executor<TRunSearchSpace, TRunProblem>(source, child.Executor, observe), child.ControlProvider));
-        }
-    }
+    protected override IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> Wrap<TRunSearchSpace, TRunProblem>(
+        IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> executor, IOperator<Evaluation, TCandidate> evaluator) =>
+        new Executor<TRunSearchSpace, TRunProblem>(evaluator, executor, observe);
 
     private sealed class Executor<TRunSearchSpace, TRunProblem>(
         IOperator<Evaluation, TCandidate> observedEvaluator,
         IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator,
         Action<EvaluatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
-        : WrappingEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>(childEvaluator)
+        : WrappingEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>(childEvaluator), IExecutorControlProvider
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -86,5 +75,7 @@ public sealed class EvaluatorObservationAdvice<TCandidate, TSearchSpace, TProble
                 observedEvaluator, objectiveVectors, candidates, (TSearchSpace)(object)searchSpace, (TProblem)(object)problem));
             return objectiveVectors;
         }
+
+        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(ChildEvaluator);
     }
 }

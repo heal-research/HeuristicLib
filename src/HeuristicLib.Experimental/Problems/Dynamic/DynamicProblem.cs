@@ -80,7 +80,10 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
         {
             return Evaluate(candidate, random, ReportEvaluation());
         }
-        finally { rwLock.ExitReadLock(); }
+        finally
+        {
+            rwLock.ExitReadLock();
+        }
     }
 
     /// <summary>
@@ -194,7 +197,10 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
                 }
             }
         }
-        finally { rwLock.ExitWriteLock(); }
+        finally
+        {
+            rwLock.ExitWriteLock();
+        }
     }
 
     /// <summary>

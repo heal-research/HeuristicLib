@@ -1,7 +1,5 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Inspection;
 
@@ -12,45 +10,39 @@ public sealed class CountingOperatorAdvice<TOperation, TCandidate>(CountAccumula
     public CountAccumulator Counter { get; } = counter;
     public OperatorCountMetric Metric { get; } = metric;
 
-    public override OperatorAdviceWrapperFactory<TOperation, TCandidate> CreateWrapperFactory(IOperator<TOperation, TCandidate> source) =>
-        new Factory(Counter, Metric);
-
-    private sealed class Factory(CountAccumulator counter, OperatorCountMetric metric) : OperatorAdviceWrapperFactory<TOperation, TCandidate>
+    public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
+        IOperator<TOperation, TCandidate> source)
     {
-        private readonly CountingInvocationWrapper invocationWrapper = new(counter, metric);
+        if (Metric == OperatorCountMetric.Candidates)
+            operation.RequireCandidateWork(source, "CountCandidates");
+    }
 
-        public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TRunSearchState>(
-            IOperator<TOperation, TCandidate> source,
-            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
-        {
-            if (metric == OperatorCountMetric.Candidates)
-                adapter.RequireCandidateWork(source, "CountCandidates");
-            return adapter.WrapInvocation(invocationWrapper);
-        }
+    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+        IOperator<TOperation, TCandidate> source) =>
+        Metric == OperatorCountMetric.Calls
+            ? operation.WrapInvocation(executor, new CallCounter(Counter))
+            : operation.WrapInvocation(executor, new CandidateCounter(Counter));
+}
+
+/// <summary>Counts each successful call.</summary>
+file readonly struct CallCounter(CountAccumulator counter) : IInvocationWrapper
+{
+    public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
+    {
+        var result = invocation.Proceed();
+        counter.IncrementBy(1);
+        return result;
     }
 }
 
-/// <summary>Counts successful child invocations or the candidate work those invocations performed.</summary>
-internal sealed class CountingInvocationWrapper(CountAccumulator counter, OperatorCountMetric metric) : IInvocationWrapper
+/// <summary>Counts the candidate work of each successful call.</summary>
+file readonly struct CandidateCounter(CountAccumulator counter) : IInvocationWrapper
 {
-    public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
-        Func<TArguments, TResult, int>? countCandidateWork)
+    public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
     {
-        if (metric == OperatorCountMetric.Calls)
-            return arguments =>
-            {
-                var result = invokeChild(arguments);
-                counter.IncrementBy(1);
-                return result;
-            };
-
-        var count = countCandidateWork ?? throw new InvalidOperationException("The operation supplies no candidate-work counting function.");
-        return arguments =>
-        {
-            var result = invokeChild(arguments);
-            counter.IncrementBy(count(arguments, result));
-            return result;
-        };
+        var result = invocation.Proceed();
+        counter.IncrementBy(invocation.CountCandidateWork(result));
+        return result;
     }
 }
 

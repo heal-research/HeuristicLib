@@ -291,18 +291,11 @@ public class AlgorithmRunTests
 
     private sealed class PreparingEvaluatorAdvice(Action prepare) : OperatorAdvice<Evaluation, int>
     {
-        public override OperatorAdviceWrapperFactory<Evaluation, int> CreateWrapperFactory(IOperator<Evaluation, int> evaluator)
-        {
-            prepare();
-            return new Factory();
-        }
+        public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
+            IOperator<Evaluation, int> source) => prepare();
 
-        private sealed class Factory : OperatorAdviceWrapperFactory<Evaluation, int>
-        {
-            public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TSearchState>(
-                IOperator<Evaluation, int> source,
-                OperationExecutorAdapter<Evaluation, int, TSearchSpace, TProblem, TSearchState> adapter) => adapter.Identity();
-        }
+        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+            IOperator<Evaluation, int> source) => executor;
     }
 
     private sealed class PreparationCountingAspect : Aspect

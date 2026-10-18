@@ -91,7 +91,7 @@ public class OperatorInspectionTests
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
-    public void DurationMeasuringMutator_PreservesOperationAndTimerFailures(bool failOperation, bool failTimer)
+    public void DurationMeasuringMutator_PropagatesTheOperationOrTimerFailure(bool failOperation, bool failTimer)
     {
         var operationFailure = new InvalidOperationException("operation");
         var timerFailure = new InvalidOperationException("timer");
@@ -109,10 +109,8 @@ public class OperatorInspectionTests
 
         var failure = Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
-        if (failOperation && failTimer)
-            failure.ShouldBeOfType<AggregateException>().InnerExceptions.ShouldBe([operationFailure, timerFailure]);
-        else
-            failure.ShouldBeSameAs(failOperation ? operationFailure : timerFailure);
+        // A timer failure while recording is thrown from finally and therefore replaces an operation failure.
+        failure.ShouldBeSameAs(failTimer ? timerFailure : operationFailure);
         calls.ShouldBe(1);
         timestamps.ShouldBe(2);
     }

@@ -18,27 +18,26 @@ public sealed class DurationMeasuringOperatorAdvice<TOperation, TCandidate> : Op
         TimeProvider = timeProvider;
     }
 
-    public override OperatorAdviceWrapperFactory<TOperation, TCandidate> CreateWrapperFactory(IOperator<TOperation, TCandidate> source) =>
-        new Factory(Duration, TimeProvider);
-
-    private sealed class Factory(DurationAccumulator duration, TimeProvider timeProvider) : OperatorAdviceWrapperFactory<TOperation, TCandidate>
-    {
-        private readonly CallbackInvocationWrapper<OperatorDurationCallbacks, long> invocationWrapper =
-            new(new OperatorDurationCallbacks(duration, timeProvider));
-
-        public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TRunSearchState>(
-            IOperator<TOperation, TCandidate> source,
-            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
-            adapter.WrapInvocation(invocationWrapper);
-    }
+    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+        IOperator<TOperation, TCandidate> source) =>
+        operation.WrapInvocation(executor, new DurationMeasurement(Duration, TimeProvider));
 }
 
-internal readonly struct OperatorDurationCallbacks(DurationAccumulator duration, TimeProvider timeProvider) : IInvocationCallbacks<long>
+/// <summary>Adds the elapsed time of each call, including calls that fail, to the accumulator.</summary>
+file readonly struct DurationMeasurement(DurationAccumulator duration, TimeProvider timeProvider) : IInvocationWrapper
 {
-    public long OnStarting() => timeProvider.GetTimestamp();
-    public void OnSucceeded(long invocationData) { }
-    public void OnFailed(long invocationData, Exception failure) { }
-    public void OnFinished(long invocationData) => duration.AddDuration(timeProvider.GetElapsedTime(invocationData));
+    public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
+    {
+        var start = timeProvider.GetTimestamp();
+        try
+        {
+            return invocation.Proceed();
+        }
+        finally
+        {
+            duration.AddDuration(timeProvider.GetElapsedTime(start));
+        }
+    }
 }
 
 public sealed record OperatorDurationMeasuring<TOperation, TCandidate> : IOperatorDurationMeasuring<IOperator<TOperation, TCandidate>>

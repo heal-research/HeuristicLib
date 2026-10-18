@@ -39,14 +39,14 @@ public sealed class TopologyExecutorFactoryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void CompositeTargetAdviceIsPreparedOnceAndWrapsFreshNodes(bool chooseOne)
+    public void CompositeTargetAdviceWrapsEachFreshNodeOverPreparedState(bool chooseOne)
     {
         var preparations = 0;
-        var recipes = 0;
+        var wraps = 0;
         var leaf = new CountingLeaf(() => preparations++);
         IOperator<Mutation, RealVector> source = chooseOne ? new ChooseOneMutator<RealVector>([leaf]) : new PipelineMutator<RealVector>([leaf]);
         var calls = new CountAccumulator();
-        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new PreparingCounterAdvice(calls, () => recipes++)));
+        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new WrapCountingAdvice(calls, () => wraps++)));
         var first = Resolve(root, source);
         var second = Resolve(root, source);
         first.ShouldNotBeSameAs(second);
@@ -57,7 +57,7 @@ public sealed class TopologyExecutorFactoryTests
         Next(Resolve(child, source)).ShouldBe(3);
         calls.CurrentCount.ShouldBe(3);
         reports.ShouldBe([3]);
-        recipes.ShouldBe(1);
+        wraps.ShouldBe(3);
         preparations.ShouldBe(1);
     }
 
@@ -82,15 +82,13 @@ public sealed class TopologyExecutorFactoryTests
         var leaf = new CountingLeaf(() => events.Add("prepare child"));
         var source = CreateComposite(multi, leaf, () => events.Add("prepare composite"), () => events.Add("bind composite"));
 
-        var factory = source.CreateExecutorFactory().GetExecutorFactory(
-            Mutation.CreateExecutorAdapter<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>())
-            .GetFor<IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>();
+        var factory = source.CreateExecutorFactory();
         events.ShouldBe(["prepare composite"]);
 
         var scope = ResolutionScope.Create();
-        var first = factory(scope).Executor;
+        var first = Construct(factory, scope);
         Next(first).ShouldBe(101);
-        var second = factory(scope.CreateChildScope()).Executor;
+        var second = Construct(factory, scope.CreateChildScope());
         Next(second).ShouldBe(202);
         first.ShouldNotBeSameAs(second);
         events.ShouldBe(["prepare composite", "prepare child", "bind composite", "bind composite"]);
@@ -246,6 +244,11 @@ public sealed class TopologyExecutorFactoryTests
     private static IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Resolve(ResolutionScope scope, IOperator<Mutation, RealVector> source) =>
         scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
 
+    private static IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Construct(
+        OperatorExecutorFactory factory, ResolutionScope scope) =>
+        (IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)factory.CreateExecutor<Mutation, RealVector,
+            BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>(scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>());
+
     private static double Next(IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> executor, double input = 0)
     {
         var problem = new TestFunctionProblem(new RastriginFunction(1));
@@ -289,15 +292,13 @@ public sealed class TopologyExecutorFactoryTests
 
         private sealed class Factory(CountingWrapper source, CounterState state) : OperatorExecutorFactory<Mutation, RealVector>
         {
-            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
-                OperationExecutorAdapter<Mutation, RealVector, TSearchSpace, TProblem, TSearchState> adapter) =>
-                ExecutorFactory.FromFactory<IMutationExecutor<RealVector, TSearchSpace, TProblem>>(scope =>
-                {
-                    var typed = scope.For<RealVector, TSearchSpace, TProblem, TSearchState>();
-                    var child = typed.Resolve(source.ChildOperator);
-                    source.bind();
-                    return new Executor<TSearchSpace, TProblem>(child, state);
-                });
+            protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+                ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
+            {
+                var child = scope.Resolve(source.ChildOperator);
+                source.bind();
+                return new Executor<TSearchSpace, TProblem>(child, state);
+            }
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, CounterState state)
@@ -333,15 +334,13 @@ public sealed class TopologyExecutorFactoryTests
 
         private sealed class Factory(CountingMulti source, CounterState state) : OperatorExecutorFactory<Mutation, RealVector>
         {
-            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
-                OperationExecutorAdapter<Mutation, RealVector, TSearchSpace, TProblem, TSearchState> adapter) =>
-                ExecutorFactory.FromFactory<IMutationExecutor<RealVector, TSearchSpace, TProblem>>(scope =>
-                {
-                    var typed = scope.For<RealVector, TSearchSpace, TProblem, TSearchState>();
-                    System.Collections.Immutable.ImmutableArray<IMutationExecutor<RealVector, TSearchSpace, TProblem>> children = [.. source.ChildOperators.Select(child => typed.Resolve(child))];
-                    source.bind();
-                    return new Executor<TSearchSpace, TProblem>(children, state);
-                });
+            protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+                ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
+            {
+                System.Collections.Immutable.ImmutableArray<IMutationExecutor<RealVector, TSearchSpace, TProblem>> children = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
+                source.bind();
+                return new Executor<TSearchSpace, TProblem>(children, state);
+            }
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<RealVector, TSearchSpace, TProblem>> children, CounterState state)
@@ -359,16 +358,19 @@ public sealed class TopologyExecutorFactoryTests
         }
     }
 
-    private sealed class PreparingCounterAdvice(CountAccumulator counter, Action prepare) : OperatorAdvice<Mutation, RealVector>
+    private sealed class WrapCountingAdvice(CountAccumulator counter, Action wrapped) : OperatorAdvice<Mutation, RealVector>
     {
-        public override OperatorAdviceWrapperFactory<Mutation, RealVector> CreateWrapperFactory(IOperator<Mutation, RealVector> configuration)
+        private readonly CountingOperatorAdvice<Mutation, RealVector> counting = new(counter, OperatorCountMetric.Calls);
+
+        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+            IOperator<Mutation, RealVector> source)
         {
-            prepare();
-            return new CountingOperatorAdvice<Mutation, RealVector>(counter, OperatorCountMetric.Calls).CreateWrapperFactory(configuration);
+            wrapped();
+            return counting.Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
         }
     }
 
-    private sealed class ObservingWrapperAdvice : OperatorAdvice<Mutation, RealVector>
+    private sealed class ObservingWrapperAdvice : MutatorAdvice<RealVector>
     {
         private readonly Action<double> report;
 
@@ -377,17 +379,9 @@ public sealed class TopologyExecutorFactoryTests
             this.report = report;
         }
 
-        public override OperatorAdviceWrapperFactory<Mutation, RealVector> CreateWrapperFactory(IOperator<Mutation, RealVector> configuration) => new Factory(report);
-
-        private sealed class Factory(Action<double> report) : OperatorAdviceWrapperFactory<Mutation, RealVector>
-        {
-            public override WrapperExecutorFactory GetWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
-                IOperator<Mutation, RealVector> source,
-                OperationExecutorAdapter<Mutation, RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
-                WrapperExecutorFactory.From<IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>>(child =>
-                    new ExecutorWithControls<IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>>(
-                        new Executor<TRunSearchSpace, TRunProblem>(child.Executor, report), child.ControlProvider));
-        }
+        protected override IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem> Wrap<TRunSearchSpace, TRunProblem>(
+            IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem> executor, IOperator<Mutation, RealVector> mutator) =>
+            new Executor<TRunSearchSpace, TRunProblem>(executor, report);
 
         private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, Action<double> report)
             : WrappingMutationExecutor<RealVector, TSearchSpace, TProblem>(child)

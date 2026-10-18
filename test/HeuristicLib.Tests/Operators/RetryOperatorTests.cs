@@ -117,16 +117,6 @@ public sealed class RetryOperatorTests
         outerCalls.CurrentCount.ShouldBe(1);
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void DirectRetryHelper_RejectsInvalidLimitsBeforeCallingTheDelegate(int maximumAttempts)
-    {
-        var calls = 0;
-        Should.Throw<ArgumentOutOfRangeException>(() => Retry.Execute(17, value => { calls++; return value; }, maximumAttempts));
-        calls.ShouldBe(0);
-    }
-
     [Fact]
     public void Retry_ReturnsTheChildResultWithoutReadingItsCount()
     {

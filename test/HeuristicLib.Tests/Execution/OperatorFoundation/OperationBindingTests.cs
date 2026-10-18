@@ -27,17 +27,14 @@ public sealed class OperationBindingTests
     [InlineData(8, 0)]
     public void EveryDescriptorPreservesItsDomainCallAndReportsDeclaredWork(int operation, int expectedWork)
     {
-        foreach (var lifecycle in new[] { false, true })
-        {
-            var source = new AllOperations();
-            var probe = new HookProbe();
-            var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe, lifecycle)));
-            Invoke(scope, source, operation);
-            probe.Work.ShouldBe(expectedWork);
-            probe.Successes.ShouldBe(1);
-            probe.Cleanups.ShouldBe(lifecycle ? 1 : 0);
-            source.Calls.ShouldBe(1);
-        }
+        var source = new AllOperations();
+        var probe = new HookProbe();
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe)));
+        InvokeOperation(scope, source, operation);
+        probe.Work.ShouldBe(expectedWork);
+        probe.Successes.ShouldBe(1);
+        probe.Cleanups.ShouldBe(1);
+        source.Calls.ShouldBe(1);
     }
 
     [Theory]
@@ -56,7 +53,7 @@ public sealed class OperationBindingTests
         {
             var failure = new RetryableOperationException("again");
             var source = new AllOperations { Failure = failure, FailuresBeforeSuccess = failures };
-            var error = Record.Exception(() => Invoke(ResolutionScope.Create(), source, operation, retry: true));
+            var error = Record.Exception(() => InvokeOperation(ResolutionScope.Create(), source, operation, retry: true));
             if (failures < 3)
                 error.ShouldBeNull();
             else
@@ -83,12 +80,12 @@ public sealed class OperationBindingTests
     public void EveryDescriptorSupportsAnInvocationWrapperThatInvokesItsChildTwice(int operation)
     {
         var source = new AllOperations();
-        var factory = new RepeatingInvocationWrapper();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new InvocationWrapperAdvice(factory)));
+        var advice = new TwiceAdvice();
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), advice));
 
-        Invoke(scope, source, operation);
+        InvokeOperation(scope, source, operation);
 
-        factory.Constructions.ShouldBe(1);
+        advice.Wraps.ShouldBe(1);
         source.Preparations.ShouldBe(1);
         source.Constructions.ShouldBe(1);
         source.Calls.ShouldBe(2);
@@ -100,20 +97,20 @@ public sealed class OperationBindingTests
     {
         var source = new AllOperations();
         IOperator<Mutation, RealVector> mutation = source;
-        var factory = new RepeatingInvocationWrapper();
-        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new InvocationWrapperAdvice(factory)));
+        var factory = new TwiceAdvice();
+        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), factory));
         var first = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutation);
-        factory.Constructions.ShouldBe(1);
+        factory.Wraps.ShouldBe(1);
         source.Calls.ShouldBe(0);
         var random = RandomNumberGenerator.Create(1);
         for (var i = 0; i < 3; i++)
             first.Mutate(Candidates, random, Problem.SearchSpace, Problem).ShouldBeSameAs(AllOperations.Output);
-        factory.Constructions.ShouldBe(1);
+        factory.Wraps.ShouldBe(1);
 
         var contextCalls = new CountAccumulator();
         var second = root.With(Aspect.CountCalls(mutation, contextCalls))
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutation);
-        factory.Constructions.ShouldBe(2);
+        factory.Wraps.ShouldBe(2);
         second.Mutate(Candidates, random, Problem.SearchSpace, Problem).ShouldBeSameAs(AllOperations.Output);
         contextCalls.CurrentCount.ShouldBe(2);
         first.Mutate(Candidates, random, Problem.SearchSpace, Problem).ShouldBeSameAs(AllOperations.Output);
@@ -121,7 +118,7 @@ public sealed class OperationBindingTests
         source.Preparations.ShouldBe(1);
         source.Constructions.ShouldBe(2);
         source.Calls.ShouldBe(10);
-        factory.Constructions.ShouldBe(2);
+        factory.Wraps.ShouldBe(2);
     }
 
     [Theory]
@@ -139,8 +136,8 @@ public sealed class OperationBindingTests
         var failure = new OperationCanceledException("operation canceled");
         var source = new AllOperations { Failure = failure };
         var probe = new HookProbe();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe, true)));
-        Assert.Throws<OperationCanceledException>(() => Invoke(scope, source, operation)).ShouldBeSameAs(failure);
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe)));
+        Assert.Throws<OperationCanceledException>(() => InvokeOperation(scope, source, operation)).ShouldBeSameAs(failure);
         probe.Failure.ShouldBeSameAs(failure);
         probe.Successes.ShouldBe(0);
         probe.Cleanups.ShouldBe(1);
@@ -155,13 +152,13 @@ public sealed class OperationBindingTests
         var source = new AllOperations();
         var root = ResolutionScope.Create();
         var measured = root.With(Aspect.Create(Pointcut.Reference(source), new CandidateMetric()));
-        var failure = Assert.Throws<InvalidOperationException>(() => Invoke(measured, source, operation));
+        var failure = Assert.Throws<InvalidOperationException>(() => InvokeOperation(measured, source, operation));
         failure.Message.ShouldContain(name);
         failure.Message.ShouldContain("candidate budget");
         failure.Message.ShouldContain(nameof(AllOperations));
         source.Constructions.ShouldBe(0);
         source.Preparations.ShouldBe(1);
-        Invoke(root, source, operation);
+        InvokeOperation(root, source, operation);
         source.Constructions.ShouldBe(1);
         source.Preparations.ShouldBe(1);
     }
@@ -178,7 +175,7 @@ public sealed class OperationBindingTests
         child.Log.Preparations.ShouldBe(0);
     }
 
-    private static void Invoke(ResolutionScope scope, AllOperations source, int operation, bool retry = false)
+    private static void InvokeOperation(ResolutionScope scope, AllOperations source, int operation, bool retry = false)
     {
         var typed = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
         var random = RandomNumberGenerator.Create(1);
@@ -229,85 +226,61 @@ public sealed class OperationBindingTests
         public Exception? Failure { get; set; }
     }
 
-    private readonly struct Hooks(HookProbe probe) : IInvocationCallbacks<long>
+    private readonly struct ProbeWrapper(HookProbe probe, bool countsWork) : IInvocationWrapper
     {
-        public long OnStarting() => 17;
-        public void OnSucceeded(long token) { token.ShouldBe(17); probe.Successes++; }
-        public void OnFailed(long token, Exception failure) { token.ShouldBe(17); probe.Failure = failure; }
-        public void OnFinished(long token) { token.ShouldBe(17); probe.Cleanups++; }
-    }
-
-    private sealed class ProbeAdvice(HookProbe probe, bool lifecycle) : OperatorAdvice
-    {
-        public override OperatorAdviceWrapperFactory CreateWrapperFactory(IOperator source) => new WrapperFactory(probe, lifecycle);
-
-        private sealed class WrapperFactory(HookProbe probe, bool lifecycle) : OperatorAdviceWrapperFactory, IInvocationWrapper
+        public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
         {
-            public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-                IOperator<TOperation, TCandidate> source,
-                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) =>
-                adapter.WrapInvocation(this);
-
-            public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
-                Func<TArguments, TResult, int>? countCandidateWork)
+            try
             {
-                Func<TArguments, TResult> observeWork = arguments =>
-                {
-                    var result = invokeChild(arguments);
-                    probe.Work = countCandidateWork?.Invoke(arguments, result) ?? 0;
-                    if (!lifecycle)
-                        probe.Successes++;
-                    return result;
-                };
-                return lifecycle
-                    ? new CallbackInvocationWrapper<Hooks, long>(new Hooks(probe)).Wrap(observeWork, countCandidateWork)
-                    : observeWork;
+                var result = invocation.Proceed();
+                probe.Work = countsWork ? invocation.CountCandidateWork(result) : 0;
+                probe.Successes++;
+                return result;
+            }
+            catch (Exception failure)
+            {
+                probe.Failure = failure;
+                throw;
+            }
+            finally
+            {
+                probe.Cleanups++;
             }
         }
     }
 
-    private sealed class RepeatingInvocationWrapper : IInvocationWrapper
+    private sealed class ProbeAdvice(HookProbe probe) : OperatorAdvice
     {
-        public int Constructions { get; private set; }
+        public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source) =>
+            operation.WrapInvocation(executor, new ProbeWrapper(probe, operation.SupportsCandidateWork));
+    }
 
-        public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
-            Func<TArguments, TResult, int>? countCandidateWork)
+    private readonly struct Twice : IInvocationWrapper
+    {
+        public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
         {
-            Constructions++;
-            return arguments =>
-            {
-                _ = invokeChild(arguments);
-                return invokeChild(arguments);
-            };
+            _ = invocation.Proceed();
+            return invocation.Proceed();
         }
     }
 
-    private sealed class InvocationWrapperAdvice(IInvocationWrapper invocationWrapper) : OperatorAdvice
+    private sealed class TwiceAdvice : OperatorAdvice
     {
-        public override OperatorAdviceWrapperFactory CreateWrapperFactory(IOperator source) => new WrapperFactory(invocationWrapper);
+        public int Wraps { get; private set; }
 
-        private sealed class WrapperFactory(IInvocationWrapper invocationWrapper) : OperatorAdviceWrapperFactory
+        public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source)
         {
-            public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-                IOperator<TOperation, TCandidate> source,
-                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter) => adapter.WrapInvocation(invocationWrapper);
+            Wraps++;
+            return operation.WrapInvocation(executor, new Twice());
         }
     }
 
     private sealed class CandidateMetric : OperatorAdvice
     {
-        public override OperatorAdviceWrapperFactory CreateWrapperFactory(IOperator source) => new WrapperFactory();
+        public override void Check(OperationExecutorAdapter operation, IOperator source) =>
+            operation.RequireCandidateWork(source, "candidate budget");
 
-        private sealed class WrapperFactory : OperatorAdviceWrapperFactory
-        {
-            public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-                IOperator<TOperation, TCandidate> source,
-                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
-            {
-                adapter.RequireCandidateWork(source, "candidate budget");
-                return adapter.Identity();
-            }
-        }
+        public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source) => executor;
     }
 
     private sealed class AllOperations : IOperator<Creation, RealVector>, IOperator<Crossover, RealVector>,

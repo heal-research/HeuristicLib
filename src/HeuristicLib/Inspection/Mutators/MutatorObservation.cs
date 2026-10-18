@@ -47,33 +47,22 @@ public static class MutatorObservations
 /// <summary>Reports every call to each mutator its pointcut selects.</summary>
 /// <param name="observe">Receives each observation on the thread that called the mutator.</param>
 public sealed class MutatorObservationAdvice<TCandidate, TSearchSpace, TProblem>(
-    Action<MutatorObservation<TCandidate, TSearchSpace, TProblem>> observe) : OperatorAdvice<Mutation, TCandidate>
+    Action<MutatorObservation<TCandidate, TSearchSpace, TProblem>> observe) : MutatorAdvice<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public override OperatorAdviceWrapperFactory<Mutation, TCandidate> CreateWrapperFactory(IOperator<Mutation, TCandidate> mutator) =>
-        new Factory(mutator, observe, this);
+    protected override void Check<TRunSearchSpace, TRunProblem>(IOperator<Mutation, TCandidate> mutator) =>
+        ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(this);
 
-    private sealed class Factory(IOperator<Mutation, TCandidate> source,
-        Action<MutatorObservation<TCandidate, TSearchSpace, TProblem>> observe, Advice advice)
-        : OperatorAdviceWrapperFactory<Mutation, TCandidate>
-    {
-        public override WrapperExecutorFactory GetWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            IOperator<Mutation, TCandidate> selected,
-            OperationExecutorAdapter<Mutation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter)
-        {
-            ObservationSignature.Require<TSearchSpace, TProblem, TRunSearchSpace, TRunProblem>(advice);
-            return WrapperExecutorFactory.From<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(child =>
-                new ExecutorWithControls<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(
-                    new Executor<TRunSearchSpace, TRunProblem>(source, child.Executor, observe), child.ControlProvider));
-        }
-    }
+    protected override IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem> Wrap<TRunSearchSpace, TRunProblem>(
+        IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem> executor, IOperator<Mutation, TCandidate> mutator) =>
+        new Executor<TRunSearchSpace, TRunProblem>(mutator, executor, observe);
 
     private sealed class Executor<TRunSearchSpace, TRunProblem>(
         IOperator<Mutation, TCandidate> observedMutator,
         IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childMutator,
         Action<MutatorObservation<TCandidate, TSearchSpace, TProblem>> observe)
-        : WrappingMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>(childMutator)
+        : WrappingMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>(childMutator), IExecutorControlProvider
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
@@ -85,5 +74,7 @@ public sealed class MutatorObservationAdvice<TCandidate, TSearchSpace, TProblem>
                 observedMutator, offspring, parents, (TSearchSpace)(object)searchSpace, (TProblem)(object)problem));
             return offspring;
         }
+
+        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(ChildMutator);
     }
 }

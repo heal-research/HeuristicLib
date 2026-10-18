@@ -62,14 +62,12 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
 
     private sealed class Factory(DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> source, ExecutionState state) : OperatorExecutorFactory<Evaluation, TCandidate>
     {
-        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
-            ExecutorFactory.FromFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
-            {
-                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
-                var childEvaluator = typed.Resolve(source.ChildOperator);
-                return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.SourceProblem, source.BestKnownProvider, source.ZeroBestKnownPolicy, state);
-            });
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+        {
+            var childEvaluator = scope.Resolve(source.ChildOperator);
+            return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.SourceProblem, source.BestKnownProvider, source.ZeroBestKnownPolicy, state);
+        }
     }
 
     private sealed class ExecutionState

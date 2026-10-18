@@ -19,7 +19,9 @@ public sealed class OperatorOwnershipTests
     private static void Reject(Action action, string expected)
     {
         try
-        { action(); }
+        {
+            action();
+        }
         catch (InvalidOperationException exception)
         {
             Check(exception.Message.Contains(expected, StringComparison.Ordinal), $"diagnostic includes '{expected}'");
@@ -86,10 +88,10 @@ public sealed class OperatorOwnershipTests
             var named = typed.Resolve(mutation.Named("one").Named("two"), out ILiveValue? namedControl);
             Check(ReferenceEquals(control, namedControl) && ReferenceEquals(operation, named), "forwarding preserves controls and operation");
             _ = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>().Resolve(mutation);
-            Check(log.Preparations == 1 && log.Bindings == 4,
-                "one owner has mutation, evaluation, external and actual-state construction views");
+            Check(log.Preparations == 1, "one owner serves mutation, evaluation, external and actual-state views");
+            var constructions = log.Constructions;
             _ = typed.Resolve(mutation);
-            Check(log.Bindings == 4, "successful view factory is cached");
+            Check(log.Constructions == constructions + 1, "every resolution constructs again; no view is cached");
             Check(Invoke(Typed(ResolutionScope.Create()).Resolve(mutation)) == 3 && log.Preparations == 2,
                 "an independent root starts with independent state");
         }
@@ -190,26 +192,18 @@ public sealed class OperatorOwnershipTests
     [Fact]
     public void Failures()
     {
-        var uncheckedSource = new SharedOperations(new ProbeLog());
-        Reject(() => ResolutionScope.Create().ResolveOperator<Mutation, RealVector, BoundedRealVectorSearchSpace,
-            TestFunctionProblem, ISearchState, IChecksumExecutor>(uncheckedSource,
-            Mutation.CreateExecutorAdapter<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>()), "requires");
-        Check(uncheckedSource.Log.Preparations == 0, "incorrect external resolution bridge rejects before owner preparation");
         var log = new ProbeLog { FailPreparation = true };
         var source = new SharedOperations(log);
         IOperator<Mutation, RealVector> mutation = source;
         var typed = Typed(ResolutionScope.Create());
         Reject(() => typed.Resolve(mutation), "preparation failure");
         log.FailPreparation = false;
-        log.FailBinding = true;
-        Reject(() => typed.Resolve(mutation), "binding failure");
-        Check(log.Preparations == 2 && log.Constructions == 0, "failed preparation retries; failed binding constructs no node");
-        log.FailBinding = false;
         log.FailConstruction = true;
         Reject(() => typed.Resolve(mutation), "construction failure");
+        Check(log.Preparations == 2, "failed preparation is retried");
         log.FailConstruction = false;
-        Check(Invoke(typed.Resolve(mutation)) == 3 && log.Preparations == 2 && log.Bindings == 2,
-            "successful preparation and view factory survive construction failure");
+        Check(Invoke(typed.Resolve(mutation)) == 3 && log.Preparations == 2,
+            "successful preparation survives a construction failure");
         var selected = Aspect.Create(Pointcut.Reference(mutation), new UnimplementedAdvice());
         Reject(() => Typed(typed.Scope.With(selected)).Resolve(mutation), "Supported extension bases");
         Check(log.Constructions == 2, "unsupported selected advice rejects before raw construction");

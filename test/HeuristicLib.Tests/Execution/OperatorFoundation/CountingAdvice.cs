@@ -1,9 +1,6 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation;
 
@@ -12,132 +9,84 @@ public sealed class CallCounter
     public int Value { get; set; }
 }
 
-public sealed class CallCountState
-{
-    public int Calls { get; set; }
-    public int LastCandidateWork { get; set; }
-}
-
 // Diagnostic/failure injection for fixtures. Weak records must not change advice/owner lifetime behavior.
 public sealed class AdviceLog
 {
-    public int Preparations { get; private set; }
-    public int Bindings { get; private set; }
-    public bool FailPreparation { get; set; }
-    public bool FailBinding { get; set; }
+    public int Checks { get; private set; }
+    public int Wraps { get; private set; }
+    public bool FailCheck { get; set; }
+    public bool FailWrap { get; set; }
     public Action? AfterSuccess { get; set; }
-    public List<WeakReference> PreparedSources { get; } = [];
-    public List<WeakReference> BoundSources { get; } = [];
-    public List<WeakReference> States { get; } = [];
+    public List<WeakReference> CheckedSources { get; } = [];
+    public List<WeakReference> WrappedSources { get; } = [];
 
-    public CallCountState Prepare(IOperator source)
+    public void Check(IOperator source)
     {
-        Preparations++;
-        if (FailPreparation)
-            throw new InvalidOperationException("Requested advice preparation failure.");
-        var state = new CallCountState();
-        PreparedSources.Add(new WeakReference(source));
-        States.Add(new WeakReference(state));
-        return state;
+        Checks++;
+        CheckedSources.Add(new WeakReference(source));
+        if (FailCheck)
+            throw new InvalidOperationException("Requested advice check failure.");
     }
 
-    public void Bind(IOperator source)
+    public void Wrap(IOperator source)
     {
-        Bindings++;
-        BoundSources.Add(new WeakReference(source));
-        if (FailBinding)
-            throw new InvalidOperationException("Requested advice binding failure.");
+        Wraps++;
+        WrappedSources.Add(new WeakReference(source));
+        if (FailWrap)
+            throw new InvalidOperationException("Requested advice wrapping failure.");
     }
-
-    public CallCountState StateAt(int index) => (CallCountState)States[index].Target!;
 }
 
-public sealed class CountInvocationWrapper(CallCounter total, CallCountState state, AdviceLog log) : IInvocationWrapper
+public readonly struct CountingWrapper(CallCounter total, AdviceLog log) : IInvocationWrapper
 {
-    public Func<TArguments, TResult> Wrap<TArguments, TResult>(Func<TArguments, TResult> invokeChild,
-        Func<TArguments, TResult, int>? countCandidateWork) => arguments =>
+    public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
     {
-        var result = invokeChild(arguments);
-        state.Calls++;
-        state.LastCandidateWork = countCandidateWork?.Invoke(arguments, result) ?? 0;
+        var result = invocation.Proceed();
         total.Value++;
         log.AfterSuccess?.Invoke();
         return result;
-    };
+    }
 }
 
 // One external general counter, with no enumeration of operations or execution signatures.
 public sealed class CountCalls(CallCounter total, AdviceLog log) : OperatorAdvice
 {
-    public override OperatorAdviceWrapperFactory CreateWrapperFactory(IOperator source) => new WrapperFactory(this, log.Prepare(source));
+    public override void Check(OperationExecutorAdapter operation, IOperator source) => log.Check(source);
 
-    // Deliberately retains its advice key: the weak-cache test must handle a key/value reference cycle.
-    private sealed class WrapperFactory(CountCalls advice, CallCountState state) : OperatorAdviceWrapperFactory
+    public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source)
     {
-        public override WrapperExecutorFactory GetWrapperFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-            IOperator<TOperation, TCandidate> source,
-            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
-        {
-            advice.RecordBinding(source);
-            return adapter.WrapInvocation(advice.CreateCallFactory(state));
-        }
+        log.Wrap(source);
+        return operation.WrapInvocation(executor, new CountingWrapper(total, log));
     }
-
-    private void RecordBinding(IOperator source)
-    {
-        log.Bind(source);
-    }
-    private CountInvocationWrapper CreateCallFactory(CallCountState state) => new(total, state, log);
 }
 
 public sealed class CountCalls<TOperation, TCandidate>(CallCounter total, AdviceLog log)
     : OperatorAdvice<TOperation, TCandidate> where TOperation : IOperationDescriptor<TOperation>
 {
-    public override OperatorAdviceWrapperFactory<TOperation, TCandidate> CreateWrapperFactory(IOperator<TOperation, TCandidate> source) =>
-        new WrapperFactory(this, log.Prepare(source));
+    public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
+        IOperator<TOperation, TCandidate> source) => log.Check(source);
 
-    private sealed class WrapperFactory(CountCalls<TOperation, TCandidate> advice, CallCountState state)
-        : OperatorAdviceWrapperFactory<TOperation, TCandidate>
+    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+        IOperator<TOperation, TCandidate> source)
     {
-        public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TRunSearchState>(
-            IOperator<TOperation, TCandidate> source,
-            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
-        {
-            advice.RecordBinding(source);
-            return adapter.WrapInvocation(advice.CreateCallFactory(state));
-        }
+        log.Wrap(source);
+        return operation.WrapInvocation(executor, new CountingWrapper(total, log));
     }
-
-    private void RecordBinding(IOperator source)
-    {
-        log.Bind(source);
-    }
-    private CountInvocationWrapper CreateCallFactory(CallCountState state) => new(total, state, log);
 }
 
 public sealed class WrongViewAdvice(CallCounter total, AdviceLog log) : OperatorAdvice<Mutation, RealVector>
 {
     public bool ReturnWrongView { get; set; } = true;
 
-    public override OperatorAdviceWrapperFactory<Mutation, RealVector> CreateWrapperFactory(
-        IOperator<Mutation, RealVector> source) =>
-        new WrapperFactory(this, log.Prepare(source));
-
-    private sealed class WrapperFactory(WrongViewAdvice advice, CallCountState state)
-        : OperatorAdviceWrapperFactory<Mutation, RealVector>
+    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+        IOperator<Mutation, RealVector> source)
     {
-        public override WrapperExecutorFactory GetWrapperFactory<TSearchSpace, TProblem, TRunSearchState>(
-            IOperator<Mutation, RealVector> source,
-            OperationExecutorAdapter<Mutation, RealVector, TSearchSpace, TProblem, TRunSearchState> adapter) =>
-            advice.BindView(source, adapter.WrapInvocation(new CountInvocationWrapper(advice.Total, state, advice.Log)));
+        log.Wrap(source);
+        return ReturnWrongView ? new WrongExecutor() : operation.WrapInvocation(executor, new CountingWrapper(total, log));
     }
 
-    private CallCounter Total => total;
-    private AdviceLog Log => log;
-
-    private WrapperExecutorFactory BindView(IOperator source, WrapperExecutorFactory valid)
+    private sealed class WrongExecutor : IChecksumExecutor
     {
-        log.Bind(source);
-        return ReturnWrongView ? WrapperExecutorFactory.From<IChecksumExecutor>(static child => child) : valid;
+        public int Read() => 0;
     }
 }

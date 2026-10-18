@@ -32,7 +32,7 @@ An analyzer is one of several ways to see what a run does. Pick by what you need
 
 Inspection preserves the observed computation while recording its own observations, counts, durations and clocks. Analyzers derive results from those observations. Observation callbacks must preserve the operation's inputs and outputs; they receive live references rather than isolated deep copies. General aspects may change behavior, and explicit algorithm policies such as budgets may read inspection data to decide when to stop.
 
-Mutation and evaluation inspection forwards the selected executor's control provider. Generic naming and retry wrappers preserve it too, so inspection through those wrappers keeps mutation-strength adaptation. Composites expose their own controls.
+Mutation and evaluation inspection passes on the selected executor's controls. Generic naming and retry wrappers do too, so inspection through those wrappers keeps mutation-strength adaptation. Composites expose their own controls.
 
 ## Choose a boundary and a clock
 
@@ -228,6 +228,6 @@ Reference, type and custom pointcuts of the same configuration type combine with
 
 An aspect subclass assigns several pairs directly to `Advices` in its constructor. It can include a clock's pairs before its own observations. Resolution applies each advice instance once, at its first position; sharing a clock across several traces therefore counts each call once. If the same advice is paired with two pointcuts, the first pairing wins. Use separate advice instances for separate selections.
 
-A new scope layer precedes inherited layers. Prepared advice state belongs to the state owning each selected configuration. Reusing an aspect across independent scopes does not share that prepared state; reusing its caller-owned accumulator intentionally combines measurements.
+A new scope layer precedes inherited layers. Algorithm observation prepares its iteration counter in the state owning each selected algorithm, so reusing an aspect across independent scopes does not share that counter. Operator advice keeps its data on the advice object; reusing it, or its caller-owned accumulator, intentionally combines measurements.
 
-Continue with [Writing custom advice](/guide/extending/writing-advice) for a complete role-specific wrapper, join-point state and run-attachment example.
+Continue with [Writing custom advice](/guide/extending/writing-advice) for complete role-specific and general advice examples and run attachment.

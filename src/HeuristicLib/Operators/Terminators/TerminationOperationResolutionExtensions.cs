@@ -13,8 +13,7 @@ public static class TerminationOperationResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState =>
-        scope.Scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState,
-            ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>>(source, Termination.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()).Executor;
+        (ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>)scope.Scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
 
     public static ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TRunSearchState, TControl>(
         this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Termination, TCandidate> source, out TControl? control)
@@ -23,10 +22,9 @@ public static class TerminationOperationResolutionExtensions
         where TRunSearchState : class, ISearchState
         where TControl : class
     {
-        var bound = scope.Scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState,
-            ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>>(source, Termination.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>());
-        control = bound.ControlProvider.Get<TControl>();
-        return bound.Executor;
+        var executor = (ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>)scope.Scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+        control = ExecutorControls.Find<TControl>(executor);
+        return executor;
     }
 
     [return: NotNullIfNotNull(nameof(source))]

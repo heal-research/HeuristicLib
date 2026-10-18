@@ -13,8 +13,7 @@ public static class InterceptionOperationResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState =>
-        scope.Scope.ResolveOperator<Interception, TCandidate, TSearchSpace, TProblem, TRunSearchState,
-            IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>>(source, Interception.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()).Executor;
+        (IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>)scope.Scope.ResolveOperator<Interception, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
 
     public static IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TRunSearchState, TControl>(
         this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Interception, TCandidate> source, out TControl? control)
@@ -23,10 +22,9 @@ public static class InterceptionOperationResolutionExtensions
         where TRunSearchState : class, ISearchState
         where TControl : class
     {
-        var bound = scope.Scope.ResolveOperator<Interception, TCandidate, TSearchSpace, TProblem, TRunSearchState,
-            IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>>(source, Interception.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>());
-        control = bound.ControlProvider.Get<TControl>();
-        return bound.Executor;
+        var executor = (IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>)scope.Scope.ResolveOperator<Interception, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+        control = ExecutorControls.Find<TControl>(executor);
+        return executor;
     }
 
     [return: NotNullIfNotNull(nameof(source))]

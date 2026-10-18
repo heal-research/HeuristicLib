@@ -12,8 +12,7 @@ public static class ReplacementOperationResolutionExtensions
         this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<Replacement, TCandidate> source)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        scope.Scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, ISearchState,
-            IReplacementExecutor<TCandidate, TSearchSpace, TProblem>>(source, Replacement.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>()).Executor;
+        (IReplacementExecutor<TCandidate, TSearchSpace, TProblem>)scope.Scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
 
     public static IReplacementExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem, TControl>(
         this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<Replacement, TCandidate> source, out TControl? control)
@@ -21,10 +20,9 @@ public static class ReplacementOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TControl : class
     {
-        var bound = scope.Scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, ISearchState,
-            IReplacementExecutor<TCandidate, TSearchSpace, TProblem>>(source, Replacement.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>());
-        control = bound.ControlProvider.Get<TControl>();
-        return bound.Executor;
+        var executor = (IReplacementExecutor<TCandidate, TSearchSpace, TProblem>)scope.Scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+        control = ExecutorControls.Find<TControl>(executor);
+        return executor;
     }
 
     public static IReplacementExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem, TRunSearchState>(
@@ -32,8 +30,7 @@ public static class ReplacementOperationResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState =>
-        scope.Scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, TRunSearchState,
-            IReplacementExecutor<TCandidate, TSearchSpace, TProblem>>(source, Replacement.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()).Executor;
+        (IReplacementExecutor<TCandidate, TSearchSpace, TProblem>)scope.Scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
 
     public static IReplacementExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem, TRunSearchState, TControl>(
         this ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope, IOperator<Replacement, TCandidate> source, out TControl? control)
@@ -42,10 +39,9 @@ public static class ReplacementOperationResolutionExtensions
         where TRunSearchState : class, ISearchState
         where TControl : class
     {
-        var bound = scope.Scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, TRunSearchState,
-            IReplacementExecutor<TCandidate, TSearchSpace, TProblem>>(source, Replacement.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>());
-        control = bound.ControlProvider.Get<TControl>();
-        return bound.Executor;
+        var executor = (IReplacementExecutor<TCandidate, TSearchSpace, TProblem>)scope.Scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+        control = ExecutorControls.Find<TControl>(executor);
+        return executor;
     }
 
     [return: NotNullIfNotNull(nameof(source))]

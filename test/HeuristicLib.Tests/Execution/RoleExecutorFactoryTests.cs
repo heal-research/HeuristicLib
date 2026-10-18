@@ -73,21 +73,17 @@ public sealed class RoleExecutorFactoryTests
     {
         var preparations = 0;
         var source = CreateMutator(arity, () => preparations++);
-        var factory = source.CreateExecutorFactory().GetExecutorFactory(
-            Mutation.CreateExecutorAdapter<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>())
-            .GetFor<IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>();
+        var factory = source.CreateExecutorFactory();
         preparations.ShouldBe(1);
 
-        var first = factory(ResolutionScope.Create()).Executor;
-        var second = factory(ResolutionScope.Create()).Executor;
+        var first = Construct(factory, ResolutionScope.Create());
+        var second = Construct(factory, ResolutionScope.Create());
         Next(first).ShouldBe(1);
         Next(second).ShouldBe(2);
         preparations.ShouldBe(1);
 
-        var independentFactory = source.CreateExecutorFactory().GetExecutorFactory(
-            Mutation.CreateExecutorAdapter<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>())
-            .GetFor<IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>();
-        Next(independentFactory(ResolutionScope.Create()).Executor).ShouldBe(1);
+        var independentFactory = source.CreateExecutorFactory();
+        Next(Construct(independentFactory, ResolutionScope.Create())).ShouldBe(1);
         preparations.ShouldBe(2);
     }
 
@@ -227,6 +223,11 @@ public sealed class RoleExecutorFactoryTests
     private static IAlgorithm<RealVector> CreateAlgorithm(bool bound, Action prepare) =>
         bound ? new BoundAlgorithm(prepare) : new AgnosticAlgorithm(prepare);
 
+    private static IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Construct(
+        OperatorExecutorFactory factory, ResolutionScope scope) =>
+        (IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)factory.CreateExecutor<Mutation, RealVector,
+            BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>(scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>());
+
     private static double Next(IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> executor)
     {
         var problem = new TestFunctionProblem(new RastriginFunction(1));
@@ -276,19 +277,11 @@ public sealed class RoleExecutorFactoryTests
             [RealVector.Repeat(++state.Calls, 1)];
     }
 
-    private sealed class ObservingMutatorAdvice(Action<double> report) : OperatorAdvice<Mutation, RealVector>
+    private sealed class ObservingMutatorAdvice(Action<double> report) : MutatorAdvice<RealVector>
     {
-        public override OperatorAdviceWrapperFactory<Mutation, RealVector> CreateWrapperFactory(IOperator<Mutation, RealVector> configuration) => new Factory(report);
-
-        private sealed class Factory(Action<double> report) : OperatorAdviceWrapperFactory<Mutation, RealVector>
-        {
-            public override WrapperExecutorFactory GetWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
-                IOperator<Mutation, RealVector> source,
-                OperationExecutorAdapter<Mutation, RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
-                WrapperExecutorFactory.From<IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>>(child =>
-                    new ExecutorWithControls<IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>>(
-                        new Executor<TRunSearchSpace, TRunProblem>(child.Executor, report), child.ControlProvider));
-        }
+        protected override IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem> Wrap<TRunSearchSpace, TRunProblem>(
+            IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem> executor, IOperator<Mutation, RealVector> mutator) =>
+            new Executor<TRunSearchSpace, TRunProblem>(executor, report);
 
         private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, Action<double> report)
             : IMutationExecutor<RealVector, TSearchSpace, TProblem>

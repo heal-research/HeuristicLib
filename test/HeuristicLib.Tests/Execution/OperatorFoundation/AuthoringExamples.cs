@@ -61,10 +61,8 @@ public sealed record ContextualMutation(IOperator<Mutation, RealVector> ChildOpe
 public sealed class ProbeLog
 {
     public int Preparations { get; set; }
-    public int Bindings { get; set; }
     public int Constructions { get; set; }
     public bool FailPreparation { get; set; }
-    public bool FailBinding { get; set; }
     public bool FailConstruction { get; set; }
 }
 
@@ -82,25 +80,13 @@ public sealed record SharedOperations(ProbeLog Log) : IOperator<Mutation, RealVe
         if (Log.FailPreparation)
             throw new InvalidOperationException("Requested preparation failure.");
         var executor = new Executor();
-        return new Factory(Log, ExecutorFactory.FromFactory<Executor>(_ =>
+        return OperatorExecutorFactory.FromFactory<Executor>(_ =>
         {
             Log.Constructions++;
             if (Log.FailConstruction)
                 throw new InvalidOperationException("Requested construction failure.");
             return executor;
-        }));
-    }
-
-    private sealed class Factory(ProbeLog log, ExecutorFactory factory) : OperatorExecutorFactory
-    {
-        public override ExecutorFactory GetExecutorFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-            OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
-        {
-            log.Bindings++;
-            if (log.FailBinding)
-                throw new InvalidOperationException("Requested binding failure.");
-            return factory;
-        }
+        });
     }
 
     private sealed class Executor : ILiveValue, IChecksumExecutor,

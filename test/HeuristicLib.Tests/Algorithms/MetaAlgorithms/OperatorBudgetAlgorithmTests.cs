@@ -813,10 +813,18 @@ public class OperatorBudgetAlgorithmTests
     {
         public Advice<IOperator<Evaluation, TCandidate>> CreateAdvice(CountAccumulator counter) => new SelectedAdvice(source => Create(source, counter));
 
+        // Creates the recorded advice for the first selected operator and delegates to it.
         private sealed class SelectedAdvice(Func<IOperator<Evaluation, TCandidate>, OperatorAdvice<Evaluation, TCandidate>> create) : OperatorAdvice<Evaluation, TCandidate>
         {
-            public override OperatorAdviceWrapperFactory<Evaluation, TCandidate> CreateWrapperFactory(IOperator<Evaluation, TCandidate> configuration) =>
-                create(configuration).CreateWrapperFactory(configuration);
+            private OperatorAdvice<Evaluation, TCandidate>? selected;
+
+            public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
+                IOperator<Evaluation, TCandidate> source) => Select(source).Check<TSearchSpace, TProblem, TSearchState>(operation, source);
+
+            public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+                IOperator<Evaluation, TCandidate> source) => Select(source).Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
+
+            private OperatorAdvice<Evaluation, TCandidate> Select(IOperator<Evaluation, TCandidate> source) => selected ??= create(source);
         }
     }
 
@@ -824,10 +832,18 @@ public class OperatorBudgetAlgorithmTests
     {
         public Advice<IOperator<Evaluation, TCandidate>> CreateAdvice(DurationAccumulator duration, TimeProvider timeProvider) => new SelectedAdvice(source => Create(source, duration, timeProvider));
 
+        // Creates the recorded advice for the first selected operator and delegates to it.
         private sealed class SelectedAdvice(Func<IOperator<Evaluation, TCandidate>, OperatorAdvice<Evaluation, TCandidate>> create) : OperatorAdvice<Evaluation, TCandidate>
         {
-            public override OperatorAdviceWrapperFactory<Evaluation, TCandidate> CreateWrapperFactory(IOperator<Evaluation, TCandidate> configuration) =>
-                create(configuration).CreateWrapperFactory(configuration);
+            private OperatorAdvice<Evaluation, TCandidate>? selected;
+
+            public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
+                IOperator<Evaluation, TCandidate> source) => Select(source).Check<TSearchSpace, TProblem, TSearchState>(operation, source);
+
+            public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+                IOperator<Evaluation, TCandidate> source) => Select(source).Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
+
+            private OperatorAdvice<Evaluation, TCandidate> Select(IOperator<Evaluation, TCandidate> source) => selected ??= create(source);
         }
     }
 

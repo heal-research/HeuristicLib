@@ -19,10 +19,10 @@ public interface IOperator<TOperation, TCandidate> : IOperator
 /// <summary>Identifies an operation, such as mutation or evaluation, and supplies the adapter for its executor interface.</summary>
 public interface IOperationDescriptor<TSelf> where TSelf : IOperationDescriptor<TSelf>
 {
-    static abstract OperationExecutorAdapter<TSelf, TCandidate, TSearchSpace, TProblem, TRunSearchState>
-        CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TRunSearchState>()
+    /// <summary>Creates the adapter that wraps this operation's executors for the run types.</summary>
+    /// <remarks>Adapters keep no state; resolution creates one per operation and run types and reuses it.</remarks>
+    static abstract OperationExecutorAdapter CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TSearchState>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TRunSearchState : class, ISearchState;
+        where TSearchState : class, ISearchState;
 }
-

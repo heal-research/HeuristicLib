@@ -39,14 +39,12 @@ public sealed record LimitEvaluator<TCandidate>
 
     private sealed class Factory(LimitEvaluator<TCandidate> source, CountAccumulator counter) : OperatorExecutorFactory<Evaluation, TCandidate>
     {
-        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            OperationExecutorAdapter<Evaluation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
-            ExecutorFactory.FromFactory<IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
-            {
-                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
-                var childEvaluator = typed.Resolve(source.ChildOperator);
-                return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.MaxEvaluations, source.FallbackObjectiveVector, source.EnforceLimitWithinBatch, counter);
-            });
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+        {
+            var childEvaluator = scope.Resolve(source.ChildOperator);
+            return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.MaxEvaluations, source.FallbackObjectiveVector, source.EnforceLimitWithinBatch, counter);
+        }
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch, CountAccumulator counter)

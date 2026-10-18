@@ -179,14 +179,12 @@ public class MutatorConfigurationEqualityTests
 
         private sealed class Factory(FirstOfMutator source) : OperatorExecutorFactory<Mutation, int>
         {
-            public override ExecutorFactory GetExecutorFactory<TSearchSpace, TProblem, TSearchState>(
-                OperationExecutorAdapter<Mutation, int, TSearchSpace, TProblem, TSearchState> adapter) =>
-                ExecutorFactory.FromFactory<IMutationExecutor<int, TSearchSpace, TProblem>>(scope =>
-                {
-                    var typed = scope.For<int, TSearchSpace, TProblem, TSearchState>();
-                    System.Collections.Immutable.ImmutableArray<IMutationExecutor<int, TSearchSpace, TProblem>> children = [.. source.ChildOperators.Select(child => typed.Resolve(child))];
-                    return new Executor<TSearchSpace, TProblem>(children);
-                });
+            protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+                ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
+            {
+                System.Collections.Immutable.ImmutableArray<IMutationExecutor<int, TSearchSpace, TProblem>> children = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
+                return new Executor<TSearchSpace, TProblem>(children);
+            }
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<int, TSearchSpace, TProblem>> childMutators)

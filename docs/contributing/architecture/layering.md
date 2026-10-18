@@ -19,7 +19,7 @@ An encoding is a vertical slice through one representation: candidate, search sp
 
 Configuration factories and role advice bases bridge authoring contracts to resolution. A prepared `ExecutorFactory<TExecutor>` receives a `ResolutionScope` to resolve children; a `WrapperExecutorFactory<TExecutor>` accepts the already resolved executor. These signatures do not give configurations ownership of resolution storage or hosting lifecycle.
 
-Generic operator contracts, descriptors and operator advice bases live in `Operators`. `OperatorExecutorFactory`, checked carriers, `OperationExecutorAdapter`, executors with control providers live in `Execution` as composition machinery. The resolver owns their caches; inspection continues to own concrete metrics and observations. Neither preparation nor hosting depends on Analysis.
+Generic operator contracts, descriptors and operator advice bases live in `Operators`. `OperatorExecutorFactory`, `OperationExecutorAdapter`, the invocation wrapper contracts and `ExecutorControls` live in `Execution` as composition machinery. The resolver owns prepared operators; inspection continues to own concrete metrics and observations. Neither preparation nor hosting depends on Analysis.
 
 Experimental can contain content, hosting or analysis at the corresponding layers and depend on the main library. The main library must not depend on Experimental. PythonInterop is an integration client above both libraries.
 

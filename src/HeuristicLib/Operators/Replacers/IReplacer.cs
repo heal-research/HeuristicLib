@@ -48,8 +48,7 @@ public static class ReplacerResolutionExtensions
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             replacer is IOperator<Replacement, TCandidate> prepared
-                ? scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, ISearchState, IReplacementExecutor<TCandidate, TSearchSpace, TProblem>>(
-                    prepared, Replacement.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>()).Executor
+                ? (IReplacementExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, ISearchState>(prepared)
                 : scope.Resolve(replacer, static source => source.CreateExecutorFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(replacer))]

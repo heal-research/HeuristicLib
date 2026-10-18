@@ -272,13 +272,27 @@ public class ExecutorFactoryAnalyzerTests
     {
         var body = hook == "CreateOperatorFactory"
             ? "Child.CreateExecutorFactory()"
-            : "scope => Child.CreateExecutorFactory().GetExecutorFactory(Mutation.CreateExecutorAdapter<int, SS, P, HEAL.HeuristicLib.Algorithms.ISearchState>()).GetFor<IMutationExecutor<int, SS, P>>()(scope).Executor";
+            : "scope => (IMutationExecutor<int, SS, P>)Child.CreateExecutorFactory().CreateExecutor<Mutation, int, SS, P, HEAL.HeuristicLib.Algorithms.ISearchState>(scope.For<int, SS, P, HEAL.HeuristicLib.Algorithms.ISearchState>())";
         var baseType = hook == "CreateOperatorFactory" ? "Operator<Mutation, int>" : "HEAL.HeuristicLib.Operators.Mutators.Mutator<int>";
         var diagnostics = await AnalyzeAsync(Preamble + $$"""
             file sealed record GenericOperator : {{baseType}}
             {
                 public required IOperator<Mutation, int> Child { get; init; }
                 protected override {{resultType}} {{hook}}() => {{body}};
+            }
+            """);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
+    }
+
+    [Fact]
+    public async Task Reports_WhenAnOperatorFactoryConstructsItsChildWithoutResolvingIt()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed class CompositionFactory(IOperator<Mutation, int> child) : OperatorExecutorFactory<Mutation, int>
+            {
+                protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+                    ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
+                    child.CreateExecutorFactory().CreateExecutor<Mutation, int, TSearchSpace, TProblem, TSearchState>(scope);
             }
             """);
         diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);

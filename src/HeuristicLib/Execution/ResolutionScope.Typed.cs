@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -48,4 +49,22 @@ public static class ResolutionScopeExtensions
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
             where TSearchState : class, ISearchState => new(scope);
     }
+
+    /// <summary>Resolves an operator for its operation and this scope's types, returning its executor untyped.</summary>
+    /// <remarks>An operation's resolution extensions cast the result to its executor interface.</remarks>
+    public static IExecutor ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem>(
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<TOperation, TCandidate> source)
+        where TOperation : IOperationDescriptor<TOperation>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        scope.Scope.ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+
+    /// <inheritdoc cref="ResolveOperator{TOperation, TCandidate, TSearchSpace, TProblem}"/>
+    public static IExecutor ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope, IOperator<TOperation, TCandidate> source)
+        where TOperation : IOperationDescriptor<TOperation>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState =>
+        scope.Scope.ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(source);
 }

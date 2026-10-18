@@ -44,8 +44,7 @@ public static class CreatorResolutionExtensions
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
             creator is IOperator<Creation, TCandidate> prepared
-                ? scope.ResolveOperator<Creation, TCandidate, TSearchSpace, TProblem, ISearchState, ICreationExecutor<TCandidate, TSearchSpace, TProblem>>(
-                    prepared, Creation.CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, ISearchState>()).Executor
+                ? (ICreationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Creation, TCandidate, TSearchSpace, TProblem, ISearchState>(prepared)
                 : scope.Resolve(creator, static source => source.CreateExecutorFactory<TSearchSpace, TProblem>(), CreateWrapperFactory<TCandidate, TSearchSpace, TProblem>);
 
         [return: NotNullIfNotNull(nameof(creator))]

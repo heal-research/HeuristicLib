@@ -17,14 +17,12 @@ public sealed record PipelineMutator<TCandidate> : MultiOperator<Mutation, TCand
 
     private sealed class Factory(PipelineMutator<TCandidate> source) : OperatorExecutorFactory<Mutation, TCandidate>
     {
-        public override ExecutorFactory GetExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            OperationExecutorAdapter<Mutation, TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> adapter) =>
-            ExecutorFactory.FromFactory<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>>(scope =>
-            {
-                var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>();
-                ImmutableArray<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> childMutators = [.. source.ChildOperators.Select(child => typed.Resolve(child))];
-                return new Executor<TRunSearchSpace, TRunProblem>(childMutators);
-            });
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+        {
+            ImmutableArray<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> childMutators = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor<TRunSearchSpace, TRunProblem>(childMutators);
+        }
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> childMutators)

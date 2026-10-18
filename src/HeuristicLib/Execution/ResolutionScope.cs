@@ -134,7 +134,10 @@ public sealed partial class ResolutionScope
                     advised = owner.GetOrAddWrapperFactory(advice, configuration, createWrapperFactory)(advised);
             return (raw, advised);
         }
-        finally { state.Constructing.Remove(configuration); }
+        finally
+        {
+            state.Constructing.Remove(configuration);
+        }
     }
 
     internal sealed partial class State(State? parent)
@@ -175,10 +178,10 @@ public sealed partial class ResolutionScope
         private sealed class ConfigurationResolutionEntry
         {
             internal ConfigurationResolutionEntry(Delegate factory) { LegacyFactory = factory; }
-            internal ConfigurationResolutionEntry(OperatorResolutionEntry prepared) { Operator = prepared; }
+            internal ConfigurationResolutionEntry(OperatorExecutorFactory prepared) { Operator = prepared; }
 
             internal Delegate? LegacyFactory { get; }
-            internal OperatorResolutionEntry? Operator { get; }
+            internal OperatorExecutorFactory? Operator { get; }
         }
 
         /// <remarks>Called once per advice, join point and owner state; the result wraps each construction.</remarks>

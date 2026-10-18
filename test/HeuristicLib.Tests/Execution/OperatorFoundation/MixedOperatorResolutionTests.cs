@@ -37,7 +37,7 @@ public sealed class MixedOperatorResolutionTests
         Invoke(operation).ShouldBe(13);
         source.Preparations.ShouldBe(1);
         source.LegacyPreparations.ShouldBe(0);
-        log.Preparations.ShouldBe(1);
+        log.Wraps.ShouldBe(3);
         counter.Value.ShouldBe(3);
     }
 
@@ -138,16 +138,10 @@ public sealed class MixedOperatorResolutionTests
     {
         public OperatorExecutorFactory CreateExecutorFactory() => new Factory(Child);
 
-        private sealed class Factory(ICrossover<RealVector> child) : OperatorExecutorFactory
+        private sealed class Factory(ICrossover<RealVector> child) : OperatorExecutorFactory<Crossover, RealVector>
         {
-            public override ExecutorFactory GetExecutorFactory<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(
-                OperationExecutorAdapter<TOperation, TCandidate, TSearchSpace, TProblem, TRunSearchState> adapter)
-            {
-                if (child is not ICrossover<TCandidate> typed || typeof(TOperation) != typeof(Crossover))
-                    throw new InvalidOperationException("Wrong operation view.");
-                return ExecutorFactory.FromFactory<ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>>(
-                    scope => scope.For<TCandidate, TSearchSpace, TProblem>().Resolve(typed));
-            }
+            protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+                ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => scope.Resolve(child);
         }
     }
 }
