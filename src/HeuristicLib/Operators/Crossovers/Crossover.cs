@@ -29,7 +29,13 @@ public sealed class Crossover : IOperationDescriptor<Crossover>
         private readonly struct Invocation(ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> executor,
             IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<TCandidate>>
         {
+            private readonly ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
+            private readonly IRandomNumberGenerator random = random;
+
+            public IRandomNumberGenerator Random => random;
             public IReadOnlyList<TCandidate> Proceed() => executor.Cross(parents, random, searchSpace, problem);
+            public IReadOnlyList<TCandidate> ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
+                ((ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Cross(parents, random ?? this.random, searchSpace, problem);
             public int CountCandidateWork(IReadOnlyList<TCandidate> result) => result.Count;
         }
 
@@ -40,7 +46,7 @@ public sealed class Crossover : IOperationDescriptor<Crossover>
             public IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 wrapper.Invoke<Invocation, IReadOnlyList<TCandidate>>(new Invocation(executor, parents, random, searchSpace, problem));
 
-            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
+            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
         }
     }
 }

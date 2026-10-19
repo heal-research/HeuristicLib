@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
@@ -16,7 +17,7 @@ public sealed record TargetTerminator<TCandidate>
         Target = target;
     }
 
-    public override bool IsTerminalState(PopulationState<TCandidate> state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+    public override bool IsTerminalState(PopulationState<TCandidate> state, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         TargetTerminator.IsTerminalState(state, problem, Target);
 }
 

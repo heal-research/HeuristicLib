@@ -94,7 +94,9 @@ public abstract class IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProb
 
     protected virtual bool HasCompleted(int yieldedStateCount, TSearchState? previousState, TProblem problem) => false;
 
-    protected virtual bool IsTerminalState(TSearchState state, int yieldedStateCount, TSearchState? previousState, TProblem problem) => false;
+    /// <summary>Decides whether the run stops after yielding the state just produced.</summary>
+    /// <remarks><paramref name="random"/> is the iteration's generator, which the step and the interceptor also received.</remarks>
+    protected virtual bool IsTerminalState(TSearchState state, int yieldedStateCount, TSearchState? previousState, TProblem problem, IRandomNumberGenerator random) => false;
 
     public sealed override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
@@ -119,7 +121,7 @@ public abstract class IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProb
                 newState = interceptor.Transform(newState, previousState, iterationRandom, problem.SearchSpace, problem);
             }
 
-            var isTerminalState = IsTerminalState(newState, yieldedStateCount + 1, previousState, problem);
+            var isTerminalState = IsTerminalState(newState, yieldedStateCount + 1, previousState, problem, iterationRandom);
             yield return newState;
 
             if (isTerminalState)

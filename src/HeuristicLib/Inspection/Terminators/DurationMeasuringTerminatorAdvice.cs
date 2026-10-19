@@ -3,6 +3,7 @@ using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Inspection;
@@ -32,12 +33,12 @@ public sealed class DurationMeasuringTerminatorAdvice<TCandidate> : TerminatorAd
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem)
+        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var startTimestamp = timeProvider.GetTimestamp();
             try
             {
-                return ChildTerminator.IsTerminalState(state, searchSpace, problem);
+                return ChildTerminator.IsTerminalState(state, random, searchSpace, problem);
             }
             finally
             {

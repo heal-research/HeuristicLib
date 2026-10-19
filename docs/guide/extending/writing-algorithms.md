@@ -72,7 +72,7 @@ That choice is what keeps the operator slots at one type argument each. `ICreato
 
 The run's search space and problem arrive as method type arguments on `CreateIterationFactory`. The nested executor class is generic in them and carries the matching constraints. Configurations retain candidate-only operator roles.
 
-The public `CreateExecutorFactory` forwards to this protected preparation hook without a construction scope. The hook returns an ordinary `ExecutorFactory` whose result must derive from `IterativeAlgorithmExecutor`. Inside that factory, resolve the optional `Interceptor` alongside the other configured children and pass it to the executor constructor. The executor base applies it in the iteration loop, before checking terminal state and yielding; its result becomes the next iteration's previous state.
+The public `CreateExecutorFactory` forwards to this protected preparation hook without a construction scope. The hook returns an ordinary `ExecutorFactory` whose result must derive from `IterativeAlgorithmExecutor`. Inside that factory, resolve the optional `Interceptor` alongside the other configured children and pass it to the executor constructor. The executor base applies it in the iteration loop, before checking terminal state and yielding; its result becomes the next iteration's previous state. `ExecuteStep`, the interceptor and the protected `IsTerminalState` hook receive the same per-iteration random number generator, so an algorithm that owns a terminator passes that generator on.
 
 ### When to name the search space and problem instead
 

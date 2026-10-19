@@ -21,8 +21,6 @@ public sealed class Interception : IOperationDescriptor<Interception>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public override bool SupportsCandidateWork => false;
-
         protected override IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateWrappedExecutor<TWrapper>(
             IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, TWrapper wrapper) =>
             new WrappedExecutor<TWrapper>(executor, wrapper);
@@ -30,8 +28,13 @@ public sealed class Interception : IOperationDescriptor<Interception>
         private readonly struct Invocation(IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
             TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<TSearchState>
         {
+            private readonly IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor = executor;
+            private readonly IRandomNumberGenerator random = random;
+
+            public IRandomNumberGenerator Random => random;
             public TSearchState Proceed() => executor.Transform(currentState, previousState, random, searchSpace, problem);
-            public int CountCandidateWork(TSearchState result) => throw new NotSupportedException();
+            public TSearchState ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
+                ((IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>?)executor ?? this.executor).Transform(currentState, previousState, random ?? this.random, searchSpace, problem);
         }
 
         private sealed class WrappedExecutor<TWrapper>(IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, TWrapper wrapper)
@@ -41,7 +44,7 @@ public sealed class Interception : IOperationDescriptor<Interception>
             public TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 wrapper.Invoke<Invocation, TSearchState>(new Invocation(executor, currentState, previousState, random, searchSpace, problem));
 
-            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
+            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
         }
     }
 }

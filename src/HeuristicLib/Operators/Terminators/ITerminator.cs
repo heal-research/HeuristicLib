@@ -3,6 +3,7 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
@@ -25,7 +26,7 @@ public interface ITerminationExecutor<TCandidate, in TSearchSpace, in TProblem, 
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem);
+    bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
 public abstract class TerminatorAdvice<TCandidate> : Advice<ITerminator<TCandidate>>

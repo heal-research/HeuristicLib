@@ -64,6 +64,12 @@ Use stable keys such as a trial index, iteration number, operator index or candi
 
 Do not derive fork keys from task completion order, thread IDs or timestamps. Those values change when scheduling changes.
 
+## Streams that algorithms pass to operators
+
+Iterative algorithms fork the run's generator once per iteration, keyed by the iteration index, and pass that fork to the step's operators, the interceptor and their own terminator. A terminator added with `TerminatedBy` receives a separate stream, forked from the run's generator under a dedicated key and then once per yielded state. In both placements a terminator that draws leaves the algorithm's random sequence unchanged.
+
+The two placements give the same terminator different random numbers. A terminator that draws can therefore stop the same seeded run at a different state when it moves between an algorithm's `Terminator` setting and `TerminatedBy`. The built-in terminators draw nothing and behave identically in both placements.
+
 ## Parallel work
 
 Give each independent unit of work its own child generator. Results then stay stable when the degree of parallelism changes:

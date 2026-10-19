@@ -29,7 +29,13 @@ public sealed class Creation : IOperationDescriptor<Creation>
         private readonly struct Invocation(ICreationExecutor<TCandidate, TSearchSpace, TProblem> executor,
             int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<TCandidate>>
         {
+            private readonly ICreationExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
+            private readonly IRandomNumberGenerator random = random;
+
+            public IRandomNumberGenerator Random => random;
             public IReadOnlyList<TCandidate> Proceed() => executor.Create(count, random, searchSpace, problem);
+            public IReadOnlyList<TCandidate> ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
+                ((ICreationExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Create(count, random ?? this.random, searchSpace, problem);
             public int CountCandidateWork(IReadOnlyList<TCandidate> result) => result.Count;
         }
 
@@ -40,7 +46,7 @@ public sealed class Creation : IOperationDescriptor<Creation>
             public IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 wrapper.Invoke<Invocation, IReadOnlyList<TCandidate>>(new Invocation(executor, count, random, searchSpace, problem));
 
-            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
+            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
         }
     }
 }

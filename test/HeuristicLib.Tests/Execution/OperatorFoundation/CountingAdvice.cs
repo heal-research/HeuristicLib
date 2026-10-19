@@ -1,6 +1,8 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation;
 
@@ -85,8 +87,8 @@ public sealed class WrongViewAdvice(CallCounter total, AdviceLog log) : Operator
         return ReturnWrongView ? new WrongExecutor() : operation.WrapInvocation(executor, new CountingWrapper(total, log));
     }
 
-    private sealed class WrongExecutor : IChecksumExecutor
+    private sealed class WrongExecutor : IChecksumExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
     {
-        public int Read() => 0;
+        public int Read(IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) => 0;
     }
 }

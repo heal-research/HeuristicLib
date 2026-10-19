@@ -93,7 +93,8 @@ public sealed class RetryOperatorTests
         var source = new ScalarSource(() => ++attempts < 3 ? throw new RetryableOperationException("again") : 17);
         var executor = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>()
             .Resolve(source.Retry(3).Named("scalar"));
-        executor.Read().ShouldBe(17);
+        var problem = new TestFunctionProblem(new SphereFunction(1));
+        executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(17);
         attempts.ShouldBe(3);
     }
 
@@ -193,10 +194,10 @@ public sealed class RetryOperatorTests
 
     private sealed record ScalarSource(Func<int> Read) : IOperator<Checksum, RealVector>
     {
-        public OperatorExecutorFactory CreateExecutorFactory() => OperatorExecutorFactory.FromFactory<IChecksumExecutor>(_ => new Executor(Read));
-        private sealed class Executor(Func<int> read) : IChecksumExecutor
+        public OperatorExecutorFactory CreateExecutorFactory() => OperatorExecutorFactory.FromFactory<Executor>(_ => new Executor(Read));
+        private sealed class Executor(Func<int> read) : IChecksumExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
         {
-            public int Read() => read();
+            public int Read(IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) => read();
         }
     }
 

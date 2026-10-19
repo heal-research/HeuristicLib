@@ -733,8 +733,8 @@ public class OperatorInspectionTests
         var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(terminator);
         var problem = CreateProblem();
 
-        execution.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
-        execution.IsTerminalState(new CounterState { Value = 2 }, problem.SearchSpace, problem);
+        execution.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
+        execution.IsTerminalState(new CounterState { Value = 2 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
     }
@@ -751,8 +751,8 @@ public class OperatorInspectionTests
         var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(terminator);
         var problem = CreateProblem();
 
-        execution.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
-        execution.IsTerminalState(new CounterState { Value = 2 }, problem.SearchSpace, problem);
+        execution.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
+        execution.IsTerminalState(new CounterState { Value = 2 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -765,7 +765,7 @@ public class OperatorInspectionTests
         var execution = ResolutionScope.Create(Aspect.CountCalls(source, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source);
         var problem = CreateProblem();
 
-        Should.Throw<InvalidOperationException>(() => execution.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => execution.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem));
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -778,7 +778,7 @@ public class OperatorInspectionTests
         var execution = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)))).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source);
         var problem = CreateProblem();
 
-        Should.Throw<InvalidOperationException>(() => execution.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => execution.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem));
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -984,6 +984,7 @@ public class OperatorInspectionTests
     {
         public override bool IsTerminalState(
             CounterState state,
+            IRandomNumberGenerator random,
             DummySearchSpace<int> searchSpace,
             FuncProblem<int, DummySearchSpace<int>> problem)
         {
@@ -994,7 +995,7 @@ public class OperatorInspectionTests
     private sealed record ThrowingTerminator
         : StatelessTerminator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>
     {
-        public override bool IsTerminalState(CounterState state, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
+        public override bool IsTerminalState(CounterState state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
             throw new InvalidOperationException();
     }
 

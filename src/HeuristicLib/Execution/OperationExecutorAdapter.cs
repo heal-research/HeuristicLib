@@ -18,8 +18,11 @@ public abstract class OperationExecutorAdapter
     public abstract Type ExecutorType { get; }
 
     /// <summary>Whether the operation's invocations report candidate work.</summary>
-    /// <remarks>Advice measuring candidate work checks this before the executor is built.</remarks>
-    public abstract bool SupportsCandidateWork { get; }
+    /// <remarks>
+    /// Advice measuring candidate work checks this before the executor is built. The default is false; an operation with
+    /// candidate work overrides it and implements <see cref="IInvocation{TResult}.CountCandidateWork"/>.
+    /// </remarks>
+    public virtual bool SupportsCandidateWork => false;
 
     /// <summary>Rejects an operator whose operation reports no candidate work.</summary>
     public void RequireCandidateWork(IOperator source, string metric)
@@ -29,7 +32,10 @@ public abstract class OperationExecutorAdapter
     }
 
     /// <summary>Returns an executor whose named method passes each call, as an invocation, to the wrapper.</summary>
-    /// <remarks>The returned executor forwards the controls of the executor it wraps.</remarks>
+    /// <remarks>
+    /// The returned executor forwards the controls of the executor it wraps, unless the wrapper implements
+    /// <see cref="IExecutorControlProvider"/> and supplies them.
+    /// </remarks>
     public abstract IExecutor WrapInvocation<TWrapper>(IExecutor executor, TWrapper wrapper) where TWrapper : struct, IInvocationWrapper;
 
     internal static OperationExecutorAdapter For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>()
@@ -54,7 +60,7 @@ public abstract class OperationExecutorAdapter
 /// <remarks>
 /// An operation author supplies one wrapping executor: its named method creates a struct invocation holding the wrapped
 /// executor and the call's arguments and passes it to the wrapper. The wrapping executor implements
-/// <see cref="IExecutorControlProvider"/> to forward the wrapped executor's controls.
+/// <see cref="IExecutorControlProvider"/> through <see cref="ExecutorControls.Find{TControl, TWrapper}"/>.
 /// </remarks>
 public abstract class OperationExecutorAdapter<TExecutor> : OperationExecutorAdapter
     where TExecutor : class, IExecutor

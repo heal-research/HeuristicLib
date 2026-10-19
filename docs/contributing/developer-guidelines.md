@@ -227,7 +227,9 @@ Roslyn analyzers catch recognizable mistakes. They do not prove ownership invari
 
 Role executions expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
 
-Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its descriptor; it does not change executor-interface membership. Public `OperationExecutorAdapter` adapters connect named methods to `IInvocationWrapper` during executor construction. Each wrapping executor passes a call to its struct wrapper as a struct `IInvocation<TResult>`, whose `Proceed` calls the wrapped named method and whose `CountCandidateWork` supplies the operation's counting rule. No invocation method is added to executor interfaces.
+Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its descriptor; it does not change executor-interface membership. Public `OperationExecutorAdapter` adapters connect named methods to `IInvocationWrapper` during executor construction. Each wrapping executor passes a call to its struct wrapper as a struct `IInvocation<TResult>`. Its `Random` is the call's random number generator, `Proceed` calls the wrapped named method, `ProceedWith` calls it on another executor of the same operation or with another random number generator, and `CountCandidateWork` supplies the operation's counting rule. Generic wrappers reach no other argument; typed role advice receives every argument. Keep `Proceed` without a default interface implementation, which would box the invocation on every call. No invocation method is added to executor interfaces.
+
+A wrapping executor forwards the wrapped executor's controls through `ExecutorControls.Find<TControl, TWrapper>`, unless its wrapper implements `IExecutorControlProvider` and supplies them, as a choice among children does by supplying none.
 
 ## § 5 Immutability and collection ownership
 
@@ -430,7 +432,7 @@ Do not make callers spell generic arguments available values can determine.
 
 ### § 8.7 Keep operator parameter groups in a common order
 
-Order parameters as primary inputs, RNG, search space and problem. Omit groups that do not apply. Lower level inputs that replace a search space occupy its position.
+Order parameters as primary inputs, RNG, search space and problem. An operation's executor method always ends with the RNG, search space and problem, including termination and operations defined outside the library, so that invocation wrappers find the RNG of every call. Reduced authoring arities and other operator APIs omit groups that do not apply. Lower level inputs that replace a search space occupy its position.
 
 Generic types and methods that name an operation descriptor put it first: `TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, ...`, omitting parameters that do not apply. Keep managed `TState` last. Apply this order across operator contracts, authoring bases, compositions, advice, factories, adapters and resolution methods. For example, use `IOperator<Mutation, RealVector>`. Families without an operation parameter retain their established order.
 
@@ -466,7 +468,7 @@ Use concept first scalar names such as `NextDouble` and target first output name
 
 ### § 8.11 Let an API surface scale per role, never over hidden axes
 
-Operation-parameterized descriptors supply one named-method call adapter. General wrappers and advice reuse `WrapInvocation` and `IInvocationWrapper`; do not add another matrix per wrapper, advice type or run signature. Candidate-work semantics are supplied by the invocation and evaluated only by wrappers needing that metric. Do not add adapter members for retry, timing, counting or other individual behaviors. A typed advice base per role, such as `MutatorAdvice`, is acceptable because it varies over roles only.
+Operation-parameterized descriptors supply one named-method call adapter. General wrappers and advice reuse `WrapInvocation` and `IInvocationWrapper`; do not add another matrix per wrapper, advice type or run signature. Candidate-work semantics are supplied by the invocation and evaluated only by wrappers needing that metric. `SupportsCandidateWork` defaults to false and `CountCandidateWork` throws by default, so an operation without candidate work implements neither, and one with candidate work overrides both. Do not add adapter members for retry, timing, counting, choice or other individual behaviors; a whole-call wrapper uses the invocation's `Random` and `ProceedWith`. A typed advice base per role, such as `MutatorAdvice`, is acceptable because it varies over roles only.
 
 Duplicating a member once per operator role is acceptable. Adding a role is a deliberate act, its author writes the
 role's members once from an obvious template, and no existing role is disturbed. The resolve family

@@ -801,6 +801,7 @@ public class OperatorBudgetAlgorithmTests
 
         public override bool IsTerminalState(
             PopulationState<RealVector> state,
+            IRandomNumberGenerator random,
             BoundedRealVectorSearchSpace searchSpace,
             TestFunctionProblem problem)
         {

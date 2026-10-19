@@ -38,12 +38,13 @@ public sealed class OperatorPreparationSpecs
         var counter = new Counter();
         var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), counter))
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
-        var executor = (IReadValueExecutor)scope.ResolveOperator(twice);
+        var executor = (IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)scope.ResolveOperator(twice);
+        var problem = new TestFunctionProblem(new SphereFunction(1));
 
-        executor.Read().ShouldBe(42);
+        executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(42);
         counter.Calls.ShouldBe(2);
         ExecutorControls.Find<IValueControl>(executor).ShouldNotBeNull().Value = 43;
-        executor.Read().ShouldBe(43);
+        executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(43);
         counter.Calls.ShouldBe(4);
     }
 
@@ -55,13 +56,14 @@ public sealed class OperatorPreparationSpecs
         var counter = new Counter();
         var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), counter))
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var problem = new TestFunctionProblem(new SphereFunction(1));
 
-        var executor = (IReadValueExecutor)scope.ResolveOperator(forwarded);
+        var executor = (IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)scope.ResolveOperator(forwarded);
 
-        executor.Read().ShouldBe(42);
+        executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(42);
         counter.Calls.ShouldBe(1);
         ExecutorControls.Find<IValueControl>(executor).ShouldNotBeNull().Value = 43;
-        executor.Read().ShouldBe(43);
+        executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(43);
         counter.Calls.ShouldBe(2);
     }
 
@@ -70,9 +72,12 @@ public sealed class OperatorPreparationSpecs
         int Value { get; set; }
     }
 
-    private interface IReadValueExecutor : IExecutor
+    // An external operation ends with the call's random number generator, search space and problem, like built-in ones.
+    private interface IReadValueExecutor<TCandidate, in TSearchSpace, in TProblem> : IExecutor
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        int Read();
+        int Read(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
     }
 
     // An external operation supplies one adapter, one invocation and one wrapping executor.
@@ -81,38 +86,47 @@ public sealed class OperatorPreparationSpecs
         public static OperationExecutorAdapter CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TSearchState>()
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
-            where TSearchState : class, ISearchState => new ExecutorAdapter();
+            where TSearchState : class, ISearchState => new ExecutorAdapter<TCandidate, TSearchSpace, TProblem>();
 
-        private sealed class ExecutorAdapter : OperationExecutorAdapter<IReadValueExecutor>
+        private sealed class ExecutorAdapter<TCandidate, TSearchSpace, TProblem> : OperationExecutorAdapter<IReadValueExecutor<TCandidate, TSearchSpace, TProblem>>
+            where TSearchSpace : class, ISearchSpace<TCandidate>
+            where TProblem : class, IProblem<TCandidate, TSearchSpace>
         {
-            public override bool SupportsCandidateWork => false;
-
-            protected override IReadValueExecutor CreateWrappedExecutor<TWrapper>(IReadValueExecutor executor, TWrapper wrapper) =>
+            protected override IReadValueExecutor<TCandidate, TSearchSpace, TProblem> CreateWrappedExecutor<TWrapper>(
+                IReadValueExecutor<TCandidate, TSearchSpace, TProblem> executor, TWrapper wrapper) =>
                 new WrappedExecutor<TWrapper>(executor, wrapper);
-        }
 
-        private readonly struct Invocation(IReadValueExecutor executor) : IInvocation<int>
-        {
-            public int Proceed() => executor.Read();
-            public int CountCandidateWork(int result) => throw new NotSupportedException();
-        }
+            private readonly struct Invocation(IReadValueExecutor<TCandidate, TSearchSpace, TProblem> executor,
+                IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<int>
+            {
+                private readonly IReadValueExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
+                private readonly IRandomNumberGenerator random = random;
 
-        private sealed class WrappedExecutor<TWrapper>(IReadValueExecutor executor, TWrapper wrapper)
-            : IReadValueExecutor, IExecutorControlProvider where TWrapper : struct, IInvocationWrapper
-        {
-            public int Read() => wrapper.Invoke<Invocation, int>(new Invocation(executor));
-            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
+                public IRandomNumberGenerator Random => random;
+                public int Proceed() => executor.Read(random, searchSpace, problem);
+                public int ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
+                    ((IReadValueExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Read(random ?? this.random, searchSpace, problem);
+            }
+
+            private sealed class WrappedExecutor<TWrapper>(IReadValueExecutor<TCandidate, TSearchSpace, TProblem> executor, TWrapper wrapper)
+                : IReadValueExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider where TWrapper : struct, IInvocationWrapper
+            {
+                public int Read(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+                    wrapper.Invoke<Invocation, int>(new Invocation(executor, random, searchSpace, problem));
+                public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
+            }
         }
     }
 
     private sealed record ValueSource(int Value) : IOperator<ReadValue, RealVector>
     {
-        public OperatorExecutorFactory CreateExecutorFactory() => OperatorExecutorFactory.FromFactory<IReadValueExecutor>(_ => new Executor(Value));
+        public OperatorExecutorFactory CreateExecutorFactory() => OperatorExecutorFactory.FromFactory<Executor>(_ => new Executor(Value));
 
-        private sealed class Executor(int value) : IReadValueExecutor, IValueControl
+        private sealed class Executor(int value)
+            : IReadValueExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>, IValueControl
         {
             public int Value { get; set; } = value;
-            public int Read() => Value;
+            public int Read(IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) => Value;
         }
     }
 

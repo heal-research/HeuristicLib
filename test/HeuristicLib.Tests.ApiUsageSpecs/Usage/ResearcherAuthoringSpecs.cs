@@ -152,6 +152,7 @@ public class ResearcherAuthoringSpecs
     {
         public override bool IsTerminalState(
           SingleSolutionState<RealVector> state,
+          IRandomNumberGenerator random,
           BoundedRealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)
         {

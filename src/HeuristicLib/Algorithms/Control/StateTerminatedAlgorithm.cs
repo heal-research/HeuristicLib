@@ -51,16 +51,24 @@ public class StateTerminatedAlgorithmExecutor<TCandidate, TSearchSpace, TProblem
         Terminator = terminator;
     }
 
+    // Iterative algorithms fork the run's generator by iteration index. A key no iteration reaches keeps the terminator
+    // from receiving the stream of an inner iteration.
+    private const ulong TerminationForkKey = ulong.MaxValue;
+
     public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
+        var terminationRandom = random.Fork(TerminationForkKey);
+        var yieldedStateCount = 0;
         await foreach (var state in Algorithm.RunStreamingAsync(problem, random, initialState, ct))
         {
             yield return state;
 
-            if (Terminator.IsTerminalState(state, problem.SearchSpace, problem))
+            if (Terminator.IsTerminalState(state, terminationRandom.Fork(yieldedStateCount), problem.SearchSpace, problem))
             {
                 yield break;
             }
+
+            yieldedStateCount++;
         }
     }
 }

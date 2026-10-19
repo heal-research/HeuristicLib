@@ -160,7 +160,7 @@ public class RoleBindingTests
 
     private sealed record BoundTerminator : StatelessTerminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
-        public override bool IsTerminalState(SingleSolutionState<RealVector> state, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => false;
+        public override bool IsTerminalState(SingleSolutionState<RealVector> state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => false;
     }
 
     private sealed record BoundInterceptor : StatelessInterceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>

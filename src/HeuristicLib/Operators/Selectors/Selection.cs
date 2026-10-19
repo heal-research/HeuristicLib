@@ -30,7 +30,13 @@ public sealed class Selection : IOperationDescriptor<Selection>
         private readonly struct Invocation(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> executor,
             IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<EvaluatedCandidate<TCandidate>>>
         {
+            private readonly ISelectionExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
+            private readonly IRandomNumberGenerator random = random;
+
+            public IRandomNumberGenerator Random => random;
             public IReadOnlyList<EvaluatedCandidate<TCandidate>> Proceed() => executor.Select(population, objective, count, random, searchSpace, problem);
+            public IReadOnlyList<EvaluatedCandidate<TCandidate>> ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
+                ((ISelectionExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Select(population, objective, count, random ?? this.random, searchSpace, problem);
             public int CountCandidateWork(IReadOnlyList<EvaluatedCandidate<TCandidate>> result) => result.Count;
         }
 
@@ -41,7 +47,7 @@ public sealed class Selection : IOperationDescriptor<Selection>
             public IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 wrapper.Invoke<Invocation, IReadOnlyList<EvaluatedCandidate<TCandidate>>>(new Invocation(executor, population, objective, count, random, searchSpace, problem));
 
-            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
+            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
         }
     }
 }

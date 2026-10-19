@@ -11,9 +11,9 @@ public class StagnationTerminatorTests
         var problem = CreateProblem();
         var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(StagnationTerminator.For(problem, stagnationThreshold: 2));
 
-        execution.IsTerminalState(CreateState(3), problem.SearchSpace, problem).ShouldBeFalse();
-        execution.IsTerminalState(CreateState(3), problem.SearchSpace, problem).ShouldBeFalse();
-        execution.IsTerminalState(CreateState(3), problem.SearchSpace, problem).ShouldBeTrue();
+        execution.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        execution.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        execution.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Fact]
@@ -22,11 +22,11 @@ public class StagnationTerminatorTests
         var problem = CreateProblem();
         var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(StagnationTerminator.For(problem, stagnationThreshold: 2));
 
-        execution.IsTerminalState(CreateState(3), problem.SearchSpace, problem).ShouldBeFalse();
-        execution.IsTerminalState(CreateState(3), problem.SearchSpace, problem).ShouldBeFalse();
-        execution.IsTerminalState(CreateState(2), problem.SearchSpace, problem).ShouldBeFalse();
-        execution.IsTerminalState(CreateState(2), problem.SearchSpace, problem).ShouldBeFalse();
-        execution.IsTerminalState(CreateState(2), problem.SearchSpace, problem).ShouldBeTrue();
+        execution.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        execution.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        execution.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        execution.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        execution.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Theory]
@@ -37,7 +37,7 @@ public class StagnationTerminatorTests
         var problem = CreateProblem();
         var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(StagnationTerminator.For(problem, threshold));
 
-        execution.IsTerminalState(CreateState(3), problem.SearchSpace, problem).ShouldBeTrue();
+        execution.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>

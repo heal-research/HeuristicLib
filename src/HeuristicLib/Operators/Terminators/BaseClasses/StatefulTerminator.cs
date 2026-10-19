@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
@@ -20,7 +21,7 @@ public abstract record StatefulTerminator<TCandidate, TSearchSpace, TProblem, TS
 {
     protected abstract TState CreateInitialState();
 
-    protected abstract bool IsTerminalState(TSearchState searchState, TState state, TSearchSpace searchSpace, TProblem problem);
+    protected abstract bool IsTerminalState(TSearchState searchState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutorFactory()
     {
@@ -31,8 +32,8 @@ public abstract record StatefulTerminator<TCandidate, TSearchSpace, TProblem, TS
     private sealed class Executor(StatefulTerminator<TCandidate, TSearchSpace, TProblem, TSearchState, TState> terminator, TState executionState)
         : TerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
-        public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem) =>
-            terminator.IsTerminalState(state, executionState, searchSpace, problem);
+        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            terminator.IsTerminalState(state, executionState, random, searchSpace, problem);
     }
 }
 
@@ -44,7 +45,7 @@ public abstract record StatefulTerminator<TCandidate, TSearchSpace, TSearchState
 {
     protected abstract TState CreateInitialState();
 
-    protected abstract bool IsTerminalState(TSearchState searchState, TState state, TSearchSpace searchSpace);
+    protected abstract bool IsTerminalState(TSearchState searchState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
     public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>> CreateExecutorFactory()
     {
@@ -55,8 +56,8 @@ public abstract record StatefulTerminator<TCandidate, TSearchSpace, TSearchState
     private sealed class Executor(StatefulTerminator<TCandidate, TSearchSpace, TSearchState, TState> terminator, TState executionState)
         : TerminationExecutor<TCandidate, TSearchSpace, TSearchState>
     {
-        public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace) =>
-            terminator.IsTerminalState(state, executionState, searchSpace);
+        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
+            terminator.IsTerminalState(state, executionState, random, searchSpace);
     }
 }
 
@@ -67,7 +68,7 @@ public abstract record StatefulTerminator<TCandidate, TSearchState, TState>
 {
     protected abstract TState CreateInitialState();
 
-    protected abstract bool IsTerminalState(TSearchState searchState, TState state);
+    protected abstract bool IsTerminalState(TSearchState searchState, TState state, IRandomNumberGenerator random);
 
     public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>> CreateExecutorFactory()
     {
@@ -78,7 +79,7 @@ public abstract record StatefulTerminator<TCandidate, TSearchState, TState>
     private sealed class Executor(StatefulTerminator<TCandidate, TSearchState, TState> terminator, TState executionState)
         : TerminationExecutor<TCandidate, TSearchState>
     {
-        public override bool IsTerminalState(TSearchState state) => terminator.IsTerminalState(state, executionState);
+        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random) => terminator.IsTerminalState(state, executionState, random);
     }
 }
 

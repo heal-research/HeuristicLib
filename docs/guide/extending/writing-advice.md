@@ -40,7 +40,7 @@ Advice that does not depend on an operation's inputs, such as timing, derives fr
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/CustomAdviceDocumentationSpecs.cs#general-advice-type{csharp}
 
-The adapter builds one wrapping executor per selected executor and compiles the struct into it, so each call costs the same as a hand-written wrapper. The wrapper can call `Proceed()` several times, as retry does, and `invocation.CountCandidateWork(result)` returns the operation's candidate work when its adapter reports `SupportsCandidateWork`. Executors created by `WrapInvocation` pass on the wrapped executor's controls.
+The adapter builds one wrapping executor per selected executor and compiles the struct into it, so each call costs the same as a hand-written wrapper. The wrapper can call `Proceed()` several times, as retry does, and `invocation.CountCandidateWork(result)` returns the operation's candidate work when its adapter reports `SupportsCandidateWork`. Every operation ends with a random number generator, which the wrapper reads as `invocation.Random`; `ProceedWith(executor, random)` runs the call on another executor of the same operation or with another generator, keeping the original for an omitted argument. Executors created by `WrapInvocation` pass on the wrapped executor's controls, unless the wrapper implements `IExecutorControlProvider` and supplies them itself.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/CustomAdviceDocumentationSpecs.cs#general-advice-run{csharp}
 

@@ -578,8 +578,8 @@ public class ChooseOneOperatorTests
         var any = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new ConstantTerminator(true).Or(new ThrowingTerminator()));
         var all = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new ConstantTerminator(false).And(new ThrowingTerminator()));
 
-        any.IsTerminalState(state, DummySearchSpace<int>.Instance, problem).ShouldBeTrue();
-        all.IsTerminalState(state, DummySearchSpace<int>.Instance, problem).ShouldBeFalse();
+        any.IsTerminalState(state, RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem).ShouldBeTrue();
+        all.IsTerminalState(state, RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem).ShouldBeFalse();
     }
 
     [Fact]
@@ -591,8 +591,8 @@ public class ChooseOneOperatorTests
         var any = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new AnyTerminator<int>());
         var all = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new AllTerminator<int>());
 
-        any.IsTerminalState(state, DummySearchSpace<int>.Instance, problem).ShouldBeFalse();
-        all.IsTerminalState(state, DummySearchSpace<int>.Instance, problem).ShouldBeTrue();
+        any.IsTerminalState(state, RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem).ShouldBeFalse();
+        all.IsTerminalState(state, RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem).ShouldBeTrue();
     }
 
     private sealed record AddOffsetMutator(int Offset) : SingleCandidateMutator<int, DummySearchSpace<int>>
@@ -659,13 +659,13 @@ public class ChooseOneOperatorTests
     private sealed record ConstantTerminator(bool Result)
         : StatelessTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>
     {
-        public override bool IsTerminalState(TestAlgorithmState state, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) => Result;
+        public override bool IsTerminalState(TestAlgorithmState state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) => Result;
     }
 
     private sealed record ThrowingTerminator
         : StatelessTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>
     {
-        public override bool IsTerminalState(TestAlgorithmState state, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+        public override bool IsTerminalState(TestAlgorithmState state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
             throw new InvalidOperationException("This terminator should not be reached.");
     }
 

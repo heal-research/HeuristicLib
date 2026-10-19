@@ -61,9 +61,8 @@ public sealed class OperationBindingTests
             source.Calls.ShouldBe(Math.Min(failures + 1, 3));
             source.Preparations.ShouldBe(1);
             source.Constructions.ShouldBe(1);
-            source.RandomSources[0].ShouldSatisfyAllConditions(
-                random => (random is not null).ShouldBe(operation != 7),
-                random => source.RandomSources.ShouldAllBe(value => ReferenceEquals(value, random)));
+            source.RandomSources[0].ShouldNotBeNull();
+            source.RandomSources.ShouldAllBe(random => ReferenceEquals(random, source.RandomSources[0]));
         }
     }
 
@@ -90,6 +89,79 @@ public sealed class OperationBindingTests
         source.Constructions.ShouldBe(1);
         source.Calls.ShouldBe(2);
         source.RandomSources.ShouldAllBe(random => ReferenceEquals(random, source.RandomSources[0]));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(6)]
+    [InlineData(7)]
+    [InlineData(8)]
+    public void EveryDescriptorExposesTheCallsRandomAndProceedsWithAnotherRandom(int operation)
+    {
+        var source = new AllOperations();
+        var fork = RandomNumberGenerator.Create(2);
+        var recorder = new InvocationRecorder();
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProceedWithAdvice(null, fork, recorder)));
+
+        InvokeOperation(scope, source, operation);
+
+        source.RandomSources.ShouldBe([fork]);
+        recorder.Random.ShouldNotBeNull().ShouldNotBeSameAs(fork);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(6)]
+    [InlineData(7)]
+    [InlineData(8)]
+    public void EveryDescriptorProceedsWithAnotherExecutorOfTheSameOperation(int operation)
+    {
+        var source = new AllOperations();
+        var other = new AllOperations();
+        var recorder = new InvocationRecorder();
+        var otherExecutor = ResolveOperation(ResolutionScope.Create(), other, operation);
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProceedWithAdvice(otherExecutor, null, recorder)));
+
+        InvokeOperation(scope, source, operation);
+
+        source.Calls.ShouldBe(0);
+        other.Calls.ShouldBe(1);
+        other.RandomSources.ShouldBe([recorder.Random.ShouldNotBeNull()]);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(6)]
+    [InlineData(7)]
+    [InlineData(8)]
+    public void EveryDescriptorForwardsControlsUnlessItsWrapperSuppliesThem(int operation)
+    {
+        var source = new AllOperations();
+        var root = ResolutionScope.Create();
+        var raw = ResolveOperation(root, source, operation);
+        var forwarding = ResolveOperation(root.With(Aspect.Create(Pointcut.Reference(source), new TwiceAdvice())), source, operation);
+        var supplied = new SuppliedControl();
+        var supplying = ResolveOperation(root.With(Aspect.Create(Pointcut.Reference(source), new ControlSupplyingAdvice(supplied))), source, operation);
+
+        forwarding.ShouldNotBeSameAs(raw);
+        ExecutorControls.Find<IExecutor>(forwarding).ShouldBeSameAs(raw);
+        ExecutorControls.Find<SuppliedControl>(supplying).ShouldBeSameAs(supplied);
+        ExecutorControls.Find<IExecutor>(supplying).ShouldBeNull();
     }
 
     [Fact]
@@ -163,6 +235,20 @@ public sealed class OperationBindingTests
         source.Preparations.ShouldBe(1);
     }
 
+    [Theory]
+    [InlineData(7)]
+    [InlineData(8)]
+    public void OperationsWithoutCandidateWorkReportNoneAndThrowWhenAskedForIt(int operation)
+    {
+        var source = new AllOperations();
+        var probe = new HookProbe();
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CandidateWorkAdvice(probe)));
+
+        Assert.Throws<NotSupportedException>(() => InvokeOperation(scope, source, operation));
+        probe.Successes.ShouldBe(0);
+        source.Calls.ShouldBe(1);
+    }
+
     [Fact]
     public void UnsupportedExternalScalarMetricRejectsBeforeItsChildIsResolved()
     {
@@ -173,6 +259,24 @@ public sealed class OperationBindingTests
             scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(source));
         failure.Message.ShouldContain(nameof(Checksum));
         child.Log.Preparations.ShouldBe(0);
+    }
+
+    private static IExecutor ResolveOperation(ResolutionScope scope, AllOperations source, int operation)
+    {
+        var typed = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
+        return operation switch
+        {
+            0 => typed.ResolveOperator((IOperator<Creation, RealVector>)source),
+            1 => typed.ResolveOperator((IOperator<Crossover, RealVector>)source),
+            2 => typed.ResolveOperator((IOperator<Mutation, RealVector>)source),
+            3 => typed.ResolveOperator((IOperator<Evaluation, RealVector>)source),
+            4 => typed.ResolveOperator((IOperator<Selection, RealVector>)source),
+            5 => typed.ResolveOperator((IOperator<Refinement, RealVector>)source),
+            6 => typed.ResolveOperator((IOperator<Replacement, RealVector>)source),
+            7 => typed.ResolveOperator((IOperator<Termination, RealVector>)source),
+            8 => typed.ResolveOperator((IOperator<Interception, RealVector>)source),
+            _ => throw new ArgumentOutOfRangeException(nameof(operation))
+        };
     }
 
     private static void InvokeOperation(ResolutionScope scope, AllOperations source, int operation, bool retry = false)
@@ -207,7 +311,7 @@ public sealed class OperationBindingTests
                 typed.Resolve(Wrap((IOperator<Replacement, RealVector>)source)).Replace(population, population, Problem.Objective, 3, random, space, Problem).ShouldBeSameAs(AllOperations.Population);
                 break;
             case 7:
-                typed.Resolve(Wrap((IOperator<Termination, RealVector>)source)).IsTerminalState(new ProbeState(), space, Problem).ShouldBeTrue();
+                typed.Resolve(Wrap((IOperator<Termination, RealVector>)source)).IsTerminalState(new ProbeState(), random, space, Problem).ShouldBeTrue();
                 break;
             case 8:
                 var state = new ProbeState();
@@ -255,6 +359,16 @@ public sealed class OperationBindingTests
             operation.WrapInvocation(executor, new ProbeWrapper(probe, operation.SupportsCandidateWork));
     }
 
+    // Asks for candidate work without checking the operation, which only a faulty wrapper does.
+    private sealed class CandidateWorkAdvice(HookProbe probe) : OperatorAdvice
+    {
+        public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source)
+        {
+            operation.SupportsCandidateWork.ShouldBeFalse();
+            return operation.WrapInvocation(executor, new ProbeWrapper(probe, countsWork: true));
+        }
+    }
+
     private readonly struct Twice : IInvocationWrapper
     {
         public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
@@ -273,6 +387,42 @@ public sealed class OperationBindingTests
             Wraps++;
             return operation.WrapInvocation(executor, new Twice());
         }
+    }
+
+    private sealed class InvocationRecorder
+    {
+        public IRandomNumberGenerator? Random { get; set; }
+    }
+
+    private readonly struct ProceedWithWrapper(IExecutor? executor, IRandomNumberGenerator? random, InvocationRecorder recorder) : IInvocationWrapper
+    {
+        public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
+        {
+            recorder.Random = invocation.Random;
+            return invocation.ProceedWith(executor, random);
+        }
+    }
+
+    private sealed class ProceedWithAdvice(IExecutor? executor, IRandomNumberGenerator? random, InvocationRecorder recorder) : OperatorAdvice
+    {
+        public override IExecutor Wrap(IExecutor wrapped, OperationExecutorAdapter operation, IOperator source) =>
+            operation.WrapInvocation(wrapped, new ProceedWithWrapper(executor, random, recorder));
+    }
+
+    private sealed class SuppliedControl;
+
+    private readonly struct ControlSupplyingWrapper(SuppliedControl control) : IInvocationWrapper, IExecutorControlProvider
+    {
+        public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult> =>
+            invocation.Proceed();
+
+        public TControl? Get<TControl>() where TControl : class => control as TControl;
+    }
+
+    private sealed class ControlSupplyingAdvice(SuppliedControl control) : OperatorAdvice
+    {
+        public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source) =>
+            operation.WrapInvocation(executor, new ControlSupplyingWrapper(control));
     }
 
     private sealed class CandidateMetric : OperatorAdvice
@@ -295,7 +445,7 @@ public sealed class OperationBindingTests
         public int Calls { get; private set; }
         public Exception? Failure { get; init; }
         public int FailuresBeforeSuccess { get; init; } = int.MaxValue;
-        public List<IRandomNumberGenerator?> RandomSources { get; } = [];
+        public List<IRandomNumberGenerator> RandomSources { get; } = [];
 
         public OperatorExecutorFactory CreateExecutorFactory()
         {
@@ -304,7 +454,7 @@ public sealed class OperationBindingTests
             return OperatorExecutorFactory.FromFactory<Executor>(_ => { Constructions++; return executor; });
         }
 
-        private void Call(IRandomNumberGenerator? random)
+        private void Call(IRandomNumberGenerator random)
         {
             RandomSources.Add(random);
             Calls++;
@@ -331,7 +481,7 @@ public sealed class OperationBindingTests
             public IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return Population; }
             public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return Output; }
             public IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return Population; }
-            public bool IsTerminalState(ISearchState state, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(null); return true; }
+            public bool IsTerminalState(ISearchState state, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return true; }
             public ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return currentState; }
         }
     }

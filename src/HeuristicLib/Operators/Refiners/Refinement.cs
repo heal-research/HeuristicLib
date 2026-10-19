@@ -29,7 +29,13 @@ public sealed class Refinement : IOperationDescriptor<Refinement>
         private readonly struct Invocation(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> executor,
             IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<TCandidate>>
         {
+            private readonly IRefinementExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
+            private readonly IRandomNumberGenerator random = random;
+
+            public IRandomNumberGenerator Random => random;
             public IReadOnlyList<TCandidate> Proceed() => executor.Refine(candidates, random, searchSpace, problem);
+            public IReadOnlyList<TCandidate> ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
+                ((IRefinementExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Refine(candidates, random ?? this.random, searchSpace, problem);
             public int CountCandidateWork(IReadOnlyList<TCandidate> result) => result.Count;
         }
 
@@ -40,7 +46,7 @@ public sealed class Refinement : IOperationDescriptor<Refinement>
             public IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 wrapper.Invoke<Invocation, IReadOnlyList<TCandidate>>(new Invocation(executor, candidates, random, searchSpace, problem));
 
-            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
+            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
         }
     }
 }

@@ -58,7 +58,7 @@ public sealed class OperatorOwnershipTests
             "TryResolve needs no explicit executor type");
 
         IOperator<Checksum, RealVector> checksum = new SharedOperations(new ProbeLog());
-        Check(typed.Resolve(new Forward<Checksum, RealVector>(checksum).Named("external")).Read() == 3,
+        Check(typed.Resolve(new Forward<Checksum, RealVector>(checksum).Named("external")).Read(RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem) == 3,
             "external descriptor and topology use public APIs across the assembly boundary");
         var recommendation = new ChecksumRecommendation();
         Check(recommendation.TryCreateRecommendedOperator(out var first) &&
@@ -83,7 +83,7 @@ public sealed class OperatorOwnershipTests
             Check(control is not null && control.Value == 3, "control projects from selected owner");
             control!.Value = 12;
             _ = typed.Resolve(evaluation);
-            Check(Invoke(operation) == 12 && typed.Resolve((IOperator<Checksum, RealVector>)source).Read() == 12,
+            Check(Invoke(operation) == 12 && typed.Resolve((IOperator<Checksum, RealVector>)source).Read(RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem) == 12,
                 "mutation and external operation see shared live state");
             var named = typed.Resolve(mutation.Named("one").Named("two"), out ILiveValue? namedControl);
             Check(ReferenceEquals(control, namedControl) && ReferenceEquals(operation, named), "forwarding preserves controls and operation");
@@ -112,7 +112,7 @@ public sealed class OperatorOwnershipTests
             _ = broad.Resolve(termination.Named("broad"));
             _ = narrow.Resolve(termination.Named("narrow"));
             Check(source.Log.Preparations == 1, "broad authored terminator supports both views without new preparation");
-            Check(!narrow.Resolve(termination).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem), "terminator remains callable");
+            Check(!narrow.Resolve(termination).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem), "terminator remains callable");
         }
         var interceptor = new IdentityInterceptor(new ProbeLog());
         var root = ResolutionScope.Create();

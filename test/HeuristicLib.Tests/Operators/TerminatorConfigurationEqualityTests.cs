@@ -60,7 +60,7 @@ public class TerminatorConfigurationEqualityTests
     private sealed record ThresholdTerminator(int Threshold)
         : StatelessTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>
     {
-        public override bool IsTerminalState(TestState state, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+        public override bool IsTerminalState(TestState state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
             state.Value >= Threshold;
     }
     private sealed record IdentityTerminator : WrappingTerminator<int>

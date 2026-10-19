@@ -148,9 +148,9 @@ public sealed class RoleExecutorFactoryTests
         var problem = new TestFunctionProblem(new RastriginFunction(1));
         var searchState = SingleSolutionState.From(RealVector.Repeat(0, 1), new ObjectiveVector(0));
 
-        population.IsTerminalState(searchState, problem.SearchSpace, problem).ShouldBeFalse();
-        single.IsTerminalState(searchState, problem.SearchSpace, problem).ShouldBeFalse();
-        population.IsTerminalState(searchState, problem.SearchSpace, problem).ShouldBeTrue();
+        population.IsTerminalState(searchState, RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        single.IsTerminalState(searchState, RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        population.IsTerminalState(searchState, RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
         preparations.ShouldBe(1);
     }
 

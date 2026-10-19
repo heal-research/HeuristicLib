@@ -330,6 +330,8 @@ Status: `Canonical`
 
 An operation invocation is one call to an operation method, such as one call to `Mutate`. A caller invokes mutation through an executor's `Mutate` method. Operation call is an accepted synonym; invocation is used in wrapper type names such as `IInvocation<TResult>` and `IInvocationWrapper`.
 
+Every invocation carries its primary inputs followed by a random number generator, search space and problem. `IInvocation<TResult>` exposes that random number generator to invocation wrappers and can repeat the call with the same arguments.
+
 An executor can receive many invocations. A duration measurement around an operation call measures that invocation rather than the lifetime of its executor.
 
 See also: Executor, Operation, Operation descriptor.
@@ -709,9 +711,9 @@ See also: Advice, Aspect, Configuration, Executor, Resolution scope.
 
 Status: `Canonical`
 
-An invocation wrapper adds behavior such as retry, timing or counting around each call to an executor's named method. The operation adapter builds it into one wrapping executor, which passes every call to the wrapper as an invocation holding the wrapped executor and the call's arguments.
+An invocation wrapper adds behavior such as retry, timing, counting or whole-call choice around each call to an executor's named method. The operation adapter builds it into one wrapping executor, which passes every call to the wrapper as an invocation holding the wrapped executor and the call's arguments.
 
-`IInvocationWrapper` represents this contract and is implemented by small structs. The wrapper calls the invocation's `Proceed()` to run the wrapped method; retry, for example, calls it again after a retryable failure. Wrappers measuring candidate work ask the invocation for `CountCandidateWork(result)`. Each wrapping executor holds its own wrapped executor, so another binding gets its own children and advice.
+`IInvocationWrapper` represents this contract and is implemented by small structs. The wrapper calls the invocation's `Proceed()` to run the wrapped method; retry, for example, calls it again after a retryable failure. It reads the call's random number generator as `Random` and can call `ProceedWith(executor, random)` to run the call on another executor of the same operation or with another generator; `ChoosePerCall` proceeds on a child it samples with that generator. Wrappers measuring candidate work ask the invocation for `CountCandidateWork(result)`. Each wrapping executor holds its own wrapped executor, so another binding gets its own children and advice. The wrapping executor exposes the wrapped executor's controls unless the wrapper implements `IExecutorControlProvider` and supplies them.
 
 See also: Operation invocation, Executor, Wrapper chain, Retry.
 

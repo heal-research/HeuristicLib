@@ -35,7 +35,10 @@ public abstract class OperatorExecutorFactory
         where TOperation : IOperationDescriptor<TOperation> => new ForwardingFactory<TOperation, TCandidate>(childOperator);
 
     /// <summary>Resolves the child for the same operation and run types and passes each of its calls to the wrapper.</summary>
-    /// <remarks>The wrapping executor forwards the child's controls.</remarks>
+    /// <remarks>
+    /// The wrapping executor forwards the child's controls, unless the wrapper implements
+    /// <see cref="IExecutorControlProvider"/> and supplies them.
+    /// </remarks>
     public static OperatorExecutorFactory WrapInvocation<TOperation, TCandidate, TWrapper>(IOperator<TOperation, TCandidate> childOperator, TWrapper wrapper)
         where TOperation : IOperationDescriptor<TOperation>
         where TWrapper : struct, IInvocationWrapper => new InvocationWrappingFactory<TOperation, TCandidate, TWrapper>(childOperator, wrapper);

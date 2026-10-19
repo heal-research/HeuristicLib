@@ -53,7 +53,7 @@ public class OperatorStaticMethodGuidelineTests
         ]).ToPopulationState();
         var target = new ObjectiveVector(1.0);
 
-        var viaInstance = new TargetTerminator<int>(target).IsTerminalState(state, DummySearchSpace<int>.Instance, problem);
+        var viaInstance = new TargetTerminator<int>(target).IsTerminalState(state, RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem);
         var viaCore = TargetTerminator.IsTerminalState(state, problem, target);
 
         viaCore.ShouldBe(viaInstance);

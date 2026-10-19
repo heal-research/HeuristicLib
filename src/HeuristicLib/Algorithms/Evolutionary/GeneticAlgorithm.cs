@@ -69,8 +69,8 @@ public record GeneticAlgorithm<TCandidate>
         protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState, TProblem problem) =>
             maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;
 
-        protected override bool IsTerminalState(PopulationState<TCandidate> state, int yieldedStateCount, PopulationState<TCandidate>? previousState, TProblem problem) =>
-            terminator?.IsTerminalState(state, problem.SearchSpace, problem) == true;
+        protected override bool IsTerminalState(PopulationState<TCandidate> state, int yieldedStateCount, PopulationState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random) =>
+            terminator?.IsTerminalState(state, random, problem.SearchSpace, problem) == true;
 
         protected override PopulationState<TCandidate> ExecuteStep(PopulationState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random)
         {

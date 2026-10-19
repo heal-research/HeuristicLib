@@ -718,8 +718,8 @@ public class OperatorAuthoringSpecs
         var problem = CreateRastriginProblem(dimension: 3);
         var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ValueTerminator(2));
 
-        execution.IsTerminalState(new CounterSearchState(1), problem.SearchSpace, problem).ShouldBeFalse();
-        execution.IsTerminalState(new CounterSearchState(2), problem.SearchSpace, problem).ShouldBeTrue();
+        execution.IsTerminalState(new CounterSearchState(1), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        execution.IsTerminalState(new CounterSearchState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Fact]
@@ -731,9 +731,9 @@ public class OperatorAuthoringSpecs
         var secondExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(terminator);
         var state = new CounterSearchState(0);
 
-        firstExecutor.IsTerminalState(state, problem.SearchSpace, problem).ShouldBeFalse();
-        firstExecutor.IsTerminalState(state, problem.SearchSpace, problem).ShouldBeTrue();
-        secondExecutor.IsTerminalState(state, problem.SearchSpace, problem).ShouldBeFalse();
+        firstExecutor.IsTerminalState(state, RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        firstExecutor.IsTerminalState(state, RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
+        secondExecutor.IsTerminalState(state, RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
     }
 
     [Fact]
@@ -742,7 +742,7 @@ public class OperatorAuthoringSpecs
         var problem = CreateRastriginProblem(dimension: 3);
         var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ForwardingTerminator(new ValueTerminator(2)));
 
-        execution.IsTerminalState(new CounterSearchState(2), problem.SearchSpace, problem).ShouldBeTrue();
+        execution.IsTerminalState(new CounterSearchState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Fact]
@@ -755,8 +755,8 @@ public class OperatorAuthoringSpecs
 
         wrapping.ChildTerminator.ShouldBeSameAs(child);
         multi.ChildTerminators.ShouldBe([child]);
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(wrapping).IsTerminalState(new CounterSearchState(2), problem.SearchSpace, problem).ShouldBeTrue();
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(multi).IsTerminalState(new CounterSearchState(2), problem.SearchSpace, problem).ShouldBeTrue();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(wrapping).IsTerminalState(new CounterSearchState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(multi).IsTerminalState(new CounterSearchState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Fact]
@@ -770,12 +770,12 @@ public class OperatorAuthoringSpecs
         ITerminator<RealVector> statefulStateOnly = new StatefulStateTerminator();
         ITerminator<RealVector> statefulStateAgnostic = new StatefulStateAgnosticTerminator();
 
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(searchSpaceOnly).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(stateOnly).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(stateAgnostic).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulSearchSpaceOnly).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulStateOnly).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulStateAgnostic).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(searchSpaceOnly).IsTerminalState(new CounterSearchState(0), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(stateOnly).IsTerminalState(new CounterSearchState(0), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(stateAgnostic).IsTerminalState(new CounterSearchState(0), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulSearchSpaceOnly).IsTerminalState(new CounterSearchState(0), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulStateOnly).IsTerminalState(new CounterSearchState(0), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulStateAgnostic).IsTerminalState(new CounterSearchState(0), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
     }
 
     [Fact]
@@ -1290,17 +1290,17 @@ public class OperatorAuthoringSpecs
 
     private sealed record ValueTerminator(int MaximumValue) : StatelessTerminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
     {
-        public override bool IsTerminalState(CounterSearchState state, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => state.Value >= MaximumValue;
+        public override bool IsTerminalState(CounterSearchState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => state.Value >= MaximumValue;
     }
 
     private sealed record SearchSpaceTerminator : StatelessTerminator<RealVector, BoundedRealVectorSearchSpace, CounterSearchState>
     {
-        public override bool IsTerminalState(CounterSearchState state, BoundedRealVectorSearchSpace searchSpace) => false;
+        public override bool IsTerminalState(CounterSearchState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) => false;
     }
 
     private sealed record StateTerminator : StatelessTerminator<RealVector, CounterSearchState>
     {
-        public override bool IsTerminalState(CounterSearchState state) => false;
+        public override bool IsTerminalState(CounterSearchState state, IRandomNumberGenerator random) => false;
     }
 
     private sealed record StateAgnosticTerminator : StatelessTerminator<RealVector>
@@ -1314,7 +1314,7 @@ public class OperatorAuthoringSpecs
 
         protected override ExecutionState CreateInitialState() => new();
 
-        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state, BoundedRealVectorSearchSpace searchSpace) => false;
+        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) => false;
     }
 
     private sealed record StatefulStateTerminator : StatefulTerminator<RealVector, CounterSearchState, StatefulStateTerminator.ExecutionState>
@@ -1323,7 +1323,7 @@ public class OperatorAuthoringSpecs
 
         protected override ExecutionState CreateInitialState() => new();
 
-        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state) => false;
+        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state, IRandomNumberGenerator random) => false;
     }
 
     private sealed record StatefulStateAgnosticTerminator : StatefulTerminator<RealVector, StatefulStateAgnosticTerminator.ExecutionState>
@@ -1344,7 +1344,7 @@ public class OperatorAuthoringSpecs
 
         protected override ExecutionState CreateInitialState() => new();
 
-        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => ++state.Calls >= 2;
+        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => ++state.Calls >= 2;
     }
 
     private sealed record ForwardingTerminator(ITerminator<RealVector> Inner)
@@ -1356,7 +1356,7 @@ public class OperatorAuthoringSpecs
         private sealed class Executor(ITerminationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState> inner)
             : TerminationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
         {
-            public override bool IsTerminalState(CounterSearchState state, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => inner.IsTerminalState(state, searchSpace, problem);
+            public override bool IsTerminalState(CounterSearchState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => inner.IsTerminalState(state, random, searchSpace, problem);
         }
     }
 
@@ -1377,8 +1377,8 @@ public class OperatorAuthoringSpecs
             where TProblem : class, IProblem<RealVector, TSearchSpace>
             where TSearchState : class, ISearchState
         {
-            public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem) =>
-                ChildTerminator.IsTerminalState(state, searchSpace, problem);
+            public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+                ChildTerminator.IsTerminalState(state, random, searchSpace, problem);
         }
     }
 
@@ -1399,8 +1399,8 @@ public class OperatorAuthoringSpecs
             where TProblem : class, IProblem<RealVector, TSearchSpace>
             where TSearchState : class, ISearchState
         {
-            public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem) =>
-                ChildTerminators[0].IsTerminalState(state, searchSpace, problem);
+            public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+                ChildTerminators[0].IsTerminalState(state, random, searchSpace, problem);
         }
     }
 

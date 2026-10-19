@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
@@ -23,8 +24,8 @@ public sealed record AnyTerminator<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem) =>
-            ChildTerminators.Any(terminator => terminator.IsTerminalState(state, searchSpace, problem));
+        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            ChildTerminators.Any(terminator => terminator.IsTerminalState(state, random, searchSpace, problem));
     }
 }
 

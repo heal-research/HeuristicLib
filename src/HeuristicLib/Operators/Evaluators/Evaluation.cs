@@ -30,7 +30,13 @@ public sealed class Evaluation : IOperationDescriptor<Evaluation>
         private readonly struct Invocation(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> executor,
             IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<ObjectiveVector>>
         {
+            private readonly IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
+            private readonly IRandomNumberGenerator random = random;
+
+            public IRandomNumberGenerator Random => random;
             public IReadOnlyList<ObjectiveVector> Proceed() => executor.Evaluate(candidates, random, searchSpace, problem);
+            public IReadOnlyList<ObjectiveVector> ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
+                ((IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Evaluate(candidates, random ?? this.random, searchSpace, problem);
             public int CountCandidateWork(IReadOnlyList<ObjectiveVector> result) => candidates.Count;
         }
 
@@ -41,7 +47,7 @@ public sealed class Evaluation : IOperationDescriptor<Evaluation>
             public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
                 wrapper.Invoke<Invocation, IReadOnlyList<ObjectiveVector>>(new Invocation(executor, candidates, random, searchSpace, problem));
 
-            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
+            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
         }
     }
 }

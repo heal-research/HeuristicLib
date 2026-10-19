@@ -78,6 +78,19 @@ public class IterativeAlgorithmExecutionTests
     }
 
     [Fact]
+    public async Task TerminalStateEvaluation_ReceivesTheInterceptorsIterationRandom()
+    {
+        var interceptor = new RecordingInterceptor();
+        var random = RandomNumberGenerator.Create(1);
+        var executor = new ProbeExecutor(interceptor) { TerminalAtValue = 2 };
+
+        _ = await Collect(executor, random, ct: TestContext.Current.CancellationToken);
+
+        executor.TerminalStateRandom.ShouldNotBeNull().ShouldBeSameAs(interceptor.Random);
+        executor.TerminalStateRandom.ShouldNotBeSameAs(random);
+    }
+
+    [Fact]
     public async Task TerminalState_IsYieldedOnceBeforeCompletion()
     {
         var executor = new ProbeExecutor { TerminalAtValue = 1 };
@@ -122,6 +135,7 @@ public class IterativeAlgorithmExecutionTests
         public bool StopBeforeFirstStep { get; init; }
         public int StepCalls { get; private set; }
         public ProbeState? FirstPreviousState { get; private set; }
+        public IRandomNumberGenerator? TerminalStateRandom { get; private set; }
         public List<string> Events { get; } = [];
 
         protected override ProbeState ExecuteStep(ProbeState? previousState, FuncProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random)
@@ -150,9 +164,10 @@ public class IterativeAlgorithmExecutionTests
             return yieldedStateCount == CompleteAtCount;
         }
 
-        protected override bool IsTerminalState(ProbeState state, int yieldedStateCount, ProbeState? previousState, FuncProblem<int, DummySearchSpace<int>> problem)
+        protected override bool IsTerminalState(ProbeState state, int yieldedStateCount, ProbeState? previousState, FuncProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random)
         {
             Events.Add($"terminal:{state.Value}");
+            TerminalStateRandom = random;
             return state.Value == TerminalAtValue;
         }
     }

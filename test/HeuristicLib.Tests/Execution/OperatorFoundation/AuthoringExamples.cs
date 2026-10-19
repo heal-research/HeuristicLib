@@ -89,20 +89,22 @@ public sealed record SharedOperations(ProbeLog Log) : IOperator<Mutation, RealVe
         });
     }
 
-    private sealed class Executor : ILiveValue, IChecksumExecutor,
+    private sealed class Executor : ILiveValue,
+        IChecksumExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>,
         IMutationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>,
         IEvaluationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>,
         ITerminationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, ISearchState>
     {
         public int Value { get; set; } = 3;
-        public int Read() => Value;
+        public int Read(IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace,
+            IProblem<RealVector, ISearchSpace<RealVector>> problem) => Value;
         public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random,
             ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) =>
             parents.Select(_ => new RealVector((double)Value)).ToArray();
         public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random,
             ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) =>
             candidates.Select(_ => (ObjectiveVector)(double)Value).ToArray();
-        public bool IsTerminalState(ISearchState state, ISearchSpace<RealVector> searchSpace,
+        public bool IsTerminalState(ISearchState state, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace,
             IProblem<RealVector, ISearchSpace<RealVector>> problem) => Value >= 10;
     }
 }

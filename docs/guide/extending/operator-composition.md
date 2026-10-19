@@ -13,7 +13,7 @@ The built in composition overview is:
 | Composition aspect                | Coordination semantics                                                                                            | Helpers and examples                                                                                        | Applicability                                                |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | Weighted alternatives per element | Chooses a child independently for each element of a batch, invokes grouped child batches and restores input order | `ChooseOneCreator`, `ChooseOneCrossover`, `ChooseOneMutator`, `ChooseOneRefiner`                            | Creators, crossovers, mutators and refiners                  |
-| Weighted alternatives per call    | Chooses one child for the complete operation call                                                                 | `ChooseOneSelector`, `ChooseOneReplacer`                                                                    | Selectors and replacers                                      |
+| Weighted alternatives per call    | Chooses one child for the complete operation call                                                                 | `ChoosePerCall`, `ChooseOneSelector`, `ChooseOneReplacer`                                                   | Every operation-parameterized operator; selectors, replacers |
 | Conditional application           | Chooses between an operation and role specific unchanged behavior                                                 | `mutator.AppliedAtRate(...)`, `crossover.AppliedAtRate(...)`, `refiner.AppliedAtRate(...)`                  | Mutators, crossovers and refiners                            |
 | Sequential composition            | Passes each stage result to the next stage in order                                                               | `PipelineMutator`, `PipelineRefiner`, `PipelineInterceptor`                                                 | Mutators, refiners and interceptors                          |
 | Repeated composition              | Feeds a result back into the same child for a configured number of iterations                                     | `IteratedRefiner`                                                                                           | Refiners                                                     |
@@ -51,6 +51,8 @@ Weights are retained exactly as configured. Omitting weights selects uniformly a
 
 `ChooseOneSelector` and `ChooseOneReplacer` make one weighted choice for each complete operation call. The selected child receives the complete population inputs and requested count. This preserves the meaning of a selector or replacer policy as a decision over a complete population instead of mixing fragments from several policies.
 
+`ChoosePerCall` makes the same whole-call choice for any operator using `IOperator<TOperation, TCandidate>`, including mutation, evaluation and operations defined outside the library. Each call samples one child with the call's random number generator and runs on that child with the same generator, unchanged inputs and the run's search space and problem. It draws exactly as `ChooseOneSelector` does with the same weights. Use it when a batch should stay with one policy, such as evaluating a complete batch with either an exact or a surrogate evaluator, and use the per-element forms when each candidate should choose independently. Its weights follow the rules above, and building its executor rejects an empty child collection or a weight count that differs from the child count.
+
 ```csharp
 var creator = ChooseOneCreator.Create(
     [uniformCreator, normalCreator],
@@ -63,6 +65,10 @@ var mutator = ChooseOneMutator.Create(
 var selector = ChooseOneSelector.Create(
     [tournamentSelector, proportionalSelector],
     [0.6, 0.4]);
+
+var evaluator = ChoosePerCall.Create(
+    [exactEvaluator, surrogateEvaluator],
+    [0.1, 0.9]);
 ```
 
 ### Conditional application
@@ -395,11 +401,11 @@ Mutation and evaluation use `IOperator<TOperation, TCandidate>`. Their generic `
 
 `Retry(3)` includes the first attempt. It catches only a directly thrown `RetryableOperationException`; cancellation, ordinary failures and aggregate exceptions propagate. Every attempt receives the same arguments, child and RNG. Failed attempts retain their random draws, state changes and inspection effects; retry provides no rollback.
 
-A multi-child composite such as a pipeline exposes its own controls. It does not inherit an arbitrary child's strength control. The remaining nominal roles still use their existing wrapper and control behavior.
+A multi-child composite such as a pipeline exposes its own controls. It does not inherit an arbitrary child's strength control. `ChoosePerCall` exposes none, because a different child can run on every call. The remaining nominal roles still use their existing wrapper and control behavior.
 
 ## Randomness and executors
 
-Compositions whose role receives an explicit random number generator invoke children in the order defined by their policy. Random draw order is therefore part of reproducible behavior. Adding, removing or reordering child operators may change later random draws even when the same root seed is used. Interceptors and terminators do not receive a random number generator, so their built in compositions are deterministic with respect to child ordering unless a child depends on some other explicit input or external resource.
+Every operation call receives an explicit random number generator, and compositions invoke children in the order defined by their policy. Random draw order is therefore part of reproducible behavior. Adding, removing or reordering child operators may change later random draws even when the same root seed is used. The built in terminators and interceptors draw nothing, so `AnyTerminator`, `AllTerminator` and `PipelineInterceptor` are deterministic with respect to child ordering unless a child draws or depends on some other explicit input or external resource.
 
 Child configurations are resolved when each composition executor is built. Reusing the same child configuration elsewhere through the same resolution scope preserves its prepared execution state. The resulting child executor objects may differ because each binding applies the requesting context's aspects.
 

@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
@@ -20,27 +21,30 @@ public sealed class Termination : IOperationDescriptor<Termination>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public override bool SupportsCandidateWork => false;
-
         protected override ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateWrappedExecutor<TWrapper>(
             ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, TWrapper wrapper) =>
             new WrappedExecutor<TWrapper>(executor, wrapper);
 
         private readonly struct Invocation(ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
-            TSearchState state, TSearchSpace searchSpace, TProblem problem) : IInvocation<bool>
+            TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<bool>
         {
-            public bool Proceed() => executor.IsTerminalState(state, searchSpace, problem);
-            public int CountCandidateWork(bool result) => throw new NotSupportedException();
+            private readonly ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor = executor;
+            private readonly IRandomNumberGenerator random = random;
+
+            public IRandomNumberGenerator Random => random;
+            public bool Proceed() => executor.IsTerminalState(state, random, searchSpace, problem);
+            public bool ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
+                ((ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>?)executor ?? this.executor).IsTerminalState(state, random ?? this.random, searchSpace, problem);
         }
 
         private sealed class WrappedExecutor<TWrapper>(ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, TWrapper wrapper)
             : ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>, IExecutorControlProvider
             where TWrapper : struct, IInvocationWrapper
         {
-            public bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem) =>
-                wrapper.Invoke<Invocation, bool>(new Invocation(executor, state, searchSpace, problem));
+            public bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+                wrapper.Invoke<Invocation, bool>(new Invocation(executor, state, random, searchSpace, problem));
 
-            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
+            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
         }
     }
 }

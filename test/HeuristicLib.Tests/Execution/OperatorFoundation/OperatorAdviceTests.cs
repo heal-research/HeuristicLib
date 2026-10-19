@@ -75,9 +75,9 @@ public sealed class OperatorAdviceTests
             _ = Invoke(scope.Resolve(mutation));
             if (!evaluationFirst)
                 _ = scope.Resolve(evaluation).Evaluate(Input, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem);
-            Check(scope.Resolve((IOperator<Checksum, RealVector>)source).Read() == 3, "general advice dispatches to an external scalar adapter");
+            Check(scope.Resolve((IOperator<Checksum, RealVector>)source).Read(RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem) == 3, "general advice dispatches to an external scalar adapter");
             var term = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
-            _ = term.Resolve((IOperator<Termination, RealVector>)source).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem);
+            _ = term.Resolve((IOperator<Termination, RealVector>)source).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
             Check(generalTotal.Value == 4 && typedTotal.Value == 1, "general counts all operations; typed counts only mutation");
             Check(generalLog.Checks == 4 && generalLog.Wraps == 4 && typedLog.Checks == 1 && typedLog.Wraps == 1,
                 "each resolution checks and wraps its own operation view once");
@@ -113,18 +113,18 @@ public sealed class OperatorAdviceTests
             var broad = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
             var narrow = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
             if (narrowFirst)
-                _ = narrow.Resolve(named).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem);
-            _ = broad.Resolve(named).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem);
+                _ = narrow.Resolve(named).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
+            _ = broad.Resolve(named).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
             if (!narrowFirst)
-                _ = narrow.Resolve(named).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem);
+                _ = narrow.Resolve(named).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
             var other = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, OtherState>();
-            _ = other.Resolve(named).IsTerminalState(new OtherState(), Problem.SearchSpace, Problem);
+            _ = other.Resolve(named).IsTerminalState(new OtherState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
             Check(source.Log.Preparations == 1, "three compatible state views prepare the operator once in either resolution order");
             Check(generalLog.Wraps == 3 && typedLog.Wraps == 3 && total.Value == 3 && skippedLog.Checks == 0,
                 "state views are wrapped separately without applying another operation's advice");
             var advised = narrow.Resolve(named, out ILiveValue? control);
             control!.Value = 12;
-            Check(advised.IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem), "an advised terminator retains its live control");
+            Check(advised.IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem), "an advised terminator retains its live control");
         }
         var interceptor = new IdentityInterceptor(new ProbeLog());
         var interceptTotal = new CallCounter();
@@ -293,10 +293,10 @@ public sealed class OperatorAdviceTests
         typedLog.FailCheck = true;
         Reject(() => narrow.Resolve(term), "advice check failure");
         Check(termSource.Log.Constructions == 1 && generalLog.Wraps == 1, "a failed check in a second view invokes neither the raw constructor nor any wrapping");
-        _ = first.IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem);
+        _ = first.IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
         Check(generalTotal.Value == 1 && typedTotal.Value == 1, "a failed second view leaves the first executor usable");
         typedLog.FailCheck = false;
-        _ = narrow.Resolve(term).IsTerminalState(new ProbeState(), Problem.SearchSpace, Problem);
+        _ = narrow.Resolve(term).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
         Check(termSource.Log.Preparations == 1 && generalTotal.Value == 2 && typedTotal.Value == 2,
             "retry reuses the prepared operator across views");
 

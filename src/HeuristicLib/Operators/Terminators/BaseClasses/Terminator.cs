@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
@@ -55,7 +56,7 @@ public abstract class TerminationExecutor<TCandidate, TSearchSpace, TProblem, TS
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem);
+    public abstract bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
 public abstract class TerminationExecutor<TCandidate, TSearchSpace, TSearchState>
@@ -63,20 +64,20 @@ public abstract class TerminationExecutor<TCandidate, TSearchSpace, TSearchState
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public abstract bool IsTerminalState(TSearchState state, TSearchSpace searchSpace);
+    public abstract bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    bool ITerminationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>.IsTerminalState(TSearchState state, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        IsTerminalState(state, searchSpace);
+    bool ITerminationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>.IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
+        IsTerminalState(state, random, searchSpace);
 }
 
 public abstract class TerminationExecutor<TCandidate, TSearchState>
     : ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
     where TSearchState : class, ISearchState
 {
-    public abstract bool IsTerminalState(TSearchState state);
+    public abstract bool IsTerminalState(TSearchState state, IRandomNumberGenerator random);
 
-    bool ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>.IsTerminalState(TSearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        IsTerminalState(state);
+    bool ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>.IsTerminalState(TSearchState state, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+        IsTerminalState(state, random);
 }
 
 public abstract class TerminationExecutor<TCandidate>
@@ -84,6 +85,6 @@ public abstract class TerminationExecutor<TCandidate>
 {
     public abstract bool IsTerminalState();
 
-    bool ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>.IsTerminalState(ISearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+    bool ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>.IsTerminalState(ISearchState state, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         IsTerminalState();
 }

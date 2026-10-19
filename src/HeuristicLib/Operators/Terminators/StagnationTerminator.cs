@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
@@ -27,7 +28,7 @@ public sealed record StagnationTerminator<TCandidate>
 
     protected override ExecutionState CreateInitialState() => new();
 
-    protected override bool IsTerminalState(PopulationState<TCandidate> algorithmState, ExecutionState executionState, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+    protected override bool IsTerminalState(PopulationState<TCandidate> algorithmState, ExecutionState executionState, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
     {
         if (StagnationThreshold <= 0)
             return true;
