@@ -119,7 +119,7 @@ public class QuadraticAssignmentProblemTests
 
         double.IsFinite(lowerBound).ShouldBeTrue();
         foreach (var solution in EnumeratePermutations(a.Size))
-            lowerBound.ShouldBeLessThanOrEqualTo(dyn.Evaluate(solution, TestRandoms.NoRandom)[0]);
+            lowerBound.ShouldBeLessThanOrEqualTo(dyn.Evaluate([solution], TestRandoms.NoRandom)[0][0]);
     }
 
     [Fact]

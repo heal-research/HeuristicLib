@@ -61,6 +61,36 @@ public partial class AutoEcPaperScenarioTests
     }
 
     [Fact]
+    public async Task ActivatedTspAnalysis_UsesReferenceFromEvaluatedEpoch()
+    {
+        var tspFile = FindLocalFile("tsp", "burma14.tsp");
+        var concordePath = FindLocalFile("for_Agent", "Concorde", "executablescygwin", "concorde.exe");
+        if (tspFile is null || concordePath is null)
+            return;
+
+        var scenario = new ActivatedTspAutoEcScenario(
+            tspFile,
+            concordePath,
+            problemSeed: 31740,
+            runSeed: 1623,
+            targetEpochChanges: 3,
+            noRacers: 1,
+            epochLength: 50);
+        var result = await RunScenario(scenario);
+
+        AssertScenarioProducesExperimentSignals(result, minQualityEpochs: 2, minBbcpChanges: 1);
+        result.Output.QualityCurve
+              .Where(point => point.Timing.Valid)
+              .ShouldAllBe(point => point.ObjectiveVector[0] >= -1e-12);
+        var bbcpFromQualityCurve = result.Output.QualityCurve
+                                         .Where(point => point.Timing.Valid && point.Timing.Epoch < result.Output.ObservedEpoch)
+                                         .GroupBy(point => point.Timing.Epoch)
+                                         .Select(epoch => epoch.Last().ObjectiveVector[0])
+                                         .Average();
+        result.Output.BestBeforeChangePerformance.ShouldBe(bbcpFromQualityCurve, tolerance: 1e-12);
+    }
+
+    [Fact]
     public async Task DynamicRacingGa_OnActivatedTsp_WritesPaperPrototypeResults()
     {
         var concordePath = FindLocalFile("for_Agent", "Concorde", "executablescygwin", "concorde.exe");

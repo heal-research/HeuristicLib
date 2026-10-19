@@ -9,6 +9,40 @@ namespace HEAL.HeuristicLib.Tests.Problems.Dynamic;
 public class DynamicAnalysisTests
 {
     [Fact]
+    public void BestBeforeChange_PublishesCompletedEpochWithoutAnotherEvaluation()
+    {
+        using var problem = new IntegerDynamicProblem(epochLength: 1000);
+        var evaluator = new ProblemEvaluator();
+        var analyzer = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>(problem, [evaluator]);
+        var execution = ResolutionScope.Create(analyzer).Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(evaluator);
+        _ = execution.Evaluate([5, 3], RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
+        analyzer.BestBeforeChange.ShouldBeEmpty();
+        problem.UpdateOnce();
+        analyzer.BestBeforeChange.Select(entry => entry.Candidate).ShouldBe([3]);
+        analyzer.Performance.ShouldBe(3);
+        _ = execution.Evaluate([10, 1], RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
+        problem.UpdateOnce();
+        analyzer.BestBeforeChange.Select(entry => entry.Candidate).ShouldBe([3, 1]);
+        analyzer.Performance.ShouldBe(2);
+    }
+
+    [Fact]
+    public void BestBeforeChange_CanIncludeAndImproveCurrentIncompleteEpoch()
+    {
+        using var problem = new IntegerDynamicProblem(epochLength: 1000);
+        var evaluator = new ProblemEvaluator();
+        var analyzer = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>(problem, [evaluator], includeCurrentEpoch: true);
+        var execution = ResolutionScope.Create(analyzer).Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(evaluator);
+        _ = execution.Evaluate([5, 3], RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
+        _ = execution.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
+        analyzer.BestBeforeChange.Select(entry => entry.Candidate).ShouldBe([2]);
+        problem.UpdateOnce();
+        _ = execution.Evaluate([10], RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
+        analyzer.BestBeforeChange.Select(entry => entry.Candidate).ShouldBe([2, 10]);
+        analyzer.Performance.ShouldBe(6);
+    }
+
+    [Fact]
     public void RelativeQuality_RefreshesAfterDeferredBatchUpdatesWithoutSubscriptions()
     {
         var problem = new IntegerDynamicProblem(epochLength: 2);

@@ -29,7 +29,7 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
 {
     private readonly List<BestBeforeChangePerformanceEntry<TCandidate>> bestBeforeChange = [];
     private readonly Func<ObjectiveVector, double> objectiveValueSelector;
-    private readonly OnlineWeibullCurveModel predictionModel = new(double.NaN);
+    private OnlineWeibullCurveModel predictionModel = new(double.NaN);
     private readonly TProblem problem;
     private (EvaluatedCandidate<TCandidate> Best, int Epoch)? currentEpochBest;
     private double objectiveValueSum;
@@ -37,13 +37,15 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
     public BestBeforeChangePerformanceAnalyzer(TProblem problem,
                                                IReadOnlyList<IEvaluator<TCandidate>> evaluators,
                                                Func<ObjectiveVector, double>? objectiveValueSelector = null,
-                                               int predictionEpochMultiplier = 10)
+                                               int predictionEpochMultiplier = 10,
+                                               bool includeCurrentEpoch = false)
     {
         if (evaluators.Count == 0)
             throw new ArgumentException("An analyzer needs at least one observation source.", nameof(evaluators));
 
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(predictionEpochMultiplier);
         this.problem = problem;
+        IncludeCurrentEpoch = includeCurrentEpoch;
         this.objectiveValueSelector = objectiveValueSelector ?? (static objectiveVector => objectiveVector[0]);
         PredictionEpochMultiplier = predictionEpochMultiplier;
         Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe<TCandidate, TSearchSpace, TProblem>(evaluator, ReadBatch).Advices)];
@@ -51,19 +53,25 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
 
     public int PredictionEpochMultiplier { get; }
 
+    /// <summary>Gets whether the best observation of the current incomplete epoch is included.</summary>
+    public bool IncludeCurrentEpoch { get; }
+
     /// <summary>
     /// The best candidate of every epoch that has ended. The epoch in progress appears once it does.
     /// </summary>
-    public IReadOnlyList<BestBeforeChangePerformanceEntry<TCandidate>> BestBeforeChange => bestBeforeChange;
+    public IReadOnlyList<BestBeforeChangePerformanceEntry<TCandidate>> BestBeforeChange
+    {
+        get { lock (Sync) { PublishCompletedEpoch(); return bestBeforeChange; } }
+    }
 
     public double Performance
     {
-        get { lock (Sync) return bestBeforeChange.Count == 0 ? double.NaN : objectiveValueSum / bestBeforeChange.Count; }
+        get { lock (Sync) { PublishCompletedEpoch(); return bestBeforeChange.Count == 0 ? double.NaN : objectiveValueSum / bestBeforeChange.Count; } }
     }
 
     public double Prediction
     {
-        get { lock (Sync) return prediction; }
+        get { lock (Sync) { PublishCompletedEpoch(); return prediction; } }
     }
     private double prediction = double.NaN;
 
@@ -80,21 +88,36 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
 
         lock (Sync)
         {
-            if (currentEpochBest is not { } current)
+            PublishCompletedEpoch();
+            if (currentEpochBest is not { } current || current.Epoch != epoch)
             {
                 currentEpochBest = (batchBest, epoch);
+                if (IncludeCurrentEpoch)
+                    Record(batchBest, epoch);
                 return;
             }
-
-            if (current.Epoch != epoch)
+            if (comparer.Compare(batchBest.ObjectiveVector, current.Best.ObjectiveVector) >= 0)
+                return;
+            currentEpochBest = (batchBest, epoch);
+            if (IncludeCurrentEpoch)
             {
-                Record(current.Best, current.Epoch);
-                currentEpochBest = (batchBest, epoch);
-                return;
+                var value = objectiveValueSelector(batchBest.ObjectiveVector);
+                objectiveValueSum += value - bestBeforeChange[^1].ObjectiveValue;
+                bestBeforeChange[^1] = new(batchBest.Candidate, batchBest.ObjectiveVector, value, epoch);
+                predictionModel = new(double.NaN);
+                foreach (var entry in bestBeforeChange)
+                    predictionModel.AddObservation(entry.Epoch, entry.ObjectiveValue);
+                prediction = predictionModel.Predict((epoch + 1) * PredictionEpochMultiplier);
             }
+        }
+    }
 
-            if (comparer.Compare(batchBest.ObjectiveVector, current.Best.ObjectiveVector) < 0)
-                currentEpochBest = (batchBest, epoch);
+    private void PublishCompletedEpoch()
+    {
+        if (!IncludeCurrentEpoch && currentEpochBest is { } current && current.Epoch < problem.CurrentEpoch)
+        {
+            Record(current.Best, current.Epoch);
+            currentEpochBest = null;
         }
     }
 
