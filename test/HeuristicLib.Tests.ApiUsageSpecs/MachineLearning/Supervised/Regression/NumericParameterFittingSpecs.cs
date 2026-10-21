@@ -168,7 +168,7 @@ public class NumericParameterFittingSpecs
             MaximumGenerations = 10,
             Creator = new RampedHalfAndHalfTreeCreator(),
             Crossover = new SubtreeCrossover(),
-            Mutator = ChooseOneMutator.Create(
+            Mutator = ChoosePerCandidate.Create(
                 new NodeReplacementMutator(),
                 new LocalPerturbationMutator(),
                 new SubtreeMutator()),

@@ -56,13 +56,13 @@ public static class MetaOptimizationProblemExamples
 
     public static MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> GeneticAlgorithmMetaOptimizationProblem<TCandidate, TSearchSpace, TProblem>(
       this TProblem problem,
-      ICreator<TCandidate>[] creators,
-      ICrossover<TCandidate>[] crossovers,
+      IOperator<Creation, TCandidate>[] creators,
+      IOperator<Crossover, TCandidate>[] crossovers,
       IOperator<Evaluation, TCandidate>[] evaluators,
-      IInterceptor<TCandidate>[] interceptors,
+      IOperator<Interception<PopulationState<TCandidate>>, TCandidate>[] interceptors,
       IOperator<Mutation, TCandidate>[] mutators,
       (int min, int max) elites,
-      ISelector<TCandidate>[] selectors,
+      IOperator<Selection, TCandidate>[] selectors,
       (int min, int max) populationSize,
       (double min, double max) mutationRate)
         where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> where TCandidate : class
@@ -94,14 +94,14 @@ public static class MetaOptimizationProblemExamples
 
     public static MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> EvolutionStrategyMetaOptimizationProblem<TCandidate, TSearchSpace, TProblem>(
       this TProblem problem,
-      ICreator<TCandidate>[] creators,
-      ICrossover<TCandidate>[] crossovers,
+      IOperator<Creation, TCandidate>[] creators,
+      IOperator<Crossover, TCandidate>[] crossovers,
       IOperator<Evaluation, TCandidate>[] evaluators,
-      IInterceptor<TCandidate>[] interceptors,
+      IOperator<Interception<PopulationState<TCandidate>>, TCandidate>[] interceptors,
       IOperator<Mutation, TCandidate>[] mutators,
       EvolutionStrategyType[] strategies,
-      IReplacer<TCandidate>[] replacers,
-      ISelector<TCandidate>[] selectors,
+      IOperator<Replacement, TCandidate>[] replacers,
+      IOperator<Selection, TCandidate>[] selectors,
       (int min, int max) populationSize,
       (int min, int max) numberOfChildren,
       (double min, double max) mutationRate)

@@ -22,29 +22,17 @@ public class OperatorTopologyTests
     ];
 
     /// <summary>
-    /// A migrated configuration contract names the candidate alone. The search space and problem the run supplies
-    /// arrive as method type arguments when the executor is created, so they are not part of the type an
-    /// author stores in a field, passes as a parameter or reuses across problems.
+    /// The configuration contract names the operation and the candidate alone. The search space, problem and search
+    /// state the run supplies arrive as method type arguments when the executor is created, so they are not part of
+    /// the type an author stores in a field, passes as a parameter or reuses across problems.
     /// </summary>
-    /// <remarks>
-    /// All nine roles are listed, terminators and interceptors included. They were the last to keep a second type
-    /// argument, and they lost it for the same reason as the other seven: an operator does not originate the search
-    /// state either, so the algorithm that resolves it supplies one.
-    /// </remarks>
-    [Theory]
-    [InlineData(typeof(ICreator<>))]
-    [InlineData(typeof(ICrossover<>))]
-    [InlineData(typeof(IRefiner<>))]
-    [InlineData(typeof(IReplacer<>))]
-    [InlineData(typeof(ISelector<>))]
-    [InlineData(typeof(ITerminator<>))]
-    [InlineData(typeof(IInterceptor<>))]
-    public void MigratedOperatorConfigurationContracts_NameOnlyTheCandidate(Type roleContract)
+    [Fact]
+    public void OperatorConfigurationContract_OmitsRunTypes()
     {
-        var typeParameters = roleContract.GetGenericArguments();
-
-        typeParameters.Length.ShouldBe(1);
-        Variance(typeParameters[0]).ShouldBe(GenericParameterAttributes.None);
+        var typeParameters = typeof(IOperator<,>).GetGenericArguments();
+        typeParameters.Length.ShouldBe(2);
+        foreach (var parameter in typeParameters)
+            Variance(parameter).ShouldBe(GenericParameterAttributes.None);
     }
 
     /// <summary>
@@ -55,6 +43,7 @@ public class OperatorTopologyTests
     [Theory]
     [InlineData(typeof(ICreationExecutor<,,>))]
     [InlineData(typeof(ICrossoverExecutor<,,>))]
+    [InlineData(typeof(IRefinementExecutor<,,>))]
     [InlineData(typeof(IEvaluationExecutor<,,>))]
     [InlineData(typeof(IMutationExecutor<,,>))]
     [InlineData(typeof(IReplacementExecutor<,,>))]

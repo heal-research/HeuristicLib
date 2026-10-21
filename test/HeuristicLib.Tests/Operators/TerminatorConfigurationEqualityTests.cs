@@ -11,7 +11,7 @@ public class TerminatorConfigurationEqualityTests
     {
         var child = new ThresholdTerminator(1);
 
-        new IdentityTerminator(child).ChildTerminator.ShouldBeSameAs(child);
+        new IdentityTerminator(child).ChildOperator.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -19,14 +19,14 @@ public class TerminatorConfigurationEqualityTests
     {
         var first = new ThresholdTerminator(1);
         var second = new ThresholdTerminator(2);
-        var children = new List<ITerminator<int>> { first, second };
+        var children = new List<IOperator<Termination, int>> { first, second };
         var left = new AnyTerminator<int>(children);
 
         children.Clear();
         var equal = AnyTerminator.Create(new ThresholdTerminator(1), new ThresholdTerminator(2));
         var reordered = AnyTerminator.Create(new ThresholdTerminator(2), new ThresholdTerminator(1));
 
-        left.ChildTerminators.ShouldBe([first, second]);
+        left.ChildOperators.ShouldBe([first, second]);
         left.ShouldBe(equal);
         left.GetHashCode().ShouldBe(equal.GetHashCode());
         left.ShouldNotBe(reordered);
@@ -63,14 +63,13 @@ public class TerminatorConfigurationEqualityTests
         public override bool IsTerminalState(TestState state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
             state.Value >= Threshold;
     }
-    private sealed record IdentityTerminator : WrappingTerminator<int>
+    private sealed record IdentityTerminator : WrappingOperator<Termination, int>
     {
-        public IdentityTerminator(ITerminator<int> child) : base(child)
+        public IdentityTerminator(IOperator<Termination, int> child) : base(child)
         {
         }
 
-        protected override WrapperExecutorFactory<ITerminationExecutor<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
-            child => child;
+        protected override OperatorExecutorFactory CreateOperatorFactory() => OperatorExecutorFactory.Forward(ChildOperator);
     }
 
 }

@@ -34,7 +34,7 @@ public sealed class AssemblyDependencyTests
         ReadNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "SearchSpaces", "ICandidateInvariant.cs")).ShouldBe("HEAL.HeuristicLib.SearchSpaces");
         ReadNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Problems", "IProblem.cs")).ShouldBe("HEAL.HeuristicLib.Problems");
 
-        typeof(ICrossover<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
+        typeof(IOperator<,>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
         typeof(IRecommends<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
         typeof(Parents<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
 

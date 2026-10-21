@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Analysis;
 /// The non-dominated candidates seen so far, kept as one growing set.
 /// </summary>
 /// <remarks>
-/// This is the accumulator behind <see cref="ParetoFrontAnalyzer{T, TS, TP}"/> and the hypervolume aggregation. It is
+/// This is the accumulator behind <see cref="ParetoFrontAnalyzer{T}"/> and the hypervolume aggregation. It is
 /// mutable and belongs to whatever accumulates it, and <see cref="Points"/> is a live view of it, so read it once the
 /// run has finished rather than during it.
 /// </remarks>

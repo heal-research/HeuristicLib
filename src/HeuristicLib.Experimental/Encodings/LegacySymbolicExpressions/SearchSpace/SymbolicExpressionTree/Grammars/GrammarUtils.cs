@@ -2,67 +2,70 @@ namespace HEAL.HeuristicLib.Encodings.LegacySymbolicExpressions;
 
 public static class GrammarUtils
 {
-    private static IEnumerable<Symbol> GetTopmostSymbols(this SymbolicExpressionGrammarBase grammar)
+    extension(SymbolicExpressionGrammarBase grammar)
     {
-        // build parents list so we can find out the topmost symbol(s)
-        var parents = new Dictionary<Symbol, List<Symbol>>();
-        foreach (var symbol in grammar.Symbols.Where(x => grammar.GetMinimumSubtreeCount(x) > 0))
+        private IEnumerable<Symbol> GetTopmostSymbols()
         {
-            var minSubtreeCount = grammar.GetMinimumSubtreeCount(symbol);
-            for (var argIndex = 0; argIndex < minSubtreeCount; ++argIndex)
+            // build parents list so we can find out the topmost symbol(s)
+            var parents = new Dictionary<Symbol, List<Symbol>>();
+            foreach (var symbol in grammar.Symbols.Where(x => grammar.GetMinimumSubtreeCount(x) > 0))
             {
-                foreach (var childSymbol in grammar.GetAllowedActiveSymbols(symbol, argIndex))
+                var minSubtreeCount = grammar.GetMinimumSubtreeCount(symbol);
+                for (var argIndex = 0; argIndex < minSubtreeCount; ++argIndex)
                 {
-                    if (!parents.ContainsKey(childSymbol))
+                    foreach (var childSymbol in grammar.GetAllowedActiveSymbols(symbol, argIndex))
                     {
-                        parents[childSymbol] = [];
-                    }
-                    parents[childSymbol].Add(symbol);
-                }
-            }
-        }
-
-        // the topmost symbols have no parents
-        return parents.Values.SelectMany(x => x).Distinct().Where(x => !parents.ContainsKey(x));
-    }
-
-    private static IReadOnlyList<Symbol> IterateBreadthReverse(this SymbolicExpressionGrammarBase grammar, Symbol topSymbol)
-    {
-        // sort symbols in reverse breadth order (starting from the topSymbol)
-        // each symbol is visited only once (this avoids infinite recursion)
-        var symbols = new List<Symbol> { topSymbol };
-        var visited = new HashSet<Symbol> { topSymbol };
-        var i = 0;
-        while (i < symbols.Count)
-        {
-            var symbol = symbols[i];
-            var minSubtreeCount = grammar.GetMinimumSubtreeCount(symbol);
-
-            for (var argIndex = 0; argIndex < minSubtreeCount; ++argIndex)
-            {
-                foreach (var childSymbol in grammar.GetAllowedActiveSymbols(symbol, argIndex))
-                {
-                    if (grammar.GetMinimumSubtreeCount(childSymbol) == 0)
-                    {
-                        continue;
-                    }
-
-                    if (visited.Add(childSymbol))
-                    {
-                        symbols.Add(childSymbol);
+                        if (!parents.ContainsKey(childSymbol))
+                        {
+                            parents[childSymbol] = [];
+                        }
+                        parents[childSymbol].Add(symbol);
                     }
                 }
             }
 
-            ++i;
+            // the topmost symbols have no parents
+            return parents.Values.SelectMany(x => x).Distinct().Where(x => !parents.ContainsKey(x));
         }
 
-        symbols.Reverse();
+        private IReadOnlyList<Symbol> IterateBreadthReverse(Symbol topSymbol)
+        {
+            // sort symbols in reverse breadth order (starting from the topSymbol)
+            // each symbol is visited only once (this avoids infinite recursion)
+            var symbols = new List<Symbol> { topSymbol };
+            var visited = new HashSet<Symbol> { topSymbol };
+            var i = 0;
+            while (i < symbols.Count)
+            {
+                var symbol = symbols[i];
+                var minSubtreeCount = grammar.GetMinimumSubtreeCount(symbol);
 
-        return symbols;
+                for (var argIndex = 0; argIndex < minSubtreeCount; ++argIndex)
+                {
+                    foreach (var childSymbol in grammar.GetAllowedActiveSymbols(symbol, argIndex))
+                    {
+                        if (grammar.GetMinimumSubtreeCount(childSymbol) == 0)
+                        {
+                            continue;
+                        }
+
+                        if (visited.Add(childSymbol))
+                        {
+                            symbols.Add(childSymbol);
+                        }
+                    }
+                }
+
+                ++i;
+            }
+
+            symbols.Reverse();
+
+            return symbols;
+        }
+
+        private IEnumerable<Symbol> GetAllowedActiveSymbols(Symbol symbol, int argIndex) => grammar.GetAllowedChildSymbols(symbol, argIndex).Where(s => s.InitialFrequency > 0);
     }
-
-    private static IEnumerable<Symbol> GetAllowedActiveSymbols(this SymbolicExpressionGrammarBase grammar, Symbol symbol, int argIndex) => grammar.GetAllowedChildSymbols(symbol, argIndex).Where(s => s.InitialFrequency > 0);
 
     public static void CalculateMinimumExpressionLengths(SymbolicExpressionGrammarBase grammar,
       Dictionary<Symbol, int> minimumExpressionLengths)

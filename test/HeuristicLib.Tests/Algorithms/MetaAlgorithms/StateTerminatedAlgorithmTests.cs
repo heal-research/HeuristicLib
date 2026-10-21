@@ -165,7 +165,7 @@ public class StateTerminatedAlgorithmTests
         events.ShouldBe(["terminator", "algorithm"]);
     }
 
-    private static StateTerminatedAlgorithm<int, PopulationState<int>> CreateStateTerminatedAlgorithm(ITerminator<int> terminator)
+    private static StateTerminatedAlgorithm<int, PopulationState<int>> CreateStateTerminatedAlgorithm(IOperator<Termination, int> terminator)
     {
         return new AdditiveStepAlgorithm(1).TerminatedBy(terminator);
     }
@@ -260,16 +260,18 @@ public class StateTerminatedAlgorithmTests
     }
 
     private sealed record RecordingResolveTerminator(List<string> Events)
-        : ITerminator<int>
+        : Operator<Termination, int>
     {
-        public ExecutorFactory<ITerminationExecutor<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
-            where TRunSearchSpace : class, ISearchSpace<int>
-            where TRunProblem : class, IProblem<int, TRunSearchSpace>
-            where TRunSearchState : class, ISearchState
+        protected override OperatorExecutorFactory CreateOperatorFactory()
         {
             Events.Add("terminator");
-            var executor = new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>();
-            return _ => executor;
+            return new Factory();
+        }
+
+        private sealed class Factory : OperatorExecutorFactory<Termination, int>
+        {
+            protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
+                new Executor<TSearchSpace, TProblem, TSearchState>();
         }
 
         private sealed class Executor<TSearchSpace, TProblem, TSearchState> : TerminationExecutor<int, TSearchSpace, TProblem, TSearchState>

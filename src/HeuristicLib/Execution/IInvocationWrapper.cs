@@ -1,4 +1,7 @@
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Execution;
 
@@ -22,6 +25,12 @@ public interface IInvocation<TResult>
     /// <summary>The random number generator passed to this call.</summary>
     IRandomNumberGenerator Random { get; }
 
+    /// <summary>The search space passed to this call.</summary>
+    ISearchSpace SearchSpace { get; }
+
+    /// <summary>The problem passed to this call.</summary>
+    IProblem Problem { get; }
+
     /// <summary>Calls the wrapped operation method with the original arguments.</summary>
     /// <remarks>May be called more than once; every call reuses the same arguments and random number generator.</remarks>
     TResult Proceed();
@@ -40,4 +49,33 @@ public interface IInvocation<TResult>
     /// boundary; it does not imply that the call can be split into independent items.
     /// </remarks>
     int CountCandidateWork(TResult result) => throw new NotSupportedException();
+
+    /// <summary>Runs each item of this call on the executor the router assigns it and returns the results in item order.</summary>
+    /// <remarks>
+    /// <see cref="IItemInvocation{TItemResult}"/> implements this for operations marked with
+    /// <see cref="Operators.IItemOperation{TSelf}"/>; for other operations it throws <see cref="NotSupportedException"/>.
+    /// </remarks>
+    TResult ProceedPerItem(WeightedRouter<IExecutor> router) => throw new NotSupportedException();
+}
+
+/// <summary>A call whose items, such as parents or requested candidates, can run on different executors.</summary>
+/// <remarks>
+/// An operation marked with <see cref="Operators.IItemOperation{TSelf}"/> implements this on its invocation. The router
+/// assigns the items, groups them per executor, restores their order and checks that each executor returns one result
+/// per item.
+/// </remarks>
+public interface IItemInvocation<TItemResult> : IInvocation<IReadOnlyList<TItemResult>>
+{
+    /// <summary>The number of items in this call.</summary>
+    int ItemCount { get; }
+
+    /// <summary>Calls the operation method on another executor with only the given items, in the given order.</summary>
+    /// <remarks>
+    /// <paramref name="items"/> holds item positions in ascending order. The call keeps its random number generator, search
+    /// space and problem, and must return one result per item.
+    /// </remarks>
+    IReadOnlyList<TItemResult> ProceedWithItems(IExecutor executor, IReadOnlyList<int> items);
+
+    IReadOnlyList<TItemResult> IInvocation<IReadOnlyList<TItemResult>>.ProceedPerItem(WeightedRouter<IExecutor> router) =>
+        router.Route(ItemCount, Random, (executor, items) => items.Count == ItemCount ? ProceedWith(executor) : ProceedWithItems(executor, items));
 }

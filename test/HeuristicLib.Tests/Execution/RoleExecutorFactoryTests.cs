@@ -5,7 +5,6 @@ using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
@@ -154,21 +153,6 @@ public sealed class RoleExecutorFactoryTests
         preparations.ShouldBe(1);
     }
 
-    [Fact]
-    public void BoundInterceptor_IncompatibleSearchStateFailsBeforePreparation()
-    {
-        var preparations = 0;
-        var source = new BoundInterceptor(() => preparations++);
-
-        ResolutionScope.Create().TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-            source, out var executor, out var reason).ShouldBeFalse();
-
-        executor.ShouldBeNull();
-        reason.ShouldNotBeNull();
-        reason.ShouldContain(nameof(SingleSolutionState<RealVector>));
-        preparations.ShouldBe(0);
-    }
-
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -306,19 +290,6 @@ public sealed class RoleExecutorFactoryTests
         }
 
         protected override bool IsTerminalState(CounterState state) => ++state.Calls >= 3;
-    }
-
-    private sealed record BoundInterceptor(Action Prepare)
-        : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, CounterState>
-    {
-        protected override CounterState CreateInitialState()
-        {
-            Prepare();
-            return new CounterState();
-        }
-
-        protected override SingleSolutionState<RealVector> Transform(SingleSolutionState<RealVector> currentState, SingleSolutionState<RealVector>? previousState, CounterState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
-            currentState;
     }
 
     private sealed record AgnosticAlgorithm(Action Prepare) : Algorithm<AgnosticAlgorithm, RealVector, SingleSolutionState<RealVector>>

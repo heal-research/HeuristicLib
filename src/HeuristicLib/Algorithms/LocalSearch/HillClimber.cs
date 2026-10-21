@@ -11,10 +11,10 @@ namespace HEAL.HeuristicLib.Algorithms;
 public record HillClimber<TCandidate>
     : IterativeAlgorithm<HillClimber<TCandidate>, TCandidate, SingleSolutionState<TCandidate>>
 {
-    public required ICreator<TCandidate> Creator { get; init; }
+    public required IOperator<Creation, TCandidate> Creator { get; init; }
     public required IOperator<Mutation, TCandidate> Mutator { get; init; }
     public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = HillClimberDefaults.Evaluator<TCandidate>();
-    public IRefiner<TCandidate>? Refiner { get; init; }
+    public IOperator<Refinement, TCandidate>? Refiner { get; init; }
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Mutator, Evaluator, Refiner);
 
     public LocalSearchDirection Direction { get; init; } = HillClimberDefaults.Direction;
@@ -125,11 +125,11 @@ public static class HillClimber
     /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
     public static HillClimber<TCandidate> For<TProblem, TCandidate, TSearchSpace>(
         Problem<TProblem, TCandidate, TSearchSpace> problem,
-        ICreator<TCandidate>? creator = null,
+        IOperator<Creation, TCandidate>? creator = null,
         IOperator<Mutation, TCandidate>? mutator = null,
         IOperator<Evaluation, TCandidate>? evaluator = null,
-        IRefiner<TCandidate>? refiner = null,
-        IInterceptor<TCandidate>? interceptor = null,
+        IOperator<Refinement, TCandidate>? refiner = null,
+        IOperator<Interception<SingleSolutionState<TCandidate>>, TCandidate>? interceptor = null,
         LocalSearchDirection direction = HillClimberDefaults.Direction,
         int maxNeighbors = HillClimberDefaults.MaxNeighbors,
         int batchSize = HillClimberDefaults.BatchSize)
@@ -165,11 +165,11 @@ public static class HillClimber
     /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
     public static HillClimber<TCandidate> For<TCandidate>(
         ISearchSpace<TCandidate> searchSpace,
-        ICreator<TCandidate>? creator = null,
+        IOperator<Creation, TCandidate>? creator = null,
         IOperator<Mutation, TCandidate>? mutator = null,
         IOperator<Evaluation, TCandidate>? evaluator = null,
-        IRefiner<TCandidate>? refiner = null,
-        IInterceptor<TCandidate>? interceptor = null,
+        IOperator<Refinement, TCandidate>? refiner = null,
+        IOperator<Interception<SingleSolutionState<TCandidate>>, TCandidate>? interceptor = null,
         LocalSearchDirection direction = HillClimberDefaults.Direction,
         int maxNeighbors = HillClimberDefaults.MaxNeighbors,
         int batchSize = HillClimberDefaults.BatchSize)
@@ -197,11 +197,11 @@ public static class HillClimber
     /// member is optional and falls back to <see cref="HillClimberDefaults"/>.
     /// </summary>
     public static HillClimber<TCandidate> Create<TCandidate>(
-        ICreator<TCandidate> creator,
+        IOperator<Creation, TCandidate> creator,
         IOperator<Mutation, TCandidate> mutator,
         IOperator<Evaluation, TCandidate>? evaluator = null,
-        IRefiner<TCandidate>? refiner = null,
-        IInterceptor<TCandidate>? interceptor = null,
+        IOperator<Refinement, TCandidate>? refiner = null,
+        IOperator<Interception<SingleSolutionState<TCandidate>>, TCandidate>? interceptor = null,
         LocalSearchDirection direction = HillClimberDefaults.Direction,
         int maxNeighbors = HillClimberDefaults.MaxNeighbors,
         int batchSize = HillClimberDefaults.BatchSize) =>

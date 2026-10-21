@@ -91,19 +91,23 @@ public class TraceCompositionTests
     {
         public FailingModule()
         {
-            Advices = [(Pointcut.OfType<ICreator<RealVector>>(), new FailingAdvice())];
+            Advices = [(Pointcut.OfType<IOperator<Creation, RealVector>>(), new FailingAdvice())];
         }
     }
 
     private sealed class FailingAdvice : CreatorAdvice<RealVector>
     {
-        public override WrapperExecutorFactory<ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICreator<RealVector> creator) =>
+        protected override void Check<TRunSearchSpace, TRunProblem>(IOperator<Creation, RealVector> creator) =>
             throw new InvalidOperationException("Advice preparation failed.");
+
+        protected override ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem> Wrap<TRunSearchSpace, TRunProblem>(
+            ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem> executor, IOperator<Creation, RealVector> creator) => executor;
+
     }
 
     private sealed record FailingCreator : Creator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ExecutorFactory<ICreationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutorFactory() =>
+        protected override ExecutorFactory<ICreationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateFactory() =>
             throw new InvalidOperationException("Resolution failed.");
     }
 
@@ -161,10 +165,10 @@ public class TraceCompositionTests
     [Fact]
     public void CommonMeasurements_AreSerializableValueObjects()
     {
-        var measurement = new ObjectiveVectorsMeasurement<RealVector, PopulationState<RealVector>>();
+        var measurement = new ObjectiveVectorsMeasurement<RealVector>();
 
         var json = System.Text.Json.JsonSerializer.Serialize(measurement);
-        var roundTrip = System.Text.Json.JsonSerializer.Deserialize<ObjectiveVectorsMeasurement<RealVector, PopulationState<RealVector>>>(json);
+        var roundTrip = System.Text.Json.JsonSerializer.Deserialize<ObjectiveVectorsMeasurement<RealVector>>(json);
 
         roundTrip.ShouldBe(measurement);
     }
@@ -176,7 +180,7 @@ public class TraceCompositionTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var iterations = Clock.FromIterations(algorithm);
         var quality = Analyzer.Trace(algorithm,
-            new ObjectiveVectorsMeasurement<RealVector, PopulationState<RealVector>>(),
+            new ObjectiveVectorsMeasurement<RealVector>(),
             Aggregate.BestMedianWorst(),
             [iterations]);
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(quality);
@@ -251,7 +255,7 @@ public class TraceCompositionTests
     [Fact]
     public void CrossoverMeasurementsUseTheTypedObservation()
     {
-        typeof(IMeasurement<CrossoverObservation<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>, double>)
+        typeof(IMeasurement<OperatorObservation<Crossover, RealVector>, double>)
             .IsAssignableFrom(typeof(OffspringCountMeasurement)).ShouldBeTrue();
 
         // This is intentionally absent because it must not compile:
@@ -259,11 +263,28 @@ public class TraceCompositionTests
     }
 
     private sealed record OffspringCountMeasurement
-        : IMeasurement<CrossoverObservation<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>, double>
+        : IMeasurement<OperatorObservation<Crossover, RealVector>, double>
     {
         public IReadOnlyList<double> Read(
-            CrossoverObservation<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> observation) =>
+            OperatorObservation<Crossover, RealVector> observation) =>
             [observation.Offspring.Count];
+    }
+
+    [Fact]
+    public async Task OffspringMeasurement_ReadsCrossoverAndMutationOffspring()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem, maximumGenerations: 3) with { MutationRate = 1 };
+        var crossed = Analyzer.Trace(algorithm.Crossover, new OffspringMeasurement<RealVector>(), Aggregate.Readings<RealVector>());
+        var mutated = Analyzer.Trace(algorithm.Mutator, new OffspringMeasurement<RealVector>(), Aggregate.Readings<RealVector>());
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(crossed).AddAspect(mutated);
+
+        await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        crossed.SampleCount.ShouldBeGreaterThan(0);
+        crossed.Snapshot().Values.ShouldAllBe(offspring => offspring.Count > 0);
+        mutated.SampleCount.ShouldBeGreaterThan(0);
+        mutated.Snapshot().Values.ShouldAllBe(offspring => offspring.Count > 0);
     }
 
     [Fact]
@@ -274,7 +295,7 @@ public class TraceCompositionTests
 
         var shortcut = algorithm.TracePopulationCandidates();
         var composed = Analyzer.Trace(algorithm,
-            new EvaluatedCandidatesMeasurement<RealVector, PopulationState<RealVector>>(),
+            new CandidatesMeasurement<RealVector>(),
             Aggregate.BestMedianWorst<RealVector>());
 
         shortcut.ShouldBeAssignableTo<TraceAnalyzer<BestMedianWorstEntry<RealVector>>>();
@@ -344,7 +365,7 @@ public class TraceCompositionTests
         {
             Interceptor = new TruncatingInterceptor(KeptCandidates: 5)
         };
-        var kept = Analyzer.Trace<RealVector, PopulationState<RealVector>, double, MinMeanMax>(algorithm.Interceptor!,
+        var kept = Analyzer.Trace(algorithm.Interceptor!,
             observation => (IReadOnlyList<double>)[observation.State.Population.EvaluatedCandidates.Count],
             Aggregate.MinMeanMax());
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(kept);
@@ -364,7 +385,7 @@ public class TraceCompositionTests
         {
             Interceptor = new TruncatingInterceptor(KeptCandidates: 5)
         };
-        var removed = Analyzer.Trace<RealVector, PopulationState<RealVector>, double, MinMeanMax>(algorithm.Interceptor!,
+        var removed = Analyzer.Trace(algorithm.Interceptor!,
             observation => (IReadOnlyList<double>)
             [
                 observation.UntransformedState.Population.EvaluatedCandidates.Count -
@@ -530,7 +551,7 @@ public class TraceCompositionTests
 
         protected override long ReadTime() => Interlocked.Read(ref calls);
 
-        public CrossoverCallClock(ICrossover<RealVector> crossover)
+        public CrossoverCallClock(IOperator<Crossover, RealVector> crossover)
         {
             Advices = Aspect.Observe(crossover, _ => Interlocked.Increment(ref calls)).Advices;
         }
@@ -541,7 +562,7 @@ public class TraceCompositionTests
     {
         public int CreatedCandidates { get; private set; }
 
-        public CreatorCountAnalyzer(ICreator<RealVector> creator)
+        public CreatorCountAnalyzer(IOperator<Creation, RealVector> creator)
         {
             Advices = [(Pointcut.Reference(creator), new ObservingCreatorAdvice(count => CreatedCandidates += count))];
         }
@@ -549,8 +570,9 @@ public class TraceCompositionTests
 
     private sealed class ObservingCreatorAdvice(Action<int> observe) : CreatorAdvice<RealVector>
     {
-        public override WrapperExecutorFactory<ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(ICreator<RealVector> creator) =>
-            childCreator => new Executor<TRunSearchSpace, TRunProblem>(childCreator, observe);
+        protected override ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem> Wrap<TRunSearchSpace, TRunProblem>(
+            ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem> executor, IOperator<Creation, RealVector> creator) =>
+            new Executor<TRunSearchSpace, TRunProblem>(executor, observe);
 
         private sealed class Executor<TSearchSpace, TProblem>(
             ICreationExecutor<RealVector, TSearchSpace, TProblem> childCreator,

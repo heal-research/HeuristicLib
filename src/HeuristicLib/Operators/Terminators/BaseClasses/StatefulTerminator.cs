@@ -23,7 +23,7 @@ public abstract record StatefulTerminator<TCandidate, TSearchSpace, TProblem, TS
 
     protected abstract bool IsTerminalState(TSearchState searchState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;
@@ -47,7 +47,7 @@ public abstract record StatefulTerminator<TCandidate, TSearchSpace, TSearchState
 
     protected abstract bool IsTerminalState(TSearchState searchState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;
@@ -70,7 +70,7 @@ public abstract record StatefulTerminator<TCandidate, TSearchState, TState>
 
     protected abstract bool IsTerminalState(TSearchState searchState, TState state, IRandomNumberGenerator random);
 
-    public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;
@@ -91,7 +91,7 @@ public abstract record StatefulTerminator<TCandidate, TState>
 
     protected abstract bool IsTerminalState(TState state);
 
-    public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;

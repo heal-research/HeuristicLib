@@ -26,3 +26,10 @@ public interface IOperationDescriptor<TSelf> where TSelf : IOperationDescriptor<
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState;
 }
+
+/// <summary>Marks an operation whose calls split into items that each yield one result, such as mutated candidates.</summary>
+/// <remarks>
+/// The operation's invocations implement <see cref="IItemInvocation{TItemResult}"/>, which lets
+/// <see cref="ChoosePerCandidate{TOperation, TCandidate}"/> run each item on a different child.
+/// </remarks>
+public interface IItemOperation<TSelf> : IOperationDescriptor<TSelf> where TSelf : IItemOperation<TSelf>;

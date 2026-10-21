@@ -12,5 +12,8 @@ public static class SingleObjective
         _ => throw new InvalidOperationException($"Unsupported objective direction: {direction}.")
     };
 
-    public static ObjectiveDirections WithSingleObjective(this ObjectiveDirections objectives) => Create(objectives.Directions.Single());
+    extension(ObjectiveDirections objectives)
+    {
+        public ObjectiveDirections WithSingleObjective() => Create(objectives.Directions.Single());
+    }
 }

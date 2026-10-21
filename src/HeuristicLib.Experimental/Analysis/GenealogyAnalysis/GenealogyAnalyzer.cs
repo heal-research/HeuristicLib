@@ -4,7 +4,6 @@ using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 
@@ -15,9 +14,7 @@ namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 /// This analyzer holds its own data. It combines multiple kinds of boundary into a graph with domain-specific
 /// queries. The graph is an accumulator, so read it once the run has finished.
 /// </remarks>
-public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState> : AccumulatingAnalyzer
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed class GenealogyAnalyzer<TCandidate, TSearchState> : AccumulatingAnalyzer
     where TSearchState : PopulationState<TCandidate>
     where TCandidate : notnull
 {
@@ -36,7 +33,7 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
     /// <param name="saveSpace">
     /// Keeps parent links for the latest generation only, discarding older generations as each new one closes.
     /// </param>
-    public GenealogyAnalyzer(IReadOnlyList<ICrossover<TCandidate>>? crossovers = null,
+    public GenealogyAnalyzer(IReadOnlyList<IOperator<Crossover, TCandidate>>? crossovers = null,
                              IReadOnlyList<IOperator<Mutation, TCandidate>>? mutators = null,
                              IReadOnlyList<IAlgorithm<TCandidate, TSearchState>>? algorithms = null,
                              IEqualityComparer<TCandidate>? equality = null,
@@ -50,7 +47,7 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
     /// publishing a different result.
     /// </summary>
     internal GenealogyAnalyzer(GenealogyGraph<TCandidate> graph,
-                               IReadOnlyList<ICrossover<TCandidate>>? crossovers,
+                               IReadOnlyList<IOperator<Crossover, TCandidate>>? crossovers,
                                IReadOnlyList<IOperator<Mutation, TCandidate>>? mutators,
                                IReadOnlyList<IAlgorithm<TCandidate, TSearchState>>? algorithms,
                                bool saveSpace)
@@ -62,11 +59,11 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
         this.saveSpace = saveSpace;
         Advices =
         [
-            .. (crossovers ?? []).SelectMany(crossover => Aspect.Observe<TCandidate, TSearchSpace, TProblem>(
+            .. (crossovers ?? []).SelectMany(crossover => Aspect.Observe(
                 crossover, observation => AfterCross(observation.Offspring, observation.Parents)).Advices),
-            .. (mutators ?? []).SelectMany(mutator => Aspect.Observe<TCandidate, TSearchSpace, TProblem>(
+            .. (mutators ?? []).SelectMany(mutator => Aspect.Observe(
                 mutator, observation => AfterMutate(observation.Offspring, observation.Parents)).Advices),
-            .. (algorithms ?? []).SelectMany(algorithm => Aspect.Observe<TCandidate, TSearchSpace, TProblem, TSearchState>(
+            .. (algorithms ?? []).SelectMany(algorithm => Aspect.Observe(
                 algorithm, observation => CloseGeneration(observation.State, observation.Problem)).Advices)
         ];
     }
@@ -88,7 +85,7 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearc
             graph.AddConnection([parent], child);
     }
 
-    private void CloseGeneration(TSearchState currentState, TProblem problem)
+    private void CloseGeneration(TSearchState currentState, IProblem problem)
     {
         var ordered = currentState.Population
                                   .OrderBy(keySelector: x => x.ObjectiveVector, problem.Objective.RequireTotalOrder(ObjectiveComparer))
@@ -104,8 +101,8 @@ public static class GenealogyAnalysisTraces
         /// <summary>
         /// Creates a genealogy analyzer over the given observation sources.
         /// </summary>
-        public static GenealogyAnalyzer<T, ISearchSpace<T>, IProblem<T, ISearchSpace<T>>, TR> Genealogy<T, TR>(
-            ICrossover<T>? crossover = null,
+        public static GenealogyAnalyzer<T, TR> Genealogy<T, TR>(
+            IOperator<Crossover, T>? crossover = null,
             IOperator<Mutation, T>? mutator = null,
             IAlgorithm<T, TR>? algorithm = null,
             IEqualityComparer<T>? equality = null,
@@ -114,7 +111,7 @@ public static class GenealogyAnalysisTraces
             where T : notnull
             where TR : PopulationState<T> =>
             new(
-                crossover is null ? null : (IReadOnlyList<ICrossover<T>>)[crossover],
+                crossover is null ? null : (IReadOnlyList<IOperator<Crossover, T>>)[crossover],
                 mutator is null ? null : (IReadOnlyList<IOperator<Mutation, T>>)[mutator],
                 algorithm is null ? null : (IReadOnlyList<IAlgorithm<T, TR>>)[algorithm],
                 equality,

@@ -25,9 +25,9 @@ public class ExecutorFactoryCodeFixTests
         using SS = HEAL.HeuristicLib.SearchSpaces.ISearchSpace<int>;
         using P = HEAL.HeuristicLib.Problems.IProblem<int, HEAL.HeuristicLib.SearchSpaces.ISearchSpace<int>>;
 
-        file sealed record ChildCrossover : Crossover<int>
+        file record ChildCrossover : Crossover<int>
         {
-            public override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateExecutorFactory() => _ => new Executor();
+            protected override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateFactory() => _ => new Executor();
             private sealed class Executor : CrossoverExecutor<int, SS, P>
             {
                 public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random, SS searchSpace, P problem) => [];
@@ -37,20 +37,18 @@ public class ExecutorFactoryCodeFixTests
         """;
 
     [Theory]
-    [InlineData("ICrossover<int>", "Child.CreateExecutorFactory<SS, P>()(scope)")]
-    [InlineData("ChildCrossover", "Child.CreateExecutorFactory()(scope)")]
-    [InlineData("ChildCrossover", "(Child.CreateExecutorFactory())(scope)")]
-    [InlineData("ChildCrossover", "Child.CreateExecutorFactory().Invoke(scope)")]
-    public async Task FixedCode_Compiles_ForImmediateFactoryInvocation(string childType, string binding)
+    [InlineData("Child.CreateFactory()(scope)")]
+    [InlineData("(Child.CreateFactory())(scope)")]
+    [InlineData("Child.CreateFactory().Invoke(scope)")]
+    public async Task FixedCode_Compiles_ForImmediateFactoryInvocation(string binding)
     {
         var fixedSource = await ApplyFixAsync(Preamble + $$"""
-            file sealed record BypassingCrossover : Crossover<int>
+            file sealed record BypassingCrossover : ChildCrossover
             {
-                public required {{childType}} Child { get; init; }
-                public override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateExecutorFactory() => scope => {{binding}};
+                public required BypassingCrossover Child { get; init; }
+                protected override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateFactory() => scope => {{binding}};
             }
             """);
-
         fixedSource.Replace(" ", "").ShouldContain("scope.Resolve<int,SS,P>(Child)");
         await AssertCompilesWithoutDiagnosticAsync(fixedSource);
     }
@@ -59,10 +57,10 @@ public class ExecutorFactoryCodeFixTests
     public async Task FixedCode_Compiles_WhenPreparationReturnsTheChildFactory()
     {
         var fixedSource = await ApplyFixAsync(Preamble + """
-            file sealed record BypassingCrossover : Crossover<int>
+            file sealed record BypassingCrossover : ChildCrossover
             {
-                public required ICrossover<int> Child { get; init; }
-                public override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateExecutorFactory() => Child.CreateExecutorFactory<SS, P>();
+                public required BypassingCrossover Child { get; init; }
+                protected override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateFactory() => Child.CreateFactory();
             }
             """);
 
@@ -74,15 +72,15 @@ public class ExecutorFactoryCodeFixTests
     public async Task FixedCode_Compiles_ForDeferredResolutionThroughAScopeField()
     {
         var fixedSource = await ApplyFixAsync(Preamble + """
-            file sealed class DeferredExecutor(ICrossover<int> child, ResolutionScope scope) : CrossoverExecutor<int, SS, P>
+            file sealed class DeferredExecutor(IConfigurationNode<ICrossoverExecutor<int, SS, P>> child, ResolutionScope scope) : CrossoverExecutor<int, SS, P>
             {
                 public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random, SS searchSpace, P problem) =>
                     Activate().Cross(parents, random, searchSpace, problem);
-                private ICrossoverExecutor<int, SS, P> Activate() => child.CreateExecutorFactory<SS, P>()(scope.CreateChildScope());
+                private ICrossoverExecutor<int, SS, P> Activate() => child.CreateExecutorFactory()(scope.CreateChildScope());
             }
             """);
 
-        fixedSource.Replace(" ", "").ShouldContain("scope.CreateChildScope().Resolve<int,SS,P>(child)");
+        fixedSource.Replace(" ", "").ShouldContain("scope.CreateChildScope().Resolve(child)");
         await AssertCompilesWithoutDiagnosticAsync(fixedSource);
     }
 
@@ -90,11 +88,11 @@ public class ExecutorFactoryCodeFixTests
     public async Task FixedCode_Compiles_ForAFourArgumentRole()
     {
         var fixedSource = await ApplyFixAsync(Preamble + """
-            file sealed record BypassingInterceptor : IConfigurationNode<IInterceptionExecutor<int, SS, P, PopulationState<int>>>
+            file sealed record BypassingTerminator : HEAL.HeuristicLib.Operators.Terminators.Terminator<int, SS, P, PopulationState<int>>
             {
-                public required IInterceptor<int> Child { get; init; }
-                public ExecutorFactory<IInterceptionExecutor<int, SS, P, PopulationState<int>>> CreateExecutorFactory() =>
-                    scope => Child.CreateExecutorFactory<SS, P, PopulationState<int>>()(scope);
+                public required BypassingTerminator Child { get; init; }
+                protected override ExecutorFactory<ITerminationExecutor<int, SS, P, PopulationState<int>>> CreateFactory() =>
+                    scope => Child.CreateFactory()(scope);
             }
             """);
 
@@ -165,12 +163,12 @@ public class ExecutorFactoryCodeFixTests
     public async Task DoesNotOfferAPartialFix_ForAStoredFactory()
     {
         await ApplyFixAsync(Preamble + """
-            file sealed record BypassingCrossover : Crossover<int>
+            file sealed record BypassingCrossover : ChildCrossover
             {
-                public required ICrossover<int> Child { get; init; }
-                public override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateExecutorFactory()
+                public required BypassingCrossover Child { get; init; }
+                protected override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateFactory()
                 {
-                    var factory = Child.CreateExecutorFactory<SS, P>();
+                    var factory = Child.CreateFactory();
                     return scope => factory(scope);
                 }
             }

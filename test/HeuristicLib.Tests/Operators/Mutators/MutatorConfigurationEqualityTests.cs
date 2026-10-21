@@ -49,24 +49,24 @@ public class MutatorConfigurationEqualityTests
     }
 
     [Fact]
-    public void ChooseOneMutator_WithDifferentChildMutators_IsNotEqual()
+    public void ChoosePerCandidateMutation_WithDifferentChildMutators_IsNotEqual()
     {
-        var left = ChooseOneMutator.Create([new AddOffsetMutator(1)], [1.0]);
-        var right = ChooseOneMutator.Create([new AddOffsetMutator(2)], [1.0]);
+        var left = ChoosePerCandidate.Create([new AddOffsetMutator(1)], [1.0]);
+        var right = ChoosePerCandidate.Create([new AddOffsetMutator(2)], [1.0]);
 
         left.ShouldNotBe(right);
     }
 
     [Fact]
-    public void ChooseOneMutator_WithDifferentWeights_IsNotEqual()
+    public void ChoosePerCandidateMutation_WithDifferentWeights_IsNotEqual()
     {
         var children = new IOperator<Mutation, int>[]
         {
             new AddOffsetMutator(1),
             new AddOffsetMutator(2),
         };
-        var left = ChooseOneMutator.Create(children, [1.0, 2.0]);
-        var right = ChooseOneMutator.Create(children, [2.0, 1.0]);
+        var left = ChoosePerCandidate.Create(children, [1.0, 2.0]);
+        var right = ChoosePerCandidate.Create(children, [2.0, 1.0]);
 
         left.ShouldNotBe(right);
     }
@@ -75,7 +75,7 @@ public class MutatorConfigurationEqualityTests
     public void MultiMutatorTopologies_WithEqualChildMutators_AreNotEqualAcrossTypes()
     {
         var pipeline = PipelineMutator.Create(new AddOffsetMutator(1), new AddOffsetMutator(2));
-        var chooseOne = ChooseOneMutator.Create(new AddOffsetMutator(1), new AddOffsetMutator(2));
+        var chooseOne = ChoosePerCandidate.Create(new AddOffsetMutator(1), new AddOffsetMutator(2));
 
         pipeline.ShouldNotBe<object>(chooseOne);
     }
@@ -188,12 +188,12 @@ public class MutatorConfigurationEqualityTests
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<int, TSearchSpace, TProblem>> childMutators)
-            : MultiMutationExecutor<int, TSearchSpace, TProblem>(childMutators)
+            : IMutationExecutor<int, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildMutators[0].Mutate(parents, random, searchSpace, problem);
+            public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+                childMutators[0].Mutate(parents, random, searchSpace, problem);
         }
     }
 }

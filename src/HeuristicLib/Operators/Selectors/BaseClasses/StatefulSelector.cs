@@ -22,7 +22,7 @@ public abstract record StatefulSelector<TCandidate, TSearchSpace, TProblem, TSta
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override ExecutorFactory<ISelectionExecutor<TCandidate, TSearchSpace, TProblem>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<ISelectionExecutor<TCandidate, TSearchSpace, TProblem>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;
@@ -45,7 +45,7 @@ public abstract record StatefulSelector<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override ExecutorFactory<ISelectionExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<ISelectionExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;
@@ -67,7 +67,7 @@ public abstract record StatefulSelector<TCandidate, TState>
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random);
 
-    public sealed override ExecutorFactory<ISelectionExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<ISelectionExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;

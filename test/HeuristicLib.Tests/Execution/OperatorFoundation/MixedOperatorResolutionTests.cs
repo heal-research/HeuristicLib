@@ -17,17 +17,17 @@ public sealed class MixedOperatorResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void NominalResolutionAdaptsToTheDeclaredPreparedOwnerInEitherOrder(bool legacyFirst)
+    public void TypedAndUntypedResolutionShareThePreparedOwnerInEitherOrder(bool untypedFirst)
     {
         var source = new DualCrossover();
         var counter = new CallCounter();
         var log = new AdviceLog();
         var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountCalls(counter, log)));
         var typed = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
-        ICrossover<RealVector> legacy = source;
+        IOperator<Crossover, RealVector> forwarded = source;
         IOperator<Crossover, RealVector> current = source;
-        var first = legacyFirst ? typed.Resolve(legacy) : typed.Resolve(current);
-        var second = legacyFirst ? typed.Resolve(current) : typed.Resolve(legacy);
+        var first = untypedFirst ? root.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(forwarded) : typed.Resolve(current);
+        var second = untypedFirst ? typed.Resolve(current) : root.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(forwarded);
         Invoke(first).ShouldBe(1);
         Invoke(second).ShouldBe(2);
         var child = root.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
@@ -36,7 +36,6 @@ public sealed class MixedOperatorResolutionTests
         control.Value = 12;
         Invoke(operation).ShouldBe(13);
         source.Preparations.ShouldBe(1);
-        source.LegacyPreparations.ShouldBe(0);
         log.Wraps.ShouldBe(3);
         counter.Value.ShouldBe(3);
     }
@@ -46,8 +45,8 @@ public sealed class MixedOperatorResolutionTests
     {
         var source = new DualCrossover();
         IOperator<Crossover, RealVector> current = source;
-        ICrossover<RealVector> legacy = new LegacyForward(current);
-        var outer = new CurrentForward(legacy);
+        IOperator<Crossover, RealVector> forwarded = new ForwardedCrossover(current);
+        var outer = new CurrentForward(forwarded);
         var counter = new CallCounter();
         var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountCalls(counter, new AdviceLog())));
         var parent = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
@@ -69,17 +68,17 @@ public sealed class MixedOperatorResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void LowLevelCallbacksCannotCreateAnIndependentOwnerForTheSameConfiguration(bool legacyFirst)
+    public void LowLevelCallbacksCannotCreateAnIndependentOwnerForTheSameConfiguration(bool untypedFirst)
     {
         var source = new DualCrossover();
         var root = ResolutionScope.Create();
         var typed = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
-        ICrossoverExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> LegacyCallback() =>
+        ICrossoverExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> LowLevelCallback() =>
             root.Resolve<DualCrossover, ICrossoverExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>(
                 source, _ => _ => new DualCrossover.Executor(), (_, _) => static child => child);
-        if (legacyFirst)
+        if (untypedFirst)
         {
-            _ = LegacyCallback();
+            _ = LowLevelCallback();
             Assert.Throws<InvalidOperationException>(() => typed.Resolve((IOperator<Crossover, RealVector>)source))
                 .Message.ShouldContain("preparation path");
             source.Preparations.ShouldBe(0);
@@ -87,7 +86,7 @@ public sealed class MixedOperatorResolutionTests
         else
         {
             _ = typed.Resolve((IOperator<Crossover, RealVector>)source);
-            Assert.Throws<InvalidOperationException>(() => LegacyCallback()).Message.ShouldContain("preparation path");
+            Assert.Throws<InvalidOperationException>(() => LowLevelCallback()).Message.ShouldContain("preparation path");
             source.Preparations.ShouldBe(1);
         }
     }
@@ -95,24 +94,15 @@ public sealed class MixedOperatorResolutionTests
     private static double Invoke(ICrossoverExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> operation) =>
         operation.Cross([Parents.From(new RealVector(0.0), new RealVector(0.0))], RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem)[0][0];
 
-    private sealed class DualCrossover : ICrossover<RealVector>, IOperator<Crossover, RealVector>
+    private sealed class DualCrossover : IOperator<Crossover, RealVector>
     {
         public int Preparations { get; private set; }
-        public int LegacyPreparations { get; private set; }
 
         public OperatorExecutorFactory CreateExecutorFactory()
         {
             Preparations++;
             var executor = new Executor();
             return OperatorExecutorFactory.FromFactory<Executor>(_ => executor);
-        }
-
-        public ExecutorFactory<ICrossoverExecutor<RealVector, TSearchSpace, TProblem>> CreateExecutorFactory<TSearchSpace, TProblem>()
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
-        {
-            LegacyPreparations++;
-            throw new InvalidOperationException("The declared prepared owner must be used.");
         }
 
         internal sealed class Executor : ILiveValue,
@@ -126,19 +116,17 @@ public sealed class MixedOperatorResolutionTests
         }
     }
 
-    private sealed record LegacyForward(IOperator<Crossover, RealVector> Child) : ICrossover<RealVector>
+    private sealed record ForwardedCrossover(IOperator<Crossover, RealVector> Child) : IOperator<Crossover, RealVector>
     {
-        public ExecutorFactory<ICrossoverExecutor<RealVector, TSearchSpace, TProblem>> CreateExecutorFactory<TSearchSpace, TProblem>()
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace> =>
-            scope => scope.For<RealVector, TSearchSpace, TProblem>().Resolve(Child);
+        public OperatorExecutorFactory CreateExecutorFactory() => OperatorExecutorFactory.Forward(Child);
+
     }
 
-    private sealed record CurrentForward(ICrossover<RealVector> Child) : IOperator<Crossover, RealVector>
+    private sealed record CurrentForward(IOperator<Crossover, RealVector> Child) : IOperator<Crossover, RealVector>
     {
         public OperatorExecutorFactory CreateExecutorFactory() => new Factory(Child);
 
-        private sealed class Factory(ICrossover<RealVector> child) : OperatorExecutorFactory<Crossover, RealVector>
+        private sealed class Factory(IOperator<Crossover, RealVector> child) : OperatorExecutorFactory<Crossover, RealVector>
         {
             protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
                 ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => scope.Resolve(child);

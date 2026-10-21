@@ -52,15 +52,15 @@ public sealed class NamedOperatorTests
     public void EveryNamedRole_ResolvesItsChildInTheSameScope()
     {
         var scope = ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>();
-        ICreator<int> creator = new SequenceCreator();
-        ICrossover<int> crossover = new SelectFirstParentCrossover<int>();
+        IOperator<Creation, int> creator = new SequenceCreator();
+        IOperator<Crossover, int> crossover = new SelectFirstParentCrossover<int>();
         IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
         IOperator<Mutation, int> mutator = new AdvancingMutator();
-        IRefiner<int> refiner = new NoChangeRefiner<int>();
-        IReplacer<int> replacer = new CommaSelectionReplacer<int>();
-        ISelector<int> selector = new TournamentSelector<int>(2);
-        IInterceptor<int> interceptor = new IdentityInterceptor<int, PopulationState<int>>();
-        ITerminator<int> terminator = new NeverTerminator<int>();
+        IOperator<Refinement, int> refiner = new NoChangeRefiner<int>();
+        IOperator<Replacement, int> replacer = new CommaSelectionReplacer<int>();
+        IOperator<Selection, int> selector = new TournamentSelector<int>(2);
+        IOperator<Interception<PopulationState<int>>, int> interceptor = new IdentityInterceptor<int, PopulationState<int>>();
+        IOperator<Termination, int> terminator = new NeverTerminator<int>();
         IAlgorithm<int, PopulationState<int>> algorithm = new AdditiveStepAlgorithm(2);
 
         scope.Resolve(creator.Named("creator")).ShouldBeSameAs(scope.Resolve(creator));

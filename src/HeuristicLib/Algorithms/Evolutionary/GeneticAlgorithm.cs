@@ -11,12 +11,12 @@ public record GeneticAlgorithm<TCandidate>
     : IterativeAlgorithm<GeneticAlgorithm<TCandidate>, TCandidate, PopulationState<TCandidate>>
 {
     public int PopulationSize { get; init; } = GeneticAlgorithmDefaults.PopulationSize;
-    public required ICreator<TCandidate> Creator { get; init; }
-    public required ICrossover<TCandidate> Crossover { get; init; }
+    public required IOperator<Creation, TCandidate> Creator { get; init; }
+    public required IOperator<Crossover, TCandidate> Crossover { get; init; }
     public required IOperator<Mutation, TCandidate> Mutator { get; init; }
-    public ITerminator<TCandidate>? Terminator { get; init; }
+    public IOperator<Termination, TCandidate>? Terminator { get; init; }
     public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = GeneticAlgorithmDefaults.Evaluator<TCandidate>();
-    public IRefiner<TCandidate>? Refiner { get; init; }
+    public IOperator<Refinement, TCandidate>? Refiner { get; init; }
 
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
@@ -35,7 +35,7 @@ public record GeneticAlgorithm<TCandidate>
     /// </remarks>
     public double MutationRate { get; init; } = GeneticAlgorithmDefaults.MutationRate;
 
-    public ISelector<TCandidate> Selector { get; init; } = GeneticAlgorithmDefaults.Selector<TCandidate>();
+    public IOperator<Selection, TCandidate> Selector { get; init; } = GeneticAlgorithmDefaults.Selector<TCandidate>();
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Terminator, Evaluator, Refiner, Selector);
 
     protected override ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
@@ -118,14 +118,14 @@ public static class GeneticAlgorithm
     /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
     public static GeneticAlgorithm<TCandidate> For<TProblem, TCandidate, TSearchSpace>(
         Problem<TProblem, TCandidate, TSearchSpace> problem,
-        ICreator<TCandidate>? creator = null,
-        ICrossover<TCandidate>? crossover = null,
+        IOperator<Creation, TCandidate>? creator = null,
+        IOperator<Crossover, TCandidate>? crossover = null,
         IOperator<Mutation, TCandidate>? mutator = null,
-        ISelector<TCandidate>? selector = null,
+        IOperator<Selection, TCandidate>? selector = null,
         IOperator<Evaluation, TCandidate>? evaluator = null,
-        IRefiner<TCandidate>? refiner = null,
-        ITerminator<TCandidate>? terminator = null,
-        IInterceptor<TCandidate>? interceptor = null,
+        IOperator<Refinement, TCandidate>? refiner = null,
+        IOperator<Termination, TCandidate>? terminator = null,
+        IOperator<Interception<PopulationState<TCandidate>>, TCandidate>? interceptor = null,
         int populationSize = GeneticAlgorithmDefaults.PopulationSize,
         int? maximumGenerations = GeneticAlgorithmDefaults.MaximumGenerations,
         double mutationRate = GeneticAlgorithmDefaults.MutationRate,
@@ -172,14 +172,14 @@ public static class GeneticAlgorithm
     /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
     public static GeneticAlgorithm<TCandidate> For<TCandidate>(
         ISearchSpace<TCandidate> searchSpace,
-        ICreator<TCandidate>? creator = null,
-        ICrossover<TCandidate>? crossover = null,
+        IOperator<Creation, TCandidate>? creator = null,
+        IOperator<Crossover, TCandidate>? crossover = null,
         IOperator<Mutation, TCandidate>? mutator = null,
-        ISelector<TCandidate>? selector = null,
+        IOperator<Selection, TCandidate>? selector = null,
         IOperator<Evaluation, TCandidate>? evaluator = null,
-        IRefiner<TCandidate>? refiner = null,
-        ITerminator<TCandidate>? terminator = null,
-        IInterceptor<TCandidate>? interceptor = null,
+        IOperator<Refinement, TCandidate>? refiner = null,
+        IOperator<Termination, TCandidate>? terminator = null,
+        IOperator<Interception<PopulationState<TCandidate>>, TCandidate>? interceptor = null,
         int populationSize = GeneticAlgorithmDefaults.PopulationSize,
         int? maximumGenerations = GeneticAlgorithmDefaults.MaximumGenerations,
         double mutationRate = GeneticAlgorithmDefaults.MutationRate,
@@ -217,14 +217,14 @@ public static class GeneticAlgorithm
     /// the operators.
     /// </remarks>
     public static GeneticAlgorithm<TCandidate> Create<TCandidate>(
-        ICreator<TCandidate> creator,
-        ICrossover<TCandidate> crossover,
+        IOperator<Creation, TCandidate> creator,
+        IOperator<Crossover, TCandidate> crossover,
         IOperator<Mutation, TCandidate> mutator,
-        ISelector<TCandidate>? selector = null,
+        IOperator<Selection, TCandidate>? selector = null,
         IOperator<Evaluation, TCandidate>? evaluator = null,
-        IRefiner<TCandidate>? refiner = null,
-        ITerminator<TCandidate>? terminator = null,
-        IInterceptor<TCandidate>? interceptor = null,
+        IOperator<Refinement, TCandidate>? refiner = null,
+        IOperator<Termination, TCandidate>? terminator = null,
+        IOperator<Interception<PopulationState<TCandidate>>, TCandidate>? interceptor = null,
         int populationSize = GeneticAlgorithmDefaults.PopulationSize,
         int? maximumGenerations = GeneticAlgorithmDefaults.MaximumGenerations,
         double mutationRate = GeneticAlgorithmDefaults.MutationRate,

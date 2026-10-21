@@ -21,18 +21,18 @@ An algorithm observation captures each search state it yields, after its interce
 
 An analyzer is one of several ways to see what a run does. Pick by what you need:
 
-| Need                                                                                        | Use                                                                                                     |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Look at every state the algorithm yields                                                    | `algorithm.Stream(problem, random)`                                                                     |
-| Only the final state                                                                        | `algorithm.CompleteAsync(problem, random)`                                                              |
-| Typed data from chosen boundaries, such as a quality curve or an operator's offspring       | An analyzer attached with `AddAspect`                                                                   |
-| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An aspect added with `AddAspect`                                                                        |
-| A count or duration that stops or limits the run                                            | Inspection such as `CountCandidates` or `LimitedToEvaluatedCandidates`, read by terminators and budgets |
-| The same analysis for every experiment trial                                                | A trial analyzer, see [Experiments](/guide/execution/experiments)                                       |
+| Need                                                                                        | Use                                                                                            |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Look at every state the algorithm yields                                                    | `algorithm.Stream(problem, random)`                                                            |
+| Only the final state                                                                        | `algorithm.CompleteAsync(problem, random)`                                                     |
+| Typed data from chosen boundaries, such as a quality curve or an operator's offspring       | An analyzer attached with `AddAspect`                                                          |
+| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An aspect added with `AddAspect`                                                               |
+| A count or duration that stops or limits the run                                            | Inspection such as `CountCandidates` or `LimitedToCandidates`, read by terminators and budgets |
+| The same analysis for every experiment trial                                                | A trial analyzer, see [Experiments](/guide/execution/experiments)                              |
 
 Inspection preserves the observed computation while recording its own observations, counts, durations and clocks. Analyzers derive results from those observations. Observation callbacks must preserve the operation's inputs and outputs; they receive live references rather than isolated deep copies. General aspects may change behavior, and explicit algorithm policies such as budgets may read inspection data to decide when to stop.
 
-Mutation and evaluation inspection passes on the selected executor's controls. Generic naming and retry wrappers do too, so inspection through those wrappers keeps mutation-strength adaptation. Composites expose their own controls.
+Inspection of creation, crossover, mutation, evaluation, selection, refinement and replacement passes on the selected executor's controls. Generic naming and retry wrappers do too, so inspection through those wrappers keeps mutation-strength adaptation. Composites expose their own controls.
 
 ## Choose a boundary and a clock
 
@@ -106,7 +106,7 @@ public CandidateSummaryAnalyzer(IOperator<Evaluation, TCandidate> evaluator)
     Advices = Aspect.Observe(evaluator, Record).Advices;
 }
 
-private void Record(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation)
+private void Record(OperatorObservation<Evaluation, TCandidate> observation)
 {
     lock (Sync)
         accumulator.Add(observation.Candidates);
@@ -117,18 +117,21 @@ Read an accumulating analyzer after the run finishes. Clocks and retention apply
 
 ## Custom traces
 
-Use a scalar projection when the observation already provides one value:
+A trace reads the observations a source offers, such as `algorithm`, `crossover` or `evaluator`; every operation offers them. Use a scalar projection when the observation already provides one value:
 
 ```csharp
 var size = Analyzer.Trace(algorithm,
-    value: observation => observation.State.Population.EvaluatedCandidates.Count);
+    observation => observation.State.Population.EvaluatedCandidates.Count);
+var offspring = Analyzer.Trace(crossover, observation => observation.Offspring.Count);
 var quality = Analyzer.Trace(
     algorithm,
-    Measurement.ObjectiveVectors(algorithm),
+    new ObjectiveVectorsMeasurement<RealVector>(),
     Aggregate.BestMedianWorst());
 ```
 
-Named measurements provide reusable value strategies with type inference from the source. Runtime-only delegates provide local projections and have no value-equality or serialization contract.
+Every operator offers an `OperatorObservation<TOperation, TCandidate>`. Its operation-specific members, such as `Offspring` for a crossover or `ObjectiveVectors` for an evaluator, read the call's arguments and result. It reads the search space and problem at the candidate's interfaces, so it fits every run over the candidate.
+
+Named measurements provide reusable value strategies and name the candidate they read. `ObjectiveVectorsMeasurement<TCandidate>` and `CandidatesMeasurement<TCandidate>` read evaluator calls and search states alike, so they also trace the states an algorithm yields or an interceptor returns. `OffspringMeasurement<TCandidate>` reads crossover and mutation calls. Runtime-only delegates provide local projections and have no value-equality or serialization contract.
 
 `IAggregation<TValue, TResult>` has a single `Aggregate` method. `Aggregate.Best()` summarizes each observation; `Aggregate.BestSoFar()` accumulates across observations, keeping the running best as its own state. A custom aggregation is an ordinary class implementing that one method, and it must publish immutable results.
 
@@ -170,7 +173,7 @@ An experiment uses a trial analyzer factory to create fresh analyzers for every 
 
 ## Build a trace for a custom observation role
 
-`TraceAnalyzer<TResult>.Create` accepts sources, a factory connecting each source to a recording callback, and a measurement function. Consumer-defined roles use the same trace storage, retention and clocks as the built-in `Analyzer.Trace` overloads. Sources are deduplicated by reference.
+`TraceAnalyzer<TResult>.Create` accepts sources, a factory connecting each source to a recording callback, and a measurement function. Consumer-defined roles use the same trace storage, retention and clocks as `Analyzer.Trace`. Sources are deduplicated by reference.
 
 For example, with a consumer-defined cooling-schedule role and its `RecordedCoolingAdvice`:
 

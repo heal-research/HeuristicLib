@@ -11,7 +11,7 @@ public class InterceptorConfigurationEqualityTests
     {
         var child = new OffsetInterceptor(1);
 
-        new IdentityInterceptor(child).ChildInterceptor.ShouldBeSameAs(child);
+        new IdentityInterceptor(child).ChildOperator.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -19,14 +19,14 @@ public class InterceptorConfigurationEqualityTests
     {
         var first = new OffsetInterceptor(1);
         var second = new OffsetInterceptor(2);
-        var children = new List<IInterceptor<int>> { first, second };
-        var left = new PipelineInterceptor<int>(children);
+        var children = new List<IOperator<Interception<TestState>, int>> { first, second };
+        var left = new PipelineInterceptor<int, TestState>(children);
 
         children.Clear();
         var equal = PipelineInterceptor.Create(new OffsetInterceptor(1), new OffsetInterceptor(2));
         var reordered = PipelineInterceptor.Create(new OffsetInterceptor(2), new OffsetInterceptor(1));
 
-        left.ChildInterceptors.ShouldBe([first, second]);
+        left.ChildOperators.ShouldBe([first, second]);
         left.ShouldBe(equal);
         left.GetHashCode().ShouldBe(equal.GetHashCode());
         left.ShouldNotBe(reordered);
@@ -52,14 +52,13 @@ public class InterceptorConfigurationEqualityTests
         public override TestState Transform(TestState currentState, TestState? previousState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
             currentState with { Value = currentState.Value + Offset };
     }
-    private sealed record IdentityInterceptor : WrappingInterceptor<int>
+    private sealed record IdentityInterceptor : WrappingOperator<Interception<TestState>, int>
     {
-        public IdentityInterceptor(IInterceptor<int> child) : base(child)
+        public IdentityInterceptor(IOperator<Interception<TestState>, int> child) : base(child)
         {
         }
 
-        protected override WrapperExecutorFactory<IInterceptionExecutor<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
-            child => child;
+        protected override OperatorExecutorFactory CreateOperatorFactory() => OperatorExecutorFactory.Forward(ChildOperator);
     }
 
 }

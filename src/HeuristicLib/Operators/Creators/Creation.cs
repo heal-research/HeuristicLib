@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>Identifies creating candidates when declaring an operator slot.</summary>
-public sealed class Creation : IOperationDescriptor<Creation>
+public sealed class Creation : IItemOperation<Creation>
 {
     public static OperationExecutorAdapter CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TSearchState>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -27,16 +27,22 @@ public sealed class Creation : IOperationDescriptor<Creation>
             new WrappedExecutor<TWrapper>(executor, wrapper);
 
         private readonly struct Invocation(ICreationExecutor<TCandidate, TSearchSpace, TProblem> executor,
-            int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<TCandidate>>
+            int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IItemInvocation<TCandidate>, ICreationArguments
         {
             private readonly ICreationExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
             private readonly IRandomNumberGenerator random = random;
 
             public IRandomNumberGenerator Random => random;
+            public ISearchSpace SearchSpace => searchSpace;
+            public IProblem Problem => problem;
+            public int Count => count;
             public IReadOnlyList<TCandidate> Proceed() => executor.Create(count, random, searchSpace, problem);
             public IReadOnlyList<TCandidate> ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
                 ((ICreationExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Create(count, random ?? this.random, searchSpace, problem);
             public int CountCandidateWork(IReadOnlyList<TCandidate> result) => result.Count;
+            public int ItemCount => count;
+            public IReadOnlyList<TCandidate> ProceedWithItems(IExecutor executor, IReadOnlyList<int> items) =>
+                ((ICreationExecutor<TCandidate, TSearchSpace, TProblem>)executor).Create(items.Count, random, searchSpace, problem);
         }
 
         private sealed class WrappedExecutor<TWrapper>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> executor, TWrapper wrapper)
@@ -49,4 +55,10 @@ public sealed class Creation : IOperationDescriptor<Creation>
             public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
         }
     }
+}
+
+/// <summary>The arguments of one creation call, which its observations read.</summary>
+internal interface ICreationArguments
+{
+    int Count { get; }
 }

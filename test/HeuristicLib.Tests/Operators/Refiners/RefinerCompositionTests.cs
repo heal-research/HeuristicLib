@@ -59,30 +59,30 @@ public class RefinerCompositionTests
         var child = AddOffset(1);
         var refiner = child.AsIterated(3);
 
-        refiner.ChildRefiner.ShouldBeSameAs(child);
+        refiner.ChildOperator.ShouldBeSameAs(child);
         refiner.Iterations.ShouldBe(3);
     }
 
     [Fact]
-    public void ChooseOneRefiner_WithoutChildRefiners_ThrowsWhenCreatingTheExecution()
+    public void ChoosePerCandidateRefinement_WithoutChildRefiners_ThrowsWhenCreatingTheExecution()
     {
-        var refiner = ChooseOneRefiner.Create<int>();
+        var refiner = ChoosePerCandidate.Create<Refinement, int>();
 
         Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(refiner));
     }
 
     [Fact]
-    public void ChooseOneRefiner_WithMismatchedWeightCount_ThrowsWhenCreatingTheExecution()
+    public void ChoosePerCandidateRefinement_WithMismatchedWeightCount_ThrowsWhenCreatingTheExecution()
     {
-        var refiner = ChooseOneRefiner.Create([AddOffset(1), Multiply(2)], [1.0]);
+        var refiner = ChoosePerCandidate.Create([AddOffset(1), Multiply(2)], [1.0]);
 
         Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(refiner));
     }
 
     [Fact]
-    public void ChooseOneRefiner_WithZeroWeightForAChild_NeverSelectsThatChild()
+    public void ChoosePerCandidateRefinement_WithZeroWeightForAChild_NeverSelectsThatChild()
     {
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ChooseOneRefiner.Create([AddOffset(1), Multiply(2)], [1.0, 0.0]));
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ChoosePerCandidate.Create([AddOffset(1), Multiply(2)], [1.0, 0.0]));
 
         Refine(execution, 3, 3, 3, 3).ShouldBe([4, 4, 4, 4]);
     }
@@ -178,9 +178,9 @@ public class RefinerCompositionTests
     }
 
     [Fact]
-    public void ChooseOneRefiner_WithTheSameSeed_MakesTheSameSelections()
+    public void ChoosePerCandidateRefinement_WithTheSameSeed_MakesTheSameSelections()
     {
-        var refiner = ChooseOneRefiner.Create([AddOffset(1), Multiply(2)], [1.0, 1.0]);
+        var refiner = ChoosePerCandidate.Create([AddOffset(1), Multiply(2)], [1.0, 1.0]);
         var candidates = new[] { 3, 3, 3, 3, 3, 3, 3, 3 };
 
         var first = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner).Refine(candidates, RandomNumberGenerator.Create(7), DummySearchSpace<int>.Instance, CreateProblem());

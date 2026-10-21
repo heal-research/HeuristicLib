@@ -22,7 +22,7 @@ public abstract record StatefulRefiner<TCandidate, TSearchSpace, TProblem, TStat
 
     protected abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public sealed override ExecutorFactory<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;
@@ -45,7 +45,7 @@ public abstract record StatefulRefiner<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public sealed override ExecutorFactory<IRefinementExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<IRefinementExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;
@@ -67,7 +67,7 @@ public abstract record StatefulRefiner<TCandidate, TState>
 
     protected abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, TState state, IRandomNumberGenerator random);
 
-    public sealed override ExecutorFactory<IRefinementExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutorFactory()
+    protected sealed override ExecutorFactory<IRefinementExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateFactory()
     {
         var executor = new Executor(this, CreateInitialState());
         return _ => executor;

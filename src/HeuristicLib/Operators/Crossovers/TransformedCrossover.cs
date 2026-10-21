@@ -12,16 +12,17 @@ namespace HEAL.HeuristicLib.Operators;
 /// <remarks>
 /// The mutator is invoked for every crossover result batch. A rate controlled mutator may be supplied when conditional mutation is explicitly desired.
 /// </remarks>
-public record TransformedCrossover<TCandidate>(ICrossover<TCandidate> SourceCrossover, IOperator<Mutation, TCandidate> TransformationMutator)
-    : ICrossover<TCandidate>
+public record TransformedCrossover<TCandidate>(IOperator<Crossover, TCandidate> SourceCrossover, IOperator<Mutation, TCandidate> TransformationMutator)
+    : Operator<Crossover, TCandidate>
 {
-    public ExecutorFactory<ICrossoverExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> => scope =>
+    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
+
+    private sealed class Factory(TransformedCrossover<TCandidate> source) : OperatorExecutorFactory<Crossover, TCandidate>
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Executor<TRunSearchSpace, TRunProblem>(typed.Resolve(SourceCrossover), typed.Resolve(TransformationMutator));
-    };
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.SourceCrossover), scope.Resolve(source.TransformationMutator));
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> crossover, IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator)
         : CrossoverExecutor<TCandidate, TSearchSpace, TProblem>
@@ -38,13 +39,13 @@ public record TransformedCrossover<TCandidate>(ICrossover<TCandidate> SourceCros
 
 public static class TransformedCrossover
 {
-    public static TransformedCrossover<TCandidate> Create<TCandidate>(ICrossover<TCandidate> crossover, IOperator<Mutation, TCandidate> mutator) =>
+    public static TransformedCrossover<TCandidate> Create<TCandidate>(IOperator<Crossover, TCandidate> crossover, IOperator<Mutation, TCandidate> mutator) =>
         new(crossover, mutator);
 }
 
 public static class TransformedCrossoverExtensions
 {
-    extension<TCandidate>(ICrossover<TCandidate> crossover)
+    extension<TCandidate>(IOperator<Crossover, TCandidate> crossover)
     {
         public TransformedCrossover<TCandidate> TransformWith(IOperator<Mutation, TCandidate> mutator) =>
             TransformedCrossover.Create(crossover, mutator);

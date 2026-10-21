@@ -104,12 +104,12 @@ public class EvaluatorConfigurationEqualityTests
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IEvaluationExecutor<int, TSearchSpace, TProblem>> childEvaluators)
-            : MultiEvaluationExecutor<int, TSearchSpace, TProblem>(childEvaluators)
+            : IEvaluationExecutor<int, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildEvaluators[0].Evaluate(candidates, random, searchSpace, problem);
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+                childEvaluators[0].Evaluate(candidates, random, searchSpace, problem);
         }
     }
     private sealed record IdentityEvaluator : WrappingOperator<Evaluation, int>

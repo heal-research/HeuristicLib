@@ -26,14 +26,14 @@ public sealed record PipelineMutator<TCandidate> : MultiOperator<Mutation, TCand
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> childMutators)
-        : MultiMutationExecutor<TCandidate, TSearchSpace, TProblem>(childMutators)
+        : IMutationExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var current = parents;
-            foreach (var mutator in ChildMutators)
+            foreach (var mutator in childMutators)
             {
                 current = mutator.Mutate(current, random, searchSpace, problem);
             }

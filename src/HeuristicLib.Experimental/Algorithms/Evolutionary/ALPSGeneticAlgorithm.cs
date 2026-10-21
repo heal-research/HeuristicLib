@@ -17,14 +17,14 @@ public record AlpsGeneticAlgorithm<TCandidate>
     : IterativeAlgorithm<AlpsGeneticAlgorithm<TCandidate>, TCandidate, AlpsState<TCandidate>>
 {
     public required int PopulationSize { get; init; }
-    public required ICreator<TCandidate> Creator { get; init; }
-    public required ICrossover<TCandidate> Crossover { get; init; }
+    public required IOperator<Creation, TCandidate> Creator { get; init; }
+    public required IOperator<Crossover, TCandidate> Crossover { get; init; }
     public required IOperator<Mutation, TCandidate> Mutator { get; init; }
-    public required ISelector<TCandidate> Selector { get; init; }
+    public required IOperator<Selection, TCandidate> Selector { get; init; }
     public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
     public int Elites { get; init; }
-    public IRefiner<TCandidate>? Refiner { get; init; }
+    public IOperator<Refinement, TCandidate>? Refiner { get; init; }
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Selector, Evaluator, Refiner);
 
     /// <summary>

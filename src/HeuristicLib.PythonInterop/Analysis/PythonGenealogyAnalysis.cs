@@ -66,7 +66,7 @@ public class PythonGenealogyAnalysis
             Creator = parameters.Creator ?? new ProbabilisticTreeCreator(),
             Crossover = parameters.Crossover ?? new SubtreeCrossover { InternalNodeProbability = 0.9 },
             Mutator = parameters.Mutator ??
-                new ChooseOneMutator<ExpressionTree>([.. SymbolicExpressionMutators.Default])
+                new ChoosePerCandidate<Mutation, ExpressionTree>([.. SymbolicExpressionMutators.Default])
         };
         var problem = ProblemGeneration.CreateSymbolicRegressionProblem(file, parameters);
         var actionCallback = callback is null ? null : new Action<PopulationState<ExpressionTree>>(callback);
@@ -120,7 +120,7 @@ public class PythonGenealogyAnalysis
         TProblem problem,
         Action<PopulationState<TCandidate>>? callback,
         ExperimentParameters<TCandidate, TSearchSpace> parameters,
-        IRefiner<TCandidate>? refiner = null) where TCandidate : notnull
+        IOperator<Refinement, TCandidate>? refiner = null) where TCandidate : notnull
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -269,13 +269,13 @@ public class PythonGenealogyAnalysis
     /// The parameters arrive from Python, where every operator is optional and unset, so this is the boundary that has
     /// to establish the contract the rest of the library relies on.
     /// </remarks>
-    private static ICreator<TCandidate> RequireCreator<TCandidate, TSearchSpace>(
+    private static IOperator<Creation, TCandidate> RequireCreator<TCandidate, TSearchSpace>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters)
         where TSearchSpace : class, ISearchSpace<TCandidate> =>
         parameters.Creator ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Creator));
 
     /// <inheritdoc cref="RequireCreator{TCandidate, TSearchSpace}"/>
-    private static ICrossover<TCandidate> RequireCrossover<TCandidate, TSearchSpace>(
+    private static IOperator<Crossover, TCandidate> RequireCrossover<TCandidate, TSearchSpace>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters)
         where TSearchSpace : class, ISearchSpace<TCandidate> =>
         parameters.Crossover ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Crossover));
@@ -293,7 +293,7 @@ public class PythonGenealogyAnalysis
         ExperimentParameters<TCandidate, TSearchSpace> parameters,
         IAlgorithm<TCandidate, TSearchState> algorithm,
         IOperator<Evaluation, TCandidate> evaluator,
-        ICrossover<TCandidate>? crossover,
+        IOperator<Crossover, TCandidate>? crossover,
         IOperator<Mutation, TCandidate>? mutator,
         Action<PopulationState<TCandidate>>? callback)
         where TCandidate : notnull

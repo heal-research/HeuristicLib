@@ -134,7 +134,7 @@ public class PointcutSpecs
             MaximumGenerations = 5,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new AlphaBetaBlendCrossover { Alpha = 0.7 },
-            Mutator = ChooseOneMutator.Create<RealVector>(exploration, refinement),
+            Mutator = ChoosePerCandidate.Create<Mutation, RealVector>(exploration, refinement),
             Selector = TournamentSelector.For(problem, tournamentSize: 2),
             MutationRate = 0.5,
             Elites = 1

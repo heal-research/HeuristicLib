@@ -50,16 +50,11 @@ public class HillClimberTests
     private static int StateCandidate(SingleSolutionState<int> state) => state.EvaluatedCandidate.Candidate;
 
     private sealed record ConstantCreator(int Value)
-        : ICreator<int>,
+        : IOperator<Creation, int>,
         ICreationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public ExecutorFactory<ICreationExecutor<int, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-            where TRunSearchSpace : class, ISearchSpace<int>
-            where TRunProblem : class, IProblem<int, TRunSearchSpace>
-        {
-            var executor = (ICreationExecutor<int, TRunSearchSpace, TRunProblem>)(object)this;
-            return _ => executor;
-        }
+        public OperatorExecutorFactory CreateExecutorFactory() =>
+            OperatorExecutorFactory.FromFactory<ICreationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>>(_ => this);
 
         public IReadOnlyList<int> Create(
             int count,

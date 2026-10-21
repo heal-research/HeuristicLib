@@ -8,9 +8,9 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 public record EliteSelector<TCandidate>
-    : ISelector<TCandidate>
+    : Operator<Selection, TCandidate>
 {
-    public EliteSelector(ISelector<TCandidate> selectorForRemaining)
+    public EliteSelector(IOperator<Selection, TCandidate> selectorForRemaining)
     {
         SelectorForRemaining = selectorForRemaining;
     }
@@ -23,7 +23,7 @@ public record EliteSelector<TCandidate>
     /// It is not called at all when the elites already fill the requested count, so it consumes no random draws in
     /// that case.
     /// </remarks>
-    public ISelector<TCandidate> SelectorForRemaining { get; init; }
+    public IOperator<Selection, TCandidate> SelectorForRemaining { get; init; }
 
     /// <summary>
     /// Gets the number of best candidates taken before the remaining places are filled. The expected value is
@@ -35,10 +35,14 @@ public record EliteSelector<TCandidate>
     /// </remarks>
     public int Elites { get; init; } = 1;
 
-    public ExecutorFactory<ISelectionExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> => scope =>
-        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(SelectorForRemaining), Elites);
+    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
+
+    private sealed class Factory(EliteSelector<TCandidate> source) : OperatorExecutorFactory<Selection, TCandidate>
+    {
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.SelectorForRemaining), source.Elites);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> selectorForRemaining, int elites)
         : SelectionExecutor<TCandidate, TSearchSpace, TProblem>
@@ -61,12 +65,12 @@ public record EliteSelector<TCandidate>
 
 public static class EliteSelector
 {
-    public static EliteSelector<TCandidate> Create<TCandidate>(ISelector<TCandidate> selector, int elites = 1) => new(selector) { Elites = elites };
+    public static EliteSelector<TCandidate> Create<TCandidate>(IOperator<Selection, TCandidate> selector, int elites = 1) => new(selector) { Elites = elites };
 }
 
 public static class EliteSelectorExtensions
 {
-    extension<TCandidate>(ISelector<TCandidate> selector)
+    extension<TCandidate>(IOperator<Selection, TCandidate> selector)
     {
         public EliteSelector<TCandidate> CombinedWithElites(int elites = 1) => EliteSelector.Create(selector, elites);
     }

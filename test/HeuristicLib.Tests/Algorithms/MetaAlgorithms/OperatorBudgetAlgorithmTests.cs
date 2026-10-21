@@ -20,7 +20,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.LimitedToEvaluatorCalls(algorithm.Evaluator, 1).Stream(
+        var results = algorithm.LimitedToCalls(algorithm.Evaluator, 1).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -38,7 +38,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.LimitedToEvaluatorCalls(algorithm.Evaluator, 2).Stream(
+        var results = algorithm.LimitedToCalls(algorithm.Evaluator, 2).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -55,7 +55,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.LimitedToEvaluatedCandidates(algorithm.Evaluator, 2).Stream(
+        var results = algorithm.LimitedToCandidates(algorithm.Evaluator, 2).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -73,7 +73,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.LimitedToEvaluatedCandidates(algorithm.Evaluator, 6).Stream(
+        var results = algorithm.LimitedToCandidates(algorithm.Evaluator, 6).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -90,7 +90,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.LimitedToEvaluatorDuration(
+        var results = algorithm.LimitedToDuration(
             algorithm.Evaluator,
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -112,7 +112,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.LimitedToEvaluatorDuration(
+        var results = algorithm.LimitedToDuration(
             algorithm.Evaluator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -137,7 +137,7 @@ public class OperatorBudgetAlgorithmTests
             Terminator = internalTerminator
         };
 
-        var results = algorithm.LimitedToEvaluatorDuration(
+        var results = algorithm.LimitedToDuration(
             algorithm.Evaluator,
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -161,7 +161,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.LimitedToEvaluatorDuration(
+        var results = algorithm.LimitedToDuration(
             algorithm.Evaluator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -264,29 +264,6 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
-    public void WithMaxOperatorDuration_CanObserveExplicitOperator()
-    {
-        var problem = CreateProblem();
-        var algorithm = CreateAlgorithm(problem) with
-        {
-            MaximumGenerations = 5
-        };
-
-        var results = algorithm.LimitedToOperatorDuration(
-            algorithm.Evaluator,
-            TimeSpan.FromSeconds(1),
-            new AdvancingTimeProvider(TimeSpan.FromSeconds(2)),
-            new OperatorDurationMeasuring<Evaluation, RealVector>())
-            .Stream(
-                problem,
-                RandomNumberGenerator.Create(42),
-                ct: TestContext.Current.CancellationToken)
-            .ToList();
-
-        results.Count.ShouldBe(1);
-    }
-
-    [Fact]
     public void WithMaxCreatorCalls_CanObserveExplicitCreator()
     {
         var problem = CreateProblem();
@@ -295,7 +272,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.LimitedToCreatorCalls(
+        var results = algorithm.LimitedToCalls(
             algorithm.Creator,
             maximumCalls: 1)
             .Stream(
@@ -316,7 +293,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.LimitedToCreatedCandidates(
+        var results = algorithm.LimitedToCandidates(
             algorithm.Creator,
             maximumCandidates: 2)
             .Stream(
@@ -337,7 +314,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.LimitedToCreatorDuration(
+        var results = algorithm.LimitedToDuration(
             algorithm.Creator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -360,7 +337,7 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 0.0
         };
 
-        var results = algorithm.LimitedToCrossoverCalls(
+        var results = algorithm.LimitedToCalls(
             algorithm.Crossover,
             maximumCalls: 1)
             .Stream(
@@ -382,7 +359,7 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 0.0
         };
 
-        var results = algorithm.LimitedToCrossedCandidates(
+        var results = algorithm.LimitedToCandidates(
             algorithm.Crossover,
             maximumCandidates: 6)
             .Stream(
@@ -404,33 +381,10 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 0.0
         };
 
-        var results = algorithm.LimitedToCrossoverDuration(
+        var results = algorithm.LimitedToDuration(
             algorithm.Crossover,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .Stream(
-                problem,
-                RandomNumberGenerator.Create(42),
-                ct: TestContext.Current.CancellationToken)
-            .ToList();
-
-        results.Count.ShouldBe(2);
-    }
-
-    [Fact]
-    public void WithMaxCount_CanObserveMutatorCalls()
-    {
-        var problem = CreateProblem();
-        var algorithm = CreateAlgorithm(problem) with
-        {
-            MaximumGenerations = 5,
-            MutationRate = 1.0
-        };
-
-        var results = algorithm.LimitedToCount(
-            algorithm.Mutator,
-            maximumCount: 1,
-            counting: new OperatorCounting<Mutation, RealVector>(OperatorCountMetric.Calls))
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -450,7 +404,7 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 1.0
         };
 
-        var results = algorithm.LimitedToMutatorCalls(
+        var results = algorithm.LimitedToCalls(
             algorithm.Mutator,
             maximumCalls: 1)
             .Stream(
@@ -463,29 +417,6 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
-    public void WithMaxCount_CanObserveMutatedCandidates()
-    {
-        var problem = CreateProblem();
-        var algorithm = CreateAlgorithm(problem) with
-        {
-            MaximumGenerations = 5,
-            MutationRate = 1.0
-        };
-
-        var results = algorithm.LimitedToCount(
-            algorithm.Mutator,
-            maximumCount: 6,
-            counting: new OperatorCounting<Mutation, RealVector>(OperatorCountMetric.Candidates))
-            .Stream(
-                problem,
-                RandomNumberGenerator.Create(42),
-                ct: TestContext.Current.CancellationToken)
-            .ToList();
-
-        results.Count.ShouldBe(3);
-    }
-
-    [Fact]
     public void WithMaxMutatedCandidates_CanObserveExplicitMutator()
     {
         var problem = CreateProblem();
@@ -495,7 +426,7 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 1.0
         };
 
-        var results = algorithm.LimitedToMutatedCandidates(
+        var results = algorithm.LimitedToCandidates(
             algorithm.Mutator,
             maximumCandidates: 6)
             .Stream(
@@ -517,7 +448,7 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 1.0
         };
 
-        var results = algorithm.LimitedToMutatorDuration(
+        var results = algorithm.LimitedToDuration(
             algorithm.Mutator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -528,28 +459,6 @@ public class OperatorBudgetAlgorithmTests
             .ToList();
 
         results.Count.ShouldBe(2);
-    }
-
-    [Fact]
-    public void WithMaxCount_CanObserveExplicitOperator()
-    {
-        var problem = CreateProblem();
-        var algorithm = CreateAlgorithm(problem) with
-        {
-            MaximumGenerations = 5
-        };
-
-        var results = algorithm.LimitedToCount(
-            algorithm.Evaluator,
-            maximumCount: 1,
-            counting: new OperatorCounting<Evaluation, RealVector>(OperatorCountMetric.Calls))
-            .Stream(
-                problem,
-                RandomNumberGenerator.Create(42),
-                ct: TestContext.Current.CancellationToken)
-            .ToList();
-
-        results.Count.ShouldBe(1);
     }
 
     [Fact]
@@ -622,12 +531,11 @@ public class OperatorBudgetAlgorithmTests
         var algorithm = CreateAlgorithm(problem);
 
         var budgeted =
-            new OperatorBudgetAlgorithm<RealVector, PopulationState<RealVector>, IOperator<Evaluation, RealVector>>
+            new OperatorBudgetAlgorithm<Evaluation, RealVector, PopulationState<RealVector>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
-                MaximumCount = maximumCount,
-                Counting = new OperatorCounting<Evaluation, RealVector>(OperatorCountMetric.Calls)
+                MaximumCount = maximumCount
             };
 
         budgeted.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
@@ -642,12 +550,11 @@ public class OperatorBudgetAlgorithmTests
         var algorithm = CreateAlgorithm(problem);
 
         var budgeted =
-            new OperatorDurationBudgetAlgorithm<RealVector, PopulationState<RealVector>, IOperator<Evaluation, RealVector>>
+            new OperatorDurationBudgetAlgorithm<Evaluation, RealVector, PopulationState<RealVector>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
-                MaximumDuration = TimeSpan.FromTicks(ticks),
-                DurationMeasuring = new OperatorDurationMeasuring<Evaluation, RealVector>()
+                MaximumDuration = TimeSpan.FromTicks(ticks)
             };
 
         budgeted.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
@@ -681,7 +588,7 @@ public class OperatorBudgetAlgorithmTests
         };
         var analyzer = new EvaluationObservingAnalyzer(algorithm.Evaluator);
 
-        algorithm.LimitedToEvaluatedCandidates(algorithm.Evaluator, maximumCandidates: 1000)
+        algorithm.LimitedToCandidates(algorithm.Evaluator, maximumCandidates: 1000)
                  .CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(analyzer)
                  .Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -690,32 +597,24 @@ public class OperatorBudgetAlgorithmTests
 
     /// <summary>
     /// A budget measures the operator it limits, never the analyzer watching that operator. Were it the other way
-    /// round, the recording work would be charged to the budget and attaching an analyzer would shorten the run.
+    /// round, the recording work would be charged to the budget and attaching an analyzer would shorten the run. Here
+    /// only the observation advances the clock, each time by more than the whole budget.
     /// </summary>
     [Fact]
-    public async Task ADurationBudget_WrapsTheOperatorRatherThanTheAnalyzerObservingIt()
+    public void ADurationBudget_WrapsTheOperatorRatherThanTheAnalyzerObservingIt()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 3 };
-        var quality = algorithm.Evaluator.TraceBestCandidateSoFar();
-        var measuredOperators = new List<Type>();
+        var clock = new ManualTimeProvider();
+        var slowObservation = Aspect.Observe(
+            algorithm.Evaluator, _ => clock.Advance(TimeSpan.FromMinutes(1)));
+        var unbudgeted = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count();
 
-        var budgeted = algorithm.LimitedToOperatorDuration(
-            algorithm.Evaluator,
-            TimeSpan.FromSeconds(30),
-            new AdvancingTimeProvider(TimeSpan.FromMilliseconds(1)),
-            new RecordingEvaluatorDurationMeasuring<RealVector>((observedOperator, duration, timeProvider) =>
-            {
-                measuredOperators.Add(observedOperator.GetType());
-                return new DurationMeasuringOperatorAdvice<Evaluation, RealVector>(duration, timeProvider);
-            }));
+        var budgeted = algorithm.LimitedToDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), clock)
+            .CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(slowObservation)
+            .Stream(cancellationToken: TestContext.Current.CancellationToken).Count();
 
-        await budgeted.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(quality)
-                      .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-
-        measuredOperators.ShouldHaveSingleItem();
-        measuredOperators[0].ShouldBe(algorithm.Evaluator.GetType());
-        quality.SampleCount.ShouldBeGreaterThan(0);
+        budgeted.ShouldBe(unbudgeted);
     }
 
     /// <summary>
@@ -734,7 +633,7 @@ public class OperatorBudgetAlgorithmTests
                        .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         await algorithm
-            .LimitedToEvaluatorDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), new AdvancingTimeProvider(TimeSpan.FromMilliseconds(1)))
+            .LimitedToDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), new AdvancingTimeProvider(TimeSpan.FromMilliseconds(1)))
             .CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(withBudget)
             .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -772,11 +671,25 @@ public class OperatorBudgetAlgorithmTests
 
         public EvaluationObservingAnalyzer(IOperator<Evaluation, RealVector> evaluator)
         {
-            Advices = Aspect.Observe<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator, Record).Advices;
+            Advices = Aspect.Observe(evaluator, Record).Advices;
         }
 
-        public void Record(EvaluatorObservation<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> observation) =>
+        public void Record(OperatorObservation<Evaluation, RealVector> observation) =>
             ObservedCandidates += observation.ObjectiveVectors.Count;
+    }
+
+    private sealed class ManualTimeProvider : TimeProvider
+    {
+        private long timestamp;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp() => timestamp;
+
+        public void Advance(TimeSpan duration)
+        {
+            timestamp += duration.Ticks;
+        }
     }
 
     private sealed class AdvancingTimeProvider(TimeSpan step) : TimeProvider
@@ -810,42 +723,4 @@ public class OperatorBudgetAlgorithmTests
             return HasTerminated;
         }
     }
-    private sealed record RecordingEvaluatorCounting<TCandidate>(Func<IOperator<Evaluation, TCandidate>, CountAccumulator, OperatorAdvice<Evaluation, TCandidate>> Create) : IOperatorCounting<IOperator<Evaluation, TCandidate>>
-    {
-        public Advice<IOperator<Evaluation, TCandidate>> CreateAdvice(CountAccumulator counter) => new SelectedAdvice(source => Create(source, counter));
-
-        // Creates the recorded advice for the first selected operator and delegates to it.
-        private sealed class SelectedAdvice(Func<IOperator<Evaluation, TCandidate>, OperatorAdvice<Evaluation, TCandidate>> create) : OperatorAdvice<Evaluation, TCandidate>
-        {
-            private OperatorAdvice<Evaluation, TCandidate>? selected;
-
-            public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
-                IOperator<Evaluation, TCandidate> source) => Select(source).Check<TSearchSpace, TProblem, TSearchState>(operation, source);
-
-            public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
-                IOperator<Evaluation, TCandidate> source) => Select(source).Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
-
-            private OperatorAdvice<Evaluation, TCandidate> Select(IOperator<Evaluation, TCandidate> source) => selected ??= create(source);
-        }
-    }
-
-    private sealed record RecordingEvaluatorDurationMeasuring<TCandidate>(Func<IOperator<Evaluation, TCandidate>, DurationAccumulator, TimeProvider, OperatorAdvice<Evaluation, TCandidate>> Create) : IOperatorDurationMeasuring<IOperator<Evaluation, TCandidate>>
-    {
-        public Advice<IOperator<Evaluation, TCandidate>> CreateAdvice(DurationAccumulator duration, TimeProvider timeProvider) => new SelectedAdvice(source => Create(source, duration, timeProvider));
-
-        // Creates the recorded advice for the first selected operator and delegates to it.
-        private sealed class SelectedAdvice(Func<IOperator<Evaluation, TCandidate>, OperatorAdvice<Evaluation, TCandidate>> create) : OperatorAdvice<Evaluation, TCandidate>
-        {
-            private OperatorAdvice<Evaluation, TCandidate>? selected;
-
-            public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
-                IOperator<Evaluation, TCandidate> source) => Select(source).Check<TSearchSpace, TProblem, TSearchState>(operation, source);
-
-            public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
-                IOperator<Evaluation, TCandidate> source) => Select(source).Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
-
-            private OperatorAdvice<Evaluation, TCandidate> Select(IOperator<Evaluation, TCandidate> source) => selected ??= create(source);
-        }
-    }
-
 }

@@ -15,25 +15,26 @@ namespace HEAL.HeuristicLib.Operators;
 /// candidate is selected by the female selector.
 /// </remarks>
 public record GenderSpecificSelector<TCandidate>
-    : ISelector<TCandidate>
+    : Operator<Selection, TCandidate>
 {
-    public GenderSpecificSelector(ISelector<TCandidate> femaleSelector, ISelector<TCandidate> maleSelector)
+    public GenderSpecificSelector(IOperator<Selection, TCandidate> femaleSelector, IOperator<Selection, TCandidate> maleSelector)
     {
         FemaleSelector = femaleSelector;
         MaleSelector = maleSelector;
     }
 
-    public ISelector<TCandidate> FemaleSelector { get; init; }
+    public IOperator<Selection, TCandidate> FemaleSelector { get; init; }
 
-    public ISelector<TCandidate> MaleSelector { get; init; }
+    public IOperator<Selection, TCandidate> MaleSelector { get; init; }
 
-    public ExecutorFactory<ISelectionExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> => scope =>
+    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
+
+    private sealed class Factory(GenderSpecificSelector<TCandidate> source) : OperatorExecutorFactory<Selection, TCandidate>
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Executor<TRunSearchSpace, TRunProblem>(typed.Resolve(FemaleSelector), typed.Resolve(MaleSelector));
-    };
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.FemaleSelector), scope.Resolve(source.MaleSelector));
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> femaleSelector, ISelectionExecutor<TCandidate, TSearchSpace, TProblem> maleSelector)
         : SelectionExecutor<TCandidate, TSearchSpace, TProblem>
@@ -65,14 +66,14 @@ public record GenderSpecificSelector<TCandidate>
 public static class GenderSpecificSelector
 {
     public static GenderSpecificSelector<TCandidate> Create<TCandidate>(
-        ISelector<TCandidate> femaleSelector, ISelector<TCandidate> maleSelector) => new(femaleSelector, maleSelector);
+        IOperator<Selection, TCandidate> femaleSelector, IOperator<Selection, TCandidate> maleSelector) => new(femaleSelector, maleSelector);
 }
 
 public static class GenderSpecificSelectorExtensions
 {
-    extension<TCandidate>(ISelector<TCandidate> femaleSelector)
+    extension<TCandidate>(IOperator<Selection, TCandidate> femaleSelector)
     {
-        public GenderSpecificSelector<TCandidate> PairWith(ISelector<TCandidate> maleSelector) =>
+        public GenderSpecificSelector<TCandidate> PairWith(IOperator<Selection, TCandidate> maleSelector) =>
             GenderSpecificSelector.Create(femaleSelector, maleSelector);
     }
 }

@@ -10,9 +10,9 @@ namespace HEAL.HeuristicLib.Tests.Scenarios.GenealogyAnalysis;
 public class GenealogyGraphTests
 {
     private static
-        ChooseOneMutator<SymbolicExpressionTree> CreateSymRegAllMutator()
+        ChoosePerCandidate<Mutation, SymbolicExpressionTree> CreateSymRegAllMutator()
     {
-        var symRegAllMutator = ChooseOneMutator.Create(
+        var symRegAllMutator = ChoosePerCandidate.Create(
             new ChangeNodeTypeManipulation(),
             new FullTreeShaker(),
             new OnePointShaker(),
@@ -114,9 +114,7 @@ public class GenealogyGraphTests
             Mutator = CreateSymRegAllMutator()
         };
         var genealogy =
-            new GenealogyAnalyzer<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace,
-                IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>,
-                SingleSolutionState<SymbolicExpressionTree>>(
+            new GenealogyAnalyzer<SymbolicExpressionTree, SingleSolutionState<SymbolicExpressionTree>>(
                 mutators: [algorithm.Mutator], algorithms: [algorithm]);
         var run = algorithm.TerminatedAfterIterations(8).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).AddAspect(genealogy);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);

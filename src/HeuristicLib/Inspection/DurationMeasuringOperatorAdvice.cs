@@ -40,13 +40,6 @@ file readonly struct DurationMeasurement(DurationAccumulator duration, TimeProvi
     }
 }
 
-public sealed record OperatorDurationMeasuring<TOperation, TCandidate> : IOperatorDurationMeasuring<IOperator<TOperation, TCandidate>>
-    where TOperation : IOperationDescriptor<TOperation>
-{
-    public Advice<IOperator<TOperation, TCandidate>> CreateAdvice(DurationAccumulator duration, TimeProvider timeProvider) =>
-        new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(duration, timeProvider);
-}
-
 public static class OperatorDurationExtensions
 {
     extension(Aspect)

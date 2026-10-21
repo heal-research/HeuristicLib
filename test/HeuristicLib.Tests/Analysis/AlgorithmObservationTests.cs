@@ -159,7 +159,7 @@ public class AlgorithmObservationTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var iterations = Clock.FromIterations(algorithm);
         var quality = Analyzer.Trace(algorithm,
-            new ObjectiveVectorsMeasurement<RealVector, PopulationState<RealVector>>(),
+            new ObjectiveVectorsMeasurement<RealVector>(),
             Aggregate.BestMedianWorst(),
             [iterations]);
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(quality);

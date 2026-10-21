@@ -12,28 +12,14 @@ namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
 /// for is reported when the execution graph is built.
 /// </remarks>
 public abstract record StatelessMoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove>
-    : IMoveEvaluator<TCandidate, TMove>, IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
+    : Operator<MoveEvaluation<TMove>, TCandidate, TSearchSpace, TProblem, IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>>,
+      IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public virtual ExecutorFactory<IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutorFactory() => _ => this;
+    protected sealed override ExecutorFactory<IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateFactory() => _ => this;
 
     public abstract ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     public ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
-
-    public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
-
-    ExecutorFactory<IMoveEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveEvaluator<TCandidate, TMove>.CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-    {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
-                this,
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
-
-        return (ExecutorFactory<IMoveEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutorFactory();
-    }
 }

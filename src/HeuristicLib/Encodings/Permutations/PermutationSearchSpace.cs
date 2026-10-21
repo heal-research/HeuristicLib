@@ -7,8 +7,8 @@ namespace HEAL.HeuristicLib.Encodings.Permutations;
 
 public record PermutationSearchSpace(int Length)
     : SearchSpace<Permutation>,
-      IRecommends<ICreator<Permutation>>,
-      IRecommends<ICrossover<Permutation>>,
+      IRecommends<IOperator<Creation, Permutation>>,
+      IRecommends<IOperator<Crossover, Permutation>>,
       IRecommends<IOperator<Mutation, Permutation>>
 {
     //uniqueness of elements is guaranteed by Permutation class
@@ -17,13 +17,13 @@ public record PermutationSearchSpace(int Length)
     public static implicit operator IntegerVectorSearchSpace(PermutationSearchSpace permutationSpace) =>
       new(permutationSpace.Length, 0, permutationSpace.Length - 1);
 
-    public bool TryCreateRecommendedOperator([NotNullWhen(true)] out ICreator<Permutation>? recommendation)
+    public bool TryCreateRecommendedOperator([NotNullWhen(true)] out IOperator<Creation, Permutation>? recommendation)
     {
         recommendation = new RandomPermutationCreator();
         return true;
     }
 
-    public bool TryCreateRecommendedOperator([NotNullWhen(true)] out ICrossover<Permutation>? recommendation)
+    public bool TryCreateRecommendedOperator([NotNullWhen(true)] out IOperator<Crossover, Permutation>? recommendation)
     {
         recommendation = new EdgeRecombinationCrossover();
         return true;

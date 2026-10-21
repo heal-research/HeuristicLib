@@ -14,8 +14,8 @@ namespace HEAL.HeuristicLib.PythonInterop;
 public class ExperimentParameters<TCandidate, TSearchSpace> where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public string AlgorithmName { get; set; } = "ga";
-    public ICreator<TCandidate>? Creator { get; set; }
-    public ICrossover<TCandidate>? Crossover { get; set; }
+    public IOperator<Creation, TCandidate>? Creator { get; set; }
+    public IOperator<Crossover, TCandidate>? Crossover { get; set; }
     public int Elites { get; set; } = 1;
     public int Iterations { get; set; } = 30;
     public double MutationRate { get; set; } = 0.05;
@@ -23,7 +23,7 @@ public class ExperimentParameters<TCandidate, TSearchSpace> where TSearchSpace :
     public int NoChildren { get; set; } = -1;
     public int PopulationSize { get; set; } = 10;
     public int Seed { get; set; }
-    public ISelector<TCandidate>? Selector { get; set; }
+    public IOperator<Selection, TCandidate>? Selector { get; set; }
     public EvolutionStrategyType Strategy { get; set; } = EvolutionStrategyType.Plus;
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; init; }
     public bool TrackGenealogy { get; set; }

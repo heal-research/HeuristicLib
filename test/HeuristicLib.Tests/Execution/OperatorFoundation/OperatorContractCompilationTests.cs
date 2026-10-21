@@ -13,6 +13,10 @@ public sealed class OperatorContractCompilationTests
     [InlineData("IOperator<Mutation, RealVector> slot = algorithm;", "CS0266")]
     [InlineData("Forward<Mutation, RealVector>(algorithm);", "CS1503")]
     [InlineData("_ = Aspect.Create(Pointcut.OfType<IOperator<Mutation, RealVector>>(), evaluationAdvice);", "CS0311")]
+    [InlineData("_ = ChoosePerCandidate.Create(mutation);", null)]
+    [InlineData("_ = ChoosePerCandidate.Create<Selection, RealVector>();", "CS0311")]
+    [InlineData("IOperator<Interception<PopulationState<RealVector>>, RealVector> slot = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();", null)]
+    [InlineData("IOperator<Interception<PopulationState<RealVector>>, RealVector> slot = new IdentityInterceptor<RealVector, SingleSolutionState<RealVector>>();", "CS0029")]
     public void CandidateOperationAlgorithmAndAdviceBoundariesAreCheckedByTheCompiler(string statement, string? expectedDiagnostic)
     {
         var tree = CSharpSyntaxTree.ParseText($$"""

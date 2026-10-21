@@ -2,12 +2,15 @@ namespace HEAL.HeuristicLib.Problems.MachineLearning.Legacy;
 
 public static class Extensions
 {
-    public static IEnumerable<int> Enumerate(this Range r)
+    extension(Range r)
     {
-        var s = r.Start.Value;
-        var e = r.End.Value;
+        public IEnumerable<int> Enumerate()
+        {
+            var s = r.Start.Value;
+            var e = r.End.Value;
 
-        return s <= e ? Enumerable.Range(s, e - s) : Enumerable.Range(e, s - e).Reverse();
+            return s <= e ? Enumerable.Range(s, e - s) : Enumerable.Range(e, s - e).Reverse();
+        }
+
     }
-
 }

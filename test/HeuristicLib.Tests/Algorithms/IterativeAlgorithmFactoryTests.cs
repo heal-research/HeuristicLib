@@ -177,7 +177,7 @@ public sealed class IterativeAlgorithmFactoryTests
         preparations.ShouldBe(1);
     }
 
-    private static IAlgorithm<int, ProbeState> CreateAlgorithm(bool bound, Action prepare, Action? bind = null, IInterceptor<int>? interceptor = null) =>
+    private static IAlgorithm<int, ProbeState> CreateAlgorithm(bool bound, Action prepare, Action? bind = null, IOperator<Interception<ProbeState>, int>? interceptor = null) =>
         bound
             ? new BoundAlgorithm(prepare, bind ?? (static () => { })) { Interceptor = interceptor }
             : new AgnosticAlgorithm(prepare, bind ?? (static () => { })) { Interceptor = interceptor };

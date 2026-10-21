@@ -29,9 +29,9 @@ public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
         INeighborhood<TG, TM1> ConstructionNeighborhood,
         INeighborhood<TG, TM2> DestructionNeighborhood,
         INeighborhood<TG, TM3> LocalNeighborhood,
-        ICreator<TG> EmptyCreator,
-        ICreator<TG> RandomCreator,
-        ICreator<TG> HeuristicCreator,
+        IOperator<Creation, TG> EmptyCreator,
+        IOperator<Creation, TG> RandomCreator,
+        IOperator<Creation, TG> HeuristicCreator,
         IRandomNumberGenerator Rng,
         ResolutionScope Registry) : this(
         Problem,

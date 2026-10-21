@@ -92,25 +92,26 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
         }
     }
 
-    private sealed class Executor<TRunSearchSpace, TRunProblem> : WrappingEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>
+    private sealed class Executor<TRunSearchSpace, TRunProblem> : IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
+        private readonly IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator;
         private readonly ExecutionState state;
         private readonly IDynamicProblem<TCandidate, TSearchSpace> sourceProblem;
         private readonly ICacheKeySelector<TCandidate, TKey> keySelector;
         private readonly long graceCount;
 
         public Executor(IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> sourceProblem, ICacheKeySelector<TCandidate, TKey> keySelector, long graceCount, ExecutionState state)
-            : base(childEvaluator)
         {
+            this.childEvaluator = childEvaluator;
             this.state = state;
             this.sourceProblem = sourceProblem;
             this.keySelector = keySelector;
             this.graceCount = graceCount;
         }
 
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TRunSearchSpace searchSpace, TRunProblem problem)
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TRunSearchSpace searchSpace, TRunProblem problem)
         {
             if (!ReferenceEquals(problem, sourceProblem))
                 throw new InvalidOperationException("Dynamic caching evaluator executions can only evaluate the dynamic problem they were created for.");
@@ -154,7 +155,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
                 IReadOnlyList<ObjectiveVector> newObjectiveVectors;
                 try
                 {
-                    newObjectiveVectors = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
+                    newObjectiveVectors = childEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
                 }
                 finally
                 {

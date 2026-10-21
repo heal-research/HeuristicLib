@@ -118,16 +118,13 @@ public sealed class OperatorOwnershipTests
         var root = ResolutionScope.Create();
         var exact = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
         var broadState = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
-        Reject(() => broadState.Resolve(interceptor), "cannot provide");
-        Check(interceptor.Log.Preparations == 1 && interceptor.Log.Constructions == 0,
-            "incompatible invariant view rejects before invoking the raw constructor");
         var state = new ProbeState();
+        Check(ReferenceEquals(state, broadState.Resolve(interceptor).Transform(state, null, RandomNumberGenerator.Create(1),
+            Problem.SearchSpace, Problem)), "a scope over another state resolves the interceptor over the state its operation names");
         Check(ReferenceEquals(state, exact.Resolve(interceptor).Transform(state, null, RandomNumberGenerator.Create(1),
-            Problem.SearchSpace, Problem)), "failed invariant view leaves successful preparation usable");
-        Check(!broadState.TryResolve(interceptor, out var missing, out var reason) && missing is null &&
-            reason.Contains("cannot provide", StringComparison.Ordinal), "invariant mismatch has a useful TryResolve reason");
-        Check(interceptor.Log.Preparations == 1 && interceptor.Log.Constructions == 1,
-            "failed second view neither reinitializes the owner nor constructs a node");
+            Problem.SearchSpace, Problem)), "the exact scope resolves the same interceptor");
+        Check(interceptor.Log.Preparations == 1 && interceptor.Log.Constructions == 2,
+            "both scopes construct their node from one preparation");
     }
 
     [Fact]

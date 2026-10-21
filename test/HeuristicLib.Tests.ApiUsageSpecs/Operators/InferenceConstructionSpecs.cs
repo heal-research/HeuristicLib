@@ -121,8 +121,8 @@ public class InferenceConstructionSpecs
         fluentTransformedCreator.SourceCreator.ShouldBeSameAs(algorithm.Creator);
         transformedCrossover.SourceCrossover.ShouldBeSameAs(algorithm.Crossover);
         fluentTransformedCrossover.SourceCrossover.ShouldBeSameAs(algorithm.Crossover);
-        pipelineInterceptor.ChildInterceptors.Count.ShouldBe(2);
-        fluentPipelineInterceptor.ChildInterceptors.Count.ShouldBe(2);
+        pipelineInterceptor.ChildOperators.Count.ShouldBe(2);
+        fluentPipelineInterceptor.ChildOperators.Count.ShouldBe(2);
         countingInterceptor.Advices.Single().Pointcut.Matches(identityInterceptor).ShouldBeTrue();
         measuredInterceptor.Advices.Single().Pointcut.Matches(identityInterceptor).ShouldBeTrue();
         eliteSelector.SelectorForRemaining.ShouldBeSameAs(algorithm.Selector);

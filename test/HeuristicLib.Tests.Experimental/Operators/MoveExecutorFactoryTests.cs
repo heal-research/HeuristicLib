@@ -37,14 +37,29 @@ public class MoveExecutorFactoryTests
 
         int Next(ResolutionScope scope) => source switch
         {
-            IMoveCreator<int, int> creator => scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(creator)
+            IOperator<MoveCreation<int>, int> creator => scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(creator)
                 .Moves(0, Random, SearchSpace, Problem).Single(),
-            IMoveApplier<int, int> applier => scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(applier)
+            IOperator<MoveApplication<int>, int> applier => scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(applier)
                 .Apply(0, 0, Random, SearchSpace, Problem),
-            IMoveEvaluator<int, int> evaluator => (int)scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(evaluator)
+            IOperator<MoveEvaluation<int>, int> evaluator => (int)scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(evaluator)
                 .Evaluate(new ObjectiveVector(0), 0, 0, Random, SearchSpace, Problem)[0],
             _ => throw new InvalidOperationException()
         };
+    }
+
+    /// <summary>A move evaluation evaluates one candidate per call, so candidate counting counts its calls.</summary>
+    [Fact]
+    public void MoveEvaluation_ReportsOneCandidatePerCall()
+    {
+        IOperator<MoveEvaluation<int>, int> evaluator = new CountingEvaluator(new Counter());
+        var candidates = new CountAccumulator();
+        var scope = ResolutionScope.Create(Aspect.CountCandidates(evaluator, candidates));
+        var executor = scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(evaluator);
+
+        executor.Evaluate(new ObjectiveVector(0), 0, 0, Random, SearchSpace, Problem);
+        executor.Evaluate(new ObjectiveVector(0), 0, 1, Random, SearchSpace, Problem);
+
+        candidates.CurrentCount.ShouldBe(2);
     }
 
     private sealed class Counter
@@ -54,8 +69,13 @@ public class MoveExecutorFactoryTests
 
     private sealed record CountingCreator(Counter Preparations) : MoveCreator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int, Counter>
     {
-        protected override Counter InitialState() { Preparations.Value++; return new Counter(); }
-        protected override IEnumerable<int> Moves(int candidate, Counter state, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem, IRandomNumberGenerator random)
+        protected override Counter CreateInitialState()
+        {
+            Preparations.Value++;
+            return new Counter();
+        }
+
+        protected override IEnumerable<int> Moves(int candidate, Counter state, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem)
         {
             yield return ++state.Value;
         }
@@ -63,13 +83,23 @@ public class MoveExecutorFactoryTests
 
     private sealed record CountingApplier(Counter Preparations) : MoveApplier<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int, Counter>
     {
-        protected override Counter InitialState() { Preparations.Value++; return new Counter(); }
-        protected override int Apply(int candidate, int move, Counter state, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem, IRandomNumberGenerator random) => ++state.Value;
+        protected override Counter CreateInitialState()
+        {
+            Preparations.Value++;
+            return new Counter();
+        }
+
+        protected override int Apply(int candidate, int move, Counter state, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem) => ++state.Value;
     }
 
     private sealed record CountingEvaluator(Counter Preparations) : MoveEvaluator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int, Counter>
     {
-        protected override Counter InitialState() { Preparations.Value++; return new Counter(); }
-        protected override ObjectiveVector Apply(int candidate, int move, Counter state, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem, IRandomNumberGenerator random) => new(++state.Value);
+        protected override Counter CreateInitialState()
+        {
+            Preparations.Value++;
+            return new Counter();
+        }
+
+        protected override ObjectiveVector Evaluate(ObjectiveVector oldQuality, int candidate, int move, Counter state, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem) => new(++state.Value);
     }
 }

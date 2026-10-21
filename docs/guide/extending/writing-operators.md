@@ -40,7 +40,7 @@ public sealed record AdjacentSwapMutator : SingleCandidateMutator<Permutation>
 }
 ```
 
-Assign it anywhere an `IOperator<Permutation, Mutation>` is expected — the slot names the candidate and operation without requiring run types, so an operator authored at any rung of the ladder fits:
+Assign it anywhere an `IOperator<Mutation, Permutation>` is expected — the slot names the candidate and operation without requiring run types, so an operator authored at any rung of the ladder fits:
 
 ```csharp
 var algorithm = GeneticAlgorithm.For(problem)
@@ -61,9 +61,9 @@ Use a stateful base for ordinary mutable execution data. It prepares one state o
 
 The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), executors and repository analyzer rules.
 
-For mutation and evaluation, derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override `CreateOperatorFactory()` to initialize shared state once and return an `OperatorExecutorFactory<TOperation, TCandidate>` whose `CreateExecutor` constructs the executor for the run's types and resolves children through its scope. A fixed-signature leaf using the explicit executor base instead overrides `CreateFactory()`.
+Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override `CreateOperatorFactory()` to initialize shared state once and return an `OperatorExecutorFactory<TOperation, TCandidate>` whose `CreateExecutor` constructs the executor for the run's types and resolves children through its scope. A fixed-signature leaf using the explicit executor base instead overrides `CreateFactory()`.
 
-Custom advice for one role derives from a role advice base such as `MutatorAdvice<TCandidate>` and wraps typed executors. Advice for every operation derives from `OperatorAdvice` and passes a struct `IInvocationWrapper` to the operation adapter. See [Write custom advice](/guide/extending/writing-advice) for complete examples. The remaining operator roles retain their role-specific topology and advice hooks.
+Custom advice for one role derives from a role advice base such as `MutatorAdvice<TCandidate>` and wraps typed executors. Advice for every operation derives from `OperatorAdvice` and passes a struct `IInvocationWrapper` to the operation adapter. See [Write custom advice](/guide/extending/writing-advice) for complete examples.
 
 The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) implements a complete round-robin mutator and follows its cursor through a new inspection context and an independent root execution.
 

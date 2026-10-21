@@ -8,24 +8,22 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperator>
-    : Algorithm<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperator>, TCandidate, TSearchState>
+public record OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>
+    : Algorithm<OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>, TCandidate, TSearchState>
+    where TOperation : IOperationDescriptor<TOperation>
     where TSearchState : class, ISearchState
-    where TOperator : class, IOperator
 {
     public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
-    public required TOperator ObservedOperator { get; init; }
-
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
 
     /// <summary>
-    /// Gets the strategy creating advice that measures the observed operator's duration into the supplied accumulator.
+    /// Gets the operator whose call duration, including failed calls, is measured against the budget.
     /// </summary>
     /// <remarks>
-    /// The advice applies only inside this budget's algorithm, so enclosing budgets and observations compose. If the
+    /// Measurement applies only inside this budget's algorithm, so enclosing budgets and observations compose. If the
     /// algorithm does not reference the observed operator, nothing is measured and the budget never stops.
     /// </remarks>
-    public required IOperatorDurationMeasuring<TOperator> DurationMeasuring { get; init; }
+    public required IOperator<TOperation, TCandidate> ObservedOperator { get; init; }
+
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
     /// <summary>
@@ -34,10 +32,12 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperato
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
+
     public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
     {
         var duration = new DurationAccumulator();
-        var measuring = Aspect.Create(Pointcut.Reference(ObservedOperator), DurationMeasuring.CreateAdvice(duration, TimeProvider));
+        var measuring = Aspect.Create(Pointcut.Reference(ObservedOperator), new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(duration, TimeProvider));
         return scope =>
         {
             var childScope = scope.With(measuring);
@@ -73,6 +73,43 @@ public sealed class OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchS
             {
                 yield break;
             }
+        }
+    }
+}
+
+public static class OperatorDurationBudgetExtensions
+{
+    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
+        where TSearchState : class, ISearchState
+    {
+        /// <summary>Stops the algorithm once the operator's calls, including failed ones, have taken the given time.</summary>
+        /// <remarks>
+        /// The operation is inferred from the operator; for an operator implementing several operations, pass it through a
+        /// variable of the operation's operator type.
+        /// </remarks>
+        public OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState> LimitedToDuration<TOperation>(
+            IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration)
+            where TOperation : IOperationDescriptor<TOperation>
+        {
+            return algorithm.LimitedToDuration(observedOperator, maximumDuration, TimeProvider.System);
+        }
+
+        /// <summary>Stops the algorithm once the operator's calls, including failed ones, have taken the given time.</summary>
+        /// <remarks>
+        /// The operation is inferred from the operator; for an operator implementing several operations, pass it through a
+        /// variable of the operation's operator type.
+        /// </remarks>
+        public OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState> LimitedToDuration<TOperation>(
+            IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration, TimeProvider timeProvider)
+            where TOperation : IOperationDescriptor<TOperation>
+        {
+            return new()
+            {
+                Algorithm = algorithm,
+                ObservedOperator = observedOperator,
+                MaximumDuration = maximumDuration,
+                TimeProvider = timeProvider
+            };
         }
     }
 }

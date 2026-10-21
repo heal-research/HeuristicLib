@@ -10,7 +10,10 @@ public interface IEstimator<in TTrainingData, TPredictor>
 
 public static class EstimatorExtensions
 {
-    public static TPredictor Fit<TTrainingData, TPredictor>(this IEstimator<TTrainingData, TPredictor> estimator, TTrainingData trainingData, IRandomNumberGenerator random, CancellationToken cancellationToken = default)
-        where TPredictor : IPredictor =>
-        estimator.FitAsync(trainingData, random, cancellationToken).GetAwaiter().GetResult();
+    extension<TTrainingData, TPredictor>(IEstimator<TTrainingData, TPredictor> estimator)
+        where TPredictor : IPredictor
+    {
+        public TPredictor Fit(TTrainingData trainingData, IRandomNumberGenerator random, CancellationToken cancellationToken = default) =>
+            estimator.FitAsync(trainingData, random, cancellationToken).GetAwaiter().GetResult();
+    }
 }

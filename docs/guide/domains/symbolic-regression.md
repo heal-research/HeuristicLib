@@ -125,11 +125,11 @@ setting `0.9` gives the conventional Koza-style bias toward internal nodes.
 | `ShrinkSubtreeMutator`     | Replaces an operation occurrence with a terminal, so length strictly decreases.                                                                                              |
 | `LocalPerturbationMutator` | Perturbs numeric and variable payloads. `One`, `All`, and `Each(probability)` select how many points are touched; the perturbation itself belongs to the originating symbol. |
 
-Combine them with the general `ChooseOneMutator` rather than a symbolic-expression
+Combine them with the general `ChoosePerCandidate` rather than a symbolic-expression
 specific multi-mutator:
 
 ```csharp
-Mutator = new ChooseOneMutator<ExpressionTree>(
+Mutator = new ChoosePerCandidate<Mutation, ExpressionTree>(
     [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()])
 {
     Weights = [1.0, 1.0, 1.0]
@@ -176,7 +176,7 @@ containment, mutation, or crossover. See [data and machine learning](/guide/doma
 var algorithm = GeneticAlgorithm.Create(
     new RampedHalfAndHalfTreeCreator(),
     new SubtreeCrossover(),
-    ChooseOneMutator.Create(
+    ChoosePerCandidate.Create(
         new NodeReplacementMutator(),
         new SubtreeMutator(),
         new LocalPerturbationMutator()),

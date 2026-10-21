@@ -51,7 +51,7 @@ The search space limits tree size and specifies which symbols may occur. The pro
 var algorithm = GeneticAlgorithm.Create(
     new RampedHalfAndHalfTreeCreator(),
     new SubtreeCrossover(),
-    ChooseOneMutator.Create(
+    ChoosePerCandidate.Create(
         new NodeReplacementMutator(),
         new LocalPerturbationMutator(),
         new SubtreeMutator()),

@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>Identifies mutating candidates when declaring an operator slot.</summary>
-public sealed class Mutation : IOperationDescriptor<Mutation>
+public sealed class Mutation : IItemOperation<Mutation>
 {
     public static OperationExecutorAdapter CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TSearchState>()
         where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -27,16 +27,25 @@ public sealed class Mutation : IOperationDescriptor<Mutation>
             new WrappedExecutor<TWrapper>(executor, wrapper);
 
         private readonly struct Invocation(IMutationExecutor<TCandidate, TSearchSpace, TProblem> executor,
-            IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<TCandidate>>
+            IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IItemInvocation<TCandidate>, IMutationArguments<TCandidate>
         {
             private readonly IMutationExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
             private readonly IRandomNumberGenerator random = random;
 
             public IRandomNumberGenerator Random => random;
+            public ISearchSpace SearchSpace => searchSpace;
+            public IProblem Problem => problem;
+            public IReadOnlyList<TCandidate> Parents => parents;
             public IReadOnlyList<TCandidate> Proceed() => executor.Mutate(parents, random, searchSpace, problem);
             public IReadOnlyList<TCandidate> ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
                 ((IMutationExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Mutate(parents, random ?? this.random, searchSpace, problem);
             public int CountCandidateWork(IReadOnlyList<TCandidate> result) => result.Count;
+            public int ItemCount => parents.Count;
+            public IReadOnlyList<TCandidate> ProceedWithItems(IExecutor executor, IReadOnlyList<int> items)
+            {
+                var source = parents;
+                return ((IMutationExecutor<TCandidate, TSearchSpace, TProblem>)executor).Mutate([.. items.Select(item => source[item])], random, searchSpace, problem);
+            }
         }
 
         private sealed class WrappedExecutor<TWrapper>(IMutationExecutor<TCandidate, TSearchSpace, TProblem> executor, TWrapper wrapper)
@@ -49,4 +58,10 @@ public sealed class Mutation : IOperationDescriptor<Mutation>
             public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
         }
     }
+}
+
+/// <summary>The arguments of one mutation call, which its observations read.</summary>
+internal interface IMutationArguments<TCandidate>
+{
+    IReadOnlyList<TCandidate> Parents { get; }
 }

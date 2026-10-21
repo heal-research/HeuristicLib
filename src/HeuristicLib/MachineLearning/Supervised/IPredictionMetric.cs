@@ -16,9 +16,12 @@ public interface IPredictionMetric<T> : IPredictionMetric
 
 public static class PredictionMetricExtensions
 {
-    public static double Evaluate<T>(this IPredictionMetric<T> metric, Series<T> predictedValues, Series<T> targetValues)
+    extension<T>(IPredictionMetric<T> metric)
         where T : notnull
     {
-        return metric.Evaluate(predictedValues.Values.Span, targetValues.Values.Span);
+        public double Evaluate(Series<T> predictedValues, Series<T> targetValues)
+        {
+            return metric.Evaluate(predictedValues.Values.Span, targetValues.Values.Span);
+        }
     }
 }

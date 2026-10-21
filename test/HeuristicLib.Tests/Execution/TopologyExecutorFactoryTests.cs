@@ -20,7 +20,7 @@ public sealed class TopologyExecutorFactoryTests
         var preparations = 0;
         var reports = new List<double>();
         var leaf = new CountingLeaf(() => preparations++);
-        IOperator<Mutation, RealVector> source = chooseOne ? new ChooseOneMutator<RealVector>([leaf]) : new PipelineMutator<RealVector>([leaf]);
+        IOperator<Mutation, RealVector> source = chooseOne ? new ChoosePerCandidate<Mutation, RealVector>([leaf]) : new PipelineMutator<RealVector>([leaf]);
         var parent = ResolutionScope.Create();
         var outer = Resolve(parent, source);
         Next(outer).ShouldBe(1);
@@ -44,7 +44,7 @@ public sealed class TopologyExecutorFactoryTests
         var preparations = 0;
         var wraps = 0;
         var leaf = new CountingLeaf(() => preparations++);
-        IOperator<Mutation, RealVector> source = chooseOne ? new ChooseOneMutator<RealVector>([leaf]) : new PipelineMutator<RealVector>([leaf]);
+        IOperator<Mutation, RealVector> source = chooseOne ? new ChoosePerCandidate<Mutation, RealVector>([leaf]) : new PipelineMutator<RealVector>([leaf]);
         var calls = new CountAccumulator();
         var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new WrapCountingAdvice(calls, () => wraps++)));
         var first = Resolve(root, source);
@@ -66,7 +66,7 @@ public sealed class TopologyExecutorFactoryTests
     {
         var childPreparations = 0;
         var leaf = new CountingLeaf(() => childPreparations++);
-        var source = new ChooseOneMutator<RealVector>([leaf]) { Weights = [1, 1] };
+        var source = new ChoosePerCandidate<Mutation, RealVector>([leaf]) { Weights = [1, 1] };
 
         Should.Throw<InvalidOperationException>(() => source.CreateExecutorFactory());
 
@@ -302,13 +302,13 @@ public sealed class TopologyExecutorFactoryTests
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, CounterState state)
-            : WrappingMutationExecutor<RealVector, TSearchSpace, TProblem>(child)
+            : IMutationExecutor<RealVector, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
-            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
             {
-                var result = ChildMutator.Mutate(parents, random, searchSpace, problem);
+                var result = child.Mutate(parents, random, searchSpace, problem);
                 return [RealVector.Repeat(result[0][0] + 100 * ++state.Calls, 1)];
             }
         }
@@ -344,14 +344,14 @@ public sealed class TopologyExecutorFactoryTests
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<RealVector, TSearchSpace, TProblem>> children, CounterState state)
-            : MultiMutationExecutor<RealVector, TSearchSpace, TProblem>(children)
+            : IMutationExecutor<RealVector, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
-            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
             {
                 var result = parents;
-                foreach (var child in ChildMutators)
+                foreach (var child in children)
                     result = child.Mutate(result, random, searchSpace, problem);
                 return [RealVector.Repeat(result[0][0] + 100 * ++state.Calls, 1)];
             }
@@ -384,13 +384,13 @@ public sealed class TopologyExecutorFactoryTests
             new Executor<TRunSearchSpace, TRunProblem>(executor, report);
 
         private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, Action<double> report)
-            : WrappingMutationExecutor<RealVector, TSearchSpace, TProblem>(child)
+            : IMutationExecutor<RealVector, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
-            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
             {
-                var result = ChildMutator.Mutate(parents, random, searchSpace, problem);
+                var result = child.Mutate(parents, random, searchSpace, problem);
                 report(result[0][0]);
                 return result;
             }

@@ -96,7 +96,7 @@ public class RefinerFailureTests
 
     private sealed record FailingAfterBatchesRefiner(int SuccessfulBatches) : Refiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ExecutorFactory<IRefinementExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutorFactory()
+        protected override ExecutorFactory<IRefinementExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateFactory()
         {
             var counter = new Counter();
             return _ => new Executor(counter, SuccessfulBatches);

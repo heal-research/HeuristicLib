@@ -271,7 +271,7 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .LimitedToEvaluatorCalls(algorithm.Evaluator, 2)
+            .LimitedToCalls(algorithm.Evaluator, 2)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
@@ -294,14 +294,14 @@ public class PractitionerUsageSpecs
         };
 
         var statesByEvaluatorCalls = algorithm
-            .LimitedToEvaluatorCalls(algorithm.Evaluator, 2)
+            .LimitedToCalls(algorithm.Evaluator, 2)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
               .ToList();
         var statesByEvaluatedCandidates = algorithm
-            .LimitedToEvaluatedCandidates(algorithm.Evaluator, 2)
+            .LimitedToCandidates(algorithm.Evaluator, 2)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
@@ -323,7 +323,7 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .LimitedToEvaluatorDuration(
+            .LimitedToDuration(
                 algorithm.Evaluator,
                 TimeSpan.FromSeconds(3),
                 new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
@@ -361,7 +361,7 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
-    public void GeneticAlgorithm_TypedOperatorBudgets_CanCountMutatorCallsOrMutatedCandidates()
+    public void GeneticAlgorithm_OperatorBudgets_CanCountMutatorCallsOrMutatedCandidates()
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var algorithm = CreateSimpleGeneticAlgorithm(problem) with
@@ -371,7 +371,7 @@ public class PractitionerUsageSpecs
         };
 
         var statesByMutatorCalls = algorithm
-            .LimitedToMutatorCalls(
+            .LimitedToCalls(
                 algorithm.Mutator,
                 maximumCalls: 1)
             .Stream(
@@ -380,7 +380,7 @@ public class PractitionerUsageSpecs
                 ct: TestContext.Current.CancellationToken)
               .ToList();
         var statesByMutatedCandidates = algorithm
-            .LimitedToMutatedCandidates(
+            .LimitedToCandidates(
                 algorithm.Mutator,
                 maximumCandidates: 20)
             .Stream(
@@ -414,7 +414,7 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
-    public void GeneticAlgorithm_TypedOperatorDurationBudget_CanMeasureMutatorWork()
+    public void GeneticAlgorithm_OperatorDurationBudget_CanMeasureMutatorWork()
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var algorithm = CreateSimpleGeneticAlgorithm(problem) with
@@ -424,35 +424,10 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .LimitedToMutatorDuration(
+            .LimitedToDuration(
                 algorithm.Mutator,
                 TimeSpan.FromSeconds(3),
                 new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .Stream(
-                problem,
-                RandomNumberGenerator.Create(987),
-                ct: TestContext.Current.CancellationToken)
-              .ToList();
-
-        states.Count.ShouldBe(3);
-        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
-    }
-
-    [Fact]
-    public void GeneticAlgorithm_GenericOperatorBudget_CanUseACountingValueStrategy()
-    {
-        var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
-        {
-            MaximumGenerations = 5,
-            MutationRate = 1.0
-        };
-
-        var states = algorithm
-            .LimitedToCount(
-                algorithm.Mutator,
-                maximumCount: 20,
-                counting: new OperatorCounting<Mutation, RealVector>(OperatorCountMetric.Candidates))
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),

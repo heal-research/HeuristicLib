@@ -11,7 +11,7 @@ public abstract record StatelessSelector<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public sealed override ExecutorFactory<ISelectionExecutor<TCandidate, TSearchSpace, TProblem>> CreateExecutorFactory() => _ => this;
+    protected sealed override ExecutorFactory<ISelectionExecutor<TCandidate, TSearchSpace, TProblem>> CreateFactory() => _ => this;
 
     public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
@@ -20,7 +20,7 @@ public abstract record StatelessSelector<TCandidate, TSearchSpace>
     : Selector<TCandidate, TSearchSpace>, ISelectionExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public sealed override ExecutorFactory<ISelectionExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutorFactory() => _ => this;
+    protected sealed override ExecutorFactory<ISelectionExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateFactory() => _ => this;
 
     public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
@@ -31,7 +31,7 @@ public abstract record StatelessSelector<TCandidate, TSearchSpace>
 public abstract record StatelessSelector<TCandidate>
     : Selector<TCandidate>, ISelectionExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
-    public sealed override ExecutorFactory<ISelectionExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutorFactory() => _ => this;
+    protected sealed override ExecutorFactory<ISelectionExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateFactory() => _ => this;
 
     public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
 

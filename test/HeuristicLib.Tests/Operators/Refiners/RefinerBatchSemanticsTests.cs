@@ -59,14 +59,14 @@ public class RefinerBatchSemanticsTests
     // This topology assigns each candidate to a child and restores input order, which needs one result per assigned
     // candidate.
     [Fact]
-    public void ChooseOneRefiner_RequiresOneResultPerCandidateAssignedToAChild()
+    public void ChoosePerCandidateRefinement_RequiresOneResultPerCandidateAssignedToAChild()
     {
-        var execution = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ChooseOneRefiner.Create(new DropLastRefiner()));
+        var execution = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ChoosePerCandidate.Create(new DropLastRefiner()));
 
         Should.Throw<InvalidOperationException>(() => Refine(execution, 1, 2, 3));
     }
 
-    private static IEnumerable<(string Name, IRefiner<Individual> Topology, Aspect? Advice)> PassThroughTopologies()
+    private static IEnumerable<(string Name, IOperator<Refinement, Individual> Topology, Aspect? Advice)> PassThroughTopologies()
     {
         var noChange = NoChangeRefiner<Individual>.Instance;
 
@@ -74,7 +74,7 @@ public class RefinerBatchSemanticsTests
         yield return ("pipeline", PipelineRefiner.Create(noChange, noChange), null);
         yield return ("empty pipeline", PipelineRefiner.Create<Individual>(), null);
         yield return ("iterated", noChange.AsIterated(3), null);
-        yield return ("choose one", ChooseOneRefiner.Create(noChange), null);
+        yield return ("choose one", ChoosePerCandidate.Create(noChange), null);
         yield return ("rate limited", new AddOffsetRefiner(1).AppliedAtRate(0.0), null);
         yield return ("counting", noChange, Aspect.CountCandidates(noChange, new CountAccumulator()));
         yield return ("duration measuring", noChange, Aspect.MeasureDuration(noChange, new DurationAccumulator()));

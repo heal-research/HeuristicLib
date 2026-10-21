@@ -103,6 +103,8 @@ public sealed class OperatorPreparationSpecs
                 private readonly IRandomNumberGenerator random = random;
 
                 public IRandomNumberGenerator Random => random;
+                public ISearchSpace SearchSpace => searchSpace;
+                public IProblem Problem => problem;
                 public int Proceed() => executor.Read(random, searchSpace, problem);
                 public int ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
                     ((IReadValueExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Read(random ?? this.random, searchSpace, problem);

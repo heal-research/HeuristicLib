@@ -125,7 +125,7 @@ public class AlgorithmAuthoringSpecs
     private sealed record SingleCreateAlgorithm
         : IterativeAlgorithm<SingleCreateAlgorithm, RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
-        public required ICreator<RealVector> Creator { get; init; }
+        public required IOperator<Creation, RealVector> Creator { get; init; }
         public IOperator<Evaluation, RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
         protected override ExecutorFactory<IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>> CreateIterationFactory() =>
@@ -154,7 +154,7 @@ public class AlgorithmAuthoringSpecs
     private sealed record DoubleCreateAlgorithm
         : IterativeAlgorithm<DoubleCreateAlgorithm, RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
-        public required ICreator<RealVector> Creator { get; init; }
+        public required IOperator<Creation, RealVector> Creator { get; init; }
         public IOperator<Evaluation, RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
         protected override ExecutorFactory<IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>> CreateIterationFactory()
@@ -239,18 +239,16 @@ public class AlgorithmAuthoringSpecs
         }
     }
 
-    private sealed class InstancingCreator : ICreator<RealVector>
+    private sealed class InstancingCreator : IOperator<Creation, RealVector>
     {
         public int ExecutionsCreated { get; private set; }
         public int CreateCalls { get; private set; }
 
-        public ExecutorFactory<ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-            where TRunSearchSpace : class, ISearchSpace<RealVector>
-            where TRunProblem : class, IProblem<RealVector, TRunSearchSpace>
+        public OperatorExecutorFactory CreateExecutorFactory()
         {
             ExecutionsCreated++;
-            var executor = (ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem>)(object)new Executor(this);
-            return _ => executor;
+            var executor = new Executor(this);
+            return OperatorExecutorFactory.FromFactory<ICreationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>(_ => executor);
         }
 
         private sealed class Executor(InstancingCreator owner)
@@ -295,19 +293,16 @@ public class AlgorithmAuthoringSpecs
         }
     }
 
-    private sealed class InstancingInterceptor : IInterceptor<RealVector>
+    private sealed class InstancingInterceptor : IOperator<Interception<SingleSolutionState<RealVector>>, RealVector>
     {
         public int ExecutionsCreated { get; private set; }
         public int TransformCalls { get; private set; }
 
-        public ExecutorFactory<IInterceptionExecutor<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
-            where TRunSearchSpace : class, ISearchSpace<RealVector>
-            where TRunProblem : class, IProblem<RealVector, TRunSearchSpace>
-            where TRunSearchState : class, ISearchState
+        public OperatorExecutorFactory CreateExecutorFactory()
         {
             ExecutionsCreated++;
-            var executor = (IInterceptionExecutor<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState>)(object)new Executor(this);
-            return _ => executor;
+            var executor = new Executor(this);
+            return OperatorExecutorFactory.FromFactory<IInterceptionExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>(_ => executor);
         }
 
         private sealed class Executor(InstancingInterceptor owner)

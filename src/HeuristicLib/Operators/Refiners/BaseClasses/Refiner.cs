@@ -6,32 +6,20 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Refiners;
 
 /// <remarks>
-/// Derive directly from this base when the refiner owns child executors or needs direct control over its execution structure.
+/// Derive directly from this base when the refiner needs direct control over its execution structure.
 /// Use <see cref="StatelessRefiner{TCandidate,TSearchSpace,TProblem}"/> when no mutable execution data is needed.
 /// Use <see cref="StatefulRefiner{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
+/// <para>
+/// The type arguments are the search space and problem this refiner is written for. The base bridges to whatever a
+/// run requests, and a request the refiner was not written for is reported when the execution graph is built. A
+/// refiner that owns children stays agnostic and derives from <see cref="WrappingOperator{Refinement, TCandidate}"/> or
+/// <see cref="MultiOperator{Refinement, TCandidate}"/> instead.
+/// </para>
 /// </remarks>
 public abstract record Refiner<TCandidate, TSearchSpace, TProblem>
-    : IRefiner<TCandidate>
+    : Operator<Refinement, TCandidate, TSearchSpace, TProblem, IRefinementExecutor<TCandidate, TSearchSpace, TProblem>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    public abstract ExecutorFactory<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> CreateExecutorFactory();
-
-    public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
-
-    ExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> IRefiner<TCandidate>.CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-    {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
-                this,
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
-
-        return (ExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>>)CreateExecutorFactory();
-    }
-}
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
 public abstract record Refiner<TCandidate, TSearchSpace>
     : Refiner<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>

@@ -24,7 +24,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     where TAlgorithm : IAlgorithm<TCandidate, TSearchState>
 {
     public DynamicRacingAlgorithm(MetaOptimizationSearchSpace metaSpace,
-                                  ICreator<MetaOptimizationGenotype> creator,
+                                  IOperator<Creation, MetaOptimizationGenotype> creator,
                                   IOperator<Mutation, MetaOptimizationGenotype> mutator,
                                   IRacingStateMerger<TCandidate, TSearchState> stateMerger,
                                   Func<MetaOptimizationGenotype, TAlgorithm> algBuilder,
@@ -33,7 +33,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     { }
 
     public DynamicRacingAlgorithm(MetaOptimizationSearchSpace metaSpace,
-                                  ICreator<MetaOptimizationGenotype> creator,
+                                  IOperator<Creation, MetaOptimizationGenotype> creator,
                                   IOperator<Mutation, MetaOptimizationGenotype> mutator,
                                   Func<TSearchState[], TSearchState> stateMerger,
                                   Func<MetaOptimizationGenotype, TAlgorithm> algBuilder,
@@ -44,7 +44,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     { }
 
     public DynamicRacingAlgorithm(MetaOptimizationSearchSpace metaSpace,
-                                  ICreator<MetaOptimizationGenotype> creator,
+                                  IOperator<Creation, MetaOptimizationGenotype> creator,
                                   IOperator<Mutation, MetaOptimizationGenotype> mutator,
                                   IRacingStateMerger<TCandidate, TSearchState> stateMerger,
                                   Func<MetaOptimizationGenotype, TAlgorithm?, TAlgorithm> algBuilder,
@@ -60,7 +60,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     }
 
     public IRacingStateMerger<TCandidate, TSearchState> StateMerger { get; }
-    public ICreator<MetaOptimizationGenotype> Creator { get; }
+    public IOperator<Creation, MetaOptimizationGenotype> Creator { get; }
     public IOperator<Mutation, MetaOptimizationGenotype> Mutator { get; }
     private MetaOptimizationSearchSpace MetaSpace { get; }
     private EmptyMetaOptProblem EmptyMetaOptProblem { get; }

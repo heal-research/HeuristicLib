@@ -43,7 +43,6 @@ These are still real open items:
 - introduce solution equivalence as a concept distinct from candidate value equality. Resolve it from the problem first, then the search space and finally `EqualityComparer<TCandidate>.Default`. Prefer behavior members such as `AreEquivalent` and `GetEquivalenceHashCode` over a stored comparer property, because search spaces are records and a comparer instance would affect value equality and serialization. Provide an `IEqualityComparer<TCandidate>` adapter for set and dictionary consumers. Audit `RemoveDuplicatesInterceptor`, Pareto front extraction, diversity and genealogy analysis and future evaluation caches before landing the contract. An explicitly supplied comparer remains the highest priority override
 - reduce the number of equivalent public API entry points. Several subsystems currently expose the same outcome through constructors, static helpers, extension methods and fluent convenience methods. Analysis is one example: users can construct analyzers directly or reach equivalent analyzers through several helper layers, making it unclear which path is canonical. Algorithm construction, run creation, execution, completion and streaming similarly offer overlapping routes that need a deliberate review. For each workflow, choose one clear canonical entry point and retain only a small convenience layer where it removes meaningful type-inference or setup friction. Remove, internalize or stop promoting alternatives that merely provide another spelling for the same operation. Judge the resulting API by whether a new user can identify the intended path without first comparing several equivalent choices.
 - define how genealogy represents repeated candidate values with different derivations in one generation. `GenealogyGraph.AddConnection` currently throws on the second value unless it equals one of its parents. A three-generation NSGA-II run with real-vector alpha/beta crossover, population 10, and seed 42 exposed this while validating explicit analysis ordering. It predates the trace changes and requires a decision about occurrence identity, not merely replacing dictionary insertion.
-- decide whether interceptor traces should infer their search state. `IInterceptor<TCandidate>` carries none, so `Analyzer.Trace(interceptor, …)` with a lambda and `Measurement.Candidates(interceptor)` need it named. An extension on the `Interceptor<…>` authoring base already infers it for `TracePopulationQuality` and `TracePopulationCandidates`; the same could cover the `Analyzer.Trace` overloads if a use appears
 
 - multi-objective short-path usage
 - generalize `PipelineAlgorithm` so consecutive algorithms may use different search state types
@@ -306,6 +305,38 @@ Built during the analysis rework in September 2026 and removed again within it.
 Two mechanisms once gave analysis a system of its own beside the execution model. A parallel observer API, `ObserveWith` with observable configurations and public `I...Observer` interfaces, offered a second way to react to the same boundary. A public supply hierarchy, `ICandidateReadings`, `IObjectiveReadings`, `IEvaluatedPopulation` and `IDerivation`, let contravariance pick valid pairs of measurement and boundary; it named type-system machinery as if it were domain language and hid which observation a measurement actually read.
 
 Both were removed. Analysis uses the execution model's own mechanism, decorations installed into the run's resolution scope, and measurements read the typed observation of the role they observe. Do not reintroduce an observation system that runs beside execution modules, or a capability hierarchy whose only purpose is to make overload resolution select valid combinations.
+
+### Generic operator observations with type-erased call data
+
+Implemented in the second Package 3 review of the [operator role parameterization plan](operator-role-parameterization-rework.md) and replaced in its third review on 2026-10-21. One `OperatorObservation<TOperation, TCandidate>` held each call's invocation and result as objects, and per-operation extension properties in `Inspection` read them through internal arguments interfaces and casts.
+
+C# has no associated types. A descriptor such as `Mutation` is not generic in the candidate, so neither it nor `IOperator<Mutation, TCandidate>` can name a call's typed data, and one generic observation must convert it at run time. The generic type also could not declare a capability for some operations only. Measurements therefore listed the operations they read, which closed them to external operations (developer guidelines § 3.3), and `Analyzer` adapted the states interceptors return. Each operation now defines a typed observation, reached through its `Calls` handle. Reopen only if C# gains associated types or the per-operation observation code becomes a real maintenance burden.
+
+### Per-operation trace overloads instead of observation handles
+
+Discussed on 2026-10-21. Static extension members on `Analyzer`, declared once per operation, infer the typed observation and would keep `Analyzer.Trace(crossover, o => …)`; a compiled probe confirmed the value and measurement forms. Operator content must not reference Analysis, so they would need a layering exception. Every operation would also declare six forwarding overloads, one per trace form for one source and for a list, which made 54 for the built-in operations. They would forward to a public handle that external operations need anyway, and a new trace form would mean editing every operation. The `Calls` and `Iterations` handles were chosen instead.
+
+### Input and result types on operation descriptors
+
+Discussed on 2026-10-21. A descriptor `IOperationDescriptor<TSelf, TIn, TOut>` cannot state a candidate-dependent type: `Mutation` has no `TCandidate` in scope for `IReadOnlyList<TCandidate>`. Candidate-generic descriptors would require `IOperator<Mutation<RealVector>, RealVector>` in every slot, because C# does not infer a type argument from a constraint. Typed arguments and results live on the operation adapter base instead, which exists per run type. Reopen only if C# gains associated types.
+
+### IObservable and Rx-style observation operators
+
+Discussed on 2026-10-21. Observation handles resemble cold observables: `Calls` describes a stream of calls, readings resemble `Select`, best-so-far resembles `Scan`, and `Analyzer.Trace` and `Aspect.Observe` resemble `Subscribe`. The library uses this only to explain the design.
+
+Implementing `IObservable<T>` was rejected. Observation attaches through aspects when a run builds executors, and a `Subscribe` returning `IDisposable` would be a second way to attach to the same boundary; see parallel observation systems above. Rx's contract does not fit either. There is no completion, because runs pause and resume and one aspect can serve several runs. Failed calls are not observed. Delivery is synchronous, inside the call and after the clocks advance, which schedulers would break. A general operator set would add public surface and a delegate call per element on hot paths. `Aspect.Observe(calls, subject.OnNext)` feeds an Rx subject without a library dependency. Reopen only for a concrete need that handles cannot express, such as combining sources over time.
+
+### Measurements as separate strategies
+
+Removed in the third Package 3 review on 2026-10-21. `IMeasurement<TInput, TValue>` records were immutable value strategies, and one measurement could read several kinds of source, such as evaluator calls and population states. Typed observations and handles replace them: a handle names its readings, as in `evaluator.Calls.ObjectiveVectors`, and `Read` builds custom ones, so `Analyzer.Trace` drops from fourteen overloads to four. Nothing relied on measurement value equality. Capability interfaces such as `IResultObservation<TResult>` or an offspring observation were considered to keep measurements open to external operations; readings on the handle made them unnecessary, and an offspring measurement named an evolutionary concept in a general mechanism. Reopen only if analysis definitions must be compared or serialized independently of their source.
+
+### Cached move operators on neighborhoods
+
+Discussed and rejected on 2026-10-21, while making advice on a neighborhood's move operators reach the resolved instance.
+
+A neighborhood handed out a new `NeighborhoodCreator`, `NeighborhoodApplier` or `NeighborhoodEvaluator` on every property read. Caching them in the neighborhood does not work cleanly, because a neighborhood is a record. A cached operator referring back to its neighborhood joins value equality, which then recurses, and `with` copies an operator that still refers to the original. Avoiding both needs hand-written equality, hashing and a copy constructor on the base, plus thread-safe lazy initialization.
+
+A neighborhood is instead its own creator, applier and evaluator; see the move follow-up in the [operator role parameterization plan](operator-role-parameterization-rework.md).
 
 ### Trace storage structures
 

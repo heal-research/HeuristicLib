@@ -9,11 +9,11 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Algorithms;
 
 public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
-    : Algorithm<TSelf, TCandidate, TSearchState>, IIterativeAlgorithm<TCandidate>
+    : Algorithm<TSelf, TCandidate, TSearchState>, IIterativeAlgorithm<TCandidate, TSearchState>
     where TSelf : IterativeAlgorithm<TSelf, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
-    public IInterceptor<TCandidate>? Interceptor { get; init; }
+    public IOperator<Interception<TSearchState>, TCandidate>? Interceptor { get; init; }
 
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Interceptor);
 

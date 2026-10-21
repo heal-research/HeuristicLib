@@ -19,9 +19,9 @@ public SeparateEvaluatorAnalyzer(IOperator<Evaluation, TCandidate> first, IOpera
 }
 ```
 
-The selected algorithm or operator is the observation's source identity. Factories cover algorithms, evaluators, crossovers, mutators and interceptors. Operator observations follow successful calls. Algorithm observations follow each yielded state, after interceptors have transformed it. Each observation reports the selected configuration, including when advice is applied through a pointcut covering several sources.
+The selected algorithm or operator is the observation's source identity. Factories cover algorithms and every operation. Operator observations follow successful calls. Algorithm observations follow each yielded state, after interceptors have transformed it. Each observation reports the selected configuration, including when advice is applied through a pointcut covering several sources.
 
-A configuration names only its candidate and, for algorithms, its search state. A typed callback or method group supplies the search space and problem types it reads. An implicitly typed lambda uses an overload with `ISearchSpace<TCandidate>` and `IProblem<TCandidate, ISearchSpace<TCandidate>>`; interceptor callbacks also read `ISearchState`. These overloads fit every run over the candidate. Observations written for narrower types are checked before the observed executor is built and report `ExecutionSignature.Mismatch` when incompatible.
+Every operator observation is an `OperatorObservation<TOperation, TCandidate>`. It reads the search space and problem at `ISearchSpace<TCandidate>` and `IProblem<TCandidate, ISearchSpace<TCandidate>>`, so it fits every run over the candidate, and its operation-specific members, such as `Parents` and `Offspring` for mutation, are extension properties over the call's arguments and result. An algorithm observation is an `AlgorithmObservation<TCandidate, TSearchState>`, and an interceptor's observation reads the states at the search state its operation names. Observation advice therefore checks no run types; the observed operator's own check still reports `ExecutionSignature.Mismatch` for a run it was not written for.
 
 Observation advice is a runtime class and may retain its callback. Operator observation wraps each executor built for its source and keeps no further state. Algorithm observation prepares its iteration counter once per advice, configuration and owner state, so rebuilding contextual nodes does not reset the count. Invocation-local previous states stay in the iterator.
 
@@ -31,7 +31,7 @@ Observation reads inputs, outputs and progress while preserving the observed com
 
 ## Trace analyzers
 
-`TraceAnalyzer<T>` is the standard tracing subsystem. It combines one or several compatible observation sources, measurement, aggregation, retention, clocks, immutable trace entries and synchronization. A trace requires at least one source and ignores repeated references to the same source.
+`TraceAnalyzer<T>` is the standard tracing subsystem. It combines one or several compatible observation sources, measurement, aggregation, retention, clocks, immutable trace entries and synchronization. An operator trace reads `OperatorObservation<TOperation, TCandidate>`, so one `Analyzer.Trace` serves every operation, as in `Analyzer.Trace(crossover, observation => observation.Offspring.Count)`. An algorithm trace reads `AlgorithmObservation<TCandidate, TSearchState>`, and a measurement of search states also traces the states an interceptor returns. Every trace aggregates against the observed run's objective. A trace requires at least one source and ignores repeated references to the same source.
 
 A trace composes observation sources, measurement, aggregation, retention and explicit clocks. Every selected clock is recorded on each entry, so the same trace can be projected by iterations, evaluations or elapsed time. No clock is added automatically: a nested run can contain several algorithm and evaluator boundaries.
 

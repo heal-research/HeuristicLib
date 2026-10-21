@@ -13,7 +13,7 @@ public class ObservationSourceRequirementTests
     public void RequiredSources_RejectAnEmptyCollection()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new ParetoFrontAnalyzer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(
+            new ParetoFrontAnalyzer<RealVector>(
                 SingleObjective.Minimize,
                 new ObjectiveVector(1.0),
                 []));
@@ -47,7 +47,7 @@ public class ObservationSourceRequirementTests
     public void GenealogyAnalyzer_NeedsAtLeastOneSourceOfAnyKind()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new GenealogyAnalyzer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>());
+            new GenealogyAnalyzer<RealVector, PopulationState<RealVector>>());
 
         exception.Message.ShouldContain("at least one crossover, mutator or algorithm");
     }
@@ -56,7 +56,7 @@ public class ObservationSourceRequirementTests
     public void GenealogyAnalyzer_AcceptsAnyOneKindOnItsOwn()
     {
         // Without an interceptor the graph still records descent, it just gains no generational structure.
-        var withCrossoverOnly = new GenealogyAnalyzer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
+        var withCrossoverOnly = new GenealogyAnalyzer<RealVector, PopulationState<RealVector>>(
             crossovers: [new SinglePointCrossover()]);
 
         withCrossoverOnly.Graph.ShouldNotBeNull();

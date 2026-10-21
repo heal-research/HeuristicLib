@@ -274,7 +274,7 @@ public sealed class OperationBindingTests
             5 => typed.ResolveOperator((IOperator<Refinement, RealVector>)source),
             6 => typed.ResolveOperator((IOperator<Replacement, RealVector>)source),
             7 => typed.ResolveOperator((IOperator<Termination, RealVector>)source),
-            8 => typed.ResolveOperator((IOperator<Interception, RealVector>)source),
+            8 => typed.ResolveOperator((IOperator<Interception<ProbeState>, RealVector>)source),
             _ => throw new ArgumentOutOfRangeException(nameof(operation))
         };
     }
@@ -315,7 +315,7 @@ public sealed class OperationBindingTests
                 break;
             case 8:
                 var state = new ProbeState();
-                typed.Resolve(Wrap((IOperator<Interception, RealVector>)source)).Transform(state, null, random, space, Problem).ShouldBeSameAs(state);
+                typed.Resolve(Wrap((IOperator<Interception<ProbeState>, RealVector>)source)).Transform(state, null, random, space, Problem).ShouldBeSameAs(state);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(operation));
@@ -436,7 +436,7 @@ public sealed class OperationBindingTests
     private sealed class AllOperations : IOperator<Creation, RealVector>, IOperator<Crossover, RealVector>,
         IOperator<Mutation, RealVector>, IOperator<Evaluation, RealVector>, IOperator<Selection, RealVector>,
         IOperator<Refinement, RealVector>, IOperator<Replacement, RealVector>, IOperator<Termination, RealVector>,
-        IOperator<Interception, RealVector>
+        IOperator<Interception<ProbeState>, RealVector>
     {
         public static readonly RealVector[] Output = [new(4.0), new(5.0)];
         public static readonly IReadOnlyList<EvaluatedCandidate<RealVector>> Population = Output.ToEvaluated<RealVector>([4.0, 5.0]);

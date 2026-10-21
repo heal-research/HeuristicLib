@@ -20,7 +20,7 @@ public static class PopulationTraces
             where TR : PopulationState<T> =>
             Analyzer.Trace(
                 algorithm,
-                new EvaluatedCandidatesMeasurement<T, TR>(),
+                new CandidatesMeasurement<T>(),
                 Aggregate.Readings<EvaluatedCandidate<T>>(),
                 clocks, retention);
 
@@ -37,7 +37,7 @@ public static class PopulationTraces
             TraceRetention? retention = null) =>
             Analyzer.Trace(
                 evaluator,
-                new ObjectiveVectorsFromEvaluationMeasurement<T>(),
+                new ObjectiveVectorsMeasurement<T>(),
                 Aggregate.Readings<ObjectiveVector>(),
                 clocks, retention);
     }

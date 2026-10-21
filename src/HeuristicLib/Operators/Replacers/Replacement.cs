@@ -28,12 +28,18 @@ public sealed class Replacement : IOperationDescriptor<Replacement>
             new WrappedExecutor<TWrapper>(executor, wrapper);
 
         private readonly struct Invocation(IReplacementExecutor<TCandidate, TSearchSpace, TProblem> executor,
-            IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<EvaluatedCandidate<TCandidate>>>
+            IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<EvaluatedCandidate<TCandidate>>>, IReplacementArguments<TCandidate>
         {
             private readonly IReplacementExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
             private readonly IRandomNumberGenerator random = random;
 
             public IRandomNumberGenerator Random => random;
+            public ISearchSpace SearchSpace => searchSpace;
+            public IProblem Problem => problem;
+            public IReadOnlyList<EvaluatedCandidate<TCandidate>> PreviousPopulation => previousPopulation;
+            public IReadOnlyList<EvaluatedCandidate<TCandidate>> OffspringPopulation => offspringPopulation;
+            public ObjectiveDirections Objective => objective;
+            public int Count => count;
             public IReadOnlyList<EvaluatedCandidate<TCandidate>> Proceed() => executor.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
             public IReadOnlyList<EvaluatedCandidate<TCandidate>> ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
                 ((IReplacementExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Replace(previousPopulation, offspringPopulation, objective, count, random ?? this.random, searchSpace, problem);
@@ -50,4 +56,13 @@ public sealed class Replacement : IOperationDescriptor<Replacement>
             public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
         }
     }
+}
+
+/// <summary>The arguments of one replacement call, which its observations read.</summary>
+internal interface IReplacementArguments<TCandidate>
+{
+    IReadOnlyList<EvaluatedCandidate<TCandidate>> PreviousPopulation { get; }
+    IReadOnlyList<EvaluatedCandidate<TCandidate>> OffspringPopulation { get; }
+    ObjectiveDirections Objective { get; }
+    int Count { get; }
 }

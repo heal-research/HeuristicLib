@@ -1,7 +1,5 @@
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators.MoveAppliers;
-using HEAL.HeuristicLib.Operators.MoveCreators;
-using HEAL.HeuristicLib.Operators.MoveEvaluators;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Neighborhoods;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -18,7 +16,7 @@ public readonly struct RoarNetNeighborhood<TG, TS, TP, TM1>(
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
 {
-    private readonly IMoveApplierExecutor<TG, TS, TP, TM1> applier = scope.For<TG, TS, TP>().Resolve(neighborhood.MoveApplier);
+    private readonly IMoveApplicationExecutor<TG, TS, TP, TM1> applier = scope.For<TG, TS, TP>().Resolve(neighborhood.MoveApplier);
     private readonly IMoveCreationExecutor<TG, TS, TP, TM1> creator = scope.For<TG, TS, TP>().Resolve(neighborhood.MoveCreator);
     private readonly IMoveEvaluationExecutor<TG, TS, TP, TM1> evaluator = scope.For<TG, TS, TP>().Resolve(neighborhood.MoveEvaluator);
 

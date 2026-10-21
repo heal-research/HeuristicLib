@@ -45,24 +45,24 @@ public class RefinerConfigurationEqualityTests
     }
 
     [Fact]
-    public void ChooseOneRefiner_WithDifferentChildRefiners_IsNotEqual()
+    public void ChoosePerCandidateRefinement_WithDifferentChildRefiners_IsNotEqual()
     {
-        var left = ChooseOneRefiner.Create([new AddOffsetRefiner(1)], [1.0]);
-        var right = ChooseOneRefiner.Create([new AddOffsetRefiner(2)], [1.0]);
+        var left = ChoosePerCandidate.Create([new AddOffsetRefiner(1)], [1.0]);
+        var right = ChoosePerCandidate.Create([new AddOffsetRefiner(2)], [1.0]);
 
         left.ShouldNotBe(right);
     }
 
     [Fact]
-    public void ChooseOneRefiner_WithDifferentWeights_IsNotEqual()
+    public void ChoosePerCandidateRefinement_WithDifferentWeights_IsNotEqual()
     {
-        var children = new IRefiner<int>[]
+        var children = new IOperator<Refinement, int>[]
         {
             new AddOffsetRefiner(1),
             new AddOffsetRefiner(2),
         };
-        var left = ChooseOneRefiner.Create(children, [1.0, 2.0]);
-        var right = ChooseOneRefiner.Create(children, [2.0, 1.0]);
+        var left = ChoosePerCandidate.Create(children, [1.0, 2.0]);
+        var right = ChoosePerCandidate.Create(children, [2.0, 1.0]);
 
         left.ShouldNotBe(right);
     }
@@ -71,7 +71,7 @@ public class RefinerConfigurationEqualityTests
     public void MultiRefinerTopologies_WithEqualChildRefiners_AreNotEqualAcrossTypes()
     {
         var pipeline = PipelineRefiner.Create(new AddOffsetRefiner(1), new AddOffsetRefiner(2));
-        var chooseOne = ChooseOneRefiner.Create(new AddOffsetRefiner(1), new AddOffsetRefiner(2));
+        var chooseOne = ChoosePerCandidate.Create(new AddOffsetRefiner(1), new AddOffsetRefiner(2));
 
         pipeline.ShouldNotBe<object>(chooseOne);
     }
@@ -169,12 +169,12 @@ public class RefinerConfigurationEqualityTests
     {
         var first = new AddOffsetRefiner(1);
         var second = new AddOffsetRefiner(2);
-        var childRefiners = new List<IRefiner<int>> { first, second };
+        var childRefiners = new List<IOperator<Refinement, int>> { first, second };
         var refiner = new FirstOfRefiner(childRefiners);
 
         childRefiners.Clear();
 
-        refiner.ChildRefiners.ShouldBe([first, second]);
+        refiner.ChildOperators.ShouldBe([first, second]);
     }
 
     private sealed record AddOffsetRefiner(int Offset) : SingleCandidateRefiner<int, DummySearchSpace<int>>
@@ -185,23 +185,32 @@ public class RefinerConfigurationEqualityTests
     // An externally authored topology with no equality attribute, generator or hand-written comparison: its structural
     // equality follows from ChildRefiners being a value array.
     private sealed record FirstOfRefiner
-        : MultiRefiner<int>
+        : MultiOperator<Refinement, int>
     {
-        public FirstOfRefiner(IReadOnlyList<IRefiner<int>> childRefiners)
+        public FirstOfRefiner(IReadOnlyList<IOperator<Refinement, int>> childRefiners)
             : base(childRefiners)
         {
         }
 
-        protected override CompositeExecutorFactory<IRefinementExecutor<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childRefiners => new Executor<TRunSearchSpace, TRunProblem>(childRefiners);
+        protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
+
+        private sealed class Factory(FirstOfRefiner source) : OperatorExecutorFactory<Refinement, int>
+        {
+            protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+                ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+            {
+                ImmutableArray<IRefinementExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
+                return new Executor<TRunSearchSpace, TRunProblem>(children);
+            }
+        }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IRefinementExecutor<int, TSearchSpace, TProblem>> childRefiners)
-            : MultiRefinementExecutor<int, TSearchSpace, TProblem>(childRefiners)
+            : IRefinementExecutor<int, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildRefiners[0].Refine(candidates, random, searchSpace, problem);
+            public IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+                childRefiners[0].Refine(candidates, random, searchSpace, problem);
         }
     }
 }

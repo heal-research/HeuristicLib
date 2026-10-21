@@ -46,7 +46,7 @@ public class OperatorCompatibilityTests
       algorithm.Crossover = @operator;
     ";
 
-        return DoesCompile(code, typeof(ICrossover<>), algorithmType, operatorType);
+        return DoesCompile(code, typeof(IOperator<,>), algorithmType, operatorType);
     }
 
     private static bool DoesCompile(string code, params Type[] usedTypes)
@@ -282,14 +282,14 @@ public class OperatorCompatibilityTests
         var @operator = Activator.CreateInstance(operatorType)!;
 
         // A crossover for a different candidate is not the same role at all, so it never reaches the binding check.
-        if (!typeof(ICrossover<>).MakeGenericType(candidate).IsInstanceOfType(@operator))
+        if (!typeof(IOperator<,>).MakeGenericType(typeof(Crossover), candidate).IsInstanceOfType(@operator))
         {
             return false;
         }
 
-        var tryResolve = typeof(CrossoverResolutionExtensions)
+        var tryResolve = typeof(CrossoverOperationResolutionExtensions)
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Single(method => method.Name == nameof(CrossoverResolutionExtensions.TryResolve)
+            .Single(method => method.Name == nameof(CrossoverOperationResolutionExtensions.TryResolve)
                 && method.GetParameters() is [{ ParameterType.Name: nameof(ResolutionScope) }, _, _, _])
             .MakeGenericMethod(candidate, searchSpace, problem);
 
@@ -318,7 +318,7 @@ internal record IndependentAlgorithm<TCandidate, TSearchSpace, TProblem> : Algor
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ICrossover<TCandidate> Crossover { get; set; } = new IndependentCrossover<TCandidate>();
+    public IOperator<Crossover, TCandidate> Crossover { get; set; } = new IndependentCrossover<TCandidate>();
 
     public override ExecutorFactory<AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, SearchState>> CreateExecutorFactory() => throw new NotSupportedException();
 }
@@ -331,7 +331,7 @@ internal record IndependentAlgorithm<TCandidate> : IndependentAlgorithm<TCandida
 internal record PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<PermutationEncodingSpecificAlgorithm<TProblem>, Permutation, PermutationSearchSpace, TProblem, SearchState>
     where TProblem : class, IProblem<Permutation, PermutationSearchSpace>
 {
-    public ICrossover<Permutation> Crossover { get; set; } = new PermutationSpecificCrossover();
+    public IOperator<Crossover, Permutation> Crossover { get; set; } = new PermutationSpecificCrossover();
 
     public override ExecutorFactory<AlgorithmExecutor<Permutation, PermutationSearchSpace, TProblem, SearchState>> CreateExecutorFactory() => throw new NotSupportedException();
 }
@@ -340,7 +340,7 @@ internal record PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecif
 
 public record TravelingSalesmanProblemSpecificAlgorithm : Algorithm<TravelingSalesmanProblemSpecificAlgorithm, Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState>
 {
-    public ICrossover<Permutation> Crossover { get; set; } = new TspSpecificCrossover();
+    public IOperator<Crossover, Permutation> Crossover { get; set; } = new TspSpecificCrossover();
 
     public override ExecutorFactory<AlgorithmExecutor<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState>> CreateExecutorFactory() => throw new NotSupportedException();
 }
@@ -348,7 +348,7 @@ public record TravelingSalesmanProblemSpecificAlgorithm : Algorithm<TravelingSal
 internal record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVectorEncodingSpecificAlgorithm<TProblem>, RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState>
     where TProblem : class, IProblem<RealVector, BoundedRealVectorSearchSpace>
 {
-    public ICrossover<RealVector> Crossover { get; set; } = new RealVectorSpecificCrossover();
+    public IOperator<Crossover, RealVector> Crossover { get; set; } = new RealVectorSpecificCrossover();
 
     public override ExecutorFactory<AlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState>> CreateExecutorFactory() => throw new NotSupportedException();
 }
@@ -357,7 +357,7 @@ internal record RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecific
 
 public record TestFunctionProblemSpecificAlgorithm : Algorithm<TestFunctionProblemSpecificAlgorithm, RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SearchState>
 {
-    public ICrossover<RealVector> Crossover { get; set; } = new TestFunctionProblemSpecificCrossover();
+    public IOperator<Crossover, RealVector> Crossover { get; set; } = new TestFunctionProblemSpecificCrossover();
 
     public override ExecutorFactory<AlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SearchState>> CreateExecutorFactory() => throw new NotSupportedException();
 }

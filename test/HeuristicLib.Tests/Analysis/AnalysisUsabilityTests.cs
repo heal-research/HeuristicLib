@@ -50,7 +50,7 @@ public class AnalysisUsabilityTests
         var secondEvaluator = new ManualEvaluator();
         var trace = Analyzer.Trace(
             [firstEvaluator, secondEvaluator],
-            new ObjectiveVectorsFromEvaluationMeasurement<int>(),
+            new ObjectiveVectorsMeasurement<int>(),
             new CountAggregation());
         var scope = Install(trace);
 
@@ -58,6 +58,21 @@ public class AnalysisUsabilityTests
         Evaluate(scope, secondEvaluator, 3, 4);
 
         trace.Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
+    }
+
+    [Fact]
+    public void OneTrace_ObservesASourceOnceWhenGivenSeveralOfItsHandles()
+    {
+        var evaluator = new ManualEvaluator();
+        var trace = Analyzer.Trace(
+            [evaluator, evaluator],
+            new ObjectiveVectorsMeasurement<int>(),
+            new CountAggregation());
+        var scope = Install(trace);
+
+        Evaluate(scope, evaluator, 1, 2);
+
+        trace.Snapshot().Select(entry => entry.Value).ShouldBe([2]);
     }
 
     [Fact]

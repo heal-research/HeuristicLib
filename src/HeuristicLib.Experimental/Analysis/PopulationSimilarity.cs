@@ -96,7 +96,7 @@ public static class PopulationSimilarityTraces
             where TR : PopulationState<T> =>
             Analyzer.Trace(
                 algorithm,
-                new EvaluatedCandidatesMeasurement<T, TR>(),
+                new CandidatesMeasurement<T>(),
                 new PopulationSimilarityAggregation<T>(candidateSimilarity),
                 clocks, retention);
 
@@ -111,7 +111,7 @@ public static class PopulationSimilarityTraces
             where TR : PopulationState<T> =>
             Analyzer.Trace(
                 algorithm,
-                new EvaluatedCandidatesMeasurement<T, TR>(),
+                new CandidatesMeasurement<T>(),
                 new AverageSimilarityAggregation<T>(candidateSimilarity),
                 clocks, retention);
     }

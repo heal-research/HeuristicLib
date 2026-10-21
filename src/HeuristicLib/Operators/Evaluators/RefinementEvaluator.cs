@@ -29,7 +29,7 @@ namespace HEAL.HeuristicLib.Operators;
 public sealed record RefinementEvaluator<TCandidate>
     : Operator<Evaluation, TCandidate>
 {
-    public RefinementEvaluator(IRefiner<TCandidate> refiner)
+    public RefinementEvaluator(IOperator<Refinement, TCandidate> refiner)
     {
         Refiner = refiner;
     }
@@ -37,7 +37,7 @@ public sealed record RefinementEvaluator<TCandidate>
     /// <summary>
     /// Gets the refiner that produces the transient candidates being measured.
     /// </summary>
-    public IRefiner<TCandidate> Refiner { get; init; }
+    public IOperator<Refinement, TCandidate> Refiner { get; init; }
 
     /// <summary>
     /// Gets the evaluator that measures the refined candidates.
@@ -83,10 +83,10 @@ public sealed record RefinementEvaluator<TCandidate>
 
 public static class RefinementEvaluator
 {
-    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner) =>
+    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IOperator<Refinement, TCandidate> refiner) =>
         new(refiner);
 
-    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IOperator<Evaluation, TCandidate> evaluator) =>
+    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IOperator<Refinement, TCandidate> refiner, IOperator<Evaluation, TCandidate> evaluator) =>
         new(refiner) { Evaluator = evaluator };
 }
 
@@ -94,7 +94,7 @@ public static class RefinementEvaluatorExtensions
 {
     extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
     {
-        public RefinementEvaluator<TCandidate> AppliedAfterRefinement(IRefiner<TCandidate> refiner) =>
+        public RefinementEvaluator<TCandidate> AppliedAfterRefinement(IOperator<Refinement, TCandidate> refiner) =>
             new RefinementEvaluator<TCandidate>(refiner) { Evaluator = evaluator };
     }
 }

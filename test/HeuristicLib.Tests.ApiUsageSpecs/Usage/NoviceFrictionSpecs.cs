@@ -148,29 +148,31 @@ public class NoviceFrictionSpecs
     /// The friction this suite was written to measure, and its result: there is no operator slot left that shows it.
     /// </summary>
     /// <remarks>
-    /// Every operator slot names the candidate; the search space, problem and search state are supplied by the run.
+    /// Every operator slot names the candidate, and the interceptor slot also the algorithm's search state; the search
+    /// space and problem are supplied by the run.
     /// </remarks>
     [Fact]
     public void EveryOperatorSlot_NamesOnlyWhatTheOperatorIsWrittenAbout()
     {
         var algorithm = typeof(GeneticAlgorithm<RealVector>);
 
-        // Slots omit run types; migrated slots additionally identify their operation.
-        string[] slots =
+        // Every slot identifies the operation and candidate, without the run's search space or problem.
+        (string Slot, Type Operation)[] operations =
         [
-            nameof(GeneticAlgorithm<RealVector>.Creator), nameof(GeneticAlgorithm<RealVector>.Crossover),
-            nameof(GeneticAlgorithm<RealVector>.Selector),
-            nameof(GeneticAlgorithm<RealVector>.Terminator), nameof(GeneticAlgorithm<RealVector>.Interceptor)
+            (nameof(GeneticAlgorithm<RealVector>.Creator), typeof(Creation)),
+            (nameof(GeneticAlgorithm<RealVector>.Crossover), typeof(Crossover)),
+            (nameof(GeneticAlgorithm<RealVector>.Mutator), typeof(Mutation)),
+            (nameof(GeneticAlgorithm<RealVector>.Evaluator), typeof(Evaluation)),
+            (nameof(GeneticAlgorithm<RealVector>.Selector), typeof(Selection)),
+            (nameof(GeneticAlgorithm<RealVector>.Refiner), typeof(Refinement)),
+            (nameof(GeneticAlgorithm<RealVector>.Terminator), typeof(Termination)),
+            (nameof(GeneticAlgorithm<RealVector>.Interceptor), typeof(Interception<PopulationState<RealVector>>))
         ];
+        foreach (var (slot, operation) in operations)
+            algorithm.GetProperty(slot)!.PropertyType.ShouldBe(typeof(IOperator<,>).MakeGenericType(operation, typeof(RealVector)));
 
-        foreach (var slot in slots)
-        {
-            algorithm.GetProperty(slot)!.PropertyType.GetGenericArguments().ShouldBe([typeof(RealVector)]);
-        }
-        algorithm.GetProperty(nameof(GeneticAlgorithm<RealVector>.Mutator))!.PropertyType
-            .ShouldBe(typeof(IOperator<Mutation, RealVector>));
-        algorithm.GetProperty(nameof(GeneticAlgorithm<RealVector>.Evaluator))!.PropertyType
-            .ShouldBe(typeof(IOperator<Evaluation, RealVector>));
+        typeof(NSGA2<RealVector>).GetProperty(nameof(NSGA2<RealVector>.Replacer))!.PropertyType
+            .ShouldBe(typeof(IOperator<Replacement, RealVector>));
     }
 
     /// <summary>

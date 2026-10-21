@@ -3,8 +3,6 @@ using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 
@@ -24,13 +22,10 @@ public abstract class RankAnalyzer<TCandidate> : Aspect
 /// This analyzer composes a genealogy analysis: it installs that analysis into a graph it owns and adds one observation
 /// of its own. Both observations share the same explicit objective ordering.
 /// </remarks>
-public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState> : RankAnalyzer<TCandidate>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed class RankAnalyzer<TCandidate, TSearchState> : RankAnalyzer<TCandidate>
     where TSearchState : PopulationState<TCandidate>
     where TCandidate : notnull
 {
-
     /// <param name="crossovers">Crossovers whose offspring become graph edges from two parents.</param>
     /// <param name="mutators">Mutators whose offspring become graph edges from one parent.</param>
     /// <param name="algorithms">
@@ -40,7 +35,10 @@ public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchStat
     /// <param name="equality">
     /// Decides which candidates are the same graph node. Defaults to <see cref="EqualityComparer{T}.Default"/>.
     /// </param>
-    public RankAnalyzer(IReadOnlyList<ICrossover<TCandidate>>? crossovers = null,
+    /// <param name="objectiveComparer">
+    /// Ranks the candidates of a generation. Without one, the problem's objective must define a total order.
+    /// </param>
+    public RankAnalyzer(IReadOnlyList<IOperator<Crossover, TCandidate>>? crossovers = null,
                         IReadOnlyList<IOperator<Mutation, TCandidate>>? mutators = null,
                         IReadOnlyList<IAlgorithm<TCandidate, TSearchState>>? algorithms = null,
                         IEqualityComparer<TCandidate>? equality = null,
@@ -50,7 +48,7 @@ public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchStat
             throw new ArgumentException("A rank analysis needs at least one crossover, mutator or algorithm to observe.");
         State = new RankState<TCandidate>(new GenealogyGraph<TCandidate>(equality ?? EqualityComparer<TCandidate>.Default));
         ObjectiveComparer = objectiveComparer;
-        var graphBuilder = new GenealogyAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchState>(
+        var graphBuilder = new GenealogyAnalyzer<TCandidate, TSearchState>(
             State.Graph, crossovers, mutators, algorithms, saveSpace: false)
         { ObjectiveComparer = objectiveComparer };
         // The graph contains this generation before its ranks are read.
@@ -64,7 +62,6 @@ public sealed class RankAnalyzer<TCandidate, TSearchSpace, TProblem, TSearchStat
     public override RankState<TCandidate> State { get; }
 
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; }
-
 }
 
 /// <summary>
@@ -103,8 +100,8 @@ public static class RankAnalysisTraces
         /// <summary>
         /// Creates a rank analyzer over the given observation sources.
         /// </summary>
-        public static RankAnalyzer<T, ISearchSpace<T>, IProblem<T, ISearchSpace<T>>, TR> Rank<T, TR>(
-            ICrossover<T>? crossover = null,
+        public static RankAnalyzer<T, TR> Rank<T, TR>(
+            IOperator<Crossover, T>? crossover = null,
             IOperator<Mutation, T>? mutator = null,
             IAlgorithm<T, TR>? algorithm = null,
             IEqualityComparer<T>? equality = null,
@@ -112,7 +109,7 @@ public static class RankAnalysisTraces
             where T : notnull
             where TR : PopulationState<T> =>
             new(
-                crossover is null ? null : (IReadOnlyList<ICrossover<T>>)[crossover],
+                crossover is null ? null : (IReadOnlyList<IOperator<Crossover, T>>)[crossover],
                 mutator is null ? null : (IReadOnlyList<IOperator<Mutation, T>>)[mutator],
                 algorithm is null ? null : (IReadOnlyList<IAlgorithm<T, TR>>)[algorithm],
                 equality, objectiveComparer);

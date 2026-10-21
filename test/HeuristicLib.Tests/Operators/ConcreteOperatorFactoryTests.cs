@@ -20,13 +20,13 @@ public sealed class ConcreteOperatorFactoryTests
     [InlineData(nameof(GenderSpecificSelector<int>))]
     public void Rebinding_ObservesEachChildOnlyInItsRequestingContext(string kind)
     {
-        ICreator<int> creator = new ConstantCreator();
-        ICrossover<int> crossover = SelectFirstParentCrossover<int>.Instance;
+        IOperator<Creation, int> creator = new ConstantCreator();
+        IOperator<Crossover, int> crossover = SelectFirstParentCrossover<int>.Instance;
         IOperator<Mutation, int> mutator = new AddOneMutator();
-        IRefiner<int> refiner = new SubtractOneRefiner();
+        IOperator<Refinement, int> refiner = new SubtractOneRefiner();
         IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
-        ISelector<int> female = new RangeSelector(0);
-        ISelector<int> male = new RangeSelector(1);
+        IOperator<Selection, int> female = new RangeSelector(0);
+        IOperator<Selection, int> male = new RangeSelector(1);
         var transformedCreator = new TransformedCreator<int>(creator, mutator);
         var transformedCrossover = new TransformedCrossover<int>(crossover, mutator);
         var refiningEvaluator = new RefinementEvaluator<int>(refiner) { Evaluator = evaluator };

@@ -18,7 +18,7 @@ public class AccumulatingAnalyzerTests
     {
         var first = new SketchEvaluator();
         var second = new SketchEvaluator();
-        var analyzer = new ParetoFrontAnalyzer<int, SketchSearchSpace, SketchProblem>(
+        var analyzer = new ParetoFrontAnalyzer<int>(
             TwoMinimized, new ObjectiveVector(100, 100), first, second);
         var scope = Install(analyzer);
 

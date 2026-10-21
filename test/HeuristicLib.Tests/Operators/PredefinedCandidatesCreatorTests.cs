@@ -27,7 +27,7 @@ public class PredefinedCandidatesCreatorTests
     public void Rebinding_PreservesCursorAndUsesTheContextualFallback()
     {
         var random = RandomNumberGenerator.Create(42);
-        ICreator<int> fallback = new ExpectedRandomCreator(random, 99);
+        IOperator<Creation, int> fallback = new ExpectedRandomCreator(random, 99);
         var creator = fallback.SeededWith([10, 20, 30]);
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var parent = ResolutionScope.Create();

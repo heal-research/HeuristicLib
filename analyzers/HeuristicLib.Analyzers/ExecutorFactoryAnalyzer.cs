@@ -54,7 +54,7 @@ public sealed class ExecutorFactoryAnalyzer : DiagnosticAnalyzer
         for (var symbol = context.SemanticModel.GetEnclosingSymbol(invocation.SpanStart, context.CancellationToken);
              symbol is not null; symbol = symbol.ContainingSymbol)
         {
-            if (symbol is IMethodSymbol method && (IsExecutionType(method.ReturnType, "ExecutorFactory", "OperatorExecutorFactory", "WrapperExecutorFactory", "CompositeExecutorFactory") || IsWrapperConstructor(method.ReturnType)
+            if (symbol is IMethodSymbol method && (IsExecutionType(method.ReturnType, "ExecutorFactory", "OperatorExecutorFactory", "WrapperExecutorFactory") || IsWrapperConstructor(method.ReturnType)
                 || method.Parameters.Any(static parameter => IsExecutionType(parameter.Type, "ResolutionScope"))))
                 return true;
             if (symbol is INamedTypeSymbol type && HasContract(type, "IExecutor"))

@@ -13,7 +13,7 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
     public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
-    public required ITerminator<TCandidate> Terminator { get; init; }
+    public required IOperator<Termination, TCandidate> Terminator { get; init; }
 
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, Terminator);
 
@@ -29,7 +29,7 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchState>
 public static class StateTerminatedAlgorithm
 {
     public static StateTerminatedAlgorithm<TCandidate, TSearchState> Create<TCandidate, TSearchState>(
-        IAlgorithm<TCandidate, TSearchState> algorithm, ITerminator<TCandidate> terminator)
+        IAlgorithm<TCandidate, TSearchState> algorithm, IOperator<Termination, TCandidate> terminator)
         where TSearchState : class, ISearchState => new()
         {
             Algorithm = algorithm,
@@ -78,7 +78,7 @@ public static class StateTerminatedAlgorithmExtensions
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public StateTerminatedAlgorithm<TCandidate, TSearchState> TerminatedBy(ITerminator<TCandidate> terminator)
+        public StateTerminatedAlgorithm<TCandidate, TSearchState> TerminatedBy(IOperator<Termination, TCandidate> terminator)
         {
             return StateTerminatedAlgorithm.Create(algorithm, terminator);
         }

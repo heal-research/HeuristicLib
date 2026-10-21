@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,38 +7,44 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 public sealed record AllTerminator<TCandidate>
-    : MultiTerminator<TCandidate>
+    : MultiOperator<Termination, TCandidate>
 {
-    public AllTerminator(params IReadOnlyList<ITerminator<TCandidate>> childTerminators)
+    public AllTerminator(params IReadOnlyList<IOperator<Termination, TCandidate>> childTerminators)
         : base(childTerminators)
     {
     }
 
-    protected override CompositeExecutorFactory<ITerminationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
-        childTerminators => new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminators);
+    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
+
+    private sealed class Factory(AllTerminator<TCandidate> source) : OperatorExecutorFactory<Termination, TCandidate>
+    {
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>([.. source.ChildOperators.Select(child => scope.Resolve(child))]);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
-        : MultiTerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childTerminators)
+        : ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            ChildTerminators.All(terminator => terminator.IsTerminalState(state, random, searchSpace, problem));
+        public bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            childTerminators.All(terminator => terminator.IsTerminalState(state, random, searchSpace, problem));
     }
 }
 
 public static class AllTerminator
 {
-    public static AllTerminator<TCandidate> Create<TCandidate>(params IReadOnlyList<ITerminator<TCandidate>> childTerminators) =>
+    public static AllTerminator<TCandidate> Create<TCandidate>(params IReadOnlyList<IOperator<Termination, TCandidate>> childTerminators) =>
         new(childTerminators);
 }
 
 public static class AllTerminatorExtensions
 {
-    extension<TCandidate>(ITerminator<TCandidate> terminator)
+    extension<TCandidate>(IOperator<Termination, TCandidate> terminator)
     {
-        public AllTerminator<TCandidate> And(params IReadOnlyList<ITerminator<TCandidate>> otherTerminators) =>
+        public AllTerminator<TCandidate> And(params IReadOnlyList<IOperator<Termination, TCandidate>> otherTerminators) =>
             AllTerminator.Create([terminator, .. otherTerminators]);
     }
 }

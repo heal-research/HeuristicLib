@@ -44,7 +44,7 @@ The adapter builds one wrapping executor per selected executor and compiles the 
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/CustomAdviceDocumentationSpecs.cs#general-advice-run{csharp}
 
-General operator advice applies to mutation and evaluation operators; the remaining roles keep their role-specific advice bases until they move to the operation-parameterized contract.
+General operator advice applies to every operation. Each also has a typed role advice base, such as `CreatorAdvice` or `RefinerAdvice`, with `Check` and `Wrap`; the bases for termination and interception also receive the run's search state type.
 
 ## Keep ordering explicit
 

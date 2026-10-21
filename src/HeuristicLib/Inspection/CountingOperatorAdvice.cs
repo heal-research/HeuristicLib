@@ -46,13 +46,6 @@ file readonly struct CandidateCounter(CountAccumulator counter) : IInvocationWra
     }
 }
 
-public sealed record OperatorCounting<TOperation, TCandidate>(OperatorCountMetric Metric) : IOperatorCounting<IOperator<TOperation, TCandidate>>
-    where TOperation : IOperationDescriptor<TOperation>
-{
-    public Advice<IOperator<TOperation, TCandidate>> CreateAdvice(CountAccumulator counter) =>
-        new CountingOperatorAdvice<TOperation, TCandidate>(counter, Metric);
-}
-
 public static class OperatorCounterExtensions
 {
     extension(Aspect)

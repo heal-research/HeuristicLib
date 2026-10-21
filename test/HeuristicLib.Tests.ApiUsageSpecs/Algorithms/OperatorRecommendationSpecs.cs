@@ -164,7 +164,7 @@ public class OperatorRecommendationSpecs
         var searchSpace = new PermutationSearchSpace(5);
         var resolution = new OperatorRecommendationResolution(problem: null, searchSpace);
 
-        var recommendation = resolution.GetOrRecommend<ICreator<Permutation>>("creator", supplied: null);
+        var recommendation = resolution.GetOrRecommend<IOperator<Creation, Permutation>>("creator", supplied: null);
         resolution.ThrowIfIncomplete("ConsumerAlgorithm");
 
         recommendation.ShouldBeOfType<RandomPermutationCreator>();
@@ -275,19 +275,19 @@ public class OperatorRecommendationSpecs
         : RealVectorProblem<RecommendedRealVectorProblem>(
             SingleObjective.Minimize,
             new BoundedRealVectorSearchSpace(dimension, minimum: -1.0, maximum: 1.0)),
-          IRecommends<ICreator<RealVector>>,
-          IRecommends<ICrossover<RealVector>>,
+          IRecommends<IOperator<Creation, RealVector>>,
+          IRecommends<IOperator<Crossover, RealVector>>,
           IRecommends<IOperator<Mutation, RealVector>>
     {
         public bool TryCreateRecommendedOperator(
-            [NotNullWhen(true)] out ICreator<RealVector>? recommendation)
+            [NotNullWhen(true)] out IOperator<Creation, RealVector>? recommendation)
         {
             recommendation = new UniformDistributedCreator(SearchSpace);
             return true;
         }
 
         public bool TryCreateRecommendedOperator(
-            [NotNullWhen(true)] out ICrossover<RealVector>? recommendation)
+            [NotNullWhen(true)] out IOperator<Crossover, RealVector>? recommendation)
         {
             recommendation = new SinglePointCrossover();
             return true;

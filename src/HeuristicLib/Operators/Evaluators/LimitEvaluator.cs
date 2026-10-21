@@ -48,11 +48,11 @@ public sealed record LimitEvaluator<TCandidate>
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch, CountAccumulator counter)
-        : WrappingEvaluationExecutor<TCandidate, TSearchSpace, TProblem>(childEvaluator)
+        : IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var remainingEvaluations = maxEvaluations - counter.CurrentCount;
             var fallback = fallbackObjectiveVector ?? problem.Objective.Worst;
@@ -66,14 +66,14 @@ public sealed record LimitEvaluator<TCandidate>
             {
                 var candidatesToEvaluate = candidates.Take(remainingEvaluations).ToList();
                 var candidatesToSkip = candidates.Skip(remainingEvaluations).ToList();
-                var evaluated = ChildEvaluator.Evaluate(candidatesToEvaluate, random, searchSpace, problem);
+                var evaluated = childEvaluator.Evaluate(candidatesToEvaluate, random, searchSpace, problem);
                 counter.IncrementBy(candidatesToEvaluate.Count);
                 var skipped = Enumerable.Repeat(fallback, candidatesToSkip.Count);
 
                 return evaluated.Concat(skipped).ToArray();
             }
 
-            var result = ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
+            var result = childEvaluator.Evaluate(candidates, random, searchSpace, problem);
             counter.IncrementBy(candidates.Count);
             return result;
         }

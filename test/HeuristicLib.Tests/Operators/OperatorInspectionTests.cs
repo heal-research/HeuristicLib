@@ -141,8 +141,8 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var creator = new SequenceCreator();
         var aspect = Aspect.CountCalls(creator, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingCreatorAdvice<int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingCreatorAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Creation, int>>().Counter.ShouldBeSameAs(counter);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Creation, int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
         var executor = ResolutionScope.Create(aspect).ResolveCreator(creator);
         var problem = CreateProblem();
 
@@ -174,8 +174,8 @@ public class OperatorInspectionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var creator = new SequenceCreator();
         var aspect = Aspect.MeasureDuration(creator, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringCreatorAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringCreatorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Creation, int>>().Duration.ShouldBeSameAs(duration);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Creation, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var executor = ResolutionScope.Create(aspect).ResolveCreator(creator);
         var problem = CreateProblem();
 
@@ -354,8 +354,8 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var crossover = new SumParentsCrossover();
         var aspect = Aspect.CountCalls(crossover, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingCrossoverAdvice<int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingCrossoverAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Crossover, int>>().Counter.ShouldBeSameAs(counter);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Crossover, int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
         var executor = ResolutionScope.Create(aspect).ResolveCrossover(crossover);
         var problem = CreateProblem();
 
@@ -403,8 +403,8 @@ public class OperatorInspectionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var crossover = new SumParentsCrossover();
         var aspect = Aspect.MeasureDuration(crossover, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringCrossoverAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringCrossoverAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Crossover, int>>().Duration.ShouldBeSameAs(duration);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Crossover, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var executor = ResolutionScope.Create(aspect).ResolveCrossover(crossover);
         var problem = CreateProblem();
 
@@ -457,8 +457,8 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var selector = new FirstCandidatesSelector();
         var aspect = Aspect.CountCalls(selector, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingSelectorAdvice<int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingSelectorAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Selection, int>>().Counter.ShouldBeSameAs(counter);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Selection, int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
         var executor = ResolutionScope.Create(aspect).ResolveSelector(selector);
         var problem = CreateProblem();
 
@@ -504,8 +504,8 @@ public class OperatorInspectionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var selector = new FirstCandidatesSelector();
         var aspect = Aspect.MeasureDuration(selector, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringSelectorAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringSelectorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Selection, int>>().Duration.ShouldBeSameAs(duration);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Selection, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var executor = ResolutionScope.Create(aspect).ResolveSelector(selector);
         var problem = CreateProblem();
 
@@ -537,8 +537,8 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var replacer = new FirstReplacementCandidatesReplacer();
         var aspect = Aspect.CountCalls(replacer, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingReplacerAdvice<int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingReplacerAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Replacement, int>>().Counter.ShouldBeSameAs(counter);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Replacement, int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
         var executor = ResolutionScope.Create(aspect).ResolveReplacer(replacer);
         var problem = CreateProblem();
 
@@ -618,8 +618,8 @@ public class OperatorInspectionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var replacer = new FirstReplacementCandidatesReplacer();
         var aspect = Aspect.MeasureDuration(replacer, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringReplacerAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringReplacerAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Replacement, int>>().Duration.ShouldBeSameAs(duration);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Replacement, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var executor = ResolutionScope.Create(aspect).ResolveReplacer(replacer);
         var problem = CreateProblem();
 
@@ -669,7 +669,7 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var interceptor = new AddOneInterceptor();
         var aspect = Aspect.CountCalls(interceptor, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingInterceptorAdvice<int>>().Counter.ShouldBeSameAs(counter);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Interception<CounterState>, int>>().Counter.ShouldBeSameAs(counter);
         var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(interceptor);
         var problem = CreateProblem();
 
@@ -686,8 +686,8 @@ public class OperatorInspectionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var interceptor = new AddOneInterceptor();
         var aspect = Aspect.MeasureDuration(interceptor, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringInterceptorAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringInterceptorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Interception<CounterState>, int>>().Duration.ShouldBeSameAs(duration);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Interception<CounterState>, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(interceptor);
         var problem = CreateProblem();
 
@@ -729,7 +729,7 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var terminator = new NeverTerminalStateTerminator();
         var aspect = Aspect.CountCalls(terminator, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingTerminatorAdvice<int>>().Counter.ShouldBeSameAs(counter);
+        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Termination, int>>().Counter.ShouldBeSameAs(counter);
         var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(terminator);
         var problem = CreateProblem();
 
@@ -746,8 +746,8 @@ public class OperatorInspectionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var terminator = new NeverTerminalStateTerminator();
         var aspect = Aspect.MeasureDuration(terminator, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringTerminatorAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringTerminatorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Termination, int>>().Duration.ShouldBeSameAs(duration);
+        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Termination, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(terminator);
         var problem = CreateProblem();
 
@@ -1059,29 +1059,29 @@ file static class OperatorResolution
 {
     extension(ResolutionScope scope)
     {
-        public ICreationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCreator(ICreator<int> creator) =>
+        public ICreationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCreator(IOperator<Creation, int> creator) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator);
 
-        public ICrossoverExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCrossover(ICrossover<int> crossover) =>
+        public ICrossoverExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCrossover(IOperator<Crossover, int> crossover) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover);
 
         public IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IOperator<Mutation, int> mutator) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
 
-        public ISelectionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveSelector(ISelector<int> selector) =>
+        public ISelectionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveSelector(IOperator<Selection, int> selector) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
 
-        public IReplacementExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveReplacer(IReplacer<int> replacer) =>
+        public IReplacementExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveReplacer(IOperator<Replacement, int> replacer) =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(replacer);
     }
 
-    extension(ICreator<int> creator)
+    extension(IOperator<Creation, int> creator)
     {
         public ICreationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCreatorExecution() =>
             ResolutionScope.Create().ResolveCreator(creator);
     }
 
-    extension(ICrossover<int> crossover)
+    extension(IOperator<Crossover, int> crossover)
     {
         public ICrossoverExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCrossoverExecution() =>
             ResolutionScope.Create().ResolveCrossover(crossover);
@@ -1093,13 +1093,13 @@ file static class OperatorResolution
             ResolutionScope.Create().ResolveMutator(mutator);
     }
 
-    extension(ISelector<int> selector)
+    extension(IOperator<Selection, int> selector)
     {
         public ISelectionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateSelectorExecution() =>
             ResolutionScope.Create().ResolveSelector(selector);
     }
 
-    extension(IReplacer<int> replacer)
+    extension(IOperator<Replacement, int> replacer)
     {
         public IReplacementExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateReplacerExecution() =>
             ResolutionScope.Create().ResolveReplacer(replacer);

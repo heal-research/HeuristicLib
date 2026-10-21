@@ -330,7 +330,7 @@ Status: `Canonical`
 
 An operation invocation is one call to an operation method, such as one call to `Mutate`. A caller invokes mutation through an executor's `Mutate` method. Operation call is an accepted synonym; invocation is used in wrapper type names such as `IInvocation<TResult>` and `IInvocationWrapper`.
 
-Every invocation carries its primary inputs followed by a random number generator, search space and problem. `IInvocation<TResult>` exposes that random number generator to invocation wrappers and can repeat the call with the same arguments.
+Every invocation carries its primary inputs followed by a random number generator, search space and problem. `IInvocation<TResult>` exposes that random number generator, search space and problem to invocation wrappers, the latter two without their run types, and can repeat the call with the same arguments.
 
 An executor can receive many invocations. A duration measurement around an operation call measures that invocation rather than the lifetime of its executor.
 
@@ -444,7 +444,7 @@ See also: Operator, Search state, Termination.
 
 Status: `Canonical`
 
-An interceptor is the operator role that transforms a produced search state before it is yielded or observed by state based stopping logic.
+An interceptor is the operator role that transforms a produced search state before it is yielded or observed by state based stopping logic. Its operation, `Interception<TSearchState>`, names the state it returns, so an interceptor slot is an `IOperator<Interception<TSearchState>, TCandidate>`.
 
 Use interceptor for state post processing. Do not use it for read only analysis. Use observation or analyzers for that.
 
@@ -505,9 +505,7 @@ The generic `IConfigurationNode<TExecutor>` prepares an `ExecutorFactory<TExecut
 
 `IOperator<TOperation, TCandidate>` instead prepares one `OperatorExecutorFactory` through `CreateExecutorFactory()`. Its `CreateExecutor` constructs executors sharing that persistent state across operations and compatible run signatures. `OperationExecutorAdapter` is an advanced construction adapter; the callable runtime object remains an executor.
 
-Generic mutation/evaluation authoring bases use protected `CreateFactory` for fixed-signature leaves and `CreateOperatorFactory` for run-generic compositions. Their child properties are `ChildOperator` and `ChildOperators`.
-
-Remaining nominal wrapping and multi bases centralize preparation through `CreateWrapperFactory` and `CreateCompositeFactory`. Their returned `WrapperExecutorFactory<TExecutor>` and `CompositeExecutorFactory<TExecutor>` receive one resolved child or an ordered immutable array of children. The children and result share the same executor interface.
+Operator authoring bases use protected `CreateFactory` for fixed-signature leaves and `CreateOperatorFactory` for run-generic compositions. Their child properties are `ChildOperator` and `ChildOperators`.
 
 Iterative algorithm bases centralize preparation through `CreateIterationFactory`. Its returned `ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>>` receives a construction scope. The algorithm author resolves the optional interceptor and other declared children through that scope and passes them to the iterative executor constructor.
 
@@ -557,7 +555,7 @@ Advice wraps the executors built for the configurations a pointcut selects. It c
 
 The single `Advice` concept provides around advice. Its wrapper can run code around an operation, change its arguments or results, or decide whether to invoke it. Advice is not restricted to observation.
 
-`Advice<TConfiguration>` identifies the configuration role it can advise. Operator advice checks a selected operator before its executor is built and wraps each executor built for it: `OperatorAdvice` covers every operation, `OperatorAdvice<TOperation, TCandidate>` one operation, and role bases such as `MutatorAdvice<TCandidate>` receive typed executors. Algorithm advice and the remaining nominal role advice prepare a wrapper factory once per advice instance, selected configuration and owner state. Resolution compares advice by reference. Observation, counting and duration measurement are predefined advice.
+`Advice<TConfiguration>` identifies the configuration role it can advise. Operator advice checks a selected operator before its executor is built and wraps each executor built for it: `OperatorAdvice` covers every operation, `OperatorAdvice<TOperation, TCandidate>` one operation, and role bases such as `MutatorAdvice<TCandidate>` receive typed executors. Algorithm advice prepares a wrapper factory once per advice instance, selected configuration and owner state. Resolution compares advice by reference. Observation, counting and duration measurement are predefined advice.
 
 See also: Aspect, Configuration node, Join point, Pointcut.
 
@@ -713,7 +711,7 @@ Status: `Canonical`
 
 An invocation wrapper adds behavior such as retry, timing, counting or whole-call choice around each call to an executor's named method. The operation adapter builds it into one wrapping executor, which passes every call to the wrapper as an invocation holding the wrapped executor and the call's arguments.
 
-`IInvocationWrapper` represents this contract and is implemented by small structs. The wrapper calls the invocation's `Proceed()` to run the wrapped method; retry, for example, calls it again after a retryable failure. It reads the call's random number generator as `Random` and can call `ProceedWith(executor, random)` to run the call on another executor of the same operation or with another generator; `ChoosePerCall` proceeds on a child it samples with that generator. Wrappers measuring candidate work ask the invocation for `CountCandidateWork(result)`. Each wrapping executor holds its own wrapped executor, so another binding gets its own children and advice. The wrapping executor exposes the wrapped executor's controls unless the wrapper implements `IExecutorControlProvider` and supplies them.
+`IInvocationWrapper` represents this contract and is implemented by small structs. The wrapper calls the invocation's `Proceed()` to run the wrapped method; retry, for example, calls it again after a retryable failure. It reads the call's random number generator as `Random` and can call `ProceedWith(executor, random)` to run the call on another executor of the same operation or with another generator; `ChoosePerCall` proceeds on a child it samples with that generator. Wrappers measuring candidate work ask the invocation for `CountCandidateWork(result)`. An item operation, marked with `IItemOperation<TSelf>`, has invocations implementing `IItemInvocation<TItemResult>`: they report their `ItemCount` and run some of their items on another executor through `ProceedWithItems(executor, items)`. Their `ProceedPerItem(router)` lets a `WeightedRouter<IExecutor>` assign each item to an executor and run each executor's items as one call; `ChoosePerCandidate` passes it a router over its children. Each wrapping executor holds its own wrapped executor, so another binding gets its own children and advice. The wrapping executor exposes the wrapped executor's controls unless the wrapper implements `IExecutorControlProvider` and supplies them.
 
 See also: Operation invocation, Executor, Wrapper chain, Retry.
 
@@ -828,7 +826,7 @@ Status: `Canonical`
 
 A measurement is what a trace reads from one observation, such as the objective vectors of a population or the offspring of a crossover. It receives the typed observation of the boundary it observes and returns the readings an aggregation then summarizes.
 
-A named measurement is an immutable value strategy implementing `IMeasurement<TInput, TValue>`, usually reached through `Measurement`. A delegate passed to `Analyzer.Trace` is a runtime-only projection with identity semantics and no value-equality or serialization contract.
+A named measurement is an immutable value strategy implementing `IMeasurement<TInput, TValue>`, such as `ObjectiveVectorsMeasurement<TCandidate>`. One measurement may read several kinds of observation, such as evaluator calls and search states. A delegate passed to `Analyzer.Trace` is a runtime-only projection with identity semantics and no value-equality or serialization contract.
 
 See also: Aggregation, Observation, Trace.
 
@@ -890,6 +888,7 @@ Related terms:
 
 - `Observation callback`: the method or runtime delegate that receives an observation.
 - `Observation source`: the algorithm or operator configuration whose boundary is observed. Sources are matched by reference, so a copied configuration is a different source.
+- `Operator observation`: the `OperatorObservation<TOperation, TCandidate>` every operator offers. Its operation-specific members, such as `Offspring` for a crossover, read the call's arguments and result.
 - `Observable operator`: a runtime operator wrapper that reports completed operations to observation callbacks.
 - `Observable algorithm`: a runtime algorithm wrapper that reports the search states an algorithm yields, at the end of every iteration.
 

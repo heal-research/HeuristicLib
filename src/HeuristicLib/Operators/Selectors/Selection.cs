@@ -28,12 +28,17 @@ public sealed class Selection : IOperationDescriptor<Selection>
             new WrappedExecutor<TWrapper>(executor, wrapper);
 
         private readonly struct Invocation(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> executor,
-            IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<EvaluatedCandidate<TCandidate>>>
+            IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<EvaluatedCandidate<TCandidate>>>, ISelectionArguments<TCandidate>
         {
             private readonly ISelectionExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
             private readonly IRandomNumberGenerator random = random;
 
             public IRandomNumberGenerator Random => random;
+            public ISearchSpace SearchSpace => searchSpace;
+            public IProblem Problem => problem;
+            public IReadOnlyList<EvaluatedCandidate<TCandidate>> Population => population;
+            public ObjectiveDirections Objective => objective;
+            public int Count => count;
             public IReadOnlyList<EvaluatedCandidate<TCandidate>> Proceed() => executor.Select(population, objective, count, random, searchSpace, problem);
             public IReadOnlyList<EvaluatedCandidate<TCandidate>> ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
                 ((ISelectionExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Select(population, objective, count, random ?? this.random, searchSpace, problem);
@@ -50,4 +55,12 @@ public sealed class Selection : IOperationDescriptor<Selection>
             public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
         }
     }
+}
+
+/// <summary>The arguments of one selection call, which its observations read.</summary>
+internal interface ISelectionArguments<TCandidate>
+{
+    IReadOnlyList<EvaluatedCandidate<TCandidate>> Population { get; }
+    ObjectiveDirections Objective { get; }
+    int Count { get; }
 }

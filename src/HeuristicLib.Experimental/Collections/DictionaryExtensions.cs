@@ -2,14 +2,17 @@ namespace HEAL.HeuristicLib.Collections;
 
 internal static class DictionaryExtensions
 {
-    internal static TValue GetOrAdd<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue defaultValue)
+    extension<TKey, TValue>(IDictionary<TKey, TValue> dictionary)
     {
-        if (dictionary.TryGetValue(key, out var value))
+        internal TValue GetOrAdd(TKey key, TValue defaultValue)
         {
-            return value;
-        }
+            if (dictionary.TryGetValue(key, out var value))
+            {
+                return value;
+            }
 
-        dictionary[key] = defaultValue;
-        return defaultValue;
+            dictionary[key] = defaultValue;
+            return defaultValue;
+        }
     }
 }

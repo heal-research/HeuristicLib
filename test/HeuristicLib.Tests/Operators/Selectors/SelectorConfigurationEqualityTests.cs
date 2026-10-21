@@ -18,7 +18,7 @@ public class SelectorConfigurationEqualityTests
 
         var selector = childSelector.AvoidSameMates(maximumAttempts: 3);
 
-        selector.ChildSelector.ShouldBeSameAs(childSelector);
+        selector.ChildOperator.ShouldBeSameAs(childSelector);
     }
 
     [Fact]
@@ -27,9 +27,9 @@ public class SelectorConfigurationEqualityTests
         var first = new RangeSelector(1);
         var second = new RangeSelector(2);
 
-        var selector = ChooseOneSelector.Create(first, second);
+        var selector = ChoosePerCall.Create(first, second);
 
-        selector.ChildSelectors.ShouldBe([first, second]);
+        selector.ChildOperators.ShouldBe([first, second]);
     }
 
     [Fact]
@@ -37,19 +37,19 @@ public class SelectorConfigurationEqualityTests
     {
         var first = new RangeSelector(1);
         var second = new RangeSelector(2);
-        var childSelectors = new List<ISelector<int>> { first, second };
+        var childSelectors = new List<IOperator<Selection, int>> { first, second };
         var selector = new FirstOfSelector(childSelectors);
 
         childSelectors.Clear();
 
-        selector.ChildSelectors.ShouldBe([first, second]);
+        selector.ChildOperators.ShouldBe([first, second]);
     }
 
     [Fact]
     public void MultiSelector_WithSeparatelyBuiltEqualChildCollections_IsEqual()
     {
-        var left = ChooseOneSelector.Create(new RangeSelector(1), new RangeSelector(2));
-        var right = ChooseOneSelector.Create(new RangeSelector(1), new RangeSelector(2));
+        var left = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(2));
+        var right = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -58,8 +58,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void MultiSelector_WithDifferentChildSelectors_IsNotEqual()
     {
-        var left = ChooseOneSelector.Create(new RangeSelector(1), new RangeSelector(2));
-        var right = ChooseOneSelector.Create(new RangeSelector(1), new RangeSelector(3));
+        var left = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(2));
+        var right = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(3));
 
         left.ShouldNotBe(right);
     }
@@ -67,8 +67,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void MultiSelector_WithReorderedChildSelectors_IsNotEqual()
     {
-        var left = ChooseOneSelector.Create(new RangeSelector(1), new RangeSelector(2));
-        var right = ChooseOneSelector.Create(new RangeSelector(2), new RangeSelector(1));
+        var left = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(2));
+        var right = ChoosePerCall.Create(new RangeSelector(2), new RangeSelector(1));
 
         left.ShouldNotBe(right);
     }
@@ -76,18 +76,18 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void MultiSelector_WithDifferentChildCount_IsNotEqual()
     {
-        var left = ChooseOneSelector.Create(new RangeSelector(1), new RangeSelector(2));
-        var right = ChooseOneSelector.Create(new RangeSelector(1));
+        var left = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(2));
+        var right = ChoosePerCall.Create(new RangeSelector(1));
 
         left.ShouldNotBe(right);
     }
 
     [Fact]
-    public void ChooseOneSelector_WithDifferentWeights_IsNotEqual()
+    public void ChoosePerCallSelector_WithDifferentWeights_IsNotEqual()
     {
-        ISelector<int>[] childSelectors = [new RangeSelector(1), new RangeSelector(2)];
-        var left = new ChooseOneSelector<int>(childSelectors) { Weights = [1.0, 2.0] };
-        var right = new ChooseOneSelector<int>(childSelectors) { Weights = [2.0, 1.0] };
+        IOperator<Selection, int>[] childSelectors = [new RangeSelector(1), new RangeSelector(2)];
+        var left = new ChoosePerCall<Selection, int>(childSelectors) { Weights = [1.0, 2.0] };
+        var right = new ChoosePerCall<Selection, int>(childSelectors) { Weights = [2.0, 1.0] };
 
         left.ShouldNotBe(right);
     }
@@ -95,7 +95,7 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void MultiSelectorTopologies_WithEqualChildSelectors_AreNotEqualAcrossTypes()
     {
-        var chooseOne = ChooseOneSelector.Create(new RangeSelector(1), new RangeSelector(2));
+        var chooseOne = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(2));
         var firstOf = new FirstOfSelector([new RangeSelector(1), new RangeSelector(2)]);
 
         chooseOne.ShouldNotBe<object>(firstOf);
@@ -165,8 +165,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void NestedSelectorComposition_WithEqualParts_IsEqual()
     {
-        var left = ChooseOneSelector.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
-        var right = ChooseOneSelector.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
+        var left = ChoosePerCall.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
+        var right = ChoosePerCall.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -175,8 +175,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void NestedSelectorComposition_WithDifferentNestedChildSelector_IsNotEqual()
     {
-        var left = ChooseOneSelector.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
-        var right = ChooseOneSelector.Create(new RangeSelector(9).CombinedWithElites(2), new RangeSelector(2));
+        var left = ChoosePerCall.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
+        var right = ChoosePerCall.Create(new RangeSelector(9).CombinedWithElites(2), new RangeSelector(2));
 
         left.ShouldNotBe(right);
     }
@@ -188,23 +188,32 @@ public class SelectorConfigurationEqualityTests
     }
 
     private sealed record FirstOfSelector
-        : MultiSelector<int>
+        : MultiOperator<Selection, int>
     {
-        public FirstOfSelector(IReadOnlyList<ISelector<int>> childSelectors)
+        public FirstOfSelector(IReadOnlyList<IOperator<Selection, int>> childSelectors)
             : base(childSelectors)
         {
         }
 
-        protected override CompositeExecutorFactory<ISelectionExecutor<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childSelectors => new Executor<TRunSearchSpace, TRunProblem>(childSelectors);
+        protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
+
+        private sealed class Factory(FirstOfSelector source) : OperatorExecutorFactory<Selection, int>
+        {
+            protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+                ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+            {
+                ImmutableArray<ISelectionExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
+                return new Executor<TRunSearchSpace, TRunProblem>(children);
+            }
+        }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<ISelectionExecutor<int, TSearchSpace, TProblem>> childSelectors)
-            : MultiSelectionExecutor<int, TSearchSpace, TProblem>(childSelectors)
+            : ISelectionExecutor<int, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildSelectors[0].Select(population, objective, count, random, searchSpace, problem);
+            public IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+                childSelectors[0].Select(population, objective, count, random, searchSpace, problem);
         }
     }
 }

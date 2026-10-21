@@ -10,24 +10,25 @@ namespace HEAL.HeuristicLib.Operators;
 /// Emits predefined candidates across successive calls before delegating remaining requests to a fallback creator.
 /// </summary>
 public record PredefinedCandidatesCreator<TCandidate>
-    : ICreator<TCandidate>
+    : Operator<Creation, TCandidate>
 {
-    public ICreator<TCandidate> CreatorForRemainingCandidates { get; init; }
+    public IOperator<Creation, TCandidate> CreatorForRemainingCandidates { get; init; }
 
     public ValueArray<TCandidate> PredefinedCandidates { get; init; }
 
-    public PredefinedCandidatesCreator(IReadOnlyList<TCandidate> predefinedCandidates, ICreator<TCandidate> creatorForRemainingCandidates)
+    public PredefinedCandidatesCreator(IReadOnlyList<TCandidate> predefinedCandidates, IOperator<Creation, TCandidate> creatorForRemainingCandidates)
     {
         PredefinedCandidates = predefinedCandidates.ToValueArray();
         CreatorForRemainingCandidates = creatorForRemainingCandidates;
     }
 
-    public ExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this, new ExecutionState());
+
+    private sealed class Factory(PredefinedCandidatesCreator<TCandidate> source, ExecutionState state) : OperatorExecutorFactory<Creation, TCandidate>
     {
-        var state = new ExecutionState();
-        return scope => new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(CreatorForRemainingCandidates), PredefinedCandidates, state);
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.CreatorForRemainingCandidates), source.PredefinedCandidates, state);
     }
 
     private sealed class ExecutionState
@@ -73,13 +74,13 @@ public record PredefinedCandidatesCreator<TCandidate>
 
 public static class PredefinedCandidatesCreator
 {
-    public static PredefinedCandidatesCreator<TCandidate> Create<TCandidate>(IReadOnlyList<TCandidate> predefinedCandidates, ICreator<TCandidate> creatorForRemainingCandidates) =>
+    public static PredefinedCandidatesCreator<TCandidate> Create<TCandidate>(IReadOnlyList<TCandidate> predefinedCandidates, IOperator<Creation, TCandidate> creatorForRemainingCandidates) =>
         new(predefinedCandidates, creatorForRemainingCandidates);
 }
 
 public static class PredefinedCandidatesCreatorExtensions
 {
-    extension<TCandidate>(ICreator<TCandidate> creator)
+    extension<TCandidate>(IOperator<Creation, TCandidate> creator)
     {
         public PredefinedCandidatesCreator<TCandidate> SeededWith(IReadOnlyList<TCandidate> predefinedCandidates) =>
             PredefinedCandidatesCreator.Create(predefinedCandidates, creator);

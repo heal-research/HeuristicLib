@@ -48,13 +48,13 @@ public record SwapMutator : SingleCandidateMutator<Permutation>
 }
 ```
 
-Reduction changes what the author declares, not where the operator fits. **Mutation and evaluation slots name the candidate and operation, without run types.** `IOperator<Mutation, Permutation>` is the whole contract, so the `SwapMutator` above fills any mutator slot over permutations, and so does an operator authored at the fullest rung against a specific problem.
+Reduction changes what the author declares, not where the operator fits. **Candidate-operation slots name the operation and candidate, without run types.** `IOperator<Mutation, Permutation>` is the whole contract, so the `SwapMutator` above fills any mutator slot over permutations, and so does an operator authored at the fullest rung against a specific problem.
 
 The arity lives in the authoring bases: the base performs the type check when a run supplies types the operator was not written for, and for a stateless operator the configuration _is_ the executable part, so it needs the search space and problem in scope where it is written. A consumer, field or child property never names them.
 
 `WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>` store one child or an ordered child collection. They forward `Fits` and candidate contracts. Their protected `CreateOperatorFactory()` validates the configuration and creates persistent data once; the returned `OperatorExecutorFactory<TOperation, TCandidate>` overrides `CreateExecutor` to construct an executor for the run's search-space, problem and state types. Resolve children through the typed scope that method receives.
 
-Use `.Named("name")` for a transparent selectable boundary and `.Retry(3)` to allow up to three attempts after a directly thrown `RetryableOperationException`. Both expose the child's controls. `ChoosePerCall` chooses one child per call and exposes no controls. A generic wrapper of your own returns `OperatorExecutorFactory.WrapInvocation(ChildOperator, wrapper)` with a struct `IInvocationWrapper`, which works for every operation, including external ones. The wrapper can read the call's random number generator and proceed with another one or on another executor of the same operation; it supplies the wrapping executor's controls by implementing `IExecutorControlProvider`, and otherwise the child's controls pass through. The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) shows the complete authoring pattern. Roles not yet using `IOperator<TOperation, TCandidate>` retain their nominal topology bases.
+Use `.Named("name")` for a transparent selectable boundary and `.Retry(3)` to allow up to three attempts after a directly thrown `RetryableOperationException`. Both expose the child's controls. `ChoosePerCall` chooses one child per call and exposes no controls. A generic wrapper of your own returns `OperatorExecutorFactory.WrapInvocation(ChildOperator, wrapper)` with a struct `IInvocationWrapper`, which works for every operation, including external ones. The wrapper can read the call's random number generator and proceed with another one or on another executor of the same operation; it supplies the wrapping executor's controls by implementing `IExecutorControlProvider`, and otherwise the child's controls pass through. The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) shows the complete authoring pattern.
 
 > Watch the last type argument. The stateful bases end in `TState`, so `StatefulMutator<TCandidate, TSearchSpace, TState>` and `StatefulMutator<TCandidate, TSearchSpace, TProblem>` have the same shape. Passing a problem where the state belongs compiles and silently produces a problem-agnostic operator whose state is a problem. `HLib0004` reports this.
 
@@ -111,7 +111,7 @@ Framework managed state does not have a disposal lifecycle. Do not put disposabl
 
 ## Explicit executors
 
-The configuration describes reusable parameters and graph structure. For mutation and evaluation, the protected `CreateFactory()` prepares persistent execution data without a scope. Its returned factory resolves child configurations through the supplied scope and creates a node for that context. The executor owns typed operation logic and resolved child references; prepared mutable data survives contextual rebinding.
+The configuration describes reusable parameters and graph structure. For creation, crossover, mutation, evaluation, selection, refinement and replacement, the protected `CreateFactory()` prepares persistent execution data without a scope. Its returned factory resolves child configurations through the supplied scope and creates a node for that context. The executor owns typed operation logic and resolved child references; prepared mutable data survives contextual rebinding.
 
 ```csharp
 private sealed record ForwardingEvaluator(IOperator<Evaluation, RealVector> Inner)
@@ -151,35 +151,36 @@ Checking the wrapped mutator with `is IMutationStrengthControl` is insufficient:
 
 ## Wrapping and multi operators
 
-Mutation and evaluation use `WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>`, with `ChildOperator` and `ChildOperators` configuration properties. Their executors may use role-specific storage such as `WrappingMutationExecutor.ChildMutator`. Keep shared counters and caches in the prepared `OperatorExecutorFactory`, and resolve current children inside its `CreateExecutor`. Existing executors keep their original children when a new context is resolved.
+Every operation uses `WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>`, with `ChildOperator` and `ChildOperators` configuration properties. Their executors hold the resolved children themselves. Keep shared counters and caches in the prepared `OperatorExecutorFactory`, and resolve current children inside its `CreateExecutor`. Existing executors keep their original children when a new context is resolved.
 
-The remaining nominal roles retain `CreateWrapperFactory` and `CreateCompositeFactory` hooks. Those return constructors receiving one resolved child or an immutable array of children. Their matching executor bases provide protected child storage.
-
-When a child plays a specific part in the operation, derive from the unprefixed role base instead and declare that child yourself:
+When a child plays a specific part in the operation, derive from `Operator<TOperation, TCandidate>` and declare that child yourself. This configuration excerpt omits the executor body:
 
 ```csharp
-public record EliteSelector<TCandidate> : ISelector<TCandidate>
+public record EliteSelector<TCandidate> : Operator<Selection, TCandidate>
 {
-    public ISelector<TCandidate> SelectorForRemaining { get; init; }
+    public required IOperator<Selection, TCandidate> SelectorForRemaining { get; init; }
     public int Elites { get; init; } = 1;
 
-    public ExecutorFactory<ISelectionExecutor<TCandidate, TRunSearchSpace, TRunProblem>>
-        CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> =>
-        scope => new Executor<TRunSearchSpace, TRunProblem>(
-            scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(SelectorForRemaining), Elites);
-    // ...
+    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
+
+    private sealed class Factory(EliteSelector<TCandidate> source)
+        : OperatorExecutorFactory<Selection, TCandidate>
+    {
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
+            new Executor<TSearchSpace, TProblem>(scope.Resolve(source.SelectorForRemaining), source.Elites);
+    }
+    // The selection executor takes elites first and requests only the remaining places from its child.
 }
 ```
 
 `EliteSelector` takes its elites first and asks `SelectorForRemaining` only for the places that are left, so calling that child `ChildSelector` would hide what it does. Wrapping it and adding a second, better-named property is not the fix. The two properties return the same object and a reader cannot tell which one to use. Declaring the child directly also lets the constructor fix how many children there are. `GenderSpecificSelector` needs exactly one `FemaleSelector` and one `MaleSelector`, which a multi base cannot express.
 
-Like every composite, these name only the candidate. A child slot is `ISelector<TCandidate>`, and the run's search space and problem arrive as method type arguments on the creation method. See [Choose an arity](#choose-an-arity) for what that costs the author and why it costs the consumer nothing.
+Like every composite, these name only the candidate. A child slot is `IOperator<Selection, TCandidate>`, and the run's search space and problem arrive as method type arguments on the creation method. See [Choose an arity](#choose-an-arity) for what that costs the author and why it costs the consumer nothing.
 
 Composition helpers such as choosing one child, applying a transformation and running a pipeline are covered in [Operator composition](/guide/extending/operator-composition).
 
-`WeightedRouter<TChoice>` supplies the per-input routing used by `ChooseOneCreator`, `ChooseOneCrossover`, `ChooseOneMutator` and `ChooseOneRefiner`. Create it with `WeightedRouter.Create(choices)` for uniform routing or `WeightedRouter.Create(choices, weights)`, using `WeightedIndexSampler` semantics; weights are compiled once per router. Its `Route` overloads accept either inputs or a requested output count, an RNG and a handler that receives one choice and its batch. It assigns every input before handling any batch, handles the batches in choice order, skips empty batches and restores results to their original positions. When every input goes to the same choice, that choice receives the original inputs. Each handler must return exactly the batch size; a mismatch throws `InvalidOperationException`. `ChoosePerCall`, `ChooseOneSelector` and `ChooseOneReplacer` choose once for the whole call and sample their child from a `WeightedItemSampler<T>`, using the call's random number generator for the choice and the child.
+`ChoosePerCandidate` routes through `WeightedRouter<TChoice>`. Its wrapper passes a router over the resolved children to the invocation's `ProceedPerItem`, which assigns every item of the call with the call's random number generator; algorithm code uses the router directly. Create it with `WeightedRouter.Create(choices)` for uniform routing or `WeightedRouter.Create(choices, weights)`, using `WeightedIndexSampler` semantics; weights are compiled once per router. Its `Route` overloads accept either inputs or an item count, an RNG and a handler that receives one choice and its batch of inputs or item positions. It assigns every input before handling any batch, handles the batches in choice order, skips empty batches and restores results to their original positions. When every input goes to the same choice, that choice receives the original inputs. Each handler must return exactly the batch size; a mismatch throws `InvalidOperationException`. `ChoosePerCall` chooses once for the whole call and samples its child from a `WeightedItemSampler<T>`, using the call's random number generator for the choice and the child.
 
 Algorithms use the router to apply parameter-derived behavior in their execution code. GA, NSGA2 and ALPS create `WeightedRouter.AtRate(mutator, mutationRate)` in their executor constructor. The router owns the resolved mutator and a null pass-through choice, so the executor retains only the router for mutation. It routes each offspring to the mutator with the rate's probability, and the algorithm mutates only that batch. Rates at most zero, negative infinity and NaN route every offspring to null; rates at least one and positive infinity route every offspring to the mutator, which receives the original offspring. Neither extreme draws from the RNG. The algorithms use the step's same RNG for routing and mutation, so observers count only offspring routed to the configured mutator. `WeightedRouter.AtRate(rate)` supplies boolean choices for callers that need a decision, and `AppliedAtRate` remains a configuration helper for explicitly configured compositions using the same rate weights.
 

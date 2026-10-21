@@ -228,37 +228,13 @@ public sealed class DeferredAlgorithmFactoryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task OperatorBudget_RebindingPreservesUsageAndOneMeasurementDeclaration(bool measureDuration)
+    public async Task OperatorBudget_RebindingPreservesUsageAcrossActivations(bool measureDuration)
     {
         var clock = new ManualClock();
         var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
-        var accumulators = new List<object>();
         IAlgorithm<int, ProbeState> budget = measureDuration
-            ? new OperatorDurationBudgetAlgorithm<int, ProbeState, IOperator<Mutation, int>>
-            {
-                Algorithm = algorithm,
-                ObservedOperator = algorithm.Mutator,
-                MaximumDuration = TimeSpan.FromSeconds(3),
-                TimeProvider = clock,
-                DurationMeasuring = new RecordingMutatorDurationMeasuring<int>((source, duration, timeProvider) =>
-                {
-                    source.ShouldBeSameAs(algorithm.Mutator);
-                    accumulators.Add(duration);
-                    return new DurationMeasuringOperatorAdvice<Mutation, int>(duration, timeProvider);
-                })
-            }
-            : new OperatorBudgetAlgorithm<int, ProbeState, IOperator<Mutation, int>>
-            {
-                Algorithm = algorithm,
-                ObservedOperator = algorithm.Mutator,
-                MaximumCount = 3,
-                Counting = new RecordingMutatorCounting<int>((source, count) =>
-                {
-                    source.ShouldBeSameAs(algorithm.Mutator);
-                    accumulators.Add(count);
-                    return new CountingOperatorAdvice<Mutation, int>(count, OperatorCountMetric.Calls);
-                })
-            };
+            ? algorithm.LimitedToDuration(algorithm.Mutator, TimeSpan.FromSeconds(3), clock)
+            : algorithm.LimitedToCalls(algorithm.Mutator, 3);
         var root = ResolutionScope.Create();
         var original = Resolve(root, budget);
         await using var paused = original.RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
@@ -273,20 +249,17 @@ public sealed class DeferredAlgorithmFactoryTests
         (await paused.MoveNextAsync()).ShouldBeFalse();
         (await Run(original)).Count.ShouldBe(1);
         observedCalls.CurrentCount.ShouldBe(2);
-        accumulators.Count.ShouldBe(1);
-        if (measureDuration)
-            ((DurationAccumulator)accumulators[0]).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(4));
-        else
-            ((CountAccumulator)accumulators[0]).CurrentCount.ShouldBe(4);
 
         var independent = await Run(Resolve(ResolutionScope.Create(), budget));
         independent.Select(state => state.Call).ShouldBe([1, 2, 3]);
         independent[0].Data.ShouldNotBeSameAs(observed[0].Data);
-        accumulators.Count.ShouldBe(2);
-        accumulators[0].ShouldNotBeSameAs(accumulators[1]);
         observedCalls.CurrentCount.ShouldBe(2);
     }
 
+    /// <summary>
+    /// The budget allows two calls. Direct runs make four calls first, so the budgeted run reaching two states shows
+    /// that only calls through the budget count.
+    /// </summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -294,32 +267,9 @@ public sealed class DeferredAlgorithmFactoryTests
     {
         var clock = new ManualClock();
         var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
-        CountAccumulator? count = null;
-        DurationAccumulator? duration = null;
         IAlgorithm<int, ProbeState> budget = measureDuration
-            ? new OperatorDurationBudgetAlgorithm<int, ProbeState, IOperator<Mutation, int>>
-            {
-                Algorithm = algorithm,
-                ObservedOperator = algorithm.Mutator,
-                MaximumDuration = TimeSpan.FromSeconds(2),
-                TimeProvider = clock,
-                DurationMeasuring = new RecordingMutatorDurationMeasuring<int>((source, accumulator, provider) =>
-                {
-                    duration = accumulator;
-                    return new DurationMeasuringOperatorAdvice<Mutation, int>(accumulator, provider);
-                })
-            }
-            : new OperatorBudgetAlgorithm<int, ProbeState, IOperator<Mutation, int>>
-            {
-                Algorithm = algorithm,
-                ObservedOperator = algorithm.Mutator,
-                MaximumCount = 2,
-                Counting = new RecordingMutatorCounting<int>((source, accumulator) =>
-                {
-                    count = accumulator;
-                    return new CountingOperatorAdvice<Mutation, int>(accumulator, OperatorCountMetric.Calls);
-                })
-            };
+            ? algorithm.LimitedToDuration(algorithm.Mutator, TimeSpan.FromSeconds(2), clock)
+            : algorithm.LimitedToCalls(algorithm.Mutator, 2);
         var root = ResolutionScope.Create();
         var limited = Resolve(root, budget);
         var direct = await Run(Resolve(root, algorithm));
@@ -328,10 +278,6 @@ public sealed class DeferredAlgorithmFactoryTests
         throughBudget[0].Data.ShouldBeSameAs(direct[0].Data);
         var laterDirect = await Run(Resolve(root, algorithm));
         laterDirect.Select(state => state.Call).ShouldBe([7, 8, 9, 10]);
-        if (measureDuration)
-            duration.ShouldNotBeNull().CurrentDuration.ShouldBe(TimeSpan.FromSeconds(2));
-        else
-            count.ShouldNotBeNull().CurrentCount.ShouldBe(2);
     }
 
     [Fact]
@@ -339,8 +285,8 @@ public sealed class DeferredAlgorithmFactoryTests
     {
         var clock = new ManualClock();
         var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
-        var durationBudget = algorithm.LimitedToMutatorDuration(algorithm.Mutator, TimeSpan.FromSeconds(3), clock);
-        var budget = durationBudget.LimitedToMutatorCalls(algorithm.Mutator, 2);
+        var durationBudget = algorithm.LimitedToDuration(algorithm.Mutator, TimeSpan.FromSeconds(3), clock);
+        var budget = durationBudget.LimitedToCalls(algorithm.Mutator, 2);
         var root = ResolutionScope.Create();
         var first = await Run(Resolve(root, budget));
         first.Select(state => state.Call).ShouldBe([1, 2]);
@@ -355,6 +301,10 @@ public sealed class DeferredAlgorithmFactoryTests
         observedCalls.CurrentCount.ShouldBe(1);
     }
 
+    /// <summary>
+    /// The child observation advances the clock by 20 seconds per call. The budgeted run still reaching its third call
+    /// shows that the budget does not measure the observation.
+    /// </summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -368,35 +318,9 @@ public sealed class DeferredAlgorithmFactoryTests
             clock.Advance(10);
             return observation.Offspring[0];
         }, clocks: [calls]);
-        var count = new CountAccumulator();
-        var duration = new DurationAccumulator();
-        var declarations = 0;
         IAlgorithm<int, ProbeState> budget = measureDuration
-            ? new OperatorDurationBudgetAlgorithm<int, ProbeState, IOperator<Mutation, int>>
-            {
-                Algorithm = algorithm,
-                ObservedOperator = algorithm.Mutator,
-                MaximumDuration = TimeSpan.FromSeconds(3),
-                TimeProvider = clock,
-                DurationMeasuring = new RecordingMutatorDurationMeasuring<int>((source, accumulator, timeProvider) =>
-                {
-                    declarations++;
-                    duration = accumulator;
-                    return new DurationMeasuringOperatorAdvice<Mutation, int>(accumulator, timeProvider);
-                })
-            }
-            : new OperatorBudgetAlgorithm<int, ProbeState, IOperator<Mutation, int>>
-            {
-                Algorithm = algorithm,
-                ObservedOperator = algorithm.Mutator,
-                MaximumCount = 3,
-                Counting = new RecordingMutatorCounting<int>((source, accumulator) =>
-                {
-                    declarations++;
-                    count = accumulator;
-                    return new CountingOperatorAdvice<Mutation, int>(accumulator, OperatorCountMetric.Calls);
-                })
-            };
+            ? algorithm.LimitedToDuration(algorithm.Mutator, TimeSpan.FromSeconds(3), clock)
+            : algorithm.LimitedToCalls(algorithm.Mutator, 3);
         var root = ResolutionScope.Create(trace);
         await using var paused = Resolve(root, budget).RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
@@ -414,18 +338,13 @@ public sealed class DeferredAlgorithmFactoryTests
         trace.By(calls).Select(point => point.Time).ShouldBe([1L, 2L, 3L]);
         trace.By(calls).Select(point => point.Value).ShouldBe([1, 1, 2]);
         observed.ShouldBe(2);
-        declarations.ShouldBe(1);
-        if (measureDuration)
-            duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
-        else
-            count.CurrentCount.ShouldBe(3);
     }
 
     [Fact]
     public async Task StateTermination_RebindingSharesTheLimitAndObservesContextualChecks()
     {
         var algorithm = new ProbeAlgorithm { Steps = 4 };
-        ITerminator<int> terminator = new AfterIterationsTerminator<int>(2);
+        IOperator<Termination, int> terminator = new AfterIterationsTerminator<int>(2);
         var source = algorithm.TerminatedBy(terminator);
         var root = ResolutionScope.Create();
         (await Run(Resolve(root, source))).Count.ShouldBe(2);
@@ -581,42 +500,4 @@ public sealed class DeferredAlgorithmFactoryTests
             return new RecordingRandom(childPath, Forks);
         }
     }
-    private sealed record RecordingMutatorCounting<TCandidate>(Func<IOperator<Mutation, TCandidate>, CountAccumulator, OperatorAdvice<Mutation, TCandidate>> Create) : IOperatorCounting<IOperator<Mutation, TCandidate>>
-    {
-        public Advice<IOperator<Mutation, TCandidate>> CreateAdvice(CountAccumulator counter) => new SelectedAdvice(source => Create(source, counter));
-
-        // Creates the recorded advice for the first selected operator and delegates to it.
-        private sealed class SelectedAdvice(Func<IOperator<Mutation, TCandidate>, OperatorAdvice<Mutation, TCandidate>> create) : OperatorAdvice<Mutation, TCandidate>
-        {
-            private OperatorAdvice<Mutation, TCandidate>? selected;
-
-            public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
-                IOperator<Mutation, TCandidate> source) => Select(source).Check<TSearchSpace, TProblem, TSearchState>(operation, source);
-
-            public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
-                IOperator<Mutation, TCandidate> source) => Select(source).Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
-
-            private OperatorAdvice<Mutation, TCandidate> Select(IOperator<Mutation, TCandidate> source) => selected ??= create(source);
-        }
-    }
-
-    private sealed record RecordingMutatorDurationMeasuring<TCandidate>(Func<IOperator<Mutation, TCandidate>, DurationAccumulator, TimeProvider, OperatorAdvice<Mutation, TCandidate>> Create) : IOperatorDurationMeasuring<IOperator<Mutation, TCandidate>>
-    {
-        public Advice<IOperator<Mutation, TCandidate>> CreateAdvice(DurationAccumulator duration, TimeProvider timeProvider) => new SelectedAdvice(source => Create(source, duration, timeProvider));
-
-        // Creates the recorded advice for the first selected operator and delegates to it.
-        private sealed class SelectedAdvice(Func<IOperator<Mutation, TCandidate>, OperatorAdvice<Mutation, TCandidate>> create) : OperatorAdvice<Mutation, TCandidate>
-        {
-            private OperatorAdvice<Mutation, TCandidate>? selected;
-
-            public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
-                IOperator<Mutation, TCandidate> source) => Select(source).Check<TSearchSpace, TProblem, TSearchState>(operation, source);
-
-            public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
-                IOperator<Mutation, TCandidate> source) => Select(source).Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
-
-            private OperatorAdvice<Mutation, TCandidate> Select(IOperator<Mutation, TCandidate> source) => selected ??= create(source);
-        }
-    }
-
 }

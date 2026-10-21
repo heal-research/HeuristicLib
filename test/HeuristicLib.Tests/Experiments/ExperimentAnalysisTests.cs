@@ -144,10 +144,10 @@ public class ExperimentAnalysisTests
         {
             this.marker = marker;
             this.invocationOrder = invocationOrder;
-            Advices = Aspect.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record).Advices;
+            Advices = Aspect.Observe(evaluator, Record).Advices;
         }
 
-        public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation)
+        public void Record(OperatorObservation<Evaluation, int> observation)
         {
             invocationOrder.Add(marker);
             Result.Count += observation.Candidates.Count;

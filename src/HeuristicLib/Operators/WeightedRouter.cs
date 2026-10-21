@@ -1,16 +1,19 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>
-/// Routes each input to a weighted choice, hands every choice its inputs as one batch and returns the results in input
-/// order.
+/// Routes each item of a call to a weighted choice, hands every choice its items as one batch and returns the results in
+/// item order.
 /// </summary>
 /// <remarks>
-/// Weights use <see cref="WeightedIndexSampler"/> semantics and are compiled once. Routing assigns every input before
-/// handling any batch, then handles the batches in choice order and skips choices that received no inputs. When every
-/// input goes to the same choice, that choice receives the original inputs. Each batch must produce exactly one result
-/// per input or requested output, in batch order. The supplied random source is used for routing and is not forked.
+/// Weights use <see cref="WeightedIndexSampler"/> semantics and are compiled once. Routing assigns every item before
+/// handling any batch, then handles the batches in choice order and skips choices that received no items. When every
+/// item goes to the same choice, that choice receives all items, as the original inputs where there are any. Each batch
+/// must produce exactly one result per item, in batch order; a mismatch throws <see cref="InvalidOperationException"/>.
+/// The supplied random source is used for routing and is not forked. Operations route their items through it by
+/// implementing <see cref="IItemInvocation{TItemResult}"/>.
 /// </remarks>
 public sealed class WeightedRouter<TChoice>
 {
@@ -18,22 +21,26 @@ public sealed class WeightedRouter<TChoice>
     private readonly WeightedIndexSampler sampler;
 
     public WeightedRouter(IReadOnlyList<TChoice> choices, IReadOnlyList<double>? weights = null)
+        : this(choices, new WeightedIndexSampler(choices.Count, weights))
+    {
+    }
+
+    internal WeightedRouter(IReadOnlyList<TChoice> choices, WeightedIndexSampler sampler)
     {
         this.choices = [.. choices];
-        sampler = new WeightedIndexSampler(choices.Count, weights);
+        this.sampler = sampler;
     }
 
     /// <summary>Routes each input to a choice and returns the results in input order.</summary>
     public IReadOnlyList<TOutput> Route<TInput, TOutput>(IReadOnlyList<TInput> inputs, IRandomNumberGenerator random, Func<TChoice, IReadOnlyList<TInput>, IReadOnlyList<TOutput>> handle)
     {
+        var assignments = Assign(inputs.Count, random);
         if (inputs.Count == 0)
             return [];
+        if (IsSingleChoice(assignments))
+            return CheckCount(handle(choices[assignments[0]], inputs), inputs.Count);
 
-        var assignedChoices = AssignChoices(inputs.Count, random);
-        if (IsSingleChoice(assignedChoices))
-            return CheckCount(handle(choices[assignedChoices[0]], inputs), inputs.Count);
-
-        var positions = GroupByChoice(assignedChoices, out var batchStarts);
+        var positions = GroupByChoice(assignments, out var batchStarts);
         var groupedInputs = new TInput[inputs.Count];
         for (var i = 0; i < groupedInputs.Length; i++)
             groupedInputs[i] = inputs[positions[i]];
@@ -50,60 +57,68 @@ public sealed class WeightedRouter<TChoice>
         return results;
     }
 
-    /// <summary>Routes each of <paramref name="count"/> requested outputs to a choice and returns them in request order.</summary>
-    public IReadOnlyList<TOutput> Route<TOutput>(int count, IRandomNumberGenerator random, Func<TChoice, int, IReadOnlyList<TOutput>> handle)
+    /// <summary>Routes each of <paramref name="count"/> items to a choice and returns the results in item order.</summary>
+    /// <remarks>The handler receives a choice and the positions of its items, in ascending order.</remarks>
+    public IReadOnlyList<TOutput> Route<TOutput>(int count, IRandomNumberGenerator random, Func<TChoice, IReadOnlyList<int>, IReadOnlyList<TOutput>> handle)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(count);
-
+        var assignments = Assign(count, random);
         if (count == 0)
             return [];
 
-        var assignedChoices = AssignChoices(count, random);
-        if (IsSingleChoice(assignedChoices))
-            return CheckCount(handle(choices[assignedChoices[0]], count), count);
+        var positions = GroupByChoice(assignments, out var batchStarts);
+        if (IsSingleChoice(assignments))
+            return CheckCount(handle(choices[assignments[0]], positions), count);
 
-        var positions = GroupByChoice(assignedChoices, out var batchStarts);
         var results = new TOutput[count];
         for (var choice = 0; choice < choices.Length; choice++)
         {
             var start = batchStarts[choice];
             var length = batchStarts[choice + 1] - start;
             if (length > 0)
-                Scatter(handle(choices[choice], length), positions, start, length, results);
+                Scatter(handle(choices[choice], new ArraySegment<int>(positions, start, length)), positions, start, length, results);
         }
 
         return results;
     }
 
-    private int[] AssignChoices(int count, IRandomNumberGenerator random)
+    private int[] Assign(int count, IRandomNumberGenerator random)
     {
-        var assignedChoices = new int[count];
+        var assignments = new int[count];
         for (var i = 0; i < count; i++)
-            assignedChoices[i] = sampler.Sample(random);
+            assignments[i] = sampler.Sample(random);
 
-        return assignedChoices;
+        return assignments;
     }
 
-    private static bool IsSingleChoice(int[] assignedChoices) =>
-        assignedChoices.AsSpan().IndexOfAnyExcept(assignedChoices[0]) < 0;
+    private static bool IsSingleChoice(int[] assignments)
+    {
+        for (var i = 1; i < assignments.Length; i++)
+        {
+            if (assignments[i] != assignments[0])
+                return false;
+        }
+
+        return true;
+    }
 
     /// <summary>
-    /// Returns the positions ordered by their assigned choice. The batch of choice <c>c</c> occupies
+    /// Returns the item positions ordered by their assigned choice. The batch of choice <c>c</c> occupies
     /// <c>[batchStarts[c], batchStarts[c + 1])</c> of the result.
     /// </summary>
-    private int[] GroupByChoice(int[] assignedChoices, out int[] batchStarts)
+    private int[] GroupByChoice(int[] assignments, out int[] batchStarts)
     {
         batchStarts = new int[choices.Length + 1];
-        foreach (var choice in assignedChoices)
+        foreach (var choice in assignments)
             batchStarts[choice + 1]++;
 
         for (var choice = 0; choice < choices.Length; choice++)
             batchStarts[choice + 1] += batchStarts[choice];
 
         var nextSlots = batchStarts[..^1];
-        var positions = new int[assignedChoices.Length];
-        for (var position = 0; position < assignedChoices.Length; position++)
-            positions[nextSlots[assignedChoices[position]]++] = position;
+        var positions = new int[assignments.Length];
+        for (var position = 0; position < assignments.Length; position++)
+            positions[nextSlots[assignments[position]]++] = position;
 
         return positions;
     }

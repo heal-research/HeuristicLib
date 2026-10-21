@@ -46,16 +46,16 @@ public sealed record RepeatingEvaluator<TCandidate>
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency)
-        : WrappingEvaluationExecutor<TCandidate, TSearchSpace, TProblem>(childEvaluator)
+        : IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var repetitionResults = BatchExecution.Execute(
                 repetitions,
-                (executor: this, candidates, searchSpace, problem),
-                static (itemRandom, state) => state.executor.ChildEvaluator.Evaluate(state.candidates, itemRandom, state.searchSpace, state.problem),
+                (childEvaluator, candidates, searchSpace, problem),
+                static (itemRandom, state) => state.childEvaluator.Evaluate(state.candidates, itemRandom, state.searchSpace, state.problem),
                 random,
                 concurrency);
 

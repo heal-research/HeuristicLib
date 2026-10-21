@@ -20,12 +20,12 @@ public record EvolutionStrategy<TCandidate>
     public int PopulationSize { get; init; } = EvolutionStrategyDefaults.PopulationSize;
     public int NumberOfChildren { get; init; } = EvolutionStrategyDefaults.NumberOfChildren;
     public EvolutionStrategyType Strategy { get; init; } = EvolutionStrategyDefaults.Strategy;
-    public required ICreator<TCandidate> Creator { get; init; }
+    public required IOperator<Creation, TCandidate> Creator { get; init; }
     public required IOperator<Mutation, TCandidate> Mutator { get; init; }
-    public ICrossover<TCandidate>? Crossover { get; init; }
+    public IOperator<Crossover, TCandidate>? Crossover { get; init; }
     public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = EvolutionStrategyDefaults.Evaluator<TCandidate>();
-    public ISelector<TCandidate> Selector { get; init; } = EvolutionStrategyDefaults.Selector<TCandidate>();
-    public IRefiner<TCandidate>? Refiner { get; init; }
+    public IOperator<Selection, TCandidate> Selector { get; init; } = EvolutionStrategyDefaults.Selector<TCandidate>();
+    public IOperator<Refinement, TCandidate>? Refiner { get; init; }
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Mutator, Crossover, Evaluator, Selector, Refiner);
 
     /// <summary>
@@ -149,13 +149,13 @@ public static class EvolutionStrategy
     /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
     public static EvolutionStrategy<TCandidate> For<TProblem, TCandidate, TSearchSpace>(
         Problem<TProblem, TCandidate, TSearchSpace> problem,
-        ICreator<TCandidate>? creator = null,
+        IOperator<Creation, TCandidate>? creator = null,
         IOperator<Mutation, TCandidate>? mutator = null,
-        ICrossover<TCandidate>? crossover = null,
-        ISelector<TCandidate>? selector = null,
+        IOperator<Crossover, TCandidate>? crossover = null,
+        IOperator<Selection, TCandidate>? selector = null,
         IOperator<Evaluation, TCandidate>? evaluator = null,
-        IRefiner<TCandidate>? refiner = null,
-        IInterceptor<TCandidate>? interceptor = null,
+        IOperator<Refinement, TCandidate>? refiner = null,
+        IOperator<Interception<PopulationState<TCandidate>>, TCandidate>? interceptor = null,
         int populationSize = EvolutionStrategyDefaults.PopulationSize,
         int numberOfChildren = EvolutionStrategyDefaults.NumberOfChildren,
         EvolutionStrategyType strategy = EvolutionStrategyDefaults.Strategy,
@@ -197,13 +197,13 @@ public static class EvolutionStrategy
     /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
     public static EvolutionStrategy<TCandidate> For<TCandidate>(
         ISearchSpace<TCandidate> searchSpace,
-        ICreator<TCandidate>? creator = null,
+        IOperator<Creation, TCandidate>? creator = null,
         IOperator<Mutation, TCandidate>? mutator = null,
-        ICrossover<TCandidate>? crossover = null,
-        ISelector<TCandidate>? selector = null,
+        IOperator<Crossover, TCandidate>? crossover = null,
+        IOperator<Selection, TCandidate>? selector = null,
         IOperator<Evaluation, TCandidate>? evaluator = null,
-        IRefiner<TCandidate>? refiner = null,
-        IInterceptor<TCandidate>? interceptor = null,
+        IOperator<Refinement, TCandidate>? refiner = null,
+        IOperator<Interception<PopulationState<TCandidate>>, TCandidate>? interceptor = null,
         int populationSize = EvolutionStrategyDefaults.PopulationSize,
         int numberOfChildren = EvolutionStrategyDefaults.NumberOfChildren,
         EvolutionStrategyType strategy = EvolutionStrategyDefaults.Strategy,
@@ -235,13 +235,13 @@ public static class EvolutionStrategy
     /// remaining member is optional and falls back to <see cref="EvolutionStrategyDefaults"/>.
     /// </summary>
     public static EvolutionStrategy<TCandidate> Create<TCandidate>(
-        ICreator<TCandidate> creator,
+        IOperator<Creation, TCandidate> creator,
         IOperator<Mutation, TCandidate> mutator,
-        ICrossover<TCandidate>? crossover = null,
-        ISelector<TCandidate>? selector = null,
+        IOperator<Crossover, TCandidate>? crossover = null,
+        IOperator<Selection, TCandidate>? selector = null,
         IOperator<Evaluation, TCandidate>? evaluator = null,
-        IRefiner<TCandidate>? refiner = null,
-        IInterceptor<TCandidate>? interceptor = null,
+        IOperator<Refinement, TCandidate>? refiner = null,
+        IOperator<Interception<PopulationState<TCandidate>>, TCandidate>? interceptor = null,
         int populationSize = EvolutionStrategyDefaults.PopulationSize,
         int numberOfChildren = EvolutionStrategyDefaults.NumberOfChildren,
         EvolutionStrategyType strategy = EvolutionStrategyDefaults.Strategy,

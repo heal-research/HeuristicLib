@@ -1,7 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Inspection;
 
@@ -24,8 +22,7 @@ public sealed class IterationClock<TCandidate, TSearchState>
 
     protected override long ReadTime() => Interlocked.Read(ref latest);
 
-
-    private void Record(AlgorithmObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> observation) =>
+    private void Record(AlgorithmObservation<TCandidate, TSearchState> observation) =>
         Interlocked.Exchange(ref latest, observation.Iteration);
 }
 

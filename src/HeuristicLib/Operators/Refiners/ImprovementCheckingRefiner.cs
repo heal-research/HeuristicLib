@@ -30,9 +30,9 @@ namespace HEAL.HeuristicLib.Operators;
 /// </para>
 /// </remarks>
 public sealed record ImprovementCheckingRefiner<TCandidate>
-    : IRefiner<TCandidate>
+    : Operator<Refinement, TCandidate>
 {
-    public ImprovementCheckingRefiner(IRefiner<TCandidate> refiner)
+    public ImprovementCheckingRefiner(IOperator<Refinement, TCandidate> refiner)
     {
         Refiner = refiner;
     }
@@ -40,7 +40,7 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     /// <summary>
     /// Gets the refiner whose result is accepted or rejected.
     /// </summary>
-    public IRefiner<TCandidate> Refiner { get; init; }
+    public IOperator<Refinement, TCandidate> Refiner { get; init; }
 
     /// <summary>
     /// Gets the evaluator used for both comparison evaluations.
@@ -63,13 +63,14 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     /// </remarks>
     public IImprovementCriterion Criterion { get; init; } = ImprovementChecking.Default;
 
-    public ExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> => scope =>
+    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
+
+    private sealed class Factory(ImprovementCheckingRefiner<TCandidate> source) : OperatorExecutorFactory<Refinement, TCandidate>
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Executor<TRunSearchSpace, TRunProblem>(typed.Resolve(Refiner), typed.Resolve(Evaluator), Criterion);
-    };
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.Refiner), scope.Resolve(source.Evaluator), source.Criterion);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> refiner, IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
         : RefinementExecutor<TCandidate, TSearchSpace, TProblem>
@@ -103,16 +104,16 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
 
 public static class ImprovementCheckingRefiner
 {
-    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner) =>
+    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IOperator<Refinement, TCandidate> refiner) =>
         new(refiner);
 
-    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IImprovementCriterion criterion) =>
+    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IOperator<Refinement, TCandidate> refiner, IImprovementCriterion criterion) =>
         new(refiner) { Criterion = criterion };
 
-    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IOperator<Evaluation, TCandidate> evaluator) =>
+    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IOperator<Refinement, TCandidate> refiner, IOperator<Evaluation, TCandidate> evaluator) =>
         new(refiner) { Evaluator = evaluator };
 
-    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IOperator<Evaluation, TCandidate> evaluator, IImprovementCriterion criterion) =>
+    public static ImprovementCheckingRefiner<TCandidate> Create<TCandidate>(IOperator<Refinement, TCandidate> refiner, IOperator<Evaluation, TCandidate> evaluator, IImprovementCriterion criterion) =>
         new(refiner) { Evaluator = evaluator, Criterion = criterion };
 }
 
@@ -317,7 +318,7 @@ internal static class ImprovementMargin
 
 public static class ImprovementCheckingRefinerExtensions
 {
-    extension<TCandidate>(IRefiner<TCandidate> refiner)
+    extension<TCandidate>(IOperator<Refinement, TCandidate> refiner)
     {
         public ImprovementCheckingRefiner<TCandidate> CheckedForImprovement() =>
             new ImprovementCheckingRefiner<TCandidate>(refiner);

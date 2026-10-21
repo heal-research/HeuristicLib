@@ -74,7 +74,19 @@ public class RoleBindingTests
     /// <summary>Calls the role's own <c>TryResolve</c> reflectively, so the test is the same for all nine.</summary>
     private static (object? Execution, string? Reason) TryResolve(string role, Type problem, bool viaTypedScope = false)
     {
-        var extensionName = role switch { "Mutator" => "MutationOperation", "Evaluator" => "EvaluationOperation", _ => role };
+        var extensionName = role switch
+        {
+            "Creator" => "CreationOperation",
+            "Crossover" => "CrossoverOperation",
+            "Mutator" => "MutationOperation",
+            "Evaluator" => "EvaluationOperation",
+            "Refiner" => "RefinementOperation",
+            "Replacer" => "ReplacementOperation",
+            "Selector" => "SelectionOperation",
+            "Terminator" => "TerminationOperation",
+            "Interceptor" => "InterceptionOperation",
+            _ => throw new ArgumentOutOfRangeException(nameof(role))
+        };
         var extensions = typeof(IOperator<,>).Assembly
             .GetType($"HEAL.HeuristicLib.Operators.{extensionName}ResolutionExtensions")!;
 
@@ -99,12 +111,14 @@ public class RoleBindingTests
             receiver = forMethod.Invoke(null, [scope])!;
         }
 
+        // An interceptor's typed form also takes the search state its operation names, which here is the scope's.
+        Type[] methodArguments = viaTypedScope && role == "Interceptor" ? [.. typeArguments, typeof(SingleSolutionState<RealVector>)] : typeArguments;
         var tryResolve = extensions
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Single(method => method.Name == "TryResolve"
                 && method.GetParameters()[0].ParameterType.IsGenericType == viaTypedScope
-                && method.GetGenericArguments().Length == typeArguments.Length)
-            .MakeGenericMethod(typeArguments);
+                && method.GetGenericArguments().Length == methodArguments.Length)
+            .MakeGenericMethod(methodArguments);
         var arguments = new[] { receiver, BoundOperators[role], null, null };
         tryResolve.Invoke(null, arguments);
         return (arguments[2], (string?)arguments[3]);

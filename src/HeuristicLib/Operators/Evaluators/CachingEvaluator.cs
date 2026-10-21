@@ -50,11 +50,11 @@ public record CachingEvaluator<TCandidate, TKey>
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, MemoryCache cache)
-        : WrappingEvaluationExecutor<TCandidate, TSearchSpace, TProblem>(childEvaluator)
+        : IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var n = candidates.Count;
             var results = new ObjectiveVector[n];
@@ -91,7 +91,7 @@ public record CachingEvaluator<TCandidate, TKey>
                 return results;
             }
 
-            var newObjectiveVectors = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
+            var newObjectiveVectors = childEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
 
             for (var k = 0; k < uncachedKeys.Count; k++)
             {

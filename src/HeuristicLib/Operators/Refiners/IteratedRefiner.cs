@@ -17,38 +17,44 @@ namespace HEAL.HeuristicLib.Operators;
 /// not depend on how many random draws an individual iteration consumes.
 /// </remarks>
 public sealed record IteratedRefiner<TCandidate>
-    : WrappingRefiner<TCandidate>
+    : WrappingOperator<Refinement, TCandidate>
 {
     /// <summary>
     /// Gets the number of times the child refiner is applied to each candidate.
     /// </summary>
     public int Iterations { get; init; }
 
-    public IteratedRefiner(IRefiner<TCandidate> childRefiner, int iterations)
+    public IteratedRefiner(IOperator<Refinement, TCandidate> childRefiner, int iterations)
         : base(childRefiner)
     {
         Iterations = iterations;
     }
 
-    protected override WrapperExecutorFactory<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected override OperatorExecutorFactory CreateOperatorFactory()
     {
         if (Iterations <= 0)
             throw new InvalidOperationException("Iterations must be positive.");
+        return new Factory(this);
+    }
 
-        return childRefiner => new Executor<TRunSearchSpace, TRunProblem>(childRefiner, Iterations);
+    private sealed class Factory(IteratedRefiner<TCandidate> source) : OperatorExecutorFactory<Refinement, TCandidate>
+    {
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.ChildOperator), source.Iterations);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> childRefiner, int iterations)
-        : WrappingRefinementExecutor<TCandidate, TSearchSpace, TProblem>(childRefiner)
+        : IRefinementExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var current = candidates;
             for (var i = 0; i < iterations; i++)
             {
-                current = ChildRefiner.Refine(current, random.Fork(i), searchSpace, problem);
+                current = childRefiner.Refine(current, random.Fork(i), searchSpace, problem);
             }
 
             return current;
@@ -58,13 +64,13 @@ public sealed record IteratedRefiner<TCandidate>
 
 public static class IteratedRefiner
 {
-    public static IteratedRefiner<TCandidate> Create<TCandidate>(IRefiner<TCandidate> childRefiner, int iterations) =>
+    public static IteratedRefiner<TCandidate> Create<TCandidate>(IOperator<Refinement, TCandidate> childRefiner, int iterations) =>
         new(childRefiner, iterations);
 }
 
 public static class IteratedRefinerExtensions
 {
-    extension<TCandidate>(IRefiner<TCandidate> refiner)
+    extension<TCandidate>(IOperator<Refinement, TCandidate> refiner)
     {
         public IteratedRefiner<TCandidate> AsIterated(int iterations) =>
             new IteratedRefiner<TCandidate>(refiner, iterations);

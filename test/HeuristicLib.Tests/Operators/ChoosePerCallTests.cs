@@ -49,14 +49,14 @@ public class ChoosePerCallTests
     [Theory]
     [InlineData(new double[0])]
     [InlineData(new[] { 1.0, 3.0, 0.5 })]
-    public void ChoosesTheSameChildrenAndLeavesTheSameDrawsAsChooseOneSelector(double[] weights)
+    public void WholeCallChoiceMatchesAcrossOperationsAndPreservesDraws(double[] weights)
     {
         var mutations = new List<(int Index, double NextDraw)>();
         var selections = new List<(int Index, double NextDraw)>();
         var choice = ChoosePerCall.Create(
             Enumerable.Range(0, 3).Select(index => (IOperator<Mutation, int>)new IndexMutator(index, mutations)).ToArray(), weights);
-        var selector = ChooseOneSelector.Create(
-            Enumerable.Range(0, 3).Select(index => (ISelector<int>)new IndexSelector(index, selections)).ToArray(), weights);
+        var selector = ChoosePerCall.Create(
+            Enumerable.Range(0, 3).Select(index => (IOperator<Selection, int>)new IndexSelector(index, selections)).ToArray(), weights);
         var mutation = CreateScope().Resolve(choice);
         var selection = CreateScope().Resolve(selector);
         IReadOnlyList<EvaluatedCandidate<int>> population = [EvaluatedCandidate.From(0, new ObjectiveVector(0.0))];

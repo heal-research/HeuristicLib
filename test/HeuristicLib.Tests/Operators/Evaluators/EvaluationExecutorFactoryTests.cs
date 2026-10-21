@@ -154,13 +154,13 @@ public sealed class EvaluationExecutorFactoryTests
             new Executor<TRunSearchSpace, TRunProblem>(executor, report);
 
         private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> child, Action<IReadOnlyList<int>> report)
-            : WrappingEvaluationExecutor<int, TSearchSpace, TProblem>(child)
+            : IEvaluationExecutor<int, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
             {
-                var result = ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
+                var result = child.Evaluate(candidates, random, searchSpace, problem);
                 report(candidates);
                 return result;
             }

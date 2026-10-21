@@ -192,7 +192,7 @@ public class SymbolicRegressionRedesignSpecs
         var algorithm = GeneticAlgorithm.Create(
             new RampedHalfAndHalfTreeCreator(),
             new SubtreeCrossover(),
-            ChooseOneMutator.Create(
+            ChoosePerCandidate.Create(
                 [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()],
                 [1.0, 1.0, 1.0]),
             selector: TournamentSelector.For(problem, tournamentSize: 2),

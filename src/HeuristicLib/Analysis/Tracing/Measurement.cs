@@ -1,8 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Analysis;
 
@@ -22,72 +21,45 @@ public sealed class DelegateMeasurement<TInput, TValue>(Func<TInput, IReadOnlyLi
 }
 
 /// <summary>
-/// Reads the objective vectors from the population in an algorithm observation.
+/// Reads objective vectors: those an evaluator just produced, or those of a search state's population.
 /// </summary>
-public sealed record ObjectiveVectorsMeasurement<TCandidate, TSearchState>
-    : IMeasurement<AlgorithmObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>, ObjectiveVector>
-    where TSearchState : PopulationState<TCandidate>
+/// <remarks>
+/// A search state is read from algorithm observations and from the states interceptors return alike, so one
+/// measurement serves evaluators, algorithms and interceptors.
+/// </remarks>
+public sealed record ObjectiveVectorsMeasurement<TCandidate>
+    : IMeasurement<OperatorObservation<Evaluation, TCandidate>, ObjectiveVector>,
+      IMeasurement<IStateObservation<PopulationState<TCandidate>>, ObjectiveVector>
 {
-    public IReadOnlyList<ObjectiveVector> Read(AlgorithmObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> observation) =>
-        [.. observation.State.Population.EvaluatedCandidates.Select(candidate => candidate.ObjectiveVector)];
+    public IReadOnlyList<ObjectiveVector> Read(OperatorObservation<Evaluation, TCandidate> input) => input.ObjectiveVectors;
+
+    public IReadOnlyList<ObjectiveVector> Read(IStateObservation<PopulationState<TCandidate>> input) =>
+        [.. input.State.Population.EvaluatedCandidates.Select(candidate => candidate.ObjectiveVector)];
 }
 
 /// <summary>
-/// Reads the evaluated candidates from the population in an algorithm observation.
+/// Reads evaluated candidates: those an evaluator just evaluated, paired with the objective vectors it produced, or
+/// those of a search state's population.
 /// </summary>
-public sealed record EvaluatedCandidatesMeasurement<TCandidate, TSearchState>
-    : IMeasurement<AlgorithmObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>, EvaluatedCandidate<TCandidate>>
-    where TSearchState : PopulationState<TCandidate>
+public sealed record CandidatesMeasurement<TCandidate>
+    : IMeasurement<OperatorObservation<Evaluation, TCandidate>, EvaluatedCandidate<TCandidate>>,
+      IMeasurement<IStateObservation<PopulationState<TCandidate>>, EvaluatedCandidate<TCandidate>>
 {
-    public IReadOnlyList<EvaluatedCandidate<TCandidate>> Read(AlgorithmObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> observation) =>
-        observation.State.Population.EvaluatedCandidates;
+    public IReadOnlyList<EvaluatedCandidate<TCandidate>> Read(OperatorObservation<Evaluation, TCandidate> input) =>
+        input.Candidates.ToEvaluated(input.ObjectiveVectors);
+
+    public IReadOnlyList<EvaluatedCandidate<TCandidate>> Read(IStateObservation<PopulationState<TCandidate>> input) =>
+        input.State.Population.EvaluatedCandidates;
 }
 
 /// <summary>
-/// Reads the evaluated candidates from the population an interceptor produced.
-/// </summary>
-public sealed record InterceptedCandidatesMeasurement<TCandidate, TSearchState>
-    : IMeasurement<InterceptorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>, EvaluatedCandidate<TCandidate>>
-    where TSearchState : PopulationState<TCandidate>
-{
-    public IReadOnlyList<EvaluatedCandidate<TCandidate>> Read(InterceptorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> observation) =>
-        observation.State.Population.EvaluatedCandidates;
-}
-
-/// <summary>
-/// Reads the objective vectors an evaluator just produced.
-/// </summary>
-public sealed record ObjectiveVectorsFromEvaluationMeasurement<TCandidate>
-    : IMeasurement<EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>, ObjectiveVector>
-{
-    public IReadOnlyList<ObjectiveVector> Read(EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> observation) =>
-        observation.ObjectiveVectors;
-}
-
-/// <summary>
-/// Reads the candidates an evaluator just evaluated, paired with the objective vectors it produced for them.
-/// </summary>
-public sealed record EvaluatedCandidatesFromEvaluationMeasurement<TCandidate>
-    : IMeasurement<EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>, EvaluatedCandidate<TCandidate>>
-{
-    public IReadOnlyList<EvaluatedCandidate<TCandidate>> Read(EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> observation) =>
-        observation.Candidates.ToEvaluated(observation.ObjectiveVectors);
-}
-
-/// <summary>
-/// Reads the offspring from a crossover observation.
+/// Reads the offspring a crossover or mutator just produced.
 /// </summary>
 public sealed record OffspringMeasurement<TCandidate>
-    : IMeasurement<CrossoverObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>, TCandidate>
+    : IMeasurement<OperatorObservation<Crossover, TCandidate>, TCandidate>,
+      IMeasurement<OperatorObservation<Mutation, TCandidate>, TCandidate>
 {
-    public IReadOnlyList<TCandidate> Read(CrossoverObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> observation) =>
-        observation.Offspring;
-}
+    public IReadOnlyList<TCandidate> Read(OperatorObservation<Crossover, TCandidate> input) => input.Offspring;
 
-public sealed record InterceptedObjectiveVectorsMeasurement<TCandidate, TSearchState>
-    : IMeasurement<InterceptorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>, ObjectiveVector>
-    where TSearchState : PopulationState<TCandidate>
-{
-    public IReadOnlyList<ObjectiveVector> Read(InterceptorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> observation) =>
-        [.. observation.State.Population.EvaluatedCandidates.Select(candidate => candidate.ObjectiveVector)];
+    public IReadOnlyList<TCandidate> Read(OperatorObservation<Mutation, TCandidate> input) => input.Offspring;
 }

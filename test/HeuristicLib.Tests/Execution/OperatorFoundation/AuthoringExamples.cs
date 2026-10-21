@@ -112,7 +112,7 @@ public sealed record SharedOperations(ProbeLog Log) : IOperator<Mutation, RealVe
 public sealed class ProbeState : ISearchState;
 public sealed class OtherState : ISearchState;
 
-public sealed record IdentityInterceptor(ProbeLog Log) : IOperator<Interception, RealVector>
+public sealed record IdentityInterceptor(ProbeLog Log) : IOperator<Interception<ProbeState>, RealVector>
 {
     public OperatorExecutorFactory CreateExecutorFactory()
     {

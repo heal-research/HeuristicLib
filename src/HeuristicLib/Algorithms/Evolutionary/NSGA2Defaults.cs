@@ -21,10 +21,10 @@ public static class NSGA2Defaults
     /// </summary>
     public const bool DominateOnEquals = true;
 
-    public static ISelector<TCandidate> Selector<TCandidate>() =>
+    public static IOperator<Selection, TCandidate> Selector<TCandidate>() =>
         new ParetoCrowdingTournamentSelector<TCandidate>(DominateOnEquals);
 
-    public static IReplacer<TCandidate> Replacer<TCandidate>() =>
+    public static IOperator<Replacement, TCandidate> Replacer<TCandidate>() =>
         new ParetoCrowdingReplacer<TCandidate>(DominateOnEquals);
 
     public static IOperator<Evaluation, TCandidate> Evaluator<TCandidate>() =>

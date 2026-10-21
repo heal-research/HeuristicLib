@@ -13,11 +13,11 @@ public record NSGA2<TCandidate>
     : IterativeAlgorithm<NSGA2<TCandidate>, TCandidate, PopulationState<TCandidate>>
 {
     public int PopulationSize { get; init; } = NSGA2Defaults.PopulationSize;
-    public required ICreator<TCandidate> Creator { get; init; }
-    public required ICrossover<TCandidate> Crossover { get; init; }
+    public required IOperator<Creation, TCandidate> Creator { get; init; }
+    public required IOperator<Crossover, TCandidate> Crossover { get; init; }
     public required IOperator<Mutation, TCandidate> Mutator { get; init; }
-    public ISelector<TCandidate> Selector { get; init; } = NSGA2Defaults.Selector<TCandidate>();
-    public IReplacer<TCandidate> Replacer { get; init; } = NSGA2Defaults.Replacer<TCandidate>();
+    public IOperator<Selection, TCandidate> Selector { get; init; } = NSGA2Defaults.Selector<TCandidate>();
+    public IOperator<Replacement, TCandidate> Replacer { get; init; } = NSGA2Defaults.Replacer<TCandidate>();
     public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = NSGA2Defaults.Evaluator<TCandidate>();
 
     /// <summary>
@@ -28,7 +28,7 @@ public record NSGA2<TCandidate>
     /// infinity and <c>NaN</c> never mutate; a value at least one and positive infinity always mutate.
     /// </remarks>
     public double MutationRate { get; init; } = NSGA2Defaults.MutationRate;
-    public IRefiner<TCandidate>? Refiner { get; init; }
+    public IOperator<Refinement, TCandidate>? Refiner { get; init; }
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Selector, Replacer, Evaluator, Refiner);
 
     /// <summary>
@@ -114,14 +114,14 @@ public static class NSGA2
     /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
     public static NSGA2<TCandidate> For<TProblem, TCandidate, TSearchSpace>(
         Problem<TProblem, TCandidate, TSearchSpace> problem,
-        ICreator<TCandidate>? creator = null,
-        ICrossover<TCandidate>? crossover = null,
+        IOperator<Creation, TCandidate>? creator = null,
+        IOperator<Crossover, TCandidate>? crossover = null,
         IOperator<Mutation, TCandidate>? mutator = null,
-        ISelector<TCandidate>? selector = null,
-        IReplacer<TCandidate>? replacer = null,
+        IOperator<Selection, TCandidate>? selector = null,
+        IOperator<Replacement, TCandidate>? replacer = null,
         IOperator<Evaluation, TCandidate>? evaluator = null,
-        IRefiner<TCandidate>? refiner = null,
-        IInterceptor<TCandidate>? interceptor = null,
+        IOperator<Refinement, TCandidate>? refiner = null,
+        IOperator<Interception<PopulationState<TCandidate>>, TCandidate>? interceptor = null,
         int populationSize = NSGA2Defaults.PopulationSize,
         int? maximumGenerations = NSGA2Defaults.MaximumGenerations,
         double mutationRate = NSGA2Defaults.MutationRate)
@@ -162,14 +162,14 @@ public static class NSGA2
     /// <exception cref="InvalidOperationException">No value or recommendation is available for one or more required operators.</exception>
     public static NSGA2<TCandidate> For<TCandidate>(
         ISearchSpace<TCandidate> searchSpace,
-        ICreator<TCandidate>? creator = null,
-        ICrossover<TCandidate>? crossover = null,
+        IOperator<Creation, TCandidate>? creator = null,
+        IOperator<Crossover, TCandidate>? crossover = null,
         IOperator<Mutation, TCandidate>? mutator = null,
-        ISelector<TCandidate>? selector = null,
-        IReplacer<TCandidate>? replacer = null,
+        IOperator<Selection, TCandidate>? selector = null,
+        IOperator<Replacement, TCandidate>? replacer = null,
         IOperator<Evaluation, TCandidate>? evaluator = null,
-        IRefiner<TCandidate>? refiner = null,
-        IInterceptor<TCandidate>? interceptor = null,
+        IOperator<Refinement, TCandidate>? refiner = null,
+        IOperator<Interception<PopulationState<TCandidate>>, TCandidate>? interceptor = null,
         int populationSize = NSGA2Defaults.PopulationSize,
         int? maximumGenerations = NSGA2Defaults.MaximumGenerations,
         double mutationRate = NSGA2Defaults.MutationRate)
@@ -201,14 +201,14 @@ public static class NSGA2
     /// member is optional and falls back to <see cref="NSGA2Defaults"/>.
     /// </summary>
     public static NSGA2<TCandidate> Create<TCandidate>(
-        ICreator<TCandidate> creator,
-        ICrossover<TCandidate> crossover,
+        IOperator<Creation, TCandidate> creator,
+        IOperator<Crossover, TCandidate> crossover,
         IOperator<Mutation, TCandidate> mutator,
-        ISelector<TCandidate>? selector = null,
-        IReplacer<TCandidate>? replacer = null,
+        IOperator<Selection, TCandidate>? selector = null,
+        IOperator<Replacement, TCandidate>? replacer = null,
         IOperator<Evaluation, TCandidate>? evaluator = null,
-        IRefiner<TCandidate>? refiner = null,
-        IInterceptor<TCandidate>? interceptor = null,
+        IOperator<Refinement, TCandidate>? refiner = null,
+        IOperator<Interception<PopulationState<TCandidate>>, TCandidate>? interceptor = null,
         int populationSize = NSGA2Defaults.PopulationSize,
         int? maximumGenerations = NSGA2Defaults.MaximumGenerations,
         double mutationRate = NSGA2Defaults.MutationRate) =>

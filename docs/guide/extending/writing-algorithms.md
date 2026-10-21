@@ -27,7 +27,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 public sealed record SingleCreateAlgorithm
     : IterativeAlgorithm<SingleCreateAlgorithm, RealVector, SingleSolutionState<RealVector>>
 {
-    public required ICreator<RealVector> Creator { get; init; }
+    public required IOperator<Creation, RealVector> Creator { get; init; }
 
     public IOperator<Evaluation, RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
@@ -68,9 +68,9 @@ public sealed record SingleCreateAlgorithm
 
 `SingleCreateAlgorithm` never reads a member of a particular problem. It hands the search space and the problem straight to its operators, so it does not need to name either, and the base above takes three type arguments: the algorithm's own type, the candidate, and the state it produces.
 
-That choice is what keeps the operator slots at one type argument each. `ICreator<RealVector>` accepts any creator written for real vectors, including one written against `BoundedRealVectorSearchSpace`, because the run supplies the space when the executor is created.
+Operator slots, including terminators, name their operation and candidate. An interceptor slot also names the search state its operation returns, as the inherited `IOperator<Interception<SingleSolutionState<RealVector>>, RealVector>? Interceptor` does. `IOperator<Creation, RealVector>` accepts any creator written for real vectors, including one written against `BoundedRealVectorSearchSpace`, because the run supplies the space when the executor is created.
 
-The run's search space and problem arrive as method type arguments on `CreateIterationFactory`. The nested executor class is generic in them and carries the matching constraints. Configurations retain candidate-only operator roles.
+The run's search space and problem arrive as method type arguments on `CreateIterationFactory`. The nested executor class is generic in them and carries the matching constraints. Configurations omit the run types from operator slots.
 
 The public `CreateExecutorFactory` forwards to this protected preparation hook without a construction scope. The hook returns an ordinary `ExecutorFactory` whose result must derive from `IterativeAlgorithmExecutor`. Inside that factory, resolve the optional `Interceptor` alongside the other configured children and pass it to the executor constructor. The executor base applies it in the iteration loop, before checking terminal state and yielding; its result becomes the next iteration's previous state. `ExecuteStep`, the interceptor and the protected `IsTerminalState` hook receive the same per-iteration random number generator, so an algorithm that owns a terminator passes that generator on.
 
@@ -88,7 +88,7 @@ public sealed record MatrixAwareAlgorithm
         SingleSolutionState<Permutation>>
 ```
 
-Its protected `CreateIterationFactory` takes no method type arguments and its executor class can be nongeneric. The hook returns `ExecutorFactory<IterativeAlgorithmExecutor<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SingleSolutionState<Permutation>>>`. Operator slots still use candidate-only roles. The public factory checks run compatibility with the declared search-space and problem contracts before preparation. Choose this base when the algorithm reads those contracts itself.
+Its protected `CreateIterationFactory` takes no method type arguments and its executor class can be nongeneric. The hook returns `ExecutorFactory<IterativeAlgorithmExecutor<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SingleSolutionState<Permutation>>>`. Operator slots still omit the run types. The public factory checks run compatibility with the declared search-space and problem contracts before preparation. Choose this base when the algorithm reads those contracts itself.
 
 Use `.TerminatedAfterIterations(count)` or another terminator when the algorithm does not stop itself.
 

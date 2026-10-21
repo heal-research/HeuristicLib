@@ -1,7 +1,4 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
-using HEAL.HeuristicLib.Operators.MoveAppliers;
-using HEAL.HeuristicLib.Operators.MoveCreators;
-using HEAL.HeuristicLib.Operators.MoveEvaluators;
 using HEAL.HeuristicLib.Operators.Neighborhoods;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
@@ -13,22 +10,41 @@ namespace HEAL.HeuristicLib.Tests.Experimental.Operators;
 /// an operator written for a search space and problem resolves over exactly those, and is reported over anything else.
 /// </summary>
 /// <remarks>
-/// A neighborhood is where all three meet. It is authored against the search space and problem it is written for, but
-/// the three operators it hands out name only the candidate and the move, which is what lets a neighborhood be held
+/// A neighborhood is where all three meet. It is authored against the search space and problem it is written for, and
+/// it is itself all three move operators, which name only the candidate and the move. That lets a neighborhood be held
 /// without repeating the triple.
 /// </remarks>
 public class MoveRoleBindingTests
 {
     private static readonly BoundedRealVectorSearchSpace SearchSpace = new(2, -1.0, 1.0);
 
+    /// <summary>
+    /// The move operators are operations, so advice wraps their calls as it wraps those of the core operators. A
+    /// neighborhood hands out itself for each of them, so advice selecting one operation reaches the neighborhood a run
+    /// resolves and leaves its other operations alone.
+    /// </summary>
     [Fact]
-    public void ANeighborhood_HandsOutOperatorsThatNameOnlyTheCandidateAndTheMove()
+    public void MoveOperators_AreWrappedByAdviceOfTheirOwnOperation()
     {
+        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 2));
         INeighborhood<RealVector, int> neighborhood = new ShiftNeighborhood();
+        var (creations, applications, evaluations) = (new CountAccumulator(), new CountAccumulator(), new CountAccumulator());
+        var scope = ResolutionScope.Create(
+                Aspect.CountCalls(neighborhood.MoveCreator, creations),
+                Aspect.CountCalls(neighborhood.MoveApplier, applications),
+                Aspect.CountCalls(neighborhood.MoveEvaluator, evaluations))
+            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var random = RandomNumberGenerator.Create(1);
+        var candidate = new RealVector(0.0, 0.0);
 
-        neighborhood.MoveCreator.ShouldBeAssignableTo<IMoveCreator<RealVector, int>>();
-        neighborhood.MoveApplier.ShouldBeAssignableTo<IMoveApplier<RealVector, int>>();
-        neighborhood.MoveEvaluator.ShouldBeAssignableTo<IMoveEvaluator<RealVector, int>>();
+        var move = scope.Resolve(neighborhood.MoveCreator).Moves(candidate, random, SearchSpace, problem).First();
+        scope.Resolve(neighborhood.MoveApplier).Apply(candidate, move, random, SearchSpace, problem);
+        var evaluator = scope.Resolve(neighborhood.MoveEvaluator);
+        evaluator.Evaluate(new ObjectiveVector(0.0), candidate, move, random, SearchSpace, problem);
+        evaluator.Evaluate(candidate, random, SearchSpace, problem);
+
+        neighborhood.MoveEvaluator.ShouldBeSameAs(neighborhood);
+        (creations.CurrentCount, applications.CurrentCount, evaluations.CurrentCount).ShouldBe((1, 1, 2));
     }
 
     [Fact]
@@ -50,7 +66,9 @@ public class MoveRoleBindingTests
             .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
 
         scope.TryResolve(neighborhood.MoveCreator, out _, out var reason).ShouldBeFalse();
-        reason.ShouldContain(nameof(TestFunctionProblem));
+        reason.ShouldContain(nameof(ShiftNeighborhood));
+        scope.TryResolve(neighborhood.MoveApplier, out _, out _).ShouldBeFalse();
+        scope.TryResolve(neighborhood.MoveEvaluator, out _, out _).ShouldBeFalse();
     }
 
     [Fact]

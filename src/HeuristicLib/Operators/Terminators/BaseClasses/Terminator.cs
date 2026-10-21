@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -7,36 +6,21 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 /// <remarks>
-/// Derive directly from this base when the terminator owns child executors or needs direct control over its execution structure.
+/// Derive directly from this base when the terminator needs direct control over its execution structure.
 /// Use <see cref="StatelessTerminator{TCandidate,TSearchSpace,TProblem,TSearchState}"/> when no mutable execution data is needed.
 /// Use <see cref="StatefulTerminator{TCandidate,TSearchSpace,TProblem,TSearchState,TState}"/> when only ordinary execution data is needed.
+/// <para>
+/// The type arguments are the search space, problem and search state this terminator is written for. The base bridges
+/// to whatever a run requests, and a request the terminator was not written for is reported when the execution graph
+/// is built. A terminator that owns children stays agnostic and derives from
+/// <see cref="WrappingOperator{Termination, TCandidate}"/> or <see cref="MultiOperator{Termination, TCandidate}"/> instead.
+/// </para>
 /// </remarks>
 public abstract record Terminator<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : ITerminator<TCandidate>
+    : Operator<Termination, TCandidate, TSearchSpace, TProblem, TSearchState, ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    public abstract ExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutorFactory();
-
-    public bool Fits(ExecutionSignature execution) =>
-        execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
-        && execution.Problem.IsAssignableTo(typeof(TProblem))
-        && execution.SearchState.IsAssignableTo(typeof(TSearchState));
-
-    ExecutorFactory<ITerminationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> ITerminator<TCandidate>.CreateExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
-    {
-        if (!Fits(ExecutionSignature.For<TRunSearchSpace, TRunProblem, TRunSearchState>()))
-        {
-            throw ExecutionSignature.Mismatch(
-                this,
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem), typeof(TRunSearchState)));
-        }
-
-        return (ExecutorFactory<ITerminationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>>)CreateExecutorFactory();
-    }
-}
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
 public abstract record Terminator<TCandidate, TSearchSpace, TSearchState>
     : Terminator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>

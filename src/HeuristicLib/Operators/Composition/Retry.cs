@@ -56,6 +56,9 @@ public static class Retry
 
 public static class RetryOperatorExtensions
 {
-    public static Retry<TOperation, TCandidate> Retry<TOperation, TCandidate>(this IOperator<TOperation, TCandidate> source, int maximumAttempts)
-        where TOperation : IOperationDescriptor<TOperation> => new(source, maximumAttempts);
+    extension<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source)
+        where TOperation : IOperationDescriptor<TOperation>
+    {
+        public Retry<TOperation, TCandidate> Retry(int maximumAttempts) => new(source, maximumAttempts);
+    }
 }

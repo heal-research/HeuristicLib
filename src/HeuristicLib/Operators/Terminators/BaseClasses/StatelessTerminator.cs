@@ -12,7 +12,7 @@ public abstract record StatelessTerminator<TCandidate, TSearchSpace, TProblem, T
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutorFactory() => _ => this;
+    protected sealed override ExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateFactory() => _ => this;
 
     public abstract bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
@@ -22,7 +22,7 @@ public abstract record StatelessTerminator<TCandidate, TSearchSpace, TSearchStat
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>> CreateExecutorFactory() => _ => this;
+    protected sealed override ExecutorFactory<ITerminationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>> CreateFactory() => _ => this;
 
     public abstract bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
@@ -34,7 +34,7 @@ public abstract record StatelessTerminator<TCandidate, TSearchState>
     : Terminator<TCandidate, TSearchState>, ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
     where TSearchState : class, ISearchState
 {
-    public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>> CreateExecutorFactory() => _ => this;
+    protected sealed override ExecutorFactory<ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>> CreateFactory() => _ => this;
 
     public abstract bool IsTerminalState(TSearchState state, IRandomNumberGenerator random);
 
@@ -45,7 +45,7 @@ public abstract record StatelessTerminator<TCandidate, TSearchState>
 public abstract record StatelessTerminator<TCandidate>
     : Terminator<TCandidate>, ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>
 {
-    public sealed override ExecutorFactory<ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>> CreateExecutorFactory() => _ => this;
+    protected sealed override ExecutorFactory<ITerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>> CreateFactory() => _ => this;
 
     public abstract bool IsTerminalState();
 

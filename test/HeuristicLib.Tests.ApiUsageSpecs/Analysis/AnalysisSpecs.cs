@@ -21,7 +21,7 @@ public class AnalysisSpecs
         var secondAlgorithm = CreateAlgorithm(problem);
         var combined = Analyzer.Trace(
             [firstAlgorithm, secondAlgorithm],
-            new ObjectiveVectorsMeasurement<RealVector, PopulationState<RealVector>>(),
+            new ObjectiveVectorsMeasurement<RealVector>(),
             Aggregate.BestSoFar());
 
         await firstAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(combined)
@@ -55,12 +55,12 @@ public class AnalysisSpecs
     }
 
     [Fact]
-    public async Task ScalarAndNamedMeasurements_InferTheirTypes()
+    public async Task ScalarProjectionsAndNamedMeasurements_TraceAnAlgorithm()
     {
         var problem = new TestFunctionProblem(new RastriginFunction(4));
         var algorithm = CreateAlgorithm(problem);
         var size = Analyzer.Trace(algorithm, value: observation => observation.State.Population.EvaluatedCandidates.Count);
-        var quality = Analyzer.Trace(algorithm, Measurement.ObjectiveVectors(algorithm), Aggregate.BestMedianWorst());
+        var quality = Analyzer.Trace(algorithm, new ObjectiveVectorsMeasurement<RealVector>(), Aggregate.BestMedianWorst());
 
         await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(size).AddAspect(quality)
             .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);

@@ -244,7 +244,7 @@ public class AlgorithmRefinementTests
         }
     }
 
-    private static IEnumerable<(string Name, Func<IRefiner<RealVector>?, IReadOnlyList<ObjectiveVector>> Run)> AllAlgorithms(TestFunctionProblem problem)
+    private static IEnumerable<(string Name, Func<IOperator<Refinement, RealVector>?, IReadOnlyList<ObjectiveVector>> Run)> AllAlgorithms(TestFunctionProblem problem)
     {
         yield return ("genetic algorithm", refiner => ObjectiveVectorsOf((CreateAlgorithm(problem) with { Refiner = refiner })
             .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
@@ -299,7 +299,7 @@ public class AlgorithmRefinementTests
         public int BatchCount => counter.Batches;
         public int RefinedCount => counter.Candidates;
 
-        public override ExecutorFactory<IRefinementExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutorFactory() =>
+        protected override ExecutorFactory<IRefinementExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateFactory() =>
             _ => new Executor(counter);
 
         private sealed class Counter

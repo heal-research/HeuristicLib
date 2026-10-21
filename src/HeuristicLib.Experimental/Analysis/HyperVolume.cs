@@ -45,7 +45,7 @@ public static class HyperVolumeTraces
             TraceRetention? retention = null) =>
             Analyzer.Trace(
                 evaluator,
-                new EvaluatedCandidatesFromEvaluationMeasurement<T>(),
+                new CandidatesMeasurement<T>(),
                 new HyperVolumeAggregation<T>(referencePoint),
                 clocks, retention);
     }

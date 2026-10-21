@@ -9,16 +9,17 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>
 /// Creates a candidate batch and then always applies one mutator to the created batch.
 /// </summary>
-public record TransformedCreator<TCandidate>(ICreator<TCandidate> SourceCreator, IOperator<Mutation, TCandidate> TransformationMutator)
-    : ICreator<TCandidate>
+public record TransformedCreator<TCandidate>(IOperator<Creation, TCandidate> SourceCreator, IOperator<Mutation, TCandidate> TransformationMutator)
+    : Operator<Creation, TCandidate>
 {
-    public ExecutorFactory<ICreationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> => scope =>
+    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
+
+    private sealed class Factory(TransformedCreator<TCandidate> source) : OperatorExecutorFactory<Creation, TCandidate>
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Executor<TRunSearchSpace, TRunProblem>(typed.Resolve(SourceCreator), typed.Resolve(TransformationMutator));
-    };
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.SourceCreator), scope.Resolve(source.TransformationMutator));
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> creator, IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator)
         : CreationExecutor<TCandidate, TSearchSpace, TProblem>
@@ -35,13 +36,13 @@ public record TransformedCreator<TCandidate>(ICreator<TCandidate> SourceCreator,
 
 public static class TransformedCreator
 {
-    public static TransformedCreator<TCandidate> Create<TCandidate>(ICreator<TCandidate> creator, IOperator<Mutation, TCandidate> mutator) =>
+    public static TransformedCreator<TCandidate> Create<TCandidate>(IOperator<Creation, TCandidate> creator, IOperator<Mutation, TCandidate> mutator) =>
         new(creator, mutator);
 }
 
 public static class TransformedCreatorExtensions
 {
-    extension<TCandidate>(ICreator<TCandidate> creator)
+    extension<TCandidate>(IOperator<Creation, TCandidate> creator)
     {
         public TransformedCreator<TCandidate> TransformWith(IOperator<Mutation, TCandidate> mutator) =>
             TransformedCreator.Create(creator, mutator);

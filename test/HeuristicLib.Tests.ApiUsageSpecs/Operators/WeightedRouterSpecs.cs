@@ -45,7 +45,7 @@ public class WeightedRouterSpecs
     {
         var router = WeightedRouter.Create(["common", "rare"], [9.0, 1.0]);
 
-        var created = router.Route(5, RandomNumberGenerator.Create(7), static (kind, batchCount) => Enumerable.Repeat(kind, batchCount).ToArray());
+        var created = router.Route(5, RandomNumberGenerator.Create(7), static (kind, items) => Enumerable.Repeat(kind, items.Count).ToArray());
 
         created.Count.ShouldBe(5);
         created.ShouldAllBe(kind => kind == "common" || kind == "rare");

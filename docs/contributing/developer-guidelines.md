@@ -135,11 +135,11 @@ Resolving a configuration an algorithm builds itself makes it visible to pointcu
 
 ### § 4.4 Expose one preparation entry
 
-Algorithms and existing nominal operator contracts expose one public `CreateExecutorFactory(...)` returning `ExecutorFactory<TExecutor>`. Operation-parameterized operators expose one public `CreateExecutorFactory()` returning `OperatorExecutorFactory`; its `CreateExecutor` constructs executors for any supported operation and run types over the same persistent state. Do not add a second initializer per operation, role-named alternatives or a competing public factory. Preparation runs once per selected configuration owner; construction may bind several nodes.
+Algorithms expose one public `CreateExecutorFactory(...)` returning `ExecutorFactory<TExecutor>`. Operation-parameterized operators expose one public `CreateExecutorFactory()` returning `OperatorExecutorFactory`; its `CreateExecutor` constructs executors for any supported operation and run types over the same persistent state. Do not add a second initializer per operation, role-named alternatives or a competing public factory. Preparation runs once per selected configuration owner; construction may bind several nodes.
 
-Mutation and evaluation authoring bases own the public entry. Fixed-signature leaves override protected `CreateFactory()`; generic compositions override `CreateOperatorFactory()` and return an `OperatorExecutorFactory<TOperation, TCandidate>` whose `CreateExecutor` resolves current children through its typed scope. Transparent generic wrappers return `OperatorExecutorFactory.Forward` or `OperatorExecutorFactory.WrapInvocation`. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
+Operator authoring bases own the public entry. Fixed-signature leaves override protected `CreateFactory()`; generic compositions override `CreateOperatorFactory()` and return an `OperatorExecutorFactory<TOperation, TCandidate>` whose `CreateExecutor` resolves current children through its typed scope. Transparent generic wrappers return `OperatorExecutorFactory.Forward` or `OperatorExecutorFactory.WrapInvocation`. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
 
-Remaining nominal topology bases own the public method and expose one protected preparation hook: `CreateWrapperFactory` returns `WrapperExecutorFactory<TExecutor>` for a wrapping base; `CreateCompositeFactory` returns `CompositeExecutorFactory<TExecutor>` for a multi base. The hook prepares persistent state and returns a factory accepting the newly resolved children. Use the same executor interface for the children and result. Derived authors construct their matching executor classes inside the returned delegate. Ordinary leaf operation overrides remain unchanged.
+Algorithm wrapping bases own the public method and expose one protected preparation hook: `CreateWrapperFactory` returns `WrapperExecutorFactory<TExecutor>`. The hook prepares persistent state and returns a factory accepting the newly resolved child. Use the same executor interface for the child and result.
 
 ### § 4.5 Keep construction entry points semantically equivalent
 
@@ -184,7 +184,7 @@ Executors keep resolved children and machinery private or protected. Use nested 
 
 ### § 4.12 Keep role authoring hierarchies symmetric
 
-Keep configuration and execution authoring hierarchies symmetric. Full role, wrapping and multi bases have matching executor bases. Derived configurations and executions use the matching pair. Pass required resolved children and prepared state through constructors. Rebinding must not reset persistent state or capture children from an earlier context.
+Keep configuration and execution authoring hierarchies symmetric. Every full role base has a matching executor base, and derived configurations and executions use the matching pair. `WrappingOperator` and `MultiOperator` have none: their factories resolve the children, and the executor they construct holds them. Pass required resolved children and prepared state through constructors. Rebinding must not reset persistent state or capture children from an earlier context.
 
 ### § 4.13 Give each child slot one public name
 
@@ -227,7 +227,7 @@ Roslyn analyzers catch recognizable mistakes. They do not prove ownership invari
 
 Role executions expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
 
-Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its descriptor; it does not change executor-interface membership. Public `OperationExecutorAdapter` adapters connect named methods to `IInvocationWrapper` during executor construction. Each wrapping executor passes a call to its struct wrapper as a struct `IInvocation<TResult>`. Its `Random` is the call's random number generator, `Proceed` calls the wrapped named method, `ProceedWith` calls it on another executor of the same operation or with another random number generator, and `CountCandidateWork` supplies the operation's counting rule. Generic wrappers reach no other argument; typed role advice receives every argument. Keep `Proceed` without a default interface implementation, which would box the invocation on every call. No invocation method is added to executor interfaces.
+Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its descriptor; it does not change executor-interface membership. Public `OperationExecutorAdapter` adapters connect named methods to `IInvocationWrapper` during executor construction. Each wrapping executor passes a call to its struct wrapper as a struct `IInvocation<TResult>`. Its `Random` is the call's random number generator, `SearchSpace` and `Problem` are the call's search space and problem without their run types, `Proceed` calls the wrapped named method, `ProceedWith` calls it on another executor of the same operation or with another random number generator, and `CountCandidateWork` supplies the operation's counting rule. Generic wrappers reach no other argument and cannot replace these; typed role advice receives every argument. Keep `Proceed` without a default interface implementation, which would box the invocation on every call. `ProceedPerItem` is the exception: `IItemInvocation<TItemResult>` implements it once for every item operation through `ItemCount` and `ProceedWithItems`, and only a per-candidate choice pays the boxing. No invocation method is added to executor interfaces.
 
 A wrapping executor forwards the wrapped executor's controls through `ExecutorControls.Find<TControl, TWrapper>`, unless its wrapper implements `IExecutorControlProvider` and supplies them, as a choice among children does by supplying none.
 
@@ -449,7 +449,9 @@ Expose a direct static implementation when the candidate or genotype does not al
 
 ### § 8.9 Group extensions by user facing concern
 
-Group extensions by user concern, not target type alone. Give observation, counting, duration, budget, factory and conversion helpers separate classes. Use concern names and role first names such as `MutatorDurationExtensions`.
+Group extensions by user concern, not target type alone. Give observation, counting, duration, budget, factory and conversion helpers separate classes. Use concern names, such as `OperatorDurationExtensions`.
+
+Write extensions as extension blocks. Keep a classic extension method only where a block cannot express it or would reorder its explicit type arguments, such as an operation that must stay first under § 8.7. Put an extension class in the file of the type it extends unless it is large enough to warrant its own file.
 
 Folders may group implementations without forcing a public namespace. Keep implementation wrappers private or internal unless callers need their concrete type.
 
@@ -495,7 +497,7 @@ differently needs a separate argument.
 A method that returns a **different type wrapping the receiver** is named as a past participle describing the result,
 because an adjective cannot be misread as a command to modify the receiver: `algorithm.TerminatedBy(terminator)`,
 `evaluator.Cached(keySelector)`, `refiner.CheckedForImprovement()`, `mutator.AppliedAtRate(0.3)`,
-`algorithm.LimitedToEvaluatedCandidates(evaluator, 100_000)`. `ga.TerminatedBy(t)` is not a genetic algorithm any
+`algorithm.LimitedToCandidates(evaluator, 100_000)`. `ga.TerminatedBy(t)` is not a genetic algorithm any
 more, and the name should not suggest otherwise.
 
 A method that **mutates the receiver** is named with an imperative verb and never with `With*`, even when it returns

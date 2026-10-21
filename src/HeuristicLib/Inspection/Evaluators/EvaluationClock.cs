@@ -1,7 +1,5 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Inspection;
 
@@ -24,7 +22,7 @@ public sealed class EvaluationClock<TCandidate>
 
     protected override long ReadTime() => Interlocked.Read(ref evaluations);
 
-    private void Record(EvaluatorObservation<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> observation) =>
+    private void Record(OperatorObservation<Evaluation, TCandidate> observation) =>
         Interlocked.Add(ref evaluations, observation.ObjectiveVectors.Count);
 }
 

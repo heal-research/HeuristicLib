@@ -14,39 +14,25 @@ namespace HEAL.HeuristicLib.Operators.MoveCreators;
 /// </para>
 /// </remarks>
 public abstract record MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TState>
-    : IMoveCreator<TCandidate, TMove>
+    : Operator<MoveCreation<TMove>, TCandidate, TSearchSpace, TProblem, IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TState : class
 {
-    private sealed record Executor(MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TState> MoveCreator, TState State)
-        : IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
+    protected abstract TState CreateInitialState();
+
+    protected abstract IEnumerable<TMove> Moves(TCandidate candidate, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
+    protected sealed override ExecutorFactory<IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateFactory()
     {
-        public IEnumerable<TMove> Moves(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            MoveCreator.Moves(candidate, State, searchSpace, problem, random);
-    }
-
-    protected abstract IEnumerable<TMove> Moves(TCandidate candidate, TState state, TSearchSpace searchSpace, TProblem problem, IRandomNumberGenerator random);
-
-    protected abstract TState InitialState();
-
-    public virtual ExecutorFactory<IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutorFactory()
-    {
-        var executor = new Executor(this, InitialState());
+        var executor = new Executor(this, CreateInitialState());
         return _ => executor;
     }
 
-    public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
-
-    ExecutorFactory<IMoveCreationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveCreator<TCandidate, TMove>.CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
+    private sealed class Executor(MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TState> moveCreator, TState state)
+        : IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
     {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
-                this,
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
-
-        return (ExecutorFactory<IMoveCreationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutorFactory();
+        public IEnumerable<TMove> Moves(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            moveCreator.Moves(candidate, state, random, searchSpace, problem);
     }
 }

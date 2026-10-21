@@ -134,9 +134,9 @@ public sealed class OperatorAdviceTests
         var state = new ProbeState();
         Check(ReferenceEquals(state, exact.Resolve(interceptor).Transform(state, null, RandomNumberGenerator.Create(1),
             Problem.SearchSpace, Problem)) && interceptTotal.Value == 1, "the same general counter works on interception without altering its result");
-        Reject(() => scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>().Resolve(interceptor), "cannot provide");
-        Check(interceptor.Log.Constructions == 1 && interceptLog.Wraps == 1,
-            "an incompatible raw view neither constructs another node nor wraps one");
+        _ = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>().Resolve(interceptor);
+        Check(interceptor.Log.Constructions == 2 && interceptLog.Wraps == 2,
+            "a scope over another state wraps the interceptor over its own state");
     }
 
     [Fact]

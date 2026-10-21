@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace HEAL.HeuristicLib.Tests.Architecture;
 
@@ -16,20 +17,14 @@ public sealed class RoleContractArityTests
 {
     private static readonly Assembly Main = typeof(IOperator).Assembly;
 
-    // Nominal contracts remain until their consumers cut over; the shared consuming slot is checked separately.
-    private static readonly IReadOnlyList<Type> Roles = [.. RolesDerivedFrom(typeof(IOperator)).Where(type => type != typeof(IOperator<,>))];
     private static readonly IReadOnlyList<Type> RoleExecutions = RolesDerivedFrom(typeof(IOperatorExecutor));
 
-    public static TheoryData<Type> ConfigurationContracts => [.. Roles];
     public static TheoryData<Type> ExecutionContracts => [.. RoleExecutions];
 
-    public static TheoryData<Type> TopologyBases => [.. Roles.SelectMany(role => Main.GetExportedTypes()
-        .Where(type => type.Name == "Wrapping" + role.Name[1..] || type.Name == "Multi" + role.Name[1..]))];
-
     [Fact]
-    public void EveryRole_DeclaresBothHalves()
+    public void EveryRole_SharesTheConfigurationContractAndDeclaresItsExecution()
     {
-        Roles.Count.ShouldBe(7);
+        RolesDerivedFrom(typeof(IOperator)).ShouldBe([typeof(IOperator<,>)]);
         RoleExecutions.Count.ShouldBe(9);
     }
 
@@ -52,7 +47,7 @@ public sealed class RoleContractArityTests
         var types = Main.GetExportedTypes();
         var signatures = types.Select(type => (Name: type.ToString(), Parameters: type.GetGenericArguments()))
             .Concat(types.SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
-                .Select(method => (Name: $"{method.DeclaringType}.{method.Name}", Parameters: method.GetGenericArguments())));
+                .SelectMany(method => DeclaredParameterLists(method).Select(parameters => (Name: $"{method.DeclaringType}.{method.Name}", Parameters: parameters))));
         foreach (var (name, parameters) in signatures)
         {
             var operation = Array.FindIndex(parameters, parameter => parameter.IsGenericParameter &&
@@ -63,46 +58,24 @@ public sealed class RoleContractArityTests
         }
     }
 
-    [Theory]
-    [MemberData(nameof(ConfigurationContracts))]
-    public void AConfiguredRole_NamesOnlyTheCandidate(Type role) =>
-        role.GetGenericArguments().Select(argument => argument.Name).ShouldBe(["TCandidate"]);
-
-    [Theory]
-    [MemberData(nameof(ConfigurationContracts))]
-    public void AConfiguredRole_PreparesItsTypedFactoryWithoutAScope(Type role)
+    /// <summary>
+    /// An extension method lists the type parameters of its receiver before its own, as an extension block declares
+    /// them, so each of the two lists must lead with its operation.
+    /// </summary>
+    private static IEnumerable<Type[]> DeclaredParameterLists(MethodInfo method)
     {
-        var factory = role.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Single(method => method.Name == "CreateExecutorFactory");
+        var parameters = method.GetGenericArguments();
+        if (!method.IsDefined(typeof(ExtensionAttribute)))
+            return [parameters];
 
-        factory.GetParameters().ShouldBeEmpty();
-        factory.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutorFactory<>));
-        factory.ReturnType.GetGenericArguments().Single().GetInterfaces().ShouldContain(typeof(IOperatorExecutor));
-        role.GetMethods().ShouldNotContain(method => method.Name == "CreateExecutionInstance");
+        var receiver = method.GetParameters()[0].ParameterType;
+        return [[.. parameters.Where(parameter => Mentions(receiver, parameter))], [.. parameters.Where(parameter => !Mentions(receiver, parameter))]];
     }
 
-    [Theory]
-    [MemberData(nameof(TopologyBases))]
-    public void ATopologyBase_PreparesBeforeReceivingItsResolvedChildren(Type topology)
-    {
-        var factory = topology.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Single(method => method.Name == "CreateExecutorFactory");
-        var wrapper = topology.Name.StartsWith("Wrapping", StringComparison.Ordinal);
-        var hook = topology.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Single(method => method.IsAbstract && method.Name == (wrapper ? "CreateWrapperFactory" : "CreateCompositeFactory"));
-
-        factory.GetParameters().ShouldBeEmpty();
-        factory.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutorFactory<>));
-        hook.IsFamily.ShouldBeTrue();
-        hook.GetParameters().ShouldBeEmpty();
-        hook.ReturnType.GetGenericTypeDefinition().ShouldBe(wrapper ? typeof(WrapperExecutorFactory<>) : typeof(CompositeExecutorFactory<>));
-        var execution = hook.ReturnType.GetGenericArguments()[^1];
-        execution.GetGenericTypeDefinition().ShouldBe(factory.ReturnType.GetGenericArguments().Single().GetGenericTypeDefinition());
-        var constructor = hook.ReturnType.GetMethod("Invoke")!;
-        constructor.ReturnType.ShouldBe(execution);
-        constructor.GetParameters().Single().ParameterType.ShouldBe(wrapper ? execution : typeof(ImmutableArray<>).MakeGenericType(execution));
-        topology.GetMethods().ShouldNotContain(method => method.Name == "CreateExecutionInstance");
-    }
+    private static bool Mentions(Type type, Type parameter) =>
+        type == parameter
+        || (type.HasElementType && Mentions(type.GetElementType()!, parameter))
+        || (type.IsGenericType && type.GetGenericArguments().Any(argument => Mentions(argument, parameter)));
 
     [Theory]
     [InlineData(typeof(IterativeAlgorithm<,,>))]

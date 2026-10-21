@@ -15,9 +15,7 @@ namespace HEAL.HeuristicLib.Analysis;
 /// retaining a front snapshot after every observation. The front is an accumulator, so read it once the run has
 /// finished.
 /// </remarks>
-public sealed class ParetoFrontAnalyzer<T, TS, TP> : AccumulatingAnalyzer
-    where TS : class, ISearchSpace<T>
-    where TP : class, IProblem<T, TS>
+public sealed class ParetoFrontAnalyzer<T> : AccumulatingAnalyzer
 {
     private readonly ParetoFront<T> front;
 
@@ -29,7 +27,7 @@ public sealed class ParetoFrontAnalyzer<T, TS, TP> : AccumulatingAnalyzer
             throw new ArgumentException("An analyzer needs at least one observation source.", nameof(evaluators));
 
         front = new ParetoFront<T>(referencePoint, problemObjective);
-        Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe<T, TS, TP>(evaluator, Record).Advices)];
+        Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe(evaluator, Record).Advices)];
     }
 
     public ObjectiveDirections Objective => front.Objective;
@@ -38,7 +36,7 @@ public sealed class ParetoFrontAnalyzer<T, TS, TP> : AccumulatingAnalyzer
     /// <summary>The front this analyzer accumulates.</summary>
     public ParetoFront<T> Front => front;
 
-    private void Record(EvaluatorObservation<T, TS, TP> observation)
+    private void Record(OperatorObservation<Evaluation, T> observation)
     {
         lock (Sync)
             front.AddPoints(observation.Candidates.ToEvaluated(observation.ObjectiveVectors));

@@ -15,41 +15,27 @@ namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
 /// </para>
 /// </remarks>
 public abstract record MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, TState>
-    : IMoveEvaluator<TCandidate, TMove>
+    : Operator<MoveEvaluation<TMove>, TCandidate, TSearchSpace, TProblem, IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TState : class
 {
-    private sealed record Executor(MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, TState> MoveEvaluator, TState State)
-        : IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
+    protected abstract TState CreateInitialState();
+
+    protected abstract ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
+    protected sealed override ExecutorFactory<IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateFactory()
     {
-        public ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            MoveEvaluator.Apply(candidate, move, State, searchSpace, problem, random);
-
-        public ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
-    }
-
-    protected abstract ObjectiveVector Apply(TCandidate candidate, TMove move, TState state, TSearchSpace searchSpace, TProblem problem, IRandomNumberGenerator random);
-
-    protected abstract TState InitialState();
-
-    public virtual ExecutorFactory<IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutorFactory()
-    {
-        var executor = new Executor(this, InitialState());
+        var executor = new Executor(this, CreateInitialState());
         return _ => executor;
     }
 
-    public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
-
-    ExecutorFactory<IMoveEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveEvaluator<TCandidate, TMove>.CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
+    private sealed class Executor(MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, TState> moveEvaluator, TState state)
+        : IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
     {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
-                this,
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
+        public ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            moveEvaluator.Evaluate(oldQuality, candidate, move, state, random, searchSpace, problem);
 
-        return (ExecutorFactory<IMoveEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutorFactory();
+        public ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
     }
 }

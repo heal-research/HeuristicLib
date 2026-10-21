@@ -321,7 +321,7 @@ public class AlgorithmRunTests
     {
         public WrappingAnalyzer(IOperator<Evaluation, int> evaluator, Action observed)
         {
-            Advices = [(Pointcut.Reference(evaluator), new EvaluatorObservationAdvice<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(_ => observed()))];
+            Advices = [(Pointcut.Reference(evaluator), new OperatorObservationAdvice<Evaluation, int>(_ => observed()))];
         }
     }
 

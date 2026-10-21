@@ -4,22 +4,25 @@ namespace HEAL.HeuristicLib.Random;
 
 public static class RandomEnumerable
 {
-    // algorithm taken from programming pearls page 127
-    // IMPORTANT because IEnumerables with yield are used the seed must be specified to return always
-    // the same sequence of numbers without caching the values.
-    public static IEnumerable<int> SampleRandomNumbers(this IRandomNumberGenerator generator, int start, int end, int count)
+    extension(IRandomNumberGenerator generator)
     {
-        var remaining = end - start;
-        for (var i = start; i < end && count > 0; i++)
+        // algorithm taken from programming pearls page 127
+        // IMPORTANT because IEnumerables with yield are used the seed must be specified to return always
+        // the same sequence of numbers without caching the values.
+        public IEnumerable<int> SampleRandomNumbers(int start, int end, int count)
         {
-            var probability = generator.NextDouble();
-            if (probability < (double)count / remaining)
+            var remaining = end - start;
+            for (var i = start; i < end && count > 0; i++)
             {
-                count--;
-                yield return i;
-            }
+                var probability = generator.NextDouble();
+                if (probability < (double)count / remaining)
+                {
+                    count--;
+                    yield return i;
+                }
 
-            remaining--;
+                remaining--;
+            }
         }
     }
 
@@ -165,6 +168,38 @@ public static class RandomEnumerable
         ///   less than <paramref name="count" /> elements.
         /// </returns>
         public IEnumerable<T> SampleProportionalWithoutRepetition(IRandomNumberGenerator random, int count, IEnumerable<double> weights, bool windowing = true, bool inverseProportional = false) => source.SampleProportionalWithoutRepetition(random, weights, windowing, inverseProportional).Take(count);
+
+        /// <summary>
+        ///   Shuffles an enumerable and returns a new enumerable according to the Fisher-Yates shuffle.
+        /// </summary>
+        /// <remarks>
+        ///   Note that the source enumerable is transformed into an array.
+        ///   The implementation is described in
+        ///   http://stackoverflow.com/questions/1287567/c-is-using-random-and-orderby-a-good-shuffle-algorithm.
+        /// </remarks>
+        /// <param name="random">
+        ///   The random number generator, its Next(n) method must deliver uniformly distributed random numbers
+        ///   in the range [0;n).
+        /// </param>
+        /// <returns>An enumerable with the elements shuffled.</returns>
+        public IEnumerable<T> Shuffle(IRandomNumberGenerator random)
+        {
+            var elements = source.ToArray();
+            for (var i = elements.Length - 1; i > 0; i--)
+            {
+                // Swap element "i" with a random earlier element (including itself)
+                var swapIndex = random.NextInt(i + 1);
+                yield return elements[swapIndex];
+                elements[swapIndex] = elements[i];
+                // we don't actually perform the swap, we can forget about the
+                // swapped element because we already returned it.
+            }
+
+            if (elements.Length > 0)
+            {
+                yield return elements[0];
+            }
+        }
     }
 
     #region Proportional Helpers
@@ -286,38 +321,4 @@ public static class RandomEnumerable
         }
     }
     #endregion
-
-    /// <summary>
-    ///   Shuffles an enumerable and returns a new enumerable according to the Fisher-Yates shuffle.
-    /// </summary>
-    /// <remarks>
-    ///   Note that the source enumerable is transformed into an array.
-    ///   The implementation is described in
-    ///   http://stackoverflow.com/questions/1287567/c-is-using-random-and-orderby-a-good-shuffle-algorithm.
-    /// </remarks>
-    /// <typeparam name="T">The type of the items that are to be shuffled.</typeparam>
-    /// <param name="source">The enumerable that contains the items.</param>
-    /// <param name="random">
-    ///   The random number generator, its Next(n) method must deliver uniformly distributed random numbers
-    ///   in the range [0;n).
-    /// </param>
-    /// <returns>An enumerable with the elements shuffled.</returns>
-    public static IEnumerable<T> Shuffle<T>(this IEnumerable<T> source, IRandomNumberGenerator random)
-    {
-        var elements = source.ToArray();
-        for (var i = elements.Length - 1; i > 0; i--)
-        {
-            // Swap element "i" with a random earlier element (including itself)
-            var swapIndex = random.NextInt(i + 1);
-            yield return elements[swapIndex];
-            elements[swapIndex] = elements[i];
-            // we don't actually perform the swap, we can forget about the
-            // swapped element because we already returned it.
-        }
-
-        if (elements.Length > 0)
-        {
-            yield return elements[0];
-        }
-    }
 }

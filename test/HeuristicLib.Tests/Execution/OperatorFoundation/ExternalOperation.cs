@@ -40,6 +40,8 @@ public sealed class ChecksumExecutorAdapter<TCandidate, TSearchSpace, TProblem> 
         private readonly IRandomNumberGenerator random = random;
 
         public IRandomNumberGenerator Random => random;
+        public ISearchSpace SearchSpace => searchSpace;
+        public IProblem Problem => problem;
         public int Proceed() => executor.Read(random, searchSpace, problem);
         public int ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
             ((IChecksumExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Read(random ?? this.random, searchSpace, problem);
@@ -56,11 +58,13 @@ public sealed class ChecksumExecutorAdapter<TCandidate, TSearchSpace, TProblem> 
 
 public static class ChecksumResolutionExtensions
 {
-    public static IChecksumExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(
-        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<Checksum, TCandidate> source)
+    extension<TCandidate, TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        (IChecksumExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator(source);
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        public IChecksumExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Checksum, TCandidate> source) =>
+            (IChecksumExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator(source);
+    }
 }
 
 public sealed class ChecksumRecommendation : IRecommends<IOperator<Checksum, RealVector>>

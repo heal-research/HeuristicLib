@@ -51,7 +51,10 @@ public static class ResolutionScopeExtensions
     }
 
     /// <summary>Resolves an operator for its operation and this scope's types, returning its executor untyped.</summary>
-    /// <remarks>An operation's resolution extensions cast the result to its executor interface.</remarks>
+    /// <remarks>
+    /// An operation's resolution extensions cast the result to its executor interface. This is a classic extension
+    /// method so that the operation stays the first type argument.
+    /// </remarks>
     public static IExecutor ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem>(
         this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<TOperation, TCandidate> source)
         where TOperation : IOperationDescriptor<TOperation>

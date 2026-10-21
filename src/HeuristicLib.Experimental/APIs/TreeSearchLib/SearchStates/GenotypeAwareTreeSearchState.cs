@@ -1,6 +1,4 @@
-using HEAL.HeuristicLib.Operators.MoveAppliers;
-using HEAL.HeuristicLib.Operators.MoveCreators;
-using HEAL.HeuristicLib.Operators.MoveEvaluators;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.Partial;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -13,7 +11,7 @@ public abstract class GenotypeAwareTreeSearchState<T, TS, TP, TM> : TreeSearchSt
     public record TreeSearchContext(
         TP Problem,
         IMoveCreationExecutor<T, TS, TP, TM> Creator,
-        IMoveApplierExecutor<T, TS, TP, TM> Applier,
+        IMoveApplicationExecutor<T, TS, TP, TM> Applier,
         IMoveEvaluationExecutor<T, TS, TP, TM> Evaluator,
         IMoveEvaluationExecutor<T, TS, TP, TM> BoundEvaluator);
 
@@ -32,7 +30,7 @@ public abstract class GenotypeAwareTreeSearchState<T, TS, TP, TM> : TreeSearchSt
 
     protected TP Problem => Context.Problem;
     protected IMoveCreationExecutor<T, TS, TP, TM> Creator => Context.Creator;
-    protected IMoveApplierExecutor<T, TS, TP, TM> Applier => Context.Applier;
+    protected IMoveApplicationExecutor<T, TS, TP, TM> Applier => Context.Applier;
     protected IMoveEvaluationExecutor<T, TS, TP, TM> Evaluator => Context.Evaluator;
     protected IMoveEvaluationExecutor<T, TS, TP, TM> BoundsEvaluator => Context.BoundEvaluator;
 

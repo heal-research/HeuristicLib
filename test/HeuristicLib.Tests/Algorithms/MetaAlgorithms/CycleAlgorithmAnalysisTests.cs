@@ -53,9 +53,9 @@ public class CycleAlgorithmAnalysisTests
 
         public IOperator<Evaluation, int> Evaluator { get; }
 
-        public IInterceptor<int> Interceptor { get; }
+        public IOperator<Interception<PopulationState<int>>, int> Interceptor { get; }
 
-        public SingleStepAlgorithm(int candidate, IOperator<Evaluation, int> evaluator, IInterceptor<int> interceptor)
+        public SingleStepAlgorithm(int candidate, IOperator<Evaluation, int> evaluator, IOperator<Interception<PopulationState<int>>, int> interceptor)
         {
             Candidate = candidate;
             Interceptor = interceptor;
@@ -99,10 +99,10 @@ public class CycleAlgorithmAnalysisTests
 
         public EvaluationTraceAnalysis(IOperator<Evaluation, int> evaluator)
         {
-            Advices = Aspect.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record).Advices;
+            Advices = Aspect.Observe(evaluator, Record).Advices;
         }
 
-        public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
+        public void Record(OperatorObservation<Evaluation, int> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);
 
         public sealed class ExecutionState

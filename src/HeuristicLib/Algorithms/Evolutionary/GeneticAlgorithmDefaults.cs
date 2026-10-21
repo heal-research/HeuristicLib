@@ -26,7 +26,7 @@ public static class GeneticAlgorithmDefaults
 
     public const int TournamentSize = 2;
 
-    public static ISelector<TCandidate> Selector<TCandidate>() =>
+    public static IOperator<Selection, TCandidate> Selector<TCandidate>() =>
         new TournamentSelector<TCandidate>(TournamentSize);
 
     public static IOperator<Evaluation, TCandidate> Evaluator<TCandidate>() =>

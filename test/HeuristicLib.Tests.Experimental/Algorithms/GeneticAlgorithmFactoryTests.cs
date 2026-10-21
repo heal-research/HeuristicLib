@@ -20,16 +20,15 @@ public sealed class GeneticAlgorithmFactoryTests
     {
         var creatorPreparations = 0;
         var interceptorPreparations = 0;
-        ICreator<int> creator = new CounterCreator(() => creatorPreparations++);
-        IInterceptor<int> interceptor = new IdentityInterceptor(() => interceptorPreparations++);
-        var algorithm = CreateAlgorithm(alps, creator, interceptor);
+        IOperator<Creation, int> creator = new CounterCreator(() => creatorPreparations++);
+        var (algorithm, countInterceptions) = CreateAlgorithm(alps, creator, () => interceptorPreparations++);
         var parent = ResolutionScope.Create();
         (await Next(parent, algorithm)).ShouldBe(1);
 
         var observedCreations = new CountAccumulator();
         var observedInterceptions = new CountAccumulator();
         var child = parent.CreateChildScope(Aspect.CountCalls(creator, observedCreations),
-            Aspect.CountCalls(interceptor, observedInterceptions));
+            countInterceptions(observedInterceptions));
 
         (await Next(child, algorithm)).ShouldBe(2);
         observedCreations.CurrentCount.ShouldBe(1);
@@ -54,15 +53,14 @@ public sealed class GeneticAlgorithmFactoryTests
     public async Task PausedIterator_KeepsItsInterceptorAndPreviousStateAcrossRebinding(bool alps)
     {
         var creator = new CounterCreator(static () => { });
-        IInterceptor<int> interceptor = new IdentityInterceptor(static () => { });
-        var algorithm = CreateAlgorithm(alps, creator, interceptor, mutationRate: 1);
+        var (algorithm, countInterceptions) = CreateAlgorithm(alps, creator, static () => { }, mutationRate: 1);
         var parent = ResolutionScope.Create();
         await using var paused = Run(parent, algorithm).GetAsyncEnumerator();
         (await paused.MoveNextAsync()).ShouldBeTrue();
         Candidate(paused.Current).ShouldBe(1);
 
         var observedInterceptions = new CountAccumulator();
-        var child = parent.CreateChildScope(Aspect.CountCalls(interceptor, observedInterceptions));
+        var child = parent.CreateChildScope(countInterceptions(observedInterceptions));
         await using var observed = Run(child, algorithm).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
         Candidate(observed.Current).ShouldBe(2);
@@ -76,32 +74,43 @@ public sealed class GeneticAlgorithmFactoryTests
         observedInterceptions.CurrentCount.ShouldBe(2);
     }
 
-    private static IAlgorithm<int> CreateAlgorithm(bool alps, ICreator<int> creator, IInterceptor<int> interceptor, double mutationRate = 0.5) =>
-        alps
-            ? new AlpsGeneticAlgorithm<int>
+    // Each algorithm gets an interceptor over its own search state, together with a way to count that interceptor's calls.
+    private static (IAlgorithm<int> Algorithm, Func<CountAccumulator, Aspect> CountInterceptions) CreateAlgorithm(bool alps, IOperator<Creation, int> creator,
+        Action prepareInterceptor, double mutationRate = 0.5)
+    {
+        if (alps)
+        {
+            var alpsInterceptor = new IdentityInterceptor<AlpsState<int>>(prepareInterceptor);
+            var alpsAlgorithm = new AlpsGeneticAlgorithm<int>
             {
                 Creator = creator,
                 Crossover = SelectFirstParentCrossover<int>.Instance,
                 Mutator = new ImprovingMutator(),
-                Interceptor = interceptor,
+                Interceptor = alpsInterceptor,
                 Selector = new RandomSelector<int>(),
                 PopulationSize = 1,
                 Elites = 0,
                 MaximumGenerations = 3,
                 MutationRate = mutationRate
-            }
-            : new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<int>
-            {
-                Creator = creator,
-                Crossover = SelectFirstParentCrossover<int>.Instance,
-                Mutator = new ImprovingMutator(),
-                Interceptor = interceptor,
-                Selector = new RandomSelector<int>(),
-                PopulationSize = 1,
-                Elites = 0,
-                MaxEffort = 1,
-                MaximumGenerations = 3
             };
+            return (alpsAlgorithm, counter => Aspect.CountCalls(alpsInterceptor, counter));
+        }
+
+        var interceptor = new IdentityInterceptor<PopulationState<int>>(prepareInterceptor);
+        var algorithm = new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<int>
+        {
+            Creator = creator,
+            Crossover = SelectFirstParentCrossover<int>.Instance,
+            Mutator = new ImprovingMutator(),
+            Interceptor = interceptor,
+            Selector = new RandomSelector<int>(),
+            PopulationSize = 1,
+            Elites = 0,
+            MaxEffort = 1,
+            MaximumGenerations = 3
+        };
+        return (algorithm, counter => Aspect.CountCalls(interceptor, counter));
+    }
 
     private static IAsyncEnumerable<ISearchState> Run(ResolutionScope scope, IAlgorithm<int> algorithm) =>
         algorithm is AlpsGeneticAlgorithm<int>
@@ -146,22 +155,24 @@ public sealed class GeneticAlgorithmFactoryTests
         public override int MutateCandidate(int parent, IRandomNumberGenerator random) => parent - 1;
     }
 
-    private sealed record IdentityInterceptor(Action Prepare) : IInterceptor<int>
+    private sealed record IdentityInterceptor<TSearchState>(Action Prepare) : Operator<Interception<TSearchState>, int>
+        where TSearchState : class, ISearchState
     {
-        public ExecutorFactory<IInterceptionExecutor<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
-            where TRunSearchSpace : class, ISearchSpace<int>
-            where TRunProblem : class, IProblem<int, TRunSearchSpace>
-            where TRunSearchState : class, ISearchState
+        protected override OperatorExecutorFactory CreateOperatorFactory()
         {
             Prepare();
-            var executor = new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>();
-            return _ => executor;
+            return new Factory();
         }
 
-        private sealed class Executor<TSearchSpace, TProblem, TSearchState> : IInterceptionExecutor<int, TSearchSpace, TProblem, TSearchState>
+        private sealed class Factory : OperatorExecutorFactory<Interception<TSearchState>, int>
+        {
+            protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TRunSearchState> scope) =>
+                new Executor<TSearchSpace, TProblem>();
+        }
+
+        private sealed class Executor<TSearchSpace, TProblem> : IInterceptionExecutor<int, TSearchSpace, TProblem, TSearchState>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
-            where TSearchState : class, ISearchState
         {
             public TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => currentState;
         }

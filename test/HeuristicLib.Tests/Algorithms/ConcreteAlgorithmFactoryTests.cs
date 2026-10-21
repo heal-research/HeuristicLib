@@ -22,16 +22,15 @@ public sealed class ConcreteAlgorithmFactoryTests
     {
         var creatorPreparations = 0;
         var interceptorPreparations = 0;
-        ICreator<int> creator = new CounterCreator(() => creatorPreparations++);
-        IInterceptor<int> interceptor = new IdentityInterceptor(() => interceptorPreparations++);
-        var algorithm = CreateAlgorithm(kind, creator, interceptor);
+        IOperator<Creation, int> creator = new CounterCreator(() => creatorPreparations++);
+        var (algorithm, countInterceptions) = CreateAlgorithm(kind, creator, () => interceptorPreparations++);
         var parent = ResolutionScope.Create();
         (await Next(parent, algorithm)).ShouldBe(1);
 
         var observedCreations = new CountAccumulator();
         var observedInterceptions = new CountAccumulator();
         var child = parent.CreateChildScope(Aspect.CountCalls(creator, observedCreations),
-            Aspect.CountCalls(interceptor, observedInterceptions));
+            countInterceptions(observedInterceptions));
 
         (await Next(child, algorithm)).ShouldBe(2);
         observedCreations.CurrentCount.ShouldBe(1);
@@ -60,15 +59,14 @@ public sealed class ConcreteAlgorithmFactoryTests
     public async Task PausedIterator_KeepsItsInterceptorAndPreviousStateAcrossRebinding(string kind)
     {
         var creator = new CounterCreator(static () => { });
-        IInterceptor<int> interceptor = new IdentityInterceptor(static () => { });
-        var algorithm = CreateAlgorithm(kind, creator, interceptor, mutationRate: 1);
+        var (algorithm, countInterceptions) = CreateAlgorithm(kind, creator, static () => { }, mutationRate: 1);
         var parent = ResolutionScope.Create();
         await using var paused = Run(parent, algorithm).GetAsyncEnumerator();
         (await paused.MoveNextAsync()).ShouldBeTrue();
         Candidate(paused.Current).ShouldBe(1);
 
         var observedInterceptions = new CountAccumulator();
-        var child = parent.CreateChildScope(Aspect.CountCalls(interceptor, observedInterceptions));
+        var child = parent.CreateChildScope(countInterceptions(observedInterceptions));
         await using var observed = Run(child, algorithm).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
         Candidate(observed.Current).ShouldBe(2);
@@ -82,18 +80,28 @@ public sealed class ConcreteAlgorithmFactoryTests
         observedInterceptions.CurrentCount.ShouldBe(2);
     }
 
-    private static IAlgorithm<int> CreateAlgorithm(string kind, ICreator<int> creator, IInterceptor<int> interceptor, double mutationRate = 0.5) =>
-        kind switch
+    // Each algorithm gets an interceptor over its own search state, together with a way to count that interceptor's calls.
+    private static (IAlgorithm<int> Algorithm, Func<CountAccumulator, Aspect> CountInterceptions) CreateAlgorithm(string kind, IOperator<Creation, int> creator,
+        Action prepareInterceptor, double mutationRate = 0.5)
+    {
+        if (kind == nameof(HillClimber<int>))
         {
-            nameof(HillClimber<int>) => new HillClimber<int>
+            var solutionInterceptor = new IdentityInterceptor<SingleSolutionState<int>>(prepareInterceptor);
+            var hillClimber = new HillClimber<int>
             {
                 Creator = creator,
                 Mutator = new ImprovingMutator(),
-                Interceptor = interceptor,
+                Interceptor = solutionInterceptor,
                 MaxNeighbors = 1,
                 BatchSize = 1,
                 Direction = LocalSearchDirection.FirstImprovement
-            },
+            };
+            return (hillClimber, counter => Aspect.CountCalls(solutionInterceptor, counter));
+        }
+
+        var interceptor = new IdentityInterceptor<PopulationState<int>>(prepareInterceptor);
+        IAlgorithm<int> algorithm = kind switch
+        {
             nameof(GeneticAlgorithm<int>) => new GeneticAlgorithm<int>
             {
                 Creator = creator,
@@ -130,6 +138,8 @@ public sealed class ConcreteAlgorithmFactoryTests
             },
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
+        return (algorithm, counter => Aspect.CountCalls(interceptor, counter));
+    }
 
     private static IAsyncEnumerable<PopulationState<int>> Run(ResolutionScope scope, IAlgorithm<int> algorithm) =>
         algorithm is HillClimber<int>
@@ -169,22 +179,24 @@ public sealed class ConcreteAlgorithmFactoryTests
         public override int MutateCandidate(int parent, IRandomNumberGenerator random) => parent - 1;
     }
 
-    private sealed record IdentityInterceptor(Action Prepare) : IInterceptor<int>
+    private sealed record IdentityInterceptor<TSearchState>(Action Prepare) : Operator<Interception<TSearchState>, int>
+        where TSearchState : class, ISearchState
     {
-        public ExecutorFactory<IInterceptionExecutor<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
-            where TRunSearchSpace : class, ISearchSpace<int>
-            where TRunProblem : class, IProblem<int, TRunSearchSpace>
-            where TRunSearchState : class, ISearchState
+        protected override OperatorExecutorFactory CreateOperatorFactory()
         {
             Prepare();
-            var executor = new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>();
-            return _ => executor;
+            return new Factory();
         }
 
-        private sealed class Executor<TSearchSpace, TProblem, TSearchState> : IInterceptionExecutor<int, TSearchSpace, TProblem, TSearchState>
+        private sealed class Factory : OperatorExecutorFactory<Interception<TSearchState>, int>
+        {
+            protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TRunSearchState> scope) =>
+                new Executor<TSearchSpace, TProblem>();
+        }
+
+        private sealed class Executor<TSearchSpace, TProblem> : IInterceptionExecutor<int, TSearchSpace, TProblem, TSearchState>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
-            where TSearchState : class, ISearchState
         {
             public TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => currentState;
         }

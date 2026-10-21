@@ -26,12 +26,15 @@ public sealed class Termination : IOperationDescriptor<Termination>
             new WrappedExecutor<TWrapper>(executor, wrapper);
 
         private readonly struct Invocation(ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
-            TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<bool>
+            TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<bool>, ITerminationArguments
         {
             private readonly ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor = executor;
             private readonly IRandomNumberGenerator random = random;
 
             public IRandomNumberGenerator Random => random;
+            public ISearchSpace SearchSpace => searchSpace;
+            public IProblem Problem => problem;
+            public ISearchState State => state;
             public bool Proceed() => executor.IsTerminalState(state, random, searchSpace, problem);
             public bool ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
                 ((ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>?)executor ?? this.executor).IsTerminalState(state, random ?? this.random, searchSpace, problem);
@@ -47,4 +50,10 @@ public sealed class Termination : IOperationDescriptor<Termination>
             public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
         }
     }
+}
+
+/// <summary>The arguments of one termination call, which its observations read.</summary>
+internal interface ITerminationArguments
+{
+    ISearchState State { get; }
 }

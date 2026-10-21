@@ -48,18 +48,18 @@ public sealed record RoundRobinMutator<TCandidate> : MultiOperator<Mutation, TCa
     private sealed class Executor<TSearchSpace, TProblem>(
         ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children,
         ExecutionState state)
-        : MultiMutationExecutor<TCandidate, TSearchSpace, TProblem>(children)
+        : IMutationExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public override IReadOnlyList<TCandidate> Mutate(
+        public IReadOnlyList<TCandidate> Mutate(
             IReadOnlyList<TCandidate> parents,
             IRandomNumberGenerator random,
             TSearchSpace searchSpace,
             TProblem problem)
         {
-            var offspring = ChildMutators[state.NextChild].Mutate(parents, random, searchSpace, problem);
-            state.NextChild = (state.NextChild + 1) % ChildMutators.Length;
+            var offspring = children[state.NextChild].Mutate(parents, random, searchSpace, problem);
+            state.NextChild = (state.NextChild + 1) % children.Length;
             return offspring;
         }
     }

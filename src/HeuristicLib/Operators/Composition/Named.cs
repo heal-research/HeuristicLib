@@ -25,6 +25,9 @@ public static class Named
 
 public static class NamedOperatorExtensions
 {
-    public static Named<TOperation, TCandidate> Named<TOperation, TCandidate>(this IOperator<TOperation, TCandidate> source, string name)
-        where TOperation : IOperationDescriptor<TOperation> => new(source, name);
+    extension<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source)
+        where TOperation : IOperationDescriptor<TOperation>
+    {
+        public Named<TOperation, TCandidate> Named(string name) => new(source, name);
+    }
 }
