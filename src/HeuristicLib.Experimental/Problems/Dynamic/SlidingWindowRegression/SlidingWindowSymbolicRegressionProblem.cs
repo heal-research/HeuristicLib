@@ -2,13 +2,14 @@ using HEAL.HeuristicLib.Data;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
 using HEAL.HeuristicLib.MachineLearning;
 using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Problems.Dynamic.Regression;
 using HEAL.HeuristicLib.Problems.MachineLearning;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.SlidingWindowRegression;
 
 public class SlidingWindowSymbolicRegressionProblem
-    : DynamicProblem<SlidingWindowSymbolicRegressionProblem, ExpressionTree, ExpressionTreeSearchSpace>
+    : DynamicRegressionProblem<SlidingWindowSymbolicRegressionProblem, ExpressionTree, ExpressionTreeSearchSpace>
 {
     private readonly SymbolicRegressionProblem innerProblem;
     private SymbolicRegressionProblem windowProblem;
@@ -30,6 +31,9 @@ public class SlidingWindowSymbolicRegressionProblem
 
     public int StepSize { get; }
     public int WindowLength { get; }
+
+    public override RegressionData CurrentData => windowProblem.TrainingData;
+    public override ImmutableArray<IRegressionMetric> PredictionMetrics => windowProblem.PredictionMetrics;
 
     public (int StartIndex, int EndIndex) CurrentState { get; private set; }
 

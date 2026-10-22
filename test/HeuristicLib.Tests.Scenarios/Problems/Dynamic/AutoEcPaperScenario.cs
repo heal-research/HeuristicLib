@@ -1,10 +1,12 @@
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Algorithms.AutoEC;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
+using IntegerVectorUniformDistributedCreator =
+    HEAL.HeuristicLib.Encodings.IntegerVectors.UniformDistributedCreator;
 using MetaOptimizationGenotype =
     HEAL.HeuristicLib.Encodings.Composite.CompositeGenotype<HEAL.HeuristicLib.Encodings.RealVectors.RealVector,
         HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector>;
@@ -13,8 +15,6 @@ using MetaOptimizationSearchSpace =
         HEAL.HeuristicLib.Encodings.RealVectors.BoundedRealVectorSearchSpace,
         HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector,
         HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVectorSearchSpace>;
-using IntegerVectorUniformDistributedCreator =
-    HEAL.HeuristicLib.Encodings.IntegerVectors.UniformDistributedCreator;
 using RealVectorUniformDistributedCreator =
     HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 

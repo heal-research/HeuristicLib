@@ -99,4 +99,37 @@ public sealed class CrossoverParameterSemanticsTests
         result.Count.ShouldBe(1);
     }
 
+    [Fact]
+    public void SimulatedBinaryCrossover_LeavesOutOfBoundsResultUnclamped()
+    {
+        var searchSpace = new BoundedRealVectorSearchSpace(1, 0.0, 1.0);
+        var crossover = new SimulatedBinaryCrossover { Contiguity = 2 };
+        var random = new SequenceRandomNumberGenerator(0.999, 0.75);
+
+        var result = crossover.CrossParents(
+            Parents.From(RealVector.Create(0.0), RealVector.Create(1.0)),
+            random,
+            searchSpace);
+
+        result[0].ShouldBeGreaterThan(1.0);
+        searchSpace.Contains(result).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void BoundsClampingMutator_ClampsVectorToSearchSpaceBounds()
+    {
+        var searchSpace = new BoundedRealVectorSearchSpace(
+            2,
+            RealVector.Create(0.0, 10.0),
+            RealVector.Create(1.0, 11.0));
+        var clamper = new BoundsClampingMutator();
+
+        var result = clamper.MutateCandidate(
+            RealVector.Create(-1.0, 12.0),
+            Random,
+            searchSpace);
+
+        result.ShouldBe(RealVector.Create(0.0, 11.0));
+        searchSpace.Contains(result).ShouldBeTrue();
+    }
 }

@@ -1,9 +1,9 @@
-using HEAL.HeuristicLib.Objectives;
-using HEAL.HeuristicLib.Inspection;
-using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.Problems;
 using System.Text.Json;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.Permutations;
+using HEAL.HeuristicLib.Inspection;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
 

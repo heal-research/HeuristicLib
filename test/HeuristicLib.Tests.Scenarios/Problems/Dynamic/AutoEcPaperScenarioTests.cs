@@ -271,6 +271,34 @@ public partial class AutoEcPaperScenarioTests
     }
 
     [Fact]
+    public async Task DynamicRacingHypermutation_PreservesResponseAcrossEpochs()
+    {
+        var ga = new MovingPeaksAutoEcScenario(
+            AutoEcChildAlgorithmKind.GeneticAlgorithm,
+            problemSeed: 321,
+            runSeed: 123,
+            targetEpochChanges: 4,
+            noRacers: 1,
+            epochLength: 100);
+        var hypermutation = new MovingPeaksAutoEcScenario(
+            AutoEcChildAlgorithmKind.HypermutationGeneticAlgorithm,
+            problemSeed: 321,
+            runSeed: 123,
+            targetEpochChanges: 4,
+            noRacers: 1,
+            epochLength: 100);
+
+        var gaResult = await RunScenario(ga);
+        var hypermutationResult = await RunScenario(hypermutation);
+
+        var gaCurve = gaResult.Output.QualityCurve.SelectMany(point => point.ObjectiveVector).ToArray();
+        var hypermutationCurve = hypermutationResult.Output.QualityCurve
+                                                     .SelectMany(point => point.ObjectiveVector)
+                                                     .ToArray();
+        gaCurve.SequenceEqual(hypermutationCurve).ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task DynamicRacingGa_OnInterpolatedQap_ProducesPaperExperimentSignals()
     {
         var scenario = new InterpolatedQapAutoEcScenario();
@@ -283,6 +311,20 @@ public partial class AutoEcPaperScenarioTests
     public async Task DynamicRacingGa_OnSlidingWindowSymReg_ProducesPaperExperimentSignals()
     {
         var scenario = new SlidingWindowSymRegAutoEcScenario();
+        var result = await RunScenario(scenario);
+
+        AssertScenarioProducesExperimentSignals(result, minQualityEpochs: 3, minBbcpChanges: 2);
+    }
+
+    [Fact]
+    public async Task DynamicRacingHypermutation_OnSlidingWindowSymReg_RebuildsChooseOneMutator()
+    {
+        var scenario = new SlidingWindowSymRegAutoEcScenario(
+            AutoEcChildAlgorithmKind.HypermutationGeneticAlgorithm,
+            targetEpochChanges: 4,
+            noRacers: 2,
+            epochLength: 100);
+
         var result = await RunScenario(scenario);
 
         AssertScenarioProducesExperimentSignals(result, minQualityEpochs: 3, minBbcpChanges: 2);

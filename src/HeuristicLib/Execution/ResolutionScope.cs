@@ -34,6 +34,18 @@ public sealed class ResolutionScope
     public ResolutionScope With(params IReadOnlyList<Aspect> aspects) =>
         new(state, this, [.. aspects]);
 
+    /// <summary>Creates a peer scope with independent copies of explicitly forkable local prepared state.</summary>
+    /// <remarks>
+    /// Ancestor state remains shared. Other local factories and advice factories are prepared afresh when needed.
+    /// All copies are installed before any child is resolved. Fork only between invocations; concurrent mutation
+    /// and forking are not supported. The resulting scope inherits this scope's observation context.
+    /// </remarks>
+    public ResolutionScope CreateForkedScope() => new(state.Fork(), parent, aspects);
+
+    /// <summary>Retains this scope's prepared state while using the supplied scope's observation context.</summary>
+    /// <remarks>Existing executions keep their original children and advice. Resolve again to obtain new bindings.</remarks>
+    public ResolutionScope WithContext(ResolutionScope context) => context.WithState(state);
+
     /// <summary>Creates child-local state that a meta-algorithm keeps across activations.</summary>
     /// <remarks>Each activation applies its own scope's aspects to this state through <see cref="WithState"/>.</remarks>
     internal State CreateChildState() => new(state);
@@ -143,6 +155,27 @@ public sealed class ResolutionScope
         private readonly Dictionary<IConfigurationNode, Delegate> factories = new(ReferenceEqualityComparer.Instance);
         private readonly ConditionalWeakTable<Advice, Dictionary<IConfigurationNode, Delegate>> wrapperFactories = new();
         internal HashSet<IConfigurationNode> Constructing { get; } = parent?.Constructing ?? new(ReferenceEqualityComparer.Instance);
+
+        internal State Fork()
+        {
+            if (Constructing.Count != 0)
+                throw new InvalidOperationException("Cannot fork state during execution graph construction.");
+
+            var fork = new State(parent);
+            var copied = new Dictionary<Delegate, Delegate>(ReferenceEqualityComparer.Instance);
+            foreach (var (configuration, factory) in factories)
+            {
+                if (factory.Target is not IForkableFactoryPreparation preparation)
+                    continue;
+                if (!copied.TryGetValue(factory, out var copy))
+                {
+                    copy = preparation.Fork();
+                    copied.Add(factory, copy);
+                }
+                fork.factories.Add(configuration, copy);
+            }
+            return fork;
+        }
 
         internal (ExecutionFactory<TExecution> Factory, State Owner) GetOrAdd<TConfiguration, TExecution>(
             TConfiguration configuration, Func<TConfiguration, ExecutionFactory<TExecution>> createExecutionFactory)

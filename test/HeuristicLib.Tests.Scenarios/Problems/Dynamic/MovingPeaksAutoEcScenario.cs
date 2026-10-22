@@ -1,9 +1,9 @@
 using HEAL.HeuristicLib.Encodings.Composite;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.RealVectors;
-using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems.Dynamic;
 using MetaOptimizationGenotype =
     HEAL.HeuristicLib.Encodings.Composite.CompositeGenotype<HEAL.HeuristicLib.Encodings.RealVectors.RealVector,
         HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector>;
@@ -121,7 +121,7 @@ public partial class AutoEcPaperScenarioTests
                 MetaOptimizationGenotype hyperParameters)
         {
             var creator = new RealVectorUniformDistributedCreator(problem.SearchSpace);
-            var crossover = new SimulatedBinaryCrossover();
+            var crossover = new SimulatedBinaryCrossover().TransformWith(new BoundsClampingMutator());
             var mutator = new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5);
             var selector = TournamentSelector.For(problem, tournamentSize: 2);
             var populationSize = hyperParameters.Part2[0];

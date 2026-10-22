@@ -115,7 +115,9 @@ public sealed class DynamicRacingFactoryTests
             Aspect.CountCalls(interceptor, interceptions));
         await using var observed = Run(child, racing, problem).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
-        sources[1].ShouldBeSameAs(contender);
+        sources.Count.ShouldBe(racers);
+        if (racers > 1)
+            sources[1].ShouldBeSameAs(contender);
         creations.CurrentCount.ShouldBe(1);
         mutations.CurrentCount.ShouldBe(racers - 1);
         evaluations.CurrentCount.ShouldBeGreaterThan(0);

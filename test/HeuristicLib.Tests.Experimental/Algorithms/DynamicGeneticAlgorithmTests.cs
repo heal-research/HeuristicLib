@@ -268,6 +268,57 @@ public class DynamicGeneticAlgorithmTests
     }
 
     [Fact]
+    public void DynamicRateMutator_ForkPreservesIndependentResponseState()
+    {
+        var problem = new IntegerDynamicProblem(epochLength: 10_000);
+        var mutator = new OffsetMutator(10).WithDynamicRate(problem, baseRate: 0.0, responseRate: 1.0, responseDuration: 2);
+        var sourceScope = ResolutionScope.Create();
+        var source = sourceScope.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(mutator);
+        var random = new CountingZeroRandomNumberGenerator();
+
+        source.Mutate([1], random, problem.SearchSpace, problem).ShouldBe([1]);
+        problem.UpdateOnce();
+        source.Mutate([1], random, problem.SearchSpace, problem).ShouldBe([11]);
+
+        var fork = sourceScope.CreateForkedScope();
+        var forked = fork.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(mutator);
+        var secondFork = fork.CreateForkedScope();
+        var twiceForked = secondFork.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(mutator);
+
+        forked.ShouldNotBeSameAs(source);
+        twiceForked.ShouldNotBeSameAs(forked);
+        forked.Mutate([1], random, problem.SearchSpace, problem).ShouldBe([11]);
+        forked.Mutate([1], random, problem.SearchSpace, problem).ShouldBe([1]);
+        twiceForked.Mutate([1], random, problem.SearchSpace, problem).ShouldBe([11]);
+        twiceForked.Mutate([1], random, problem.SearchSpace, problem).ShouldBe([1]);
+        source.Mutate([1], random, problem.SearchSpace, problem).ShouldBe([11]);
+        source.Mutate([1], random, problem.SearchSpace, problem).ShouldBe([1]);
+    }
+
+    [Fact]
+    public void DynamicRateMutator_ForkRebuildsNonForkableChooseOneComposite()
+    {
+        var problem = new IntegerDynamicProblem(epochLength: 10_000);
+        var child = ChooseOneMutator.Create<int>(
+            new OffsetMutator(10));
+        var mutator = child.WithDynamicRate(problem, baseRate: 0.0, responseRate: 1.0, responseDuration: 2);
+        var sourceScope = ResolutionScope.Create();
+        var source = sourceScope.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(mutator);
+        var random = new CountingZeroRandomNumberGenerator();
+
+        source.Mutate([1], random, problem.SearchSpace, problem).ShouldBe([1]);
+        problem.UpdateOnce();
+        source.Mutate([1], random, problem.SearchSpace, problem).ShouldBe([11]);
+
+        var fork = sourceScope.CreateForkedScope();
+        var forked = fork.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(mutator);
+
+        forked.ShouldNotBeSameAs(source);
+        forked.Mutate([1], random, problem.SearchSpace, problem).ShouldBe([11]);
+        source.Mutate([1], random, problem.SearchSpace, problem).ShouldBe([11]);
+    }
+
+    [Fact]
     public void DynamicRateMutator_RejectsReuseWithDifferentProblemInstance()
     {
         var problem = new IntegerDynamicProblem(epochLength: 10_000);

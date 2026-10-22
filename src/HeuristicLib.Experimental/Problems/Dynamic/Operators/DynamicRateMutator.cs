@@ -48,8 +48,15 @@ public sealed record DynamicRateMutator<TCandidate, TSearchSpace, TProblem>
 
     public override ExecutionFactory<MutatorExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory()
     {
-        var state = new ExecutionState();
-        return scope => new Execution(scope.Resolve<TCandidate, TSearchSpace, TProblem>(ChildMutator), BaseRate, ResponseRate, ResponseDuration, state);
+        return ExecutionFactory.Forkable<ExecutionState, MutatorExecution<TCandidate, TSearchSpace, TProblem>>(
+            new ExecutionState(),
+            static state => new ExecutionState
+            {
+                SourceProblem = state.SourceProblem,
+                LastObservedEpoch = state.LastObservedEpoch,
+                RemainingResponseCalls = state.RemainingResponseCalls
+            },
+            (state, scope) => new Execution(scope.Resolve<TCandidate, TSearchSpace, TProblem>(ChildMutator), BaseRate, ResponseRate, ResponseDuration, state));
     }
 
     private sealed class ExecutionState

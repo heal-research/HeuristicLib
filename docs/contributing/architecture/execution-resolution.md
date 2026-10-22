@@ -50,7 +50,19 @@ Each advice instance applies once, at its first position in this chain. Two trac
 | `Retained` | Child state kept by child configuration reference across activations and bindings. |
 | `Shared`   | The parent's state.                                                                |
 
-Retained selection uses the internal `CreateChildState` and `WithState` operations. The retained state stores no aspects; each activation uses its current scope's aspect chain. Advice factories remain in that retained state, so their counters and other prepared data survive. Cycle exercises these policies without another public scope API.
+Retained selection uses the internal `CreateChildState` and `WithState` operations. The retained state stores no aspects; each activation uses its current scope's aspect chain. Advice factories remain in that retained state, so their counters and other prepared data survive. Cycle exercises these policies through this selector.
+
+## Forking prepared state
+
+`ExecutionFactory.Forkable(state, copyState, bind)` explicitly opts one prepared factory into state copying. Its copier returns independent mutable state; its binder receives that state and resolves children through the supplied construction scope. Neither the copier nor the binder may retain and use the original mutable state instead of their argument. Immutable settings and configuration references may remain shared. Copy ordinary mutable data only; resolve graph dependencies again in the binder. Copying does not resolve children or clone execution nodes.
+
+`scope.CreateForkedScope()` creates a peer with snapshots of the scope's forkable local preparations. The snapshot is taken immediately, before the peer resolves anything. All copied preparations are installed before binding children, so a forkable descendant is found even when an intervening composite prepares an ordinary factory. Other local factories prepare afresh as needed. Ancestor state remains shared, and configuration references remain the lookup keys. A newly constructed, equal configuration does not inherit another configuration's snapshot.
+
+The peer inherits the source observation context but prepares its own advice factories. External accumulators intentionally shared by aspects remain shared. Existing execution nodes keep their original state and observations. Fork between invocations: concurrent mutation is unsupported, and forking during graph construction throws `InvalidOperationException`. A failed copy leaves the source unchanged and publishes no partial peer; the copier itself must not mutate the source.
+
+`retainedScope.WithContext(currentScope)` retains state ownership while replacing the observation context used by subsequent resolutions. It does not redirect an execution that has already been bound. A racing algorithm uses this to retain the winner's child state across races and contextual bindings; challengers receive forked peer state and newly bound children. Active iterators are disposed at race boundaries while their explicitly retained prepared state survives.
+
+The consumer flow is exercised by `PreparedStateForkingSpecs` in the API usage suite. Resolver tests cover snapshots, fresh ordinary dependencies, ancestor sharing and contextual advice independently of the racing algorithm.
 
 ## Controls, failures and lifetime
 

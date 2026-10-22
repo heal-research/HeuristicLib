@@ -34,6 +34,8 @@ A scope finds prepared factories in its state and ancestors. Parent-first select
 
 `With` changes aspects while sharing state. `CreateChildScope` creates child-local state and inherits aspects. A meta-algorithm prepares one `ChildScopeSelector` for its activation policy: Fresh creates a child state, Retained keeps child state by configuration reference, and Shared uses parent state. Retained state keeps advice preparation but applies each activation's current aspects.
 
+An explicit factory may opt its persistent state into copying with `ExecutionFactory.Forkable`. A forked peer copies those local preparations and binds its own execution nodes. A retained scope can use `WithContext` to apply the current observation context without copying state. See [forking prepared state](/contributing/architecture/execution-resolution#forking-prepared-state) for ownership and snapshot rules.
+
 Stateful operations are not inherently thread safe. Concurrent use needs synchronization appropriate to the execution path. Execution nodes have no general disposal contract; resources needing deterministic cleanup require an explicit lifecycle owner.
 
 See [execution resolution](/contributing/architecture/execution-resolution) for ordering, controls, failure retry and lifetime rules, and [operator implementation](/contributing/architecture/operator-implementation) for authoring examples.

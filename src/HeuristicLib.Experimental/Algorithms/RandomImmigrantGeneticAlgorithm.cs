@@ -124,16 +124,16 @@ public record ChangeTriggeredRandomImmigrantGeneticAlgorithm<TCandidate, TSearch
         protected override bool ShouldInjectImmigrants(TProblem problem)
         {
             var currentEpoch = problem.CurrentEpoch;
-            if (state.LastObservedEpoch is null)
+            if (State.LastObservedEpoch is null)
             {
-                state.LastObservedEpoch = currentEpoch;
+                State.LastObservedEpoch = currentEpoch;
                 return false;
             }
 
-            if (currentEpoch == state.LastObservedEpoch)
+            if (currentEpoch == State.LastObservedEpoch)
                 return false;
 
-            state.LastObservedEpoch = currentEpoch;
+            State.LastObservedEpoch = currentEpoch;
             return true;
         }
     }
@@ -330,6 +330,7 @@ public abstract class RandomImmigrantGeneticAlgorithmExecution<TCandidate, TSear
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
+    protected RandomImmigrantExecutionState State => state;
     protected int GeneratedGenerationCount => state.GeneratedGenerationCount;
     private readonly WeightedRouter<IMutatorExecution<TCandidate, TSearchSpace, TProblem>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
 
