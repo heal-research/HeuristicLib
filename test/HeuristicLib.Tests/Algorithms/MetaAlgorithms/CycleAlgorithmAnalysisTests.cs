@@ -39,7 +39,7 @@ public class CycleAlgorithmAnalysisTests
             public int Value { get; set; }
         }
 
-        protected override ExecutionState CreateInitialState() => new();
+        protected override ExecutionState CreateExecutionState() => new();
 
         protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, ExecutionState executionState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
         {
@@ -99,10 +99,10 @@ public class CycleAlgorithmAnalysisTests
 
         public EvaluationTraceAnalysis(IOperator<Evaluation, int> evaluator)
         {
-            Advices = Aspect.Observe(evaluator, Record).Advices;
+            Advices = [.. Aspect.Observe(evaluator.Calls, Record)];
         }
 
-        public void Record(OperatorObservation<Evaluation, int> observation) =>
+        public void Record(EvaluationObservation<int> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);
 
         public sealed class ExecutionState

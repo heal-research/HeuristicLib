@@ -76,20 +76,12 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// <remarks>
     /// This evaluator serves exactly one problem instance, matched by identity, which <c>Evaluate</c> checks.
     /// </remarks>
-    protected override OperatorExecutorFactory CreateOperatorFactory()
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        var state = new ExecutionState(SizeLimit, SourceProblem.CurrentEpoch);
-        return new Factory(this, state);
-    }
-
-    private sealed class Factory(DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey> source, ExecutionState state) : OperatorExecutorFactory<Evaluation, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
-        {
-            var childEvaluator = scope.Resolve(source.ChildOperator);
-            return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.SourceProblem, source.KeySelector, source.GraceCount, state);
-        }
+        var state = scope.GetExecutionState(this, () => new ExecutionState(SizeLimit, SourceProblem.CurrentEpoch));
+        var childEvaluator = scope.Resolve(ChildOperator);
+        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, GraceCount, state);
     }
 
     private sealed class Executor<TRunSearchSpace, TRunProblem> : IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>

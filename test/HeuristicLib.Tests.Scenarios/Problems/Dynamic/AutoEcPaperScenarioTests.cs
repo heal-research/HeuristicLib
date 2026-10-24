@@ -101,10 +101,7 @@ public class AutoEcPaperScenarioTests
             ModelObservationInterval = 10
         };
         var epoch = Clock.FromEpoch(problem);
-        var qualityCurve = Analyzer.Trace(evaluator,
-            observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors),
-            Aggregate.Best<Permutation>(),
-            [epoch]);
+        var qualityCurve = Analyzer.Trace(evaluator.Calls, o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
         var bbcp =
             new BestBeforeChangePerformanceAnalyzer<Permutation, PermutationSearchSpace,
                 ActivatedTravelingSalesmanProblem>(
@@ -154,10 +151,7 @@ public class AutoEcPaperScenarioTests
             ModelObservationInterval = 10
         };
         var epoch = Clock.FromEpoch(problem);
-        var qualityCurve = Analyzer.Trace(evaluator,
-            observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors),
-            Aggregate.Best<RealVector>(),
-            [epoch]);
+        var qualityCurve = Analyzer.Trace(evaluator.Calls, o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
         var bbcp =
             new BestBeforeChangePerformanceAnalyzer<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
                 problem,

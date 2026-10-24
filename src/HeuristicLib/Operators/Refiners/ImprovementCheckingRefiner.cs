@@ -63,14 +63,9 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     /// </remarks>
     public IImprovementCriterion Criterion { get; init; } = ImprovementChecking.Default;
 
-    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-    private sealed class Factory(ImprovementCheckingRefiner<TCandidate> source) : OperatorExecutorFactory<Refinement, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.Refiner), scope.Resolve(source.Evaluator), source.Criterion);
-    }
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(Refiner), scope.Resolve(Evaluator), Criterion);
 
     private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> refiner, IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
         : RefinementExecutor<TCandidate, TSearchSpace, TProblem>

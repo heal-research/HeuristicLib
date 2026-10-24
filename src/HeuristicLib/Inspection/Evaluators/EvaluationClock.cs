@@ -17,12 +17,12 @@ public sealed class EvaluationClock<TCandidate>
 
     public EvaluationClock(IOperator<Evaluation, TCandidate> evaluator)
     {
-        Advices = Aspect.Observe(evaluator, Record).Advices;
+        Advices = [.. Aspect.Observe(evaluator.Calls, Record)];
     }
 
     protected override long ReadTime() => Interlocked.Read(ref evaluations);
 
-    private void Record(OperatorObservation<Evaluation, TCandidate> observation) =>
+    private void Record(EvaluationObservation<TCandidate> observation) =>
         Interlocked.Add(ref evaluations, observation.ObjectiveVectors.Count);
 }
 

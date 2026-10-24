@@ -16,7 +16,7 @@ public abstract record StatelessMoveApplier<TCandidate, TSearchSpace, TProblem, 
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected sealed override ExecutorFactory<IMoveApplicationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateFactory() => _ => this;
+    protected sealed override IMoveApplicationExecutor<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract TCandidate Apply(TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

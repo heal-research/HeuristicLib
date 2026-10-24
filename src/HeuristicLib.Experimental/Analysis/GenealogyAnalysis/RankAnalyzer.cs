@@ -54,8 +54,8 @@ public sealed class RankAnalyzer<TCandidate, TSearchState> : RankAnalyzer<TCandi
         // The graph contains this generation before its ranks are read.
         Advices =
         [
-            .. graphBuilder.Advices,
-            .. (algorithms ?? []).SelectMany(algorithm => Aspect.Observe(algorithm, _ => State.RecordRanks()).Advices)
+            .. graphBuilder,
+            .. (algorithms ?? []).SelectMany(algorithm => Aspect.Observe(algorithm.Iterations, _ => State.RecordRanks()))
         ];
     }
 

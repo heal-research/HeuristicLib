@@ -11,7 +11,7 @@ public abstract record StatelessEvaluator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected sealed override ExecutorFactory<IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>> CreateFactory() => _ => this;
+    protected sealed override IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
@@ -20,7 +20,7 @@ public abstract record StatelessEvaluator<TCandidate, TSearchSpace>
     : Evaluator<TCandidate, TSearchSpace>, IEvaluationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    protected sealed override ExecutorFactory<IEvaluationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateFactory() => _ => this;
+    protected sealed override IEvaluationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
@@ -31,7 +31,7 @@ public abstract record StatelessEvaluator<TCandidate, TSearchSpace>
 public abstract record StatelessEvaluator<TCandidate>
     : Evaluator<TCandidate>, IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
-    protected sealed override ExecutorFactory<IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateFactory() => _ => this;
+    protected sealed override IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
 

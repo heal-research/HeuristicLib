@@ -8,11 +8,11 @@ namespace HEAL.HeuristicLib.Operators;
 /// <remarks>A transparent wrapper implements <see cref="IExecutorControlProvider"/> to forward the child's controls.</remarks>
 public abstract class CreatorAdvice<TCandidate> : OperatorAdvice<Creation, TCandidate>
 {
-    public sealed override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
+    public sealed override void Check<TSearchSpace, TProblem, TSearchState>(OperationInfo operation,
         IOperator<Creation, TCandidate> source) => Check<TSearchSpace, TProblem>(source);
 
     public sealed override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor,
-        OperationExecutorAdapter operation, IOperator<Creation, TCandidate> source) =>
+        OperationInfo operation, IOperator<Creation, TCandidate> source) =>
         Wrap((ICreationExecutor<TCandidate, TSearchSpace, TProblem>)executor, source);
 
     /// <summary>Checks the run's types before constructing the selected creator's executor.</summary>

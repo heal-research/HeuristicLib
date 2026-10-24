@@ -291,10 +291,10 @@ public class AlgorithmRunTests
 
     private sealed class PreparingEvaluatorAdvice(Action prepare) : OperatorAdvice<Evaluation, int>
     {
-        public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
+        public override void Check<TSearchSpace, TProblem, TSearchState>(OperationInfo operation,
             IOperator<Evaluation, int> source) => prepare();
 
-        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
             IOperator<Evaluation, int> source) => executor;
     }
 
@@ -313,7 +313,7 @@ public class AlgorithmRunTests
     {
         public ObservingAnalyzer(IOperator<Evaluation, int> evaluator, Action observed)
         {
-            Advices = Aspect.Observe(evaluator, _ => observed()).Advices;
+            Advices = [.. Aspect.Observe(evaluator.Calls, _ => observed())];
         }
     }
 
@@ -321,7 +321,28 @@ public class AlgorithmRunTests
     {
         public WrappingAnalyzer(IOperator<Evaluation, int> evaluator, Action observed)
         {
-            Advices = [(Pointcut.Reference(evaluator), new OperatorObservationAdvice<Evaluation, int>(_ => observed()))];
+            Advices = [(Pointcut.Reference(evaluator), new ObservingEvaluatorAdvice(observed))];
+        }
+    }
+
+    private sealed class ObservingEvaluatorAdvice(Action observed) : EvaluatorAdvice<int>
+    {
+        protected override IEvaluationExecutor<int, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
+            IEvaluationExecutor<int, TSearchSpace, TProblem> executor, IOperator<Evaluation, int> evaluator) =>
+            new Executor<TSearchSpace, TProblem>(executor, observed);
+
+        private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> executor, Action observed)
+            : IEvaluationExecutor<int, TSearchSpace, TProblem>
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
+        {
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random,
+                TSearchSpace searchSpace, TProblem problem)
+            {
+                var objectiveVectors = executor.Evaluate(candidates, random, searchSpace, problem);
+                observed();
+                return objectiveVectors;
+            }
         }
     }
 

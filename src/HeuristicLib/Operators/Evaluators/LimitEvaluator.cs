@@ -31,20 +31,12 @@ public sealed record LimitEvaluator<TCandidate>
         MaxEvaluations = maxEvaluations;
     }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory()
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        var counter = new CountAccumulator();
-        return new Factory(this, counter);
-    }
-
-    private sealed class Factory(LimitEvaluator<TCandidate> source, CountAccumulator counter) : OperatorExecutorFactory<Evaluation, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
-        {
-            var childEvaluator = scope.Resolve(source.ChildOperator);
-            return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.MaxEvaluations, source.FallbackObjectiveVector, source.EnforceLimitWithinBatch, counter);
-        }
+        var counter = scope.GetExecutionState(this, static () => new CountAccumulator());
+        var childEvaluator = scope.Resolve(ChildOperator);
+        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch, counter);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch, CountAccumulator counter)
@@ -65,10 +57,9 @@ public sealed record LimitEvaluator<TCandidate>
             if (enforceLimitWithinBatch && remainingEvaluations < candidates.Count)
             {
                 var candidatesToEvaluate = candidates.Take(remainingEvaluations).ToList();
-                var candidatesToSkip = candidates.Skip(remainingEvaluations).ToList();
                 var evaluated = childEvaluator.Evaluate(candidatesToEvaluate, random, searchSpace, problem);
                 counter.IncrementBy(candidatesToEvaluate.Count);
-                var skipped = Enumerable.Repeat(fallback, candidatesToSkip.Count);
+                var skipped = Enumerable.Repeat(fallback, candidates.Count - candidatesToEvaluate.Count);
 
                 return evaluated.Concat(skipped).ToArray();
             }

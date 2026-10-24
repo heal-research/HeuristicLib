@@ -438,7 +438,7 @@ public partial class ExecutorFactoryResolutionTests
     {
         public AdviceGroup(params IReadOnlyList<Aspect> aspects)
         {
-            Advices = [.. aspects.SelectMany(aspect => aspect.Advices)];
+            Advices = [.. aspects.SelectMany(aspect => aspect)];
         }
     }
 

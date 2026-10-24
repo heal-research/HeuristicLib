@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>An operator configuration with an ordered collection of children supporting the same operation.</summary>
 public abstract record MultiOperator<TOperation, TCandidate> : Operator<TOperation, TCandidate>, IOperatorContract<TCandidate>
-    where TOperation : IOperationDescriptor<TOperation>
+    where TOperation : IOperation<TOperation>
 {
     protected MultiOperator(IReadOnlyList<IOperator<TOperation, TCandidate>> childOperators)
     {

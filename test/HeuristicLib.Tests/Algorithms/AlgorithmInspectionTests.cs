@@ -21,7 +21,7 @@ public sealed class AlgorithmInspectionTests
         var observed = new List<IAlgorithm<int, PopulationState<int>>>();
         var scope = ResolutionScope.Create(Aspect.CountCalls(algorithm, count),
             Aspect.MeasureDuration(algorithm, duration, time),
-            Aspect.Observe(algorithm, observation => observed.Add(observation.Algorithm)));
+            Aspect.Observe(algorithm.Iterations, observation => observed.Add(observation.Algorithm)));
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var execution = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>().Resolve(algorithm);
         await using var iterator = execution.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)

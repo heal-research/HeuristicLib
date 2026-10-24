@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Algorithms;
 
 public record OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>
     : Algorithm<OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>, TCandidate, TSearchState>
-    where TOperation : IOperationDescriptor<TOperation>
+    where TOperation : IOperation<TOperation>
     where TSearchState : class, ISearchState
 {
     public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
@@ -89,7 +89,7 @@ public static class OperatorDurationBudgetExtensions
         /// </remarks>
         public OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState> LimitedToDuration<TOperation>(
             IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration)
-            where TOperation : IOperationDescriptor<TOperation>
+            where TOperation : IOperation<TOperation>
         {
             return algorithm.LimitedToDuration(observedOperator, maximumDuration, TimeProvider.System);
         }
@@ -101,7 +101,7 @@ public static class OperatorDurationBudgetExtensions
         /// </remarks>
         public OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState> LimitedToDuration<TOperation>(
             IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration, TimeProvider timeProvider)
-            where TOperation : IOperationDescriptor<TOperation>
+            where TOperation : IOperation<TOperation>
         {
             return new()
             {

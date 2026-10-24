@@ -13,16 +13,11 @@ public sealed record PipelineMutator<TCandidate> : MultiOperator<Mutation, TCand
     {
     }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-    private sealed class Factory(PipelineMutator<TCandidate> source) : OperatorExecutorFactory<Mutation, TCandidate>
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
-        {
-            ImmutableArray<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> childMutators = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor<TRunSearchSpace, TRunProblem>(childMutators);
-        }
+        ImmutableArray<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> childMutators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+        return new Executor<TRunSearchSpace, TRunProblem>(childMutators);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> childMutators)

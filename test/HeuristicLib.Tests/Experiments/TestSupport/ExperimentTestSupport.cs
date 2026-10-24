@@ -87,6 +87,7 @@ internal sealed class ExecutionProbe
     private int setupCount;
     private int executionCount;
     private readonly ConcurrentQueue<int> candidates = new();
+    private readonly SemaphoreSlim executionsBegun = new(0);
 
     public int SetupCount => setupCount;
 
@@ -114,6 +115,17 @@ internal sealed class ExecutionProbe
             }
 
             maximum = observed;
+        }
+
+        executionsBegun.Release();
+    }
+
+    /// <summary>Completes once the given number of executions have begun, counting those that began earlier.</summary>
+    public async Task WaitForExecutionsAsync(int count, CancellationToken cancellationToken)
+    {
+        for (var execution = 0; execution < count; execution++)
+        {
+            await executionsBegun.WaitAsync(cancellationToken);
         }
     }
 

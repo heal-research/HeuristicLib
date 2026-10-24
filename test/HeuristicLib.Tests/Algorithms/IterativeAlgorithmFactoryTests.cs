@@ -254,7 +254,7 @@ public sealed class IterativeAlgorithmFactoryTests
 
     private sealed record AdvancingInterceptor(Action Prepare) : StatefulInterceptor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState, CounterState>
     {
-        protected override CounterState CreateInitialState()
+        protected override CounterState CreateExecutionState()
         {
             Prepare();
             return new CounterState();

@@ -115,7 +115,7 @@ from higher layers to lower ones. Treat configuration and executor as phases wit
 
 ## § 4 Configuration and execution ownership
 
-See [execution resolution](/contributing/architecture/execution-resolution) for factory preparation, state sharing and contextual node binding.
+See [execution resolution](/contributing/architecture/execution-resolution) for executor construction, state sharing and contextual node binding.
 
 ### § 4.1 Separate reusable configurations from executors
 
@@ -127,7 +127,7 @@ Search states are public progress values. Do not use them to carry private count
 
 ### § 4.3 Resolve declared children through the resolution scope
 
-Preparation receives no scope. The returned `ExecutorFactory<TExecutor>` receives a `ResolutionScope` construction frame; resolve children inside that factory and pass them to the node. Retain the frame only for child scopes, wrappers or delayed child construction. A meta-algorithm needing retained child state prepares one `ChildScopeSelector` and reuses it across bindings; each activation supplies its current construction scope. Do not add another scope abstraction or call a child's factory directly.
+An operator's `CreateExecutor` receives a scope typed to the run; resolve children through it and pass them to the executor. An algorithm's preparation receives no scope; the returned `ExecutorFactory<TExecutor>` receives a `ResolutionScope` construction frame, and children resolve inside that factory. Retain a scope only for child scopes, wrappers or delayed child construction. A meta-algorithm needing retained child state prepares one `ChildScopeSelector` and reuses it across bindings; each activation supplies its current construction scope. Do not add another scope abstraction or call a child's hook or factory directly.
 
 Algorithms resolve only their configured parameters and create no operators of their own. Keep those parameters as supplied. Behavior derived from a parameter, such as a mutation rate, belongs in the algorithm's execution code. Independent operators doing real work must be parameters so observations and budgets can see them.
 
@@ -135,9 +135,9 @@ Resolving a configuration an algorithm builds itself makes it visible to pointcu
 
 ### § 4.4 Expose one preparation entry
 
-Algorithms expose one public `CreateExecutorFactory(...)` returning `ExecutorFactory<TExecutor>`. Operation-parameterized operators expose one public `CreateExecutorFactory()` returning `OperatorExecutorFactory`; its `CreateExecutor` constructs executors for any supported operation and run types over the same persistent state. Do not add a second initializer per operation, role-named alternatives or a competing public factory. Preparation runs once per selected configuration owner; construction may bind several nodes.
+Algorithms expose one public `CreateExecutorFactory(...)` returning `ExecutorFactory<TExecutor>`. Preparation runs once per selected configuration owner; construction may bind several nodes. Operation-parameterized operators expose one `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which resolution calls for every build and which builds an executor for the operation and run types. Data shared by those builds comes from `scope.GetExecutionState(this, create)`, which creates it once per owner for every operation and run type. Do not add a second initializer per operation, role-named alternatives or a competing public factory.
 
-Operator authoring bases own the public entry. Fixed-signature leaves override protected `CreateFactory()`; generic compositions override `CreateOperatorFactory()` and return an `OperatorExecutorFactory<TOperation, TCandidate>` whose `CreateExecutor` resolves current children through its typed scope. Transparent generic wrappers return `OperatorExecutorFactory.Forward` or `OperatorExecutorFactory.WrapInvocation`. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
+Operator authoring bases own the public entry. Fixed-signature leaves override protected `CreateExecutor(ResolutionScope scope)`; generic compositions override the protected run-generic `CreateExecutor` and resolve current children through its typed scope. Transparent generic wrappers return `scope.ResolveOperator(ChildOperator)` or `TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(scope.ResolveOperator(ChildOperator), wrapper)`. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
 
 Algorithm wrapping bases own the public method and expose one protected preparation hook: `CreateWrapperFactory` returns `WrapperExecutorFactory<TExecutor>`. The hook prepares persistent state and returns a factory accepting the newly resolved child. Use the same executor interface for the child and result.
 
@@ -156,9 +156,9 @@ A setting has one input path.
 
 ### § 4.7 Validate complete configurations during preparation
 
-Retain configuration values unchanged during construction and `with`. Validate them in `CreateExecutorFactory` or the protected preparation hook and throw `InvalidOperationException` before execution begins. Bound bridges validate run-type compatibility before preparation. Do not add a separate validation API.
+Retain configuration values unchanged during construction and `with`. Validate them at the start of `CreateExecutor`, in `CreateExecutorFactory` or in the protected preparation hook and throw `InvalidOperationException` before execution begins. Bound bridges validate run-type compatibility before preparation. Do not add a separate validation API.
 
-For operation-parameterized operators, validate immutable configuration in `CreateExecutorFactory`. `Fits` supplies preflight metadata, and resolution checks each constructed executor against the requested executor interface. Advice rejects an operator it cannot wrap in `Check`, which runs before raw construction so unsupported metrics fail before child work. A failed construction must not discard successful owner preparation.
+For operation-parameterized operators, validate immutable configuration at the start of `CreateExecutor`, before requesting execution state. `Fits` supplies preflight metadata, and resolution checks each constructed executor against the requested executor interface. Advice rejects an operator it cannot wrap in `Check`, which runs before raw construction so unsupported metrics fail before child work and before the execution state is created. A failed construction keeps execution state that was already created.
 
 Persistent initialization must not depend on whichever binding first resolves a live child. Failed preparation is not cached, so a later resolution can retry. Successful preparation remains available when a later contextual construction or advice application fails; that binding can also be retried.
 
@@ -203,7 +203,7 @@ Choose an authoring base by ownership. See [Operator implementation](/contributi
 - Use a single item base for independent per item work.
 - Never put configurations, executions, registries, scopes or child bound delegates in framework managed operator state.
 
-Stateless and ordinary stateful leaf bases hide factory preparation. Composite authors separate persistent `ExecutionState state` from bound children. Executors have no general disposal contract; resources still require an explicit lifecycle owner.
+Stateless and ordinary stateful leaf bases hide executor construction. Composite authors take persistent `ExecutionState` from `scope.GetExecutionState(this, create)` and keep it apart from bound children. Executors have no general disposal contract; resources still require an explicit lifecycle owner.
 
 ### § 4.15 Keep single item batching explicit and deterministic
 
@@ -227,9 +227,9 @@ Roslyn analyzers catch recognizable mistakes. They do not prove ownership invari
 
 Role executions expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
 
-Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its descriptor; it does not change executor-interface membership. Public `OperationExecutorAdapter` adapters connect named methods to `IInvocationWrapper` during executor construction. Each wrapping executor passes a call to its struct wrapper as a struct `IInvocation<TResult>`. Its `Random` is the call's random number generator, `SearchSpace` and `Problem` are the call's search space and problem without their run types, `Proceed` calls the wrapped named method, `ProceedWith` calls it on another executor of the same operation or with another random number generator, and `CountCandidateWork` supplies the operation's counting rule. Generic wrappers reach no other argument and cannot replace these; typed role advice receives every argument. Keep `Proceed` without a default interface implementation, which would box the invocation on every call. `ProceedPerItem` is the exception: `IItemInvocation<TItemResult>` implements it once for every item operation through `ItemCount` and `ProceedWithItems`, and only a per-candidate choice pays the boxing. No invocation method is added to executor interfaces.
+Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its `IOperation<TSelf>`; it does not change executor-interface membership. An operation's static `Wrap` connects its named method to `IInvocationWrapper` during executor construction, and its static `IsExecutor` lets resolution check an executor without a `Type`. Each wrapping executor passes a call to its struct wrapper as the operation's private `Invocation` struct, an `IInvocation<TResult>`. Its `Random` is the call's random number generator, `SearchSpace` and `Problem` are the call's search space and problem without their run types, `Proceed(executor, random)` calls the named method, optionally on another executor of the same operation or with another random number generator, and `CountCandidateWork` supplies the operation's counting rule. Generic wrappers reach no other argument and cannot replace these; typed role advice receives every argument. Keep `Proceed` without a default interface implementation, which would box the invocation on every call. `CountCandidateWork` defaults to throwing, and operations with candidate work implement it, so it does not box where it is used. Routing a call's items is a capability of an item operation, not of its invocation: `IItemOperation<TSelf>.Route` returns a routed executor. No invocation method is added to executor interfaces.
 
-A wrapping executor forwards the wrapped executor's controls through `ExecutorControls.Find<TControl, TWrapper>`, unless its wrapper implements `IExecutorControlProvider` and supplies them, as a choice among children does by supplying none.
+A wrapping executor derives from `WrappingExecutor<TExecutor, TWrapper>`, which forwards the wrapped executor's controls unless the wrapper implements `IExecutorControlProvider` and supplies them, as a choice among children does by supplying none. A routed executor derives from `RoutingExecutor<TExecutor>` and exposes none of its children's controls.
 
 ## § 5 Immutability and collection ownership
 
@@ -434,7 +434,7 @@ Do not make callers spell generic arguments available values can determine.
 
 Order parameters as primary inputs, RNG, search space and problem. An operation's executor method always ends with the RNG, search space and problem, including termination and operations defined outside the library, so that invocation wrappers find the RNG of every call. Reduced authoring arities and other operator APIs omit groups that do not apply. Lower level inputs that replace a search space occupy its position.
 
-Generic types and methods that name an operation descriptor put it first: `TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, ...`, omitting parameters that do not apply. Keep managed `TState` last. Apply this order across operator contracts, authoring bases, compositions, advice, factories, adapters and resolution methods. For example, use `IOperator<Mutation, RealVector>`. Families without an operation parameter retain their established order.
+Generic types and methods that name an operation put it first: `TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, ...`, omitting parameters that do not apply. Keep managed `TState` last. Apply this order across operator contracts, operations, authoring bases, compositions, advice and resolution methods. For example, use `IOperator<Mutation, RealVector>`. Families without an operation parameter retain their established order.
 
 ### § 8.8 Expose direct static implementations when the operation needs one
 
@@ -470,7 +470,7 @@ Use concept first scalar names such as `NextDouble` and target first output name
 
 ### § 8.11 Let an API surface scale per role, never over hidden axes
 
-Operation-parameterized descriptors supply one named-method call adapter. General wrappers and advice reuse `WrapInvocation` and `IInvocationWrapper`; do not add another matrix per wrapper, advice type or run signature. Candidate-work semantics are supplied by the invocation and evaluated only by wrappers needing that metric. `SupportsCandidateWork` defaults to false and `CountCandidateWork` throws by default, so an operation without candidate work implements neither, and one with candidate work overrides both. Do not add adapter members for retry, timing, counting, choice or other individual behaviors; a whole-call wrapper uses the invocation's `Random` and `ProceedWith`. A typed advice base per role, such as `MutatorAdvice`, is acceptable because it varies over roles only.
+Each operation supplies one invocation over its named method. General wrappers and advice reuse `TOperation.Wrap` and `IInvocationWrapper`; do not add another matrix per wrapper, advice type or run signature. Candidate-work semantics are supplied by the invocation and evaluated only by wrappers needing that metric. `SupportsCandidateWork` defaults to false and `CountCandidateWork` throws by default, so an operation without candidate work implements neither, and one with candidate work implements both. Do not add operation or invocation members for retry, timing, counting or other individual behaviors; per-item choice uses an item operation's `Route`, and a whole-call wrapper uses the invocation's `Random` and `Proceed`. A typed advice base per role, such as `MutatorAdvice`, is acceptable because it varies over roles only.
 
 Duplicating a member once per operator role is acceptable. Adding a role is a deliberate act, its author writes the
 role's members once from an obvious template, and no existing role is disturbed. The resolve family

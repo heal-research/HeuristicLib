@@ -6,24 +6,26 @@ An analyzer is a stateful `Aspect` that owns collected data and exposes typed re
 
 ## Observation boundaries
 
-Algorithms and operators remain unaware of analysis. Predefined observation records, advice and `Aspect.Observe` factories live in `HEAL.HeuristicLib.Inspection`:
+Algorithms and operators remain unaware of analysis. Each operation declares its observation record, the advice that builds it and its `Calls` source in files beside the operation. `AlgorithmObservation`, the algorithm's `Iterations` source, `ObservationSource<TObservation>` and `Aspect.Observe` live in `HEAL.HeuristicLib.Inspection`:
 
 ```csharp
 public SeparateEvaluatorAnalyzer(IOperator<Evaluation, TCandidate> first, IOperator<Evaluation, TCandidate> second)
 {
     Advices =
     [
-        .. Aspect.Observe(first, RecordFirst).Advices,
-        .. Aspect.Observe(second, RecordSecond).Advices
+        .. Aspect.Observe(first.Calls, RecordFirst),
+        .. Aspect.Observe(second.Calls, RecordSecond)
     ];
 }
 ```
 
-The selected algorithm or operator is the observation's source identity. Factories cover algorithms and every operation. Operator observations follow successful calls. Algorithm observations follow each yielded state, after interceptors have transformed it. Each observation reports the selected configuration, including when advice is applied through a pointcut covering several sources.
+A source's observed algorithm or operator, which it receives on construction and matches by reference, identifies what it observes. Every operation and every algorithm offers a source; an operator implementing several operations offers each through a view typed to that operation. Operator observations follow successful calls. Algorithm observations follow each yielded state, after interceptors have transformed it. Each observation names the observed configuration.
 
-Every operator observation is an `OperatorObservation<TOperation, TCandidate>`. It reads the search space and problem at `ISearchSpace<TCandidate>` and `IProblem<TCandidate, ISearchSpace<TCandidate>>`, so it fits every run over the candidate, and its operation-specific members, such as `Parents` and `Offspring` for mutation, are extension properties over the call's arguments and result. An algorithm observation is an `AlgorithmObservation<TCandidate, TSearchState>`, and an interceptor's observation reads the states at the search state its operation names. Observation advice therefore checks no run types; the observed operator's own check still reports `ExecutionSignature.Mismatch` for a run it was not written for.
+Each operation's observation record keeps its domain names, such as `Parents` and `Offspring` in `MutationObservation<TCandidate>`. It reads the search space and problem at `ISearchSpace<TCandidate>` and `IProblem<TCandidate, ISearchSpace<TCandidate>>`, so it fits every run over the candidate. An algorithm observation is an `AlgorithmObservation<TCandidate, TSearchState>`, and an interceptor's observation reads the states at the search state its operation names. Observation advice therefore checks no run types; the observed operator's own check still reports `ExecutionSignature.Mismatch` for a run it was not written for. Every operator and algorithm observation carries the call's search space and problem, so a trace's function can rank by that problem's objective. A source of any other configuration may deliver any value; its trace reads it through a function like any other.
 
-Observation advice is a runtime class and may retain its callback. Operator observation wraps each executor built for its source and keeps no further state. Algorithm observation prepares its iteration counter once per advice, configuration and owner state, so rebuilding contextual nodes does not reset the count. Invocation-local previous states stay in the iterator.
+The trace machinery names no operation; a ready-made trace extends the source of the observation type it reads, such as evaluator calls. An external operation declares the same three parts and is observed and traced exactly like a built-in one.
+
+Operation observation advice is file-local; its source creates it with the callback. It wraps each executor built for its observed configuration and keeps no further state. Algorithm observation prepares its iteration counter once per advice, configuration and owner state, so rebuilding contextual nodes does not reset the count. Invocation-local previous states stay in the iterator.
 
 Earlier advice wraps closer to the source executor and reports completed operations first. A trace therefore includes its clocks' advice before its own observation advice. Shared clocks keep their first position. A scope with no matching advice adds no observation wrapper.
 
@@ -31,19 +33,19 @@ Observation reads inputs, outputs and progress while preserving the observed com
 
 ## Trace analyzers
 
-`TraceAnalyzer<T>` is the standard tracing subsystem. It combines one or several compatible observation sources, measurement, aggregation, retention, clocks, immutable trace entries and synchronization. An operator trace reads `OperatorObservation<TOperation, TCandidate>`, so one `Analyzer.Trace` serves every operation, as in `Analyzer.Trace(crossover, observation => observation.Offspring.Count)`. An algorithm trace reads `AlgorithmObservation<TCandidate, TSearchState>`, and a measurement of search states also traces the states an interceptor returns. Every trace aggregates against the observed run's objective. A trace requires at least one source and ignores repeated references to the same source.
+`TraceAnalyzer<T>` is the standard tracing subsystem. It combines one or several sources of one observation type with a function, retention, clocks, immutable trace entries and synchronization. `Analyzer.Trace` reads one value per observation through that function, as in `Analyzer.Trace(crossover.Calls, observation => observation.Offspring.Count)`, for one source or a list. Ranking is a plain function that receives the objective directions it orders by, usually the observed call's own, as in `Analyzer.Trace(evaluator.Calls, observation => observation.ObjectiveVectors.BestMedianWorst(observation.Problem.Objective))`. Ready-made traces extend the sources they read, such as `TraceBestSoFar` on evaluator calls and `TracePopulationQuality` on algorithm iterations. A trace requires at least one source and observes each boundary once: sources match when their observed configurations are the same reference and their observation types are equal, so the same source given twice counts once, while the sources of two operations of one configuration are each observed.
 
-A trace composes observation sources, measurement, aggregation, retention and explicit clocks. Every selected clock is recorded on each entry, so the same trace can be projected by iterations, evaluations or elapsed time. No clock is added automatically: a nested run can contain several algorithm and evaluator boundaries.
+A trace composes its sources, a function, retention and explicit clocks. Every selected clock is recorded on each entry, so the same trace can be projected by iterations, evaluations or elapsed time. No clock is added automatically: a nested run can contain several algorithm and evaluator boundaries.
 
-Named measurements are immutable value strategies. Delegate measurements and scalar projections are runtime-only adapters with identity semantics. Public trace construction never exposes an execution scope.
+Trace functions are runtime delegates; they are neither comparable nor serializable values. Public trace construction never exposes an execution scope.
 
-Aggregation and retention are plain objects, not execution configurations. They are never resolved through a `ResolutionScope`, because nothing about them depends on a run: an aggregation's state is its own, it is built when the trace is built, and it is never rebuilt. A trace contributes its observation and clock advice to the run's scope.
+Retention and best-so-far objects are plain objects, not execution configurations. They are never resolved through a `ResolutionScope`, because nothing about them depends on a run: their state is their own, they are built when the trace is built, and they are never rebuilt. A trace contributes its observation and clock advice to the run's scope.
 
-One consequence is deliberate: an aggregation or retention that holds state owns it, so handing one object to two traces couples them. The factories on `Aggregate` and `TraceRetention` return a fresh object per call, which is what makes ordinary inline use independent. Combining several sources in one trace remains the supported way to share an accumulator and result sink.
+One consequence is deliberate: a retention or best-so-far object that holds state owns it, so handing one object to two traces couples them. The factories on `TraceRetention` and the ready-made traces create a fresh object per call, which is what makes ordinary inline use independent. Combining several sources in one trace remains the supported way to share an accumulator and result sink.
 
-`IAggregation<TValue, TResult>` has one method and covers both per-observation summaries and accumulation across observations, such as `BestSoFarAggregation`. There is no separate reducer role and no stateless base class: a stateless aggregation is a class with no fields.
+A best-so-far object keeps the running best across observations: `BestSoFar` the best objective vector, and `BestSoFar<T>` any other value, ranked by the objective vector its selector reads. The first directions it receives fix it; other directions or another dimensionality throw. There is no aggregation role: summaries and accumulation are functions of the observation, and accumulation keeps its state in an object the function captures.
 
-`TraceRetention.Decide` returns `RetentionDecision.Append`, `ReplaceLatest` or `Skip`, so a policy controls publication and may keep the trace at its most recent entry. An unknown decision fails at the trace. Retention happens after measurement and aggregation and never skips that computation.
+`TraceRetention.Decide` returns `RetentionDecision.Append`, `ReplaceLatest` or `Skip`, so a policy controls publication and may keep the trace at its most recent entry. An unknown decision fails at the trace. Retention happens after the trace's function reads an observation and never skips that computation.
 
 ## Accumulating analyzers
 
@@ -57,7 +59,7 @@ Observations carry the concrete problem used by the operation. Ranking uses that
 
 An observation carries the problem because every observed operation is called with it. It does not carry the objective or a comparer: what the run optimizes is not part of what happened at the boundary, and a trace handed an objective when it is composed could rank by one the run does not use.
 
-A trace serializes measurement, aggregation, retention and publication. Built-in traces can safely observe several sources concurrently. Custom analyzers that may be installed on concurrently executing runs are responsible for synchronizing their own state.
+A trace serializes its function, retention and publication. Built-in traces can safely observe several sources concurrently. Custom analyzers that may be installed on concurrently executing runs are responsible for synchronizing their own state.
 
 The lock is not there for batch parallelism: an observation of one source arrives on the thread that called the operator, so it is never delivered twice. It is what lets a caller read a trace while the run writes, and what keeps one analyzer consistent when runs sharing it execute at the same time. The store is an ordinary list under that lock, copied when a snapshot or projection is taken.
 
@@ -69,7 +71,7 @@ Analyzers and resolution scopes have no disposal contract. Reusing an analyzer o
 
 A stateful object that collects data is named `...Analyzer`, such as a consumer-authored `CandidateSummaryAnalyzer`. The immutable values it publishes are entries, snapshots or result records, never `...Analyzer`.
 
-Ready-made traces are extension methods on the configuration they observe, named `Trace...`, as in `algorithm.TracePopulationQuality()` or `algorithm.Evaluator.TraceBestSoFar()`, and grouped in a static class ending in `Traces`. User-facing shortcuts take the observed configuration itself. A run-level shortcut such as `run.TracePopulationCandidates(out var analyzer)` observes the run's root algorithm unless a nested one is named.
+Ready-made traces are extension members on the observation sources they read, named `Trace...`, as in `algorithm.Iterations.TracePopulationQuality()` or `algorithm.Evaluator.Calls.TraceBestSoFar()`, and grouped in a static class ending in `Traces`. Extending the source of an observation type rather than a configuration lets every configuration offering that source use them. A run-level shortcut such as `run.TracePopulationCandidates(out var analyzer)` observes the run's root algorithm unless a nested one is named.
 
 The main package ships general-purpose traces. Specialized analysis belongs beside the concept it measures, following the package placement rules in § 9.6 of the [developer guidelines](/contributing/developer-guidelines).
 

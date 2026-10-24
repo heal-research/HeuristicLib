@@ -10,7 +10,7 @@ public abstract record StatelessCreator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected sealed override ExecutorFactory<ICreationExecutor<TCandidate, TSearchSpace, TProblem>> CreateFactory() => _ => this;
+    protected sealed override ICreationExecutor<TCandidate, TSearchSpace, TProblem> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
@@ -19,7 +19,7 @@ public abstract record StatelessCreator<TCandidate, TSearchSpace>
     : Creator<TCandidate, TSearchSpace>, ICreationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    protected sealed override ExecutorFactory<ICreationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateFactory() => _ => this;
+    protected sealed override ICreationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
@@ -30,7 +30,7 @@ public abstract record StatelessCreator<TCandidate, TSearchSpace>
 public abstract record StatelessCreator<TCandidate>
     : Creator<TCandidate>, ICreationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
-    protected sealed override ExecutorFactory<ICreationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateFactory() => _ => this;
+    protected sealed override ICreationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random);
 

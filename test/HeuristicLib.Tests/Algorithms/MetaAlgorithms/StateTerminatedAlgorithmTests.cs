@@ -262,16 +262,10 @@ public class StateTerminatedAlgorithmTests
     private sealed record RecordingResolveTerminator(List<string> Events)
         : Operator<Termination, int>
     {
-        protected override OperatorExecutorFactory CreateOperatorFactory()
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
             Events.Add("terminator");
-            return new Factory();
-        }
-
-        private sealed class Factory : OperatorExecutorFactory<Termination, int>
-        {
-            protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
-                new Executor<TSearchSpace, TProblem, TSearchState>();
+            return new Executor<TSearchSpace, TProblem, TSearchState>();
         }
 
         private sealed class Executor<TSearchSpace, TProblem, TSearchState> : TerminationExecutor<int, TSearchSpace, TProblem, TSearchState>

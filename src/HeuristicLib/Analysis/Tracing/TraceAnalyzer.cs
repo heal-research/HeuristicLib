@@ -1,8 +1,6 @@
 using System.Collections;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
-using HEAL.HeuristicLib.Objectives;
-using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Analysis;
 
@@ -20,52 +18,30 @@ public sealed class TraceAnalyzer<TResult> : Aspect
     private readonly TraceRetention retention;
     private readonly ImmutableArray<Clock> clocks;
 
-    private TraceAnalyzer(TraceRetention retention, IReadOnlyList<Clock> clocks, Func<TraceAnalyzer<TResult>, ImmutableArray<Aspect>> createObservationAspects)
+    private TraceAnalyzer(TraceRetention retention, IReadOnlyList<Clock> clocks, Func<TraceAnalyzer<TResult>, IEnumerable<Aspect>> createObservationAspects)
     {
         this.retention = retention;
         this.clocks = [.. clocks.Distinct<Clock>(ReferenceEqualityComparer.Instance)];
         // Storage is initialized before observer callbacks capture this trace. Clock advice precedes the observations,
         // so an entry reads clocks that already include its call.
-        Advices = [.. this.clocks.SelectMany(clock => clock.Advices), .. createObservationAspects(this).SelectMany(aspect => aspect.Advices)];
+        Advices = [.. this.clocks.SelectMany(clock => clock), .. createObservationAspects(this).SelectMany(aspect => aspect)];
     }
 
-    /// <summary>Builds a trace over distinct sources, storing the measured value of each observation.</summary>
-    /// <remarks>
-    /// The aspect factory connects each source to the supplied recording callback. This runtime construction API
-    /// supports custom observation roles; source identity and shared clocks use reference equality.
-    /// </remarks>
-    public static TraceAnalyzer<TResult> Create<TSource, TObservation>(
-        IReadOnlyList<TSource> sources,
-        Func<TSource, Action<TObservation>, Aspect> createAspect,
-        Func<TObservation, TResult> measure,
-        IReadOnlyList<Clock>? clocks = null,
-        TraceRetention? retention = null)
-        where TSource : class
+    // Observes each boundary once, so a source given twice is not recorded twice. All sources of one trace share the
+    // observation type, so the configuration reference identifies the boundary.
+    internal static TraceAnalyzer<TResult> Create<TObservation>(
+        IReadOnlyList<ObservationSource<TObservation>> sources,
+        Func<TObservation, TResult> value,
+        IReadOnlyList<Clock>? clocks,
+        TraceRetention? retention)
     {
-        var distinctSources = sources.Distinct<TSource>(ReferenceEqualityComparer.Instance).ToArray();
+        var distinctSources = sources.DistinctBy(static source => source.Configuration, ReferenceEqualityComparer.Instance).ToArray();
         if (distinctSources.Length == 0)
             throw new InvalidOperationException("A trace analyzer requires at least one observation source.");
 
         return new TraceAnalyzer<TResult>(retention ?? TraceRetention.EveryObservation(), clocks ?? [],
-            trace => [.. distinctSources.Select(source =>
-                createAspect(source, observation => trace.Record(measure, observation)))]);
+            trace => distinctSources.Select(source => Aspect.Observe(source, observation => trace.Record(value, observation))));
     }
-
-    /// <summary>Builds a trace of aggregated measurements using the observed problem's objective.</summary>
-    public static TraceAnalyzer<TResult> Create<TSource, TObservation, TProblem, TValue>(
-        IReadOnlyList<TSource> sources,
-        Func<TSource, Action<TObservation>, Aspect> createAspect,
-        IMeasurement<TObservation, TValue> measurement,
-        IAggregation<TValue, TResult> aggregation,
-        IReadOnlyList<Clock>? clocks = null,
-        TraceRetention? retention = null,
-        IComparer<ObjectiveVector>? objectiveComparer = null)
-        where TSource : class
-        where TObservation : Observation<TProblem>
-        where TProblem : class, IProblem =>
-        Create(sources, createAspect,
-            observation => aggregation.Aggregate(measurement.Read(observation), observation.Problem.Objective, objectiveComparer),
-            clocks, retention);
 
     public int SampleCount { get { lock (sync) return entries.Count; } }
     public TraceEntry<TResult>? Latest { get { lock (sync) return entries.Count == 0 ? null : entries[^1]; } }
@@ -87,16 +63,16 @@ public sealed class TraceAnalyzer<TResult> : Aspect
     public IReadOnlyList<TracePoint<TTime, TResult>> By<TTime>(Clock<TTime> clock) => Snapshot().By(clock);
 
     /// <summary>
-    /// Measures and stores under one lock. An observation of one source arrives on the thread that called the
+    /// Reads and stores under one lock. An observation of one source arrives on the thread that called the
     /// operator, so the lock is not about parallel evaluation: it is what lets a caller read the trace while a run
     /// writes to it, and what keeps a shared analyzer consistent across runs executing at the same time. The
     /// observation is passed alongside the function so the callback allocates nothing.
     /// </summary>
-    private void Record<TObservation>(Func<TObservation, TResult> measure, TObservation observation)
+    private void Record<TObservation>(Func<TObservation, TResult> read, TObservation observation)
     {
         lock (sync)
         {
-            var value = measure(observation);
+            var value = read(observation);
             var decision = retention.Decide(value);
             switch (decision)
             {

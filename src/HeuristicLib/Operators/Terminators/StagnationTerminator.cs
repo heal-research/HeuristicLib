@@ -26,7 +26,7 @@ public sealed record StagnationTerminator<TCandidate>
     /// <remarks>A zero or negative threshold terminates on the first checked produced search state.</remarks>
     public int StagnationThreshold { get; init; } = 20;
 
-    protected override ExecutionState CreateInitialState() => new();
+    protected override ExecutionState CreateExecutionState() => new();
 
     protected override bool IsTerminalState(PopulationState<TCandidate> algorithmState, ExecutionState executionState, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
     {

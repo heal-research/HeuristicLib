@@ -66,7 +66,10 @@ public sealed class NamedOperatorTests
         scope.Resolve(creator.Named("creator")).ShouldBeSameAs(scope.Resolve(creator));
         scope.Resolve(crossover.Named("crossover")).ShouldBeSameAs(scope.Resolve(crossover));
         scope.Resolve(evaluator.Named("evaluator")).ShouldBeSameAs(scope.Resolve(evaluator));
-        scope.Resolve(mutator.Named("mutator")).ShouldBeSameAs(scope.Resolve(mutator));
+        // A stateful leaf builds a new executor for each resolution, so the named and the plain mutator share its state.
+        var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+        scope.Resolve(mutator.Named("mutator")).Mutate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe([1]);
+        scope.Resolve(mutator).Mutate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe([2]);
         scope.Resolve(refiner.Named("refiner")).ShouldBeSameAs(scope.Resolve(refiner));
         scope.Resolve(replacer.Named("replacer")).ShouldBeSameAs(scope.Resolve(replacer));
         scope.Resolve(selector.Named("selector")).ShouldBeSameAs(scope.Resolve(selector));
@@ -104,7 +107,7 @@ public sealed class NamedOperatorTests
 
     private sealed record AdvancingMutator : StatefulMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, MutationState>
     {
-        protected override MutationState CreateInitialState() => new();
+        protected override MutationState CreateExecutionState() => new();
 
         protected override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, MutationState state, IRandomNumberGenerator random,
             DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>

@@ -127,7 +127,7 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     /// </remarks>
     public Aspect CreateIterationUpdateAspect<TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState =>
-        Aspect.Observe(algorithm, _ => CompleteIteration());
+        Aspect.Observe(algorithm.Iterations, _ => CompleteIteration());
 
     internal void CompleteIteration()
     {

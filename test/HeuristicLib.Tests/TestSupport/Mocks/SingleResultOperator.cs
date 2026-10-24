@@ -19,16 +19,21 @@ public sealed class SingleResultOperator
     public int Constructions { get; private set; }
     public int Calls { get; private set; }
 
-    public OperatorExecutorFactory CreateExecutorFactory()
+    // One public method implements every operation's CreateExecutor, whose signature does not name the operation.
+    public IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
+        where TSearchSpace : class, ISearchSpace<int>
+        where TProblem : class, IProblem<int, TSearchSpace>
+        where TSearchState : class, ISearchState
     {
-        Preparations++;
-        var state = new ExecutionState();
-        return OperatorExecutorFactory.FromFactory<Executor>(_ =>
+        var state = scope.GetExecutionState(this, () =>
         {
-            Constructions++;
-            return new Executor(this, state);
+            Preparations++;
+            return new ExecutionState();
         });
+        Constructions++;
+        return new Executor(this, state);
     }
+
 
     private sealed class ExecutionState
     {

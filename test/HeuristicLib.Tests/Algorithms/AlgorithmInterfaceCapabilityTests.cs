@@ -14,7 +14,7 @@ public class AlgorithmInterfaceCapabilityTests
     [InlineData("held.TerminatedAfterIterations(10)")]
     [InlineData("held.TerminatedBy(new NeverTerminator<Permutation>())")]
     [InlineData("held.LimitedToDuration(TimeSpan.FromSeconds(1))")]
-    [InlineData("held.TracePopulationQuality()")]
+    [InlineData("held.Iterations.TracePopulationQuality()")]
     [InlineData("held.AsGrid()")]
     [InlineData("held.Repeat(2)")]
     [InlineData("held.CycleWith(algorithm)")]
@@ -44,6 +44,7 @@ public class AlgorithmInterfaceCapabilityTests
         using HEAL.HeuristicLib.Encodings.Permutations;
         using HEAL.HeuristicLib.Execution;
         using HEAL.HeuristicLib.Experiments;
+        using HEAL.HeuristicLib.Inspection;
         using HEAL.HeuristicLib.Operators;
         using HEAL.HeuristicLib.Problems.TravelingSalesman;
         using HEAL.HeuristicLib.Random;

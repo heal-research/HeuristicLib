@@ -15,7 +15,6 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
 {
     private readonly Lock sync = new();
-    private readonly Dictionary<AspectFactory<TAlgorithm>, ImmutableArray<Aspect>> trialAspects = new(ReferenceEqualityComparer.Instance);
     private RunLifecycleState lifecycleState = RunLifecycleState.Preparing;
 
     public IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> Experiment { get; }
@@ -62,32 +61,19 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
     }
 
-    /// <summary>Creates one aspect from this factory for every experiment trial and adds it to the trial's run.</summary>
-    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> AddAspectPerTrial<TAspect>(
-        AspectFactory<TAlgorithm, TAspect> aspectFactory)
+    /// <summary>Creates one aspect for every experiment trial and adds it to the trial's run.</summary>
+    /// <returns>Each trial together with the aspect created for it, in trial order.</returns>
+    public ImmutableArray<TrialAspect<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAspect>> AddAspectPerTrial<TAspect>(
+        Func<TAlgorithm, TAspect> createAspect)
         where TAspect : Aspect
     {
         EnsureNotStarted();
-        if (trialAspects.ContainsKey(aspectFactory))
-            throw new InvalidOperationException("The same trial aspect cannot be added more than once.");
+        ImmutableArray<TrialAspect<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAspect>> aspects =
+            [.. Trials.Select(trial => TrialAspect.From(trial, createAspect(trial.Algorithm)))];
+        foreach (var (trial, aspect) in aspects)
+            trial.Run.AddAspect(aspect);
 
-        ImmutableArray<Aspect> aspects = [.. Trials.Select(trial => aspectFactory.Create(trial.Algorithm))];
-        for (var index = 0; index < Trials.Length; index++)
-            Trials[index].Run.AddAspect(aspects[index]);
-
-        trialAspects.Add(aspectFactory, aspects);
-        return this;
-    }
-
-    /// <summary>
-    /// Gets each trial together with the aspect this factory created for it, in trial order.
-    /// </summary>
-    public ImmutableArray<TrialAspect<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAspect>> GetAspectPerTrial<TAspect>(AspectFactory<TAlgorithm, TAspect> aspectFactory)
-        where TAspect : Aspect
-    {
-        var aspects = trialAspects[aspectFactory];
-
-        return [.. Trials.Select((trial, index) => TrialAspect.From(trial, (TAspect)aspects[index]))];
+        return aspects;
     }
 
     public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)

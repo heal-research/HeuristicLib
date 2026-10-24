@@ -18,14 +18,9 @@ public record NoSameMatesSelector<TCandidate>
 
     public int MaxAttempts { get; init; }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-    private sealed class Factory(NoSameMatesSelector<TCandidate> source) : OperatorExecutorFactory<Selection, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.ChildOperator), source.MaxAttempts);
-    }
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(ChildOperator), MaxAttempts);
 
     private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> childSelector, int maxAttempts)
         : ISelectionExecutor<TCandidate, TSearchSpace, TProblem>

@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace HEAL.HeuristicLib.Tests.Operators;
 
-/// <summary>Compile real factory contracts before checking that child preparation cannot silently bypass resolution.</summary>
+/// <summary>Compile real construction contracts before checking that building a child cannot silently bypass resolution.</summary>
 public class ExecutorFactoryAnalyzerTests
 {
     private const string Preamble = """
@@ -23,25 +23,27 @@ public class ExecutorFactoryAnalyzerTests
 
         file record ChildCrossover : Crossover<int>
         {
-            protected override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateFactory() => _ => new Executor();
+            protected override ICrossoverExecutor<int, SS, P> CreateExecutor(ResolutionScope scope) => new Executor();
             private sealed class Executor : CrossoverExecutor<int, SS, P>
             {
                 public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random, SS searchSpace, P problem) => [];
             }
         }
 
+        file interface ICustomExecutor : IExecutor;
+
         """;
 
     [Theory]
-    [InlineData("IOperator<Crossover, int>", "(ICrossoverExecutor<int, SS, P>)Child.CreateExecutorFactory().CreateExecutor<Crossover, int, SS, P, ISearchState>(scope.For<int, SS, P, ISearchState>())")]
-    [InlineData("ChildCrossover", "(ICrossoverExecutor<int, SS, P>)Child.CreateExecutorFactory().CreateExecutor<Crossover, int, SS, P, ISearchState>(scope.For<int, SS, P, ISearchState>())")]
-    public async Task Reports_WhenAChildFactoryIsInvokedInsideTheBinding(string childType, string binding)
+    [InlineData("IOperator<Crossover, int>", "(ICrossoverExecutor<int, SS, P>)Child.CreateExecutor(scope.For<int, SS, P, ISearchState>())")]
+    [InlineData("ChildCrossover", "(ICrossoverExecutor<int, SS, P>)((IOperator<Crossover, int>)Child).CreateExecutor(scope.For<int, SS, P, ISearchState>())")]
+    public async Task Reports_WhenALeafHookCreatesItsChildDirectly(string childType, string construction)
     {
         var diagnostics = await AnalyzeAsync(Preamble + $$"""
             file sealed record BypassingCrossover : Crossover<int>
             {
                 public required {{childType}} Child { get; init; }
-                protected override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateFactory() => scope => {{binding}};
+                protected override ICrossoverExecutor<int, SS, P> CreateExecutor(ResolutionScope scope) => {{construction}};
             }
             """);
 
@@ -49,17 +51,17 @@ public class ExecutorFactoryAnalyzerTests
     }
 
     [Theory]
-    [InlineData("Child.CreateExecutorFactory()")]
-    [InlineData("Prepare(); OperatorExecutorFactory Prepare() => Child.CreateExecutorFactory()")]
-    public async Task Reports_WhenAChildFactoryIsPreparedDirectly(string preparation)
+    [InlineData("Child.CreateExecutor(scope)")]
+    [InlineData("Build(); IExecutor Build() => Child.CreateExecutor(scope)")]
+    public async Task Reports_WhenARunGenericHookCreatesItsChildDirectly(string construction)
     {
         var diagnostics = await AnalyzeAsync(Preamble + $$"""
             file sealed record BypassingCrossover : Operator<Crossover, int>
             {
                 public required IOperator<Crossover, int> Child { get; init; }
-                protected override OperatorExecutorFactory CreateOperatorFactory()
+                protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
                 {
-                    return {{preparation}};
+                    return {{construction}};
                 }
             }
             """);
@@ -71,13 +73,13 @@ public class ExecutorFactoryAnalyzerTests
     public async Task Reports_WhenAChildFactoryIsStoredDuringPreparation()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
-            file sealed record BypassingCrossover : Crossover<int>
+            file sealed record CustomConfiguration : IConfigurationNode<ICustomExecutor>
             {
-                public required IOperator<Crossover, int> Child { get; init; }
-                protected override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateFactory()
+                public required IConfigurationNode<ICustomExecutor> Child { get; init; }
+                public ExecutorFactory<ICustomExecutor> CreateExecutorFactory()
                 {
                     var factory = Child.CreateExecutorFactory();
-                    return scope => (ICrossoverExecutor<int, SS, P>)factory.CreateExecutor<Crossover, int, SS, P, ISearchState>(scope.For<int, SS, P, ISearchState>());
+                    return scope => factory(scope);
                 }
             }
             """);
@@ -92,7 +94,7 @@ public class ExecutorFactoryAnalyzerTests
             file sealed record ResolvingCrossover : Crossover<int>
             {
                 public required IOperator<Crossover, int> Child { get; init; }
-                protected override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateFactory() => scope => scope.Resolve<int, SS, P>(Child);
+                protected override ICrossoverExecutor<int, SS, P> CreateExecutor(ResolutionScope scope) => scope.Resolve<int, SS, P>(Child);
             }
             """);
 
@@ -105,7 +107,7 @@ public class ExecutorFactoryAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
             file static class DeliberateCaller
             {
-                public static ICrossoverExecutor<int, SS, P> Create(ChildCrossover mutator) => (ICrossoverExecutor<int, SS, P>)mutator.CreateExecutorFactory().CreateExecutor<Crossover, int, SS, P, ISearchState>(ResolutionScope.Create().For<int, SS, P, ISearchState>());
+                public static ICrossoverExecutor<int, SS, P> Create(IOperator<Crossover, int> crossover) => (ICrossoverExecutor<int, SS, P>)crossover.CreateExecutor(ResolutionScope.Create().For<int, SS, P, ISearchState>());
             }
             """);
 
@@ -113,16 +115,16 @@ public class ExecutorFactoryAnalyzerTests
     }
 
     [Theory]
-    [InlineData("CreateFactory(1)")]
-    [InlineData("this.CreateFactory(1)")]
-    [InlineData("base.CreateFactory()")]
-    public async Task DoesNotReport_WhenAFactoryHookDelegatesToItselfOrItsBase(string preparation)
+    [InlineData("CreateExecutor(scope, 1)")]
+    [InlineData("this.CreateExecutor(scope, 1)")]
+    [InlineData("base.CreateExecutor(scope)")]
+    public async Task DoesNotReport_WhenAHookDelegatesToItselfOrItsBase(string construction)
     {
         var diagnostics = await AnalyzeAsync(Preamble + $$"""
             file sealed record DelegatingCrossover : ChildCrossover
             {
-                protected override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateFactory() => {{preparation}};
-                private ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateFactory(int unused) => base.CreateFactory();
+                protected override ICrossoverExecutor<int, SS, P> CreateExecutor(ResolutionScope scope) => {{construction}};
+                private ICrossoverExecutor<int, SS, P> CreateExecutor(ResolutionScope scope, int unused) => base.CreateExecutor(scope);
             }
             """);
 
@@ -135,8 +137,9 @@ public class ExecutorFactoryAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
             file sealed record BridgingCrossover : IOperator<Crossover, int>
             {
-                public required ChildCrossover Child { get; init; }
-                OperatorExecutorFactory IOperator<Crossover, int>.CreateExecutorFactory() => Child.CreateExecutorFactory();
+                public required IOperator<Crossover, int> Child { get; init; }
+                IExecutor IOperator<Crossover, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
+                    Child.CreateExecutor(scope);
             }
             """);
 
@@ -149,7 +152,8 @@ public class ExecutorFactoryAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
             file sealed record BridgingCrossover : ChildCrossover, IOperator<Crossover, int>
             {
-                OperatorExecutorFactory IOperator<Crossover, int>.CreateExecutorFactory() => CreateExecutorFactory();
+                IExecutor IOperator<Crossover, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
+                    CreateExecutor(scope.Scope);
             }
             """);
 
@@ -163,8 +167,8 @@ public class ExecutorFactoryAnalyzerTests
             file sealed record RecursiveCrossover : ChildCrossover
             {
                 public RecursiveCrossover? Child { get; init; }
-                protected override ExecutorFactory<ICrossoverExecutor<int, SS, P>> CreateFactory() =>
-                    Child is null ? base.CreateFactory() : Child.CreateFactory();
+                protected override ICrossoverExecutor<int, SS, P> CreateExecutor(ResolutionScope scope) =>
+                    Child is null ? base.CreateExecutor(scope) : Child.CreateExecutor(scope);
             }
             """);
 
@@ -172,14 +176,14 @@ public class ExecutorFactoryAnalyzerTests
     }
 
     [Fact]
-    public async Task Reports_WhenTheFactoryCallIsDeferredToAnExecutionMethod()
+    public async Task Reports_WhenTheConstructionIsDeferredToAnExecutionMethod()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
             file sealed class DeferredExecutor(IOperator<Crossover, int> child, ResolutionScope scope) : CrossoverExecutor<int, SS, P>
             {
                 public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random, SS searchSpace, P problem) =>
                     Activate().Cross(parents, random, searchSpace, problem);
-                private ICrossoverExecutor<int, SS, P> Activate() => (ICrossoverExecutor<int, SS, P>)child.CreateExecutorFactory().CreateExecutor<Crossover, int, SS, P, ISearchState>(scope.For<int, SS, P, ISearchState>());
+                private ICrossoverExecutor<int, SS, P> Activate() => (ICrossoverExecutor<int, SS, P>)child.CreateExecutor(scope.For<int, SS, P, ISearchState>());
             }
             """);
 
@@ -194,8 +198,8 @@ public class ExecutorFactoryAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + $$"""
             file static class CustomResolution
             {
-                public static ICrossoverExecutor<int, SS, P> Resolve(ResolutionScope scope, IOperator<Crossover, int> configuration, IOperator<Crossover, int> Other) =>
-                    scope.Resolve(configuration, source => { var factory = {{preparation}}; return new ExecutorFactory<ICrossoverExecutor<int, SS, P>>(innerScope => (ICrossoverExecutor<int, SS, P>)factory.CreateExecutor<Crossover, int, SS, P, ISearchState>(innerScope.For<int, SS, P, ISearchState>())); },
+                public static ICustomExecutor Resolve(ResolutionScope scope, IConfigurationNode<ICustomExecutor> configuration, IConfigurationNode<ICustomExecutor> Other) =>
+                    scope.Resolve(configuration, source => { var factory = {{preparation}}; return new ExecutorFactory<ICustomExecutor>(innerScope => factory(innerScope)); },
                         static (_, _) => throw new System.InvalidOperationException());
             }
             """);
@@ -208,8 +212,8 @@ public class ExecutorFactoryAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
             file static class CustomResolution
             {
-                public static ICrossoverExecutor<int, SS, P> Resolve(ResolutionScope scope, IOperator<Crossover, int> configuration) =>
-                    scope.Resolve<IOperator<Crossover, int>, ICrossoverExecutor<int, SS, P>>(configuration, source => innerScope => (ICrossoverExecutor<int, SS, P>)source.CreateExecutorFactory().CreateExecutor<Crossover, int, SS, P, ISearchState>(innerScope.For<int, SS, P, ISearchState>()),
+                public static ICustomExecutor Resolve(ResolutionScope scope, IConfigurationNode<ICustomExecutor> configuration) =>
+                    scope.Resolve<IConfigurationNode<ICustomExecutor>, ICustomExecutor>(configuration, source => innerScope => source.CreateExecutorFactory()(innerScope),
                         static (_, _) => throw new System.InvalidOperationException());
             }
             """);
@@ -217,15 +221,15 @@ public class ExecutorFactoryAnalyzerTests
     }
 
     [Fact]
-    public async Task Reports_WhenWrapperPreparationConstructsAChildFactoryDirectly()
+    public async Task Reports_WhenAWrapperCreatesItsChildDirectly()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
             file sealed record CustomWrapper(IOperator<Crossover, int> Child) : WrappingOperator<Crossover, int>(Child)
             {
-                protected override OperatorExecutorFactory CreateOperatorFactory()
+                protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
                 {
-                    var childFactory = Child.CreateExecutorFactory();
-                    return OperatorExecutorFactory.Forward(ChildOperator);
+                    _ = Child.CreateExecutor(scope);
+                    return scope.ResolveOperator(ChildOperator);
                 }
             }
             """);
@@ -236,7 +240,6 @@ public class ExecutorFactoryAnalyzerTests
     public async Task Reports_ForAConsumerDefinedExecutionContract()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
-            file interface ICustomExecutor : IExecutor;
             file sealed record CustomConfiguration : IConfigurationNode<ICustomExecutor>
             {
                 public required IConfigurationNode<ICustomExecutor> Child { get; init; }
@@ -254,47 +257,15 @@ public class ExecutorFactoryAnalyzerTests
             file sealed class UnrelatedChild
             {
                 public System.Func<ResolutionScope, int> CreateExecutorFactory() => _ => 0;
+                public int CreateExecutor(ResolutionScope scope) => 0;
             }
             file sealed class DeliberateCaller
             {
-                public int Build(ResolutionScope scope) => new UnrelatedChild().CreateExecutorFactory()(scope);
+                public int Build(ResolutionScope scope) => new UnrelatedChild().CreateExecutorFactory()(scope) + new UnrelatedChild().CreateExecutor(scope);
             }
             """);
 
         diagnostics.ShouldBeEmpty();
-    }
-
-    [Theory]
-    [InlineData("CreateOperatorFactory", "OperatorExecutorFactory")]
-    [InlineData("CreateFactory", "ExecutorFactory<IMutationExecutor<int, SS, P>>")]
-    public async Task Reports_WhenGenericOperatorPreparationBypassesTheChildScope(string hook, string resultType)
-    {
-        var body = hook == "CreateOperatorFactory"
-            ? "Child.CreateExecutorFactory()"
-            : "scope => (IMutationExecutor<int, SS, P>)Child.CreateExecutorFactory().CreateExecutor<Mutation, int, SS, P, HEAL.HeuristicLib.Algorithms.ISearchState>(scope.For<int, SS, P, HEAL.HeuristicLib.Algorithms.ISearchState>())";
-        var baseType = hook == "CreateOperatorFactory" ? "Operator<Mutation, int>" : "HEAL.HeuristicLib.Operators.Mutators.Mutator<int>";
-        var diagnostics = await AnalyzeAsync(Preamble + $$"""
-            file sealed record GenericOperator : {{baseType}}
-            {
-                public required IOperator<Mutation, int> Child { get; init; }
-                protected override {{resultType}} {{hook}}() => {{body}};
-            }
-            """);
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
-    }
-
-    [Fact]
-    public async Task Reports_WhenAnOperatorFactoryConstructsItsChildWithoutResolvingIt()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-            file sealed class CompositionFactory(IOperator<Mutation, int> child) : OperatorExecutorFactory<Mutation, int>
-            {
-                protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-                    ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
-                    child.CreateExecutorFactory().CreateExecutor<Mutation, int, TSearchSpace, TProblem, TSearchState>(scope);
-            }
-            """);
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
     }
 
     [Fact]
@@ -304,8 +275,8 @@ public class ExecutorFactoryAnalyzerTests
             file sealed record RecursiveLeaf : HEAL.HeuristicLib.Operators.Mutators.Mutator<int>
             {
                 public RecursiveLeaf? Child { get; init; }
-                protected override ExecutorFactory<IMutationExecutor<int, SS, P>> CreateFactory() =>
-                    Child is null ? _ => throw new System.InvalidOperationException() : Child.CreateFactory();
+                protected override IMutationExecutor<int, SS, P> CreateExecutor(ResolutionScope scope) =>
+                    Child is null ? throw new System.InvalidOperationException() : Child.CreateExecutor(scope);
             }
             """);
         diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);

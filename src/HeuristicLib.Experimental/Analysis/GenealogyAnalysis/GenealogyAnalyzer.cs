@@ -60,11 +60,11 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchState> : AccumulatingAn
         Advices =
         [
             .. (crossovers ?? []).SelectMany(crossover => Aspect.Observe(
-                crossover, observation => AfterCross(observation.Offspring, observation.Parents)).Advices),
+                crossover.Calls, observation => AfterCross(observation.Offspring, observation.Parents))),
             .. (mutators ?? []).SelectMany(mutator => Aspect.Observe(
-                mutator, observation => AfterMutate(observation.Offspring, observation.Parents)).Advices),
+                mutator.Calls, observation => AfterMutate(observation.Offspring, observation.Parents))),
             .. (algorithms ?? []).SelectMany(algorithm => Aspect.Observe(
-                algorithm, observation => CloseGeneration(observation.State, observation.Problem)).Advices)
+                algorithm.Iterations, observation => CloseGeneration(observation.State, observation.Problem)))
         ];
     }
 

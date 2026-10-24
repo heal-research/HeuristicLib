@@ -34,7 +34,7 @@ public class ObservationSourceRequirementTests
             Selector = RandomSelector.For(problem)
         };
 
-        var analysis = Analyzer.TraceAverageSimilarity(new NoSimilarity(), algorithm);
+        var analysis = algorithm.Iterations.TraceAverageSimilarity(new NoSimilarity());
 
         analysis.SampleCount.ShouldBe(0);
     }

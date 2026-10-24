@@ -19,15 +19,12 @@ public abstract record MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TS
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TState : class
 {
-    protected abstract TState CreateInitialState();
+    protected abstract TState CreateExecutionState();
 
     protected abstract TCandidate Apply(TCandidate candidate, TMove move, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    protected sealed override ExecutorFactory<IMoveApplicationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateFactory()
-    {
-        var executor = new Executor(this, CreateInitialState());
-        return _ => executor;
-    }
+    protected sealed override IMoveApplicationExecutor<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutor(ResolutionScope scope) =>
+        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
 
     private sealed class Executor(MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TState> moveApplier, TState state)
         : IMoveApplicationExecutor<TCandidate, TSearchSpace, TProblem, TMove>

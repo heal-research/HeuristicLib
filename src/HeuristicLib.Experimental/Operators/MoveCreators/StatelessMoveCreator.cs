@@ -16,7 +16,7 @@ public abstract record StatelessMoveCreator<TCandidate, TSearchSpace, TProblem, 
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected sealed override ExecutorFactory<IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateFactory() => _ => this;
+    protected sealed override IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IEnumerable<TMove> Moves(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

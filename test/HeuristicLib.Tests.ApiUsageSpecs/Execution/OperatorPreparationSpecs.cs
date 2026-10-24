@@ -14,7 +14,7 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
 public sealed class OperatorPreparationSpecs
 {
     [Fact]
-    public void AnExternalInvocationWrapperSupportsABuiltInOperationWithoutChangingItsAdapter()
+    public void AnExternalInvocationWrapperSupportsABuiltInOperationWithoutChangingIt()
     {
         IOperator<Mutation, RealVector> source = new IdentityMutation();
         var twice = new Twice<Mutation, RealVector>(source);
@@ -80,49 +80,46 @@ public sealed class OperatorPreparationSpecs
         int Read(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
     }
 
-    // An external operation supplies one adapter, one invocation and one wrapping executor.
-    private sealed class ReadValue : IOperationDescriptor<ReadValue>
+    // An external operation names its executor interface and wraps an executor with one invocation, like built-in ones.
+    private sealed class ReadValue : IOperation<ReadValue>
     {
-        public static OperationExecutorAdapter CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TSearchState>()
-            where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace>
-            where TSearchState : class, ISearchState => new ExecutorAdapter<TCandidate, TSearchSpace, TProblem>();
+        static bool IOperation<ReadValue>.IsExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(IExecutor executor) =>
+            executor is IReadValueExecutor<TCandidate, TSearchSpace, TProblem>;
 
-        private sealed class ExecutorAdapter<TCandidate, TSearchSpace, TProblem> : OperationExecutorAdapter<IReadValueExecutor<TCandidate, TSearchSpace, TProblem>>
+        static IExecutor IOperation<ReadValue>.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(IExecutor executor, TWrapper wrapper) =>
+            new WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(executor, wrapper);
+
+        private readonly struct Invocation<TCandidate, TSearchSpace, TProblem>(IReadValueExecutor<TCandidate, TSearchSpace, TProblem> executor,
+            IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<int>
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
         {
-            protected override IReadValueExecutor<TCandidate, TSearchSpace, TProblem> CreateWrappedExecutor<TWrapper>(
-                IReadValueExecutor<TCandidate, TSearchSpace, TProblem> executor, TWrapper wrapper) =>
-                new WrappedExecutor<TWrapper>(executor, wrapper);
+            private readonly IReadValueExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
+            private readonly IRandomNumberGenerator random = random;
 
-            private readonly struct Invocation(IReadValueExecutor<TCandidate, TSearchSpace, TProblem> executor,
-                IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<int>
-            {
-                private readonly IReadValueExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
-                private readonly IRandomNumberGenerator random = random;
+            public IRandomNumberGenerator Random => random;
+            public ISearchSpace SearchSpace => searchSpace;
+            public IProblem Problem => problem;
 
-                public IRandomNumberGenerator Random => random;
-                public ISearchSpace SearchSpace => searchSpace;
-                public IProblem Problem => problem;
-                public int Proceed() => executor.Read(random, searchSpace, problem);
-                public int ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
-                    ((IReadValueExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Read(random ?? this.random, searchSpace, problem);
-            }
+            public int Proceed(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
+                ((IReadValueExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Read(random ?? this.random, searchSpace, problem);
+        }
 
-            private sealed class WrappedExecutor<TWrapper>(IReadValueExecutor<TCandidate, TSearchSpace, TProblem> executor, TWrapper wrapper)
-                : IReadValueExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider where TWrapper : struct, IInvocationWrapper
-            {
-                public int Read(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                    wrapper.Invoke<Invocation, int>(new Invocation(executor, random, searchSpace, problem));
-                public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
-            }
+        private sealed class WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(IExecutor executor, TWrapper wrapper)
+            : WrappingExecutor<IReadValueExecutor<TCandidate, TSearchSpace, TProblem>, TWrapper>(executor, wrapper), IReadValueExecutor<TCandidate, TSearchSpace, TProblem>
+            where TSearchSpace : class, ISearchSpace<TCandidate>
+            where TProblem : class, IProblem<TCandidate, TSearchSpace>
+            where TWrapper : struct, IInvocationWrapper
+        {
+            public int Read(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+                Wrapper.Invoke<Invocation<TCandidate, TSearchSpace, TProblem>, int>(new(Executor, random, searchSpace, problem));
         }
     }
 
     private sealed record ValueSource(int Value) : IOperator<ReadValue, RealVector>
     {
-        public OperatorExecutorFactory CreateExecutorFactory() => OperatorExecutorFactory.FromFactory<Executor>(_ => new Executor(Value));
+        IExecutor IOperator<ReadValue, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => new Executor(Value);
 
         private sealed class Executor(int value)
             : IReadValueExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>, IValueControl
@@ -139,10 +136,10 @@ public sealed class OperatorPreparationSpecs
 
     // This configuration and its call wrapper use only public APIs and enumerate no operations.
     private sealed record Twice<TOperation, TCandidate>(IOperator<TOperation, TCandidate> ChildOperator)
-        : WrappingOperator<TOperation, TCandidate>(ChildOperator) where TOperation : IOperationDescriptor<TOperation>
+        : WrappingOperator<TOperation, TCandidate>(ChildOperator) where TOperation : IOperation<TOperation>
     {
-        protected override OperatorExecutorFactory CreateOperatorFactory() =>
-            OperatorExecutorFactory.WrapInvocation(ChildOperator, new CallTwice());
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
+            TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, CallTwice>(scope.ResolveOperator(ChildOperator), new CallTwice());
     }
 
     private readonly struct CallTwice : IInvocationWrapper
@@ -155,19 +152,20 @@ public sealed class OperatorPreparationSpecs
     }
 
     private sealed record Forward<TOperation, TCandidate>(IOperator<TOperation, TCandidate> ChildOperator)
-        : IOperator<TOperation, TCandidate> where TOperation : IOperationDescriptor<TOperation>
+        : IOperator<TOperation, TCandidate> where TOperation : IOperation<TOperation>
     {
         public bool Fits(ExecutionSignature execution) => ChildOperator.Fits(execution);
         public IOperatorContract<TCandidate>? CandidateContract => ChildOperator.CandidateContract;
-        public OperatorExecutorFactory CreateExecutorFactory() => OperatorExecutorFactory.Forward(ChildOperator);
+        IExecutor IOperator<TOperation, TCandidate>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) => scope.ResolveOperator(ChildOperator);
     }
 
     private sealed class Counter : OperatorAdvice
     {
         public int Calls { get; private set; }
 
-        public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source) =>
-            operation.WrapInvocation(executor, new Counting(this));
+        public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) =>
+            operation.Wrap(executor, new Counting(this));
 
         private readonly struct Counting(Counter counter) : IInvocationWrapper
         {

@@ -164,7 +164,7 @@ public sealed class ConcreteAlgorithmFactoryTests
 
     private sealed record CounterCreator(Action Prepare) : StatefulCreator<int, CounterState>
     {
-        protected override CounterState CreateInitialState()
+        protected override CounterState CreateExecutionState()
         {
             Prepare();
             return new CounterState();
@@ -182,17 +182,18 @@ public sealed class ConcreteAlgorithmFactoryTests
     private sealed record IdentityInterceptor<TSearchState>(Action Prepare) : Operator<Interception<TSearchState>, int>
         where TSearchState : class, ISearchState
     {
-        protected override OperatorExecutorFactory CreateOperatorFactory()
+        // Creating the execution state is the once-per-owner preparation the test counts.
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TRunSearchState> scope)
         {
-            Prepare();
-            return new Factory();
+            scope.GetExecutionState(this, () =>
+            {
+                Prepare();
+                return new Preparation();
+            });
+            return new Executor<TSearchSpace, TProblem>();
         }
 
-        private sealed class Factory : OperatorExecutorFactory<Interception<TSearchState>, int>
-        {
-            protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TRunSearchState> scope) =>
-                new Executor<TSearchSpace, TProblem>();
-        }
+        private sealed class Preparation;
 
         private sealed class Executor<TSearchSpace, TProblem> : IInterceptionExecutor<int, TSearchSpace, TProblem, TSearchState>
             where TSearchSpace : class, ISearchSpace<int>

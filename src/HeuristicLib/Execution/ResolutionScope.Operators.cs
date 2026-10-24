@@ -13,7 +13,7 @@ public sealed partial class ResolutionScope
     /// Every matching advice checks the operator before its executor is built.
     /// </remarks>
     public IExecutor ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(IOperator<TOperation, TCandidate> source)
-        where TOperation : IOperationDescriptor<TOperation>
+        where TOperation : IOperation<TOperation>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
@@ -26,24 +26,23 @@ public sealed partial class ResolutionScope
             throw new InvalidOperationException($"Recursive construction of {source.GetType().Name} through {typeof(TOperation).Name}.");
         try
         {
-            var operation = OperationExecutorAdapter.For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>();
-            var (factory, owner) = state.GetOrAddOperatorOwner(source);
+            var operation = OperationInfo.For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>();
+            var owner = state.GetOrAddOperatorOwner(source);
 
             List<Advice>? applicable = null;
             foreach (var (pointcut, advice) in Advices())
                 if (pointcut.Matches(source) && CheckOperatorAdvice<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(advice, operation, source))
                     (applicable ??= []).Add(advice);
 
-            var executor = factory.CreateExecutor<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(
-                WithState(owner).For<TCandidate, TSearchSpace, TProblem, TSearchState>());
-            RequireExecutorType(executor, operation, source);
+            var executor = source.CreateExecutor(WithState(owner).For<TCandidate, TSearchSpace, TProblem, TSearchState>());
+            operation.RequireExecutor(executor, source);
             if (applicable is not null)
                 foreach (var advice in applicable)
                 {
                     executor = advice is OperatorAdvice general
                         ? general.Wrap(executor, operation, source)
                         : ((OperatorAdvice<TOperation, TCandidate>)advice).Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
-                    RequireExecutorType(executor, operation, advice);
+                    operation.RequireExecutor(executor, advice);
                 }
             return executor;
         }
@@ -55,8 +54,8 @@ public sealed partial class ResolutionScope
 
     // Returns whether the advice wraps this operation; advice for another operation of the same configuration is skipped.
     private static bool CheckOperatorAdvice<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(Advice advice,
-        OperationExecutorAdapter operation, IOperator<TOperation, TCandidate> source)
-        where TOperation : IOperationDescriptor<TOperation>
+        OperationInfo operation, IOperator<TOperation, TCandidate> source)
+        where TOperation : IOperation<TOperation>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
@@ -77,23 +76,16 @@ public sealed partial class ResolutionScope
         }
     }
 
-    private static void RequireExecutorType(IExecutor executor, OperationExecutorAdapter operation, object origin)
-    {
-        if (!operation.ExecutorType.IsInstanceOfType(executor))
-            throw new InvalidOperationException($"{origin.GetType().Name} cannot provide {operation.ExecutorType}; it returned {executor.GetType()}.");
-    }
-
     internal sealed partial class State
     {
-        internal (OperatorExecutorFactory Factory, State Owner) GetOrAddOperatorOwner<TOperation, TCandidate>(
-            IOperator<TOperation, TCandidate> source) where TOperation : IOperationDescriptor<TOperation>
+        // Finds the state that owns the operator, as for every configuration, or makes this state its owner.
+        internal State GetOrAddOperatorOwner(IOperator source)
         {
             var selected = FindOwner(source);
             if (selected is { } existing)
-                return (existing.Entry.Operator ?? throw PreparationPathMismatch(source), existing.Owner);
-            var created = source.CreateExecutorFactory();
-            owners.Add(source, new ConfigurationResolutionEntry(created));
-            return (created, this);
+                return existing.Entry.LegacyFactory is null ? existing.Owner : throw PreparationPathMismatch(source);
+            owners.Add(source, new ConfigurationResolutionEntry(null));
+            return this;
         }
     }
 }

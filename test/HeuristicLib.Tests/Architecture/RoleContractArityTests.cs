@@ -29,15 +29,15 @@ public sealed class RoleContractArityTests
     }
 
     [Fact]
-    public void TheSharedConsumingContractNamesOperationThenCandidateAndCreatesOneFactory()
+    public void TheSharedConsumingContractNamesOperationThenCandidateAndBuildsInOneHook()
     {
         var contract = typeof(IOperator<,>);
         contract.GetGenericArguments().Select(argument => argument.Name).ShouldBe(["TOperation", "TCandidate"]);
         contract.GetInterfaces().ShouldContain(typeof(IOperator));
-        var factory = contract.GetMethod("CreateExecutorFactory")!;
-        factory.GetGenericArguments().ShouldBeEmpty();
-        factory.GetParameters().ShouldBeEmpty();
-        factory.ReturnType.ShouldBe(typeof(OperatorExecutorFactory));
+        var hook = contract.GetMethod("CreateExecutor")!;
+        hook.GetGenericArguments().Select(argument => argument.Name).ShouldBe(["TSearchSpace", "TProblem", "TSearchState"]);
+        hook.GetParameters().ShouldHaveSingleItem().ParameterType.GetGenericTypeDefinition().ShouldBe(typeof(ResolutionScope<,,,>));
+        hook.ReturnType.ShouldBe(typeof(IExecutor));
         contract.GetMethods().ShouldNotContain(method => method.Name == "Prepare");
     }
 
@@ -52,7 +52,7 @@ public sealed class RoleContractArityTests
         {
             var operation = Array.FindIndex(parameters, parameter => parameter.IsGenericParameter &&
                 parameter.GetGenericParameterConstraints().Any(constraint => constraint.IsGenericType &&
-                    constraint.GetGenericTypeDefinition() == typeof(IOperationDescriptor<>)));
+                    constraint.GetGenericTypeDefinition() == typeof(IOperation<>)));
             if (operation >= 0)
                 operation.ShouldBe(0, name);
         }

@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
@@ -8,61 +7,47 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>Identifies choosing survivors from a population and its offspring when declaring an operator slot.</summary>
-public sealed class Replacement : IOperationDescriptor<Replacement>
+public sealed class Replacement : IOperation<Replacement>
 {
-    public static OperationExecutorAdapter CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TSearchState>()
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState =>
-        new ExecutorAdapter<TCandidate, TSearchSpace, TProblem>();
+    static bool IOperation<Replacement>.IsExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(IExecutor executor) =>
+        executor is IReplacementExecutor<TCandidate, TSearchSpace, TProblem>;
 
-    private sealed class ExecutorAdapter<TCandidate, TSearchSpace, TProblem>
-        : OperationExecutorAdapter<IReplacementExecutor<TCandidate, TSearchSpace, TProblem>>
+    static IExecutor IOperation<Replacement>.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(IExecutor executor, TWrapper wrapper) =>
+        new WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(executor, wrapper);
+
+    static bool IOperation<Replacement>.SupportsCandidateWork => true;
+
+    private readonly struct Invocation<TCandidate, TSearchSpace, TProblem>(IReplacementExecutor<TCandidate, TSearchSpace, TProblem> executor,
+        IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
+        ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        : IInvocation<IReadOnlyList<EvaluatedCandidate<TCandidate>>>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public override bool SupportsCandidateWork => true;
+        private readonly IReplacementExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
+        private readonly IRandomNumberGenerator random = random;
 
-        protected override IReplacementExecutor<TCandidate, TSearchSpace, TProblem> CreateWrappedExecutor<TWrapper>(
-            IReplacementExecutor<TCandidate, TSearchSpace, TProblem> executor, TWrapper wrapper) =>
-            new WrappedExecutor<TWrapper>(executor, wrapper);
+        public IRandomNumberGenerator Random => random;
+        public ISearchSpace SearchSpace => searchSpace;
+        public IProblem Problem => problem;
 
-        private readonly struct Invocation(IReplacementExecutor<TCandidate, TSearchSpace, TProblem> executor,
-            IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<EvaluatedCandidate<TCandidate>>>, IReplacementArguments<TCandidate>
-        {
-            private readonly IReplacementExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
-            private readonly IRandomNumberGenerator random = random;
+        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Proceed(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
+            ((IReplacementExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor)
+                .Replace(previousPopulation, offspringPopulation, objective, count, random ?? this.random, searchSpace, problem);
 
-            public IRandomNumberGenerator Random => random;
-            public ISearchSpace SearchSpace => searchSpace;
-            public IProblem Problem => problem;
-            public IReadOnlyList<EvaluatedCandidate<TCandidate>> PreviousPopulation => previousPopulation;
-            public IReadOnlyList<EvaluatedCandidate<TCandidate>> OffspringPopulation => offspringPopulation;
-            public ObjectiveDirections Objective => objective;
-            public int Count => count;
-            public IReadOnlyList<EvaluatedCandidate<TCandidate>> Proceed() => executor.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
-            public IReadOnlyList<EvaluatedCandidate<TCandidate>> ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
-                ((IReplacementExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Replace(previousPopulation, offspringPopulation, objective, count, random ?? this.random, searchSpace, problem);
-            public int CountCandidateWork(IReadOnlyList<EvaluatedCandidate<TCandidate>> result) => result.Count;
-        }
-
-        private sealed class WrappedExecutor<TWrapper>(IReplacementExecutor<TCandidate, TSearchSpace, TProblem> executor, TWrapper wrapper)
-            : IReplacementExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider
-            where TWrapper : struct, IInvocationWrapper
-        {
-            public IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                wrapper.Invoke<Invocation, IReadOnlyList<EvaluatedCandidate<TCandidate>>>(new Invocation(executor, previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem));
-
-            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
-        }
+        public int CountCandidateWork(IReadOnlyList<EvaluatedCandidate<TCandidate>> result) => result.Count;
     }
-}
 
-/// <summary>The arguments of one replacement call, which its observations read.</summary>
-internal interface IReplacementArguments<TCandidate>
-{
-    IReadOnlyList<EvaluatedCandidate<TCandidate>> PreviousPopulation { get; }
-    IReadOnlyList<EvaluatedCandidate<TCandidate>> OffspringPopulation { get; }
-    ObjectiveDirections Objective { get; }
-    int Count { get; }
+    private sealed class WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(IExecutor executor, TWrapper wrapper)
+        : WrappingExecutor<IReplacementExecutor<TCandidate, TSearchSpace, TProblem>, TWrapper>(executor, wrapper), IReplacementExecutor<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TWrapper : struct, IInvocationWrapper
+    {
+        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
+            IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count,
+            IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            Wrapper.Invoke<Invocation<TCandidate, TSearchSpace, TProblem>, IReadOnlyList<EvaluatedCandidate<TCandidate>>>(
+                new(Executor, previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem));
+    }
 }

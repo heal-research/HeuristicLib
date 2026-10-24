@@ -67,20 +67,7 @@ public static class InterceptionOperationResolutionExtensions
 
         public bool TryResolve<TSearchState>(IOperator<Interception<TSearchState>, TCandidate> source,
             [NotNullWhen(true)] out IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? executor, [NotNullWhen(false)] out string? reason)
-            where TSearchState : class, ISearchState
-        {
-            try
-            {
-                executor = scope.Resolve(source);
-                reason = null;
-                return true;
-            }
-            catch (InvalidOperationException exception)
-            {
-                executor = null;
-                reason = exception.Message;
-                return false;
-            }
-        }
+            where TSearchState : class, ISearchState =>
+            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
     }
 }

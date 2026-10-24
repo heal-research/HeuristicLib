@@ -10,7 +10,7 @@ public abstract record StatelessMutator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected sealed override ExecutorFactory<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> CreateFactory() => _ => this;
+    protected sealed override IMutationExecutor<TCandidate, TSearchSpace, TProblem> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
@@ -19,7 +19,7 @@ public abstract record StatelessMutator<TCandidate, TSearchSpace>
     : Mutator<TCandidate, TSearchSpace>, IMutationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    protected sealed override ExecutorFactory<IMutationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateFactory() => _ => this;
+    protected sealed override IMutationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
@@ -30,7 +30,7 @@ public abstract record StatelessMutator<TCandidate, TSearchSpace>
 public abstract record StatelessMutator<TCandidate>
     : Mutator<TCandidate>, IMutationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
-    protected sealed override ExecutorFactory<IMutationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateFactory() => _ => this;
+    protected sealed override IMutationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random);
 

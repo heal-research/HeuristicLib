@@ -46,7 +46,7 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
         this.problem = problem;
         this.objectiveValueSelector = objectiveValueSelector ?? (static objectiveVector => objectiveVector[0]);
         PredictionEpochMultiplier = predictionEpochMultiplier;
-        Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe(evaluator, ReadBatch).Advices)];
+        Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe(evaluator.Calls, ReadBatch))];
     }
 
     public int PredictionEpochMultiplier { get; }
@@ -67,7 +67,7 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
     }
     private double prediction = double.NaN;
 
-    private void ReadBatch(OperatorObservation<Evaluation, TCandidate> observation)
+    private void ReadBatch(EvaluationObservation<TCandidate> observation)
     {
         // The environment only changes when the next batch begins, so it still names the one that scored this batch.
         var epoch = problem.CurrentEpoch;

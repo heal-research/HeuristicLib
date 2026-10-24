@@ -89,7 +89,7 @@ public sealed class OnChangeRetention : TraceRetention
 
 /// <summary>
 /// Keeps one entry, the most recent, with the moment of its own observation. Earlier values are not history the
-/// trace ever held, so a trace retaining this way answers what its measurement says now rather than how it moved.
+/// trace ever held, so a trace retaining this way answers what it reads now rather than how that moved.
 /// </summary>
 public sealed class LatestOnlyRetention : TraceRetention
 {

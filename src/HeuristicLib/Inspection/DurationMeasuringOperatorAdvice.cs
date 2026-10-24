@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Inspection;
 
 /// <summary>Measures the time spent in each operation call, including calls that fail.</summary>
 public sealed class DurationMeasuringOperatorAdvice<TOperation, TCandidate> : OperatorAdvice<TOperation, TCandidate>
-    where TOperation : IOperationDescriptor<TOperation>
+    where TOperation : IOperation<TOperation>
 {
     public DurationAccumulator Duration { get; }
     public TimeProvider TimeProvider { get; }
@@ -18,9 +18,9 @@ public sealed class DurationMeasuringOperatorAdvice<TOperation, TCandidate> : Op
         TimeProvider = timeProvider;
     }
 
-    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
         IOperator<TOperation, TCandidate> source) =>
-        operation.WrapInvocation(executor, new DurationMeasurement(Duration, TimeProvider));
+        operation.Wrap(executor, new DurationMeasurement(Duration, TimeProvider));
 }
 
 /// <summary>Adds the elapsed time of each call, including calls that fail, to the accumulator.</summary>
@@ -45,10 +45,10 @@ public static class OperatorDurationExtensions
     extension(Aspect)
     {
         public static Aspect MeasureDuration<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source, DurationAccumulator duration)
-            where TOperation : IOperationDescriptor<TOperation> => Aspect.MeasureDuration(source, duration, TimeProvider.System);
+            where TOperation : IOperation<TOperation> => Aspect.MeasureDuration(source, duration, TimeProvider.System);
 
         public static Aspect MeasureDuration<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source, DurationAccumulator duration, TimeProvider timeProvider)
-            where TOperation : IOperationDescriptor<TOperation> =>
+            where TOperation : IOperation<TOperation> =>
             Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(duration, timeProvider));
     }
 }

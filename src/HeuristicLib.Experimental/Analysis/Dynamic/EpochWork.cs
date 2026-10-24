@@ -33,11 +33,7 @@ public static class EpochWorkTrace
             Clock<long> evaluations,
             EpochClock<TCandidate, TSearchSpace> epoch)
             where TSearchSpace : class, ISearchSpace<TCandidate> =>
-            Analyzer.Trace(
-                at,
-                observation => new[] { observation.ObjectiveVectors.Count },
-                Aggregate.Single<int>(),
-                [evaluations, epoch]);
+            Analyzer.Trace(at.Calls, observation => observation.ObjectiveVectors.Count, [evaluations, epoch]);
     }
 
     /// <summary>

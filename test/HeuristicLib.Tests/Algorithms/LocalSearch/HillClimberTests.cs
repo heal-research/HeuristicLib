@@ -53,8 +53,8 @@ public class HillClimberTests
         : IOperator<Creation, int>,
         ICreationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public OperatorExecutorFactory CreateExecutorFactory() =>
-            OperatorExecutorFactory.FromFactory<ICreationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>>(_ => this);
+        IExecutor IOperator<Creation, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => this;
 
         public IReadOnlyList<int> Create(
             int count,
@@ -68,13 +68,8 @@ public class HillClimberTests
         : IOperator<Mutation, int>,
         IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public OperatorExecutorFactory CreateExecutorFactory()
-        {
-            var executor = CreateBoundExecution();
-            return OperatorExecutorFactory.FromFactory(_ => executor);
-        }
-
-        private IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecution() => this;
+        IExecutor IOperator<Mutation, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => this;
 
         public IReadOnlyList<int> Mutate(
             IReadOnlyList<int> parents,

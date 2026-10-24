@@ -312,17 +312,14 @@ An operation is a named action an operator performs, such as mutation or evaluat
 
 An operation is distinct from the executor that performs it. One executor can support several operations. Use operation for the action, execution for the callable runtime object, and invocation or call for one actual use of an operation.
 
-See also: Executor, Operation descriptor, Operation invocation, Operator roles.
+`IOperation<TSelf>` identifies an operation in an operator contract. For example, `Mutation` in `IOperator<Mutation, TCandidate>` identifies mutation, whose executor interface is `IMutationExecutor<...>`. Its static members recognize that executor interface for the run types, wrap an executor so that each call passes through an invocation wrapper and state whether calls report candidate work. Resolution and advice reach them through `OperationInfo`. `IItemOperation<TSelf>` marks an operation whose calls split into items and adds routing them.
 
-### Operation descriptor
+Related terms:
 
-Status: `Canonical`
+- `IOperation` and `IItemOperation`: `Provisional`. The type names may change because they read close to operator.
+- `Operation descriptor`: `Legacy`. The former name of `IOperation<TSelf>`. Use operation.
 
-An operation descriptor identifies which operation an operator contract selects. For example, `Mutation` in `IOperator<Mutation, TCandidate>` identifies mutation, whose executor interface is `IMutationExecutor<...>`.
-
-The descriptor represents the kind of action. The executor performs it, and each call is a separate invocation.
-
-See also: Executor, Operation, Operation invocation.
+See also: Executor, Item, Operation invocation, Operator roles.
 
 ### Operation invocation
 
@@ -334,7 +331,19 @@ Every invocation carries its primary inputs followed by a random number generato
 
 An executor can receive many invocations. A duration measurement around an operation call measures that invocation rather than the lifetime of its executor.
 
-See also: Executor, Operation, Operation descriptor.
+See also: Executor, Item, Operation.
+
+### Item
+
+Status: `Canonical`
+
+An item is one unit an operation call splits into, such as one parent group of a crossover call or one candidate of an evaluation call. Each item yields one result, which is not always a candidate: evaluation yields one objective vector per candidate.
+
+An item operation is marked with `IItemOperation<TSelf>`. Routing is its capability: `Route` returns an executor that runs each item of a call on the child a router assigns it, so `ChoosePerItem` can choose a different child per item. Creation, crossover, mutation, evaluation and refinement are item operations. Selection, replacement, termination and interception calls have no independent items.
+
+Use item in names that belong to splitting a call, which any item operation can use. Use candidate when the name is about candidates themselves: candidate work, one operation's inputs and outputs, and rate helpers.
+
+See also: Candidate, Operation, Operation invocation.
 
 ### Child operator
 
@@ -501,11 +510,9 @@ A configuration node is a configuration considered as a node in the configuratio
 
 Configuration is accepted shorthand for configuration node when the context is clear. Use node when graph membership needs emphasis, or a role-specific term such as mutator when the role is known. The common interface is `IConfigurationNode`, including its generic form. Role-specific configuration names such as `IOperator` and `IOperator<Mutation, TCandidate>` do not acquire a `Node` suffix.
 
-The generic `IConfigurationNode<TExecutor>` prepares an `ExecutorFactory<TExecutor>` through `CreateExecutorFactory()`. Core run-typed roles expose the same preparation method with their run type parameters. This factory receives a construction scope and binds a typed executor to its resolution context; it is runtime machinery, not a configuration value strategy.
+`IOperator<TOperation, TCandidate>` builds its executor in one hook, `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which resolution calls for every build with a scope typed to the run. The hook resolves children through that scope and takes shared data from `scope.GetExecutionState(this, create)`. Operator authoring bases override the protected run-generic `CreateExecutor` for compositions and `CreateExecutor(ResolutionScope scope)` for fixed-signature leaves. Their child properties are `ChildOperator` and `ChildOperators`.
 
-`IOperator<TOperation, TCandidate>` instead prepares one `OperatorExecutorFactory` through `CreateExecutorFactory()`. Its `CreateExecutor` constructs executors sharing that persistent state across operations and compatible run signatures. `OperationExecutorAdapter` is an advanced construction adapter; the callable runtime object remains an executor.
-
-Operator authoring bases use protected `CreateFactory` for fixed-signature leaves and `CreateOperatorFactory` for run-generic compositions. Their child properties are `ChildOperator` and `ChildOperators`.
+Algorithms and consumer-defined roles prepare a factory instead. The generic `IConfigurationNode<TExecutor>` prepares an `ExecutorFactory<TExecutor>` through `CreateExecutorFactory()`, and algorithms expose the same preparation method with their run type parameters. This factory receives a construction scope and binds a typed executor to its resolution context; it is runtime machinery, not a configuration value strategy.
 
 Iterative algorithm bases centralize preparation through `CreateIterationFactory`. Its returned `ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>>` receives a construction scope. The algorithm author resolves the optional interceptor and other declared children through that scope and passes them to the iterative executor constructor.
 
@@ -573,11 +580,11 @@ See also: Advice, Configuration node, Executor, Pointcut.
 
 Status: `Canonical`
 
-An aspect holds ordered pointcut/advice pairs in `Advices`. `Aspect.Create(pointcut, advice)` creates one pair; a derived constructor can assign several pairs directly.
+An aspect is the ordered list of its pointcut/advice pairs. `Aspect.Create(pointcut, advice)` creates one pair. A derived constructor assigns its pairs to the protected `Advices` and spreads other aspects into them, as in `Advices = [.. Aspect.Observe(evaluator.Calls, Record)]`.
 
 Runs accept aspects through `AddAspect`. Resolution applies earlier advice closer to the source executor, with a new scope's pairs preceding inherited pairs. Each advice instance applies once at its first position. If the same advice appears with two pointcuts, the first pairing wins. Two traces sharing a clock therefore share its advice without counting twice.
 
-An aspect holds its pairs; resolution state owns prepared advice factories. Reusing an aspect across independent scopes does not share their prepared execution state. An analyzer or clock may own collected data that it intentionally shares across runs.
+An aspect holds its pairs; execution state owns prepared advice factories. Reusing an aspect across independent scopes does not share their prepared execution state. An analyzer or clock may own collected data that it intentionally shares across runs.
 
 See also: Advice, Join point, Pointcut, Resolution scope.
 
@@ -653,7 +660,7 @@ Status: `Canonical`
 
 Execution state is private mutable data used by an executor, such as counters, caches and buffers. It must not be shared through the reusable configuration.
 
-Under the typed factory contract, persistent state belongs to the selected logical execution and survives reconstruction of its nodes. Resolved children and construction frames belong to each binding; iterator progress and local timers belong to an invocation. Framework-managed leaf state cannot contain graph dependencies.
+A configuration requests its execution state from the scope of its build by passing itself, as in `GetExecutionState(this, create)`; only a configuration being built can request it. The state is created on the first request and belongs to the execution state that owns the configuration, so every later build there receives the same object across operations and run types, while a fresh child state starts with new execution state. A configuration has one execution state object. Resolved children belong to each build; iterator progress and local timers belong to an invocation. Execution state cannot contain graph dependencies such as executors, configurations or scopes.
 
 Use `ExecutionState` for an authored private state holder and `state` for its local variable or parameter when the context is clear.
 
@@ -667,7 +674,7 @@ Status: `Canonical`
 
 A child scope policy chooses a resolution scope and its state ownership and reuse when a meta-algorithm activates an inner algorithm. `ChildScopePolicy.Fresh` creates new child-local state per activation, `Retained` keeps child-local state per inner algorithm configuration reference within its owning meta-algorithm, and `Shared` uses the meta-algorithm's state.
 
-Child-local state reuses factories already owned by an ancestor. Retaining state does not retain an earlier observation context. Cycle exposes the choice as `ScopePolicy`, defaulting to `Fresh`; other meta-algorithms keep their own policies.
+Child-local state reuses execution state and factories already owned by an ancestor. Retaining state does not retain an earlier observation context. Cycle exposes the choice as `ScopePolicy`, defaulting to `Fresh`; other meta-algorithms keep their own policies.
 
 See also: Configuration node, Execution state, Resolution scope.
 
@@ -687,7 +694,7 @@ Status: `Canonical`
 
 A resolution scope resolves configurations to executors during a run.
 
-The scope combines state ownership with an immutable ordered collection of zero, one or more aspects. It selects prepared factories by configuration reference and invokes them with the requesting aspects. The resolver caches no executors, but a leaf factory may return its prepared raw node. Dependencies resolve in the state owning their factory. Child scopes create local state while reusing ancestor-owned factories; `With` changes aspects while sharing state. Both operations accept multiple aspects in supplied order as one layer.
+The scope combines state ownership with an immutable ordered collection of zero, one or more aspects. It builds an operator's executor for every request with the requesting aspects and selects the prepared factories of algorithms and consumer-defined roles by configuration reference. The resolver caches no executors. A configuration's execution state and factory live in the state that owns the configuration. Child scopes create local state while reusing what an ancestor owns; `With` changes aspects while sharing state. Both operations accept multiple aspects in supplied order as one layer.
 
 See [execution resolution](/contributing/architecture/execution-resolution) for preparation, binding and observation rules.
 
@@ -709,9 +716,9 @@ See also: Advice, Aspect, Configuration, Executor, Resolution scope.
 
 Status: `Canonical`
 
-An invocation wrapper adds behavior such as retry, timing, counting or whole-call choice around each call to an executor's named method. The operation adapter builds it into one wrapping executor, which passes every call to the wrapper as an invocation holding the wrapped executor and the call's arguments.
+An invocation wrapper adds behavior such as retry, timing, counting or whole-call choice around each call to an executor's named method. The operation builds it into one wrapping executor through `IOperation<TSelf>.Wrap`, which passes every call to the wrapper as an invocation holding the wrapped executor and the call's arguments.
 
-`IInvocationWrapper` represents this contract and is implemented by small structs. The wrapper calls the invocation's `Proceed()` to run the wrapped method; retry, for example, calls it again after a retryable failure. It reads the call's random number generator as `Random` and can call `ProceedWith(executor, random)` to run the call on another executor of the same operation or with another generator; `ChoosePerCall` proceeds on a child it samples with that generator. Wrappers measuring candidate work ask the invocation for `CountCandidateWork(result)`. An item operation, marked with `IItemOperation<TSelf>`, has invocations implementing `IItemInvocation<TItemResult>`: they report their `ItemCount` and run some of their items on another executor through `ProceedWithItems(executor, items)`. Their `ProceedPerItem(router)` lets a `WeightedRouter<IExecutor>` assign each item to an executor and run each executor's items as one call; `ChoosePerCandidate` passes it a router over its children. Each wrapping executor holds its own wrapped executor, so another binding gets its own children and advice. The wrapping executor exposes the wrapped executor's controls unless the wrapper implements `IExecutorControlProvider` and supplies them.
+`IInvocationWrapper` represents this contract and is implemented by small structs. The wrapper calls the invocation's `Proceed()` to run the wrapped method; retry, for example, calls it again after a retryable failure. It reads the call's random number generator as `Random` and can call `Proceed(executor, random)` to run the call on another executor of the same operation or with another generator; `ChoosePerCall` proceeds on a child it samples with that generator. Wrappers measuring candidate work ask the invocation for `CountCandidateWork(result)`. Each operation writes its invocation as a private struct. Each wrapping executor derives from `WrappingExecutor<TExecutor, TWrapper>` and holds its own wrapped executor, so another binding gets its own children and advice. The wrapping executor exposes the wrapped executor's controls unless the wrapper implements `IExecutorControlProvider` and supplies them.
 
 See also: Operation invocation, Executor, Wrapper chain, Retry.
 
@@ -765,7 +772,7 @@ Status: `Canonical`
 
 An analyzer is a stateful aspect that records or derives information from selected execution boundaries. A run accepts it through `AddAspect` alongside other aspects.
 
-The caller selects its sources, clocks and analysis behavior. A trace owns its aggregation and retention objects, which are never resolved through a scope. Its constructor assigns observation and clock advice. Reusing an analyzer across runs intentionally combines its results.
+The caller selects its sources, clocks and analysis behavior. A trace owns its function, its retention object and any best-so-far object the function updates; none of them is resolved through a scope. Its constructor assigns observation and clock advice. Reusing an analyzer across runs intentionally combines its results.
 
 Properties on a trace read published values without allocation. Methods can allocate immutable snapshots or projections. An accumulating analyzer publishes its accumulator itself and is read once its run has finished.
 
@@ -798,6 +805,14 @@ mutable trace and exposes safe live reads and immutable trace snapshots during a
 
 Do not use series for this concept. In HeuristicLib, a series is a named column in tabular data.
 
+`Analyzer.Trace` reads each observation through one function, as in `Analyzer.Trace(crossover.Calls, observation => observation.Offspring.Count)`. Counting, collecting and single values are plain functions. Ranking functions such as `BestMedianWorst` receive the objective directions they order by, usually the observed call's own, as in `observation.ObjectiveVectors.BestMedianWorst(observation.Problem.Objective)`. A best-so-far object keeps its running best across calls: `BestSoFar` the best objective vector, and `BestSoFar<T>` any other value, ranked by the objective vector its selector reads. The first directions it receives fix it, and other directions or another dimensionality throw.
+
+Related terms:
+
+- `Readings`: `Legacy`. The former projection of a source's observations. A trace reads each observation through its function.
+- `Aggregation`: `Legacy`. The former object a trace summarized readings with. Use a function, a ranking function or a best-so-far object.
+- `Measurement`: `Legacy`. The former value strategy a trace read from observations. Use a function of each observation.
+
 See also: Analysis snapshot, Analyzer, Run.
 
 ### Accumulator
@@ -818,23 +833,7 @@ See also: Trace, Analyzer.
 
 Status: `Canonical`
 
-Trace retention decides what a trace does with an aggregated observation: append it as a new entry, store it over the entry before it, or drop it. `TraceRetention` is an object that holds whatever counting or remembering its policy needs, so each trace is given its own. Retention happens after measurement and aggregation and never skips that work. A policy that appends or drops leaves stored entries untouched; `TraceRetention.LatestOnly()` replaces, so a trace using it keeps one entry rather than a history.
-
-### Measurement
-
-Status: `Canonical`
-
-A measurement is what a trace reads from one observation, such as the objective vectors of a population or the offspring of a crossover. It receives the typed observation of the boundary it observes and returns the readings an aggregation then summarizes.
-
-A named measurement is an immutable value strategy implementing `IMeasurement<TInput, TValue>`, such as `ObjectiveVectorsMeasurement<TCandidate>`. One measurement may read several kinds of observation, such as evaluator calls and search states. A delegate passed to `Analyzer.Trace` is a runtime-only projection with identity semantics and no value-equality or serialization contract.
-
-See also: Aggregation, Observation, Trace.
-
-### Aggregation
-
-Status: `Canonical`
-
-An aggregation turns an observation's readings into an immutable result and may accumulate across observations. `IAggregation<TValue, TResult>` is an object with one `Aggregate` method, which owns any history it keeps, so each trace is given its own. A stateless aggregation summarizes each observation independently and holds nothing.
+Trace retention decides what a trace does with the value its function read from an observation: append it as a new entry, store it over the entry before it, or drop it. `TraceRetention` is an object that holds whatever counting or remembering its policy needs, so each trace is given its own. Retention happens after the function reads the observation and never skips that work. A policy that appends or drops leaves stored entries untouched; `TraceRetention.LatestOnly()` replaces, so a trace using it keeps one entry rather than a history.
 
 ### Clock
 
@@ -870,7 +869,7 @@ See also: Clock, Time, Trace.
 
 Status: `Canonical`
 
-Inspection observes and measures execution while preserving the observed operation's inputs, outputs and computation. It may update its own counters, clocks and collected data. Explicit algorithm or operator policies may use those measurements to change behavior, such as stopping after a budget is consumed.
+Inspection observes and measures execution while preserving the observed operation's inputs, outputs and computation. It may update its own counters, clocks and collected data. Explicit algorithm or operator policies may use those counts and durations to change behavior, such as stopping after a budget is consumed.
 
 `HEAL.HeuristicLib.Inspection` contains observations, predefined observation/counting/timing advice, clocks and accumulators. General aspects and advice belong to the execution model and may change behavior. Analysis derives and publishes results from observations.
 
@@ -884,15 +883,27 @@ An observation is a read-only capture at a defined algorithm or operator boundar
 
 An observation may record data, but it must not change the observed operation's inputs, outputs, or internal computation. Explicit policies may later read observation data to make decisions, such as stopping a run.
 
+Each operation defines the record of one successful call, such as `CrossoverObservation<TCandidate>` with `Parents` and `Offspring`; an algorithm's record is `AlgorithmObservation<TCandidate, TSearchState>`. A record holds the call's inputs and outputs in their original types, plus the call's search space and problem, typed as the call receives them. A record of a call without them holds none. An observation of a configuration of your own may be any value, such as the temperature a cooling schedule returned.
+
 Related terms:
 
 - `Observation callback`: the method or runtime delegate that receives an observation.
-- `Observation source`: the algorithm or operator configuration whose boundary is observed. Sources are matched by reference, so a copied configuration is a different source.
-- `Operator observation`: the `OperatorObservation<TOperation, TCandidate>` every operator offers. Its operation-specific members, such as `Offspring` for a crossover, read the call's arguments and result.
+- `Observed configuration`: the algorithm or operator configuration whose boundary is observed. It is matched by reference, so a copied configuration is observed separately.
+- `Operator observation`: the observation record of one operation's call. It keeps the operation's domain names for the call's inputs and result.
 - `Observable operator`: a runtime operator wrapper that reports completed operations to observation callbacks.
 - `Observable algorithm`: a runtime algorithm wrapper that reports the search states an algorithm yields, at the end of every iteration.
 
-See also: Algorithm, Analyzer, Operator, Run.
+See also: Algorithm, Analyzer, Observation source, Operator, Run.
+
+### Observation source
+
+Status: `Canonical`
+
+An observation source names the observations of one observed configuration: `Calls` on an operator for its successful calls, or `Iterations` on an algorithm for the search states it yields. `ObservationSource<TObservation>` represents it; the type name is `Provisional`.
+
+A source describes observations; creating one installs nothing. `Analyzer.Trace` and `Aspect.Observe` attach it through an aspect, which resolution weaves into the executors a run builds. In that it resembles a cold `IObservable<T>`, but the library implements neither that interface nor Rx-style operators. A trace observes each boundary once, matched by configuration reference and observation type, so two sources of one configuration and observation type record each observation once. An operator implementing several operations offers each operation's source through a view typed to that operation.
+
+See also: Observation, Trace.
 
 ### Experiment
 
@@ -920,8 +931,10 @@ See also: Algorithm, Experiment, Run.
 
 Status: `Canonical`
 
-A trial analyzer factory creates an analyzer for each trial's algorithm configuration. `AspectFactory.Create` supplies the factory passed to `ExperimentRun.AddAspectPerTrial`. It can select several observation boundaries and create clocks for that trial.
+A trial analyzer is the analyzer created for one trial's algorithm configuration. `ExperimentRun.AddAspectPerTrial` takes a function of that configuration, creates one aspect for each trial and returns the trials with their aspects in trial order. Each `TrialAspect` exposes `Trial` and the concrete analyzer as `Aspect`. The function can select several observation boundaries and create clocks for its trial.
 
-Pass that same factory to `GetAspectPerTrial` to retrieve entries in trial order. Each `TrialAspect` exposes `Trial` and the concrete analyzer as `Aspect`.
+Related terms:
+
+- `Trial analyzer factory`: `Legacy`. The former `AspectFactory`, which created per-trial aspects and served to look them up. Pass a function to `AddAspectPerTrial` and keep its result.
 
 See also: Analyzer, Aspect, Experiment trial, Run.

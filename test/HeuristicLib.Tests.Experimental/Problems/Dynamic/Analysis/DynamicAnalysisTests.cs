@@ -46,10 +46,7 @@ public class DynamicAnalysisTests
             [4]
         ]);
         var epoch = Clock.FromEpoch(problem);
-        var bestPerEpoch = Analyzer.Trace(algorithm.Evaluator,
-            observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors),
-            Aggregate.Best<int>(),
-            [epoch]);
+        var bestPerEpoch = Analyzer.Trace(algorithm.Evaluator.Calls, o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(bestPerEpoch);
 

@@ -3,6 +3,7 @@ using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Experiments;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
@@ -52,12 +53,10 @@ public class ExperimentSpecs
         var experiment = CreateSimpleHillClimber(problem)
             .AsGrid()
             .VaryBy([4, 8], (algorithm, maximumNeighbors) => algorithm with { MaxNeighbors = maximumNeighbors });
-        var bestQuality = AspectFactory.Create(
-            (HillClimber<RealVector> algorithm) => algorithm.Evaluator.TraceBestSoFar());
-        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456)).AddAspectPerTrial(bestQuality);
+        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456));
+        var analyses = run.AddAspectPerTrial(algorithm => algorithm.Evaluator.Calls.TraceBestSoFar());
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-        var analyses = run.GetAspectPerTrial(bestQuality);
 
         analyses.Length.ShouldBe(2);
         analyses.Select(analysis => analysis.Trial.Key.MaxNeighbors).ShouldBe([4, 8]);

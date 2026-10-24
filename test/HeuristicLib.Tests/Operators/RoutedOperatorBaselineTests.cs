@@ -48,19 +48,19 @@ public sealed class RoutedOperatorBaselineTests
             var random = RandomNumberGenerator.Create(seed);
             void Save(string role, IEnumerable<int> values) => snapshots.Add(role + seed,
                 string.Join(",", values) + ";next=" + random.NextInt() + ";calls=" + string.Join("/", log));
-            Save("creation", scope.Resolve(ChoosePerCandidate.Create([new Creator(100, log), new Creator(200, log)], [1.0, 3.0]))
+            Save("creation", scope.Resolve(ChoosePerItem.Create([new Creator(100, log), new Creator(200, log)], [1.0, 3.0]))
                 .Create(12, random, problem.SearchSpace, problem));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
-            Save("crossover", scope.Resolve(ChoosePerCandidate.Create([new DrawingCross(100, log), new DrawingCross(200, log)], [1.0, 3.0]))
+            Save("crossover", scope.Resolve(ChoosePerItem.Create([new DrawingCross(100, log), new DrawingCross(200, log)], [1.0, 3.0]))
                 .Cross(parents, random, problem.SearchSpace, problem));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
-            Save("mutation", scope.Resolve(ChoosePerCandidate.Create([new DrawingMutate(100, log), new DrawingMutate(200, log)], [1.0, 3.0]))
+            Save("mutation", scope.Resolve(ChoosePerItem.Create([new DrawingMutate(100, log), new DrawingMutate(200, log)], [1.0, 3.0]))
                 .Mutate(inputs, random, problem.SearchSpace, problem));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
-            Save("refinement", scope.Resolve(ChoosePerCandidate.Create([new DrawingRefine(100, log), new DrawingRefine(200, log)], [1.0, 3.0]))
+            Save("refinement", scope.Resolve(ChoosePerItem.Create([new DrawingRefine(100, log), new DrawingRefine(200, log)], [1.0, 3.0]))
                 .Refine(inputs, random, problem.SearchSpace, problem));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();

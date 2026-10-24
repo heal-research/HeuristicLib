@@ -406,11 +406,11 @@ public class PractitionerUsageSpecs
         var counted = new CountingOperatorAdvice<Mutation, RealVector>(counter, OperatorCountMetric.Candidates);
         var measured = Aspect.MeasureDuration(mutator, duration);
 
-        Aspect.Create(Pointcut.Reference(mutator), counted).Advices.Single().Pointcut.Matches(mutator).ShouldBeTrue();
+        Aspect.Create(Pointcut.Reference(mutator), counted).Single().Pointcut.Matches(mutator).ShouldBeTrue();
         counted.Counter.ShouldBeSameAs(counter);
         counted.Metric.ShouldBe(OperatorCountMetric.Candidates);
-        measured.Advices.Single().Pointcut.Matches(mutator).ShouldBeTrue();
-        measured.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Mutation, RealVector>>().Duration.ShouldBeSameAs(duration);
+        measured.Single().Pointcut.Matches(mutator).ShouldBeTrue();
+        measured.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Mutation, RealVector>>().Duration.ShouldBeSameAs(duration);
     }
 
     [Fact]

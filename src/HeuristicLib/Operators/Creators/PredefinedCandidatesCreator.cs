@@ -22,14 +22,10 @@ public record PredefinedCandidatesCreator<TCandidate>
         CreatorForRemainingCandidates = creatorForRemainingCandidates;
     }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this, new ExecutionState());
-
-    private sealed class Factory(PredefinedCandidatesCreator<TCandidate> source, ExecutionState state) : OperatorExecutorFactory<Creation, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.CreatorForRemainingCandidates), source.PredefinedCandidates, state);
-    }
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(CreatorForRemainingCandidates), PredefinedCandidates,
+            scope.GetExecutionState(this, static () => new ExecutionState()));
 
     private sealed class ExecutionState
     {

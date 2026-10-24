@@ -16,7 +16,7 @@ public sealed class MutatorSelectionTests
     {
         var small = new StepMutator(1);
         var large = new StepMutator(5);
-        var mutator = ChoosePerCandidate.Create<Mutation, int>(small, large);
+        var mutator = ChoosePerItem.Create<Mutation, int>(small, large);
         var counts = new Dictionary<IOperator<Mutation, int>, CountAccumulator>(ReferenceEqualityComparer.Instance);
         var scope = ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IOperator<Mutation, int>>(), new CountingSelectedMutator(source =>
         {
@@ -171,7 +171,7 @@ public sealed class MutatorSelectionTests
     private sealed class CountingSelectedMutator(Func<IOperator<Mutation, int>, CountAccumulator> counter) : OperatorAdvice<Mutation, int>
     {
         // Each resolution of a selected mutator records its own counter.
-        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
             IOperator<Mutation, int> mutator) =>
             new CountingOperatorAdvice<Mutation, int>(counter(mutator), OperatorCountMetric.Candidates)
                 .Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, mutator);

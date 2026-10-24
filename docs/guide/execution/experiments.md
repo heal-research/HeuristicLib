@@ -132,18 +132,15 @@ Parameter search can overfit benchmark instances. Keep separate instances for fi
 
 Analyzers can collect progress during each trial rather than only final states. Continue with [Observability and analysis](/guide/execution/observability-and-analysis).
 
-A trial analyzer factory receives the concrete trial algorithm. Create any clocks inside the factory so they belong to that trial:
+`AddAspectPerTrial` takes a function of the concrete trial algorithm and calls it once for each trial. Create any clocks inside the function so they belong to that trial:
 
 ```csharp
-var quality = AspectFactory.Create(
-    (GeneticAlgorithm<RealVector> trial) =>
-        trial.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
-var run = algorithm.Repeat(2).CreateRun(problem, random)
-    .AddAspectPerTrial(quality);
+var run = algorithm.Repeat(2).CreateRun(problem, random);
+var analyses = run.AddAspectPerTrial(trial =>
+    trial.Iterations.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
 await run.CompleteAsync();
-var analyses = run.GetAspectPerTrial(quality);
 ```
 
-`GetAspectPerTrial` returns `TrialAspect` entries in trial order. Each has a typed `Trial` and an `Aspect` property; here `Aspect` has the concrete analyzer type created by the factory. Reuse the factory across experiments and create fresh analyzers and clocks for each trial when results should be independent. Returning a shared analyzer or clock intentionally combines its history or counts.
+`AddAspectPerTrial` returns `TrialAspect` entries in trial order. Each has a typed `Trial` and an `Aspect` property; here `Aspect` has the concrete analyzer type the function returns. Keep the result to read the analyzers after the run. Reuse the function across experiments and create fresh analyzers and clocks for each trial when results should be independent. Returning a shared analyzer or clock intentionally combines its history or counts.
 
-Use `AspectFactory.Create` for any per-trial aspect, including analyzers. Add factories with `AddAspectPerTrial`; their aspects follow that order in each trial. Adding the same factory twice is rejected.
+Use `AddAspectPerTrial` for any per-trial aspect, including analyzers. Each call adds one aspect to every trial; aspects follow the order of the calls in each trial.

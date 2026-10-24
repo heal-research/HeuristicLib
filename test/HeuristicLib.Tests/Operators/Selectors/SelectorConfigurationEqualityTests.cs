@@ -195,16 +195,11 @@ public class SelectorConfigurationEqualityTests
         {
         }
 
-        protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-        private sealed class Factory(FirstOfSelector source) : OperatorExecutorFactory<Selection, int>
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-                ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
-            {
-                ImmutableArray<ISelectionExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
-                return new Executor<TRunSearchSpace, TRunProblem>(children);
-            }
+            ImmutableArray<ISelectionExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor<TRunSearchSpace, TRunProblem>(children);
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<ISelectionExecutor<int, TSearchSpace, TProblem>> childSelectors)

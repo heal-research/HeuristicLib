@@ -36,11 +36,11 @@ To cover every mutator over real vectors, replace `Pointcut.Reference(mutator)` 
 
 ## Wrap every operation
 
-Advice that does not depend on an operation's inputs, such as timing, derives from `OperatorAdvice` and works for every operation, including operations defined outside the library. It passes a small struct implementing `IInvocationWrapper` to the operation adapter. The wrapper receives each call as an invocation and calls `Proceed()` to run the wrapped method:
+Advice that does not depend on an operation's inputs, such as timing, derives from `OperatorAdvice` and works for every operation, including operations defined outside the library. It passes a small struct implementing `IInvocationWrapper` to `operation.Wrap`, where `operation` describes the selected executor's operation. The wrapper receives each call as an invocation and calls `Proceed()` to run the wrapped method:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/CustomAdviceDocumentationSpecs.cs#general-advice-type{csharp}
 
-The adapter builds one wrapping executor per selected executor and compiles the struct into it, so each call costs the same as a hand-written wrapper. The wrapper can call `Proceed()` several times, as retry does, and `invocation.CountCandidateWork(result)` returns the operation's candidate work when its adapter reports `SupportsCandidateWork`. Every operation ends with a random number generator, which the wrapper reads as `invocation.Random`; `ProceedWith(executor, random)` runs the call on another executor of the same operation or with another generator, keeping the original for an omitted argument. Executors created by `WrapInvocation` pass on the wrapped executor's controls, unless the wrapper implements `IExecutorControlProvider` and supplies them itself.
+`Wrap` builds one wrapping executor per selected executor and compiles the struct into it, so each call costs the same as a hand-written wrapper. The wrapper can call `Proceed()` several times, as retry does, and `invocation.CountCandidateWork(result)` returns the operation's candidate work when the operation reports `SupportsCandidateWork`. Every operation ends with a random number generator, which the wrapper reads as `invocation.Random`; `Proceed(executor, random)` runs the call on another executor of the same operation or with another generator, keeping the original for an omitted argument. Executors created by `Wrap` pass on the wrapped executor's controls, unless the wrapper implements `IExecutorControlProvider` and supplies them itself.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/CustomAdviceDocumentationSpecs.cs#general-advice-run{csharp}
 

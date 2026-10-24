@@ -17,7 +17,7 @@ public abstract record StatelessMoveEvaluator<TCandidate, TSearchSpace, TProblem
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected sealed override ExecutorFactory<IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateFactory() => _ => this;
+    protected sealed override IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 

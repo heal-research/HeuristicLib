@@ -10,7 +10,7 @@ public abstract record StatelessRefiner<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected sealed override ExecutorFactory<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> CreateFactory() => _ => this;
+    protected sealed override IRefinementExecutor<TCandidate, TSearchSpace, TProblem> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
@@ -19,7 +19,7 @@ public abstract record StatelessRefiner<TCandidate, TSearchSpace>
     : Refiner<TCandidate, TSearchSpace>, IRefinementExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    protected sealed override ExecutorFactory<IRefinementExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateFactory() => _ => this;
+    protected sealed override IRefinementExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
@@ -30,7 +30,7 @@ public abstract record StatelessRefiner<TCandidate, TSearchSpace>
 public abstract record StatelessRefiner<TCandidate>
     : Refiner<TCandidate>, IRefinementExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
-    protected sealed override ExecutorFactory<IRefinementExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateFactory() => _ => this;
+    protected sealed override IRefinementExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
 

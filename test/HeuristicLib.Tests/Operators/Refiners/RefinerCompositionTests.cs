@@ -64,25 +64,25 @@ public class RefinerCompositionTests
     }
 
     [Fact]
-    public void ChoosePerCandidateRefinement_WithoutChildRefiners_ThrowsWhenCreatingTheExecution()
+    public void ChoosePerItemRefinement_WithoutChildRefiners_ThrowsWhenCreatingTheExecution()
     {
-        var refiner = ChoosePerCandidate.Create<Refinement, int>();
+        var refiner = ChoosePerItem.Create<Refinement, int>();
 
         Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(refiner));
     }
 
     [Fact]
-    public void ChoosePerCandidateRefinement_WithMismatchedWeightCount_ThrowsWhenCreatingTheExecution()
+    public void ChoosePerItemRefinement_WithMismatchedWeightCount_ThrowsWhenCreatingTheExecution()
     {
-        var refiner = ChoosePerCandidate.Create([AddOffset(1), Multiply(2)], [1.0]);
+        var refiner = ChoosePerItem.Create([AddOffset(1), Multiply(2)], [1.0]);
 
         Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(refiner));
     }
 
     [Fact]
-    public void ChoosePerCandidateRefinement_WithZeroWeightForAChild_NeverSelectsThatChild()
+    public void ChoosePerItemRefinement_WithZeroWeightForAChild_NeverSelectsThatChild()
     {
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ChoosePerCandidate.Create([AddOffset(1), Multiply(2)], [1.0, 0.0]));
+        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(ChoosePerItem.Create([AddOffset(1), Multiply(2)], [1.0, 0.0]));
 
         Refine(execution, 3, 3, 3, 3).ShouldBe([4, 4, 4, 4]);
     }
@@ -178,9 +178,9 @@ public class RefinerCompositionTests
     }
 
     [Fact]
-    public void ChoosePerCandidateRefinement_WithTheSameSeed_MakesTheSameSelections()
+    public void ChoosePerItemRefinement_WithTheSameSeed_MakesTheSameSelections()
     {
-        var refiner = ChoosePerCandidate.Create([AddOffset(1), Multiply(2)], [1.0, 1.0]);
+        var refiner = ChoosePerItem.Create([AddOffset(1), Multiply(2)], [1.0, 1.0]);
         var candidates = new[] { 3, 3, 3, 3, 3, 3, 3, 3 };
 
         var first = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner).Refine(candidates, RandomNumberGenerator.Create(7), DummySearchSpace<int>.Instance, CreateProblem());

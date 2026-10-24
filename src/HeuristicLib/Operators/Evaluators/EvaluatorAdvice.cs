@@ -12,11 +12,11 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public abstract class EvaluatorAdvice<TCandidate> : OperatorAdvice<Evaluation, TCandidate>
 {
-    public sealed override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
+    public sealed override void Check<TSearchSpace, TProblem, TSearchState>(OperationInfo operation,
         IOperator<Evaluation, TCandidate> source) => Check<TSearchSpace, TProblem>(source);
 
     public sealed override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor,
-        OperationExecutorAdapter operation, IOperator<Evaluation, TCandidate> source) =>
+        OperationInfo operation, IOperator<Evaluation, TCandidate> source) =>
         Wrap((IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>)executor, source);
 
     /// <summary>Rejects an evaluator this advice cannot wrap for the run's search space and problem, before its executor is built.</summary>

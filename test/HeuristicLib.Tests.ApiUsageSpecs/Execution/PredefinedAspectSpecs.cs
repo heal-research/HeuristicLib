@@ -10,10 +10,10 @@ using HEAL.HeuristicLib.Operators.Terminators;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
 
-public sealed class AspectFactorySpecs
+public sealed class PredefinedAspectSpecs
 {
     [Fact]
-    public void PredefinedFactoriesInferEveryRoleFromTheirArguments()
+    public void PredefinedAspectsInferEveryRoleFromTheirArguments()
     {
         var creator = new UniformDistributedCreator();
         var crossover = SelectFirstParentCrossover<RealVector>.Instance;
@@ -74,18 +74,18 @@ public sealed class AspectFactorySpecs
             (selector, Aspect.CountCandidates(selector, out var selectorCount)),
             (replacer, Aspect.CountCandidates(replacer, counter)),
             (replacer, Aspect.CountCandidates(replacer, out var replacerCount)),
-            (algorithm, Aspect.Observe(algorithm, _ => { })),
-            (crossover, Aspect.Observe(crossover, _ => { })),
-            (evaluator, Aspect.Observe(evaluator, _ => { })),
-            (mutator, Aspect.Observe(mutator, _ => { })),
-            (interceptor, Aspect.Observe(interceptor, _ => { }))
+            (algorithm, Aspect.Observe(algorithm.Iterations, _ => { })),
+            (crossover, Aspect.Observe(crossover.Calls, _ => { })),
+            (evaluator, Aspect.Observe(evaluator.Calls, _ => { })),
+            (mutator, Aspect.Observe(mutator.Calls, _ => { })),
+            (interceptor, Aspect.Observe(interceptor.Calls, _ => { }))
         ];
 
         foreach (var (source, aspect) in aspects)
-            aspect.Advices.ShouldHaveSingleItem().Pointcut.Matches(source).ShouldBeTrue();
+            aspect.ShouldHaveSingleItem().Pointcut.Matches(source).ShouldBeTrue();
 
-        Clock.FromIterations(algorithm).Advices.ShouldHaveSingleItem().Pointcut.Matches(algorithm).ShouldBeTrue();
-        Clock.FromEvaluations(evaluator).Advices.ShouldHaveSingleItem().Pointcut.Matches(evaluator).ShouldBeTrue();
+        Clock.FromIterations(algorithm).ShouldHaveSingleItem().Pointcut.Matches(algorithm).ShouldBeTrue();
+        Clock.FromEvaluations(evaluator).ShouldHaveSingleItem().Pointcut.Matches(evaluator).ShouldBeTrue();
         Clock.FromElapsedTime(timeProvider).ShouldBeOfType<ElapsedTimeClock>();
     }
 }

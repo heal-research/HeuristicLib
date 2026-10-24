@@ -607,7 +607,7 @@ public class OperatorBudgetAlgorithmTests
         var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 3 };
         var clock = new ManualTimeProvider();
         var slowObservation = Aspect.Observe(
-            algorithm.Evaluator, _ => clock.Advance(TimeSpan.FromMinutes(1)));
+            algorithm.Evaluator.Calls, _ => clock.Advance(TimeSpan.FromMinutes(1)));
         var unbudgeted = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count();
 
         var budgeted = algorithm.LimitedToDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), clock)
@@ -626,8 +626,8 @@ public class OperatorBudgetAlgorithmTests
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 3 };
-        var withoutBudget = algorithm.Evaluator.TraceBestCandidateSoFar();
-        var withBudget = algorithm.Evaluator.TraceBestCandidateSoFar();
+        var withoutBudget = algorithm.Evaluator.Calls.TraceBestCandidateSoFar();
+        var withBudget = algorithm.Evaluator.Calls.TraceBestCandidateSoFar();
 
         await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(withoutBudget)
                        .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -671,10 +671,10 @@ public class OperatorBudgetAlgorithmTests
 
         public EvaluationObservingAnalyzer(IOperator<Evaluation, RealVector> evaluator)
         {
-            Advices = Aspect.Observe(evaluator, Record).Advices;
+            Advices = [.. Aspect.Observe(evaluator.Calls, Record)];
         }
 
-        public void Record(OperatorObservation<Evaluation, RealVector> observation) =>
+        public void Record(EvaluationObservation<RealVector> observation) =>
             ObservedCandidates += observation.ObjectiveVectors.Count;
     }
 

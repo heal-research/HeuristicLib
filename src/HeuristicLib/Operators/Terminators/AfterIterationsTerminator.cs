@@ -23,7 +23,7 @@ public sealed record AfterIterationsTerminator<TCandidate>
     /// <remarks>A nonpositive limit terminates on the first checked state.</remarks>
     public int MaximumIterations { get; init; }
 
-    protected override ExecutionState CreateInitialState() => new();
+    protected override ExecutionState CreateExecutionState() => new();
 
     protected override bool IsTerminalState(ExecutionState executionState)
     {

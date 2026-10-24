@@ -16,6 +16,8 @@ Match the new operation to the role an algorithm already expects.
 | Refiner   | Improve a candidate after variation             |
 | Replacer  | Decide which candidates survive                 |
 
+When no role fits, define a new operation; see [Define a new operation](/contributing/architecture/operator-implementation#define-a-new-operation).
+
 ## Implement a stateless operator
 
 Use a single candidate base when each candidate can be processed independently. This adjacent swap mutation preserves a permutation while making a local change:
@@ -57,13 +59,15 @@ Reduced arity bases such as `SingleCandidateMutator<Permutation>` omit inputs th
 
 Operator records are reusable configuration. Do not store counters, caches or other changing run data in their properties.
 
-Use a stateful base for ordinary mutable execution data. It prepares one state object per selected logical execution; descendant bindings can share ancestor state, while independent root scopes start fresh. Keep `CreateInitialState()` and the ordinary operation override. Use an explicit executor when the operator owns child operators or more complex run resources.
+Use a stateful base for ordinary mutable execution data. It prepares one state object per selected logical execution; descendant bindings can share ancestor state, while independent root scopes start fresh. Keep `CreateExecutionState()` and the ordinary operation override. Use an explicit executor when the operator owns child operators or more complex run resources.
 
 The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), executors and repository analyzer rules.
 
-Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override `CreateOperatorFactory()` to initialize shared state once and return an `OperatorExecutorFactory<TOperation, TCandidate>` whose `CreateExecutor` constructs the executor for the run's types and resolves children through its scope. A fixed-signature leaf using the explicit executor base instead overrides `CreateFactory()`.
+Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override the protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds the executor for the run's types, resolves children through its scope and takes shared state from `scope.GetExecutionState(this, create)`. A fixed-signature leaf using the explicit executor base instead overrides `CreateExecutor(ResolutionScope scope)`.
 
-Custom advice for one role derives from a role advice base such as `MutatorAdvice<TCandidate>` and wraps typed executors. Advice for every operation derives from `OperatorAdvice` and passes a struct `IInvocationWrapper` to the operation adapter. See [Write custom advice](/guide/extending/writing-advice) for complete examples.
+Custom advice for one role derives from a role advice base such as `MutatorAdvice<TCandidate>` and wraps typed executors. Advice for every operation derives from `OperatorAdvice` and passes a struct `IInvocationWrapper` to the operation's `Wrap`. See [Write custom advice](/guide/extending/writing-advice) for complete examples.
+
+An operator you write is observed through its operation's `Calls` source, such as `mutator.Calls`, exactly like a built-in one. See [Observability and analysis](/guide/execution/observability-and-analysis).
 
 The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) implements a complete round-robin mutator and follows its cursor through a new inspection context and an independent root execution.
 

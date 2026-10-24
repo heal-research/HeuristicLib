@@ -124,13 +124,13 @@ public sealed class DeferredAlgorithmFactoryTests
         };
         var root = ResolutionScope.Create();
         var observations = new List<string>();
-        var original = Resolve(root.With(Aspect.Observe(mutator, _ => observations.Add("original"))), cycle);
+        var original = Resolve(root.With(Aspect.Observe(mutator.Calls, _ => observations.Add("original"))), cycle);
         var before = await Run(original);
         before.Select(state => state.Call).ShouldBe([1, 2, 1, 3, 4, 2]);
         before[0].Data.ShouldBeSameAs(before[1].Data);
         before[0].Data.ShouldNotBeSameAs(before[2].Data);
 
-        var rebuilt = Resolve(root.With(Aspect.Observe(mutator, _ => observations.Add("rebuilt"))), cycle);
+        var rebuilt = Resolve(root.With(Aspect.Observe(mutator.Calls, _ => observations.Add("rebuilt"))), cycle);
         var after = await Run(rebuilt);
         after.Select(state => state.Call).ShouldBe([5, 6, 3, 7, 8, 4]);
         after[0].Data.ShouldBeSameAs(before[0].Data);
@@ -168,7 +168,7 @@ public sealed class DeferredAlgorithmFactoryTests
     private static WeakReference RunUnderTemporaryObserver(ResolutionScope root,
         CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState> cycle, IOperator<Mutation, int> mutator)
     {
-        var observer = Aspect.Observe(mutator, _ => { });
+        var observer = Aspect.Observe(mutator.Calls, _ => { });
         Run(Resolve(root.With(observer), cycle)).GetAwaiter().GetResult();
         return new WeakReference(observer);
     }
@@ -313,7 +313,7 @@ public sealed class DeferredAlgorithmFactoryTests
         var clock = new ManualClock();
         var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
         var calls = new MutationCallClock(algorithm.Mutator);
-        var trace = Analyzer.Trace(algorithm.Mutator, observation =>
+        var trace = Analyzer.Trace(algorithm.Mutator.Calls, observation =>
         {
             clock.Advance(10);
             return observation.Offspring[0];
@@ -326,7 +326,7 @@ public sealed class DeferredAlgorithmFactoryTests
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observed = 0;
-        var child = root.CreateChildScope(Aspect.Observe(algorithm.Mutator, _ =>
+        var child = root.CreateChildScope(Aspect.Observe(algorithm.Mutator.Calls, _ =>
         {
             observed++;
             clock.Advance(20);
@@ -463,7 +463,7 @@ public sealed class DeferredAlgorithmFactoryTests
         protected override long ReadTime() => calls;
         public MutationCallClock(IOperator<Mutation, int> mutator)
         {
-            Advices = Aspect.Observe(mutator, _ => calls++).Advices;
+            Advices = [.. Aspect.Observe(mutator.Calls, _ => calls++)];
         }
     }
 
@@ -471,7 +471,7 @@ public sealed class DeferredAlgorithmFactoryTests
 
     private sealed record CountingMutations : StatefulMutator<int, MutationData>
     {
-        protected override MutationData CreateInitialState() => new();
+        protected override MutationData CreateExecutionState() => new();
         protected override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, MutationData state, IRandomNumberGenerator random) => [++state.Calls];
     }
 

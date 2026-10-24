@@ -49,24 +49,24 @@ public class MutatorConfigurationEqualityTests
     }
 
     [Fact]
-    public void ChoosePerCandidateMutation_WithDifferentChildMutators_IsNotEqual()
+    public void ChoosePerItemMutation_WithDifferentChildMutators_IsNotEqual()
     {
-        var left = ChoosePerCandidate.Create([new AddOffsetMutator(1)], [1.0]);
-        var right = ChoosePerCandidate.Create([new AddOffsetMutator(2)], [1.0]);
+        var left = ChoosePerItem.Create([new AddOffsetMutator(1)], [1.0]);
+        var right = ChoosePerItem.Create([new AddOffsetMutator(2)], [1.0]);
 
         left.ShouldNotBe(right);
     }
 
     [Fact]
-    public void ChoosePerCandidateMutation_WithDifferentWeights_IsNotEqual()
+    public void ChoosePerItemMutation_WithDifferentWeights_IsNotEqual()
     {
         var children = new IOperator<Mutation, int>[]
         {
             new AddOffsetMutator(1),
             new AddOffsetMutator(2),
         };
-        var left = ChoosePerCandidate.Create(children, [1.0, 2.0]);
-        var right = ChoosePerCandidate.Create(children, [2.0, 1.0]);
+        var left = ChoosePerItem.Create(children, [1.0, 2.0]);
+        var right = ChoosePerItem.Create(children, [2.0, 1.0]);
 
         left.ShouldNotBe(right);
     }
@@ -75,7 +75,7 @@ public class MutatorConfigurationEqualityTests
     public void MultiMutatorTopologies_WithEqualChildMutators_AreNotEqualAcrossTypes()
     {
         var pipeline = PipelineMutator.Create(new AddOffsetMutator(1), new AddOffsetMutator(2));
-        var chooseOne = ChoosePerCandidate.Create(new AddOffsetMutator(1), new AddOffsetMutator(2));
+        var chooseOne = ChoosePerItem.Create(new AddOffsetMutator(1), new AddOffsetMutator(2));
 
         pipeline.ShouldNotBe<object>(chooseOne);
     }
@@ -172,19 +172,11 @@ public class MutatorConfigurationEqualityTests
         {
         }
 
-        protected override OperatorExecutorFactory CreateOperatorFactory()
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
-            return new Factory(this);
-        }
-
-        private sealed class Factory(FirstOfMutator source) : OperatorExecutorFactory<Mutation, int>
-        {
-            protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-                ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
-            {
-                System.Collections.Immutable.ImmutableArray<IMutationExecutor<int, TSearchSpace, TProblem>> children = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
-                return new Executor<TSearchSpace, TProblem>(children);
-            }
+            System.Collections.Immutable.ImmutableArray<IMutationExecutor<int, TSearchSpace, TProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor<TSearchSpace, TProblem>(children);
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<int, TSearchSpace, TProblem>> childMutators)

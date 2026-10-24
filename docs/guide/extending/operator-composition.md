@@ -12,7 +12,7 @@ The built in composition overview is:
 
 | Composition aspect              | Coordination semantics                                                                                        | Helpers and examples                                                                                        | Applicability                                                |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Weighted alternatives per item  | Chooses a child independently for each item of a call, invokes grouped child batches and restores input order | `ChoosePerCandidate`                                                                                        | Creators, crossovers, mutators, evaluators and refiners      |
+| Weighted alternatives per item  | Chooses a child independently for each item of a call, invokes grouped child batches and restores input order | `ChoosePerItem`                                                                                             | Creators, crossovers, mutators, evaluators and refiners      |
 | Weighted alternatives per call  | Chooses one child for the complete operation call                                                             | `ChoosePerCall`                                                                                             | Every operation-parameterized operator                       |
 | Conditional application         | Chooses between an operation and role specific unchanged behavior                                             | `mutator.AppliedAtRate(...)`, `crossover.AppliedAtRate(...)`, `refiner.AppliedAtRate(...)`                  | Mutators, crossovers and refiners                            |
 | Sequential composition          | Passes each stage result to the next stage in order                                                           | `PipelineMutator`, `PipelineRefiner`, `PipelineInterceptor`                                                 | Mutators, refiners and interceptors                          |
@@ -43,22 +43,22 @@ Individual composition policies may require a stronger contract. A composition m
 
 ## Weighted alternatives
 
-`ChoosePerCandidate<TOperation, TCandidate>` selects a child independently for each item of a call: each requested candidate of a creation, each parent group of a crossover and each candidate of a mutation, evaluation or refinement. Items assigned to the same child are passed to that child as one call. Results are then restored to the original item order.
+`ChoosePerItem<TOperation, TCandidate>` selects a child independently for each item of a call: each requested candidate of a creation, each parent group of a crossover and each candidate of a mutation, evaluation or refinement. Items assigned to the same child are passed to that child as one call. Results are then restored to the original item order.
 
-This order restoration requires every selected child to return exactly one result for each assigned item, so a child creator returns the assigned count and every other child preserves its assigned batch size. Selection, replacement, termination and interception calls have no independent items. Their operations are not marked with `IItemOperation<TSelf>`, so `ChoosePerCandidate` does not compile for them.
+This order restoration requires every selected child to return exactly one result for each assigned item, so a child creator returns the assigned count and every other child preserves its assigned batch size. Selection, replacement, termination and interception calls have no independent items. Their operations are not marked with `IItemOperation<TSelf>`, so `ChoosePerItem` does not compile for them.
 
 Weights are retained exactly as configured. Omitting weights selects uniformly across all children. Positive finite weights participate proportionally; zero, negative finite weights, negative infinity and `NaN` mean never. Positive infinity overrides finite weights, with multiple positive-infinity children selected uniformly. If no child is selectable, selection falls back to uniform across all children. Configured weights are compiled once for repeated sampling rather than normalized or recalculated for every choice.
 
 `ChoosePerCall<Selection, TCandidate>` and `ChoosePerCall<Replacement, TCandidate>` make one weighted choice for each complete selection or replacement call. The selected child receives the complete population inputs and requested count. This preserves the meaning of a selector or replacer policy as a decision over a complete population instead of mixing fragments from several policies.
 
-`ChoosePerCall` makes the same whole-call choice for any operator using `IOperator<TOperation, TCandidate>`, including mutation, evaluation and operations defined outside the library. Each call samples one child with the call's random number generator and runs on that child with the same generator, unchanged inputs and the run's search space and problem. Use it when a batch should stay with one policy, such as evaluating a complete batch with either an exact or a surrogate evaluator, and use `ChoosePerCandidate` when each item should choose independently. Its weights follow the rules above, and building its executor rejects an empty child collection or a weight count that differs from the child count.
+`ChoosePerCall` makes the same whole-call choice for any operator using `IOperator<TOperation, TCandidate>`, including mutation, evaluation and operations defined outside the library. Each call samples one child with the call's random number generator and runs on that child with the same generator, unchanged inputs and the run's search space and problem. Use it when a batch should stay with one policy, such as evaluating a complete batch with either an exact or a surrogate evaluator, and use `ChoosePerItem` when each item should choose independently. Its weights follow the rules above, and building its executor rejects an empty child collection or a weight count that differs from the child count.
 
 ```csharp
-var creator = ChoosePerCandidate.Create(
+var creator = ChoosePerItem.Create(
     [uniformCreator, normalCreator],
     [0.75, 0.25]);
 
-var mutator = ChoosePerCandidate.Create(
+var mutator = ChoosePerItem.Create(
     [smallMutation, largeMutation],
     [0.8, 0.2]);
 
@@ -427,7 +427,7 @@ Use these imports in a C# project with implicit system usings enabled:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-type{csharp}
 
-The constructor retains child configurations through the multi base, which snapshots their collection. `CreateOperatorFactory` validates that collection and allocates `ExecutionState` once. The returned `Factory` keeps that cursor; its `CreateExecutor` resolves the current children through the typed scope it receives and builds an executor around the same cursor. Allocating `ExecutionState` inside `CreateExecutor` would reset the cursor whenever another observation context binds the composition.
+The constructor retains child configurations through the multi base, which snapshots their collection. `CreateExecutor` validates that collection, resolves the current children through the typed scope it receives and builds an executor around the cursor from `scope.GetExecutionState`. The scope creates that `ExecutionState` on the first build and returns the same object to every later build of the composition, so each executor continues the same sequence. Creating `ExecutionState` directly inside `CreateExecutor` would reset the cursor whenever another observation context binds the composition.
 
 The executor retains the resolved children of its context; it keeps only the cursor in shared state. `offspring` is local to one invocation. This example expects sequential calls: sharing the state does not serialize concurrent mutation operations.
 

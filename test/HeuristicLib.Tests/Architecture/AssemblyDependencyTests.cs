@@ -71,7 +71,7 @@ public sealed class AssemblyDependencyTests
         main.GetType("HEAL.HeuristicLib.Algorithms.NSGA2`1").ShouldNotBeNull();
         main.GetType("HEAL.HeuristicLib.Problems.QuadraticAssignment.QuadraticAssignmentProblem").ShouldNotBeNull();
         main.GetType("HEAL.HeuristicLib.Algorithms.AlpsGeneticAlgorithm`1").ShouldBeNull();
-        main.GetType("HEAL.HeuristicLib.Analysis.PopulationSimilarityAggregation`1").ShouldBeNull();
+        main.GetType("HEAL.HeuristicLib.Analysis.PopulationSimilarityExtensions").ShouldBeNull();
         main.GetType("HEAL.HeuristicLib.SearchSpaces.ISubencodingComparable`1").ShouldBeNull();
         main.GetType("HEAL.HeuristicLib.Algorithms.ISolutionLayout`1").ShouldBeNull();
     }

@@ -76,16 +76,11 @@ public class ReplacerConfigurationEqualityTests
         {
         }
 
-        protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-        private sealed class Factory(FirstOfReplacer source) : OperatorExecutorFactory<Replacement, int>
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-                ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
-            {
-                ImmutableArray<IReplacementExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
-                return new Executor<TRunSearchSpace, TRunProblem>(children);
-            }
+            ImmutableArray<IReplacementExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor<TRunSearchSpace, TRunProblem>(children);
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IReplacementExecutor<int, TSearchSpace, TProblem>> childReplacers)
@@ -103,7 +98,8 @@ public class ReplacerConfigurationEqualityTests
         {
         }
 
-        protected override OperatorExecutorFactory CreateOperatorFactory() => OperatorExecutorFactory.Forward(ChildOperator);
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => scope.ResolveOperator(ChildOperator);
     }
 
 }

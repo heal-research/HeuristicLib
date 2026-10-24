@@ -13,8 +13,8 @@ public class EvaluatorInspectionTests
         var counter = new CountAccumulator();
         var evaluator = CreateEvaluator();
         var aspect = Aspect.CountCalls(evaluator, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Evaluation, int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Evaluation, int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
+        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Evaluation, int>>().Counter.ShouldBeSameAs(counter);
+        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Evaluation, int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
         var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
@@ -46,8 +46,8 @@ public class EvaluatorInspectionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var evaluator = CreateEvaluator();
         var aspect = Aspect.MeasureDuration(evaluator, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Evaluation, int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Evaluation, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
+        aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Evaluation, int>>().Duration.ShouldBeSameAs(duration);
+        aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Evaluation, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 

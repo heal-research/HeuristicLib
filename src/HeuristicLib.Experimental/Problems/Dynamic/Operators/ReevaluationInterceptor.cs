@@ -23,10 +23,10 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
         SourceProblem = sourceProblem;
     }
 
-    protected override ExecutorFactory<IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateFactory()
+    protected override IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor(ResolutionScope scope)
     {
-        var state = new ExecutionState(SourceProblem.CurrentEpoch);
-        return scope => new Executor(scope.Resolve<TCandidate, TSearchSpace, TProblem>(Evaluator), SourceProblem, state);
+        var state = scope.GetExecutionState(this, () => new ExecutionState(SourceProblem.CurrentEpoch));
+        return new Executor(scope.Resolve<TCandidate, TSearchSpace, TProblem>(Evaluator), SourceProblem, state);
     }
 
     private sealed class ExecutionState(int initialEpoch)

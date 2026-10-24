@@ -57,21 +57,8 @@ public static class ReplacementOperationResolutionExtensions
         public IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IOperator<Replacement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve(IOperator<Replacement, TCandidate> source,
-            [NotNullWhen(true)] out IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason)
-        {
-            try
-            {
-                executor = scope.Resolve(source);
-                reason = null;
-                return true;
-            }
-            catch (InvalidOperationException exception)
-            {
-                executor = null;
-                reason = exception.Message;
-                return false;
-            }
-        }
+            [NotNullWhen(true)] out IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
+            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
     }
 
     extension<TCandidate, TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope)
@@ -94,20 +81,7 @@ public static class ReplacementOperationResolutionExtensions
         public IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IOperator<Replacement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve(IOperator<Replacement, TCandidate> source,
-            [NotNullWhen(true)] out IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason)
-        {
-            try
-            {
-                executor = scope.Resolve(source);
-                reason = null;
-                return true;
-            }
-            catch (InvalidOperationException exception)
-            {
-                executor = null;
-                reason = exception.Message;
-                return false;
-            }
-        }
+            [NotNullWhen(true)] out IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
+            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
     }
 }

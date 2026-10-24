@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Creators;
@@ -60,10 +61,10 @@ public class AdaptableMutationStrengthTests
         var child = parent.CreateChildScope(Aspect.CountCalls(mutator, observedCalls));
         var typed = child.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
         var inner = typed.Resolve(mutator, out IMutationStrengthControl? innerStrength);
-        innerStrength.ShouldBeSameAs(strength);
+        ShouldShareStrength(innerStrength, strength);
         inner.ShouldNotBeAssignableTo<IMutationStrengthControl>();
         typed.Resolve(mutator, out IMutationStrengthControl? repeatedStrength).ShouldNotBeSameAs(inner);
-        repeatedStrength.ShouldBeSameAs(strength);
+        ShouldShareStrength(repeatedStrength, strength);
 
         inner.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, problem).ShouldBe([new RealVector(2.0)]);
         observedCalls.CurrentCount.ShouldBe(1);
@@ -179,9 +180,9 @@ public class AdaptableMutationStrengthTests
                 var typed = scope.For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>();
                 _ = typed.Resolve(mutator, out IMutationStrengthControl? strength);
                 _ = typed.Resolve(gaussian, out IMutationStrengthControl? childStrength);
-                strength.ShouldNotBeNull().ShouldBeSameAs(childStrength);
+                ShouldShareStrength(strength, childStrength);
                 if (previous is not null)
-                    strength.ShouldBeSameAs(previous);
+                    ShouldShareStrength(strength, previous);
                 previous = strength;
                 foreach (var state in typed.Resolve(algorithm).Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken))
                     result.Add((state.Population.Single().Candidate[0], strength.CurrentMutationStrength));
@@ -190,6 +191,17 @@ public class AdaptableMutationStrengthTests
             gaussian.MutationStrength.ShouldBe(3.0);
             return result;
         }
+    }
+
+    // A stateful leaf builds a new executor for each resolution, so two controls share the strength, not the object.
+    private static void ShouldShareStrength([NotNull] IMutationStrengthControl? control, IMutationStrengthControl? other)
+    {
+        control.ShouldNotBeNull();
+        other.ShouldNotBeNull();
+        var strength = control.CurrentMutationStrength;
+        other.CurrentMutationStrength = strength + 1.0;
+        control.CurrentMutationStrength.ShouldBe(strength + 1.0);
+        other.CurrentMutationStrength = strength;
     }
 
     private static EvolutionStrategy<RealVector> CreateAlgorithm(IOperator<Mutation, RealVector> mutator, FuncProblem<RealVector, BoundedRealVectorSearchSpace> problem) => new()

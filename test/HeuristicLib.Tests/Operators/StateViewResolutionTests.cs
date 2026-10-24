@@ -82,7 +82,7 @@ public class StateViewResolutionTests
 
     private sealed record ThirdCallTerminator(Probe Probe) : StatefulTerminator<int, CallCount>
     {
-        protected override CallCount CreateInitialState()
+        protected override CallCount CreateExecutionState()
         {
             Probe.Preparations++;
             return new CallCount();
@@ -93,7 +93,7 @@ public class StateViewResolutionTests
 
     private sealed record CountingInterceptor(Probe Probe) : StatefulInterceptor<int, FirstState, CallCount>
     {
-        protected override CallCount CreateInitialState()
+        protected override CallCount CreateExecutionState()
         {
             Probe.Preparations++;
             return new CallCount();

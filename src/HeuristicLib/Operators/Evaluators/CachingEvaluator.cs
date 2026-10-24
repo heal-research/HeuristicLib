@@ -31,22 +31,14 @@ public record CachingEvaluator<TCandidate, TKey>
         KeySelector = keySelector;
     }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory()
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
         // Keep statistics disabled: MemoryCache's thread-local statistics can retain the cache and its entries
-        // on a live thread after the prepared execution state is released.
-        var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = SizeLimit });
-        return new Factory(this, cache);
-    }
-
-    private sealed class Factory(CachingEvaluator<TCandidate, TKey> source, MemoryCache cache) : OperatorExecutorFactory<Evaluation, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
-        {
-            var childEvaluator = scope.Resolve(source.ChildOperator);
-            return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.KeySelector, cache);
-        }
+        // on a live thread after the execution state is released.
+        var cache = scope.GetExecutionState(this, () => new MemoryCache(new MemoryCacheOptions { SizeLimit = SizeLimit }));
+        var childEvaluator = scope.Resolve(ChildOperator);
+        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, cache);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, MemoryCache cache)

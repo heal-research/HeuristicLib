@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Algorithms;
 
 public record OperatorBudgetAlgorithm<TOperation, TCandidate, TSearchState>
     : Algorithm<OperatorBudgetAlgorithm<TOperation, TCandidate, TSearchState>, TCandidate, TSearchState>
-    where TOperation : IOperationDescriptor<TOperation>
+    where TOperation : IOperation<TOperation>
     where TSearchState : class, ISearchState
 {
     public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
@@ -93,7 +93,7 @@ public static class OperatorCountBudgetExtensions
         /// </remarks>
         public OperatorBudgetAlgorithm<TOperation, TCandidate, TSearchState> LimitedToCalls<TOperation>(
             IOperator<TOperation, TCandidate> observedOperator, int maximumCalls)
-            where TOperation : IOperationDescriptor<TOperation>
+            where TOperation : IOperation<TOperation>
         {
             return new()
             {
@@ -112,7 +112,7 @@ public static class OperatorCountBudgetExtensions
         /// </remarks>
         public OperatorBudgetAlgorithm<TOperation, TCandidate, TSearchState> LimitedToCandidates<TOperation>(
             IOperator<TOperation, TCandidate> observedOperator, int maximumCandidates)
-            where TOperation : IOperationDescriptor<TOperation>
+            where TOperation : IOperation<TOperation>
         {
             return new()
             {

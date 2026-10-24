@@ -28,7 +28,7 @@ public class CreatorConfigurationEqualityTests
         var first = new ConstantCreator(1);
         var second = new ConstantCreator(2);
 
-        var creator = ChoosePerCandidate.Create(first, second);
+        var creator = ChoosePerItem.Create(first, second);
 
         creator.ChildOperators.ShouldBe([first, second]);
     }
@@ -49,8 +49,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void MultiCreator_WithSeparatelyBuiltEqualChildCollections_IsEqual()
     {
-        var left = ChoosePerCandidate.Create(new ConstantCreator(1), new ConstantCreator(2));
-        var right = ChoosePerCandidate.Create(new ConstantCreator(1), new ConstantCreator(2));
+        var left = ChoosePerItem.Create(new ConstantCreator(1), new ConstantCreator(2));
+        var right = ChoosePerItem.Create(new ConstantCreator(1), new ConstantCreator(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -59,8 +59,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void MultiCreator_WithDifferentChildCreators_IsNotEqual()
     {
-        var left = ChoosePerCandidate.Create(new ConstantCreator(1), new ConstantCreator(2));
-        var right = ChoosePerCandidate.Create(new ConstantCreator(1), new ConstantCreator(3));
+        var left = ChoosePerItem.Create(new ConstantCreator(1), new ConstantCreator(2));
+        var right = ChoosePerItem.Create(new ConstantCreator(1), new ConstantCreator(3));
 
         left.ShouldNotBe(right);
     }
@@ -68,8 +68,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void MultiCreator_WithReorderedChildCreators_IsNotEqual()
     {
-        var left = ChoosePerCandidate.Create(new ConstantCreator(1), new ConstantCreator(2));
-        var right = ChoosePerCandidate.Create(new ConstantCreator(2), new ConstantCreator(1));
+        var left = ChoosePerItem.Create(new ConstantCreator(1), new ConstantCreator(2));
+        var right = ChoosePerItem.Create(new ConstantCreator(2), new ConstantCreator(1));
 
         left.ShouldNotBe(right);
     }
@@ -77,18 +77,18 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void MultiCreator_WithDifferentChildCount_IsNotEqual()
     {
-        var left = ChoosePerCandidate.Create(new ConstantCreator(1), new ConstantCreator(2));
-        var right = ChoosePerCandidate.Create(new ConstantCreator(1));
+        var left = ChoosePerItem.Create(new ConstantCreator(1), new ConstantCreator(2));
+        var right = ChoosePerItem.Create(new ConstantCreator(1));
 
         left.ShouldNotBe(right);
     }
 
     [Fact]
-    public void ChoosePerCandidateCreation_WithDifferentWeights_IsNotEqual()
+    public void ChoosePerItemCreation_WithDifferentWeights_IsNotEqual()
     {
         IOperator<Creation, int>[] childCreators = [new ConstantCreator(1), new ConstantCreator(2)];
-        var left = new ChoosePerCandidate<Creation, int>(childCreators) { Weights = [1.0, 2.0] };
-        var right = new ChoosePerCandidate<Creation, int>(childCreators) { Weights = [2.0, 1.0] };
+        var left = new ChoosePerItem<Creation, int>(childCreators) { Weights = [1.0, 2.0] };
+        var right = new ChoosePerItem<Creation, int>(childCreators) { Weights = [2.0, 1.0] };
 
         left.ShouldNotBe(right);
     }
@@ -98,11 +98,11 @@ public class CreatorConfigurationEqualityTests
     /// configuration stays distinguishable from an unweighted one.
     /// </summary>
     [Fact]
-    public void ChoosePerCandidateCreation_WithOmittedWeights_IsNotEqualToExplicitUniformWeights()
+    public void ChoosePerItemCreation_WithOmittedWeights_IsNotEqualToExplicitUniformWeights()
     {
         IOperator<Creation, int>[] childCreators = [new ConstantCreator(1), new ConstantCreator(2)];
-        var omitted = new ChoosePerCandidate<Creation, int>(childCreators);
-        var explicitUniform = new ChoosePerCandidate<Creation, int>(childCreators) { Weights = [0.5, 0.5] };
+        var omitted = new ChoosePerItem<Creation, int>(childCreators);
+        var explicitUniform = new ChoosePerItem<Creation, int>(childCreators) { Weights = [0.5, 0.5] };
 
         omitted.Weights.ShouldBeEmpty();
         omitted.ShouldNotBe(explicitUniform);
@@ -111,7 +111,7 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void MultiCreatorTopologies_WithEqualChildCreators_AreNotEqualAcrossTypes()
     {
-        var chooseOne = ChoosePerCandidate.Create(new ConstantCreator(1), new ConstantCreator(2));
+        var chooseOne = ChoosePerItem.Create(new ConstantCreator(1), new ConstantCreator(2));
         var firstOf = new FirstOfCreator([new ConstantCreator(1), new ConstantCreator(2)]);
 
         chooseOne.ShouldNotBe<object>(firstOf);
@@ -196,8 +196,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void NestedCreatorComposition_WithEqualParts_IsEqual()
     {
-        var left = ChoosePerCandidate.Create(new ConstantCreator(1).TransformWith(new AddOneMutator()), new ConstantCreator(2));
-        var right = ChoosePerCandidate.Create(new ConstantCreator(1).TransformWith(new AddOneMutator()), new ConstantCreator(2));
+        var left = ChoosePerItem.Create(new ConstantCreator(1).TransformWith(new AddOneMutator()), new ConstantCreator(2));
+        var right = ChoosePerItem.Create(new ConstantCreator(1).TransformWith(new AddOneMutator()), new ConstantCreator(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -206,8 +206,8 @@ public class CreatorConfigurationEqualityTests
     [Fact]
     public void NestedCreatorComposition_WithDifferentNestedChildCreator_IsNotEqual()
     {
-        var left = ChoosePerCandidate.Create(new ConstantCreator(1).TransformWith(new AddOneMutator()), new ConstantCreator(2));
-        var right = ChoosePerCandidate.Create(new ConstantCreator(9).TransformWith(new AddOneMutator()), new ConstantCreator(2));
+        var left = ChoosePerItem.Create(new ConstantCreator(1).TransformWith(new AddOneMutator()), new ConstantCreator(2));
+        var right = ChoosePerItem.Create(new ConstantCreator(9).TransformWith(new AddOneMutator()), new ConstantCreator(2));
 
         left.ShouldNotBe(right);
     }
@@ -230,16 +230,11 @@ public class CreatorConfigurationEqualityTests
         {
         }
 
-        protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-        private sealed class Factory(FirstOfCreator source) : OperatorExecutorFactory<Creation, int>
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-                ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
-            {
-                ImmutableArray<ICreationExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
-                return new Executor<TRunSearchSpace, TRunProblem>(children);
-            }
+            ImmutableArray<ICreationExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor<TRunSearchSpace, TRunProblem>(children);
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<ICreationExecutor<int, TSearchSpace, TProblem>> childCreators)
@@ -257,7 +252,8 @@ public class CreatorConfigurationEqualityTests
         {
         }
 
-        protected override OperatorExecutorFactory CreateOperatorFactory() => OperatorExecutorFactory.Forward(ChildOperator);
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => scope.ResolveOperator(ChildOperator);
     }
 
 }

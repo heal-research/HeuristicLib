@@ -34,7 +34,7 @@ public static class RunTraceExtensions
             TraceRetention? retention = null,
             IComparer<ObjectiveVector>? objectiveComparer = null)
         {
-            analyzer = (algorithm ?? run.Algorithm).TracePopulationCandidates(clocks, retention, objectiveComparer);
+            analyzer = (algorithm ?? run.Algorithm).Iterations.TracePopulationCandidates(clocks, retention, objectiveComparer);
             return run.AddAspect(analyzer);
         }
     }

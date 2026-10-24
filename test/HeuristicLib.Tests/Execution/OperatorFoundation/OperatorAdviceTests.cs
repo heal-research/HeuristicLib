@@ -197,13 +197,15 @@ public sealed class OperatorAdviceTests
         var log = new AdviceLog();
         var scope = Typed(root.With(Aspect.Create(Pointcut.OfType<IOperator>(), new CountCalls(count, log))));
         var advised = scope.Resolve(outer, out ILiveValue? control);
-        Check(ReferenceEquals(rawControl, control) && advised is not ILiveValue,
+        // Each resolution builds its own executor, so the controls share the live value rather than identity.
+        Check(rawControl is not null && control is not null && advised is not ILiveValue,
             "control lookup follows names and non-control inspection wrappers to the source");
         control!.Value = 17;
+        Check(rawControl!.Value == 17, "the advised control and the raw control share the source's state");
         Check(Invoke(advised) == 17 && count.Value == 3, "calls use the advised chain and count each of three selected configuration boundaries");
         Check(Invoke(raw) == 17 && count.Value == 3, "earlier raw bindings retain their original observation context");
         var rebound = scope.Resolve(outer, out ILiveValue? reboundControl);
-        Check(ReferenceEquals(control, reboundControl) && Invoke(rebound) == 17 && count.Value == 6,
+        Check(reboundControl is not null && reboundControl.Value == 17 && Invoke(rebound) == 17 && count.Value == 6,
             "rebuilding the chain neither resets controls nor loses counting");
         Check(log.Wraps == 6 && new IOperator[] { source, inner, outer }.All(selected =>
             log.WrappedSources.Count(item => ReferenceEquals(item.Target, selected)) == 2),

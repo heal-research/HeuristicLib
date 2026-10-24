@@ -12,12 +12,10 @@ public sealed class ExecutorFactoryAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "HLib0001";
 
-    private const string ExecutionNamespace = "HEAL.HeuristicLib.Execution";
-
     private static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticId,
         title: "Resolve child configurations through the scope",
-        messageFormat: "Do not prepare a child executor factory directly. Use ResolutionScope.Resolve(...) to preserve its wrappers and execution state.",
+        messageFormat: "Do not create a child's executor or executor factory directly. Resolve the child through the scope to preserve its advice and execution state.",
         category: "Architecture",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -35,10 +33,8 @@ public sealed class ExecutorFactoryAnalyzer : DiagnosticAnalyzer
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
         if (context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken).Symbol is not IMethodSymbol target
-            || target.Name is not ("CreateExecutorFactory" or "CreateFactory" or "CreateOperatorFactory")
             || target.IsStatic
-            || target.Parameters.Length != 0
-            || !IsExecutionType(target.ReturnType, "ExecutorFactory", "OperatorExecutorFactory")
+            || !IsConstructionHook(target)
             || !HasContract(target.ContainingType, "IConfigurationNode"))
             return;
 
@@ -49,13 +45,29 @@ public sealed class ExecutorFactoryAnalyzer : DiagnosticAnalyzer
         context.ReportDiagnostic(Diagnostic.Create(Rule, invocation.GetLocation()));
     }
 
+    // An operator builds its executor in CreateExecutor; algorithms and consumer-defined roles still prepare a factory.
+    private static bool IsConstructionHook(IMethodSymbol target) => target.Name switch
+    {
+        "CreateExecutor" => target.Parameters.Length == 1 && ExecutionTypes.Is(target.Parameters[0].Type, "ResolutionScope")
+            && IsExecutorType(target.ReturnType),
+        "CreateExecutorFactory" => target.Parameters.Length == 0 && ExecutionTypes.Is(target.ReturnType, "ExecutorFactory"),
+        _ => false
+    };
+
+    private static bool IsExecutorType(ITypeSymbol type) => type switch
+    {
+        INamedTypeSymbol named => HasContract(named, "IExecutor"),
+        ITypeParameterSymbol parameter => parameter.ConstraintTypes.Any(IsExecutorType),
+        _ => false
+    };
+
     private static bool IsConstructionContext(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation)
     {
         for (var symbol = context.SemanticModel.GetEnclosingSymbol(invocation.SpanStart, context.CancellationToken);
              symbol is not null; symbol = symbol.ContainingSymbol)
         {
-            if (symbol is IMethodSymbol method && (IsExecutionType(method.ReturnType, "ExecutorFactory", "OperatorExecutorFactory", "WrapperExecutorFactory") || IsWrapperConstructor(method.ReturnType)
-                || method.Parameters.Any(static parameter => IsExecutionType(parameter.Type, "ResolutionScope"))))
+            if (symbol is IMethodSymbol method && (ExecutionTypes.Is(method.ReturnType, "ExecutorFactory", "WrapperExecutorFactory") || IsWrapperConstructor(method.ReturnType)
+                || method.Parameters.Any(static parameter => ExecutionTypes.Is(parameter.Type, "ResolutionScope"))))
                 return true;
             if (symbol is INamedTypeSymbol type && HasContract(type, "IExecutor"))
                 return true;
@@ -70,7 +82,7 @@ public sealed class ExecutorFactoryAnalyzer : DiagnosticAnalyzer
             || context.SemanticModel.GetOperation(argument, context.CancellationToken) is not IArgumentOperation preparation
             || preparation.Parameter?.Name != "createExecutorFactory"
             || preparation.Parent is not IInvocationOperation resolution
-            || !IsExecutionType(resolution.TargetMethod.ContainingType, "ResolutionScope")
+            || !ExecutionTypes.Is(resolution.TargetMethod.ContainingType, "ResolutionScope")
             || context.SemanticModel.GetOperation(lambda, context.CancellationToken) is not IAnonymousFunctionOperation callback)
             return false;
         var receiver = context.SemanticModel.GetSymbolInfo(member.Expression, context.CancellationToken).Symbol;
@@ -97,8 +109,5 @@ public sealed class ExecutorFactoryAnalyzer : DiagnosticAnalyzer
     }
 
     private static bool HasContract(INamedTypeSymbol type, string name) =>
-        IsExecutionType(type, name) || type.AllInterfaces.Any(contract => IsExecutionType(contract, name));
-
-    private static bool IsExecutionType(ITypeSymbol type, params string[] names) =>
-        type.ContainingNamespace.ToDisplayString() == ExecutionNamespace && names.Contains(type.Name);
+        ExecutionTypes.Is(type, name) || type.AllInterfaces.Any(contract => ExecutionTypes.Is(contract, name));
 }

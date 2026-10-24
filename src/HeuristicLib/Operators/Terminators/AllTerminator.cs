@@ -14,14 +14,9 @@ public sealed record AllTerminator<TCandidate>
     {
     }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-    private sealed class Factory(AllTerminator<TCandidate> source) : OperatorExecutorFactory<Termination, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>([.. source.ChildOperators.Select(child => scope.Resolve(child))]);
-    }
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+        new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>([.. ChildOperators.Select(child => scope.Resolve(child))]);
 
     private sealed class Executor<TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
         : ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>

@@ -25,7 +25,7 @@ public sealed class OperationBindingTests
     [InlineData(6, 2)]
     [InlineData(7, 0)]
     [InlineData(8, 0)]
-    public void EveryDescriptorPreservesItsDomainCallAndReportsDeclaredWork(int operation, int expectedWork)
+    public void EveryOperationPreservesItsDomainCallAndReportsDeclaredWork(int operation, int expectedWork)
     {
         var source = new AllOperations();
         var probe = new HookProbe();
@@ -47,7 +47,7 @@ public sealed class OperationBindingTests
     [InlineData(6)]
     [InlineData(7)]
     [InlineData(8)]
-    public void EveryDescriptorRetriesItsNamedCallWithoutReconstructingTheChild(int operation)
+    public void EveryOperationRetriesItsNamedCallWithoutReconstructingTheChild(int operation)
     {
         foreach (var failures in new[] { 0, 2, 3 })
         {
@@ -76,7 +76,7 @@ public sealed class OperationBindingTests
     [InlineData(6)]
     [InlineData(7)]
     [InlineData(8)]
-    public void EveryDescriptorSupportsAnInvocationWrapperThatInvokesItsChildTwice(int operation)
+    public void EveryOperationSupportsAnInvocationWrapperThatInvokesItsChildTwice(int operation)
     {
         var source = new AllOperations();
         var advice = new TwiceAdvice();
@@ -101,12 +101,12 @@ public sealed class OperationBindingTests
     [InlineData(6)]
     [InlineData(7)]
     [InlineData(8)]
-    public void EveryDescriptorExposesTheCallsRandomAndProceedsWithAnotherRandom(int operation)
+    public void EveryOperationExposesTheCallsRandomAndProceedsWithAnotherRandom(int operation)
     {
         var source = new AllOperations();
         var fork = RandomNumberGenerator.Create(2);
         var recorder = new InvocationRecorder();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProceedWithAdvice(null, fork, recorder)));
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new RedirectingAdvice(null, fork, recorder)));
 
         InvokeOperation(scope, source, operation);
 
@@ -124,13 +124,13 @@ public sealed class OperationBindingTests
     [InlineData(6)]
     [InlineData(7)]
     [InlineData(8)]
-    public void EveryDescriptorProceedsWithAnotherExecutorOfTheSameOperation(int operation)
+    public void EveryOperationProceedsWithAnotherExecutorOfTheSameOperation(int operation)
     {
         var source = new AllOperations();
         var other = new AllOperations();
         var recorder = new InvocationRecorder();
         var otherExecutor = ResolveOperation(ResolutionScope.Create(), other, operation);
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProceedWithAdvice(otherExecutor, null, recorder)));
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new RedirectingAdvice(otherExecutor, null, recorder)));
 
         InvokeOperation(scope, source, operation);
 
@@ -149,7 +149,7 @@ public sealed class OperationBindingTests
     [InlineData(6)]
     [InlineData(7)]
     [InlineData(8)]
-    public void EveryDescriptorForwardsControlsUnlessItsWrapperSuppliesThem(int operation)
+    public void EveryOperationForwardsControlsUnlessItsWrapperSuppliesThem(int operation)
     {
         var source = new AllOperations();
         var root = ResolutionScope.Create();
@@ -158,8 +158,9 @@ public sealed class OperationBindingTests
         var supplied = new SuppliedControl();
         var supplying = ResolveOperation(root.With(Aspect.Create(Pointcut.Reference(source), new ControlSupplyingAdvice(supplied))), source, operation);
 
-        forwarding.ShouldNotBeSameAs(raw);
-        ExecutorControls.Find<IExecutor>(forwarding).ShouldBeSameAs(raw);
+        // Each build creates its own executor, so the advised build forwards the control of its own raw executor.
+        forwarding.ShouldNotBeOfType(raw.GetType());
+        ExecutorControls.Find<IExecutor>(forwarding).ShouldBeOfType(raw.GetType());
         ExecutorControls.Find<SuppliedControl>(supplying).ShouldBeSameAs(supplied);
         ExecutorControls.Find<IExecutor>(supplying).ShouldBeNull();
     }
@@ -203,7 +204,7 @@ public sealed class OperationBindingTests
     [InlineData(6)]
     [InlineData(7)]
     [InlineData(8)]
-    public void EveryDescriptorReportsFaultAndCleansUpOnce(int operation)
+    public void EveryOperationReportsFaultAndCleansUpOnce(int operation)
     {
         var failure = new OperationCanceledException("operation canceled");
         var source = new AllOperations { Failure = failure };
@@ -219,7 +220,7 @@ public sealed class OperationBindingTests
     [Theory]
     [InlineData(7, "Termination")]
     [InlineData(8, "Interception")]
-    public void CandidateMetricRejectionPrecedesConstructionAndPreservesTheOwner(int operation, string name)
+    public void CandidateMetricRejectionPrecedesConstructionAndExecutionState(int operation, string name)
     {
         var source = new AllOperations();
         var root = ResolutionScope.Create();
@@ -229,7 +230,8 @@ public sealed class OperationBindingTests
         failure.Message.ShouldContain("candidate budget");
         failure.Message.ShouldContain(nameof(AllOperations));
         source.Constructions.ShouldBe(0);
-        source.Preparations.ShouldBe(1);
+        // The rejection precedes the construction hook, so it also precedes the execution state the hook creates.
+        source.Preparations.ShouldBe(0);
         InvokeOperation(root, source, operation);
         source.Constructions.ShouldBe(1);
         source.Preparations.ShouldBe(1);
@@ -286,7 +288,7 @@ public sealed class OperationBindingTests
         var space = Problem.SearchSpace;
         var population = Candidates.ToEvaluated<RealVector>([1.0, 2.0, 3.0]);
         IOperator<TOperation, RealVector> Wrap<TOperation>(IOperator<TOperation, RealVector> child)
-            where TOperation : IOperationDescriptor<TOperation> => retry ? child.Retry(3) : child;
+            where TOperation : IOperation<TOperation> => retry ? child.Retry(3) : child;
         switch (operation)
         {
             case 0:
@@ -355,17 +357,17 @@ public sealed class OperationBindingTests
 
     private sealed class ProbeAdvice(HookProbe probe) : OperatorAdvice
     {
-        public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source) =>
-            operation.WrapInvocation(executor, new ProbeWrapper(probe, operation.SupportsCandidateWork));
+        public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) =>
+            operation.Wrap(executor, new ProbeWrapper(probe, operation.SupportsCandidateWork));
     }
 
     // Asks for candidate work without checking the operation, which only a faulty wrapper does.
     private sealed class CandidateWorkAdvice(HookProbe probe) : OperatorAdvice
     {
-        public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source)
+        public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source)
         {
             operation.SupportsCandidateWork.ShouldBeFalse();
-            return operation.WrapInvocation(executor, new ProbeWrapper(probe, countsWork: true));
+            return operation.Wrap(executor, new ProbeWrapper(probe, countsWork: true));
         }
     }
 
@@ -382,10 +384,10 @@ public sealed class OperationBindingTests
     {
         public int Wraps { get; private set; }
 
-        public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source)
+        public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source)
         {
             Wraps++;
-            return operation.WrapInvocation(executor, new Twice());
+            return operation.Wrap(executor, new Twice());
         }
     }
 
@@ -394,19 +396,19 @@ public sealed class OperationBindingTests
         public IRandomNumberGenerator? Random { get; set; }
     }
 
-    private readonly struct ProceedWithWrapper(IExecutor? executor, IRandomNumberGenerator? random, InvocationRecorder recorder) : IInvocationWrapper
+    private readonly struct RedirectingWrapper(IExecutor? executor, IRandomNumberGenerator? random, InvocationRecorder recorder) : IInvocationWrapper
     {
         public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
         {
             recorder.Random = invocation.Random;
-            return invocation.ProceedWith(executor, random);
+            return invocation.Proceed(executor, random);
         }
     }
 
-    private sealed class ProceedWithAdvice(IExecutor? executor, IRandomNumberGenerator? random, InvocationRecorder recorder) : OperatorAdvice
+    private sealed class RedirectingAdvice(IExecutor? executor, IRandomNumberGenerator? random, InvocationRecorder recorder) : OperatorAdvice
     {
-        public override IExecutor Wrap(IExecutor wrapped, OperationExecutorAdapter operation, IOperator source) =>
-            operation.WrapInvocation(wrapped, new ProceedWithWrapper(executor, random, recorder));
+        public override IExecutor Wrap(IExecutor wrapped, OperationInfo operation, IOperator source) =>
+            operation.Wrap(wrapped, new RedirectingWrapper(executor, random, recorder));
     }
 
     private sealed class SuppliedControl;
@@ -421,16 +423,16 @@ public sealed class OperationBindingTests
 
     private sealed class ControlSupplyingAdvice(SuppliedControl control) : OperatorAdvice
     {
-        public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source) =>
-            operation.WrapInvocation(executor, new ControlSupplyingWrapper(control));
+        public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) =>
+            operation.Wrap(executor, new ControlSupplyingWrapper(control));
     }
 
     private sealed class CandidateMetric : OperatorAdvice
     {
-        public override void Check(OperationExecutorAdapter operation, IOperator source) =>
+        public override void Check(OperationInfo operation, IOperator source) =>
             operation.RequireCandidateWork(source, "candidate budget");
 
-        public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source) => executor;
+        public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) => executor;
     }
 
     private sealed class AllOperations : IOperator<Creation, RealVector>, IOperator<Crossover, RealVector>,
@@ -447,12 +449,23 @@ public sealed class OperationBindingTests
         public int FailuresBeforeSuccess { get; init; } = int.MaxValue;
         public List<IRandomNumberGenerator> RandomSources { get; } = [];
 
-        public OperatorExecutorFactory CreateExecutorFactory()
+        // One public method implements every operation's CreateExecutor, whose signature does not name the operation.
+        // Creating the execution state counts as the preparation; every build creates its own executor.
+        public IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
+            where TSearchSpace : class, ISearchSpace<RealVector>
+            where TProblem : class, IProblem<RealVector, TSearchSpace>
+            where TSearchState : class, ISearchState
         {
-            Preparations++;
-            var executor = new Executor(this);
-            return OperatorExecutorFactory.FromFactory<Executor>(_ => { Constructions++; return executor; });
+            scope.GetExecutionState(this, () =>
+            {
+                Preparations++;
+                return new Preparation();
+            });
+            Constructions++;
+            return new Executor(this);
         }
+
+        private sealed class Preparation;
 
         private void Call(IRandomNumberGenerator random)
         {

@@ -27,14 +27,9 @@ public record GenderSpecificSelector<TCandidate>
 
     public IOperator<Selection, TCandidate> MaleSelector { get; init; }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-    private sealed class Factory(GenderSpecificSelector<TCandidate> source) : OperatorExecutorFactory<Selection, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.FemaleSelector), scope.Resolve(source.MaleSelector));
-    }
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(FemaleSelector), scope.Resolve(MaleSelector));
 
     private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> femaleSelector, ISelectionExecutor<TCandidate, TSearchSpace, TProblem> maleSelector)
         : SelectionExecutor<TCandidate, TSearchSpace, TProblem>

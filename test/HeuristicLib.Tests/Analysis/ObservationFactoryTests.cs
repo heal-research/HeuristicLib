@@ -25,7 +25,7 @@ public class ObservationFactoryTests
         var parentObservations = new List<AlgorithmObservation<int, PopulationState<int>>>();
         var childObservations = new List<AlgorithmObservation<int, PopulationState<int>>>();
         var childEvaluations = new List<int>();
-        var root = ResolutionScope.Create(Aspect.Observe(algorithm, parentObservations.Add));
+        var root = ResolutionScope.Create(Aspect.Observe(algorithm.Iterations, parentObservations.Add));
         var original = root.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
         var parentInitial = CreateState(1);
         await using var paused = original.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), parentInitial,
@@ -33,8 +33,8 @@ public class ObservationFactoryTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var parentFirst = paused.Current;
 
-        var child = root.CreateChildScope(Aspect.Observe(algorithm, childObservations.Add),
-            Aspect.Observe(algorithm.Evaluator, observation => childEvaluations.AddRange(observation.Candidates)));
+        var child = root.CreateChildScope(Aspect.Observe(algorithm.Iterations, childObservations.Add),
+            Aspect.Observe(algorithm.Evaluator.Calls, observation => childEvaluations.AddRange(observation.Candidates)));
         var rebound = child.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
         rebound.ShouldNotBeSameAs(original);
         var childInitial = CreateState(10);
@@ -57,7 +57,7 @@ public class ObservationFactoryTests
         childEvaluations.ShouldBe([11, 12]);
 
         // A separate root selects a separate execution and observation counter for the same configuration.
-        var independent = ResolutionScope.Create(Aspect.Observe(algorithm, parentObservations.Add));
+        var independent = ResolutionScope.Create(Aspect.Observe(algorithm.Iterations, parentObservations.Add));
         var independentStates = new List<PopulationState<int>>();
         await foreach (var state in independent.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm)
             .RunStreamingAsync(problem, RandomNumberGenerator.Create(3), ct: TestContext.Current.CancellationToken))
@@ -74,9 +74,9 @@ public class ObservationFactoryTests
         IReadOnlyList<int> parents = [1, 2];
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source, observation =>
+            observe => Aspect.Observe(source.Calls, observation =>
             {
-                observation.Operator.ShouldBeSameAs(source);
+                observation.Mutator.ShouldBeSameAs(source);
                 observation.Parents.ShouldBeSameAs(parents);
                 observation.Offspring.ShouldBeSameAs(parents);
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
@@ -96,9 +96,9 @@ public class ObservationFactoryTests
         IReadOnlyList<Parents<int>> parents = [new(1, 2)];
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source, observation =>
+            observe => Aspect.Observe(source.Calls, observation =>
             {
-                observation.Operator.ShouldBeSameAs(source);
+                observation.Crossover.ShouldBeSameAs(source);
                 observation.Parents.ShouldBeSameAs(parents);
                 observation.Offspring.ShouldBeSameAs(offspring);
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
@@ -118,9 +118,9 @@ public class ObservationFactoryTests
         IReadOnlyList<int> candidates = [3];
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source, observation =>
+            observe => Aspect.Observe(source.Calls, observation =>
             {
-                observation.Operator.ShouldBeSameAs(source);
+                observation.Evaluator.ShouldBeSameAs(source);
                 observation.Candidates.ShouldBeSameAs(candidates);
                 observation.ObjectiveVectors.ShouldBeSameAs(objectiveVectors);
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
@@ -141,9 +141,9 @@ public class ObservationFactoryTests
         var previous = CreateState(1);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source, observation =>
+            observe => Aspect.Observe(source.Calls, observation =>
             {
-                observation.Operator.ShouldBeSameAs(source);
+                observation.Interceptor.ShouldBeSameAs(source);
                 observation.State.ShouldBeSameAs(transformed);
                 observation.UntransformedState.ShouldBeSameAs(current);
                 observation.PreviousState.ShouldBeSameAs(previous);
@@ -163,9 +163,9 @@ public class ObservationFactoryTests
         IOperator<Creation, int> source = new RecordingCreator(events, created);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source, observation =>
+            observe => Aspect.Observe(source.Calls, observation =>
             {
-                observation.Operator.ShouldBeSameAs(source);
+                observation.Creator.ShouldBeSameAs(source);
                 observation.Candidates.ShouldBeSameAs(created);
                 observation.Count.ShouldBe(2);
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
@@ -185,9 +185,9 @@ public class ObservationFactoryTests
         IOperator<Selection, int> source = new RecordingSelector(events, selected);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source, observation =>
+            observe => Aspect.Observe(source.Calls, observation =>
             {
-                observation.Operator.ShouldBeSameAs(source);
+                observation.Selector.ShouldBeSameAs(source);
                 observation.Selected.ShouldBeSameAs(selected);
                 observation.Population.ShouldBeSameAs(population);
                 observation.Objective.ShouldBe(problem.Objective);
@@ -210,9 +210,9 @@ public class ObservationFactoryTests
         IOperator<Refinement, int> source = new RecordingRefiner(events, refined);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source, observation =>
+            observe => Aspect.Observe(source.Calls, observation =>
             {
-                observation.Operator.ShouldBeSameAs(source);
+                observation.Refiner.ShouldBeSameAs(source);
                 observation.Refined.ShouldBeSameAs(refined);
                 observation.Candidates.ShouldBeSameAs(candidates);
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
@@ -233,9 +233,9 @@ public class ObservationFactoryTests
         IOperator<Replacement, int> source = new RecordingReplacer(events, replaced);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source, observation =>
+            observe => Aspect.Observe(source.Calls, observation =>
             {
-                observation.Operator.ShouldBeSameAs(source);
+                observation.Replacer.ShouldBeSameAs(source);
                 observation.Replaced.ShouldBeSameAs(replaced);
                 observation.PreviousPopulation.ShouldBeSameAs(previous);
                 observation.OffspringPopulation.ShouldBeSameAs(offspring);
@@ -258,9 +258,9 @@ public class ObservationFactoryTests
         var state = CreateState(1);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source, observation =>
+            observe => Aspect.Observe(source.Calls, observation =>
             {
-                observation.Operator.ShouldBeSameAs(source);
+                observation.Terminator.ShouldBeSameAs(source);
                 observation.State.ShouldBeSameAs(state);
                 observation.IsTerminal.ShouldBeTrue();
                 observation.Problem.ShouldBeSameAs(problem);
@@ -271,8 +271,8 @@ public class ObservationFactoryTests
     }
 
     /// <summary>
-    /// An operation defined outside the library is observed like the library's own; its observation carries the result
-    /// and the invocation its arguments come from.
+    /// An operation defined outside the library is observed like the library's own once its author declares its
+    /// observation and source.
     /// </summary>
     [Fact]
     public void ExternalOperationObservation_RebindsItsPredecessorAndPreservesSourceAndResult()
@@ -281,11 +281,10 @@ public class ObservationFactoryTests
         IOperator<Checksum, int> source = new RecordingChecksum(events, 17);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source, observation =>
+            observe => Aspect.Observe(source.Calls, observation =>
             {
-                observation.Operator.ShouldBeSameAs(source);
+                observation.Checksum.ShouldBeSameAs(source);
                 observation.Result.ShouldBe(17);
-                observation.Invocation.ShouldBeAssignableTo<IInvocation<int>>();
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
@@ -332,7 +331,8 @@ List<string> events,
 
     private sealed record RecordingChecksum(List<string> Events, int Value) : IOperator<Checksum, int>
     {
-        public OperatorExecutorFactory CreateExecutorFactory() => OperatorExecutorFactory.FromFactory<Executor>(_ => new Executor(this));
+        IExecutor IOperator<Checksum, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor(this);
 
         private sealed class Executor(RecordingChecksum source) : IChecksumExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
         {

@@ -87,7 +87,7 @@ public sealed class RetryOperatorTests
     }
 
     [Fact]
-    public void ExternalScalarDescriptor_SupportsTheSameRetryWrapper()
+    public void ExternalScalarOperation_SupportsTheSameRetryWrapper()
     {
         var attempts = 0;
         var source = new ScalarSource(() => ++attempts < 3 ? throw new RetryableOperationException("again") : 17);
@@ -185,16 +185,17 @@ public sealed class RetryOperatorTests
 
     private sealed record PreparationProbe(Action Prepare) : Mutator<int>
     {
-        protected override ExecutorFactory<IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>> CreateFactory()
+        protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope)
         {
             Prepare();
-            return _ => throw new InvalidOperationException("must not construct");
+            throw new InvalidOperationException("must not construct");
         }
     }
 
     private sealed record ScalarSource(Func<int> Read) : IOperator<Checksum, RealVector>
     {
-        public OperatorExecutorFactory CreateExecutorFactory() => OperatorExecutorFactory.FromFactory<Executor>(_ => new Executor(Read));
+        IExecutor IOperator<Checksum, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => new Executor(Read);
         private sealed class Executor(Func<int> read) : IChecksumExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
         {
             public int Read(IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) => read();

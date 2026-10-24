@@ -88,19 +88,11 @@ public class EvaluatorConfigurationEqualityTests
         {
         }
 
-        protected override OperatorExecutorFactory CreateOperatorFactory()
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
-            return new Factory(this);
-        }
-
-        private sealed class Factory(FirstOfEvaluator source) : OperatorExecutorFactory<Evaluation, int>
-        {
-            protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-                ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
-            {
-                System.Collections.Immutable.ImmutableArray<IEvaluationExecutor<int, TSearchSpace, TProblem>> children = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
-                return new Executor<TSearchSpace, TProblem>(children);
-            }
+            System.Collections.Immutable.ImmutableArray<IEvaluationExecutor<int, TSearchSpace, TProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor<TSearchSpace, TProblem>(children);
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IEvaluationExecutor<int, TSearchSpace, TProblem>> childEvaluators)
@@ -118,7 +110,8 @@ public class EvaluatorConfigurationEqualityTests
         {
         }
 
-        protected override OperatorExecutorFactory CreateOperatorFactory() => OperatorExecutorFactory.Forward(ChildOperator);
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => scope.ResolveOperator(ChildOperator);
     }
 
 }

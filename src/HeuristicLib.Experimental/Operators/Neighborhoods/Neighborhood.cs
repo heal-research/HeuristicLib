@@ -32,8 +32,14 @@ public abstract record Neighborhood<TCandidate, TSearchSpace, TProblem, TMove>
     public IOperator<MoveApplication<TMove>, TCandidate> MoveApplier => this;
     public IOperator<MoveEvaluation<TMove>, TCandidate> MoveEvaluator => this;
 
-    public OperatorExecutorFactory CreateExecutorFactory() =>
-        OperatorExecutorFactory.FromFactory<Neighborhood<TCandidate, TSearchSpace, TProblem, TMove>>(_ => this);
+    IExecutor IOperator<MoveCreation<TMove>, TCandidate>.CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => this;
+
+    IExecutor IOperator<MoveApplication<TMove>, TCandidate>.CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => this;
+
+    IExecutor IOperator<MoveEvaluation<TMove>, TCandidate>.CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => this;
 
     public bool Fits(ExecutionSignature execution) =>
         execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));

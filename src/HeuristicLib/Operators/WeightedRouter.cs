@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
@@ -12,8 +11,8 @@ namespace HEAL.HeuristicLib.Operators;
 /// handling any batch, then handles the batches in choice order and skips choices that received no items. When every
 /// item goes to the same choice, that choice receives all items, as the original inputs where there are any. Each batch
 /// must produce exactly one result per item, in batch order; a mismatch throws <see cref="InvalidOperationException"/>.
-/// The supplied random source is used for routing and is not forked. Operations route their items through it by
-/// implementing <see cref="IItemInvocation{TItemResult}"/>.
+/// The supplied random source is used for routing and is not forked. An item operation's routed executor, a
+/// <see cref="RoutingExecutor{TExecutor}"/>, routes the items of each call through it.
 /// </remarks>
 public sealed class WeightedRouter<TChoice>
 {
@@ -81,6 +80,10 @@ public sealed class WeightedRouter<TChoice>
 
         return results;
     }
+
+    // The same choices and weights with the choices typed as TOther, such as children resolved as executors.
+    internal WeightedRouter<TOther> Cast<TOther>() where TOther : class =>
+        new(choices.Select(choice => (TOther)(object)choice!).ToArray(), sampler);
 
     private int[] Assign(int count, IRandomNumberGenerator random)
     {

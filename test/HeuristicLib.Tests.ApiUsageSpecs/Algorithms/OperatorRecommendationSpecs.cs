@@ -3,6 +3,7 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -52,7 +53,7 @@ public class OperatorRecommendationSpecs
         var problem = new TravelingSalesmanProblem();
 
         var algorithm = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
-        var qualityAnalyzer = algorithm.TracePopulationCandidates();
+        var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(qualityAnalyzer);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);

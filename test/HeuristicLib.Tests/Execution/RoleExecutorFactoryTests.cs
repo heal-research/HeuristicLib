@@ -68,21 +68,21 @@ public sealed class RoleExecutorFactoryTests
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
-    public void StatefulLeaf_PreparationCreatesStateBeforeBindingAndEachFactoryOwnsItsState(int arity)
+    public void StatefulLeaf_CreatesStateOnFirstBuildAndEachOwningStateKeepsItsOwn(int arity)
     {
         var preparations = 0;
         var source = CreateMutator(arity, () => preparations++);
-        var factory = source.CreateExecutorFactory();
+        var root = ResolutionScope.Create();
+        var first = root.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
         preparations.ShouldBe(1);
 
-        var first = Construct(factory, ResolutionScope.Create());
-        var second = Construct(factory, ResolutionScope.Create());
+        var second = root.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
+        first.ShouldNotBeSameAs(second);
         Next(first).ShouldBe(1);
         Next(second).ShouldBe(2);
         preparations.ShouldBe(1);
 
-        var independentFactory = source.CreateExecutorFactory();
-        Next(Construct(independentFactory, ResolutionScope.Create())).ShouldBe(1);
+        Next(ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBe(1);
         preparations.ShouldBe(2);
     }
 
@@ -207,11 +207,6 @@ public sealed class RoleExecutorFactoryTests
     private static IAlgorithm<RealVector> CreateAlgorithm(bool bound, Action prepare) =>
         bound ? new BoundAlgorithm(prepare) : new AgnosticAlgorithm(prepare);
 
-    private static IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Construct(
-        OperatorExecutorFactory factory, ResolutionScope scope) =>
-        (IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)factory.CreateExecutor<Mutation, RealVector,
-            BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>(scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>());
-
     private static double Next(IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> executor)
     {
         var problem = new TestFunctionProblem(new RastriginFunction(1));
@@ -226,7 +221,7 @@ public sealed class RoleExecutorFactoryTests
     private sealed record BoundMutator(Action Prepare)
         : StatefulMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterState>
     {
-        protected override CounterState CreateInitialState()
+        protected override CounterState CreateExecutionState()
         {
             Prepare();
             return new CounterState();
@@ -239,7 +234,7 @@ public sealed class RoleExecutorFactoryTests
     private sealed record SearchSpaceMutator(Action Prepare)
         : StatefulMutator<RealVector, BoundedRealVectorSearchSpace, CounterState>
     {
-        protected override CounterState CreateInitialState()
+        protected override CounterState CreateExecutionState()
         {
             Prepare();
             return new CounterState();
@@ -251,7 +246,7 @@ public sealed class RoleExecutorFactoryTests
 
     private sealed record CandidateMutator(Action Prepare) : StatefulMutator<RealVector, CounterState>
     {
-        protected override CounterState CreateInitialState()
+        protected override CounterState CreateExecutionState()
         {
             Prepare();
             return new CounterState();
@@ -283,7 +278,7 @@ public sealed class RoleExecutorFactoryTests
 
     private sealed record InputFreeTerminator(Action Prepare) : StatefulTerminator<RealVector, CounterState>
     {
-        protected override CounterState CreateInitialState()
+        protected override CounterState CreateExecutionState()
         {
             Prepare();
             return new CounterState();

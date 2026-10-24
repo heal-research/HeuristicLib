@@ -369,7 +369,7 @@ public class ResolutionScopeTests
     {
         public NamedAspect(params IReadOnlyList<Aspect> aspects)
         {
-            Advices = [.. aspects.SelectMany(aspect => aspect.Advices)];
+            Advices = [.. aspects.SelectMany(aspect => aspect)];
         }
     }
 

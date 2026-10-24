@@ -5,48 +5,53 @@ using HEAL.HeuristicLib.Operators;
 namespace HEAL.HeuristicLib.Analysis;
 
 /// <summary>
-/// Accumulates a Pareto front across observations and reports its hypervolume.
+/// Accumulates a Pareto front across calls and reports its hypervolume.
 /// </summary>
-/// <remarks>The front is this object's own state, so give each trace its own.</remarks>
-public sealed class HyperVolumeAggregation<TCandidate>(ObjectiveVector referencePoint)
-    : IAggregation<EvaluatedCandidate<TCandidate>, double>
+/// <remarks>
+/// The front is this object's own state, so give each trace its own. The first objective directions it receives build
+/// the front and fix it: a later call with other directions throws, because its candidates do not belong on that front.
+/// </remarks>
+public sealed class HyperVolumeSoFar<TCandidate>(ObjectiveVector referencePoint)
 {
     private ParetoFront<TCandidate>? front;
     private double hyperVolume;
 
     public ObjectiveVector ReferencePoint { get; } = referencePoint;
 
-    public double Aggregate(IReadOnlyList<EvaluatedCandidate<TCandidate>> readings, ObjectiveDirections objective, IComparer<ObjectiveVector>? objectiveComparer = null)
+    /// <summary>Adds the evaluated candidates to the front and returns the front's hypervolume.</summary>
+    public double Update(IReadOnlyList<EvaluatedCandidate<TCandidate>> values, ObjectiveDirections objective)
     {
         front ??= new ParetoFront<TCandidate>(ReferencePoint, objective);
+        if (!ReferenceEquals(front.Objective, objective) && !front.Objective.Directions.SequenceEqual(objective.Directions))
+            throw new InvalidOperationException(
+                $"A hypervolume so far is fixed to the objective directions {front.Objective} it first received, but a call has {objective}.");
 
-        // The front only moves when a reading survives domination, and the calculation is the expensive part.
-        if (front.AddPoints(readings))
+        // The front only moves when a candidate survives domination, and the calculation is the expensive part.
+        if (front.AddPoints(values))
             hyperVolume = HyperVolumeCalculator.Calculate(
-                front.Points.Select(evaluated => evaluated.ObjectiveVector), ReferencePoint, objective);
+                front.Points.Select(evaluated => evaluated.ObjectiveVector), ReferencePoint, front.Objective);
         return hyperVolume;
     }
 }
 
 public static class HyperVolumeTraces
 {
-    extension(Analyzer)
+    extension<TCandidate>(ObservationSource<EvaluationObservation<TCandidate>> calls)
     {
         /// <summary>
-        /// Traces the hypervolume of the Pareto front accumulated over everything the evaluator produces.
+        /// Traces the hypervolume of the Pareto front accumulated over every candidate the evaluator evaluates.
         /// </summary>
         /// <remarks>
-        /// The front is the reduction's private state, so the recorded entries are plain numbers.
+        /// The front is private to the trace, so the recorded entries are plain numbers.
         /// </remarks>
-        public static TraceAnalyzer<double> TraceHyperVolume<T>(
-            ObjectiveVector referencePoint,
-            IOperator<Evaluation, T> evaluator,
+        public TraceAnalyzer<double> TraceHyperVolume(ObjectiveVector referencePoint,
             IReadOnlyList<Clock>? clocks = null,
-            TraceRetention? retention = null) =>
-            Analyzer.Trace(
-                evaluator,
-                new CandidatesMeasurement<T>(),
-                new HyperVolumeAggregation<T>(referencePoint),
+            TraceRetention? retention = null)
+        {
+            var hyperVolume = new HyperVolumeSoFar<TCandidate>(referencePoint);
+            return Analyzer.Trace(calls,
+                observation => hyperVolume.Update(observation.Candidates.ToEvaluated(observation.ObjectiveVectors), observation.Problem.Objective),
                 clocks, retention);
+        }
     }
 }

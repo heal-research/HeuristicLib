@@ -13,8 +13,8 @@ public sealed class ExperimentalBoundaryTests
 
         typeof(OpenEndedRelevantAllelesPreservingGeneticAlgorithm<>).Assembly.ShouldBe(experimental);
         typeof(IslandPopulation<>).Assembly.ShouldBe(experimental);
-        experimental.GetType("HEAL.HeuristicLib.Analysis.PopulationSimilarityAggregation`1").ShouldNotBeNull();
-        experimental.GetType("HEAL.HeuristicLib.Analysis.HyperVolumeAggregation`1").ShouldNotBeNull();
+        experimental.GetType("HEAL.HeuristicLib.Analysis.PopulationSimilarityExtensions").ShouldNotBeNull();
+        experimental.GetType("HEAL.HeuristicLib.Analysis.HyperVolumeSoFar`1").ShouldNotBeNull();
     }
 
     [Fact]

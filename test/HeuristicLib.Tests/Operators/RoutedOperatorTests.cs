@@ -17,13 +17,13 @@ namespace HEAL.HeuristicLib.Tests.Operators;
 public class RoutedOperatorTests
 {
     [Fact]
-    public void ChoosePerCandidateMutation_SnapshotsMutatorsAndWeights()
+    public void ChoosePerItemMutation_SnapshotsMutatorsAndWeights()
     {
         var first = new AddOffsetMutator(1);
         var second = new AddOffsetMutator(2);
         var mutators = new List<IOperator<Mutation, int>> { first, second };
         var weightValues = new[] { 1.0, 2.0 };
-        var configuration = new ChoosePerCandidate<Mutation, int>(mutators) { Weights = weightValues.ToValueArray() };
+        var configuration = new ChoosePerItem<Mutation, int>(mutators) { Weights = weightValues.ToValueArray() };
 
         mutators.Clear();
         weightValues[0] = 100.0;
@@ -33,15 +33,15 @@ public class RoutedOperatorTests
     }
 
     [Fact]
-    public void ChoosePerCandidateMutation_PreservesStructuralConfigurationEquality()
+    public void ChoosePerItemMutation_PreservesStructuralConfigurationEquality()
     {
         var first = new AddOffsetMutator(1);
         var second = new AddOffsetMutator(2);
 
-        var left = ChoosePerCandidate.Create(
+        var left = ChoosePerItem.Create(
             [first, second],
             [1.0, 2.0]);
-        var right = ChoosePerCandidate.Create(
+        var right = ChoosePerItem.Create(
             [first, second],
             [1.0, 2.0]);
 
@@ -50,9 +50,9 @@ public class RoutedOperatorTests
     }
 
     [Fact]
-    public void ChoosePerCandidateCreation_ShouldPreserveAssignmentOrder()
+    public void ChoosePerItemCreation_ShouldPreserveAssignmentOrder()
     {
-        var creator = ChoosePerCandidate.Create(
+        var creator = ChoosePerItem.Create(
             [new ConstantCreator(100), new ConstantCreator(200)],
             [1.0, 1.0]);
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
@@ -88,9 +88,9 @@ public class RoutedOperatorTests
     }
 
     [Fact]
-    public void ChoosePerCandidateMutation_ShouldPreserveOriginalOrder()
+    public void ChoosePerItemMutation_ShouldPreserveOriginalOrder()
     {
-        var mutator = ChoosePerCandidate.Create(
+        var mutator = ChoosePerItem.Create(
             [new AddOffsetMutator(100), new AddOffsetMutator(200)],
             [1.0, 1.0]);
 
@@ -107,9 +107,9 @@ public class RoutedOperatorTests
     }
 
     [Fact]
-    public void ChoosePerCandidateEvaluation_ShouldPreserveOriginalOrder()
+    public void ChoosePerItemEvaluation_ShouldPreserveOriginalOrder()
     {
-        var evaluator = ChoosePerCandidate.Create(
+        var evaluator = ChoosePerItem.Create(
             [new OffsetEvaluator(100), new OffsetEvaluator(200)],
             [1.0, 1.0]);
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
@@ -157,17 +157,17 @@ public class RoutedOperatorTests
         ImmutableArray<IOperator<Mutation, int>> mutators = [new AddOffsetMutator(100), new AddOffsetMutator(200)];
         ImmutableArray<IOperator<Selection, int>> selectors = [new FirstCandidatesSelector(), new LastCandidatesSelector()];
         ImmutableArray<IOperator<Replacement, int>> replacers = [new PreviousCandidatesReplacer(), new OffspringCandidatesReplacer()];
-        var creatorFromFactory = ChoosePerCandidate.Create(new ConstantCreator(100), new ConstantCreator(200));
-        var crossoverFromFactory = ChoosePerCandidate.Create(new FirstParentCrossover(100), new SecondParentCrossover(200));
-        var mutatorFromFactory = ChoosePerCandidate.Create(new AddOffsetMutator(100), new AddOffsetMutator(200));
+        var creatorFromFactory = ChoosePerItem.Create(new ConstantCreator(100), new ConstantCreator(200));
+        var crossoverFromFactory = ChoosePerItem.Create(new FirstParentCrossover(100), new SecondParentCrossover(200));
+        var mutatorFromFactory = ChoosePerItem.Create(new AddOffsetMutator(100), new AddOffsetMutator(200));
         var selectorFromFactory = ChoosePerCall.Create(new FirstCandidatesSelector(), new LastCandidatesSelector());
         var replacerFromFactory = ChoosePerCall.Create(new PreviousCandidatesReplacer(), new OffspringCandidatesReplacer());
 
-        new ChoosePerCandidate<Creation, int>(creators).Weights.ShouldBeEmpty();
+        new ChoosePerItem<Creation, int>(creators).Weights.ShouldBeEmpty();
         creatorFromFactory.Weights.ShouldBeEmpty();
-        new ChoosePerCandidate<Crossover, int>(crossovers).Weights.ShouldBeEmpty();
+        new ChoosePerItem<Crossover, int>(crossovers).Weights.ShouldBeEmpty();
         crossoverFromFactory.Weights.ShouldBeEmpty();
-        new ChoosePerCandidate<Mutation, int>(mutators).Weights.ShouldBeEmpty();
+        new ChoosePerItem<Mutation, int>(mutators).Weights.ShouldBeEmpty();
         mutatorFromFactory.Weights.ShouldBeEmpty();
         new ChoosePerCall<Selection, int>(selectors).Weights.ShouldBeEmpty();
         selectorFromFactory.Weights.ShouldBeEmpty();
@@ -176,7 +176,7 @@ public class RoutedOperatorTests
     }
 
     [Fact]
-    public void ChoosePerCandidateMutation_EmptyWeights_AreRetainedAsUniformSelection()
+    public void ChoosePerItemMutation_EmptyWeights_AreRetainedAsUniformSelection()
     {
         var mutators = new IOperator<Mutation, int>[]
         {
@@ -185,8 +185,8 @@ public class RoutedOperatorTests
         };
 
         ImmutableArray<double> defaultWeights = default;
-        var emptyWeightsMutator = new ChoosePerCandidate<Mutation, int>(mutators) { Weights = [] };
-        var defaultWeightsMutator = new ChoosePerCandidate<Mutation, int>(mutators) { Weights = defaultWeights.ToValueArray() };
+        var emptyWeightsMutator = new ChoosePerItem<Mutation, int>(mutators) { Weights = [] };
+        var defaultWeightsMutator = new ChoosePerItem<Mutation, int>(mutators) { Weights = defaultWeights.ToValueArray() };
 
         emptyWeightsMutator.Weights.ShouldBeEmpty();
         defaultWeightsMutator.Weights.ShouldBeEmpty();
@@ -295,15 +295,15 @@ public class RoutedOperatorTests
     {
         // Weights are an optional setting rather than a constructor argument, so a count that disagrees with the
         // children is detected when the executor is built rather than when the configuration is created.
-        var tooManyWeights = ChoosePerCandidate.Create([new AddOffsetMutator(100)], [1.0, 1.0]);
-        var tooFewWeights = ChoosePerCandidate.Create([new ConstantCreator(100), new ConstantCreator(200)], [1.0]);
+        var tooManyWeights = ChoosePerItem.Create([new AddOffsetMutator(100)], [1.0, 1.0]);
+        var tooFewWeights = ChoosePerItem.Create([new ConstantCreator(100), new ConstantCreator(200)], [1.0]);
 
         Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().ResolveMutator(tooManyWeights));
         Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().ResolveCreator(tooFewWeights));
 
-        var emptyCreator = ChoosePerCandidate.Create<Creation, int>();
-        var emptyCrossover = ChoosePerCandidate.Create<Crossover, int>();
-        var emptyMutator = ChoosePerCandidate.Create<Mutation, int>();
+        var emptyCreator = ChoosePerItem.Create<Creation, int>();
+        var emptyCrossover = ChoosePerItem.Create<Crossover, int>();
+        var emptyMutator = ChoosePerItem.Create<Mutation, int>();
         var emptySelector = ChoosePerCall.Create<Selection, int>();
         var emptyReplacer = ChoosePerCall.Create<Replacement, int>();
         var scope = ResolutionScope.Create();
@@ -323,9 +323,9 @@ public class RoutedOperatorTests
     [Fact]
     public void RoutedOperators_ShouldRejectChildrenRemovedByReconfiguration()
     {
-        var creator = ChoosePerCandidate.Create(new ConstantCreator(1)) with { ChildOperators = [] };
-        var crossover = ChoosePerCandidate.Create(new FirstParentCrossover(1)) with { ChildOperators = [] };
-        var mutator = ChoosePerCandidate.Create(new AddOffsetMutator(1)) with { ChildOperators = [] };
+        var creator = ChoosePerItem.Create(new ConstantCreator(1)) with { ChildOperators = [] };
+        var crossover = ChoosePerItem.Create(new FirstParentCrossover(1)) with { ChildOperators = [] };
+        var mutator = ChoosePerItem.Create(new AddOffsetMutator(1)) with { ChildOperators = [] };
         var selector = ChoosePerCall.Create(new FirstCandidatesSelector()) with { ChildOperators = [] };
         var replacer = ChoosePerCall.Create(new PreviousCandidatesReplacer()) with { ChildOperators = [] };
         var scope = ResolutionScope.Create();
@@ -374,9 +374,9 @@ public class RoutedOperatorTests
     }
 
     [Fact]
-    public void ChoosePerCandidateCrossover_ShouldPreserveOriginalOrder()
+    public void ChoosePerItemCrossover_ShouldPreserveOriginalOrder()
     {
-        var crossover = ChoosePerCandidate.Create(
+        var crossover = ChoosePerItem.Create(
             [new FirstParentCrossover(100), new SecondParentCrossover(200)],
             [1.0, 1.0]);
 
@@ -508,10 +508,10 @@ public class RoutedOperatorTests
     }
 
     [Fact]
-    public void ChoosePerCandidateMutation_RepeatedChildMutator_ReusesItsExecution()
+    public void ChoosePerItemMutation_RepeatedChildMutator_ReusesItsExecution()
     {
         var innerOperator = new CountingExecutionMutator();
-        var chooseOne = ChoosePerCandidate.Create(innerOperator, innerOperator);
+        var chooseOne = ChoosePerItem.Create(innerOperator, innerOperator);
 
         _ = ResolutionScope.Create().ResolveMutator(chooseOne);
 
@@ -672,10 +672,10 @@ public class RoutedOperatorTests
         var inputs = Enumerable.Range(0, count).ToArray();
         return role switch
         {
-            "creation" => scope.Resolve(new ChoosePerCandidate<Creation, int>([(IOperator<Creation, int>)source])).Create(count, random, space, RoutingProblem),
-            "crossover" => scope.Resolve(new ChoosePerCandidate<Crossover, int>([(IOperator<Crossover, int>)source])).Cross(inputs.Select(x => Parents.From(x, x)).ToArray(), random, space, RoutingProblem),
-            "mutation" => scope.Resolve(new ChoosePerCandidate<Mutation, int>([(IOperator<Mutation, int>)source])).Mutate(inputs, random, space, RoutingProblem),
-            "refinement" => scope.Resolve(new ChoosePerCandidate<Refinement, int>([(IOperator<Refinement, int>)source])).Refine(inputs, random, space, RoutingProblem),
+            "creation" => scope.Resolve(new ChoosePerItem<Creation, int>([(IOperator<Creation, int>)source])).Create(count, random, space, RoutingProblem),
+            "crossover" => scope.Resolve(new ChoosePerItem<Crossover, int>([(IOperator<Crossover, int>)source])).Cross(inputs.Select(x => Parents.From(x, x)).ToArray(), random, space, RoutingProblem),
+            "mutation" => scope.Resolve(new ChoosePerItem<Mutation, int>([(IOperator<Mutation, int>)source])).Mutate(inputs, random, space, RoutingProblem),
+            "refinement" => scope.Resolve(new ChoosePerItem<Refinement, int>([(IOperator<Refinement, int>)source])).Refine(inputs, random, space, RoutingProblem),
             _ => throw new ArgumentOutOfRangeException(nameof(role))
         };
     }
@@ -689,10 +689,10 @@ public class RoutedOperatorTests
         IReadOnlyList<double> weights = suppliedWeights ?? [1, 3];
         IReadOnlyList<int> result = role switch
         {
-            "creation" => scope.Resolve(ChoosePerCandidate.Create([new DrawingCreator(100) { Concurrency = concurrency }, new DrawingCreator(200) { Concurrency = concurrency }], weights)).Create(32, random, space, RoutingProblem),
-            "crossover" => scope.Resolve(ChoosePerCandidate.Create([new DrawingCrossover(100) { Concurrency = concurrency }, new DrawingCrossover(200) { Concurrency = concurrency }], weights)).Cross(inputs.Select(x => Parents.From(x, x)).ToArray(), random, space, RoutingProblem),
-            "mutation" => scope.Resolve(ChoosePerCandidate.Create([new DrawingMutator(100) { Concurrency = concurrency }, new DrawingMutator(200) { Concurrency = concurrency }], weights)).Mutate(inputs, random, space, RoutingProblem),
-            "refinement" => scope.Resolve(ChoosePerCandidate.Create([new DrawingRefiner(100) { Concurrency = concurrency }, new DrawingRefiner(200) { Concurrency = concurrency }], weights)).Refine(inputs, random, space, RoutingProblem),
+            "creation" => scope.Resolve(ChoosePerItem.Create([new DrawingCreator(100) { Concurrency = concurrency }, new DrawingCreator(200) { Concurrency = concurrency }], weights)).Create(32, random, space, RoutingProblem),
+            "crossover" => scope.Resolve(ChoosePerItem.Create([new DrawingCrossover(100) { Concurrency = concurrency }, new DrawingCrossover(200) { Concurrency = concurrency }], weights)).Cross(inputs.Select(x => Parents.From(x, x)).ToArray(), random, space, RoutingProblem),
+            "mutation" => scope.Resolve(ChoosePerItem.Create([new DrawingMutator(100) { Concurrency = concurrency }, new DrawingMutator(200) { Concurrency = concurrency }], weights)).Mutate(inputs, random, space, RoutingProblem),
+            "refinement" => scope.Resolve(ChoosePerItem.Create([new DrawingRefiner(100) { Concurrency = concurrency }, new DrawingRefiner(200) { Concurrency = concurrency }], weights)).Refine(inputs, random, space, RoutingProblem),
             _ => throw new ArgumentOutOfRangeException(nameof(role))
         };
         return (result, random.NextInt());
@@ -809,25 +809,26 @@ public class RoutedOperatorTests
     {
         public int ExecutionsCreated { get; private set; }
 
-        public OperatorExecutorFactory CreateExecutorFactory()
-        {
-            var executor = CreateBoundExecution();
-            return OperatorExecutorFactory.FromFactory(_ => executor);
-        }
+        // Every build in one owning state shares the call count.
+        IExecutor IOperator<Mutation, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor(scope.GetExecutionState(this, CreateExecutionState));
 
-        private IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecution()
+        private ExecutionState CreateExecutionState()
         {
             ExecutionsCreated++;
-            return new Executor();
+            return new ExecutionState();
         }
 
-        private sealed class Executor : IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        private sealed class ExecutionState
         {
-            private int calls;
+            public int Calls { get; set; }
+        }
 
+        private sealed class Executor(ExecutionState state) : IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        {
             public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
             {
-                calls++;
+                var calls = ++state.Calls;
                 return parents.Select(parent => parent + calls).ToArray();
             }
         }
@@ -842,11 +843,8 @@ public class RoutedOperatorTests
     private sealed record CallbackExecutionMutator(MutationCallback Callback)
         : IOperator<Mutation, int>
     {
-        public OperatorExecutorFactory CreateExecutorFactory()
-        {
-            var executor = CreateBoundExecution();
-            return OperatorExecutorFactory.FromFactory(_ => executor);
-        }
+        IExecutor IOperator<Mutation, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => CreateBoundExecution();
 
         private IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecution() =>
             new Executor(Callback);

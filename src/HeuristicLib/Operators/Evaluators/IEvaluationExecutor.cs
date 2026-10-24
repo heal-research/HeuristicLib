@@ -54,21 +54,8 @@ public static class EvaluationOperationResolutionExtensions
         public IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IOperator<Evaluation, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve(IOperator<Evaluation, TCandidate> source,
-            [NotNullWhen(true)] out IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason)
-        {
-            try
-            {
-                executor = scope.Resolve(source);
-                reason = null;
-                return true;
-            }
-            catch (InvalidOperationException exception)
-            {
-                executor = null;
-                reason = exception.Message;
-                return false;
-            }
-        }
+            [NotNullWhen(true)] out IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
+            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
     }
 
     extension<TCandidate, TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope)
@@ -91,20 +78,7 @@ public static class EvaluationOperationResolutionExtensions
         public IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IOperator<Evaluation, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve(IOperator<Evaluation, TCandidate> source,
-            [NotNullWhen(true)] out IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason)
-        {
-            try
-            {
-                executor = scope.Resolve(source);
-                reason = null;
-                return true;
-            }
-            catch (InvalidOperationException exception)
-            {
-                executor = null;
-                reason = exception.Message;
-                return false;
-            }
-        }
+            [NotNullWhen(true)] out IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
+            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
     }
 }

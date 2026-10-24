@@ -9,14 +9,15 @@ namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation.Fix
 
 public abstract record LeafOperator<TOperation, TCandidate, TSearchSpace, TProblem, TExecutor>
     : IOperator<TOperation, TCandidate>
-    where TOperation : IOperationDescriptor<TOperation>
+    where TOperation : IOperation<TOperation>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TExecutor : class, IExecutor
 {
-    // Nonvirtual public owner entry: explicit authors implement only the protected construction hook.
-    public OperatorExecutorFactory CreateExecutorFactory() => OperatorExecutorFactory.FromFactory(CreateFactory());
-    protected abstract ExecutorFactory<TExecutor> CreateFactory();
+    // Explicit owner entry: authors implement only the protected construction hook.
+    IExecutor IOperator<TOperation, TCandidate>.CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => CreateExecutor(scope.Scope);
+    protected abstract TExecutor CreateExecutor(ResolutionScope scope);
 
     public bool Fits(ExecutionSignature execution) =>
         execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
@@ -33,8 +34,8 @@ public abstract record Mutator<TCandidate>
 public abstract record StatelessMutator<TCandidate> : Mutator<TCandidate>,
     IMutationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
-    protected sealed override ExecutorFactory<IMutationExecutor<TCandidate, ISearchSpace<TCandidate>,
-        IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateFactory() => _ => this;
+    protected sealed override IMutationExecutor<TCandidate, ISearchSpace<TCandidate>,
+        IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random);
 
@@ -46,16 +47,13 @@ public abstract record StatelessMutator<TCandidate> : Mutator<TCandidate>,
 
 public abstract record StatefulMutator<TCandidate, TState> : Mutator<TCandidate> where TState : class
 {
-    protected abstract TState CreateInitialState();
+    protected abstract TState CreateExecutionState();
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state,
         IRandomNumberGenerator random);
 
-    protected sealed override ExecutorFactory<IMutationExecutor<TCandidate, ISearchSpace<TCandidate>,
-        IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateFactory()
-    {
-        var executor = new Executor(this, CreateInitialState());
-        return _ => executor;
-    }
+    protected sealed override IMutationExecutor<TCandidate, ISearchSpace<TCandidate>,
+        IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutor(ResolutionScope scope) =>
+        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
 
     private sealed class Executor(StatefulMutator<TCandidate, TState> source, TState state)
         : IMutationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
@@ -71,8 +69,8 @@ public abstract record StatelessEvaluator<TCandidate> : LeafOperator<Evaluation,
     IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>>,
     IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
-    protected sealed override ExecutorFactory<IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>,
-        IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateFactory() => _ => this;
+    protected sealed override IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>,
+        IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutor(ResolutionScope scope) => this;
 
     public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates,
         IRandomNumberGenerator random, IProblem<TCandidate, ISearchSpace<TCandidate>> problem);

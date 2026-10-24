@@ -108,10 +108,10 @@ public class PipelineAlgorithmTests
 
         public EvaluationCountAnalysis(IOperator<Evaluation, int> evaluator)
         {
-            Advices = Aspect.Observe(evaluator, Record).Advices;
+            Advices = [.. Aspect.Observe(evaluator.Calls, Record)];
         }
 
-        public void Record(OperatorObservation<Evaluation, int> observation) =>
+        public void Record(EvaluationObservation<int> observation) =>
             AnalysisResult.Count += observation.Candidates.Count;
 
         public sealed class Result

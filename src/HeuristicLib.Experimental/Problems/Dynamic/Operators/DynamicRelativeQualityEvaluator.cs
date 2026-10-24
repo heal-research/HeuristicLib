@@ -54,20 +54,12 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
         BestKnownProvider = bestKnownProvider;
     }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory()
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        var state = new ExecutionState();
-        return new Factory(this, state);
-    }
-
-    private sealed class Factory(DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> source, ExecutionState state) : OperatorExecutorFactory<Evaluation, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
-        {
-            var childEvaluator = scope.Resolve(source.ChildOperator);
-            return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.SourceProblem, source.BestKnownProvider, source.ZeroBestKnownPolicy, state);
-        }
+        var state = scope.GetExecutionState(this, static () => new ExecutionState());
+        var childEvaluator = scope.Resolve(ChildOperator);
+        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy, state);
     }
 
     private sealed class ExecutionState

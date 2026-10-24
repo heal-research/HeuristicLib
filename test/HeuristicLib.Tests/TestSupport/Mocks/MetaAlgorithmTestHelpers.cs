@@ -24,12 +24,18 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
 {
     public int ExecutionCount { get; private set; }
 
-    protected override ExecutorFactory<IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> CreateFactory()
+    // Counts the execution states it creates, one per owning state.
+    protected override IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope)
     {
-        ExecutionCount++;
-        var executor = new Executor();
-        return _ => executor;
+        scope.GetExecutionState(this, () =>
+        {
+            ExecutionCount++;
+            return new Preparation();
+        });
+        return new Executor();
     }
+
+    private sealed class Preparation;
 
     private sealed class Executor : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {

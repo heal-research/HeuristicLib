@@ -27,7 +27,7 @@ public class CrossoverConfigurationEqualityTests
         var first = new OffsetCrossover(1);
         var second = new OffsetCrossover(2);
 
-        var crossover = ChoosePerCandidate.Create(first, second);
+        var crossover = ChoosePerItem.Create(first, second);
 
         crossover.ChildOperators.ShouldBe([first, second]);
     }
@@ -48,8 +48,8 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void MultiCrossover_WithSeparatelyBuiltEqualChildCollections_IsEqual()
     {
-        var left = ChoosePerCandidate.Create(new OffsetCrossover(1), new OffsetCrossover(2));
-        var right = ChoosePerCandidate.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var left = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var right = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -58,8 +58,8 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void MultiCrossover_WithDifferentChildCrossovers_IsNotEqual()
     {
-        var left = ChoosePerCandidate.Create(new OffsetCrossover(1), new OffsetCrossover(2));
-        var right = ChoosePerCandidate.Create(new OffsetCrossover(1), new OffsetCrossover(3));
+        var left = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var right = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(3));
 
         left.ShouldNotBe(right);
     }
@@ -67,8 +67,8 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void MultiCrossover_WithReorderedChildCrossovers_IsNotEqual()
     {
-        var left = ChoosePerCandidate.Create(new OffsetCrossover(1), new OffsetCrossover(2));
-        var right = ChoosePerCandidate.Create(new OffsetCrossover(2), new OffsetCrossover(1));
+        var left = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var right = ChoosePerItem.Create(new OffsetCrossover(2), new OffsetCrossover(1));
 
         left.ShouldNotBe(right);
     }
@@ -76,18 +76,18 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void MultiCrossover_WithDifferentChildCount_IsNotEqual()
     {
-        var left = ChoosePerCandidate.Create(new OffsetCrossover(1), new OffsetCrossover(2));
-        var right = ChoosePerCandidate.Create(new OffsetCrossover(1));
+        var left = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var right = ChoosePerItem.Create(new OffsetCrossover(1));
 
         left.ShouldNotBe(right);
     }
 
     [Fact]
-    public void ChoosePerCandidateCrossover_WithDifferentWeights_IsNotEqual()
+    public void ChoosePerItemCrossover_WithDifferentWeights_IsNotEqual()
     {
         IOperator<Crossover, int>[] childCrossovers = [new OffsetCrossover(1), new OffsetCrossover(2)];
-        var left = new ChoosePerCandidate<Crossover, int>(childCrossovers) { Weights = [1.0, 2.0] };
-        var right = new ChoosePerCandidate<Crossover, int>(childCrossovers) { Weights = [2.0, 1.0] };
+        var left = new ChoosePerItem<Crossover, int>(childCrossovers) { Weights = [1.0, 2.0] };
+        var right = new ChoosePerItem<Crossover, int>(childCrossovers) { Weights = [2.0, 1.0] };
 
         left.ShouldNotBe(right);
     }
@@ -97,11 +97,11 @@ public class CrossoverConfigurationEqualityTests
     /// configuration stays distinguishable from an unweighted one.
     /// </summary>
     [Fact]
-    public void ChoosePerCandidateCrossover_WithOmittedWeights_IsNotEqualToExplicitUniformWeights()
+    public void ChoosePerItemCrossover_WithOmittedWeights_IsNotEqualToExplicitUniformWeights()
     {
         IOperator<Crossover, int>[] childCrossovers = [new OffsetCrossover(1), new OffsetCrossover(2)];
-        var omitted = new ChoosePerCandidate<Crossover, int>(childCrossovers);
-        var explicitUniform = new ChoosePerCandidate<Crossover, int>(childCrossovers) { Weights = [0.5, 0.5] };
+        var omitted = new ChoosePerItem<Crossover, int>(childCrossovers);
+        var explicitUniform = new ChoosePerItem<Crossover, int>(childCrossovers) { Weights = [0.5, 0.5] };
 
         omitted.Weights.ShouldBeEmpty();
         omitted.ShouldNotBe(explicitUniform);
@@ -110,7 +110,7 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void MultiCrossoverTopologies_WithEqualChildCrossovers_AreNotEqualAcrossTypes()
     {
-        var chooseOne = ChoosePerCandidate.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var chooseOne = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
         var firstOf = new FirstOfCrossover([new OffsetCrossover(1), new OffsetCrossover(2)]);
 
         chooseOne.ShouldNotBe<object>(firstOf);
@@ -174,7 +174,7 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void RequiredChildCollection_CanBeReplacedWithAWithExpression()
     {
-        var original = ChoosePerCandidate.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var original = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
 
         var reconfigured = original with { ChildOperators = [new OffsetCrossover(3)], Weights = [1.0] };
 
@@ -195,8 +195,8 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void NestedCrossoverComposition_WithEqualParts_IsEqual()
     {
-        var left = ChoosePerCandidate.Create(new OffsetCrossover(1).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
-        var right = ChoosePerCandidate.Create(new OffsetCrossover(1).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
+        var left = ChoosePerItem.Create(new OffsetCrossover(1).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
+        var right = ChoosePerItem.Create(new OffsetCrossover(1).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -205,8 +205,8 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void NestedCrossoverComposition_WithDifferentNestedChildCrossover_IsNotEqual()
     {
-        var left = ChoosePerCandidate.Create(new OffsetCrossover(1).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
-        var right = ChoosePerCandidate.Create(new OffsetCrossover(9).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
+        var left = ChoosePerItem.Create(new OffsetCrossover(1).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
+        var right = ChoosePerItem.Create(new OffsetCrossover(9).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
 
         left.ShouldNotBe(right);
     }
@@ -230,16 +230,11 @@ public class CrossoverConfigurationEqualityTests
         {
         }
 
-        protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-        private sealed class Factory(FirstOfCrossover source) : OperatorExecutorFactory<Crossover, int>
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-                ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
-            {
-                ImmutableArray<ICrossoverExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
-                return new Executor<TRunSearchSpace, TRunProblem>(children);
-            }
+            ImmutableArray<ICrossoverExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor<TRunSearchSpace, TRunProblem>(children);
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<ICrossoverExecutor<int, TSearchSpace, TProblem>> childCrossovers)
@@ -257,7 +252,8 @@ public class CrossoverConfigurationEqualityTests
         {
         }
 
-        protected override OperatorExecutorFactory CreateOperatorFactory() => OperatorExecutorFactory.Forward(ChildOperator);
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => scope.ResolveOperator(ChildOperator);
     }
 
 }

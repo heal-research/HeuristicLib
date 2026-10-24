@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 /// <remarks>
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
 /// It must not contain operator or algorithm configurations, executors or executor resolution facilities.
-/// <see cref="CreateInitialState"/> must return a fresh state object for each preparation. Bindings of that execution share the state.
+/// <see cref="CreateExecutionState"/> must return a fresh state object. Resolution requests it once per owning execution state, and every executor built there shares it.
 /// Calls are not inherently thread safe.
 /// </remarks>
 public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TState>
@@ -19,15 +19,12 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TProblem, T
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TState : class
 {
-    protected abstract TState CreateInitialState();
+    protected abstract TState CreateExecutionState();
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    protected sealed override ExecutorFactory<IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateFactory()
-    {
-        var executor = new Executor(this, CreateInitialState());
-        return _ => executor;
-    }
+    protected sealed override IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor(ResolutionScope scope) =>
+        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
 
     private sealed class Executor(StatefulInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TState> interceptor, TState state)
         : InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
@@ -43,15 +40,12 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TSearchStat
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TState : class
 {
-    protected abstract TState CreateInitialState();
+    protected abstract TState CreateExecutionState();
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    protected sealed override ExecutorFactory<IInterceptionExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>> CreateFactory()
-    {
-        var executor = new Executor(this, CreateInitialState());
-        return _ => executor;
-    }
+    protected sealed override IInterceptionExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutor(ResolutionScope scope) =>
+        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
 
     private sealed class Executor(StatefulInterceptor<TCandidate, TSearchSpace, TSearchState, TState> interceptor, TState state)
         : InterceptionExecutor<TCandidate, TSearchSpace, TSearchState>
@@ -66,15 +60,12 @@ public abstract record StatefulInterceptor<TCandidate, TSearchState, TState>
     where TSearchState : class, ISearchState
     where TState : class
 {
-    protected abstract TState CreateInitialState();
+    protected abstract TState CreateExecutionState();
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random);
 
-    protected sealed override ExecutorFactory<IInterceptionExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>> CreateFactory()
-    {
-        var executor = new Executor(this, CreateInitialState());
-        return _ => executor;
-    }
+    protected sealed override IInterceptionExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutor(ResolutionScope scope) =>
+        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
 
     private sealed class Executor(StatefulInterceptor<TCandidate, TSearchState, TState> interceptor, TState state)
         : InterceptionExecutor<TCandidate, TSearchState>

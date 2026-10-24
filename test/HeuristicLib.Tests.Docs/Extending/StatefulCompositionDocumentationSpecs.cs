@@ -21,23 +21,14 @@ public sealed record RoundRobinMutator<TCandidate> : MultiOperator<Mutation, TCa
     {
     }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory()
+    protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         if (ChildOperators.Count == 0)
             throw new InvalidOperationException("At least one mutator is required.");
-        return new Factory(this, new ExecutionState());
-    }
-
-    private sealed class Factory(RoundRobinMutator<TCandidate> source, ExecutionState state)
-        : OperatorExecutorFactory<Mutation, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-            ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
-        {
-            ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children =
-                [.. source.ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor<TSearchSpace, TProblem>(children, state);
-        }
+        ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children =
+            [.. ChildOperators.Select(child => scope.Resolve(child))];
+        return new Executor<TSearchSpace, TProblem>(children, scope.GetExecutionState(this, static () => new ExecutionState()));
     }
 
     private sealed class ExecutionState

@@ -28,21 +28,13 @@ public sealed record RepeatingEvaluator<TCandidate>
         Repetitions = repetitions;
     }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory()
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
         if (Repetitions <= 0)
             throw new InvalidOperationException("Repetitions must be positive.");
-        return new Factory(this);
-    }
-
-    private sealed class Factory(RepeatingEvaluator<TCandidate> source) : OperatorExecutorFactory<Evaluation, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
-        {
-            var childEvaluator = scope.Resolve(source.ChildOperator);
-            return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, source.Repetitions, source.Aggregator, source.Concurrency);
-        }
+        var childEvaluator = scope.Resolve(ChildOperator);
+        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, Repetitions, Aggregator, Concurrency);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency)

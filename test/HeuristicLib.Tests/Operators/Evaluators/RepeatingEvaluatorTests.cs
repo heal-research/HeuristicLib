@@ -68,7 +68,7 @@ public class RepeatingEvaluatorTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void Preparation_RejectsNonPositiveRepetitions(int repetitions)
+    public void Resolution_RejectsNonPositiveRepetitions(int repetitions)
     {
         var constructed = new RepeatingEvaluator<int>(new CandidateEvaluator(), repetitions);
         var reconfigured = new RepeatingEvaluator<int>(new CandidateEvaluator(), 1) with
@@ -78,9 +78,12 @@ public class RepeatingEvaluatorTests
 
         constructed.Repetitions.ShouldBe(repetitions);
         reconfigured.Repetitions.ShouldBe(repetitions);
-        Should.Throw<InvalidOperationException>(() => constructed.CreateExecutorFactory());
-        Should.Throw<InvalidOperationException>(() => reconfigured.CreateExecutorFactory());
+        Should.Throw<InvalidOperationException>(() => Resolve(constructed));
+        Should.Throw<InvalidOperationException>(() => Resolve(reconfigured));
     }
+
+    private static IEvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> Resolve(IOperator<Evaluation, int> evaluator) =>
+        ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>
         FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);

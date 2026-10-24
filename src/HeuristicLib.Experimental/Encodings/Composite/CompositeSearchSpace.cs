@@ -40,7 +40,7 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     public record Creator(IOperator<Creation, T1> Operator1, IOperator<Creation, T2> Operator2)
         : Operator<Creation, CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>, ICreationExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>>
     {
-        protected override ExecutorFactory<ICreationExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>> CreateFactory() => scope =>
+        protected override ICreationExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>> CreateExecutor(ResolutionScope scope) =>
             new Executor(
                 scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
                 scope.Resolve<T2, TS2, IProblem<T2, TS2>>(Operator2));
@@ -66,7 +66,7 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     public record Crossover(IOperator<HEAL.HeuristicLib.Operators.Crossover, T1> Operator1, IOperator<HEAL.HeuristicLib.Operators.Crossover, T2> Operator2)
         : Operator<HEAL.HeuristicLib.Operators.Crossover, CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>, ICrossoverExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>>
     {
-        protected override ExecutorFactory<ICrossoverExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>> CreateFactory() => scope =>
+        protected override ICrossoverExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>> CreateExecutor(ResolutionScope scope) =>
             new Executor(
                 scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
                 scope.Resolve<T2, TS2, IProblem<T2, TS2>>(Operator2));
@@ -97,7 +97,7 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     {
         public bool All { get; init; } = true;
 
-        protected override ExecutorFactory<IMutationExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>> CreateFactory() => scope =>
+        protected override IMutationExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>> CreateExecutor(ResolutionScope scope) =>
             new Executor(
                 scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
                 scope.Resolve<T2, TS2, IProblem<T2, TS2>>(Operator2),

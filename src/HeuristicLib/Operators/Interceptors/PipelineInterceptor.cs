@@ -15,14 +15,9 @@ public sealed record PipelineInterceptor<TCandidate, TSearchState>
     {
     }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-    private sealed class Factory(PipelineInterceptor<TCandidate, TSearchState> source) : OperatorExecutorFactory<Interception<TSearchState>, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>([.. source.ChildOperators.Select(child => scope.Resolve(child))]);
-    }
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+        new Executor<TRunSearchSpace, TRunProblem>([.. ChildOperators.Select(child => scope.Resolve(child))]);
 
     private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
         : IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>

@@ -69,7 +69,7 @@ public class MoveExecutorFactoryTests
 
     private sealed record CountingCreator(Counter Preparations) : MoveCreator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int, Counter>
     {
-        protected override Counter CreateInitialState()
+        protected override Counter CreateExecutionState()
         {
             Preparations.Value++;
             return new Counter();
@@ -83,7 +83,7 @@ public class MoveExecutorFactoryTests
 
     private sealed record CountingApplier(Counter Preparations) : MoveApplier<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int, Counter>
     {
-        protected override Counter CreateInitialState()
+        protected override Counter CreateExecutionState()
         {
             Preparations.Value++;
             return new Counter();
@@ -94,7 +94,7 @@ public class MoveExecutorFactoryTests
 
     private sealed record CountingEvaluator(Counter Preparations) : MoveEvaluator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int, Counter>
     {
-        protected override Counter CreateInitialState()
+        protected override Counter CreateExecutionState()
         {
             Preparations.Value++;
             return new Counter();

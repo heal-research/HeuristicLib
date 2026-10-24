@@ -15,6 +15,10 @@ public class ResolutionScope<TCandidate, TSearchSpace, TProblem>(ResolutionScope
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public ResolutionScope Scope => scope;
+
+    /// <inheritdoc cref="ResolutionScope.GetExecutionState{TState}"/>
+    public TState GetExecutionState<TState>(IConfigurationNode configuration, Func<TState> create) where TState : class =>
+        scope.GetExecutionState(configuration, create);
 }
 
 /// <summary>
@@ -57,7 +61,7 @@ public static class ResolutionScopeExtensions
     /// </remarks>
     public static IExecutor ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem>(
         this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<TOperation, TCandidate> source)
-        where TOperation : IOperationDescriptor<TOperation>
+        where TOperation : IOperation<TOperation>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         scope.Scope.ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
@@ -65,7 +69,7 @@ public static class ResolutionScopeExtensions
     /// <inheritdoc cref="ResolveOperator{TOperation, TCandidate, TSearchSpace, TProblem}"/>
     public static IExecutor ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(
         this ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope, IOperator<TOperation, TCandidate> source)
-        where TOperation : IOperationDescriptor<TOperation>
+        where TOperation : IOperation<TOperation>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState =>

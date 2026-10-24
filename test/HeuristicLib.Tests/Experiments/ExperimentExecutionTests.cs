@@ -75,10 +75,13 @@ public class ExperimentExecutionTests
             new ProbeAlgorithm(3, probe, DelayMilliseconds: 1_000));
         var run = ExperimentTestSupport.CreateRun(experiment);
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cancellation.CancelAfter(TimeSpan.FromMilliseconds(30));
 
-        await Should.ThrowAsync<OperationCanceledException>(() =>
-            run.CompleteAsync(ExecutionConcurrency.Concurrent(), cancellationToken: cancellation.Token));
+        // Cancel only once every trial is active, however long the trials take to start.
+        var completion = run.CompleteAsync(ExecutionConcurrency.Concurrent(), cancellationToken: cancellation.Token);
+        await probe.WaitForExecutionsAsync(3, TestContext.Current.CancellationToken);
+        await cancellation.CancelAsync();
+
+        await Should.ThrowAsync<OperationCanceledException>(() => completion);
 
         probe.ExecutionCount.ShouldBe(3);
         probe.ActiveExecutions.ShouldBe(0);

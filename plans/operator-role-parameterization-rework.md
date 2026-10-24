@@ -1,8 +1,8 @@
 # Operator Parameterization and Role Unification
 
-**Decision status**: The generic consuming contract remains the accepted direction. Standalone prototype checkpoints stopped after checkpoint 3 on 2026-10-16. Continue the remaining questions through actual core migrations, reusing `prototypes/operator-role-integrated` and moving useful checks into regular tests. Execution and resolution design simplification is required during Package 2 closure, before the Package 3 role cutovers; its concrete design was accepted on 2026-10-18 (Package 2a). An invocation foundation step before the role cutovers (Package 2b) and the Package 3 decisions were accepted on 2026-10-19.
+**Decision status**: The generic consuming contract remains the accepted direction. Standalone prototype checkpoints stopped after checkpoint 3 on 2026-10-16. Continue the remaining questions through actual core migrations, reusing `prototypes/operator-role-integrated` and moving useful checks into regular tests. Execution and resolution design simplification is required during Package 2 closure, before the Package 3 role cutovers; its concrete design was accepted on 2026-10-18 (Package 2a). An invocation foundation step before the role cutovers (Package 2b) and the Package 3 decisions were accepted on 2026-10-19. The fifth review decisions of 2026-10-23, one observation source and operation types without adapters, and its factory review, one `CreateExecutor` hook with execution state through the scope, are accepted.
 
-**Implementation status**: Package 1 supplies the production resolver/advice foundation. Package 2 cuts mutation and evaluation over to `IOperator<TOperation, TCandidate>` across repository consumers, with generic naming/retry, shared counting/timing, adapted observations and real GA/EvolutionStrategy canaries. Package 2a replaces the construction carriers, delegate call wrappers and callback helpers with direct construction and struct invocation wrappers; all solution tests pass. The developer accepted the measured performance on 2026-10-18, completing Packages 2 and 2a. Package 2b is complete: its explicit latency/allocation budgets pass and the developer accepted the small stack-cost increase on 2026-10-20. Package 3 migrates creation, crossover, selection, refinement and replacement across repository consumers, with passing solution tests and performance gates recorded below. Its accepted review decisions, adding termination and interception, operation-generic budgets, `ChoosePerItem` and one trace entry point, are implemented with passing solution tests and await review. The third review decisions of 2026-10-21, including typed observations with handles and the removal of measurements, await implementation.
+**Implementation status**: Package 1 supplies the production resolver/advice foundation. Package 2 cuts mutation and evaluation over to `IOperator<TOperation, TCandidate>` across repository consumers, with generic naming/retry, shared counting/timing, adapted observations and real GA/EvolutionStrategy canaries. Package 2a replaces the construction carriers, delegate call wrappers and callback helpers with direct construction and struct invocation wrappers; all solution tests pass. The developer accepted the measured performance on 2026-10-18, completing Packages 2 and 2a. Package 2b is complete: its explicit latency/allocation budgets pass and the developer accepted the small stack-cost increase on 2026-10-20. Package 3 migrates creation, crossover, selection, refinement and replacement across repository consumers, with passing solution tests and performance gates recorded below. Its accepted review decisions, adding termination and interception, operation-generic budgets, `ChoosePerItem` and one trace entry point, are implemented with passing solution tests and await review. The third review decisions of 2026-10-21, including typed observations with handles, the removal of measurements and the operation adapter base, are implemented with passing solution tests and § 8 budgets and await review. The fourth review decisions are implemented. Step 1 of the fifth review and factory review decisions is implemented with passing solution tests and § 8 budgets and awaits review; step 2 lands with Package 4. The sixth review's decisions are implemented and await review.
 
 **Target**: .NET 10 and C# 14, using the SDK selected by `global.json`.
 
@@ -693,11 +693,215 @@ Limits and removed scenarios:
 - A user-written measurement class becomes a custom reading on the handle.
 - Every trace and observation call site goes through `Calls` or `Iterations`.
 
+The third review decisions were implemented on 2026-10-22 from `9c567b9e`:
+
+- `ChoosePerCandidate` is `ChoosePerItem` again, `IItemOperation<TSelf>` is `IItemOperationDescriptor<TSelf>`, and the glossary has an item entry. The seeded routing baselines pass unchanged.
+- `OperationExecutorAdapter<TExecutor, TArguments, TResult>` builds each call's invocation from the operation's private arguments struct. The struct implements `IOperationArguments<TExecutor, TResult>` or, for an item operation, `IItemOperationArguments<TExecutor, TItemResult>`, which adds `ItemCount` and `SelectItems` and implements the per-item call once through `WeightedRouter`. The nine built-in operations, Experimental's move creation and move application, and both external-operation fixtures use the base; `IItemInvocation<TItemResult>` and the per-operation invocation structs are removed. `ResolutionScope.TryResolve(resolve, out executor, out reason)` replaces the `try`/`catch` body of every `TryResolve` extension, including the Experimental move operations and algorithms.
+- Each operation declares its observation record, file-local advice, `Calls` handle and readings in an `…Observation.cs` file beside its descriptor; termination has no reading. Algorithms offer `Iterations`, with `ObjectiveVectors` and `EvaluatedCandidates` over population states. `Observations<TObservation>` and `Readings<TValue>` live in `Inspection`. An external operation constructs its handle through the public `Observations<TObservation>` constructor, as the new checksum observation fixture does.
+- `Analyzer.Trace` has the four accepted overloads. `TraceBestSoFar`, `TraceBestCandidateSoFar`, `TracePopulationQuality`, `TracePopulationCandidates` and Experimental's similarity and hypervolume traces extend readings; Experimental's `TraceAllPopulations` and `TraceAllObjectiveVectors` merge into `TraceAll` on any readings. `IMeasurement`, the measurement records, `DelegateMeasurement`, `IStateObservation`, `OperatorObservation`, `OperatorObservationAdvice`, `OperatorObservations` and public `TraceAnalyzer<TResult>.Create` are removed; trace construction deduplicates sources internally.
+- The observability guide explains handles as cold observables and shows `Aspect.Observe(crossover.Calls, subject.OnNext)`. Operator implementation documents defining an operation on the adapter base and making it observable, and writing operators links to it. The glossary replaces Measurement with Readings and adds Item and Observation handle. The analyzer, execution-resolution, layering and developer-guideline texts no longer name removed types.
+
+Assumptions taken without review, for the developer to confirm:
+
+- The adapter base needs two public interfaces the decision does not name, `IOperationArguments<TExecutor, TResult>` and `IItemOperationArguments<TExecutor, TItemResult>`. A base with the arguments as a type parameter cannot implement `IItemInvocation<TItemResult>` for its invocation, so the item contract moved from the invocation to the arguments. `IOperationArguments` keeps throwing defaults for `CountCandidateWork` and the per-item call, as the invocation had. Operations with candidate work implement `CountCandidateWork` on their struct, so only per-item choice boxes the arguments, through the item interface's default implementation.
+- `Observation` remains derivable only through `Observation<TProblem>`, so a consumer-defined role whose calls receive no problem, such as the former cooling-schedule spec, can no longer be traced. That API usage spec is removed rather than adding a problem-free observation base.
+- `Aggregate.Single` and `SingleAggregation<TValue>` remain, although nothing uses them since scalar measurements are gone; a value per observation replaces them.
+
+Limits and removed scenarios, beyond those accepted above:
+
+- A consumer-defined role without a problem has no observation handle and no trace.
+- Observation advice is file-local, so an operation's observation cannot be installed under another pointcut, such as `Pointcut.OfType`, through the library's advice.
+- Experimental's move evaluation keeps its two hand-written invocations, because its executor has two named methods and the base serves one.
+- Experimental's whole-population and objective-vector history traces are one `TraceAll`, read through the source's readings.
+
+Source cost against `9c567b9e`: production +33 lines in the core library, −131 in Experimental and none in PythonInterop, together −98 lines with 13 files added and 4 deleted. Tests −25 lines and one file added; published documentation +178 lines. The adapter base alone: the nine descriptors shrink from 592 to 493 lines while the base and invocation contracts grow from 157 to 225, net −31; mutation shrinks from 67 to 57 lines and the scalar checksum fixture from 87 to 85. The resolution helper removes 299 lines from 13 extension files for +10 in `ResolutionScope`. The adapter count stays at nine built-in plus two fixtures, and an operation author now writes the arguments struct, the wrapping executor and the static factory.
+
+Performance reused the Package 3 harness, direct references and ABBA protocol, three isolated Release processes with 2.5 seconds of warmup and 31 pairs. Both duration intervals crossed the +10 ns budget, so the pinned BenchmarkDotNet confirmation reran them with three launches, 40 warmups and 15 measured iterations. Mean overheads are:
+
+| Operation / concern                     | Shared minus direct |                  Uncertainty interval |
+| --------------------------------------- | ------------------: | ------------------------------------: |
+| Refinement counting                     |            −1.38 ns |                95%: −1.72 to −1.04 ns |
+| Refinement duration, ABBA               |           +12.12 ns |               95%: +8.20 to +16.03 ns |
+| Refinement duration, confirmation       |            +0.18 ns | Conservative 99.9%: −0.51 to +0.86 ns |
+| Refinement first-attempt success retry  |           +10.37 ns |               95%: +8.29 to +12.45 ns |
+| Refinement three-layer stack            |           +21.77 ns |              95%: +20.09 to +23.44 ns |
+| Replacement counting                    |            −0.33 ns |                95%: −0.58 to −0.08 ns |
+| Replacement duration, ABBA              |           +14.47 ns |               95%: +8.67 to +20.28 ns |
+| Replacement duration, confirmation      |            −0.82 ns | Conservative 99.9%: −1.34 to −0.29 ns |
+| Replacement first-attempt success retry |           +13.99 ns |              95%: +10.00 to +17.98 ns |
+| Replacement three-layer stack           |           +23.66 ns |              95%: +15.35 to +31.97 ns |
+
+All paths measure 0 B extra warmed allocation. Counting, confirmed duration and first-success retry pass § 8's +5/+10/+25 ns budgets with their upper bounds below the limits, so the base is kept. As in the earlier Package 3 measurement, the ABBA duration estimates overstate what the confirmation finds. Retry and stack estimates are 0.8 to 6.6 ns above the earlier Package 3 run; the runs come from different sessions without a same-session reference, so this is no retention claim. Raw reports, logs, the added confirmation class and hashes remain local under ignored `artifacts/operator-role-package3/third-review/`.
+
+Validation passes: Release build, all 3,169 solution tests (2,689 core, 209 API usage, 240 Experimental, 4 documentation and 27 scenario tests), whitespace, warning-level style and error-level analyzer verification, changed Markdown formatting, `npm run docs:build` and `dotnet pack --configuration Release --no-restore`. Build warnings in changed files predate this change. The branch, HEAD and Git index are unchanged.
+
+**Fourth review decisions (2026-10-22; accepted)**: The developer's review of the third review's implementation settles two of its open points. The first supersedes the assumption that every observation derives from `Observation<TProblem>`.
+
+- **Observations need not carry a problem.** `IProblemObservation<out TProblem>` replaces the `Observation` and `Observation<TProblem>` bases and their internal `ObservedProblem`. Operator and algorithm observation records implement it through their own `Problem` property. `Observations<TObservation>` accepts any observation type, so a source whose calls receive no problem has a handle and a trace of one value per observation again. `Read` becomes an extension constrained to `IProblemObservation<IProblem>`, which covariance satisfies for every record.
+- **A trace merges sources by boundary and reading.** Handles match only with the same source reference and observation type, and readings only when their read functions are also equal delegates. Different readings of one source and the handles of different operations of one configuration are each observed. `Analyzer`, the analyzer architecture and the observability guide document the rule.
+
+The fourth review decisions were implemented on 2026-10-22:
+
+- `IProblemObservation<TProblem>` lives in `Inspection`; the ten observation records, the checksum fixture and the operator-implementation example implement it.
+- An internal `ObservationIdentity` keys a trace's sources; handles and readings carry it.
+- `ConsumerDefinedRolesCanFeedATrace` is restored with a cooling-schedule handle of the consumer's own. New tests cover two readings of one source and two operations of one configuration.
+
+Limits:
+
+- `Read` is an extension member, so C# no longer accepts `calls.Read<double>(o => [...])` with only the value type given. Callers let the value type be inferred, as in `calls.Read(o => o.Offspring.Select(c => c[0]).ToArray())`; three tests changed.
+- A handle without a problem offers no readings, including aggregations such as `MinMeanMax` that need no objective; it is traced one value per observation.
+
+Validation passes: Release build, all 3,173 solution tests, whitespace, warning-level style and error-level analyzer verification, changed Markdown formatting and `npm run docs:build`. The Git index is unchanged.
+
+**Fifth review decisions (2026-10-23; accepted, step 1 implemented)**: The developer's review of the fourth review's implementation reshapes observation and the call system before Package 4. They supersede the fourth review's problem interface and reading identity, the third review's readings and operation authoring base, including its assumption about the argument interfaces, and the 2026-10-16 descriptor naming.
+
+Observation:
+
+- **One observation source.** `ObservationSource<TObservation>`, a provisional name, replaces `Observations<TObservation>` and `Readings<TValue>`. Operators offer `Calls` and algorithms `Iterations` as before, and a source is used directly, as in `Analyzer.Trace(crossover.Calls, o => o.Offspring.Count)` and `Aspect.Observe(crossover.Calls, subject.OnNext)`. The observed configuration remains a constructor argument; its property becomes internal.
+- **Records are the call.** A record holds the operator's inputs and outputs in their original types, plus the call's search space and problem, typed as today, because operator and algorithm calls receive them as ordinary arguments. A record of a call without them, such as a consumer-defined cooling schedule, holds none. Nothing is added for analysis, such as objective directions on evaluation records, and no base record or interface declares the problem.
+- **No projections.** `Readings<TValue>`, a `Reading` value, `Read` or `Select`, the named readings on sources and `IProblemObservation` are removed. Traces read records through a function, and `IAggregation` is removed, so `Analyzer.Trace` has one form. Counting, collecting and single values become plain functions in that form.
+- **Ranking takes its directions as an argument.** Ranking becomes plain functions such as best and best-median-worst that receive the values and their objective directions, and the trace's function passes the call's own, as in `Analyzer.Trace(evaluator.Calls, o => o.ObjectiveVectors.BestMedianWorst(o.Problem.Objective))`. Sources and traces carry no problem function. Ranking within one call never conflicts, because each call is ranked by its own problem.
+- **Best-so-far.** A best-so-far object keeps its running best across calls, as today. The first directions it receives fix it, and a later call with other directions or another dimensionality throws. Passing fixed directions, such as `sphere.Objective`, instead of each call's own remains possible.
+- **Trace helpers.** `TracePopulationQuality` and `TracePopulationCandidates` target iterations over `PopulationState` and take no lambda; they key on a state type any algorithm can yield, not on an operation. `TraceBestSoFar` and `TraceBestCandidateSoFar` target evaluator calls, where all their current uses are, and take no lambda either. Each helper passes the call's own directions.
+- **Duplicate sources.** A trace observes each source once, by configuration reference and observation type. Read-function equality leaves the identity, because one trace applies one function to all its sources.
+- **Aspects are lists.** An aspect is the list of its pointcut/advice pairs, so clocks and composite analyzers write `Advices = [.. Aspect.Observe(evaluator.Calls, Record)]` instead of unpacking another aspect's `Advices`.
+
+Calls and operations:
+
+- **One invocation per operation.** Each operation implements a private `Invocation` struct directly on `IInvocation<TResult>`. It supplies `Random`, `SearchSpace` and `Problem`, `Proceed(IExecutor? executor = null, IRandomNumberGenerator? random = null)`, which replaces `ProceedWith`, `CountCandidateWork` for operations with candidate work and, for item operations, `ProceedPerItem(router)` through `WeightedRouter.Route`. `SearchSpace` and `Problem` stay untyped and unused for now, so every advice sees the call's context through the existing invocation rather than a separate interface. `IOperationArguments`, `IItemOperationArguments` and `OperationExecutorAdapter<TExecutor, TArguments, TResult>` are removed, and per-item choice no longer boxes. `IInvocation<TResult>` remains the call system's only interface. Experimental's move evaluation writes its two invocations like any other operation.
+- **The operation type holds what every system needs.** Explicit static members of `IOperation<TSelf>` supply the executor interface for the run types, wrap an executor with an invocation wrapper and state whether calls report candidate work; the item marker states that calls split into items. `OperationExecutorAdapter`, `OperationExecutorAdapter<TExecutor>` and the per-operation `ExecutorAdapter` classes are removed. General and typed advice receive `OperationInfo`, one library-owned sealed type, and wrap through `operation.Wrap(executor, wrapper)`. Typed resolution, typed advice bases, observations and authoring bases stay per operation, because C# has no associated types.
+- **Names.** `IOperationDescriptor<TSelf>` becomes `IOperation<TSelf>` and `IItemOperationDescriptor<TSelf>` becomes `IItemOperation<TSelf>`. The glossary already defines an operation as the named action an operator performs; it records both names with status `Provisional`, so their similarity to operator can be discussed again.
+
+Factory review (accepted, step 1 implemented): the same session removes the factories between configurations and their executors.
+
+- **One hook per configuration.** Every configuration builds its executor in one `CreateExecutor` hook: run-generic operators override `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, algorithms `CreateExecutor<TSearchSpace, TProblem>(scope)`, and fixed-signature leaves and own roles `CreateExecutor(ResolutionScope scope)`. `OperatorExecutorFactory` with its private classes and `FromFactory`, `Forward` and `WrapInvocation`, `OperatorExecutorFactory<TOperation, TCandidate>` with the 22 nested `Factory` classes, `ExecutorFactory<TExecutor>`, `WrapperExecutorFactory<TExecutor>` and the hooks `CreateExecutorFactory`, `CreateOperatorFactory`, `CreateFactory`, `CreateIterationFactory` and `CreateWrapperFactory` are removed.
+- **Execution state through the scope.** `scope.GetExecutionState(static () => new CountAccumulator())` returns the execution state of the configuration the scope builds and creates it on the first request. Each build receives a new scope that knows its configuration, so no key is passed and a configuration only reaches its own state; calling it on a scope that builds nothing, such as one from `ResolutionScope.Create()`, is a bug. Resolution stores the state in the execution state that owns the configuration, found as today, so every later build there gets the same object across operations and run types, while a fresh child state starts with new state. A configuration has one state object; asking for another type is a bug. The cast stays in resolution's storage, and no public signature uses `object`. Scoped lifetimes in dependency-injection containers and state hooks in UI frameworks, such as React's `useState`, work the same way. This replaces the state variants of `Operator` and `WrappingOperator` considered earlier in the review.
+- **Consequences for authors.** Stateful role bases such as `StatefulMutator` keep a typed hook, renamed from `CreateInitialState` to `CreateExecutionState` because the old name reads like the search state a run starts from, and pass its result to the author's method. Validation moves to the start of `CreateExecutor`. A stateful leaf builds a new executor for each resolution, sharing its state, instead of returning one instance.
+- **Algorithms prepare and wrap like operators.** An algorithm prepares once per configuration instead of once per run types, and wrapping algorithms build around the resolved child directly. This lands with Package 4's meta-algorithm rework.
+- **Advice wraps the built executor.** Resolution applies operator, algorithm and own-role advice itself, each through one library base with `Wrap(executor, source)`: `OperatorAdvice`, `AlgorithmAdvice` and, for own roles, `Advice<TConfiguration, TExecutor>`, whose `Wrap` receives the role type itself. Resolution, which knows only the executor type, reaches it through an internal interface, and only library bases derive from `Advice<TConfiguration>` directly. Own roles no longer pass a callback that casts their advice, so the lambda-based `ResolutionScope.Resolve(configuration, createFactory, createWrapperFactory)` is removed. Advice keeps its data on the advice object, also for algorithms: an algorithm observation's `Iteration` counts every yielded state the advice sees, across fresh activations, so iteration clocks only move forward, while the inner algorithm itself still restarts with fresh execution state.
+- **No typed advice base for now.** Typed advice keeps writing its own wrapping executor; today only the library's observation advice does. A base that owns the executor, so that an author overrides one method such as `Mutate(MutatorCall<TCandidate> call)`, needs one public call type per operation and is reconsidered when authors write typed advice.
+- **Own roles stay.** `IConfigurationNode<TExecutor>` remains for consumer-defined roles, such as the cooling schedule in the pointcut specs.
+- **Per-trial aspects without factories.** `ExperimentRun.AddAspectPerTrial(Func<TAlgorithm, TAspect>)` returns each trial with its aspect. `AspectFactory`, its two generic forms and `GetAspectPerTrial` are removed; the factory only served as the lookup key and as the reason to reject a second add. `AddAspectPerTrial` no longer chains.
+
+Implementation order (accepted 2026-10-24): two steps, each in a fresh session.
+
+1. Before Package 4, in one step: the observation decisions, the call and operation decisions, operator construction through `CreateExecutor` and `GetExecutionState`, and per-trial aspects without `AspectFactory`. Algorithms keep their current factories, `ExecutorFactory<TExecutor>` and `WrapperExecutorFactory<TExecutor>` until step 2, and own roles keep the lambda-based `Resolve` they share with algorithms.
+2. With Package 4: algorithms built and wrapped like operators, algorithm advice keeping its data on the advice, own roles with `Advice<TConfiguration, TExecutor>`, and the removal of `ExecutorFactory<TExecutor>`, `WrapperExecutorFactory<TExecutor>` and the lambda-based `Resolve`.
+
+To-dos of step 1: the glossary marks `IOperation` and `IItemOperation` as `Provisional` and updates "trial analyzer factory", "configuration node", "execution state", "operation descriptor" and the reading terms; developer guidelines § 4.3 and § 4.4, the execution-resolution, operator-implementation and analyzer architecture pages and the observability and experiments guides follow the new names; `AspectFactorySpecs`, which tests the predefined aspects, is renamed and `LayerDependencyTests` is updated.
+
+Assumptions to confirm during implementation:
+
+- `MinMeanMax` needs no objective directions, so it becomes a plain function like counting.
+- The § 8 budgets are measured again after the adapters are removed.
+- Analyzer HLib0002 finds state types in `GetExecutionState` calls instead of base type arguments, and HLib0001 is reworded for `CreateExecutor`.
+
+Limits and removed scenarios:
+
+- One trace no longer combines sources of different observation types, such as mutator and evaluator calls; one unit test does so today.
+- A ranking trace written directly passes the directions, as in `o.Problem.Objective`; about 20 places do so today, most of them in library helpers.
+- A best-so-far trace over calls with different objectives throws instead of restarting.
+- Each operation's invocation writes `Random` and the executor cast again.
+
+**Step 1 implementation (2026-10-24)**: The observation decisions, the call and operation decisions, operator construction through `CreateExecutor` and `GetExecutionState`, and per-trial aspects through `AddAspectPerTrial` are implemented across core, Experimental, PythonInterop, analyzers, tests and documentation, including the step's to-dos. Algorithms and own roles keep their factories until step 2.
+
+Assumption outcomes:
+
+- `MinMeanMax` needs no objective directions and is a plain function over numbers. Confirmed.
+- The § 8 budgets pass; see the measurements below.
+- HLib0002 holds in part. The stateful bases call `GetExecutionState` in library code, so the analyzer still finds a stateful leaf's state type through its base type argument; it now also checks the state type of every `GetExecutionState` call in author code. HLib0001 is reworded for `CreateExecutor` and matches both hooks. Its code fix covers `CreateExecutor` too: a child resolves through `scope.Resolve<...>(child)` on a scope without run types and through `scope.ResolveOperator(child)` on a run-generic scope.
+
+Consequences found during implementation:
+
+- A stateful leaf builds a new executor for each resolution, so two resolutions share state but neither executor nor control identity. Tests that compared identity now compare the shared value.
+- Advice `Check` runs before the construction hook, so a rejected operator creates no execution state.
+- Experimental's `HyperVolumeAggregation` becomes the best-so-far object `HyperVolumeSoFar`, and its population-similarity aggregation becomes the `Similarity` function in `PopulationSimilarityExtensions`; the similarity traces target iterations.
+- Numerics' internal `OperationInfo` is renamed `NumericOperationInfo`, so test projects that see internals need no alias for the execution type (decided 2026-10-24).
+- Test fixtures that kept an executor as their own execution state, so that every build returned the same object, now keep a small state object and build a new executor each time, as authors must; their tests compare the shared value (decided 2026-10-24).
+- Removed tests: traces over different readings of one source and over mutator and evaluator calls together, the rejection of a second per-trial add, the `OperatorExecutorFactory` analyzer case and the generic-owner code-fix case.
+
+Source cost against the index state the step started from: production −599 lines, −554 in the core library, −45 in Experimental and none in PythonInterop, with 4 files added, 9 deleted and 1 renamed; analyzers +85 lines; tests −43 lines, with 2 files added and 2 deleted; published documentation −31 lines. The nine built-in operations shrink from 493 to 477 lines and the operation and invocation contracts from 262 to 206, as `OperationExecutorAdapter` gives way to `OperationInfo`. `OperatorExecutorFactory` and the 22 nested `Factory` classes are removed. An operation author writes the invocation struct, the wrapping executor and the operation's static members.
+
+Performance reused the Package 3 harness, direct references and ABBA protocol, adapted only to the `IOperation<TSelf>` constraint: three isolated Release processes with 2.5 seconds of warmup and 31 pairs. Both duration intervals crossed the +10 ns budget again, so the pinned BenchmarkDotNet confirmation reran them with three launches, 40 warmups and 15 measured iterations. Mean overheads are:
+
+| Operation / concern                     | Shared minus direct |                  Uncertainty interval |
+| --------------------------------------- | ------------------: | ------------------------------------: |
+| Refinement counting                     |            −1.24 ns |                95%: −1.59 to −0.89 ns |
+| Refinement duration, ABBA               |            +7.66 ns |               95%: +4.91 to +10.40 ns |
+| Refinement duration, confirmation       |            +3.74 ns | Conservative 99.9%: +1.24 to +6.24 ns |
+| Refinement first-attempt success retry  |            +7.49 ns |               95%: +4.40 to +10.59 ns |
+| Refinement three-layer stack            |           +18.74 ns |              95%: +12.52 to +24.95 ns |
+| Replacement counting                    |            +0.09 ns |                95%: −0.45 to +0.62 ns |
+| Replacement duration, ABBA              |            +9.61 ns |               95%: +7.75 to +11.46 ns |
+| Replacement duration, confirmation      |            +2.71 ns | Conservative 99.9%: −0.74 to +6.16 ns |
+| Replacement first-attempt success retry |            +9.36 ns |               95%: +8.43 to +10.30 ns |
+| Replacement three-layer stack           |           +20.32 ns |              95%: +18.46 to +22.19 ns |
+
+All paths measure 0 B extra warmed allocation. Counting, confirmed duration and first-success retry pass § 8's +5/+10/+25 ns budgets with their upper bounds below the limits. Retry and stack estimates are 2.9 to 4.6 ns below the third review's run, while the confirmed duration estimates are 3.5 to 3.6 ns above it; the runs come from different sessions without a same-session reference, so this is no retention claim. Raw reports, logs, the adapted harness and hashes remain local under ignored `artifacts/operator-role-package3/fifth-review/`.
+
+Validation passes: Release build, all 3,172 solution tests, whitespace, warning-level style and error-level analyzer verification, changed Markdown formatting, `npm run docs:build` and `dotnet pack --configuration Release --no-restore`. Build warnings in changed files predate this change. The branch, HEAD and Git index are unchanged.
+
+**Sixth review decisions (2026-10-24; accepted, implemented)**: The developer's review of step 1 settles these changes before Package 4. They supersede the factory review's scope that knows the configuration it builds and the fifth review's per-item invocation member and executor-type member.
+
+- **The configuration names itself.** `scope.GetExecutionState(this, create)` replaces `GetExecutionState(create)`: the configuration passes itself instead of the scope remembering what it builds. Resolution finds the configuration's owner as for every configuration and throws unless that configuration is being built at that moment. Every build receives the owner's scope through `WithState`; the scope's `building` field and `Building` are removed. HLib0002 also reports a request whose first argument is not `this`, so misuse shows at compile time and not only when the build runs; the scope's own forwarding call is exempt.
+- **Routing is an item operation's capability.** `IItemOperation<TSelf>` declares `Route<TCandidate, TSearchSpace, TProblem, TSearchState>(WeightedRouter<IExecutor> children)`, which returns an executor that runs each item of a call on the child the router assigns it. `ChoosePerItem` returns that executor; `IInvocation.ProceedPerItem` and the file-local `ItemChoiceWrapper` are removed. Item assignment, random draws and the original list for a child that receives every item stay as they are.
+- **Candidate work stays on the invocation.** `CountCandidateWork` keeps its throwing default; the backlog's candidate-work capability entry still applies.
+- **Typed executor check.** `IOperation<TSelf>.IsExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(executor)` replaces `GetExecutorType`, so the operation contract holds no `Type`. Resolution checks every built and wrapped executor with it. The check that fixed-signature `Operator<…, TExecutor>` ran before its hook is removed; a wrong executor type now fails right after the hook, still during resolution. `OperationInfo.ExecutorType` is removed.
+- **One best-so-far.** `BestSoFar<T>(Func<T, ObjectiveVector> objectiveVector, IComparer<ObjectiveVector>? objectiveComparer = null)` replaces `BestSoFar`, `BestCandidateSoFar<TCandidate>` and the internal `FixedDirections`, in one file with `BestSoFarTraces`. It keeps the fixed-direction and dimensionality checks.
+- **The invocation keeps the call's context.** `IInvocation<TResult>` keeps `Random`, `SearchSpace` and `Problem`: they are arguments of the call, and general wrappers see only the invocation, while removing all three would take `ChoosePerCall` its generator. Passing them to `Invoke` beside the invocation would repeat them in every wrapper signature, a struct bundling them is the context carrier § 4.19 of the developer guidelines excludes, and a class invocation with a base would allocate on every call. The backlog records the repeated properties for a later look.
+- **Executor bases for operation authors.** `WrappingExecutor<TExecutor, TWrapper>` holds the wrapped executor, cast once from `IExecutor`, and the wrapper, and forwards controls. `RoutingExecutor<TExecutor>` holds the children as a `WeightedRouter<TExecutor>`. Each operation's wrapping and routed executors derive from them, so an operation writes neither control forwarding nor the casts in `Wrap` and routing. The static members and the invocation struct stay per operation: the members name the executor interface for the run types, and a struct has no base class. `IInvocation<TResult>` moves to its own file.
+
+**Sixth review follow-up decisions (2026-10-24; accepted, implemented)**:
+
+- **`BestSoFar` keeps the best objective vector.** The non-generic `BestSoFar(objectiveComparer)` derives from `BestSoFar<ObjectiveVector>` with the identity selector, so the common case reads `new BestSoFar()`. `BestSoFar<T>(selector)` remains for other values and is no longer sealed.
+- **Contracts keep `IReadOnlyList<T>`.** Spans in operator contracts are rejected and recorded in the [developer backlog](developer-backlog.md#spans-in-operator-contracts); `ArraySegment` stays an implementation choice. The sweep found no further `ArraySegment` use; `LimitEvaluator` no longer copies the candidates it skips only to count them.
+
+**Sixth review implementation (2026-10-24)**: The decisions are implemented across core, Experimental, tests and documentation, together with a test that a configuration not being built cannot request execution state, from a scope that builds nothing or for a child whose build has finished.
+
+Consequences found during implementation:
+
+- Algorithms and own roles, which keep their factories until step 2, also receive the owner's scope through `WithState` and request their state by passing themselves.
+- `OperationInfo` exposes no operation name: its per-operation dispatch instance names the operation by its type in messages, and the executor check it replaces `ExecutorType` with is internal to resolution.
+- `ExecutorControls.Find<TControl, TWrapper>` is removed: `WrappingExecutor<TExecutor, TWrapper>`, its only caller, asks its wrapper for controls itself. `WeightedRouter<TChoice>` gains an internal `Cast<TOther>()`, which `RoutingExecutor<TExecutor>` uses to type the children once.
+- A routed executor hands each child a batch through the router's list overload, as an `ArraySegment` over the grouped inputs instead of a new array; assignments, random draws and the original list for a child receiving every item are unchanged.
+
+Source cost, counted from a snapshot taken partway through and file by file before it: production about −8 lines, about −2 in the core library and −6 in Experimental, with 3 files added and 1 deleted; tests +22 lines; published documentation +3 lines. The nine built-in operations grow from 477 to 484 lines: each item operation gains its routed executor (+3), and each other operation loses its control forwarding (−2). `ChoosePerItem` shrinks by 9 lines, `Operator` by 23 and the best-so-far file pair from 138 to 105, while the two executor bases add 45.
+
+Performance reran the fifth review's harness unchanged: three isolated Release processes, 2.5 seconds of warmup and 31 ABBA pairs. Both duration intervals crossed the +10 ns budget again, so the pinned BenchmarkDotNet confirmation reran them with three launches, 40 warmups and 15 measured iterations:
+
+| Operation / concern                     | Shared minus direct |                  Uncertainty interval |
+| --------------------------------------- | ------------------: | ------------------------------------: |
+| Refinement counting                     |            −1.84 ns |                95%: −2.95 to −0.72 ns |
+| Refinement duration, ABBA               |            +8.71 ns |               95%: +6.43 to +10.98 ns |
+| Refinement duration, confirmation       |            +1.43 ns | Conservative 99.9%: +0.14 to +2.72 ns |
+| Refinement first-attempt success retry  |            +6.75 ns |               95%: −0.26 to +13.77 ns |
+| Refinement three-layer stack            |           +14.36 ns |               95%: −1.04 to +29.76 ns |
+| Replacement counting                    |            −0.36 ns |                95%: −1.43 to +0.70 ns |
+| Replacement duration, ABBA              |            +9.28 ns |               95%: −0.69 to +19.25 ns |
+| Replacement duration, confirmation      |            −0.79 ns | Conservative 99.9%: −1.99 to +0.42 ns |
+| Replacement first-attempt success retry |            +8.71 ns |               95%: −0.45 to +17.86 ns |
+| Replacement three-layer stack           |           +22.84 ns |              95%: +14.18 to +31.50 ns |
+
+All paths measure 0 B extra warmed allocation. Counting, confirmed duration and first-success retry pass § 8's +5/+10/+25 ns budgets with their upper bounds below the limits. The ABBA intervals are wider than in the fifth review's run, and no estimate moved by more than 4.4 ns from it; the runs come from different sessions without a same-session reference, so this is no retention claim. Raw reports, logs, the harness and hashes remain local under ignored `artifacts/operator-role-package3/sixth-review/`.
+
+Validation passes: Release build, all 3,175 solution tests, including the HLib0002 tests for the first argument, whitespace, warning-level style and error-level analyzer verification, changed Markdown formatting, `npm run docs:build` and `dotnet pack --configuration Release --no-restore`. The branch, HEAD and Git index are unchanged.
+
+**Seventh review decisions (2026-10-24; accepted, implemented)**: The developer's review of the sixth review's implementation and of its standards review settles these points.
+
+- **Observation sources keep their name.** "Handle" is too generic, so `ObservationSource<TObservation>` stays, still provisional. Documentation calls the `Calls` or `Iterations` value an observation source and the configuration it observes the observed configuration; the constructor parameter and the internal property are named `configuration`.
+- **Execution state.** Resolution creates the state that owns a configuration, but runs use it as execution state, so documentation calls it execution state rather than resolution state.
+- **One file per contract.** `IOperator<TOperation, TCandidate>` moves to `IOperator.cs`; `IOperation<TSelf>` and `IItemOperation<TSelf>` live in `IOperation.cs`.
+- **No comparer on objective-vector extremes.** `Best`, `Worst` and `Median` over objective vectors lose the `objectiveComparer` parameter this branch added and no caller used.
+- **Fixed directions for the hypervolume so far.** `HyperVolumeSoFar` throws on a later call with other objective directions, as `BestSoFar` does.
+- **Standards-review suggestions.** `ChoosePerCall` and `ChoosePerItem` share their checks and child resolution through an internal `WeightedChoice`. The analyzers and the code fix recognize execution types through one internal `ExecutionTypes.Is`. A test operator implementing several operations implements `CreateExecutor` once, as a public method: its signature does not name the operation, so one method implements it for every operation. The "Define a new operation" walkthrough is compiled and run in `HeuristicLib.Tests.Docs` and imported into the page.
+
 ### Package 4 — State-dependent operations, native hosting and meta-algorithms
 
 Termination and interception moved into Package 3 (see its review decisions). Termination keeps the random number generator added in Package 2b.
 
 Keep `IAlgorithm` independent and migrate Cycle, budgets, IslandModel and other affected meta-algorithms to the new operator collaborators without inventing `AlgorithmOperation`. Use native `AlgorithmRun`, typed scopes and algorithm advice; remove experimental host/contract adapters from the implementation path. Validate Fresh/Retained/Shared reuse, pausing, root-boundary cancellation, nested early stopping and disposal. Preserve all existing algorithm entry points and completion semantics.
+
+Open question from the fifth review's factory review: `CycleAlgorithm` offers an observation source `Turns` with one `CycleTurn` record per inner algorithm's turn, holding the cycle number, the inner algorithm and the state it starts from. An analyzer observing the inner algorithm's iterations then knows when that algorithm restarts: the observed iteration count continues across turns, and a new call to the inner algorithm cannot tell a fresh start from a retained continuation. The developer accepted the names; `Activations` was rejected.
 
 **Gate**: full solution tests and public hosting/API/documentation examples pass, state-view/advice counters survive rebinding correctly, and no prototype bridge or nominal operator configuration interface is required by production.
 

@@ -17,7 +17,7 @@ public sealed class IterationClock<TCandidate, TSearchState>
 
     public IterationClock(IAlgorithm<TCandidate, TSearchState> algorithm)
     {
-        Advices = Aspect.Observe(algorithm, Record).Advices;
+        Advices = [.. Aspect.Observe(algorithm.Iterations, Record)];
     }
 
     protected override long ReadTime() => Interlocked.Read(ref latest);

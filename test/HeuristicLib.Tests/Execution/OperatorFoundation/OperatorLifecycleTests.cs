@@ -217,10 +217,10 @@ public sealed class OperatorLifecycleTests
     {
         public int Wraps { get; private set; }
 
-        public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source)
+        public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source)
         {
             Wraps++;
-            return operation.WrapInvocation(executor, new LifecycleWrapper(probe, operation.SupportsCandidateWork));
+            return operation.Wrap(executor, new LifecycleWrapper(probe, operation.SupportsCandidateWork));
         }
     }
 

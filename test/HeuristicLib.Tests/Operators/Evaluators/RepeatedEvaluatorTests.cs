@@ -47,7 +47,7 @@ public class RepeatedEvaluatorTests
             public int Calls;
         }
 
-        protected override ExecutionState CreateInitialState() => new();
+        protected override ExecutionState CreateExecutionState() => new();
 
         protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, ExecutionState executionState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
         {

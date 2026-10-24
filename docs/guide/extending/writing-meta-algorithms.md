@@ -17,10 +17,10 @@ Obtain a child algorithm's executor with `scope.Resolve(childAlgorithm)`. Creati
 
 `ResolutionScope.Resolve` applies matching advice from the current aspects, including [analyzer observations](/guide/execution/observability-and-analysis). Bypassing a child's resolution means an analyzer observing that child misses its states.
 
-The `HLib0001` analyzer reports direct child `CreateExecutorFactory` calls in preparation hooks, binding lambdas and deferred execution methods. It does not prove correct state ownership or follow factories passed through arbitrary helper code. Keep child construction on the scope's resolution path.
+The `HLib0001` analyzer reports direct child `CreateExecutorFactory` and `CreateExecutor` calls in preparation and construction hooks, binding lambdas and deferred execution methods. It does not prove correct state ownership or follow factories passed through arbitrary helper code. Keep child construction on the scope's resolution path.
 :::
 
-The same rule applies to operators. Prepare persistent data before returning the factory, then resolve fixed children inside it and pass the resolved executors to the bound node. A meta-algorithm with deferred children can retain its factory's construction scope for later child activation.
+The same rule applies to operators. An operator's `CreateExecutor` resolves fixed children through its scope, takes persistent data from `scope.GetExecutionState(this, create)` and passes both to the executor it builds. A meta-algorithm with deferred children can retain its factory's construction scope for later child activation.
 
 ## A two-stage meta-algorithm
 
@@ -90,6 +90,7 @@ Use it by naming the two stages:
 
 ```csharp
 using HEAL.HeuristicLib.Analysis; // TracePopulationQuality
+using HEAL.HeuristicLib.Inspection; // Iterations
 
 var explore = geneticAlgorithm with { MutationRate = 0.5, MaximumGenerations = 200 };
 var exploit = geneticAlgorithm with { MutationRate = 0.05, MaximumGenerations = 300 };
@@ -100,7 +101,7 @@ var staged = new TwoStageAlgorithm<RealVector, PopulationState<RealVector>>
     Second = exploit
 };
 
-var wholeRun = staged.TracePopulationQuality();
+var wholeRun = staged.Iterations.TracePopulationQuality();
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
     .AddAspect(wholeRun);
 ```
@@ -110,9 +111,9 @@ Two type arguments, not four. The search space and the problem are supplied by `
 Because the children are resolved through the scope, either stage can also be observed on its own:
 
 ```csharp
-var exploreQuality = explore.TracePopulationQuality();
+var exploreQuality = explore.Iterations.TracePopulationQuality();
 
-var wholeRun = staged.TracePopulationQuality();
+var wholeRun = staged.Iterations.TracePopulationQuality();
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
     .AddAspect(exploreQuality)
     .AddAspect(wholeRun);

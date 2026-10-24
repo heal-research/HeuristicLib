@@ -1,9 +1,30 @@
 using System.Diagnostics.CodeAnalysis;
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
 public interface IOperator : IConfigurationNode;
+
+/// <summary>A reusable operator configuration supporting the operation identified by TOperation.</summary>
+public interface IOperator<TOperation, TCandidate> : IOperator
+    where TOperation : IOperation<TOperation>
+{
+    IOperatorContract<TCandidate>? CandidateContract => this as IOperatorContract<TCandidate>;
+
+    /// <summary>Builds this operator's executor for the run types, resolving children through the scope.</summary>
+    /// <remarks>
+    /// Resolution calls this for every build. Validate the configuration first and take shared execution data, such as
+    /// counters or caches, from <see cref="ResolutionScope.GetExecutionState{TState}"/>, passing this configuration. The
+    /// result implements the operation's executor interface for the run types.
+    /// </remarks>
+    IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState;
+}
 
 public interface IOperatorExecutor : IExecutor;
 

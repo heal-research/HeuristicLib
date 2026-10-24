@@ -13,7 +13,7 @@ public sealed class RetryableOperationException : Exception
 /// <remarks>MaximumAttempts includes the first call. Attempts reuse the same arguments, child and RNG without rollback.
 /// Successful calls return immediately. Other failures, including cancellation and aggregate exceptions, propagate without retry.</remarks>
 public sealed record Retry<TOperation, TCandidate> : WrappingOperator<TOperation, TCandidate>
-    where TOperation : IOperationDescriptor<TOperation>
+    where TOperation : IOperation<TOperation>
 {
     public Retry(IOperator<TOperation, TCandidate> childOperator, int maximumAttempts) : base(childOperator)
     {
@@ -22,11 +22,11 @@ public sealed record Retry<TOperation, TCandidate> : WrappingOperator<TOperation
 
     public int MaximumAttempts { get; init; }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory()
+    protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         if (MaximumAttempts < 1)
             throw new InvalidOperationException("MaximumAttempts must be positive.");
-        return OperatorExecutorFactory.WrapInvocation(ChildOperator, new RetryWrapper(MaximumAttempts));
+        return TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, RetryWrapper>(scope.ResolveOperator(ChildOperator), new RetryWrapper(MaximumAttempts));
     }
 }
 
@@ -51,13 +51,13 @@ file readonly struct RetryWrapper(int maximumAttempts) : IInvocationWrapper
 public static class Retry
 {
     public static Retry<TOperation, TCandidate> Create<TOperation, TCandidate>(IOperator<TOperation, TCandidate> childOperator, int maximumAttempts)
-        where TOperation : IOperationDescriptor<TOperation> => new(childOperator, maximumAttempts);
+        where TOperation : IOperation<TOperation> => new(childOperator, maximumAttempts);
 }
 
 public static class RetryOperatorExtensions
 {
     extension<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source)
-        where TOperation : IOperationDescriptor<TOperation>
+        where TOperation : IOperation<TOperation>
     {
         public Retry<TOperation, TCandidate> Retry(int maximumAttempts) => new(source, maximumAttempts);
     }

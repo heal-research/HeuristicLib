@@ -4,10 +4,10 @@ using System.Runtime.CompilerServices;
 namespace HEAL.HeuristicLib.Execution;
 
 /// <remarks>
-/// Prepared factories belong to configuration references in a state and are reused from ancestors. Each resolution
-/// constructs fresh nodes using the factory owner's state and the requesting aspects. A leaf may return its prepared node.
-/// A scope applies its own aspects, then those of the scope it was created from, so every scope sees its ancestors'
-/// aspects. The resolver provides no disposal or concurrency guarantees.
+/// Configurations belong to the state that first resolved them and are reused from ancestors, together with their
+/// execution state. Each resolution builds fresh executors in the owner's state with the requesting aspects. A scope
+/// applies its own aspects, then those of the scope it was created from, so every scope sees its ancestors' aspects.
+/// The resolver provides no disposal or concurrency guarantees.
 /// </remarks>
 public sealed partial class ResolutionScope
 {
@@ -40,6 +40,17 @@ public sealed partial class ResolutionScope
 
     /// <summary>Applies this scope's aspects over another state.</summary>
     internal ResolutionScope WithState(State other) => new(other, parent, aspects);
+
+    /// <summary>Returns the execution state of a configuration being built, creating it on the first request.</summary>
+    /// <remarks>
+    /// A configuration passes itself from its build, as in <c>scope.GetExecutionState(this, create)</c>, and receives its
+    /// own state, such as a counter or a cache. The state belongs to the execution state that owns the configuration:
+    /// every later build there receives the same object, across operations and run types, while a fresh child state
+    /// starts with new state. A configuration has one state object, so every request asks for the same type. A
+    /// configuration that is not being built in this scope has no execution state to request.
+    /// </remarks>
+    public TState GetExecutionState<TState>(IConfigurationNode configuration, Func<TState> create) where TState : class =>
+        state.GetExecutionState(configuration, create);
 
     public TExecutor Resolve<TConfiguration, TExecutor>(TConfiguration configuration,
         Func<TConfiguration, ExecutorFactory<TExecutor>> createExecutorFactory, Func<Advice, TConfiguration, WrapperExecutorFactory<TExecutor>> createWrapperFactory)
@@ -80,11 +91,21 @@ public sealed partial class ResolutionScope
         Func<TConfiguration, ExecutorFactory<TExecutor>> createExecutorFactory, Func<Advice, TConfiguration, WrapperExecutorFactory<TExecutor>> createWrapperFactory,
         [NotNullWhen(true)] out TExecutor? executor, [NotNullWhen(false)] out string? reason)
         where TConfiguration : class, IConfigurationNode
+        where TExecutor : class, IExecutor =>
+        TryResolve(() => Resolve(configuration, createExecutorFactory, createWrapperFactory), out executor, out reason);
+
+    /// <summary>Runs a resolution, reporting its failure as a reason instead of throwing.</summary>
+    /// <remarks>
+    /// Invalid-operation failures become reasons; other exceptions propagate. An operation's <c>TryResolve</c> extensions
+    /// pass their own <c>Resolve</c> call.
+    /// </remarks>
+    public static bool TryResolve<TExecutor>(Func<TExecutor> resolve,
+        [NotNullWhen(true)] out TExecutor? executor, [NotNullWhen(false)] out string? reason)
         where TExecutor : class, IExecutor
     {
         try
         {
-            executor = Resolve(configuration, createExecutorFactory, createWrapperFactory);
+            executor = resolve();
             reason = null;
             return true;
         }
@@ -112,7 +133,7 @@ public sealed partial class ResolutionScope
         var applied = new HashSet<Advice>(ReferenceEqualityComparer.Instance);
         for (var scope = this; scope is not null; scope = scope.parent)
             foreach (var aspect in scope.aspects)
-                foreach (var pair in aspect.Advices)
+                foreach (var pair in aspect)
                     if (applied.Add(pair.Advice))
                         yield return pair;
     }
@@ -175,13 +196,24 @@ public sealed partial class ResolutionScope
         private static InvalidOperationException PreparationPathMismatch(IConfigurationNode configuration) =>
             new($"{configuration.GetType().Name} already has a prepared owner through another preparation path. Resolve through its declared operator contract.");
 
-        private sealed class ConfigurationResolutionEntry
+        // Only a configuration under construction reaches its entry, which its owner holds.
+        internal TState GetExecutionState<TState>(IConfigurationNode configuration, Func<TState> create) where TState : class
         {
-            internal ConfigurationResolutionEntry(Delegate factory) { LegacyFactory = factory; }
-            internal ConfigurationResolutionEntry(OperatorExecutorFactory prepared) { Operator = prepared; }
+            if (!Constructing.Contains(configuration) || FindOwner(configuration) is not { Entry: var entry })
+                throw new InvalidOperationException(
+                    $"{configuration.GetType().Name} is not being built in this scope. Request execution state from its own build, passing the configuration itself.");
+            entry.ExecutionState ??= create() ?? throw new InvalidOperationException($"The execution state of {configuration.GetType().Name} must not be null.");
+            return entry.ExecutionState as TState ?? throw new InvalidOperationException(
+                $"{configuration.GetType().Name} already has execution state of type {entry.ExecutionState.GetType().Name}, not {typeof(TState).Name}. A configuration has one state object.");
+        }
 
-            internal Delegate? LegacyFactory { get; }
-            internal OperatorExecutorFactory? Operator { get; }
+        private sealed class ConfigurationResolutionEntry(Delegate? legacyFactory)
+        {
+            // Algorithms and consumer-defined roles build through a prepared factory; operators through their CreateExecutor hook.
+            internal Delegate? LegacyFactory { get; } = legacyFactory;
+
+            // Created on the configuration's first request and shared by every later build in the owner state.
+            internal object? ExecutionState { get; set; }
         }
 
         /// <remarks>Called once per advice, join point and owner state; the result wraps each construction.</remarks>

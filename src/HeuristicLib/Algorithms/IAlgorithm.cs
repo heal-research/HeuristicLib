@@ -75,21 +75,8 @@ public static class AlgorithmResolutionExtensions
             [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
-            where TSearchState : class, ISearchState
-        {
-            try
-            {
-                executor = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
-                reason = null;
-                return true;
-            }
-            catch (InvalidOperationException exception)
-            {
-                executor = null;
-                reason = exception.Message;
-                return false;
-            }
-        }
+            where TSearchState : class, ISearchState =>
+            ResolutionScope.TryResolve(() => scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm), out executor, out reason);
     }
 
     extension<TCandidate, TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)

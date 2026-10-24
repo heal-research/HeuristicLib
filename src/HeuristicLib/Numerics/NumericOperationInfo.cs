@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Numerics;
 /// Every field applies to every operation, so none of them is optional. Kernels differ by arity and are looked up
 /// separately.
 /// </remarks>
-internal readonly record struct OperationInfo(
+internal readonly record struct NumericOperationInfo(
     Operation Operation,
     string Name,
     int Arity,

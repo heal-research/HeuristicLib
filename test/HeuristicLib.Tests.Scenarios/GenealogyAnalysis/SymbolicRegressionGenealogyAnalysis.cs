@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 using HEAL.HeuristicLib.Encodings.LegacySymbolicExpressions;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.MachineLearning.Legacy;
 using RandomNumberGenerator = HEAL.HeuristicLib.Random.RandomNumberGenerator;
@@ -10,9 +11,9 @@ namespace HEAL.HeuristicLib.Tests.Scenarios.GenealogyAnalysis;
 public class GenealogyGraphTests
 {
     private static
-        ChoosePerCandidate<Mutation, SymbolicExpressionTree> CreateSymRegAllMutator()
+        ChoosePerItem<Mutation, SymbolicExpressionTree> CreateSymRegAllMutator()
     {
-        var symRegAllMutator = ChoosePerCandidate.Create(
+        var symRegAllMutator = ChoosePerItem.Create(
             new ChangeNodeTypeManipulation(),
             new FullTreeShaker(),
             new OnePointShaker(),
@@ -45,7 +46,7 @@ public class GenealogyGraphTests
             MaximumGenerations = 6
         };
 
-        var analysis = ga.TracePopulationCandidates();
+        var analysis = ga.Iterations.TracePopulationCandidates();
 
         var run = ga.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).AddAspect(analysis);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
@@ -81,8 +82,8 @@ public class GenealogyGraphTests
             MaximumGenerations = gens
         };
 
-        var evalQualities = algorithm.Evaluator.TraceBestCandidateSoFar();
-        var qualities = algorithm.TracePopulationCandidates();
+        var evalQualities = algorithm.Evaluator.Calls.TraceBestCandidateSoFar();
+        var qualities = algorithm.Iterations.TracePopulationCandidates();
         var genealogyAnalysis =
             Analyzer.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm);
 
@@ -149,7 +150,7 @@ public class GenealogyGraphTests
         };
 
         var genealogy = Analyzer.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm);
-        var qualities = algorithm.TracePopulationCandidates();
+        var qualities = algorithm.Iterations.TracePopulationCandidates();
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).AddAspect(genealogy).AddAspect(qualities);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);

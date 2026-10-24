@@ -184,7 +184,7 @@ public class CycleAlgorithmTests
     private sealed record YieldedStateStampingInterceptor
         : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, YieldedStateStampingInterceptor.ExecutionState>
     {
-        protected override ExecutionState CreateInitialState() => new();
+        protected override ExecutionState CreateExecutionState() => new();
 
         protected override PopulationState<RealVector> Transform(
           PopulationState<RealVector> currentState,

@@ -26,22 +26,28 @@ public sealed class ExecutorFactoryCodeFixProvider : CodeFixProvider
         foreach (var diagnostic in context.Diagnostics)
         {
             var factory = root.FindNode(diagnostic.Location.SourceSpan, getInnermostNodeForTie: true).FirstAncestorOrSelf<InvocationExpressionSyntax>();
-            if (factory?.Expression is not MemberAccessExpressionSyntax member
-                || model.GetTypeInfo(factory, context.CancellationToken).Type is not INamedTypeSymbol { Name: "ExecutorFactory", Arity: 1 } factoryType
-                || factoryType.ContainingNamespace.ToDisplayString() != "HEAL.HeuristicLib.Execution")
+            if (factory?.Expression is not MemberAccessExpressionSyntax member)
                 continue;
 
+            if (model.GetTypeInfo(factory, context.CancellationToken).Type is not INamedTypeSymbol { Arity: 1 } factoryType
+                || !ExecutionTypes.Is(factoryType, "ExecutorFactory"))
+            {
+                if (TryResolveConstruction(model, factory, member, context.CancellationToken, out var construction))
+                    await RegisterIfCompilesAsync(context, root, diagnostic, factory, construction).ConfigureAwait(false);
+                continue;
+            }
+
             ExpressionSyntax target = factory;
+            ExpressionSyntax replacement;
             while (target.Parent is ParenthesizedExpressionSyntax parentheses)
                 target = parentheses;
             if (target.Parent is MemberAccessExpressionSyntax { Name.Identifier.ValueText: "Invoke" } invoke)
                 target = invoke;
 
-            ExpressionSyntax replacement;
             if (target.Parent is InvocationExpressionSyntax binding && binding.Expression == target && binding.ArgumentList.Arguments.Count == 1)
             {
                 var scope = binding.ArgumentList.Arguments[0].Expression;
-                if (model.GetTypeInfo(scope, context.CancellationToken).Type?.ToDisplayString() != "HEAL.HeuristicLib.Execution.ResolutionScope")
+                if (!ExecutionTypes.Is(model.GetTypeInfo(scope, context.CancellationToken).Type, "ResolutionScope"))
                     continue;
                 replacement = CreateResolve(model, member.Expression, scope, factoryType.TypeArguments[0]);
                 target = binding;
@@ -63,18 +69,44 @@ public sealed class ExecutorFactoryCodeFixProvider : CodeFixProvider
                 continue;
             }
 
-            var annotation = new SyntaxAnnotation();
-            var changedRoot = root.ReplaceNode(target, replacement.WithTriviaFrom(target).WithAdditionalAnnotations(annotation));
-            var changed = context.Document.WithSyntaxRoot(changedRoot);
-            var changedModel = await changed.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
-            if (changedModel is null || changedModel.GetDiagnostics(changedRoot.GetAnnotatedNodes(annotation).Single().Span, context.CancellationToken)
-                .Any(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
-                continue;
-            context.RegisterCodeFix(CodeAction.Create(
-                title: "Resolve child through the scope",
-                createChangedDocument: _ => Task.FromResult(changed),
-                equivalenceKey: nameof(ExecutorFactoryCodeFixProvider)), diagnostic);
+            await RegisterIfCompilesAsync(context, root, diagnostic, target, replacement).ConfigureAwait(false);
         }
+    }
+
+    // An operator's hook builds its executor directly, so the fix resolves the child through the scope it was given.
+    private static bool TryResolveConstruction(SemanticModel model, InvocationExpressionSyntax construction, MemberAccessExpressionSyntax member,
+        CancellationToken cancellationToken, out ExpressionSyntax replacement)
+    {
+        replacement = construction;
+        if (construction.ArgumentList.Arguments.Count != 1
+            || model.GetSymbolInfo(construction, cancellationToken).Symbol is not IMethodSymbol { Name: "CreateExecutor" } hook)
+            return false;
+        var scope = construction.ArgumentList.Arguments[0].Expression;
+        if (model.GetTypeInfo(scope, cancellationToken).Type is not INamedTypeSymbol scopeType || !ExecutionTypes.Is(scopeType, "ResolutionScope"))
+            return false;
+
+        // A run-generic hook returns its executor untyped, as ResolveOperator does. A leaf hook names its role.
+        replacement = scopeType.IsGenericType
+            ? SyntaxFactory.InvocationExpression(
+                SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, scope.WithoutTrivia(), SyntaxFactory.IdentifierName("ResolveOperator")),
+                SyntaxFactory.ArgumentList(SyntaxFactory.SingletonSeparatedList(SyntaxFactory.Argument(member.Expression.WithoutTrivia()))))
+            : CreateResolve(model, member.Expression, scope, hook.ReturnType);
+        return true;
+    }
+
+    private static async Task RegisterIfCompilesAsync(CodeFixContext context, SyntaxNode root, Diagnostic diagnostic, ExpressionSyntax target, ExpressionSyntax replacement)
+    {
+        var annotation = new SyntaxAnnotation();
+        var changedRoot = root.ReplaceNode(target, replacement.WithTriviaFrom(target).WithAdditionalAnnotations(annotation));
+        var changed = context.Document.WithSyntaxRoot(changedRoot);
+        var changedModel = await changed.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
+        if (changedModel is null || changedModel.GetDiagnostics(changedRoot.GetAnnotatedNodes(annotation).Single().Span, context.CancellationToken)
+            .Any(static error => error.Severity == DiagnosticSeverity.Error))
+            return;
+        context.RegisterCodeFix(CodeAction.Create(
+            title: "Resolve child through the scope",
+            createChangedDocument: _ => Task.FromResult(changed),
+            equivalenceKey: nameof(ExecutorFactoryCodeFixProvider)), diagnostic);
     }
 
     private static InvocationExpressionSyntax CreateResolve(SemanticModel model, ExpressionSyntax source, ExpressionSyntax scope, ITypeSymbol execution)

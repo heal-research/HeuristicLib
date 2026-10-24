@@ -6,7 +6,7 @@ Most applications only configure built-in operators. Use this page when your can
 
 Operator configurations are reusable descriptions. Operator executors perform the work and own any run scoped data. HeuristicLib provides three authoring paths so an operator can use the smallest execution model that fits its responsibilities.
 
-Operator configurations prepare typed executor factories. Each factory binds an executor to resolved children and observations.
+Operator configurations build their executors in a `CreateExecutor` hook that resolution calls for every build. Each build binds an executor to resolved children and observations and shares the configuration's execution state.
 
 ## Choose an authoring path
 
@@ -52,9 +52,9 @@ Reduction changes what the author declares, not where the operator fits. **Candi
 
 The arity lives in the authoring bases: the base performs the type check when a run supplies types the operator was not written for, and for a stateless operator the configuration _is_ the executable part, so it needs the search space and problem in scope where it is written. A consumer, field or child property never names them.
 
-`WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>` store one child or an ordered child collection. They forward `Fits` and candidate contracts. Their protected `CreateOperatorFactory()` validates the configuration and creates persistent data once; the returned `OperatorExecutorFactory<TOperation, TCandidate>` overrides `CreateExecutor` to construct an executor for the run's search-space, problem and state types. Resolve children through the typed scope that method receives.
+`WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>` store one child or an ordered child collection. They forward `Fits` and candidate contracts. Their protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` validates the configuration and constructs an executor for the run's search-space, problem and state types on every build. Resolve children through the typed scope it receives, and take persistent data from `scope.GetExecutionState(this, create)`, which creates it once for the configuration's owner.
 
-Use `.Named("name")` for a transparent selectable boundary and `.Retry(3)` to allow up to three attempts after a directly thrown `RetryableOperationException`. Both expose the child's controls. `ChoosePerCall` chooses one child per call and exposes no controls. A generic wrapper of your own returns `OperatorExecutorFactory.WrapInvocation(ChildOperator, wrapper)` with a struct `IInvocationWrapper`, which works for every operation, including external ones. The wrapper can read the call's random number generator and proceed with another one or on another executor of the same operation; it supplies the wrapping executor's controls by implementing `IExecutorControlProvider`, and otherwise the child's controls pass through. The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) shows the complete authoring pattern.
+Use `.Named("name")` for a transparent selectable boundary and `.Retry(3)` to allow up to three attempts after a directly thrown `RetryableOperationException`. Both expose the child's controls. `ChoosePerCall` chooses one child per call and exposes no controls. A generic wrapper of your own returns `TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(scope.ResolveOperator(ChildOperator), wrapper)` with a struct `IInvocationWrapper`, which works for every operation, including external ones. The wrapper can read the call's random number generator and proceed with another one or on another executor of the same operation; it supplies the wrapping executor's controls by implementing `IExecutorControlProvider`, and otherwise the child's controls pass through. The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) shows the complete authoring pattern.
 
 > Watch the last type argument. The stateful bases end in `TState`, so `StatefulMutator<TCandidate, TSearchSpace, TState>` and `StatefulMutator<TCandidate, TSearchSpace, TProblem>` have the same shape. Passing a problem where the state belongs compiles and silently produces a problem-agnostic operator whose state is a problem. `HLib0004` reports this.
 
@@ -79,7 +79,7 @@ Use specialized helpers such as `SingleCandidateEvaluator` when the role offers 
 
 ## Stateful operators
 
-A stateful operator receives one fresh `TState` for each selected logical execution. Its base calls `CreateInitialState()` during preparation and retains one raw executor across observation contexts. Independent logical executions receive independent state. The state can contain counters, caches and ordinary helper data structures.
+A stateful operator receives one fresh `TState` for each selected logical execution. Its base requests that state from `scope.GetExecutionState(this, CreateExecutionState)` on every build, so `CreateExecutionState()` runs once per owner and each executor built across observation contexts shares the state. Independent logical executions receive independent state. The state can contain counters, caches and ordinary helper data structures.
 
 ```csharp
 private sealed record CountingEvaluator
@@ -90,7 +90,7 @@ private sealed record CountingEvaluator
         public int Calls { get; set; }
     }
 
-    protected override ExecutionState CreateInitialState() => new();
+    protected override ExecutionState CreateExecutionState() => new();
 
     protected override IReadOnlyList<ObjectiveVector> Evaluate(
         IReadOnlyList<RealVector> candidates,
@@ -105,20 +105,20 @@ private sealed record CountingEvaluator
 }
 ```
 
-`CreateInitialState()` must return a fresh object. State must not contain operator or algorithm configurations, executors, scopes or delegates bound to child executors. Use the explicit path when an operator needs any of those execution graph dependencies.
+`CreateExecutionState()` must return a fresh object. State must not contain operator or algorithm configurations, executors, scopes or delegates bound to child executors. Use the explicit path when an operator needs any of those execution graph dependencies.
 
 Framework managed state does not have a disposal lifecycle. Do not put disposable resources there. Such ownership requires an explicitly authored executor and a defined lifecycle mechanism.
 
 ## Explicit executors
 
-The configuration describes reusable parameters and graph structure. For creation, crossover, mutation, evaluation, selection, refinement and replacement, the protected `CreateFactory()` prepares persistent execution data without a scope. Its returned factory resolves child configurations through the supplied scope and creates a node for that context. The executor owns typed operation logic and resolved child references; prepared mutable data survives contextual rebinding.
+The configuration describes reusable parameters and graph structure. For creation, crossover, mutation, evaluation, selection, refinement and replacement, the protected `CreateExecutor(ResolutionScope scope)` runs for every build. It resolves child configurations through the supplied scope and creates a node for that context. The executor owns typed operation logic and resolved child references; execution data from `scope.GetExecutionState(this, create)` survives contextual rebinding.
 
 ```csharp
 private sealed record ForwardingEvaluator(IOperator<Evaluation, RealVector> Inner)
     : Evaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
 {
-    protected override ExecutorFactory<IEvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateFactory() =>
-        scope => new Executor(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
+    protected override IEvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutor(ResolutionScope scope) =>
+        new Executor(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
 
     private sealed class Executor(IEvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> inner)
         : EvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
@@ -133,7 +133,7 @@ private sealed record ForwardingEvaluator(IOperator<Evaluation, RealVector> Inne
 }
 ```
 
-Resolve declared child operators inside the returned factory. Allocate persistent counters, caches and helper data before returning it. Retain the scope only when deferred graph construction is an intentional part of the operator. Algorithms resolve their configured parameters and keep parameter-derived behavior in their execution code rather than constructing hidden operators.
+Resolve declared child operators inside `CreateExecutor`. Take persistent counters, caches and helper data from `scope.GetExecutionState(this, create)` rather than creating them in the hook, which would reset them on every build. Retain the scope only when deferred graph construction is an intentional part of the operator. Algorithms resolve their configured parameters and keep parameter-derived behavior in their execution code rather than constructing hidden operators.
 
 Return the most concrete accessible executor type that is useful to callers. A private nested executor is returned through its role specific executor base.
 
@@ -151,7 +151,7 @@ Checking the wrapped mutator with `is IMutationStrengthControl` is insufficient:
 
 ## Wrapping and multi operators
 
-Every operation uses `WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>`, with `ChildOperator` and `ChildOperators` configuration properties. Their executors hold the resolved children themselves. Keep shared counters and caches in the prepared `OperatorExecutorFactory`, and resolve current children inside its `CreateExecutor`. Existing executors keep their original children when a new context is resolved.
+Every operation uses `WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>`, with `ChildOperator` and `ChildOperators` configuration properties. Their executors hold the resolved children themselves. Keep shared counters and caches in the execution state from `scope.GetExecutionState(this, create)`, and resolve current children inside `CreateExecutor`. Existing executors keep their original children when a new context is resolved.
 
 When a child plays a specific part in the operation, derive from `Operator<TOperation, TCandidate>` and declare that child yourself. This configuration excerpt omits the executor body:
 
@@ -161,28 +161,49 @@ public record EliteSelector<TCandidate> : Operator<Selection, TCandidate>
     public required IOperator<Selection, TCandidate> SelectorForRemaining { get; init; }
     public int Elites { get; init; } = 1;
 
-    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
+    protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
+        new Executor<TSearchSpace, TProblem>(scope.Resolve(SelectorForRemaining), Elites);
 
-    private sealed class Factory(EliteSelector<TCandidate> source)
-        : OperatorExecutorFactory<Selection, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-            ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-            new Executor<TSearchSpace, TProblem>(scope.Resolve(source.SelectorForRemaining), source.Elites);
-    }
     // The selection executor takes elites first and requests only the remaining places from its child.
 }
 ```
 
 `EliteSelector` takes its elites first and asks `SelectorForRemaining` only for the places that are left, so calling that child `ChildSelector` would hide what it does. Wrapping it and adding a second, better-named property is not the fix. The two properties return the same object and a reader cannot tell which one to use. Declaring the child directly also lets the constructor fix how many children there are. `GenderSpecificSelector` needs exactly one `FemaleSelector` and one `MaleSelector`, which a multi base cannot express.
 
-Like every composite, these name only the candidate. A child slot is `IOperator<Selection, TCandidate>`, and the run's search space and problem arrive as method type arguments on the creation method. See [Choose an arity](#choose-an-arity) for what that costs the author and why it costs the consumer nothing.
+Like every composite, these name only the candidate. A child slot is `IOperator<Selection, TCandidate>`, and the run's search space and problem arrive as method type arguments on `CreateExecutor`. See [Choose an arity](#choose-an-arity) for what that costs the author and why it costs the consumer nothing.
 
 Composition helpers such as choosing one child, applying a transformation and running a pipeline are covered in [Operator composition](/guide/extending/operator-composition).
 
-`ChoosePerCandidate` routes through `WeightedRouter<TChoice>`. Its wrapper passes a router over the resolved children to the invocation's `ProceedPerItem`, which assigns every item of the call with the call's random number generator; algorithm code uses the router directly. Create it with `WeightedRouter.Create(choices)` for uniform routing or `WeightedRouter.Create(choices, weights)`, using `WeightedIndexSampler` semantics; weights are compiled once per router. Its `Route` overloads accept either inputs or an item count, an RNG and a handler that receives one choice and its batch of inputs or item positions. It assigns every input before handling any batch, handles the batches in choice order, skips empty batches and restores results to their original positions. When every input goes to the same choice, that choice receives the original inputs. Each handler must return exactly the batch size; a mismatch throws `InvalidOperationException`. `ChoosePerCall` chooses once for the whole call and samples its child from a `WeightedItemSampler<T>`, using the call's random number generator for the choice and the child.
+`ChoosePerItem` routes through `WeightedRouter<TChoice>`. It passes a router over the resolved children to its operation's `Route`, whose routed executor assigns every item of a call with the call's random number generator; algorithm code uses the router directly. Create it with `WeightedRouter.Create(choices)` for uniform routing or `WeightedRouter.Create(choices, weights)`, using `WeightedIndexSampler` semantics; weights are compiled once per router. Its `Route` overloads accept either inputs or an item count, an RNG and a handler that receives one choice and its batch of inputs or item positions. It assigns every input before handling any batch, handles the batches in choice order, skips empty batches and restores results to their original positions. When every input goes to the same choice, that choice receives the original inputs. Each handler must return exactly the batch size; a mismatch throws `InvalidOperationException`. `ChoosePerCall` chooses once for the whole call and samples its child from a `WeightedItemSampler<T>`, using the call's random number generator for the choice and the child.
 
 Algorithms use the router to apply parameter-derived behavior in their execution code. GA, NSGA2 and ALPS create `WeightedRouter.AtRate(mutator, mutationRate)` in their executor constructor. The router owns the resolved mutator and a null pass-through choice, so the executor retains only the router for mutation. It routes each offspring to the mutator with the rate's probability, and the algorithm mutates only that batch. Rates at most zero, negative infinity and NaN route every offspring to null; rates at least one and positive infinity route every offspring to the mutator, which receives the original offspring. Neither extreme draws from the RNG. The algorithms use the step's same RNG for routing and mutation, so observers count only offspring routed to the configured mutator. `WeightedRouter.AtRate(rate)` supplies boolean choices for callers that need a decision, and `AppliedAtRate` remains a configuration helper for explicitly configured compositions using the same rate weights.
+
+## Define a new operation
+
+When no existing role fits, define an operation. It has an executor interface with one named method, an operation type that implements `IOperation<TSelf>` and wraps that executor, and typed resolution extensions. Operators then implement `IOperator<TOperation, TCandidate>` for it, and naming, retry, choice, counting, timing and custom advice work without further code. A built-in operation is defined the same way.
+
+The named method ends with the call's random number generator, search space and problem:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-executor{csharp}
+
+The operation implements the static members of `IOperation<TSelf>` explicitly. It recognizes its executor interface, wraps an executor in a private wrapping executor, and holds a private `Invocation` struct for one call. An item operation, marked with `IItemOperation<TSelf>`, also routes a call's items to several executors through a private routed executor. The library bases `WrappingExecutor<TExecutor, TWrapper>` and `RoutingExecutor<TExecutor>` hold the executors, the wrapper and the router, type them as the operation's executor interface and forward controls:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-type{csharp}
+
+The invocation is what every wrapper receives: its `Random`, `SearchSpace` and `Problem`, and `Proceed`. An operation whose calls do not split into items implements `IOperation<TSelf>` instead and needs no routed executor. An operation with candidate work returns true from `SupportsCandidateWork` and implements `CountCandidateWork` on its invocation. The static members, the invocation and the two executors stay per operation: C# needs a nominal class for each executor interface, a struct has no base class, and the operation's static members are the only place that names the executor interface for the run's types.
+
+Resolution extensions cast the resolved executor to the operation's interface. `TryResolve` passes its own `Resolve` call to `ResolutionScope.TryResolve`:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-resolution{csharp}
+
+### Make the operation observable
+
+An operation is observable once it declares three parts beside the operation, as each built-in operation does: an observation record, advice that builds the record from the typed call, and a `Calls` source. The record carries the call's inputs and outputs together with its search space and problem, so a trace can rank by that problem's objective:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-observation{csharp}
+
+`Analyzer.Trace(estimator.Calls, observation => observation.Estimates.Count)` and `Aspect.Observe(estimator.Calls, …)` then work as they do for built-in operations. The advice casts because `OperatorAdvice<TOperation, TCandidate>` receives the executor untyped; a role advice base such as `MutatorAdvice<TCandidate>` removes that cast for its operation.
 
 ## Scaffolding roles and cross-cutting concerns
 
@@ -205,7 +226,7 @@ An agent will not settle a concern's semantics for you. Implement and review the
 
 The `OperatorAuthoringAnalyzer` Roslyn analyzer assists with common mistakes across operator roles:
 
-- `HLib0002` reports execution graph dependencies exposed through stateful operator state.
+- `HLib0002` reports execution graph dependencies exposed through stateful operator state or requested through `GetExecutionState`, and a `GetExecutionState` request that passes a configuration other than `this`.
 - `HLib0003` reports direct mutation of operator configuration members during operation logic.
 - `HLib0004` reports a framework contract type bound as the stateful state type argument, which is usually a reduced-arity mix-up.
 

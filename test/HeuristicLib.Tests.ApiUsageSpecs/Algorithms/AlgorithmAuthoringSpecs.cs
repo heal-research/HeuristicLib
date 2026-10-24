@@ -201,7 +201,7 @@ public class AlgorithmAuthoringSpecs
             public int Calls { get; set; }
         }
 
-        protected override ExecutionState CreateInitialState()
+        protected override ExecutionState CreateExecutionState()
         {
             return new ExecutionState();
         }
@@ -244,11 +244,11 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionsCreated { get; private set; }
         public int CreateCalls { get; private set; }
 
-        public OperatorExecutorFactory CreateExecutorFactory()
+        IExecutor IOperator<Creation, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
             ExecutionsCreated++;
-            var executor = new Executor(this);
-            return OperatorExecutorFactory.FromFactory<ICreationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>(_ => executor);
+            return new Executor(this);
         }
 
         private sealed class Executor(InstancingCreator owner)
@@ -270,11 +270,11 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionsCreated { get; private set; }
         public int EvaluateCalls { get; private set; }
 
-        public OperatorExecutorFactory CreateExecutorFactory()
+        IExecutor IOperator<Evaluation, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
             ExecutionsCreated++;
-            var executor = new Executor(this);
-            return OperatorExecutorFactory.FromFactory<IEvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>(_ => executor);
+            return new Executor(this);
         }
 
         private sealed class Executor(InstancingEvaluator owner)
@@ -298,11 +298,11 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionsCreated { get; private set; }
         public int TransformCalls { get; private set; }
 
-        public OperatorExecutorFactory CreateExecutorFactory()
+        IExecutor IOperator<Interception<SingleSolutionState<RealVector>>, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
             ExecutionsCreated++;
-            var executor = new Executor(this);
-            return OperatorExecutorFactory.FromFactory<IInterceptionExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>(_ => executor);
+            return new Executor(this);
         }
 
         private sealed class Executor(InstancingInterceptor owner)

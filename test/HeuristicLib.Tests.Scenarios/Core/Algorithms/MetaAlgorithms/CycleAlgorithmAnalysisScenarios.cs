@@ -91,7 +91,7 @@ public class CycleAlgorithmAnalysisScenarios
             public int Value { get; set; }
         }
 
-        protected override ExecutionState CreateInitialState() => new();
+        protected override ExecutionState CreateExecutionState() => new();
 
         protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, ExecutionState executionState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
         {
@@ -152,10 +152,10 @@ public class CycleAlgorithmAnalysisScenarios
 
         public EvaluationTraceAnalysis(IOperator<Evaluation, int> evaluator)
         {
-            Advices = Aspect.Observe(evaluator, Record).Advices;
+            Advices = [.. Aspect.Observe(evaluator.Calls, Record)];
         }
 
-        public void Record(OperatorObservation<Evaluation, int> observation) =>
+        public void Record(EvaluationObservation<int> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);
 
         public sealed class ExecutionState
@@ -178,10 +178,10 @@ public class CycleAlgorithmAnalysisScenarios
 
         public InterceptionTraceAnalysis(IOperator<Interception<PopulationState<int>>, int> interceptor)
         {
-            Advices = Aspect.Observe(interceptor, Record).Advices;
+            Advices = [.. Aspect.Observe(interceptor.Calls, Record)];
         }
 
-        public void Record(OperatorObservation<Interception<PopulationState<int>>, int> observation) =>
+        public void Record(InterceptionObservation<int, PopulationState<int>> observation) =>
             Result.RecordObjectiveValue(observation.UntransformedState);
 
         public sealed class ExecutionState

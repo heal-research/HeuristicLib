@@ -126,7 +126,7 @@ public sealed class EvaluationExecutorFactoryTests
 
     private sealed record CountingEvaluator(Action Prepare, Action EvaluateCall) : StatefulEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>
     {
-        protected override CounterState CreateInitialState()
+        protected override CounterState CreateExecutionState()
         {
             Prepare();
             return new CounterState();

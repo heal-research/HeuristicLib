@@ -48,8 +48,8 @@ public sealed class MutationLogAdvice<TCandidate>(Action<IOperator<Mutation, TCa
 #region general-advice-type
 public sealed class SlowCallAdvice(TimeSpan threshold, TimeProvider time, Action<IOperator, TimeSpan> report) : OperatorAdvice
 {
-    public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source) =>
-        operation.WrapInvocation(executor, new ReportSlowCalls(threshold, time, report, source));
+    public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) =>
+        operation.Wrap(executor, new ReportSlowCalls(threshold, time, report, source));
 
     private readonly struct ReportSlowCalls(TimeSpan threshold, TimeProvider time, Action<IOperator, TimeSpan> report,
         IOperator source) : IInvocationWrapper

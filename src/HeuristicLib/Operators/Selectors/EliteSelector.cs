@@ -35,14 +35,9 @@ public record EliteSelector<TCandidate>
     /// </remarks>
     public int Elites { get; init; } = 1;
 
-    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-    private sealed class Factory(EliteSelector<TCandidate> source) : OperatorExecutorFactory<Selection, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.SelectorForRemaining), source.Elites);
-    }
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(SelectorForRemaining), Elites);
 
     private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> selectorForRemaining, int elites)
         : SelectionExecutor<TCandidate, TSearchSpace, TProblem>

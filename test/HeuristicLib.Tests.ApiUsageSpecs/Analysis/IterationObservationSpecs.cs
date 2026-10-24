@@ -38,7 +38,7 @@ public class IterationObservationSpecs
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 3);
         var iterations = Clock.FromIterations(algorithm);
-        var quality = algorithm.TracePopulationCandidates([iterations]);
+        var quality = algorithm.Iterations.TracePopulationCandidates([iterations]);
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(quality);
 
         await foreach (var state in run.Stream(cancellationToken: TestContext.Current.CancellationToken))
@@ -74,7 +74,7 @@ public class IterationObservationSpecs
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 5);
 
-        var qualityAnalyzer = algorithm.TracePopulationCandidates();
+        var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
         var run = algorithm
             .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
             .AddAspect(qualityAnalyzer);
@@ -105,7 +105,7 @@ public class IterationObservationSpecs
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 4);
 
-        var qualityAnalyzer = algorithm.TracePopulationCandidates();
+        var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(qualityAnalyzer);
 
         var streamedStates = new List<PopulationState<RealVector>>();
@@ -124,7 +124,7 @@ public class IterationObservationSpecs
     {
         public RecordingModule(IAlgorithm<RealVector, PopulationState<RealVector>> source, Action observed)
         {
-            Advices = Aspect.Observe(source, _ => observed()).Advices;
+            Advices = [.. Aspect.Observe(source.Iterations, _ => observed())];
         }
     }
 
@@ -133,7 +133,7 @@ public class IterationObservationSpecs
     {
         public RecordingAnalyzer(IAlgorithm<RealVector, PopulationState<RealVector>> source, Action observed)
         {
-            Advices = Aspect.Observe(source, _ => observed()).Advices;
+            Advices = [.. Aspect.Observe(source.Iterations, _ => observed())];
         }
     }
 

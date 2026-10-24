@@ -25,7 +25,7 @@ public sealed record AfterElapsedTimeTerminator<TCandidate>
 
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
-    protected override ExecutionState CreateInitialState() =>
+    protected override ExecutionState CreateExecutionState() =>
         new() { StartTimestamp = TimeProvider.GetTimestamp() };
 
     protected override bool IsTerminalState(ExecutionState executionState) =>

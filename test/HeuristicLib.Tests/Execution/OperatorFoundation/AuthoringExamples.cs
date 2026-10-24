@@ -32,7 +32,7 @@ public sealed record CountingMutation : StatefulMutator<RealVector, CountingMuta
         public int Calls { get; set; }
     }
 
-    protected override ExecutionState CreateInitialState() => new();
+    protected override ExecutionState CreateExecutionState() => new();
 
     protected override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, ExecutionState state,
         IRandomNumberGenerator random)
@@ -45,9 +45,9 @@ public sealed record CountingMutation : StatefulMutator<RealVector, CountingMuta
 public sealed record ContextualMutation(IOperator<Mutation, RealVector> ChildOperator)
     : Mutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
 {
-    protected override ExecutorFactory<IMutationExecutor<RealVector, BoundedRealVectorSearchSpace,
-        TestFunctionProblem>> CreateFactory() =>
-        scope => new Executor(scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(ChildOperator));
+    protected override IMutationExecutor<RealVector, BoundedRealVectorSearchSpace,
+        TestFunctionProblem> CreateExecutor(ResolutionScope scope) =>
+        new Executor(scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(ChildOperator));
 
     private sealed class Executor(IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> child)
         : IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
@@ -74,28 +74,43 @@ public interface ILiveValue
 public sealed record SharedOperations(ProbeLog Log) : IOperator<Mutation, RealVector>,
     IOperator<Evaluation, RealVector>, IOperator<Termination, RealVector>, IOperator<Checksum, RealVector>
 {
-    public OperatorExecutorFactory CreateExecutorFactory()
+    // One public method implements every operation's CreateExecutor, whose signature does not name the operation.
+    // Every build in one owning state shares the live value. Creating the state counts as the preparation.
+    public IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
+        where TSearchSpace : class, ISearchSpace<RealVector>
+        where TProblem : class, IProblem<RealVector, TSearchSpace>
+        where TSearchState : class, ISearchState
     {
-        Log.Preparations++;
-        if (Log.FailPreparation)
-            throw new InvalidOperationException("Requested preparation failure.");
-        var executor = new Executor();
-        return OperatorExecutorFactory.FromFactory<Executor>(_ =>
+        var state = scope.GetExecutionState(this, () =>
         {
-            Log.Constructions++;
-            if (Log.FailConstruction)
-                throw new InvalidOperationException("Requested construction failure.");
-            return executor;
+            Log.Preparations++;
+            if (Log.FailPreparation)
+                throw new InvalidOperationException("Requested preparation failure.");
+            return new ExecutionState();
         });
+        Log.Constructions++;
+        if (Log.FailConstruction)
+            throw new InvalidOperationException("Requested construction failure.");
+        return new Executor(state);
     }
 
-    private sealed class Executor : ILiveValue,
+    private sealed class ExecutionState
+    {
+        public int Value { get; set; } = 3;
+    }
+
+    private sealed class Executor(ExecutionState state) : ILiveValue,
         IChecksumExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>,
         IMutationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>,
         IEvaluationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>,
         ITerminationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, ISearchState>
     {
-        public int Value { get; set; } = 3;
+        public int Value
+        {
+            get => state.Value;
+            set => state.Value = value;
+        }
+
         public int Read(IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace,
             IProblem<RealVector, ISearchSpace<RealVector>> problem) => Value;
         public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random,
@@ -114,15 +129,19 @@ public sealed class OtherState : ISearchState;
 
 public sealed record IdentityInterceptor(ProbeLog Log) : IOperator<Interception<ProbeState>, RealVector>
 {
-    public OperatorExecutorFactory CreateExecutorFactory()
+    IExecutor IOperator<Interception<ProbeState>, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
     {
-        Log.Preparations++;
-        return OperatorExecutorFactory.FromFactory<Executor>(_ =>
+        scope.GetExecutionState(this, () =>
         {
-            Log.Constructions++;
-            return new Executor();
+            Log.Preparations++;
+            return new Preparation();
         });
+        Log.Constructions++;
+        return new Executor();
     }
+
+    private sealed class Preparation;
 
     private sealed class Executor : IInterceptionExecutor<RealVector, ISearchSpace<RealVector>,
         IProblem<RealVector, ISearchSpace<RealVector>>, ProbeState>
@@ -140,12 +159,9 @@ public sealed record NodeTokenMutation : Mutator<RealVector>
         public int Value { get; set; }
     }
 
-    protected override ExecutorFactory<IMutationExecutor<RealVector, ISearchSpace<RealVector>,
-        IProblem<RealVector, ISearchSpace<RealVector>>>> CreateFactory()
-    {
-        var sequence = new Sequence();
-        return _ => new Executor(++sequence.Value);
-    }
+    protected override IMutationExecutor<RealVector, ISearchSpace<RealVector>,
+        IProblem<RealVector, ISearchSpace<RealVector>>> CreateExecutor(ResolutionScope scope) =>
+        new Executor(++scope.GetExecutionState(this, static () => new Sequence()).Value);
 
     private sealed class Executor(int token) : IMutationExecutor<RealVector, ISearchSpace<RealVector>,
         IProblem<RealVector, ISearchSpace<RealVector>>>

@@ -20,15 +20,12 @@ public abstract record MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, 
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TState : class
 {
-    protected abstract TState CreateInitialState();
+    protected abstract TState CreateExecutionState();
 
     protected abstract ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    protected sealed override ExecutorFactory<IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>> CreateFactory()
-    {
-        var executor = new Executor(this, CreateInitialState());
-        return _ => executor;
-    }
+    protected sealed override IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutor(ResolutionScope scope) =>
+        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
 
     private sealed class Executor(MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, TState> moveEvaluator, TState state)
         : IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>

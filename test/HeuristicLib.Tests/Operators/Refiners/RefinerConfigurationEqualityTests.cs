@@ -45,24 +45,24 @@ public class RefinerConfigurationEqualityTests
     }
 
     [Fact]
-    public void ChoosePerCandidateRefinement_WithDifferentChildRefiners_IsNotEqual()
+    public void ChoosePerItemRefinement_WithDifferentChildRefiners_IsNotEqual()
     {
-        var left = ChoosePerCandidate.Create([new AddOffsetRefiner(1)], [1.0]);
-        var right = ChoosePerCandidate.Create([new AddOffsetRefiner(2)], [1.0]);
+        var left = ChoosePerItem.Create([new AddOffsetRefiner(1)], [1.0]);
+        var right = ChoosePerItem.Create([new AddOffsetRefiner(2)], [1.0]);
 
         left.ShouldNotBe(right);
     }
 
     [Fact]
-    public void ChoosePerCandidateRefinement_WithDifferentWeights_IsNotEqual()
+    public void ChoosePerItemRefinement_WithDifferentWeights_IsNotEqual()
     {
         var children = new IOperator<Refinement, int>[]
         {
             new AddOffsetRefiner(1),
             new AddOffsetRefiner(2),
         };
-        var left = ChoosePerCandidate.Create(children, [1.0, 2.0]);
-        var right = ChoosePerCandidate.Create(children, [2.0, 1.0]);
+        var left = ChoosePerItem.Create(children, [1.0, 2.0]);
+        var right = ChoosePerItem.Create(children, [2.0, 1.0]);
 
         left.ShouldNotBe(right);
     }
@@ -71,7 +71,7 @@ public class RefinerConfigurationEqualityTests
     public void MultiRefinerTopologies_WithEqualChildRefiners_AreNotEqualAcrossTypes()
     {
         var pipeline = PipelineRefiner.Create(new AddOffsetRefiner(1), new AddOffsetRefiner(2));
-        var chooseOne = ChoosePerCandidate.Create(new AddOffsetRefiner(1), new AddOffsetRefiner(2));
+        var chooseOne = ChoosePerItem.Create(new AddOffsetRefiner(1), new AddOffsetRefiner(2));
 
         pipeline.ShouldNotBe<object>(chooseOne);
     }
@@ -192,16 +192,11 @@ public class RefinerConfigurationEqualityTests
         {
         }
 
-        protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-        private sealed class Factory(FirstOfRefiner source) : OperatorExecutorFactory<Refinement, int>
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-                ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
-            {
-                ImmutableArray<IRefinementExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
-                return new Executor<TRunSearchSpace, TRunProblem>(children);
-            }
+            ImmutableArray<IRefinementExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor<TRunSearchSpace, TRunProblem>(children);
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IRefinementExecutor<int, TSearchSpace, TProblem>> childRefiners)

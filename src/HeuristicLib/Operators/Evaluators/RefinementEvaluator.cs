@@ -51,14 +51,9 @@ public sealed record RefinementEvaluator<TCandidate>
 
     public override bool Fits(ExecutionSignature execution) => execution.Fits(Evaluator, Refiner);
 
-    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-    private sealed class Factory(RefinementEvaluator<TCandidate> source) : OperatorExecutorFactory<Evaluation, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.Evaluator), scope.Resolve(source.Refiner));
-    }
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(Evaluator), scope.Resolve(Refiner));
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator, IRefinementExecutor<TCandidate, TSearchSpace, TProblem> refiner)
         : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>

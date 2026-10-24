@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace HEAL.HeuristicLib.Analyzers;
 
@@ -14,12 +15,21 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
     public const string StateContractDiagnosticId = "HLib0004";
 
     private const string OperatorMetadataName = "HEAL.HeuristicLib.Operators.IOperator";
-    private const string CreateInitialStateMethodName = "CreateInitialState";
+    private const string CreateExecutionStateMethodName = "CreateExecutionState";
+    private const string GetExecutionStateMethodName = "GetExecutionState";
 
     private static readonly DiagnosticDescriptor StatefulStateRule = new(
         id: StatefulStateDiagnosticId,
         title: "Stateful operator state must not contain execution graph dependencies",
-        messageFormat: "State member '{0}' exposes execution graph dependency '{1}'. Use the explicit executor operator path instead.",
+        messageFormat: "Execution state '{0}' exposes execution graph dependency '{1}'. Use the explicit executor operator path instead.",
+        category: "Architecture",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ExecutionStateOwnerRule = new(
+        id: StatefulStateDiagnosticId,
+        title: "Execution state must be requested by the configuration it belongs to",
+        messageFormat: "Execution state is requested for '{0}' instead of this. A configuration requests only its own state; another configuration's state stays with its own build.",
         category: "Architecture",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -40,7 +50,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [StatefulStateRule, ConfigurationMutationRule, StateContractRule];
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [StatefulStateRule, ExecutionStateOwnerRule, ConfigurationMutationRule, StateContractRule];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -55,6 +65,10 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
             startContext.RegisterSymbolAction(
                 symbolContext => AnalyzeStatefulOperator(symbolContext, forbiddenTypes, stateContractTypes, operatorContract),
                 SymbolKind.NamedType);
+
+            startContext.RegisterSyntaxNodeAction(
+                syntaxContext => AnalyzeExecutionStateRequest(syntaxContext, forbiddenTypes),
+                SyntaxKind.InvocationExpression);
 
             startContext.RegisterSyntaxNodeAction(
                 syntaxContext => AnalyzeAssignment(syntaxContext, operatorContract),
@@ -139,6 +153,72 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        ReportForbiddenStateMembers(context.ReportDiagnostic, stateType, forbiddenTypes, operatorType.Locations.FirstOrDefault());
+    }
+
+    // An operator that builds its own executor requests its state from the scope, so the request names the state type.
+    private static void AnalyzeExecutionStateRequest(SyntaxNodeAnalysisContext context, ImmutableArray<INamedTypeSymbol> forbiddenTypes)
+    {
+        var invocation = (InvocationExpressionSyntax)context.Node;
+        if (context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken).Symbol is not IMethodSymbol { Name: GetExecutionStateMethodName, IsStatic: false, TypeArguments.Length: 1 } request
+            || !ExecutionTypes.Is(request.ContainingType, "ResolutionScope"))
+        {
+            return;
+        }
+
+        // A scope forwarding the request passes the configuration it received.
+        if (!ExecutionTypes.Is(context.ContainingSymbol?.ContainingType, "ResolutionScope"))
+        {
+            AnalyzeExecutionStateOwner(context, invocation);
+        }
+
+        if (request.TypeArguments[0] is not INamedTypeSymbol stateType)
+        {
+            return;
+        }
+
+        var forbiddenStateType = forbiddenTypes.FirstOrDefault(candidate => IsOrImplements(stateType, candidate));
+        if (forbiddenStateType is not null)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                StatefulStateRule,
+                invocation.GetLocation(),
+                stateType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
+                forbiddenStateType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
+            return;
+        }
+
+        ReportForbiddenStateMembers(context.ReportDiagnostic, stateType, forbiddenTypes, invocation.GetLocation());
+    }
+
+    // A configuration requests only its own state, so the request passes this.
+    private static void AnalyzeExecutionStateOwner(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation)
+    {
+        if (context.SemanticModel.GetOperation(invocation, context.CancellationToken) is not IInvocationOperation operation
+            || operation.Arguments.FirstOrDefault(static argument => argument.Parameter?.Ordinal == 0) is not { } configuration)
+        {
+            return;
+        }
+
+        var value = configuration.Value;
+        while (value is IConversionOperation conversion)
+        {
+            value = conversion.Operand;
+        }
+
+        if (value is IInstanceReferenceOperation { ReferenceKind: InstanceReferenceKind.ContainingTypeInstance })
+        {
+            return;
+        }
+
+        context.ReportDiagnostic(Diagnostic.Create(
+            ExecutionStateOwnerRule,
+            configuration.Syntax.GetLocation(),
+            value.Syntax.ToString()));
+    }
+
+    private static void ReportForbiddenStateMembers(Action<Diagnostic> report, ITypeSymbol stateType, ImmutableArray<INamedTypeSymbol> forbiddenTypes, Location? fallback)
+    {
         foreach (var member in GetStateMembers(stateType))
         {
             var memberType = GetMemberType(member);
@@ -152,13 +232,13 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            var location = member.Locations.FirstOrDefault(static candidate => candidate.IsInSource) ?? operatorType.Locations.FirstOrDefault();
+            var location = member.Locations.FirstOrDefault(static candidate => candidate.IsInSource) ?? fallback;
             if (location is null)
             {
                 continue;
             }
 
-            context.ReportDiagnostic(Diagnostic.Create(
+            report(Diagnostic.Create(
                 StatefulStateRule,
                 location,
                 member.Name,
@@ -175,7 +255,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            var stateFactory = current.OriginalDefinition.GetMembers(CreateInitialStateMethodName)
+            var stateFactory = current.OriginalDefinition.GetMembers(CreateExecutionStateMethodName)
                 .OfType<IMethodSymbol>()
                 .FirstOrDefault(static method => !method.IsStatic && method.Parameters.Length == 0 && method.ReturnType is ITypeParameterSymbol);
             if (stateFactory?.ReturnType is not ITypeParameterSymbol stateParameter

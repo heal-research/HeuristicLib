@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>An operator configuration with one child supporting the same operation.</summary>
 public abstract record WrappingOperator<TOperation, TCandidate> : Operator<TOperation, TCandidate>, IOperatorContract<TCandidate>
-    where TOperation : IOperationDescriptor<TOperation>
+    where TOperation : IOperation<TOperation>
 {
     protected WrappingOperator(IOperator<TOperation, TCandidate> childOperator)
     {

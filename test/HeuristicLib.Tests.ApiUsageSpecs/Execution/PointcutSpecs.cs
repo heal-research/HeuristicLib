@@ -4,6 +4,7 @@ using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
@@ -56,18 +57,21 @@ public class PointcutSpecs
     }
 
     [Fact]
-    public void NamingWrappersCanRetainTheirSharedChildExecution()
+    public void NamingWrappersShareTheirChildsExecutionState()
     {
         var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
         var exploration = new Named<Mutation, RealVector>(child, "exploration");
         var refinement = new Named<Mutation, RealVector>(child, "refinement");
         var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
 
-        var explorationExecutor = scope.Resolve(exploration);
-        var refinementExecutor = scope.Resolve(refinement);
+        // Each resolution builds a new executor, and all of them share the child's mutation strength.
+        _ = scope.Resolve(exploration, out IMutationStrengthControl? explorationStrength);
+        _ = scope.Resolve(refinement, out IMutationStrengthControl? refinementStrength);
+        _ = scope.Resolve(child, out IMutationStrengthControl? childStrength);
+        explorationStrength.ShouldNotBeNull().CurrentMutationStrength = 0.25;
 
-        explorationExecutor.ShouldBeSameAs(refinementExecutor);
-        scope.Resolve(child).ShouldBeSameAs(explorationExecutor);
+        refinementStrength.ShouldNotBeNull().CurrentMutationStrength.ShouldBe(0.25);
+        childStrength.ShouldNotBeNull().CurrentMutationStrength.ShouldBe(0.25);
     }
 
     [Fact]
@@ -134,7 +138,7 @@ public class PointcutSpecs
             MaximumGenerations = 5,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new AlphaBetaBlendCrossover { Alpha = 0.7 },
-            Mutator = ChoosePerCandidate.Create<Mutation, RealVector>(exploration, refinement),
+            Mutator = ChoosePerItem.Create<Mutation, RealVector>(exploration, refinement),
             Selector = TournamentSelector.For(problem, tournamentSize: 2),
             MutationRate = 0.5,
             Elites = 1
@@ -223,10 +227,7 @@ public class PointcutSpecs
         ICoolingSchedule warmup = new GeometricCooling(StartTemperature: 100, Factor: 0.5);
         ICoolingSchedule main = new GeometricCooling(StartTemperature: 8, Factor: 0.5);
         var plan = new AnnealingPlan(warmup, main, WarmupSteps: 3);
-        var temperatures = TraceAnalyzer<double>.Create<ICoolingSchedule, double>(
-            [warmup, warmup, main],
-            static (schedule, record) => Aspect.Create(
-                Pointcut.Reference(schedule), new RecordedCoolingAdvice(record)),
+        var temperatures = Analyzer.Trace([Temperatures(warmup), Temperatures(warmup), Temperatures(main)],
             static temperature => temperature);
         var executor = ResolutionScope.Create(temperatures).Resolve(plan);
 
@@ -237,6 +238,10 @@ public class PointcutSpecs
         first.Values.ShouldBe([100]);
         temperatures.Snapshot().Values.ShouldBe([100, 2]);
     }
+
+    // The role's calls receive no problem, so its observations are the plain temperatures each call returned.
+    private static ObservationSource<double> Temperatures(ICoolingSchedule schedule) =>
+        new(schedule, observe => Aspect.Create(Pointcut.Reference(schedule), new RecordedCoolingAdvice(observe)));
 
     private sealed class MutationCounter : Aspect
     {
@@ -262,7 +267,7 @@ public class PointcutSpecs
     {
         public AspectGroup(params IReadOnlyList<Aspect> aspects)
         {
-            Advices = [.. aspects.SelectMany(aspect => aspect.Advices)];
+            Advices = [.. aspects.SelectMany(aspect => aspect)];
         }
     }
 

@@ -27,7 +27,7 @@ public sealed class ParetoFrontAnalyzer<T> : AccumulatingAnalyzer
             throw new ArgumentException("An analyzer needs at least one observation source.", nameof(evaluators));
 
         front = new ParetoFront<T>(referencePoint, problemObjective);
-        Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe(evaluator, Record).Advices)];
+        Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe(evaluator.Calls, Record))];
     }
 
     public ObjectiveDirections Objective => front.Objective;
@@ -36,7 +36,7 @@ public sealed class ParetoFrontAnalyzer<T> : AccumulatingAnalyzer
     /// <summary>The front this analyzer accumulates.</summary>
     public ParetoFront<T> Front => front;
 
-    private void Record(OperatorObservation<Evaluation, T> observation)
+    private void Record(EvaluationObservation<T> observation)
     {
         lock (Sync)
             front.AddPoints(observation.Candidates.ToEvaluated(observation.ObjectiveVectors));

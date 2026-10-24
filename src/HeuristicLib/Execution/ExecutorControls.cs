@@ -10,16 +10,6 @@ public static class ExecutorControls
     /// </remarks>
     public static TControl? Find<TControl>(IExecutor executor) where TControl : class =>
         executor is IExecutorControlProvider provider ? provider.Get<TControl>() : executor as TControl;
-
-    /// <summary>Returns the control of an executor that passes its calls to an invocation wrapper.</summary>
-    /// <remarks>
-    /// A wrapper implementing <see cref="IExecutorControlProvider"/> supplies the controls; otherwise they are those of the
-    /// wrapped executor. Operation adapters call this from their wrapping executors.
-    /// </remarks>
-    public static TControl? Find<TControl, TWrapper>(IExecutor executor, TWrapper wrapper)
-        where TControl : class
-        where TWrapper : struct, IInvocationWrapper =>
-        wrapper is IExecutorControlProvider provider ? provider.Get<TControl>() : Find<TControl>(executor);
 }
 
 /// <summary>Supplies an executor's runtime controls when they are not the executor itself.</summary>

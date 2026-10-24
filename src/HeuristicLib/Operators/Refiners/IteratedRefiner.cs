@@ -30,18 +30,12 @@ public sealed record IteratedRefiner<TCandidate>
         Iterations = iterations;
     }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory()
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
         if (Iterations <= 0)
             throw new InvalidOperationException("Iterations must be positive.");
-        return new Factory(this);
-    }
-
-    private sealed class Factory(IteratedRefiner<TCandidate> source) : OperatorExecutorFactory<Refinement, TCandidate>
-    {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.ChildOperator), source.Iterations);
+        return new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(ChildOperator), Iterations);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> childRefiner, int iterations)

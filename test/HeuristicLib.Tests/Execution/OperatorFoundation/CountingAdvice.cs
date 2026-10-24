@@ -53,26 +53,26 @@ public readonly struct CountingWrapper(CallCounter total, AdviceLog log) : IInvo
 // One external general counter, with no enumeration of operations or execution signatures.
 public sealed class CountCalls(CallCounter total, AdviceLog log) : OperatorAdvice
 {
-    public override void Check(OperationExecutorAdapter operation, IOperator source) => log.Check(source);
+    public override void Check(OperationInfo operation, IOperator source) => log.Check(source);
 
-    public override IExecutor Wrap(IExecutor executor, OperationExecutorAdapter operation, IOperator source)
+    public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source)
     {
         log.Wrap(source);
-        return operation.WrapInvocation(executor, new CountingWrapper(total, log));
+        return operation.Wrap(executor, new CountingWrapper(total, log));
     }
 }
 
 public sealed class CountCalls<TOperation, TCandidate>(CallCounter total, AdviceLog log)
-    : OperatorAdvice<TOperation, TCandidate> where TOperation : IOperationDescriptor<TOperation>
+    : OperatorAdvice<TOperation, TCandidate> where TOperation : IOperation<TOperation>
 {
-    public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
+    public override void Check<TSearchSpace, TProblem, TSearchState>(OperationInfo operation,
         IOperator<TOperation, TCandidate> source) => log.Check(source);
 
-    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
         IOperator<TOperation, TCandidate> source)
     {
         log.Wrap(source);
-        return operation.WrapInvocation(executor, new CountingWrapper(total, log));
+        return operation.Wrap(executor, new CountingWrapper(total, log));
     }
 }
 
@@ -80,11 +80,11 @@ public sealed class WrongViewAdvice(CallCounter total, AdviceLog log) : Operator
 {
     public bool ReturnWrongView { get; set; } = true;
 
-    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
         IOperator<Mutation, RealVector> source)
     {
         log.Wrap(source);
-        return ReturnWrongView ? new WrongExecutor() : operation.WrapInvocation(executor, new CountingWrapper(total, log));
+        return ReturnWrongView ? new WrongExecutor() : operation.Wrap(executor, new CountingWrapper(total, log));
     }
 
     private sealed class WrongExecutor : IChecksumExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>

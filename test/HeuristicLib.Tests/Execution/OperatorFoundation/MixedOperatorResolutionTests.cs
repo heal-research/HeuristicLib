@@ -75,7 +75,7 @@ public sealed class MixedOperatorResolutionTests
         var typed = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         ICrossoverExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> LowLevelCallback() =>
             root.Resolve<DualCrossover, ICrossoverExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>(
-                source, _ => _ => new DualCrossover.Executor(), (_, _) => static child => child);
+                source, _ => _ => new DualCrossover.Executor(new DualCrossover.ExecutionState()), (_, _) => static child => child);
         if (untypedFirst)
         {
             _ = LowLevelCallback();
@@ -98,17 +98,28 @@ public sealed class MixedOperatorResolutionTests
     {
         public int Preparations { get; private set; }
 
-        public OperatorExecutorFactory CreateExecutorFactory()
-        {
-            Preparations++;
-            var executor = new Executor();
-            return OperatorExecutorFactory.FromFactory<Executor>(_ => executor);
-        }
+        // Every build in one owning state shares the live value.
+        IExecutor IOperator<Crossover, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) =>
+            new Executor(scope.GetExecutionState(this, () =>
+            {
+                Preparations++;
+                return new ExecutionState();
+            }));
 
-        internal sealed class Executor : ILiveValue,
-            ICrossoverExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
+        internal sealed class ExecutionState
         {
             public int Value { get; set; }
+        }
+
+        internal sealed class Executor(ExecutionState state) : ILiveValue,
+            ICrossoverExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
+        {
+            public int Value
+            {
+                get => state.Value;
+                set => state.Value = value;
+            }
 
             public IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, IRandomNumberGenerator random,
                 ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) =>
@@ -118,18 +129,13 @@ public sealed class MixedOperatorResolutionTests
 
     private sealed record ForwardedCrossover(IOperator<Crossover, RealVector> Child) : IOperator<Crossover, RealVector>
     {
-        public OperatorExecutorFactory CreateExecutorFactory() => OperatorExecutorFactory.Forward(Child);
-
+        IExecutor IOperator<Crossover, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => scope.ResolveOperator(Child);
     }
 
     private sealed record CurrentForward(IOperator<Crossover, RealVector> Child) : IOperator<Crossover, RealVector>
     {
-        public OperatorExecutorFactory CreateExecutorFactory() => new Factory(Child);
-
-        private sealed class Factory(IOperator<Crossover, RealVector> child) : OperatorExecutorFactory<Crossover, RealVector>
-        {
-            protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-                ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => scope.Resolve(child);
-        }
+        IExecutor IOperator<Crossover, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => scope.Resolve(Child);
     }
 }

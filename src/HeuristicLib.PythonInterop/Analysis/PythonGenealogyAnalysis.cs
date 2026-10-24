@@ -66,7 +66,7 @@ public class PythonGenealogyAnalysis
             Creator = parameters.Creator ?? new ProbabilisticTreeCreator(),
             Crossover = parameters.Crossover ?? new SubtreeCrossover { InternalNodeProbability = 0.9 },
             Mutator = parameters.Mutator ??
-                new ChoosePerCandidate<Mutation, ExpressionTree>([.. SymbolicExpressionMutators.Default])
+                new ChoosePerItem<Mutation, ExpressionTree>([.. SymbolicExpressionMutators.Default])
         };
         var problem = ProblemGeneration.CreateSymbolicRegressionProblem(file, parameters);
         var actionCallback = callback is null ? null : new Action<PopulationState<ExpressionTree>>(callback);
@@ -215,7 +215,7 @@ public class PythonGenealogyAnalysis
         TraceAnalyzer<BestMedianWorstEntry<TCandidate>> Qualities,
         RankAnalyzer<TCandidate>? RankAnalysis,
         TraceAnalyzer<EvaluatedCandidate<TCandidate>> QualityCurve,
-        TraceAnalyzer<IReadOnlyList<EvaluatedCandidate<TCandidate>>>? AllPopulations,
+        TraceAnalyzer<ValueArray<EvaluatedCandidate<TCandidate>>>? AllPopulations,
         Aspect? CallbackAnalyzer)
         where TCandidate : notnull
     {
@@ -300,14 +300,14 @@ public class PythonGenealogyAnalysis
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TSearchState : PopulationState<TCandidate>
     {
-        var qualities = algorithm.TracePopulationCandidates(objectiveComparer: parameters.ObjectiveComparer);
+        var qualities = algorithm.Iterations.TracePopulationCandidates(objectiveComparer: parameters.ObjectiveComparer);
         var rankAnalysis = parameters.TrackGenealogy
             ? Analyzer.Rank(crossover, mutator, algorithm, objectiveComparer: parameters.ObjectiveComparer)
             : null;
-        var qc = evaluator.TraceBestCandidateSoFar(objectiveComparer: parameters.ObjectiveComparer);
-        var apt = parameters.TrackPopulations ? Analyzer.TraceAllPopulations(algorithm) : null;
+        var qc = evaluator.Calls.TraceBestCandidateSoFar(objectiveComparer: parameters.ObjectiveComparer);
+        var apt = parameters.TrackPopulations ? Analyzer.Trace(algorithm.Iterations, static observation => observation.State.Population.EvaluatedCandidates) : null;
         var c = callback != null
-            ? Aspect.Observe(algorithm, observation => callback(observation.State))
+            ? Aspect.Observe(algorithm.Iterations, observation => callback(observation.State))
             : null;
         return new MyAnalyzers<TCandidate>(qualities, rankAnalysis, qc, apt, c);
     }

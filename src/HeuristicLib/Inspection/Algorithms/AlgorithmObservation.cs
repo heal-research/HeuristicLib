@@ -21,29 +21,8 @@ public sealed record AlgorithmObservation<TCandidate, TSearchState>(
     TSearchState State,
     TSearchState? PreviousState,
     ISearchSpace<TCandidate> SearchSpace,
-    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem) : Observation<IProblem<TCandidate, ISearchSpace<TCandidate>>>(Problem), IStateObservation<TSearchState>
+    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     where TSearchState : class, ISearchState;
-
-/// <summary>An observation of a search state, read the same way whether an algorithm yielded it or an interceptor returned it.</summary>
-/// <remarks>Measurements of a search state, such as its population's objective vectors, read observations through this.</remarks>
-public interface IStateObservation<out TSearchState>
-    where TSearchState : class, ISearchState
-{
-    TSearchState State { get; }
-}
-
-public static class AlgorithmObservations
-{
-    extension(Aspect)
-    {
-        /// <summary>Observes every search state yielded by one chosen algorithm.</summary>
-        public static Aspect Observe<TCandidate, TSearchState>(
-            IAlgorithm<TCandidate, TSearchState> algorithm,
-            Action<AlgorithmObservation<TCandidate, TSearchState>> observe)
-            where TSearchState : class, ISearchState =>
-            Aspect.Create(Pointcut.Reference(algorithm), new AlgorithmObservationAdvice<TCandidate, TSearchState>(observe));
-    }
-}
 
 /// <summary>Reports every search state yielded by each algorithm its pointcut selects.</summary>
 /// <param name="observe">Receives each observation on the thread that consumes the run.</param>
@@ -84,5 +63,16 @@ public sealed class AlgorithmObservationAdvice<TCandidate, TSearchState>(
                 yield return searchState;
             }
         }
+    }
+}
+
+public static class AlgorithmObservations
+{
+    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
+        where TSearchState : class, ISearchState
+    {
+        /// <summary>The observations of the search states this algorithm yields.</summary>
+        public ObservationSource<AlgorithmObservation<TCandidate, TSearchState>> Iterations =>
+            new(algorithm, observe => Aspect.Create(Pointcut.Reference(algorithm), new AlgorithmObservationAdvice<TCandidate, TSearchState>(observe)));
     }
 }

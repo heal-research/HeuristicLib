@@ -5,23 +5,23 @@ namespace HEAL.HeuristicLib.Inspection;
 
 /// <summary>Counts successful calls or candidate work for the selected operation.</summary>
 public sealed class CountingOperatorAdvice<TOperation, TCandidate>(CountAccumulator counter, OperatorCountMetric metric)
-    : OperatorAdvice<TOperation, TCandidate> where TOperation : IOperationDescriptor<TOperation>
+    : OperatorAdvice<TOperation, TCandidate> where TOperation : IOperation<TOperation>
 {
     public CountAccumulator Counter { get; } = counter;
     public OperatorCountMetric Metric { get; } = metric;
 
-    public override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
+    public override void Check<TSearchSpace, TProblem, TSearchState>(OperationInfo operation,
         IOperator<TOperation, TCandidate> source)
     {
         if (Metric == OperatorCountMetric.Candidates)
             operation.RequireCandidateWork(source, "CountCandidates");
     }
 
-    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationExecutorAdapter operation,
+    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
         IOperator<TOperation, TCandidate> source) =>
         Metric == OperatorCountMetric.Calls
-            ? operation.WrapInvocation(executor, new CallCounter(Counter))
-            : operation.WrapInvocation(executor, new CandidateCounter(Counter));
+            ? operation.Wrap(executor, new CallCounter(Counter))
+            : operation.Wrap(executor, new CandidateCounter(Counter));
 }
 
 /// <summary>Counts each successful call.</summary>
@@ -51,15 +51,15 @@ public static class OperatorCounterExtensions
     extension(Aspect)
     {
         public static Aspect CountCalls<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source, CountAccumulator counter)
-            where TOperation : IOperationDescriptor<TOperation> =>
+            where TOperation : IOperation<TOperation> =>
             Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice<TOperation, TCandidate>(counter, OperatorCountMetric.Calls));
 
         public static Aspect CountCandidates<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source, CountAccumulator counter)
-            where TOperation : IOperationDescriptor<TOperation> =>
+            where TOperation : IOperation<TOperation> =>
             Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice<TOperation, TCandidate>(counter, OperatorCountMetric.Candidates));
 
         public static Aspect CountCandidates<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source, out CountAccumulator counter)
-            where TOperation : IOperationDescriptor<TOperation>
+            where TOperation : IOperation<TOperation>
         {
             counter = new CountAccumulator();
             return Aspect.CountCandidates(source, counter);

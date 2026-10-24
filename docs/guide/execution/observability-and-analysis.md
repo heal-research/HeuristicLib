@@ -36,12 +36,14 @@ Inspection of creation, crossover, mutation, evaluation, selection, refinement a
 
 ## Choose a boundary and a clock
 
-An evaluator observation captures one completed evaluator call, including the whole batch. An algorithm observation captures a yielded state. A nested algorithm is a separate observation boundary.
+Each operator offers its successful calls as `Calls`, and each algorithm offers its yielded states as `Iterations`. These observation sources describe a boundary; creating one installs nothing. An evaluator's `Calls` observes one completed evaluator call, including the whole batch. An algorithm's `Iterations` observes a yielded state. A nested algorithm is a separate observation boundary.
+
+Ready-made traces are extensions on sources, such as `evaluator.Calls` or `algorithm.Iterations`:
 
 ```csharp
 var evaluations = Clock.FromEvaluations(algorithm.Evaluator);
-var best = algorithm.Evaluator.TraceBestSoFar(clocks: [evaluations]);
-var population = algorithm.TracePopulationQuality(clocks: [evaluations]);
+var best = algorithm.Evaluator.Calls.TraceBestSoFar(clocks: [evaluations]);
+var population = algorithm.Iterations.TracePopulationQuality(clocks: [evaluations]);
 var run = algorithm.CreateRun(problem, random)
     .AddAspect(best)
     .AddAspect(population);
@@ -54,7 +56,19 @@ Several traces may share the same clock in one run. Its advice applies once. Use
 
 Evaluation counts describe the selected evaluator boundary. A caching evaluator's outer boundary can count requests while its inner evaluator counts cache misses. Choose the boundary whose work you intend to compare.
 
-Observation sources match configurations by reference. A copied configuration is a different source, even if its settings compare equal. A source that never participates produces no observations. Create analyzers for the actual configured objects that will execute.
+Observation sources match configurations by reference. A copied configuration is observed separately, even if its settings compare equal. A configuration that never participates produces no observations. Create analyzers for the actual configured objects that will execute. An operator implementing several operations offers each operation's source through that operation's typed view.
+
+### Sources and `IObservable<T>`
+
+A source resembles a cold `IObservable<T>`: it describes observations without producing any until something subscribes. Here, `Analyzer.Trace` and `Aspect.Observe` subscribe by creating an aspect, and adding that aspect to a run or scope attaches it. The library implements neither `IObservable<T>` nor Rx-style operators. A callback can feed observations into Rx, for example into a subject:
+
+```csharp
+var subject = new Subject<CrossoverObservation<RealVector>>();
+var feed = Aspect.Observe(crossover.Calls, subject.OnNext);
+var run = algorithm.CreateRun(problem, random).AddAspect(feed);
+```
+
+The callback runs on the thread that called the operator, inside the operation's wrapped call.
 
 ## Select configurations by properties or names
 
@@ -85,16 +99,16 @@ Results remain available after completion, cancellation or pausing. An analyzer 
 
 ## Retention and accumulation
 
-`TracePopulationQuality` records current best, median, and worst objective vectors from each population. `TraceBestSoFar` accumulates the best objective vector across evaluator calls and records only improvements by default. Use `TracePopulationCandidates` or `TraceBestCandidateSoFar` when you need to retain the candidates behind those values.
+`TracePopulationQuality` records the current best, median, and worst of each observation's objective vectors, such as those of a yielded population. `TraceBestSoFar` accumulates the best objective vector across observations, such as evaluator calls, and records only improvements by default. Use `TracePopulationCandidates` or `TraceBestCandidateSoFar` when you need to retain the candidates behind those values.
 
 ```csharp
-var quality = algorithm.TracePopulationQuality(clocks: [iterations], retention: TraceRetention.EveryNth(10));
-var bestAtEveryEvaluation = algorithm.Evaluator.TraceBestSoFar(clocks: [evaluations], retention: TraceRetention.EveryObservation());
+var quality = algorithm.Iterations.TracePopulationQuality(clocks: [iterations], retention: TraceRetention.EveryNth(10));
+var bestAtEveryEvaluation = algorithm.Evaluator.Calls.TraceBestSoFar(clocks: [evaluations], retention: TraceRetention.EveryObservation());
 ```
 
-`TraceRetention.EveryNth(10)` records observations 10, 20, 30, and so on. It adds no extra initial or final entry. `TraceRetention.OnChange()` records the first value and subsequent changes by value equality, and `TraceRetention.OnChange(comparer)` decides sameness with a comparer of your own. `TraceRetention.LatestOnly()` stores each value over the one before it, so the trace holds a single entry carrying the moment of the observation that produced it. Use it when you want what a measurement says now rather than how it moved, and read it with `Latest` or `RequireLatestValue()`. A retention counts for the object it is, so give each trace its own, which the factories do.
+`TraceRetention.EveryNth(10)` records observations 10, 20, 30, and so on. It adds no extra initial or final entry. `TraceRetention.OnChange()` records the first value and subsequent changes by value equality, and `TraceRetention.OnChange(comparer)` decides sameness with a comparer of your own. `TraceRetention.LatestOnly()` stores each value over the one before it, so the trace holds a single entry carrying the moment of the observation that produced it. Use it when you want what a trace says now rather than how it moved, and read it with `Latest` or `RequireLatestValue()`. A retention counts for the object it is, so give each trace its own, which the factories do.
 
-Retention runs after measurement and aggregation. It controls stored entries and never skips expensive computations, so best-so-far still sees an improvement between retained observations. `EveryNth` and `OnChange` leave stored entries alone; `LatestOnly` is the one policy that discards what the trace already held.
+Retention runs after a trace's function reads an observation. It controls stored entries and never skips expensive computations, so best-so-far still sees an improvement between retained observations. `EveryNth` and `OnChange` leave stored entries alone; `LatestOnly` is the one policy that discards what the trace already held.
 
 ## Accumulating analyzers
 
@@ -103,10 +117,10 @@ Some analysis produces one mutable summary rather than a history. Derive from `A
 ```csharp
 public CandidateSummaryAnalyzer(IOperator<Evaluation, TCandidate> evaluator)
 {
-    Advices = Aspect.Observe(evaluator, Record).Advices;
+    Advices = Aspect.Observe(evaluator.Calls, Record).Advices;
 }
 
-private void Record(OperatorObservation<Evaluation, TCandidate> observation)
+private void Record(EvaluationObservation<TCandidate> observation)
 {
     lock (Sync)
         accumulator.Add(observation.Candidates);
@@ -117,34 +131,40 @@ Read an accumulating analyzer after the run finishes. Clocks and retention apply
 
 ## Custom traces
 
-A trace reads the observations a source offers, such as `algorithm`, `crossover` or `evaluator`; every operation offers them. Use a scalar projection when the observation already provides one value:
+`Analyzer.Trace` reads one value from each observation of a source through a function:
 
 ```csharp
-var size = Analyzer.Trace(algorithm,
+var size = Analyzer.Trace(algorithm.Iterations,
     observation => observation.State.Population.EvaluatedCandidates.Count);
-var offspring = Analyzer.Trace(crossover, observation => observation.Offspring.Count);
-var quality = Analyzer.Trace(
-    algorithm,
-    new ObjectiveVectorsMeasurement<RealVector>(),
-    Aggregate.BestMedianWorst());
+var offspring = Analyzer.Trace(crossover.Calls, observation => observation.Offspring.Count);
+var quality = Analyzer.Trace(evaluator.Calls,
+    observation => observation.ObjectiveVectors.BestMedianWorst(observation.Problem.Objective));
 ```
 
-Every operator offers an `OperatorObservation<TOperation, TCandidate>`. Its operation-specific members, such as `Offspring` for a crossover or `ObjectiveVectors` for an evaluator, read the call's arguments and result. It reads the search space and problem at the candidate's interfaces, so it fits every run over the candidate.
+Each operation has its own observation record, such as `CrossoverObservation<TCandidate>` with `Parents` and `Offspring`, or `EvaluationObservation<TCandidate>` with `Candidates` and `ObjectiveVectors`. It holds the call's inputs and outputs and reads the search space and problem at the candidate's interfaces, so it fits every run over the candidate.
 
-Named measurements provide reusable value strategies and name the candidate they read. `ObjectiveVectorsMeasurement<TCandidate>` and `CandidatesMeasurement<TCandidate>` read evaluator calls and search states alike, so they also trace the states an algorithm yields or an interceptor returns. `OffspringMeasurement<TCandidate>` reads crossover and mutation calls. Runtime-only delegates provide local projections and have no value-equality or serialization contract.
+Counting, collecting and single values are plain functions of the observation. Ranking functions such as `Best` and `BestMedianWorst` receive the objective directions they order by, usually the observed call's own, `observation.Problem.Objective`, so each call is ranked by its own problem. `MinMeanMax` summarizes plain numbers and needs no directions.
 
-`IAggregation<TValue, TResult>` has a single `Aggregate` method. `Aggregate.Best()` summarizes each observation; `Aggregate.BestSoFar()` accumulates across observations, keeping the running best as its own state. A custom aggregation is an ordinary class implementing that one method, and it must publish immutable results.
-
-An aggregation or retention that holds state owns it, so build one per trace. The factories do that for you: `TraceRetention.EveryNth(10)` and `Aggregate.BestSoFar()` return a fresh object every call. Hoisting one into a variable and passing it to two traces makes them share its counting.
-
-To collect several compatible sources into one accumulator and result sink, create one combined trace:
+A best-so-far object keeps the running best across observations. `BestSoFar` keeps the best objective vector; `BestSoFar<T>` keeps any other value, ranked by the objective vector its selector reads, such as `new BestSoFar<EvaluatedCandidate<RealVector>>(candidate => candidate.ObjectiveVector)`. Create one per trace and update it from the trace's function:
 
 ```csharp
-var evaluators = new[] { firstAlgorithm.Evaluator, secondAlgorithm.Evaluator };
-var combined = evaluators.TraceBestSoFar();
+var best = new BestSoFar();
+var bestSoFar = Analyzer.Trace(evaluator.Calls,
+    observation => best.Update(observation.ObjectiveVectors, observation.Problem.Objective));
 ```
 
-Attach `combined` to both runs to intentionally accumulate shared history. Separate traces have independent strategy state when each receives its own aggregation and retention objects.
+The first directions it receives fix it; other directions or another dimensionality throw. The ready-made traces create their own best-so-far and retention objects, as `TraceRetention.EveryNth(10)` returns a fresh object every call. Hoisting one into a variable and passing it to two traces makes them share its state.
+
+To collect several sources of one observation type into one accumulator and result sink, create one combined trace:
+
+```csharp
+var calls = new[] { firstAlgorithm.Evaluator.Calls, secondAlgorithm.Evaluator.Calls };
+var combined = calls.TraceBestSoFar();
+```
+
+Attach `combined` to both runs to intentionally accumulate shared history. Separate traces have independent state when each receives its own best-so-far and retention objects.
+
+A combined trace observes each boundary once. Giving it the same source twice records each call once. The sources of different operations of one operator observe different boundaries, and each is recorded.
 
 Take one snapshot when you want consistent projections onto several axes:
 
@@ -162,33 +182,28 @@ Single-objective traces use the observed problem's objective comparer automatica
 Select an objective comparer explicitly when the trace needs a total order:
 
 ```csharp
-var best = algorithm.Evaluator.TraceBestSoFar(objectiveComparer: new LexicographicComparer(problem.Objective.Directions));
+var best = algorithm.Evaluator.Calls.TraceBestSoFar(objectiveComparer: new LexicographicComparer(problem.Objective.Directions));
 ```
 
 This makes dimension priority explicit and affects this trace's comparisons, including best-so-far accumulation. It does not change the problem or algorithm's objective. Analysis accepts the objective system's existing `IComparer<ObjectiveVector>` implementations. The `RequireTotalOrder` helper also serves callers outside analysis. Ranking is checked at observation time because installation has no problem context.
 
 ## Experiments
 
-An experiment uses a trial analyzer factory to create fresh analyzers for every trial. Retrieve the typed trial/analyzer pairs and read each analyzer directly. See [Experiments](/guide/execution/experiments).
+An experiment creates fresh analyzers for every trial from a function of the trial's algorithm. `AddAspectPerTrial` returns the typed trial/analyzer pairs; read each analyzer directly. See [Experiments](/guide/execution/experiments).
 
-## Build a trace for a custom observation role
+## Observe an operation of your own
 
-`TraceAnalyzer<TResult>.Create` accepts sources, a factory connecting each source to a recording callback, and a measurement function. Consumer-defined roles use the same trace storage, retention and clocks as `Analyzer.Trace`. Sources are deduplicated by reference.
+An operation you define becomes observable when it declares an observation record, the advice that builds it, and a `Calls` source, as each built-in operation does. Its source then works with `Analyzer.Trace` and `Aspect.Observe` like any other. An observation that carries the problem of the call it observed lets a trace rank by that problem's objective. See [Make the operation observable](/contributing/architecture/operator-implementation#make-the-operation-observable) for a complete example.
 
-For example, with a consumer-defined cooling-schedule role and its `RecordedCoolingAdvice`:
+A configuration whose calls receive no problem can still be observed and traced, one value per observation. Construct its source with the aspect that reports each value, for example for a cooling schedule of your own and its recording advice:
 
 ```csharp
-var temperatures = TraceAnalyzer<double>.Create<ICoolingSchedule, double>(
-    [warmup, main],
-    static (schedule, record) => Aspect.Create(
-        Pointcut.Reference(schedule), new RecordedCoolingAdvice(record)),
-    static temperature => temperature);
-var execution = ResolutionScope.Create(temperatures).Resolve(plan);
-execution.Temperature(step: 0);
-var values = temperatures.Snapshot().Values;
+var temperatures = new ObservationSource<double>(schedule,
+    observe => Aspect.Create(Pointcut.Reference(schedule), new RecordedCoolingAdvice(observe)));
+var trace = Analyzer.Trace(temperatures, static temperature => temperature);
 ```
 
-The factory initializes trace storage before creating its observation callbacks and installs clocks before observation aspects. Reading a snapshot does not change the trace.
+Such an observation carries no objective, so its trace reads plain values and ranks nothing.
 
 ## Use an aspect directly
 
@@ -199,7 +214,7 @@ var counter = new CountAccumulator();
 var counting = Aspect.CountCalls(algorithm.Mutator, counter);
 var duration = new DurationAccumulator();
 var timing = Aspect.MeasureDuration(algorithm.Mutator, duration, TimeProvider.System);
-var observation = Aspect.Observe(algorithm.Mutator,
+var observation = Aspect.Observe(algorithm.Mutator.Calls,
     value => Console.WriteLine(value.Offspring.Count));
 var run = algorithm.CreateRun(problem, random)
     .AddAspect(counting)
@@ -208,7 +223,7 @@ var run = algorithm.CreateRun(problem, random)
 await run.CompleteAsync();
 ```
 
-Earlier advice wraps closer to the source executor. Here timing finishes before the observation callback, so logging is outside the measurement. Counting updates only after success; timing uses `finally` and records failed calls too.
+Earlier advice wraps closer to the source executor. Here timing finishes before the observation callback, so logging is outside the timed span. Counting updates only after success; timing uses `finally` and records failed calls too.
 
 To select several configurations, pair a pointcut with role advice:
 
@@ -229,8 +244,8 @@ sealed class SmallMutations : Pointcut<IOperator<Mutation, RealVector>>
 
 Reference, type and custom pointcuts of the same configuration type combine with `And`/`&` and `Or`/`|`. Matching short-circuits from left to right. The pointcut sees configurations that resolution reaches, including those created later by a meta-algorithm.
 
-An aspect subclass assigns several pairs directly to `Advices` in its constructor. It can include a clock's pairs before its own observations. Resolution applies each advice instance once, at its first position; sharing a clock across several traces therefore counts each call once. If the same advice is paired with two pointcuts, the first pairing wins. Use separate advice instances for separate selections.
+An aspect is the ordered list of its pointcut/advice pairs. An aspect subclass assigns several pairs to `Advices` in its constructor and can spread a clock's pairs before its own observations, as in `Advices = [.. clock, .. Aspect.Observe(evaluator.Calls, Record)]`. Resolution applies each advice instance once, at its first position; sharing a clock across several traces therefore counts each call once. If the same advice is paired with two pointcuts, the first pairing wins. Use separate advice instances for separate selections.
 
-A new scope layer precedes inherited layers. Algorithm observation prepares its iteration counter in the state owning each selected algorithm, so reusing an aspect across independent scopes does not share that counter. Operator advice keeps its data on the advice object; reusing it, or its caller-owned accumulator, intentionally combines measurements.
+A new scope layer precedes inherited layers. Algorithm observation prepares its iteration counter in the state owning each selected algorithm, so reusing an aspect across independent scopes does not share that counter. Operator advice keeps its data on the advice object; reusing it, or its caller-owned accumulator, intentionally combines its counts or durations.
 
 Continue with [Writing custom advice](/guide/extending/writing-advice) for complete role-specific and general advice examples and run attachment.

@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
@@ -12,66 +11,62 @@ namespace HEAL.HeuristicLib.Operators;
 /// Both methods of the executor pass their calls to the same wrapper, each as its own invocation. Each call evaluates
 /// one candidate, so it reports one unit of candidate work.
 /// </remarks>
-public sealed class MoveEvaluation<TMove> : IOperationDescriptor<MoveEvaluation<TMove>>
+public sealed class MoveEvaluation<TMove> : IOperation<MoveEvaluation<TMove>>
 {
-    public static OperationExecutorAdapter CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TSearchState>()
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState =>
-        new ExecutorAdapter<TCandidate, TSearchSpace, TProblem>();
+    static bool IOperation<MoveEvaluation<TMove>>.IsExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(IExecutor executor) =>
+        executor is IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>;
 
-    private sealed class ExecutorAdapter<TCandidate, TSearchSpace, TProblem>
-        : OperationExecutorAdapter<IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>>
+    static IExecutor IOperation<MoveEvaluation<TMove>>.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(IExecutor executor, TWrapper wrapper) =>
+        new WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(executor, wrapper);
+
+    static bool IOperation<MoveEvaluation<TMove>>.SupportsCandidateWork => true;
+
+    private readonly struct MoveInvocation<TCandidate, TSearchSpace, TProblem>(IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> executor,
+        ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<ObjectiveVector>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public override bool SupportsCandidateWork => true;
+        private readonly IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> executor = executor;
+        private readonly IRandomNumberGenerator random = random;
 
-        protected override IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> CreateWrappedExecutor<TWrapper>(
-            IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> executor, TWrapper wrapper) =>
-            new WrappedExecutor<TWrapper>(executor, wrapper);
+        public IRandomNumberGenerator Random => random;
+        public ISearchSpace SearchSpace => searchSpace;
+        public IProblem Problem => problem;
 
-        private readonly struct MoveInvocation(IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> executor,
-            ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<ObjectiveVector>
-        {
-            private readonly IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> executor = executor;
-            private readonly IRandomNumberGenerator random = random;
+        public ObjectiveVector Proceed(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
+            ((IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>?)executor ?? this.executor).Evaluate(oldQuality, candidate, move, random ?? this.random, searchSpace, problem);
 
-            public IRandomNumberGenerator Random => random;
-            public ISearchSpace SearchSpace => searchSpace;
-            public IProblem Problem => problem;
-            public ObjectiveVector Proceed() => executor.Evaluate(oldQuality, candidate, move, random, searchSpace, problem);
-            public ObjectiveVector ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
-                ((IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>?)executor ?? this.executor).Evaluate(oldQuality, candidate, move, random ?? this.random, searchSpace, problem);
-            public int CountCandidateWork(ObjectiveVector result) => 1;
-        }
+        public int CountCandidateWork(ObjectiveVector result) => 1;
+    }
 
-        private readonly struct CandidateInvocation(IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> executor,
-            TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<ObjectiveVector>
-        {
-            private readonly IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> executor = executor;
-            private readonly IRandomNumberGenerator random = random;
+    private readonly struct CandidateInvocation<TCandidate, TSearchSpace, TProblem>(IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> executor,
+        TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<ObjectiveVector>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        private readonly IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> executor = executor;
+        private readonly IRandomNumberGenerator random = random;
 
-            public IRandomNumberGenerator Random => random;
-            public ISearchSpace SearchSpace => searchSpace;
-            public IProblem Problem => problem;
-            public ObjectiveVector Proceed() => executor.Evaluate(candidate, random, searchSpace, problem);
-            public ObjectiveVector ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
-                ((IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>?)executor ?? this.executor).Evaluate(candidate, random ?? this.random, searchSpace, problem);
-            public int CountCandidateWork(ObjectiveVector result) => 1;
-        }
+        public IRandomNumberGenerator Random => random;
+        public ISearchSpace SearchSpace => searchSpace;
+        public IProblem Problem => problem;
 
-        private sealed class WrappedExecutor<TWrapper>(IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> executor, TWrapper wrapper)
-            : IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>, IExecutorControlProvider
-            where TWrapper : struct, IInvocationWrapper
-        {
-            public ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                wrapper.Invoke<MoveInvocation, ObjectiveVector>(new MoveInvocation(executor, oldQuality, candidate, move, random, searchSpace, problem));
+        public ObjectiveVector Proceed(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
+            ((IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>?)executor ?? this.executor).Evaluate(candidate, random ?? this.random, searchSpace, problem);
 
-            public ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                wrapper.Invoke<CandidateInvocation, ObjectiveVector>(new CandidateInvocation(executor, candidate, random, searchSpace, problem));
+        public int CountCandidateWork(ObjectiveVector result) => 1;
+    }
 
-            public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
-        }
+    private sealed class WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(IExecutor executor, TWrapper wrapper)
+        : WrappingExecutor<IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>, TWrapper>(executor, wrapper), IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TWrapper : struct, IInvocationWrapper
+    {
+        public ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            Wrapper.Invoke<MoveInvocation<TCandidate, TSearchSpace, TProblem>, ObjectiveVector>(new(Executor, oldQuality, candidate, move, random, searchSpace, problem));
+
+        public ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            Wrapper.Invoke<CandidateInvocation<TCandidate, TSearchSpace, TProblem>, ObjectiveVector>(new(Executor, candidate, random, searchSpace, problem));
     }
 }

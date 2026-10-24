@@ -33,7 +33,7 @@ public class OperatorAuthoringAnalyzerTests
                   public Dictionary<int, int> Cache { get; } = new();
               }
 
-              protected override State CreateInitialState() => new();
+              protected override State CreateExecutionState() => new();
 
               protected override IReadOnlyList<int> Mutate(
                   IReadOnlyList<int> parents,
@@ -60,7 +60,7 @@ public class OperatorAuthoringAnalyzerTests
                   public IExecutor? ChildExecution { get; set; }
               }
 
-              protected override State CreateInitialState() => new();
+              protected override State CreateExecutionState() => new();
 
               protected override IReadOnlyList<int> Mutate(
                   IReadOnlyList<int> parents,
@@ -86,7 +86,7 @@ public class OperatorAuthoringAnalyzerTests
                       { get; } = new();
               }
 
-              protected override State CreateInitialState() => new();
+              protected override State CreateExecutionState() => new();
 
               protected override IReadOnlyList<int> Mutate(
                   IReadOnlyList<int> parents,
@@ -116,7 +116,7 @@ public class OperatorAuthoringAnalyzerTests
                   public ResolutionScope? Registry { get; set; }
               }
 
-              protected override State CreateInitialState() => new();
+              protected override State CreateExecutionState() => new();
 
               protected override IReadOnlyList<int> Mutate(
                   IReadOnlyList<int> parents,
@@ -142,7 +142,7 @@ public class OperatorAuthoringAnalyzerTests
                   public (int Count, IExecutor? Instance) Snapshot { get; set; }
               }
 
-              protected override State CreateInitialState() => new();
+              protected override State CreateExecutionState() => new();
 
               protected override IReadOnlyList<int> Mutate(
                   IReadOnlyList<int> parents,
@@ -164,7 +164,7 @@ public class OperatorAuthoringAnalyzerTests
           file abstract record CustomStatefulOperator<TState> : IOperator
               where TState : class
           {
-              protected abstract TState CreateInitialState();
+              protected abstract TState CreateExecutionState();
 
               public ExecutorFactory<CustomOperatorExecutor> CreateExecutorFactory() => _ => new();
           }
@@ -178,7 +178,7 @@ public class OperatorAuthoringAnalyzerTests
                   public ResolutionScope? Registry { get; set; }
               }
 
-              protected override State CreateInitialState() => new();
+              protected override State CreateExecutionState() => new();
           }
           """);
 
@@ -220,7 +220,7 @@ public class OperatorAuthoringAnalyzerTests
 
               public sealed class State;
 
-              protected override State CreateInitialState() => new();
+              protected override State CreateExecutionState() => new();
 
               protected override IReadOnlyList<int> Mutate(
                   IReadOnlyList<int> parents,
@@ -305,7 +305,7 @@ public class OperatorAuthoringAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
           file sealed record TrapMutator : StatefulMutator<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
           {
-              protected override IProblem<int, ISearchSpace<int>> CreateInitialState() => null!;
+              protected override IProblem<int, ISearchSpace<int>> CreateExecutionState() => null!;
 
               protected override IReadOnlyList<int> Mutate(
                   IReadOnlyList<int> parents,
@@ -327,7 +327,7 @@ public class OperatorAuthoringAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
           file sealed record TrapMutator : StatefulMutator<int, ISearchSpace<int>>
           {
-              protected override ISearchSpace<int> CreateInitialState() => null!;
+              protected override ISearchSpace<int> CreateExecutionState() => null!;
 
               protected override IReadOnlyList<int> Mutate(
                   IReadOnlyList<int> parents,
@@ -353,7 +353,7 @@ public class OperatorAuthoringAnalyzerTests
 
           file sealed record TrapInterceptor : StatefulInterceptor<int, TrapSearchState, TrapSearchState>
           {
-              protected override TrapSearchState CreateInitialState() => null!;
+              protected override TrapSearchState CreateExecutionState() => null!;
 
               protected override TrapSearchState Transform(
                   TrapSearchState currentState,
@@ -385,7 +385,7 @@ public class OperatorAuthoringAnalyzerTests
                   public int Calls { get; set; }
               }
 
-              protected override State CreateInitialState() => new();
+              protected override State CreateExecutionState() => new();
 
               protected override OrdinarySearchState Transform(
                   OrdinarySearchState currentState,
@@ -395,6 +395,139 @@ public class OperatorAuthoringAnalyzerTests
               {
                   state.Calls++;
                   return currentState;
+              }
+          }
+          """);
+
+        diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ExecutionStateRequest_RejectsExecutionMember()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed record InvalidMutator : Mutator<int>
+          {
+              public sealed class State
+              {
+                  public ResolutionScope? Registry { get; set; }
+              }
+
+              protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
+                  new Executor(scope.GetExecutionState(this, static () => new State()));
+
+              private sealed class Executor(State state) : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
+              {
+                  public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
+                      IProblem<int, ISearchSpace<int>> problem) => state.Registry is null ? parents : [];
+              }
+          }
+          """);
+
+        var diagnostic = diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
+        diagnostic.GetMessage().ShouldContain("Registry");
+    }
+
+    [Fact]
+    public async Task ExecutionStateRequest_RejectsAnExecutorAsState()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed record InvalidMutator : Mutator<int>
+          {
+              protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
+                  scope.GetExecutionState(this, static () => new Executor());
+
+              private sealed class Executor : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
+              {
+                  public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
+                      IProblem<int, ISearchSpace<int>> problem) => parents;
+              }
+          }
+          """);
+
+        var diagnostic = diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
+        diagnostic.GetMessage().ShouldContain("IExecutor");
+    }
+
+    [Fact]
+    public async Task ExecutionStateRequest_AllowsOrdinaryExecutionData()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed record ValidMutator : Mutator<int>
+          {
+              public sealed class State
+              {
+                  public int Calls { get; set; }
+              }
+
+              protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
+                  new Executor(scope.GetExecutionState(this, static () => new State()));
+
+              private sealed class Executor(State state) : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
+              {
+                  public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
+                      IProblem<int, ISearchSpace<int>> problem)
+                  {
+                      state.Calls++;
+                      return parents;
+                  }
+              }
+          }
+          """);
+
+        diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ExecutionStateRequest_RejectsAnotherConfiguration()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed record InvalidMutator(IOperator<Mutation, int> Child) : Mutator<int>
+          {
+              public sealed class State
+              {
+                  public int Calls { get; set; }
+              }
+
+              protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
+                  new Executor(scope.GetExecutionState(Child, static () => new State()));
+
+              private sealed class Executor(State state) : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
+              {
+                  public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
+                      IProblem<int, ISearchSpace<int>> problem) => state.Calls == 0 ? parents : [];
+              }
+          }
+          """);
+
+        var diagnostic = diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
+        diagnostic.GetMessage().ShouldContain("'Child'");
+    }
+
+    [Fact]
+    public async Task ExecutionStateRequest_AllowsThisAsNamedOrConvertedArgument()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed record ValidMutator : Mutator<int>
+          {
+              public sealed class State
+              {
+                  public int Calls { get; set; }
+              }
+
+              protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope)
+              {
+                  scope.GetExecutionState((IConfigurationNode)this, static () => new State());
+                  return new Executor(scope.GetExecutionState(create: static () => new State(), configuration: this));
+              }
+
+              private sealed class Executor(State state) : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
+              {
+                  public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
+                      IProblem<int, ISearchSpace<int>> problem) => state.Calls == 0 ? parents : [];
               }
           }
           """);

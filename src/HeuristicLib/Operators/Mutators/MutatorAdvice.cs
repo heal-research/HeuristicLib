@@ -12,11 +12,11 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public abstract class MutatorAdvice<TCandidate> : OperatorAdvice<Mutation, TCandidate>
 {
-    public sealed override void Check<TSearchSpace, TProblem, TSearchState>(OperationExecutorAdapter operation,
+    public sealed override void Check<TSearchSpace, TProblem, TSearchState>(OperationInfo operation,
         IOperator<Mutation, TCandidate> source) => Check<TSearchSpace, TProblem>(source);
 
     public sealed override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor,
-        OperationExecutorAdapter operation, IOperator<Mutation, TCandidate> source) =>
+        OperationInfo operation, IOperator<Mutation, TCandidate> source) =>
         Wrap((IMutationExecutor<TCandidate, TSearchSpace, TProblem>)executor, source);
 
     /// <summary>Rejects a mutator this advice cannot wrap for the run's search space and problem, before its executor is built.</summary>

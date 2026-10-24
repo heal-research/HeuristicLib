@@ -42,7 +42,7 @@ internal sealed partial class Execution : IDisposable
         adjointScratch = adjointScratchLength == 0 ? [] : ArrayPool<double>.Shared.Rent(adjointScratchLength);
     }
 
-    private static int MaximumScratchSpanCount(Program program, Func<OperationInfo, int> select)
+    private static int MaximumScratchSpanCount(Program program, Func<NumericOperationInfo, int> select)
     {
         var maximum = 0;
         foreach (var instruction in program.Instructions)

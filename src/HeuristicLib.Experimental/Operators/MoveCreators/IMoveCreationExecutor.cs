@@ -49,21 +49,8 @@ public static class MoveCreationOperationResolutionExtensions
         public IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TMove>(IOperator<MoveCreation<TMove>, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve<TMove>(IOperator<MoveCreation<TMove>, TCandidate> source,
-            [NotNullWhen(true)] out IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? executor, [NotNullWhen(false)] out string? reason)
-        {
-            try
-            {
-                executor = scope.Resolve(source);
-                reason = null;
-                return true;
-            }
-            catch (InvalidOperationException exception)
-            {
-                executor = null;
-                reason = exception.Message;
-                return false;
-            }
-        }
+            [NotNullWhen(true)] out IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? executor, [NotNullWhen(false)] out string? reason) =>
+            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
     }
 
     extension<TCandidate, TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope)
@@ -78,20 +65,7 @@ public static class MoveCreationOperationResolutionExtensions
         public IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TMove>(IOperator<MoveCreation<TMove>, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve<TMove>(IOperator<MoveCreation<TMove>, TCandidate> source,
-            [NotNullWhen(true)] out IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? executor, [NotNullWhen(false)] out string? reason)
-        {
-            try
-            {
-                executor = scope.Resolve(source);
-                reason = null;
-                return true;
-            }
-            catch (InvalidOperationException exception)
-            {
-                executor = null;
-                reason = exception.Message;
-                return false;
-            }
-        }
+            [NotNullWhen(true)] out IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? executor, [NotNullWhen(false)] out string? reason) =>
+            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
     }
 }

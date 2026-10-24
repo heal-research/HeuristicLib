@@ -10,11 +10,11 @@ namespace HEAL.HeuristicLib.Operators;
 public abstract class InterceptorAdvice<TCandidate, TSearchState> : OperatorAdvice<Interception<TSearchState>, TCandidate>
     where TSearchState : class, ISearchState
 {
-    public sealed override void Check<TSearchSpace, TProblem, TRunSearchState>(OperationExecutorAdapter operation,
+    public sealed override void Check<TSearchSpace, TProblem, TRunSearchState>(OperationInfo operation,
         IOperator<Interception<TSearchState>, TCandidate> source) => Check<TSearchSpace, TProblem>(source);
 
     public sealed override IExecutor Wrap<TSearchSpace, TProblem, TRunSearchState>(IExecutor executor,
-        OperationExecutorAdapter operation, IOperator<Interception<TSearchState>, TCandidate> source) =>
+        OperationInfo operation, IOperator<Interception<TSearchState>, TCandidate> source) =>
         Wrap((IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>)executor, source);
 
     /// <summary>Rejects an interceptor this advice cannot wrap for the run's types, before its executor is built.</summary>

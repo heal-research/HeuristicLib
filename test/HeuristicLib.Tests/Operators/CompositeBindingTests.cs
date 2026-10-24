@@ -53,8 +53,8 @@ public class CompositeBindingTests
     /// <summary>How not to write it: the base fixes the triple, so the child is resolved at the wrong one.</summary>
     private sealed record LeafLadderTransformedCreator(IOperator<Creation, RealVector> Source) : Creator<RealVector>
     {
-        protected override ExecutorFactory<ICreationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>> CreateFactory() =>
-            scope => new Executor(scope.Resolve<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(Source));
+        protected override ICreationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> CreateExecutor(ResolutionScope scope) =>
+            new Executor(scope.Resolve<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(Source));
 
         private sealed class Executor(ICreationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> source)
             : CreationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
@@ -67,14 +67,9 @@ public class CompositeBindingTests
     /// <summary>How to write it: the run's types are method type arguments, so they reach the child.</summary>
     private sealed record AgnosticTransformedCreator(IOperator<Creation, RealVector> Source) : Operator<Creation, RealVector>
     {
-        protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-        private sealed class Factory(AgnosticTransformedCreator source) : OperatorExecutorFactory<Creation, RealVector>
-        {
-            protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-                ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-                new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(source.Source));
-        }
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(Source));
 
         private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<RealVector, TSearchSpace, TProblem> source)
             : CreationExecutor<RealVector, TSearchSpace, TProblem>

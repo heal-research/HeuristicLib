@@ -16,25 +16,19 @@ public interface IChecksumExecutor<TCandidate, in TSearchSpace, in TProblem> : I
     int Read(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-// This descriptor and its adapter are compiled in the consumer, never in the backend.
-public sealed class Checksum : IOperationDescriptor<Checksum>
+// This operation is compiled in the consumer, never in the backend.
+public sealed class Checksum : IOperation<Checksum>
 {
-    public static OperationExecutorAdapter CreateExecutorAdapter<TCandidate, TSearchSpace, TProblem, TSearchState>()
+    static bool IOperation<Checksum>.IsExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(IExecutor executor) =>
+        executor is IChecksumExecutor<TCandidate, TSearchSpace, TProblem>;
+
+    static IExecutor IOperation<Checksum>.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(IExecutor executor, TWrapper wrapper) =>
+        new WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(executor, wrapper);
+
+    private readonly struct Invocation<TCandidate, TSearchSpace, TProblem>(IChecksumExecutor<TCandidate, TSearchSpace, TProblem> executor,
+        IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<int>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState => new ChecksumExecutorAdapter<TCandidate, TSearchSpace, TProblem>();
-}
-
-public sealed class ChecksumExecutorAdapter<TCandidate, TSearchSpace, TProblem> : OperationExecutorAdapter<IChecksumExecutor<TCandidate, TSearchSpace, TProblem>>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    protected override IChecksumExecutor<TCandidate, TSearchSpace, TProblem> CreateWrappedExecutor<TWrapper>(
-        IChecksumExecutor<TCandidate, TSearchSpace, TProblem> executor, TWrapper wrapper) =>
-        new WrappedExecutor<TWrapper>(executor, wrapper);
-
-    private readonly struct Invocation(IChecksumExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<int>
     {
         private readonly IChecksumExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
         private readonly IRandomNumberGenerator random = random;
@@ -42,17 +36,19 @@ public sealed class ChecksumExecutorAdapter<TCandidate, TSearchSpace, TProblem> 
         public IRandomNumberGenerator Random => random;
         public ISearchSpace SearchSpace => searchSpace;
         public IProblem Problem => problem;
-        public int Proceed() => executor.Read(random, searchSpace, problem);
-        public int ProceedWith(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
+
+        public int Proceed(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
             ((IChecksumExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Read(random ?? this.random, searchSpace, problem);
     }
 
-    private sealed class WrappedExecutor<TWrapper>(IChecksumExecutor<TCandidate, TSearchSpace, TProblem> executor, TWrapper wrapper)
-        : IChecksumExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider where TWrapper : struct, IInvocationWrapper
+    private sealed class WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(IExecutor executor, TWrapper wrapper)
+        : WrappingExecutor<IChecksumExecutor<TCandidate, TSearchSpace, TProblem>, TWrapper>(executor, wrapper), IChecksumExecutor<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TWrapper : struct, IInvocationWrapper
     {
         public int Read(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            wrapper.Invoke<Invocation, int>(new Invocation(executor, random, searchSpace, problem));
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl, TWrapper>(executor, wrapper);
+            Wrapper.Invoke<Invocation<TCandidate, TSearchSpace, TProblem>, int>(new(Executor, random, searchSpace, problem));
     }
 }
 
@@ -79,9 +75,13 @@ public sealed class ChecksumRecommendation : IRecommends<IOperator<Checksum, Rea
 
 // An external generic topology uses public preparation APIs without enumerating operations.
 public sealed record Forward<TOperation, TCandidate>(IOperator<TOperation, TCandidate> ChildOperator)
-    : IOperator<TOperation, TCandidate> where TOperation : IOperationDescriptor<TOperation>
+    : IOperator<TOperation, TCandidate> where TOperation : IOperation<TOperation>
 {
     public IOperatorContract<TCandidate>? CandidateContract => ChildOperator.CandidateContract;
     public bool Fits(ExecutionSignature execution) => ChildOperator.Fits(execution);
-    public OperatorExecutorFactory CreateExecutorFactory() => OperatorExecutorFactory.Forward(ChildOperator);
+    public IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState =>
+        scope.ResolveOperator(ChildOperator);
 }

@@ -14,16 +14,11 @@ public sealed record PipelineRefiner<TCandidate>
     {
     }
 
-    protected override OperatorExecutorFactory CreateOperatorFactory() => new Factory(this);
-
-    private sealed class Factory(PipelineRefiner<TCandidate> source) : OperatorExecutorFactory<Refinement, TCandidate>
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
-        {
-            ImmutableArray<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> children = [.. source.ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor<TRunSearchSpace, TRunProblem>(children);
-        }
+        ImmutableArray<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+        return new Executor<TRunSearchSpace, TRunProblem>(children);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> childRefiners)
